@@ -62,6 +62,10 @@ PAYLOAD_ERRORS = {
 }
 
 RAW_EMAIL_ERRORS = {
+    "UNAVAILABLE": {
+        "message": "Raw email content is unavailable for this credential",
+        "suggestion": "Use event.email.parsed for message content. This credential cannot download raw email.",
+    },
     "NOT_INCLUDED": {
         "message": "Raw email content not included inline",
         "suggestion": "Use the download URL at event.email.content.download.url to fetch the raw email.",
@@ -94,7 +98,7 @@ WebhookPayloadErrorCode = Literal[
     "INVALID_ENCODING",
 ]
 WebhookValidationErrorCode = Literal["SCHEMA_VALIDATION_FAILED"]
-RawEmailDecodeErrorCode = Literal["NOT_INCLUDED", "INVALID_BASE64", "HASH_MISMATCH"]
+RawEmailDecodeErrorCode = Literal["NOT_INCLUDED", "UNAVAILABLE", "INVALID_BASE64", "HASH_MISMATCH"]
 WebhookErrorCode = (
     WebhookVerificationErrorCode
     | WebhookPayloadErrorCode

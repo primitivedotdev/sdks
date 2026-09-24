@@ -88,6 +88,11 @@ export const PAYLOAD_ERRORS = {
  * Use these for documentation, dashboards, and i18n.
  */
 export const RAW_EMAIL_ERRORS = {
+  UNAVAILABLE: {
+    message: "Raw email content is unavailable for this credential",
+    suggestion:
+      "Use event.email.parsed for message content. This credential cannot download raw email.",
+  },
   NOT_INCLUDED: {
     message: "Raw email content not included inline",
     suggestion:

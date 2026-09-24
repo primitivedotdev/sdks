@@ -57,6 +57,16 @@ export type {
 
 export { signStandardWebhooksPayload, signWebhookPayload, WEBHOOK_VERSION };
 
+/** Producer-built events include raw content metadata and download information. */
+export type ProducedEmailReceivedEvent = EmailReceivedEvent & {
+  email: EmailReceivedEvent["email"] & {
+    content: {
+      raw: NonNullable<EmailReceivedEvent["email"]["content"]["raw"]>;
+      download: NonNullable<EmailReceivedEvent["email"]["content"]["download"]>;
+    };
+  };
+};
+
 /** Maximum raw email size for inline inclusion (256 KB). */
 export const RAW_EMAIL_INLINE_THRESHOLD = 262144;
 
@@ -250,7 +260,7 @@ export function buildEmailReceivedEvent(
     /** Override the attempted-at timestamp, typically for tests. */
     attempted_at?: string;
   },
-): EmailReceivedEvent {
+): ProducedEmailReceivedEvent {
   const event_id = generateEventId(input.endpoint_id, input.email_id);
   const attempted_at = options?.attempted_at
     ? validateTimestamp(options.attempted_at, "attempted_at")
@@ -385,7 +395,8 @@ export function buildEmailReceivedEvent(
     },
   } satisfies EmailReceivedEvent;
 
-  return validateEmailReceivedEvent(event);
+  validateEmailReceivedEvent(event);
+  return event;
 }
 
 /**
@@ -469,7 +480,7 @@ export interface BuildEventFromParsedDataOptions {
  */
 export function buildEventFromParsedData(
   params: BuildEventFromParsedDataOptions,
-): EmailReceivedEvent {
+): ProducedEmailReceivedEvent {
   const { parsed, attachmentsDownloadUrl, smtpRcptTo } = params;
 
   const hasAttachments = parsed.attachments.length > 0;

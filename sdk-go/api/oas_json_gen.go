@@ -24715,6 +24715,12 @@ func (s *Endpoint) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *Endpoint) encodeFields(e *jx.Encoder) {
 	{
+		if s.Recipient.Set {
+			e.FieldStart("recipient")
+			s.Recipient.Encode(e)
+		}
+	}
+	{
 		if s.ReceiverCapabilities.Set {
 			e.FieldStart("receiver_capabilities")
 			s.ReceiverCapabilities.Encode(e)
@@ -24822,28 +24828,29 @@ func (s *Endpoint) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEndpoint = [21]string{
-	0:  "receiver_capabilities",
-	1:  "id",
-	2:  "org_id",
-	3:  "url",
-	4:  "enabled",
-	5:  "domain_id",
-	6:  "rules",
-	7:  "created_at",
-	8:  "updated_at",
-	9:  "delivery_count",
-	10: "success_count",
-	11: "failure_count",
-	12: "consecutive_fails",
-	13: "last_delivery_at",
-	14: "last_success_at",
-	15: "last_failure_at",
-	16: "deactivated_at",
-	17: "kind",
-	18: "function_id",
-	19: "is_route_target",
-	20: "name",
+var jsonFieldsNameOfEndpoint = [22]string{
+	0:  "recipient",
+	1:  "receiver_capabilities",
+	2:  "id",
+	3:  "org_id",
+	4:  "url",
+	5:  "enabled",
+	6:  "domain_id",
+	7:  "rules",
+	8:  "created_at",
+	9:  "updated_at",
+	10: "delivery_count",
+	11: "success_count",
+	12: "failure_count",
+	13: "consecutive_fails",
+	14: "last_delivery_at",
+	15: "last_success_at",
+	16: "last_failure_at",
+	17: "deactivated_at",
+	18: "kind",
+	19: "function_id",
+	20: "is_route_target",
+	21: "name",
 }
 
 // Decode decodes Endpoint from json.
@@ -24855,6 +24862,16 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
+		case "recipient":
+			if err := func() error {
+				s.Recipient.Reset()
+				if err := s.Recipient.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"recipient\"")
+			}
 		case "receiver_capabilities":
 			if err := func() error {
 				s.ReceiverCapabilities.Reset()
@@ -24866,7 +24883,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"receiver_capabilities\"")
 			}
 		case "id":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.ID = v
@@ -24878,7 +24895,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"id\"")
 			}
 		case "org_id":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.OrgID = v
@@ -24900,7 +24917,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"url\"")
 			}
 		case "enabled":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Bool()
 				s.Enabled = bool(v)
@@ -24922,7 +24939,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"domain_id\"")
 			}
 		case "rules":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				if err := s.Rules.Decode(d); err != nil {
 					return err
@@ -24932,7 +24949,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"rules\"")
 			}
 		case "created_at":
-			requiredBitSet[0] |= 1 << 7
+			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -24944,7 +24961,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "updated_at":
-			requiredBitSet[1] |= 1 << 0
+			requiredBitSet[1] |= 1 << 1
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -24956,7 +24973,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"updated_at\"")
 			}
 		case "delivery_count":
-			requiredBitSet[1] |= 1 << 1
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := d.Int()
 				s.DeliveryCount = int(v)
@@ -24968,7 +24985,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"delivery_count\"")
 			}
 		case "success_count":
-			requiredBitSet[1] |= 1 << 2
+			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
 				v, err := d.Int()
 				s.SuccessCount = int(v)
@@ -24980,7 +24997,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"success_count\"")
 			}
 		case "failure_count":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				v, err := d.Int()
 				s.FailureCount = int(v)
@@ -24992,7 +25009,7 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"failure_count\"")
 			}
 		case "consecutive_fails":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				v, err := d.Int()
 				s.ConsecutiveFails = int(v)
@@ -25093,8 +25110,8 @@ func (s *Endpoint) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [3]uint8{
-		0b11010110,
-		0b00011111,
+		0b10101100,
+		0b00111111,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {

@@ -163,7 +163,9 @@ func TestEventsWebSocketLostReceipt(t *testing.T) {
 		}
 		var data interface{} = map[string]interface{}{"id": "endpoint", "kind": "pull", "receiver_capabilities": map[string]interface{}{"completion_modes": []string{"sdk"}, "stream_protocols": []string{"primitive.events.v1"}}}
 		if r.URL.Path == "/v1/account" {
-			data = map[string]string{"id": "account"}
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": map[string]string{"code": "agent_connection_scope_forbidden"}})
+			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "data": data})
 	}))

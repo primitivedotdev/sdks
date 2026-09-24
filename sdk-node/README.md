@@ -667,3 +667,17 @@ Same name shares work; different names receive independent copies. New names do
 not backfill history. Closing preserves pending work. Optional `onStatus` reports
 reconnects, handler errors, and retained gap counts; `onGap: "error"` stops on a gap.
 Use `transport: "poll"` explicitly when WebSocket access is unavailable.
+
+### Connected-agent listeners
+
+Use the agent's existing connected-address credential with the same listener API.
+The server automatically restricts its private subscription to inbound email for
+that address. No owner credential, recipient filter, or relay is required. Names
+are isolated per credential. Revoking or replacing the credential removes its
+subscriptions and queued deliveries; reconnect with the new credential to start
+receiving new events.
+
+Address-scoped events contain parsed message content in `email.parsed`.
+`email.content.raw` and `email.content.download` are null. Signed download links,
+account routing metadata, and other SMTP envelope recipients are not exposed.
+Attachments can be fetched through the authenticated email attachment API.

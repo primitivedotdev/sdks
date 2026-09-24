@@ -625,7 +625,7 @@ export function confirmedHeaders(): {
  * ```typescript
  * if (isDownloadExpired(event)) {
  *   console.log("Download URL has expired, cannot fetch raw email");
- * } else {
+ * } else if (event.email.content.download) {
  *   const response = await fetch(event.email.content.download.url);
  * }
  * ```
@@ -634,6 +634,7 @@ export function isDownloadExpired(
   event: EmailReceivedEvent,
   now: number = Date.now(),
 ): boolean {
+  if (event.email.content.download === null) return true;
   const expiresAt = new Date(event.email.content.download.expires_at).getTime();
   return now >= expiresAt;
 }
@@ -658,6 +659,7 @@ export function getDownloadTimeRemaining(
   event: EmailReceivedEvent,
   now: number = Date.now(),
 ): number {
+  if (event.email.content.download === null) return 0;
   const expiresAt = new Date(event.email.content.download.expires_at).getTime();
   return Math.max(0, expiresAt - now);
 }
@@ -672,19 +674,19 @@ export function getDownloadTimeRemaining(
  * Use this to check before calling `decodeRawEmail()` to avoid try/catch.
  *
  * @param event - The webhook event
- * @returns true if raw content is included inline, false if download required
+ * @returns true if raw content is included inline, false if download is required or raw content is unavailable
  *
  * @example
  * ```typescript
  * if (isRawIncluded(event)) {
  *   const rawEmail = decodeRawEmail(event);
- * } else {
+ * } else if (event.email.content.download) {
  *   const response = await fetch(event.email.content.download.url);
  * }
  * ```
  */
 export function isRawIncluded(event: EmailReceivedEvent): boolean {
-  return event.email.content.raw.included;
+  return event.email.content.raw?.included ?? false;
 }
 
 /**
@@ -701,7 +703,7 @@ export interface DecodeRawEmailOptions {
 /**
  * Decode the raw email content from an EmailReceivedEvent.
  *
- * Throws if the raw content is not included inline (i.e., must be downloaded).
+ * Throws if raw content requires downloading or is unavailable for this credential.
  * By default, verifies the SHA-256 hash matches after decoding.
  *
  * NOTE: This function assumes a well-formed event from `handleWebhook()`.
@@ -734,11 +736,16 @@ export function decodeRawEmail(
   const { verify = true } = options;
   const raw = event.email.content.raw;
 
+  if (raw === null)
+    throw new RawEmailDecodeError(
+      "UNAVAILABLE",
+      "Raw email is unavailable for address-scoped events. Use email.parsed.",
+    );
   if (!raw.included) {
     throw new RawEmailDecodeError(
       "NOT_INCLUDED",
       `Raw email not included inline (size: ${raw.size_bytes} bytes, threshold: ${raw.max_inline_bytes} bytes). ` +
-        `Download from: ${event.email.content.download.url}`,
+        `Download from: ${event.email.content.download?.url ?? "unavailable"}`,
     );
   }
 
@@ -798,6 +805,11 @@ export function verifyRawEmailDownload(
     : Buffer.from(downloaded as ArrayBuffer);
 
   const hash = createHash("sha256").update(buffer).digest("hex");
+  if (event.email.content.raw === null)
+    throw new RawEmailDecodeError(
+      "UNAVAILABLE",
+      "Raw email is unavailable for address-scoped events. Use email.parsed.",
+    );
   const expected = event.email.content.raw.sha256;
 
   if (hash !== expected.toLowerCase()) {

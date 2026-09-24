@@ -47,4 +47,4 @@ const output = await compile(rootSchema, "EmailReceivedEvent", {
   unreachableDefinitions: true,
 });
 
-writeFileSync(outputPath, output);
+writeFileSync(outputPath, output.replace(/[ \t]+$/gm, ""));

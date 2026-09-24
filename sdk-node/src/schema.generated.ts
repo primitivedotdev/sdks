@@ -164,13 +164,44 @@ export const emailReceivedEventJsonSchema = {
             },
             "content": {
               "type": "object",
+              "if": {
+                "properties": {
+                  "raw": {
+                    "type": "null"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "download": {
+                    "type": "null"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "download": {
+                    "type": "object"
+                  }
+                }
+              },
               "properties": {
                 "raw": {
-                  "$ref": "#/definitions/RawContent",
-                  "description": "Raw email in RFC 5322 format. May be inline (base64) or download-only depending on size."
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/RawContent"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Raw MIME is null for address-scoped listeners. Use email.parsed for message content."
                 },
                 "download": {
-                  "type": "object",
+                  "type": [
+                    "object",
+                    "null"
+                  ],
                   "properties": {
                     "url": {
                       "type": "string",
@@ -188,7 +219,7 @@ export const emailReceivedEventJsonSchema = {
                     "url",
                     "expires_at"
                   ],
-                  "description": "Download information for the raw email. Always present, even if raw content is inline."
+                  "description": "Raw download information. Null for address-scoped listeners, which do not receive bearer download links."
                 }
               },
               "required": [

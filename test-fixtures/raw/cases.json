@@ -90,6 +90,24 @@
         "included": false,
         "verify_download_error_code": "HASH_MISMATCH"
       }
+    },
+    {
+      "name": "address_scoped_no_raw",
+      "event": {
+        "email": {
+          "content": {
+            "raw": null,
+            "download": null
+          }
+        }
+      },
+      "expected": {
+        "included": false,
+        "decode_error_code": "UNAVAILABLE",
+        "verify_download_error_code": "UNAVAILABLE",
+        "suggestion": "Use event.email.parsed for message content. This credential cannot download raw email."
+      },
+      "download_bytes_utf8": "unavailable"
     }
   ]
 }

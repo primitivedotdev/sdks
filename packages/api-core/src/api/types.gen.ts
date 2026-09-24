@@ -3166,6 +3166,10 @@ export type CompleteWebhookResponse = {
 };
 
 export type Endpoint = {
+    /**
+     * Server-enforced recipient for an address-scoped pull subscription; null for account-wide receiving.
+     */
+    recipient?: string | null;
     receiver_capabilities?: {
         completion_modes: Array<'http' | 'exec' | 'stdout' | 'sdk'>;
         stream_protocols: Array<'primitive.events.v1'>;

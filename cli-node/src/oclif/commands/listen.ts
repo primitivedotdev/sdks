@@ -7,7 +7,7 @@ import { ListenStateError } from "../listen-state.js";
 export default class ListenCommand extends Command {
   static summary = "Receive webhook events locally without a public endpoint";
   static description =
-    "Subscribe once and reconnect using the same durable server queue. Use a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout.";
+    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout.";
   static examples = [
     "<%= config.bin %> listen",
     '<%= config.bin %> listen --subscription my-agent --exec "python3 accept.py"',
@@ -32,7 +32,7 @@ export default class ListenCommand extends Command {
     }),
     subscription: Flags.string({
       description:
-        "Stable subscription name. Defaults to a saved name for this account and API environment.",
+        "Stable subscription name. Defaults to a saved name for this credential scope and API environment.",
     }),
     exec: Flags.string({
       description:

@@ -40,6 +40,8 @@ class Endpoint:
             success_count (int): Successful deliveries
             failure_count (int): Failed deliveries
             consecutive_fails (int): Current streak of consecutive failures
+            recipient (None | str | Unset): Server-enforced recipient for an address-scoped pull subscription; null for
+                account-wide receiving.
             receiver_capabilities (EndpointReceiverCapabilities | Unset):
             url (None | str | Unset):
             domain_id (None | Unset | UUID): Restrict this endpoint to emails from a specific domain
@@ -65,6 +67,7 @@ class Endpoint:
     success_count: int
     failure_count: int
     consecutive_fails: int
+    recipient: None | str | Unset = UNSET
     receiver_capabilities: EndpointReceiverCapabilities | Unset = UNSET
     url: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
@@ -104,6 +107,12 @@ class Endpoint:
         failure_count = self.failure_count
 
         consecutive_fails = self.consecutive_fails
+
+        recipient: None | str | Unset
+        if isinstance(self.recipient, Unset):
+            recipient = UNSET
+        else:
+            recipient = self.recipient
 
         receiver_capabilities: dict[str, Any] | Unset = UNSET
         if not isinstance(self.receiver_capabilities, Unset):
@@ -191,6 +200,8 @@ class Endpoint:
             "failure_count": failure_count,
             "consecutive_fails": consecutive_fails,
         })
+        if recipient is not UNSET:
+            field_dict["recipient"] = recipient
         if receiver_capabilities is not UNSET:
             field_dict["receiver_capabilities"] = receiver_capabilities
         if url is not UNSET:
@@ -257,6 +268,16 @@ class Endpoint:
         failure_count = d.pop("failure_count")
 
         consecutive_fails = d.pop("consecutive_fails")
+
+        def _parse_recipient(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        recipient = _parse_recipient(d.pop("recipient", UNSET))
+
 
         _receiver_capabilities = d.pop("receiver_capabilities", UNSET)
         receiver_capabilities: EndpointReceiverCapabilities | Unset
@@ -431,6 +452,7 @@ class Endpoint:
             success_count=success_count,
             failure_count=failure_count,
             consecutive_fails=consecutive_fails,
+            recipient=recipient,
             receiver_capabilities=receiver_capabilities,
             url=url,
             domain_id=domain_id,
