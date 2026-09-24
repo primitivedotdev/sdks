@@ -501,6 +501,9 @@ func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
 }
 
 func VerifyRawEmailDownload(downloaded []byte, event any) ([]byte, error) {
+	if value, ok := getMapValue(event, "email", "content", "raw"); ok && value == nil {
+		return nil, NewRawEmailDecodeError("NOT_INCLUDED", "Raw email is unavailable for address-scoped events. Use email.parsed.")
+	}
 	expected, ok := getString(event, "email", "content", "raw", "sha256")
 	if !ok || expected == "" {
 		return nil, missingPayloadFieldError("email.content.raw.sha256")

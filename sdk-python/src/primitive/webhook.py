@@ -825,6 +825,11 @@ def verify_raw_email_download(
     email = _require_field(event, "email", "email")
     content = _require_field(email, "email.content", "content")
     raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
+    if raw is None:
+        raise RawEmailDecodeError(
+            "NOT_INCLUDED",
+            "Raw email is unavailable for address-scoped events. Use email.parsed.",
+        )
     try:
         expected = _normalize_sha256(
             _require_field(raw, "email.content.raw.sha256", "sha256")

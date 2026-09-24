@@ -23,11 +23,13 @@ class RequestFailure extends ListenError {
     readonly retryAfter: number,
   ) {
     super(
-      status === 401 || status === 403
-        ? "Listener authorization failed. Run primitive signin or check your API key and account permissions."
-        : status === 409 && code === "subscription_conflict"
-          ? "This subscription has different event filters. Omit --events to resume it, or use primitive listen --subscription new-subscription (add your --events selection)."
-          : `Listener API request failed (HTTP ${status || "transport"}, ${code}).`,
+      code === "agent_connection_scope_forbidden"
+        ? "This operation is outside the connected address grant. Use inbound email events and this credential’s own subscription."
+        : status === 401 || status === 403
+          ? "Listener authorization failed. Run primitive signin or check your API key and account permissions."
+          : status === 409 && code === "subscription_conflict"
+            ? "This subscription has different event filters. Omit --events to resume it, or use primitive listen --subscription new-subscription (add your --events selection)."
+            : `Listener API request failed (HTTP ${status || "transport"}, ${code}).`,
     );
   }
 }
@@ -203,7 +205,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
       );
     origin = base;
     if (!verified || auth.auth.apiKey !== verifiedKey) {
-      if (auth.auth.apiKey.startsWith("pconn_")) {
+      if (auth.auth.apiKey?.startsWith("pconn_")) {
         // Connected credentials cannot read account settings. Keep local state
         // private to this credential; registration and every receive authenticate
         // it on the server before any event is returned.
@@ -303,7 +305,9 @@ export async function runListen(options: ListenOptions): Promise<number> {
         (value) => typeof value === "string" && /^[a-zA-Z0-9_.-]+$/.test(value),
       )
         ? selected.join(", ")
-        : "all events";
+        : endpoint.recipient
+          ? `inbound email for ${JSON.stringify(endpoint.recipient)}`
+          : "all events";
     stderr.write(
       `Listening on subscription ${subscription.name} (${endpoint.id}); ${resumed ? "resumed" : "created"}, mode ${options.mode ?? "stdout"}, selection: ${selection}. Retention: 24 hours; handler limit: 30 seconds. Pending count follows the first poll. Ctrl-C disconnects; delete with primitive endpoints delete --id ${endpoint.id}.\n`,
     );

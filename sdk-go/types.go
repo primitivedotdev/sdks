@@ -194,8 +194,8 @@ type EmailHeaders struct {
 }
 
 type EmailContent struct {
-	Raw      RawContent   `json:"raw"`
-	Download DownloadInfo `json:"download"`
+	Raw      *RawContent   `json:"raw"`
+	Download *DownloadInfo `json:"download"`
 }
 
 type DownloadInfo struct {

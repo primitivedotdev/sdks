@@ -103,8 +103,10 @@
       },
       "expected": {
         "included": false,
-        "decode_error_code": "NOT_INCLUDED"
-      }
+        "decode_error_code": "NOT_INCLUDED",
+        "verify_download_error_code": "NOT_INCLUDED"
+      },
+      "download_bytes_utf8": "unavailable"
     }
   ]
 }
