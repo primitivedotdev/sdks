@@ -30,7 +30,6 @@ import {
   formatMicros,
   formatRedemptionSummary,
   formatRetryHint,
-  shellQuote,
 } from "../../src/oclif/commands/credits.js";
 import { COMMANDS, lookupOperation } from "../../src/oclif/index.js";
 
@@ -330,14 +329,9 @@ describe("credits redeem", () => {
 });
 
 describe("credits redeem retry hint", () => {
-  it("shell-quotes values that would split or expand", () => {
-    expect(shellQuote("LAUNCH50")).toBe("LAUNCH50");
-    expect(shellQuote("cli-redeem-1a2b")).toBe("cli-redeem-1a2b");
-    expect(shellQuote("SPRING SALE")).toBe("'SPRING SALE'");
-    expect(shellQuote("a$b;c")).toBe("'a$b;c'");
-    expect(shellQuote("it's")).toBe("'it'\\''s'");
-    expect(formatRetryHint("key*1", "SPRING SALE")).toContain(
-      "primitive credits redeem 'SPRING SALE' --idempotency-key 'key*1'",
+  it("prints the key and a plain retry instruction, not a shell command", () => {
+    expect(formatRetryHint("cli-redeem-1a2b")).toBe(
+      "Idempotency-Key: cli-redeem-1a2b\nTo retry this redemption safely, run the same command again with --idempotency-key cli-redeem-1a2b.",
     );
   });
 
@@ -359,7 +353,7 @@ describe("credits redeem retry hint", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("Idempotency-Key: retry-503");
     expect(result.stderr).toContain(
-      "primitive credits redeem LAUNCH50 --idempotency-key retry-503",
+      "run the same command again with --idempotency-key retry-503.",
     );
   });
 

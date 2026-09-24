@@ -111,22 +111,14 @@ type ApiErrorBody = { code?: unknown; message?: unknown };
 /**
  * Lines printed after a failed redemption so the user can retry without risk
  * of a second grant: reusing the same key and code returns the original grant
- * if the first attempt did land.
+ * if the first attempt did land. No shell command is printed, since quoting
+ * differs between shells.
  */
-export function formatRetryHint(idempotencyKey: string, code: string): string {
+export function formatRetryHint(idempotencyKey: string): string {
   return [
     `Idempotency-Key: ${idempotencyKey}`,
-    `To retry safely, run: primitive credits redeem ${shellQuote(code)} --idempotency-key ${shellQuote(idempotencyKey)}`,
+    `To retry this redemption safely, run the same command again with --idempotency-key ${idempotencyKey}.`,
   ].join("\n");
-}
-
-/**
- * Quote a value for a POSIX shell so a copied retry command passes it as one
- * unchanged argument. Plain values are left bare for readability.
- */
-export function shellQuote(value: string): string {
-  if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value;
-  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 /**
@@ -174,7 +166,7 @@ export class CreditsRedeemCommand extends Command {
   --idempotency-key to retry the same redemption safely, for example after a
   network error. Retrying with the same key and code returns the original
   grant and adds no second credit. On any failure the key in use is printed to
-  stderr with the exact command to retry.`;
+  stderr so the same command can be rerun with --idempotency-key.`;
 
   static summary = "Redeem a credit code";
 
@@ -240,7 +232,7 @@ export class CreditsRedeemCommand extends Command {
       });
 
     const writeRetryHint = () =>
-      process.stderr.write(`${formatRetryHint(idempotencyKey, code)}\n`);
+      process.stderr.write(`${formatRetryHint(idempotencyKey)}\n`);
 
     await runWithTiming(flags.time, async () => {
       let result: Awaited<ReturnType<typeof redeemCreditCode>>;
