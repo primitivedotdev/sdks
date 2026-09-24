@@ -214,8 +214,10 @@ describe("COMMANDS / manifest coverage", () => {
     expect(COMMANDS.listen).toBeDefined();
     expect(COMMANDS["listen:init"]).toBeDefined();
     const listener = COMMANDS.listen as unknown as {
+      description: string;
       flags: Record<string, unknown>;
     };
+    expect(listener.description).toContain("Connected-agent credentials");
     for (const flag of [
       "subscription",
       "events",

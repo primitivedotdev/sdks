@@ -532,9 +532,7 @@ def parse_webhook_event(
     # header is the PRIMARY discriminator; fall back to a top-level `event`
     # string in the body only for backward-compat with any sender that embeds it.
     body_event = input.get("event")
-    resolved_event = event_type or (
-        body_event if isinstance(body_event, str) else None
-    )
+    resolved_event = event_type or (body_event if isinstance(body_event, str) else None)
 
     if not resolved_event:
         # No `X-Webhook-Event` header AND no in-body `event` field: we cannot
@@ -708,6 +706,8 @@ def is_download_expired(
     email = _require_field(event, "email", "email")
     content = _require_field(email, "email.content", "content")
     download = _require_field(content, "email.content.download", "download")
+    if download is None:
+        return True
     expires_at = _require_field(
         download, "email.content.download.expires_at", "expires_at"
     )
@@ -735,6 +735,8 @@ def get_download_time_remaining(
     email = _require_field(event, "email", "email")
     content = _require_field(email, "email.content", "content")
     download = _require_field(content, "email.content.download", "download")
+    if download is None:
+        return 0
     expires_at = _require_field(
         download, "email.content.download.expires_at", "expires_at"
     )
@@ -754,7 +756,9 @@ def is_raw_included(event: EmailReceivedEvent | Mapping[str, Any]) -> bool:
     email = _require_field(event, "email", "email")
     content = _require_field(email, "email.content", "content")
     raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
-    return bool(_require_field(raw, "email.content.raw.included", "included"))
+    return raw is not None and bool(
+        _require_field(raw, "email.content.raw.included", "included")
+    )
 
 
 def decode_raw_email(
@@ -765,6 +769,11 @@ def decode_raw_email(
     email = _require_field(event, "email", "email")
     content = _require_field(email, "email.content", "content")
     raw = _unwrap_root(_require_field(content, "email.content.raw", "raw"))
+    if raw is None:
+        raise RawEmailDecodeError(
+            "NOT_INCLUDED",
+            "Raw email is unavailable for address-scoped events. Use email.parsed.",
+        )
     download = _require_field(content, "email.content.download", "download")
     if not _require_field(raw, "email.content.raw.included", "included"):
         raise RawEmailDecodeError(

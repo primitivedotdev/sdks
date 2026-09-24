@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   completeWebhookEvent,
   createEndpoint,
@@ -202,6 +203,20 @@ export async function runListen(options: ListenOptions): Promise<number> {
       );
     origin = base;
     if (!verified || auth.auth.apiKey !== verifiedKey) {
+      if (auth.auth.apiKey.startsWith("pconn_")) {
+        // Connected credentials cannot read account settings. Keep local state
+        // private to this credential; registration and every receive authenticate
+        // it on the server before any event is returned.
+        const identity = `connection:${createHash("sha256").update(auth.auth.apiKey).digest("hex")}`;
+        if (accountId !== undefined && accountId !== identity)
+          throw new ListenError(
+            "The connected credential changed while listening. Restart the listener.",
+          );
+        accountId = identity;
+        verifiedKey = auth.auth.apiKey;
+        verified = true;
+        return auth.apiClient.client;
+      }
       const account = await retry(() =>
         getAccount({
           client: auth.apiClient.client,

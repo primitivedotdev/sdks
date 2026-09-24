@@ -194,7 +194,11 @@ func (UnimplementedHandler) CreateEmailChallenge(ctx context.Context, req *Creat
 // For local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named
 // creation resumes the same active destination; omitted filters preserve its selection, while
 // conflicting supplied configuration returns 409. New unfiltered destinations receive all
-// subsequently ready eligible event types. Pull destinations do not occupy HTTP routing slots.
+// subsequently ready eligible event types within their credential scope. Connected-agent credentials
+// automatically create private subscriptions restricted to inbound email for their assigned address.
+// Names are isolated per credential; revocation or replacement deletes its subscriptions.
+// Address-scoped events contain parsed mail without raw MIME, signed download links, routing
+// metadata, or sibling envelope recipients. Pull destinations do not occupy HTTP routing slots.
 // Signing-secret setup and a test HTTP delivery are not required for pull receiving.
 //
 // POST /endpoints

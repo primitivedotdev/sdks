@@ -124,6 +124,16 @@ const bodies = (suffix: string) =>
     .map((request) => request.body);
 
 describe("local webhook runner", () => {
+  it("listens with a connected credential without requiring account access", async () => {
+    token = `pconn_${"a".repeat(64)}`;
+    steps["/v1/account"] = [apiError(403, "agent_connection_scope_forbidden")];
+    expect(await runListen(options)).toBe(1);
+    expect(requests.some((request) => request.path === "/v1/account")).toBe(
+      false,
+    );
+    expect(options.handler).toHaveBeenCalledWith(delivery, controller.signal);
+  });
+
   it("registers, receives and counts only confirmed handler success using fresh authentication on every operation", async () => {
     expect(await runListen(options)).toBe(1);
     expect(authenticate).toHaveBeenCalledTimes(5);

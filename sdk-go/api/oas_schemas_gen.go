@@ -9298,6 +9298,8 @@ func (s *EmailWebhookStatus) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/Endpoint
 type Endpoint struct {
+	// Server-enforced recipient for an address-scoped pull subscription; null for account-wide receiving.
+	Recipient            OptNilString                    `json:"recipient"`
 	ReceiverCapabilities OptEndpointReceiverCapabilities `json:"receiver_capabilities"`
 	ID                   uuid.UUID                       `json:"id"`
 	OrgID                uuid.UUID                       `json:"org_id"`
@@ -9331,6 +9333,11 @@ type Endpoint struct {
 	IsRouteTarget OptBool `json:"is_route_target"`
 	// Stable name of a pull destination.
 	Name OptNilString `json:"name"`
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *Endpoint) GetRecipient() OptNilString {
+	return s.Recipient
 }
 
 // GetReceiverCapabilities returns the value of ReceiverCapabilities.
@@ -9436,6 +9443,11 @@ func (s *Endpoint) GetIsRouteTarget() OptBool {
 // GetName returns the value of Name.
 func (s *Endpoint) GetName() OptNilString {
 	return s.Name
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *Endpoint) SetRecipient(val OptNilString) {
+	s.Recipient = val
 }
 
 // SetReceiverCapabilities sets the value of ReceiverCapabilities.

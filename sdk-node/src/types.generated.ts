@@ -6,88 +6,88 @@
  */
 
 /**
+ * Raw email content - a discriminated union on `included`.
+ *
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "RawContent".
+ */
+export type RawContent = (RawContentInline | RawContentDownloadOnly)
+/**
  * Result for a single forwarded email detected in the message.
- * 
+ *
  * Use the `type` and `analyzed` fields to narrow the type:
  * - `type: 'inline'` - Inline forward, always analyzed
  * - `type: 'attachment'` + `analyzed: true` - Analyzed attachment
  * - `type: 'attachment'` + `analyzed: false` - Skipped attachment
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ForwardResult".
  */
 export type ForwardResult = (ForwardResultInline | ForwardResultAttachmentAnalyzed | ForwardResultAttachmentSkipped)
 /**
  * Valid webhook version format (YYYY-MM-DD date string). The SDK accepts any valid date-formatted version, not just the current one, for forward and backward compatibility.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "WebhookVersion".
  */
 export type WebhookVersion = string
 /**
- * Raw email content - a discriminated union on `included`.
- * 
- * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
- * via the `definition` "RawContent".
- */
-export type RawContent = (RawContentInline | RawContentDownloadOnly)
-/**
  * Parsed email content - a discriminated union on `status`.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ParsedData".
  */
 export type ParsedData = (ParsedDataComplete | ParsedDataFailed)
 /**
  * Verdict for forwarded email verification.
- * 
+ *
  * - `legit`: DKIM signature verified the original sender
  * - `unknown`: Could not verify the forwarded email's authenticity
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ForwardVerdict".
  */
 export type ForwardVerdict = ("legit" | "unknown")
 /**
  * Confidence level for the authentication verdict.
- * 
+ *
  * - `high`: Strong cryptographic evidence (DKIM aligned + DMARC pass)
  * - `medium`: Good evidence but with caveats (SPF-only alignment)
  * - `low`: Weak evidence (missing authentication or unclear results)
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "AuthConfidence".
  */
 export type AuthConfidence = ("high" | "medium" | "low")
 /**
  * DMARC policy action specified in the domain's DMARC record.
- * 
+ *
  * - `reject`: The domain owner requests that receivers reject failing emails
  * - `quarantine`: The domain owner requests that failing emails be treated as suspicious
  * - `none`: The domain owner is only monitoring (no action requested)
  * - `null`: No DMARC policy was found for the domain
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "DmarcPolicy".
  */
 export type DmarcPolicy = ("reject" | "quarantine" | "none" | null)
 /**
  * SPF verification result.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "SpfResult".
  */
 export type SpfResult = ("pass" | "fail" | "softfail" | "neutral" | "none" | "temperror" | "permerror")
 /**
  * DMARC verification result.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "DmarcResult".
  */
 export type DmarcResult = ("pass" | "fail" | "none" | "temperror" | "permerror")
 /**
  * DKIM signature verification result for a single signature.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "DkimResult".
  */
@@ -95,27 +95,27 @@ export type DkimResult = ("pass" | "fail" | "temperror" | "permerror")
 
 /**
  * Webhook payload for the `email.received` event.
- * 
+ *
  * This is delivered to your webhook endpoint when Primitive receives an email matching your domain configuration.
  */
 export interface EmailReceivedEvent {
 /**
  * Unique delivery event ID.
- * 
+ *
  * This ID is stable across retries to the same endpoint - use it as your idempotency/dedupe key. Note that the same email delivered to different endpoints will have different event IDs.
- * 
+ *
  * Format: `evt_` prefix followed by a SHA-256 hash (64 hex characters). Example: `evt_a1b2c3d4e5f6...` (68 characters total)
  */
 id: string
 /**
  * Event type identifier.
- * 
+ *
  * - `email.received` - A normal inbound email.
  * - `email.bounced` - A delivery status notification (DSN) reporting that a message delivery failed. Carries `email.analysis.bounce`.
  * - `email.tls_report` - An SMTP TLS report (RFC 8460). Carries `email.analysis.tls_report`.
  * - `email.dmarc_report` - A DMARC aggregate report (RFC 7489). Carries `email.analysis.dmarc_report`.
  * - `email.dmarc_failure` - A DMARC failure (forensic) report.
- * 
+ *
  * Machine-generated mail (bounces and the report types above) is delivered under its own event type rather than `email.received`, so an endpoint subscribed only to `email.received` receives just normal inbound mail. The payload shape is otherwise identical across event types; the type-specific details live under `email.analysis`.
  */
 event: ("email.received" | "email.bounced" | "email.tls_report" | "email.dmarc_report" | "email.dmarc_failure")
@@ -171,7 +171,7 @@ helo: (string | null)
 mail_from: string
 /**
  * SMTP envelope recipients (RCPT TO commands). All addresses that received this email in a single delivery.
- * 
+ *
  * @minItems 1
  */
 rcpt_to: [string, ...(string)[]]
@@ -206,13 +206,13 @@ date: (string | null)
  */
 content: {
 /**
- * Raw email in RFC 5322 format. May be inline (base64) or download-only depending on size.
+ * Raw MIME is null for address-scoped listeners. Use email.parsed for message content.
  */
-raw: (RawContentInline | RawContentDownloadOnly)
+raw: (RawContent | null)
 /**
- * Download information for the raw email. Always present, even if raw content is inline.
+ * Raw download information. Null for address-scoped listeners, which do not receive bearer download links.
  */
-download: {
+download: ({
 /**
  * URL to download the raw email as-is in RFC 5322 format. Managed Primitive always issues HTTPS. Self-host deployments may issue HTTP URLs that resolve inside the operator's network (e.g. `http://localhost:4001/...`). Receivers that want to refuse plaintext downloads should check the scheme explicitly.
  */
@@ -221,7 +221,7 @@ url: string
  * ISO 8601 timestamp (UTC) when this URL expires. Download before this time or the URL will return 403.
  */
 expires_at: string
-}
+} | null)
 }
 /**
  * Parsed email content (body text, HTML, attachments). Check `status` to determine if parsing succeeded.
@@ -262,9 +262,9 @@ default_scope?: ("domain" | "org" | null)
 }
 /**
  * Raw email content included inline (base64 encoded).
- * 
+ *
  * When the raw email is small enough (under  {@link  max_inline_bytes } ), it's included directly in the webhook payload for convenience.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "RawContentInline".
  */
@@ -296,9 +296,9 @@ data: string
 }
 /**
  * Raw email content not included (must be downloaded).
- * 
+ *
  * When the raw email exceeds  {@link  max_inline_bytes } , it's not included in the webhook payload. Use the download URL from  {@link  EmailReceivedEvent.email.content.download  }  to fetch it.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "RawContentDownloadOnly".
  */
@@ -326,9 +326,9 @@ sha256: string
 }
 /**
  * Parsed email content when parsing succeeded.
- * 
+ *
  * Use the discriminant `status: "complete"` to narrow from  {@link  ParsedData } .
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ParsedDataComplete".
  */
@@ -384,31 +384,31 @@ attachments_download_url: (string | null)
 }
 /**
  * A parsed email address with optional display name.
- * 
+ *
  * This structure is used in the `parsed` section of the webhook payload (e.g., `reply_to`, `cc`, `bcc`). For unparsed header strings, see the `headers` section (e.g., `event.email.headers.from`).
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "EmailAddress".
  */
 export interface EmailAddress {
 /**
  * The email address portion (e.g., "john@example.com").
- * 
+ *
  * This is the raw value from the email header with no validation applied. May contain unusual but valid formats like quoted local parts.
  */
 address: string
 /**
  * The display name portion, if present. Null if the address had no display name.
- * 
+ *
  * May contain any characters including unicode, emoji, or special characters as they appeared in the original email header.
  */
 name: (string | null)
 }
 /**
  * Metadata for an email attachment.
- * 
+ *
  * Attachment content is not included directly in the webhook payload. Use the `attachments_download_url` from  {@link  ParsedDataComplete }  to download all attachments as a tar.gz archive.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "WebhookAttachment".
  */
@@ -440,9 +440,9 @@ tar_path: string
 }
 /**
  * Parsed email content when parsing failed.
- * 
+ *
  * Use the discriminant `status: "failed"` to narrow from  {@link  ParsedData } .
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ParsedDataFailed".
  */
@@ -518,7 +518,7 @@ retryable: boolean
 export interface EmailAnalysis {
 /**
  * SpamAssassin analysis results.
- * 
+ *
  * Optional. Present when the email was processed by a SpamAssassin-equipped pipeline (always present in Primitive's managed service). When absent, spam scoring was not performed on this email.
  */
 spamassassin?: {
@@ -534,7 +534,7 @@ dmarc_report?: DmarcReportAnalysis
 }
 /**
  * Forward detection and analysis results.
- * 
+ *
  * Optional. In Primitive's managed service this object is included only when forwarded content is detected; when absent, no forward was detected or forward detection was not performed.
  */
 export interface ForwardAnalysis {
@@ -561,7 +561,7 @@ attachments_limit: (number | null)
 }
 /**
  * Result for an inline forward that was detected and analyzed. Inline forwards are always analyzed when forward detection is enabled.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ForwardResultInline".
  */
@@ -579,7 +579,7 @@ summary: string
 }
 /**
  * Original sender information extracted from the forwarded email.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ForwardOriginalSender".
  */
@@ -620,7 +620,7 @@ dmarc_policy: ("reject" | "quarantine" | "none" | null)
 }
 /**
  * Result for an attachment forward that was analyzed.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ForwardResultAttachmentAnalyzed".
  */
@@ -675,7 +675,7 @@ dmarc_policy: ("reject" | "quarantine" | "none" | null)
 }
 /**
  * Result for an attachment forward that was detected but not analyzed. This occurs when attachment analysis is disabled or the limit was reached.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ForwardResultAttachmentSkipped".
  */
@@ -708,7 +708,7 @@ summary: string
 }
 /**
  * Bounce (delivery status notification) analysis.
- * 
+ *
  * Present on `email.bounced` events: the parsed DSN reporting that a message you sent could not be delivered. Absent on all other event types.
  */
 export interface BounceAnalysis {
@@ -763,7 +763,7 @@ reasons: string[]
 }
 /**
  * SMTP TLS report analysis (RFC 8460).
- * 
+ *
  * Present on `email.tls_report` events: a remote MTA's report of TLS negotiation results for mail sent to your domain. Absent on all other event types.
  */
 export interface TlsReportAnalysis {
@@ -823,7 +823,7 @@ receiving_mx_hostname: (string | null)
 }
 /**
  * DMARC aggregate report analysis (RFC 7489).
- * 
+ *
  * Present on `email.dmarc_report` events: a receiver's periodic aggregate report of DMARC authentication results for your domain. Absent on all other event types.
  */
 export interface DmarcReportAnalysis {
@@ -898,19 +898,19 @@ header_from: (string | null)
 export interface EmailAuth {
 /**
  * SPF verification result.
- * 
+ *
  * SPF checks if the sending IP is authorized by the envelope sender's domain. "pass" means the IP is authorized; "fail" means it's explicitly not allowed.
  */
 spf: ("pass" | "fail" | "softfail" | "neutral" | "none" | "temperror" | "permerror")
 /**
  * DMARC verification result.
- * 
+ *
  * DMARC passes if either SPF or DKIM passes AND aligns with the From: domain. "pass" means the email is authenticated according to the sender's policy.
  */
 dmarc: ("pass" | "fail" | "none" | "temperror" | "permerror")
 /**
  * DMARC policy from the sender's DNS record.
- * 
+ *
  * - `reject`: Domain wants receivers to reject failing emails
  * - `quarantine`: Domain wants failing emails marked as suspicious
  * - `none`: Domain is monitoring only (no action requested)
@@ -919,25 +919,25 @@ dmarc: ("pass" | "fail" | "none" | "temperror" | "permerror")
 dmarcPolicy: ("reject" | "quarantine" | "none" | null)
 /**
  * The organizational domain used for DMARC lookups.
- * 
+ *
  * For example, if the From: address is `user@mail.example.com`, the DMARC lookup checks `_dmarc.mail.example.com`, then falls back to `_dmarc.example.com`. This field shows which domain's policy was used.
  */
 dmarcFromDomain: (string | null)
 /**
  * Whether SPF aligned with the From: domain for DMARC purposes.
- * 
+ *
  * True if the envelope sender domain matches the From: domain (per alignment mode).
  */
 dmarcSpfAligned: boolean
 /**
  * Whether DKIM aligned with the From: domain for DMARC purposes.
- * 
+ *
  * True if at least one DKIM signature's domain matches the From: domain.
  */
 dmarcDkimAligned: boolean
 /**
  * Whether DMARC SPF alignment mode is strict.
- * 
+ *
  * - `true`: Strict alignment required (exact domain match)
  * - `false`: Relaxed alignment allowed (organizational domain match)
  * - `null`: No DMARC record found
@@ -945,7 +945,7 @@ dmarcDkimAligned: boolean
 dmarcSpfStrict: (boolean | null)
 /**
  * Whether DMARC DKIM alignment mode is strict.
- * 
+ *
  * - `true`: Strict alignment required (exact domain match)
  * - `false`: Relaxed alignment allowed (organizational domain match)
  * - `null`: No DMARC record found
@@ -953,16 +953,16 @@ dmarcSpfStrict: (boolean | null)
 dmarcDkimStrict: (boolean | null)
 /**
  * All DKIM signatures found in the email with their verification results.
- * 
+ *
  * May be empty if no DKIM signatures were present.
  */
 dkimSignatures: DkimSignature[]
 }
 /**
  * Details about a single DKIM signature found in the email.
- * 
+ *
  * An email may have multiple DKIM signatures (e.g., one from the sending domain and one from the ESP). Each signature is verified independently.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "DkimSignature".
  */
@@ -973,7 +973,7 @@ export interface DkimSignature {
 domain: string
 /**
  * The DKIM selector used to locate the public key (s= tag). Combined with the domain to form the DNS lookup: `selector._domainkey.domain`
- * 
+ *
  * Optional in self-hosted environments where the milter may not provide selector info.
  */
 selector: (string | null)
@@ -983,7 +983,7 @@ selector: (string | null)
 result: ("pass" | "fail" | "temperror" | "permerror")
 /**
  * Whether this signature's domain aligns with the From: domain (for DMARC).
- * 
+ *
  * Alignment can be "strict" (exact match) or "relaxed" (organizational domain match). For example, if From: is `user@sub.example.com` and DKIM is signed by `example.com`:
  * - Relaxed alignment: true (same organizational domain)
  * - Strict alignment: false (not exact match)
@@ -991,43 +991,43 @@ result: ("pass" | "fail" | "temperror" | "permerror")
 aligned: boolean
 /**
  * Key size in bits (e.g., 1024, 2048). Null if the key size couldn't be determined.
- * 
+ *
  * Optional in self-hosted environments.
  */
 keyBits: (number | null)
 /**
  * Signing algorithm (e.g., "rsa-sha256", "ed25519-sha256").
- * 
+ *
  * Optional in self-hosted environments.
  */
 algo: (string | null)
 }
 /**
  * Webhook payload for the `email.received` event.
- * 
+ *
  * This is delivered to your webhook endpoint when Primitive receives an email matching your domain configuration.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "EmailReceivedEvent".
  */
 export interface EmailReceivedEvent1 {
 /**
  * Unique delivery event ID.
- * 
+ *
  * This ID is stable across retries to the same endpoint - use it as your idempotency/dedupe key. Note that the same email delivered to different endpoints will have different event IDs.
- * 
+ *
  * Format: `evt_` prefix followed by a SHA-256 hash (64 hex characters). Example: `evt_a1b2c3d4e5f6...` (68 characters total)
  */
 id: string
 /**
  * Event type identifier.
- * 
+ *
  * - `email.received` - A normal inbound email.
  * - `email.bounced` - A delivery status notification (DSN) reporting that a message delivery failed. Carries `email.analysis.bounce`.
  * - `email.tls_report` - An SMTP TLS report (RFC 8460). Carries `email.analysis.tls_report`.
  * - `email.dmarc_report` - A DMARC aggregate report (RFC 7489). Carries `email.analysis.dmarc_report`.
  * - `email.dmarc_failure` - A DMARC failure (forensic) report.
- * 
+ *
  * Machine-generated mail (bounces and the report types above) is delivered under its own event type rather than `email.received`, so an endpoint subscribed only to `email.received` receives just normal inbound mail. The payload shape is otherwise identical across event types; the type-specific details live under `email.analysis`.
  */
 event: ("email.received" | "email.bounced" | "email.tls_report" | "email.dmarc_report" | "email.dmarc_failure")
@@ -1083,7 +1083,7 @@ helo: (string | null)
 mail_from: string
 /**
  * SMTP envelope recipients (RCPT TO commands). All addresses that received this email in a single delivery.
- * 
+ *
  * @minItems 1
  */
 rcpt_to: [string, ...(string)[]]
@@ -1118,13 +1118,13 @@ date: (string | null)
  */
 content: {
 /**
- * Raw email in RFC 5322 format. May be inline (base64) or download-only depending on size.
+ * Raw MIME is null for address-scoped listeners. Use email.parsed for message content.
  */
-raw: (RawContentInline | RawContentDownloadOnly)
+raw: (RawContent | null)
 /**
- * Download information for the raw email. Always present, even if raw content is inline.
+ * Raw download information. Null for address-scoped listeners, which do not receive bearer download links.
  */
-download: {
+download: ({
 /**
  * URL to download the raw email as-is in RFC 5322 format. Managed Primitive always issues HTTPS. Self-host deployments may issue HTTP URLs that resolve inside the operator's network (e.g. `http://localhost:4001/...`). Receivers that want to refuse plaintext downloads should check the scheme explicitly.
  */
@@ -1133,7 +1133,7 @@ url: string
  * ISO 8601 timestamp (UTC) when this URL expires. Download before this time or the URL will return 403.
  */
 expires_at: string
-}
+} | null)
 }
 /**
  * Parsed email content (body text, HTML, attachments). Check `status` to determine if parsing succeeded.
@@ -1145,7 +1145,7 @@ auth: EmailAuth
 }
 /**
  * The recipient-routing decision for an inbound email: which endpoint it resolved to and why. Present on the event only when recipient routing ran for the organization.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "RoutingDecision".
  */
@@ -1177,7 +1177,7 @@ default_scope?: ("domain" | "org" | null)
 }
 /**
  * Error details when email parsing fails.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ParsedError".
  */
@@ -1199,20 +1199,20 @@ retryable: boolean
 }
 /**
  * Email analysis and classification results.
- * 
+ *
  * All properties in this object are optional. Which fields are present depends on the analysis pipeline processing the email. Primitive's managed service populates all fields. Self-hosted or third-party deployments may include some, all, or none of these fields depending on their pipeline configuration.
- * 
+ *
  * When a field is absent, it means that particular analysis was not performed, not that the analysis produced no results. For example, a missing `spamassassin` field means SpamAssassin was not run, not that the email scored 0.
- * 
+ *
  * These fields may be omitted from the payload entirely but must not be set to null.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "EmailAnalysis".
  */
 export interface EmailAnalysis1 {
 /**
  * SpamAssassin analysis results.
- * 
+ *
  * Optional. Present when the email was processed by a SpamAssassin-equipped pipeline (always present in Primitive's managed service). When absent, spam scoring was not performed on this email.
  */
 spamassassin?: {
@@ -1228,7 +1228,7 @@ dmarc_report?: DmarcReportAnalysis
 }
 /**
  * Parsed delivery status notification (bounce). Present as `email.analysis.bounce` on `email.bounced` events.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "BounceAnalysis".
  */
@@ -1284,7 +1284,7 @@ reasons: string[]
 }
 /**
  * Parsed SMTP TLS report (RFC 8460). Present as `email.analysis.tls_report` on `email.tls_report` events.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "TlsReportAnalysis".
  */
@@ -1315,7 +1315,7 @@ policies: TlsReportPolicy[]
 }
 /**
  * Parsed DMARC aggregate report (RFC 7489). Present as `email.analysis.dmarc_report` on `email.dmarc_report` events.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "DmarcReportAnalysis".
  */
@@ -1366,7 +1366,7 @@ records: DmarcRecord[]
 }
 /**
  * Forward detection and analysis results.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ForwardAnalysis".
  */
@@ -1394,7 +1394,7 @@ attachments_limit: (number | null)
 }
 /**
  * Verification result for a forwarded email.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "ForwardVerification".
  */
@@ -1422,28 +1422,28 @@ dmarc_policy: ("reject" | "quarantine" | "none" | null)
 }
 /**
  * Email authentication results for SPF, DKIM, and DMARC.
- * 
+ *
  * Use `validateEmailAuth()` to compute a verdict based on these results.
- * 
+ *
  * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
  * via the `definition` "EmailAuth".
  */
 export interface EmailAuth1 {
 /**
  * SPF verification result.
- * 
+ *
  * SPF checks if the sending IP is authorized by the envelope sender's domain. "pass" means the IP is authorized; "fail" means it's explicitly not allowed.
  */
 spf: ("pass" | "fail" | "softfail" | "neutral" | "none" | "temperror" | "permerror")
 /**
  * DMARC verification result.
- * 
+ *
  * DMARC passes if either SPF or DKIM passes AND aligns with the From: domain. "pass" means the email is authenticated according to the sender's policy.
  */
 dmarc: ("pass" | "fail" | "none" | "temperror" | "permerror")
 /**
  * DMARC policy from the sender's DNS record.
- * 
+ *
  * - `reject`: Domain wants receivers to reject failing emails
  * - `quarantine`: Domain wants failing emails marked as suspicious
  * - `none`: Domain is monitoring only (no action requested)
@@ -1452,25 +1452,25 @@ dmarc: ("pass" | "fail" | "none" | "temperror" | "permerror")
 dmarcPolicy: ("reject" | "quarantine" | "none" | null)
 /**
  * The organizational domain used for DMARC lookups.
- * 
+ *
  * For example, if the From: address is `user@mail.example.com`, the DMARC lookup checks `_dmarc.mail.example.com`, then falls back to `_dmarc.example.com`. This field shows which domain's policy was used.
  */
 dmarcFromDomain: (string | null)
 /**
  * Whether SPF aligned with the From: domain for DMARC purposes.
- * 
+ *
  * True if the envelope sender domain matches the From: domain (per alignment mode).
  */
 dmarcSpfAligned: boolean
 /**
  * Whether DKIM aligned with the From: domain for DMARC purposes.
- * 
+ *
  * True if at least one DKIM signature's domain matches the From: domain.
  */
 dmarcDkimAligned: boolean
 /**
  * Whether DMARC SPF alignment mode is strict.
- * 
+ *
  * - `true`: Strict alignment required (exact domain match)
  * - `false`: Relaxed alignment allowed (organizational domain match)
  * - `null`: No DMARC record found
@@ -1478,7 +1478,7 @@ dmarcDkimAligned: boolean
 dmarcSpfStrict: (boolean | null)
 /**
  * Whether DMARC DKIM alignment mode is strict.
- * 
+ *
  * - `true`: Strict alignment required (exact domain match)
  * - `false`: Relaxed alignment allowed (organizational domain match)
  * - `null`: No DMARC record found
@@ -1486,7 +1486,7 @@ dmarcSpfStrict: (boolean | null)
 dmarcDkimStrict: (boolean | null)
 /**
  * All DKIM signatures found in the email with their verification results.
- * 
+ *
  * May be empty if no DKIM signatures were present.
  */
 dkimSignatures: DkimSignature[]

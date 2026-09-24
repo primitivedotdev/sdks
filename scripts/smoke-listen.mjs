@@ -26,7 +26,14 @@ const api = createServer(async (request, response) => {
   const input = raw ? JSON.parse(raw) : null;
   requests.push({ path: request.url, input });
   let data;
-  if (request.url === "/v1/account") data = { id: account };
+  if (request.url === "/v1/account") {
+    if (request.headers.authorization?.startsWith("Bearer pconn_")) {
+      response.writeHead(403, { "content-type": "application/json" });
+      response.end(JSON.stringify({ success: false, error: { code: "agent_connection_scope_forbidden" } }));
+      return;
+    }
+    data = { id: account };
+  }
   else if (request.url === "/v1/endpoints") {
     assert.equal(input.kind, "pull");
     let entry = destinations.get(input.name);
@@ -61,7 +68,7 @@ sockets.on("connection", (socket, request) => {
   socket.on("message", (raw) => {
     const frame = JSON.parse(raw.toString());
     if (frame.type === "authenticate") {
-      assert.equal(frame.token, "fixture-key");
+      assert.ok(frame.token === "fixture-key" || frame.token === `pconn_${"a".repeat(64)}`);
       socket.send(JSON.stringify({ type: "ready", protocol: "primitive.events.v1" }));
     } else if (frame.type === "receive") {
       if (emptyStream) return;
@@ -101,6 +108,14 @@ try {
     assert.match(result.stdout + result.stderr, /listen/);
   }
   let before = requests.length;
+  const connected = await run(["listen", "--once", "--timeout", "10"], { env: { ...env, PRIMITIVE_API_KEY: `pconn_${"a".repeat(64)}` } });
+  assert.equal(connected.code, 0, connected.stderr);
+  assert.equal(connected.stdout.trim(), body);
+  assert.equal(requests.slice(before).some(request => request.path === "/v1/account"), false);
+  requests.length = 0;
+  destinations.clear();
+  completions.length = 0;
+  before = requests.length;
   const invalid = await run(["listen", "--transport", "poll", "--exec", "unused", "--forward-to", "http://localhost:1234"]);
   assert.notEqual(invalid.code, 0);
   assert.equal(requests.length, before, "invalid modes must fail before authentication");

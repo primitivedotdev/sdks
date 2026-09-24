@@ -914,15 +914,15 @@ class Content(BaseModel):
         extra="allow",
     )
     raw: Annotated[
-        RawContent,
+        RawContent | None,
         Field(
-            description="Raw email in RFC 5322 format. May be inline (base64) or download-only depending on size."
+            description="Raw MIME is null for address-scoped listeners. Use email.parsed for message content."
         ),
     ]
     download: Annotated[
-        Download,
+        Download | None,
         Field(
-            description="Download information for the raw email. Always present, even if raw content is inline."
+            description="Raw download information. Null for address-scoped listeners, which do not receive bearer download links."
         ),
     ]
 

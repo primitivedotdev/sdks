@@ -394,6 +394,9 @@ func invalidAuthInputError(err error) *WebhookValidationError {
 }
 
 func IsDownloadExpired(event any, nowMillis ...int64) (bool, error) {
+	if value, ok := getMapValue(event, "email", "content", "download"); ok && value == nil {
+		return true, nil
+	}
 	expiresAt, ok := getString(event, "email", "content", "download", "expires_at")
 	if !ok {
 		return false, missingPayloadFieldError("email.content.download.expires_at")
@@ -415,6 +418,9 @@ func IsDownloadExpired(event any, nowMillis ...int64) (bool, error) {
 }
 
 func GetDownloadTimeRemaining(event any, nowMillis ...int64) (int64, error) {
+	if value, ok := getMapValue(event, "email", "content", "download"); ok && value == nil {
+		return 0, nil
+	}
 	expiresAt, ok := getString(event, "email", "content", "download", "expires_at")
 	if !ok {
 		return 0, missingPayloadFieldError("email.content.download.expires_at")
@@ -444,6 +450,9 @@ func parseRFC3339Timestamp(value string) (time.Time, error) {
 }
 
 func IsRawIncluded(event any) (bool, error) {
+	if value, ok := getMapValue(event, "email", "content", "raw"); ok && value == nil {
+		return false, nil
+	}
 	included, ok := getBool(event, "email", "content", "raw", "included")
 	if !ok {
 		return false, missingPayloadFieldError("email.content.raw.included")
@@ -452,6 +461,9 @@ func IsRawIncluded(event any) (bool, error) {
 }
 
 func DecodeRawEmail(event any, verify ...bool) ([]byte, error) {
+	if value, ok := getMapValue(event, "email", "content", "raw"); ok && value == nil {
+		return nil, NewRawEmailDecodeError("NOT_INCLUDED", "Raw email is unavailable for address-scoped events. Use email.parsed.")
+	}
 	included, ok := getBool(event, "email", "content", "raw", "included")
 	if !ok {
 		return nil, missingPayloadFieldError("email.content.raw.included")

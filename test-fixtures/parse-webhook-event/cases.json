@@ -1,6 +1,17 @@
 {
   "cases": [
     {
+      "name": "address_scoped_email",
+      "input_fixture": [
+        "webhook",
+        "address-scoped-email.json"
+      ],
+      "expected": {
+        "kind": "email.received",
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
+    },
+    {
       "name": "valid_known_event",
       "input_fixture": ["webhook", "valid-email-received.json"],
       "expected": {

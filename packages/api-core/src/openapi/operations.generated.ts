@@ -4841,7 +4841,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-endpoint",
-    "description": "Creates a new webhook endpoint. If a deactivated endpoint\nwith the same URL and domain exists, it is reactivated\ninstead. Subject to plan limits on the number of active\nendpoints.\n\n**Signing is account-scoped, not per-endpoint.** This call\ndoes not return any signing material; every endpoint on the\naccount uses the same webhook secret, fetched via\n`GET /account/webhook-secret`. See the API-level \"Webhook\nsigning\" section for the full wire format (header name,\nsigned string, hash algo, secret format, tolerance) and a\nlanguage-agnostic verification recipe.\n\nAfter creating the endpoint, fire a test delivery against\nit via `POST /endpoints/{id}/test` to confirm your verifier\naccepts the signature.\n\n\nFor local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named creation resumes the same active destination; omitted filters preserve its selection, while conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently ready eligible event types. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull receiving.",
+    "description": "Creates a new webhook endpoint. If a deactivated endpoint\nwith the same URL and domain exists, it is reactivated\ninstead. Subject to plan limits on the number of active\nendpoints.\n\n**Signing is account-scoped, not per-endpoint.** This call\ndoes not return any signing material; every endpoint on the\naccount uses the same webhook secret, fetched via\n`GET /account/webhook-secret`. See the API-level \"Webhook\nsigning\" section for the full wire format (header name,\nsigned string, hash algo, secret format, tolerance) and a\nlanguage-agnostic verification recipe.\n\nAfter creating the endpoint, fire a test delivery against\nit via `POST /endpoints/{id}/test` to confirm your verifier\naccepts the signature.\n\n\nFor local receiving, use kind=pull and a stable name, without url, function_id or domain_id. Named creation resumes the same active destination; omitted filters preserve its selection, while conflicting supplied configuration returns 409. New unfiltered destinations receive all subsequently ready eligible event types within their credential scope. Connected-agent credentials automatically create private subscriptions restricted to inbound email for their assigned address. Names are isolated per credential; revocation or replacement deletes its subscriptions. Address-scoped events contain parsed mail without raw MIME, signed download links, routing metadata, or sibling envelope recipients. Pull destinations do not occupy HTTP routing slots. Signing-secret setup and a test HTTP delivery are not required for pull receiving.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createEndpoint",
@@ -4914,6 +4914,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "responseSchema": {
       "type": "object",
       "properties": {
+        "recipient": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Server-enforced recipient for an address-scoped pull subscription; null for account-wide receiving."
+        },
         "receiver_capabilities": {
           "type": "object",
           "properties": {
@@ -5127,6 +5134,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "items": {
         "type": "object",
         "properties": {
+          "recipient": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Server-enforced recipient for an address-scoped pull subscription; null for account-wide receiving."
+          },
           "receiver_capabilities": {
             "type": "object",
             "properties": {
@@ -5703,6 +5717,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "responseSchema": {
       "type": "object",
       "properties": {
+        "recipient": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Server-enforced recipient for an address-scoped pull subscription; null for account-wide receiving."
+        },
         "receiver_capabilities": {
           "type": "object",
           "properties": {
