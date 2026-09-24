@@ -152,7 +152,7 @@ class _Connection:
         self.transport, self.socket_factory = transport, socket_factory
         self._status_callback, self.on_gap = status, on_gap
         self.socket: EventSocket | None = None
-        self.account_id: object = None
+        self.origin: str | None = None
         self.status = EventStatus("ready")
         self.gaps = -1
 
@@ -192,10 +192,11 @@ class _Connection:
     async def open(self) -> None:
         if self.transport == "poll" or self.socket:
             return
-        account_id = _object(await self.request("account")).get("id")
-        if not account_id or (self.account_id and account_id != self.account_id):
+        origin = str(self.client.base_url)
+        if self.origin is not None and self.origin != origin:
             raise EventReceiverError("identity_changed", 403)
-        self.account_id = account_id
+        self.origin = origin
+        # The handshake checks this exact subscription's credential scope.
         url = urlsplit(
             str(self.client.base_url.join(f"endpoints/{self.endpoint}/stream"))
         )

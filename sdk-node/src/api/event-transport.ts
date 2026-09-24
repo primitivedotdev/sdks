@@ -1,7 +1,6 @@
 import {
   type CompleteWebhookInput,
   completeWebhookEvent,
-  getAccount,
   type PrimitiveApiClient,
   type PullWebhookResponse,
   pullWebhookEvent,
@@ -151,7 +150,7 @@ export class EventConnection {
     resolve(value: unknown): void;
     reject(error: unknown): void;
   };
-  private accountId?: string;
+  private origin?: string;
   private touch?: () => void;
   constructor(
     private readonly client: PrimitiveApiClient["client"],
@@ -175,25 +174,17 @@ export class EventConnection {
   async open(signal: AbortSignal): Promise<void> {
     if (this.options.transport === "poll" || this.socket?.readyState === 1)
       return;
-    const account = unwrap(
-      await getAccount({
-        client: this.client,
-        responseStyle: "fields",
-        throwOnError: false,
-        signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
-      }),
-    );
-    if (
-      !account.data?.id ||
-      (this.accountId && account.data.id !== this.accountId)
-    )
+    const config = this.client.getConfig();
+    if (this.origin !== undefined && this.origin !== config.baseUrl)
       throw new EventReceiverError(
-        "The authenticated account changed; restart the receiver",
+        "The API environment changed; restart the receiver",
         "identity_changed",
         403,
       );
-    this.accountId = account.data.id;
-    const config = this.client.getConfig();
+    this.origin = config.baseUrl;
+    // The server authenticates the credential against this exact subscription
+    // during the handshake and again on receive/completion. No account access
+    // is needed, including when reconnecting an address-scoped credential.
     const auth =
       typeof config.auth === "function"
         ? await config.auth({ type: "http", scheme: "bearer" })

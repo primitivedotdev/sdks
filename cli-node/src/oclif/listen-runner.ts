@@ -402,6 +402,10 @@ export async function runListen(options: ListenOptions): Promise<number> {
         delivery_id: delivery.delivery_id,
         lease_token: delivery.lease_token,
       };
+      // Forwarding acknowledges delivery; an address grant never authorizes
+      // deleting canonical mail, even if the local server requests it.
+      if (endpoint.recipient && completion.mode === "http")
+        completion.confirmed = false;
       try {
         // Keep this evidence in memory until confirmed. Never rerun the hook to retry an acknowledgement.
         const receipt = await retry(async () => {

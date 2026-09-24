@@ -227,6 +227,14 @@ async def test_websocket_reconnect_retries_receipt_without_receiving_again() -> 
             await socket.close()
 
     async def fetch(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/account"):
+            return httpx.Response(
+                403,
+                json={
+                    "success": False,
+                    "error": {"code": "agent_connection_scope_forbidden"},
+                },
+            )
         data = (
             {"id": "account"}
             if request.url.path.endswith("/account")

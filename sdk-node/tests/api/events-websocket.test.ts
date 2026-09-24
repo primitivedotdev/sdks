@@ -13,6 +13,16 @@ it("receives over WebSocket by default and retries a lost receipt without anothe
   const completions: unknown[] = [];
   let deliveries = 0;
   const server = createServer((request, response) => {
+    if (request.url?.endsWith("/account")) {
+      response.writeHead(403, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          success: false,
+          error: { code: "agent_connection_scope_forbidden" },
+        }),
+      );
+      return;
+    }
     const data = request.url?.endsWith("/account")
       ? { id: "account" }
       : {

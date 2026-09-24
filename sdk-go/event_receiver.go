@@ -196,15 +196,14 @@ type eventPacket struct {
 }
 
 type eventConnection struct {
-	api       receiverAPI
-	endpoint  string
-	options   EventOptions
-	socket    atomic.Pointer[websocket.Conn]
-	reads     <-chan eventPacket
-	accountID string
-	origin    string
-	status    EventStatus
-	gaps      int
+	api      receiverAPI
+	endpoint string
+	options  EventOptions
+	socket   atomic.Pointer[websocket.Conn]
+	reads    <-chan eventPacket
+	origin   string
+	status   EventStatus
+	gaps     int
 }
 
 func (c *eventConnection) close() {
@@ -251,16 +250,7 @@ func (c *eventConnection) open(ctx context.Context) error {
 	if c.options.Transport == "poll" || c.socket.Load() != nil {
 		return nil
 	}
-	var account struct {
-		ID string `json:"id"`
-	}
-	if err := c.request(ctx, "account", nil, &account); err != nil {
-		return err
-	}
-	if account.ID == "" || (c.accountID != "" && c.accountID != account.ID) {
-		return &EventReceiverError{Code: "identity_changed", Status: 403}
-	}
-	c.accountID = account.ID
+	// The handshake checks the credential against this exact subscription.
 	base, token, err := c.api.ReceiverConnection(ctx)
 	if err != nil {
 		return err
