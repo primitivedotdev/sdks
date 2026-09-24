@@ -507,6 +507,16 @@ type Invoker interface {
 	//
 	// GET /emails/{id}/conversation
 	GetConversation(ctx context.Context, params GetConversationParams) (GetConversationRes, error)
+	// GetCreditBalance invokes getCreditBalance operation.
+	//
+	// Read the organization credit position. `prepaid_credit` is the prepaid
+	// usage credit (paid top-ups, redeemed credit codes and granted credit)
+	// that can still pay for usage. `budget` is the active agent spending
+	// budget an operator funded for top-ups, or null when there is none.
+	// Amounts are strings of integer micros (1 USD = 1000000 micros).
+	//
+	// GET /credits/balance
+	GetCreditBalance(ctx context.Context) (GetCreditBalanceRes, error)
 	// GetEmail invokes getEmail operation.
 	//
 	// Returns the full record for an inbound email received at one
@@ -957,6 +967,23 @@ type Invoker interface {
 	//
 	// POST /endpoints/{id}/pull
 	PullWebhookEvent(ctx context.Context, request *PullWebhookInput, params PullWebhookEventParams) (PullWebhookEventRes, error)
+	// RedeemCreditCode invokes redeemCreditCode operation.
+	//
+	// Redeem a credit code for the authenticated organization. The credit is
+	// added to the organization prepaid credit and shows in
+	// `GET /credits/balance` under `prepaid_credit`.
+	// Redeeming requires an organization owner or admin. An API key redeems
+	// with the authority of the user who created it, based on that user's
+	// current role; a key without that authority gets the same
+	// `credit_code_invalid` refusal as an unknown code.
+	// The `Idempotency-Key` header is required. Retrying with the same key
+	// and code returns the original grant with `replayed: true` and grants
+	// nothing new; the same key with a different code is refused with
+	// `idempotency_key_reused`. Every refusal carries a human-readable
+	// `error.message` that can be shown to the user as is.
+	//
+	// POST /credits/redeem
+	RedeemCreditCode(ctx context.Context, request *RedeemCreditCodeInput, params RedeemCreditCodeParams) (RedeemCreditCodeRes, error)
 	// RegisterPayoutAddress invokes registerPayoutAddress operation.
 	//
 	// Register (or update) the default payout address your org receives x402
@@ -7183,6 +7210,117 @@ func (c *Client) sendGetConversation(ctx context.Context, params GetConversation
 	return result, nil
 }
 
+// GetCreditBalance invokes getCreditBalance operation.
+//
+// Read the organization credit position. `prepaid_credit` is the prepaid
+// usage credit (paid top-ups, redeemed credit codes and granted credit)
+// that can still pay for usage. `budget` is the active agent spending
+// budget an operator funded for top-ups, or null when there is none.
+// Amounts are strings of integer micros (1 USD = 1000000 micros).
+//
+// GET /credits/balance
+func (c *Client) GetCreditBalance(ctx context.Context) (GetCreditBalanceRes, error) {
+	res, err := c.sendGetCreditBalance(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetCreditBalance(ctx context.Context) (res GetCreditBalanceRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getCreditBalance"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/credits/balance"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetCreditBalanceOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/credits/balance"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetCreditBalanceOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetCreditBalanceResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetEmail invokes getEmail operation.
 //
 // Returns the full record for an inbound email received at one
@@ -12872,6 +13010,141 @@ func (c *Client) sendPullWebhookEvent(ctx context.Context, request *PullWebhookI
 
 	stage = "DecodeResponse"
 	result, err := decodePullWebhookEventResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RedeemCreditCode invokes redeemCreditCode operation.
+//
+// Redeem a credit code for the authenticated organization. The credit is
+// added to the organization prepaid credit and shows in
+// `GET /credits/balance` under `prepaid_credit`.
+// Redeeming requires an organization owner or admin. An API key redeems
+// with the authority of the user who created it, based on that user's
+// current role; a key without that authority gets the same
+// `credit_code_invalid` refusal as an unknown code.
+// The `Idempotency-Key` header is required. Retrying with the same key
+// and code returns the original grant with `replayed: true` and grants
+// nothing new; the same key with a different code is refused with
+// `idempotency_key_reused`. Every refusal carries a human-readable
+// `error.message` that can be shown to the user as is.
+//
+// POST /credits/redeem
+func (c *Client) RedeemCreditCode(ctx context.Context, request *RedeemCreditCodeInput, params RedeemCreditCodeParams) (RedeemCreditCodeRes, error) {
+	res, err := c.sendRedeemCreditCode(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendRedeemCreditCode(ctx context.Context, request *RedeemCreditCodeInput, params RedeemCreditCodeParams) (res RedeemCreditCodeRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("redeemCreditCode"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/credits/redeem"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RedeemCreditCodeOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/credits/redeem"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeRedeemCreditCodeRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.IdempotencyKey))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RedeemCreditCodeOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRedeemCreditCodeResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

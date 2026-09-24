@@ -13,6 +13,10 @@ import {
   ConfigSetCommand,
   ConfigUseCommand,
 } from "./commands/config.js";
+import {
+  CreditsBalanceCommand,
+  CreditsRedeemCommand,
+} from "./commands/credits.js";
 import DoctorCommand from "./commands/doctor.js";
 import DomainsZoneFileCommand from "./commands/domains-zone-file.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
@@ -413,6 +417,8 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
 
 const DESCRIBE_OPERATION_ALIASES: Record<string, string> = {
   ...CANONICAL_OPERATION_ALIASES,
+  "credits:balance": "credits:get-credit-balance",
+  "credits:redeem": "credits:redeem-credit-code",
   "domains:zone-file": "domains:download-domain-zone-file",
   "functions:logs": "functions:list-function-logs",
   "memories:delete": "memories:delete-memory",
@@ -453,6 +459,10 @@ const OVERRIDDEN_OPERATION_IDS = new Set<string>([
   // auto-generated wrappers.
   "payments:register-payout-address",
   "payments:pay-challenge",
+  // `credits:redeem-credit-code` is hand-rolled because the redeem route
+  // requires an Idempotency-Key header, which generated wrappers do not send.
+  // The friendly `credits:redeem` shares the same command.
+  "credits:redeem-credit-code",
 ]);
 
 const generatedCommands = Object.fromEntries(
@@ -659,6 +669,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   "memories:get": MemoriesGetCommand,
   "memories:delete": MemoriesDeleteCommand,
   "memories:search": MemoriesSearchCommand,
+  // Credit codes and balance. `credits:redeem <code>` generates the required
+  // Idempotency-Key and prints the grant or the refusal message;
+  // `credits:balance` prints a readable summary. The generated
+  // credits:get-credit-balance wrapper stays available for raw JSON.
+  "credits:redeem": CreditsRedeemCommand,
+  "credits:redeem-credit-code": CreditsRedeemCommand,
+  "credits:balance": CreditsBalanceCommand,
   ...generatedCommandAliases,
   ...generatedCommands,
   // `functions:logs` is the human/agent-friendly log viewer: compact

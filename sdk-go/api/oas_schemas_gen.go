@@ -5125,6 +5125,271 @@ type CreateWakeScheduleUnauthorized ErrorResponse
 
 func (*CreateWakeScheduleUnauthorized) createWakeScheduleRes() {}
 
+// Ref: #/components/schemas/CreditBalance
+type CreditBalance struct {
+	// The active agent spending budget an operator funded for top-ups,
+	// or null when there is none.
+	Budget NilCreditBalanceBudget `json:"budget"`
+	// Prepaid usage credit (top-ups, redeemed credit codes and granted
+	// credit) that can still pay for usage, or null when there is none.
+	// Omitted when an exact figure cannot be given right now; the budget
+	// is still returned.
+	PrepaidCredit OptNilCreditBalancePrepaidCredit `json:"prepaid_credit"`
+}
+
+// GetBudget returns the value of Budget.
+func (s *CreditBalance) GetBudget() NilCreditBalanceBudget {
+	return s.Budget
+}
+
+// GetPrepaidCredit returns the value of PrepaidCredit.
+func (s *CreditBalance) GetPrepaidCredit() OptNilCreditBalancePrepaidCredit {
+	return s.PrepaidCredit
+}
+
+// SetBudget sets the value of Budget.
+func (s *CreditBalance) SetBudget(val NilCreditBalanceBudget) {
+	s.Budget = val
+}
+
+// SetPrepaidCredit sets the value of PrepaidCredit.
+func (s *CreditBalance) SetPrepaidCredit(val OptNilCreditBalancePrepaidCredit) {
+	s.PrepaidCredit = val
+}
+
+// The active agent spending budget an operator funded for top-ups,
+// or null when there is none.
+type CreditBalanceBudget struct {
+	// Currency of the budget, for example `usd`.
+	Currency string `json:"currency"`
+	// Total allowance the operator funded, in micros.
+	MaxAmountMicros string `json:"max_amount_micros"`
+	// How much of the allowance has been drawn down, in micros.
+	SpentMicros string `json:"spent_micros"`
+	// `max_amount_micros - spent_micros`, floored at zero.
+	RemainingMicros string `json:"remaining_micros"`
+	// Largest single top-up allowed, in micros, or null for no per-top-up cap.
+	PerTopupCapMicros NilString `json:"per_topup_cap_micros"`
+	// When the allowance expires, or null for no expiry.
+	ExpiresAt NilDateTime `json:"expires_at"`
+	// Budget status. An active budget reads `active`.
+	Status string `json:"status"`
+}
+
+// GetCurrency returns the value of Currency.
+func (s *CreditBalanceBudget) GetCurrency() string {
+	return s.Currency
+}
+
+// GetMaxAmountMicros returns the value of MaxAmountMicros.
+func (s *CreditBalanceBudget) GetMaxAmountMicros() string {
+	return s.MaxAmountMicros
+}
+
+// GetSpentMicros returns the value of SpentMicros.
+func (s *CreditBalanceBudget) GetSpentMicros() string {
+	return s.SpentMicros
+}
+
+// GetRemainingMicros returns the value of RemainingMicros.
+func (s *CreditBalanceBudget) GetRemainingMicros() string {
+	return s.RemainingMicros
+}
+
+// GetPerTopupCapMicros returns the value of PerTopupCapMicros.
+func (s *CreditBalanceBudget) GetPerTopupCapMicros() NilString {
+	return s.PerTopupCapMicros
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *CreditBalanceBudget) GetExpiresAt() NilDateTime {
+	return s.ExpiresAt
+}
+
+// GetStatus returns the value of Status.
+func (s *CreditBalanceBudget) GetStatus() string {
+	return s.Status
+}
+
+// SetCurrency sets the value of Currency.
+func (s *CreditBalanceBudget) SetCurrency(val string) {
+	s.Currency = val
+}
+
+// SetMaxAmountMicros sets the value of MaxAmountMicros.
+func (s *CreditBalanceBudget) SetMaxAmountMicros(val string) {
+	s.MaxAmountMicros = val
+}
+
+// SetSpentMicros sets the value of SpentMicros.
+func (s *CreditBalanceBudget) SetSpentMicros(val string) {
+	s.SpentMicros = val
+}
+
+// SetRemainingMicros sets the value of RemainingMicros.
+func (s *CreditBalanceBudget) SetRemainingMicros(val string) {
+	s.RemainingMicros = val
+}
+
+// SetPerTopupCapMicros sets the value of PerTopupCapMicros.
+func (s *CreditBalanceBudget) SetPerTopupCapMicros(val NilString) {
+	s.PerTopupCapMicros = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *CreditBalanceBudget) SetExpiresAt(val NilDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetStatus sets the value of Status.
+func (s *CreditBalanceBudget) SetStatus(val string) {
+	s.Status = val
+}
+
+// Prepaid usage credit (top-ups, redeemed credit codes and granted
+// credit) that can still pay for usage, or null when there is none.
+// Omitted when an exact figure cannot be given right now; the budget
+// is still returned.
+type CreditBalancePrepaidCredit struct {
+	// Currency of the credit, which is the organization billing currency.
+	Currency string `json:"currency"`
+	// What the credit can still pay for, in micros.
+	RemainingMicros string `json:"remaining_micros"`
+	// Earliest expiry among credits with a balance, or null when none of them expires.
+	NextExpiresAt NilDateTime `json:"next_expires_at"`
+}
+
+// GetCurrency returns the value of Currency.
+func (s *CreditBalancePrepaidCredit) GetCurrency() string {
+	return s.Currency
+}
+
+// GetRemainingMicros returns the value of RemainingMicros.
+func (s *CreditBalancePrepaidCredit) GetRemainingMicros() string {
+	return s.RemainingMicros
+}
+
+// GetNextExpiresAt returns the value of NextExpiresAt.
+func (s *CreditBalancePrepaidCredit) GetNextExpiresAt() NilDateTime {
+	return s.NextExpiresAt
+}
+
+// SetCurrency sets the value of Currency.
+func (s *CreditBalancePrepaidCredit) SetCurrency(val string) {
+	s.Currency = val
+}
+
+// SetRemainingMicros sets the value of RemainingMicros.
+func (s *CreditBalancePrepaidCredit) SetRemainingMicros(val string) {
+	s.RemainingMicros = val
+}
+
+// SetNextExpiresAt sets the value of NextExpiresAt.
+func (s *CreditBalancePrepaidCredit) SetNextExpiresAt(val NilDateTime) {
+	s.NextExpiresAt = val
+}
+
+// Ref: #/components/schemas/CreditRedemption
+type CreditRedemption struct {
+	// Identifier of the redemption.
+	RedemptionID string `json:"redemption_id"`
+	// Credit granted, in micros of `currency` (1 USD = 1000000 micros).
+	AmountMicros string `json:"amount_micros"`
+	// Currency of the granted credit, for example `usd`.
+	Currency string `json:"currency"`
+	// When the credit was granted.
+	GrantedAt time.Time `json:"granted_at"`
+	// When the granted credit expires, or null when it does not expire.
+	ExpiresAt NilDateTime `json:"expires_at"`
+	// Customer-facing label of the promotion, when it has one.
+	Label NilString `json:"label"`
+	// True when this Idempotency-Key already redeemed this code and the
+	// original grant is returned. No second grant is made.
+	Replayed bool `json:"replayed"`
+	// Human-readable summary of the grant, suitable to show as is.
+	Message string `json:"message"`
+}
+
+// GetRedemptionID returns the value of RedemptionID.
+func (s *CreditRedemption) GetRedemptionID() string {
+	return s.RedemptionID
+}
+
+// GetAmountMicros returns the value of AmountMicros.
+func (s *CreditRedemption) GetAmountMicros() string {
+	return s.AmountMicros
+}
+
+// GetCurrency returns the value of Currency.
+func (s *CreditRedemption) GetCurrency() string {
+	return s.Currency
+}
+
+// GetGrantedAt returns the value of GrantedAt.
+func (s *CreditRedemption) GetGrantedAt() time.Time {
+	return s.GrantedAt
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *CreditRedemption) GetExpiresAt() NilDateTime {
+	return s.ExpiresAt
+}
+
+// GetLabel returns the value of Label.
+func (s *CreditRedemption) GetLabel() NilString {
+	return s.Label
+}
+
+// GetReplayed returns the value of Replayed.
+func (s *CreditRedemption) GetReplayed() bool {
+	return s.Replayed
+}
+
+// GetMessage returns the value of Message.
+func (s *CreditRedemption) GetMessage() string {
+	return s.Message
+}
+
+// SetRedemptionID sets the value of RedemptionID.
+func (s *CreditRedemption) SetRedemptionID(val string) {
+	s.RedemptionID = val
+}
+
+// SetAmountMicros sets the value of AmountMicros.
+func (s *CreditRedemption) SetAmountMicros(val string) {
+	s.AmountMicros = val
+}
+
+// SetCurrency sets the value of Currency.
+func (s *CreditRedemption) SetCurrency(val string) {
+	s.Currency = val
+}
+
+// SetGrantedAt sets the value of GrantedAt.
+func (s *CreditRedemption) SetGrantedAt(val time.Time) {
+	s.GrantedAt = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *CreditRedemption) SetExpiresAt(val NilDateTime) {
+	s.ExpiresAt = val
+}
+
+// SetLabel sets the value of Label.
+func (s *CreditRedemption) SetLabel(val NilString) {
+	s.Label = val
+}
+
+// SetReplayed sets the value of Replayed.
+func (s *CreditRedemption) SetReplayed(val bool) {
+	s.Replayed = val
+}
+
+// SetMessage sets the value of Message.
+func (s *CreditRedemption) SetMessage(val string) {
+	s.Message = val
+}
+
 type DecideRegistryRequestConflict ErrorResponse
 
 func (*DecideRegistryRequestConflict) decideRegistryRequestRes() {}
@@ -9667,6 +9932,14 @@ const (
 	ErrorResponseErrorCodeEventPreparationFailed        ErrorResponseErrorCode = "event_preparation_failed"
 	ErrorResponseErrorCodeSubscriptionUnavailable       ErrorResponseErrorCode = "subscription_unavailable"
 	ErrorResponseErrorCodeStaleDelivery                 ErrorResponseErrorCode = "stale_delivery"
+	ErrorResponseErrorCodeIdempotencyKeyRequired        ErrorResponseErrorCode = "idempotency_key_required"
+	ErrorResponseErrorCodeIdempotencyKeyReused          ErrorResponseErrorCode = "idempotency_key_reused"
+	ErrorResponseErrorCodeCreditCodeInvalid             ErrorResponseErrorCode = "credit_code_invalid"
+	ErrorResponseErrorCodeCreditCodeAlreadyRedeemed     ErrorResponseErrorCode = "credit_code_already_redeemed"
+	ErrorResponseErrorCodeCreditCodeNotEligible         ErrorResponseErrorCode = "credit_code_not_eligible"
+	ErrorResponseErrorCodeCreditCodeBalanceCap          ErrorResponseErrorCode = "credit_code_balance_cap"
+	ErrorResponseErrorCodeRateLimited                   ErrorResponseErrorCode = "rate_limited"
+	ErrorResponseErrorCodeServiceUnavailable            ErrorResponseErrorCode = "service_unavailable"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -9744,6 +10017,14 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeEventPreparationFailed,
 		ErrorResponseErrorCodeSubscriptionUnavailable,
 		ErrorResponseErrorCodeStaleDelivery,
+		ErrorResponseErrorCodeIdempotencyKeyRequired,
+		ErrorResponseErrorCodeIdempotencyKeyReused,
+		ErrorResponseErrorCodeCreditCodeInvalid,
+		ErrorResponseErrorCodeCreditCodeAlreadyRedeemed,
+		ErrorResponseErrorCodeCreditCodeNotEligible,
+		ErrorResponseErrorCodeCreditCodeBalanceCap,
+		ErrorResponseErrorCodeRateLimited,
+		ErrorResponseErrorCodeServiceUnavailable,
 	}
 }
 
@@ -9893,6 +10174,22 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeSubscriptionUnavailable:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeStaleDelivery:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeIdempotencyKeyRequired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeIdempotencyKeyReused:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeCreditCodeInvalid:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeCreditCodeAlreadyRedeemed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeCreditCodeNotEligible:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeCreditCodeBalanceCap:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRateLimited:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeServiceUnavailable:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -10118,6 +10415,30 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeStaleDelivery:
 		*s = ErrorResponseErrorCodeStaleDelivery
 		return nil
+	case ErrorResponseErrorCodeIdempotencyKeyRequired:
+		*s = ErrorResponseErrorCodeIdempotencyKeyRequired
+		return nil
+	case ErrorResponseErrorCodeIdempotencyKeyReused:
+		*s = ErrorResponseErrorCodeIdempotencyKeyReused
+		return nil
+	case ErrorResponseErrorCodeCreditCodeInvalid:
+		*s = ErrorResponseErrorCodeCreditCodeInvalid
+		return nil
+	case ErrorResponseErrorCodeCreditCodeAlreadyRedeemed:
+		*s = ErrorResponseErrorCodeCreditCodeAlreadyRedeemed
+		return nil
+	case ErrorResponseErrorCodeCreditCodeNotEligible:
+		*s = ErrorResponseErrorCodeCreditCodeNotEligible
+		return nil
+	case ErrorResponseErrorCodeCreditCodeBalanceCap:
+		*s = ErrorResponseErrorCodeCreditCodeBalanceCap
+		return nil
+	case ErrorResponseErrorCodeRateLimited:
+		*s = ErrorResponseErrorCodeRateLimited
+		return nil
+	case ErrorResponseErrorCodeServiceUnavailable:
+		*s = ErrorResponseErrorCodeServiceUnavailable
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -10268,6 +10589,7 @@ func (s *ErrorResponseHeaders) SetResponse(val ErrorResponse) {
 func (*ErrorResponseHeaders) downloadEmailAttachmentPartRes()   {}
 func (*ErrorResponseHeaders) downloadSentAttachmentPartRes()    {}
 func (*ErrorResponseHeaders) pollCliLoginRes()                  {}
+func (*ErrorResponseHeaders) redeemCreditCodeRes()              {}
 func (*ErrorResponseHeaders) resendAgentSignupVerificationRes() {}
 func (*ErrorResponseHeaders) resendCliSignupVerificationRes()   {}
 
@@ -12745,6 +13067,42 @@ func (*GetConversationOK) getConversationRes() {}
 type GetConversationUnauthorized ErrorResponse
 
 func (*GetConversationUnauthorized) getConversationRes() {}
+
+type GetCreditBalanceForbidden ErrorResponse
+
+func (*GetCreditBalanceForbidden) getCreditBalanceRes() {}
+
+// Merged schema.
+type GetCreditBalanceOK struct {
+	Success bool          `json:"success"`
+	Data    CreditBalance `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetCreditBalanceOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetCreditBalanceOK) GetData() CreditBalance {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetCreditBalanceOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetCreditBalanceOK) SetData(val CreditBalance) {
+	s.Data = val
+}
+
+func (*GetCreditBalanceOK) getCreditBalanceRes() {}
+
+type GetCreditBalanceUnauthorized ErrorResponse
+
+func (*GetCreditBalanceUnauthorized) getCreditBalanceRes() {}
 
 type GetEmailBadRequest ErrorResponse
 
@@ -15735,6 +16093,51 @@ func (o NilBool) Or(d bool) bool {
 	return d
 }
 
+// NewNilCreditBalanceBudget returns new NilCreditBalanceBudget with value set to v.
+func NewNilCreditBalanceBudget(v CreditBalanceBudget) NilCreditBalanceBudget {
+	return NilCreditBalanceBudget{
+		Value: v,
+	}
+}
+
+// NilCreditBalanceBudget is nullable CreditBalanceBudget.
+type NilCreditBalanceBudget struct {
+	Value CreditBalanceBudget
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilCreditBalanceBudget) SetTo(v CreditBalanceBudget) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilCreditBalanceBudget) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilCreditBalanceBudget) SetToNull() {
+	o.Null = true
+	var v CreditBalanceBudget
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilCreditBalanceBudget) Get() (v CreditBalanceBudget, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilCreditBalanceBudget) Or(d CreditBalanceBudget) CreditBalanceBudget {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilDateTime returns new NilDateTime with value set to v.
 func NewNilDateTime(v time.Time) NilDateTime {
 	return NilDateTime{
@@ -18030,6 +18433,69 @@ func (o OptNilBool) Get() (v bool, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilBool) Or(d bool) bool {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilCreditBalancePrepaidCredit returns new OptNilCreditBalancePrepaidCredit with value set to v.
+func NewOptNilCreditBalancePrepaidCredit(v CreditBalancePrepaidCredit) OptNilCreditBalancePrepaidCredit {
+	return OptNilCreditBalancePrepaidCredit{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilCreditBalancePrepaidCredit is optional nullable CreditBalancePrepaidCredit.
+type OptNilCreditBalancePrepaidCredit struct {
+	Value CreditBalancePrepaidCredit
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilCreditBalancePrepaidCredit was set.
+func (o OptNilCreditBalancePrepaidCredit) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilCreditBalancePrepaidCredit) Reset() {
+	var v CreditBalancePrepaidCredit
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilCreditBalancePrepaidCredit) SetTo(v CreditBalancePrepaidCredit) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilCreditBalancePrepaidCredit) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilCreditBalancePrepaidCredit) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v CreditBalancePrepaidCredit
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilCreditBalancePrepaidCredit) Get() (v CreditBalancePrepaidCredit, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilCreditBalancePrepaidCredit) Or(d CreditBalancePrepaidCredit) CreditBalancePrepaidCredit {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -21816,6 +22282,7 @@ func (*RateLimitedHeaders) deleteSentEmailRes()        {}
 func (*RateLimitedHeaders) discardEmailContentRes()    {}
 func (*RateLimitedHeaders) downloadDomainZoneFileRes() {}
 func (*RateLimitedHeaders) getChallengeRes()           {}
+func (*RateLimitedHeaders) getCreditBalanceRes()       {}
 func (*RateLimitedHeaders) getInboxStatusRes()         {}
 func (*RateLimitedHeaders) getMemoryRes()              {}
 func (*RateLimitedHeaders) getSpendPolicyRes()         {}
@@ -22037,6 +22504,75 @@ func (s *RecipientRouteMatchType) UnmarshalText(data []byte) error {
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
+
+type RedeemCreditCodeBadRequest ErrorResponse
+
+func (*RedeemCreditCodeBadRequest) redeemCreditCodeRes() {}
+
+type RedeemCreditCodeConflict ErrorResponse
+
+func (*RedeemCreditCodeConflict) redeemCreditCodeRes() {}
+
+type RedeemCreditCodeForbidden ErrorResponse
+
+func (*RedeemCreditCodeForbidden) redeemCreditCodeRes() {}
+
+// Ref: #/components/schemas/RedeemCreditCodeInput
+type RedeemCreditCodeInput struct {
+	// The credit code to redeem. Surrounding whitespace is ignored; the
+	// rest must be 1 to 256 characters.
+	Code string `json:"code"`
+}
+
+// GetCode returns the value of Code.
+func (s *RedeemCreditCodeInput) GetCode() string {
+	return s.Code
+}
+
+// SetCode sets the value of Code.
+func (s *RedeemCreditCodeInput) SetCode(val string) {
+	s.Code = val
+}
+
+// Merged schema.
+type RedeemCreditCodeOK struct {
+	Success bool             `json:"success"`
+	Data    CreditRedemption `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *RedeemCreditCodeOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *RedeemCreditCodeOK) GetData() CreditRedemption {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *RedeemCreditCodeOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *RedeemCreditCodeOK) SetData(val CreditRedemption) {
+	s.Data = val
+}
+
+func (*RedeemCreditCodeOK) redeemCreditCodeRes() {}
+
+type RedeemCreditCodeServiceUnavailable ErrorResponse
+
+func (*RedeemCreditCodeServiceUnavailable) redeemCreditCodeRes() {}
+
+type RedeemCreditCodeUnauthorized ErrorResponse
+
+func (*RedeemCreditCodeUnauthorized) redeemCreditCodeRes() {}
+
+type RedeemCreditCodeUnprocessableEntity ErrorResponse
+
+func (*RedeemCreditCodeUnprocessableEntity) redeemCreditCodeRes() {}
 
 type RegisterPayoutAddressBadRequest ErrorResponse
 

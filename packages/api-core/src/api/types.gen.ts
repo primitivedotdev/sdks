@@ -502,7 +502,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -1071,6 +1071,111 @@ export type WebhookSecret = {
      * The webhook signing secret value
      */
     secret: string;
+};
+
+export type RedeemCreditCodeInput = {
+    /**
+     * The credit code to redeem. Surrounding whitespace is ignored; the
+     * rest must be 1 to 256 characters.
+     *
+     */
+    code: string;
+};
+
+export type CreditRedemption = {
+    /**
+     * Identifier of the redemption.
+     */
+    redemption_id: string;
+    /**
+     * Credit granted, in micros of `currency` (1 USD = 1000000 micros).
+     */
+    amount_micros: string;
+    /**
+     * Currency of the granted credit, for example `usd`.
+     */
+    currency: string;
+    /**
+     * When the credit was granted.
+     */
+    granted_at: string;
+    /**
+     * When the granted credit expires, or null when it does not expire.
+     */
+    expires_at: string | null;
+    /**
+     * Customer-facing label of the promotion, when it has one.
+     */
+    label: string | null;
+    /**
+     * True when this Idempotency-Key already redeemed this code and the
+     * original grant is returned. No second grant is made.
+     *
+     */
+    replayed: boolean;
+    /**
+     * Human-readable summary of the grant, suitable to show as is.
+     */
+    message: string;
+};
+
+export type CreditBalance = {
+    /**
+     * The active agent spending budget an operator funded for top-ups,
+     * or null when there is none.
+     *
+     */
+    budget: {
+        /**
+         * Currency of the budget, for example `usd`.
+         */
+        currency: string;
+        /**
+         * Total allowance the operator funded, in micros.
+         */
+        max_amount_micros: string;
+        /**
+         * How much of the allowance has been drawn down, in micros.
+         */
+        spent_micros: string;
+        /**
+         * `max_amount_micros - spent_micros`, floored at zero.
+         */
+        remaining_micros: string;
+        /**
+         * Largest single top-up allowed, in micros, or null for no per-top-up cap.
+         */
+        per_topup_cap_micros: string | null;
+        /**
+         * When the allowance expires, or null for no expiry.
+         */
+        expires_at: string | null;
+        /**
+         * Budget status. An active budget reads `active`.
+         */
+        status: string;
+    } | null;
+    /**
+     * Prepaid usage credit (top-ups, redeemed credit codes and granted
+     * credit) that can still pay for usage, or null when there is none.
+     * Omitted when an exact figure cannot be given right now; the budget
+     * is still returned.
+     *
+     */
+    prepaid_credit?: {
+        /**
+         * Currency of the credit, which is the organization billing currency.
+         */
+        currency: string;
+        /**
+         * What the credit can still pay for, in micros.
+         */
+        remaining_micros: string;
+        /**
+         * Earliest expiry among credits with a balance, or null when none of them expires.
+         */
+        next_expires_at: string | null;
+    } | null;
 };
 
 export type InboxStatus = {
@@ -5126,6 +5231,125 @@ export type RotateWebhookSecretResponses = {
 };
 
 export type RotateWebhookSecretResponse = RotateWebhookSecretResponses[keyof RotateWebhookSecretResponses];
+
+export type RedeemCreditCodeData = {
+    body: RedeemCreditCodeInput;
+    headers: {
+        /**
+         * Required client-supplied key: 1 to 200 printable ASCII
+         * characters, without spaces. Use a new key for each code you
+         * redeem and reuse it only to retry the same request.
+         *
+         */
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/credits/redeem';
+};
+
+export type RedeemCreditCodeErrors = {
+    /**
+     * `idempotency_key_required` means the Idempotency-Key header is
+     * missing. `validation_error` means the header is empty, longer than
+     * 200 characters or not printable non-space ASCII, or the body is
+     * invalid.
+     *
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * The organization or user already redeemed this code, or already
+     * redeemed another code in the same exclusive group (a set of codes
+     * of which each organization or user may redeem only one).
+     * `error.code` is `credit_code_already_redeemed`.
+     *
+     */
+    409: ErrorResponse;
+    /**
+     * The code cannot be redeemed. `credit_code_invalid` covers unknown,
+     * expired and exhausted codes and callers without authority to
+     * redeem; `credit_code_not_eligible` means the organization does not
+     * meet the promotion terms; `credit_code_balance_cap` means the
+     * organization already holds the most promotional credit it can;
+     * `idempotency_key_reused` means this Idempotency-Key already
+     * redeemed a different code.
+     *
+     */
+    422: ErrorResponse;
+    /**
+     * Too many requests or redemption attempts. `error.code` is
+     * `rate_limited`. Wait for `Retry-After` when present. Like other
+     * rate-limited responses, it also carries the `ratelimit-limit`,
+     * `ratelimit-remaining`, `ratelimit-reset` and `ratelimit-policy`
+     * quota headers when the limiter reports them.
+     *
+     */
+    429: ErrorResponse;
+    /**
+     * The code could not be redeemed right now. Retry later with the
+     * same Idempotency-Key. `error.code` is `service_unavailable`.
+     *
+     */
+    503: ErrorResponse;
+};
+
+export type RedeemCreditCodeError = RedeemCreditCodeErrors[keyof RedeemCreditCodeErrors];
+
+export type RedeemCreditCodeResponses = {
+    /**
+     * The code was redeemed, or this request replayed an earlier
+     * redemption with the same Idempotency-Key.
+     *
+     */
+    200: SuccessEnvelope & {
+        data?: CreditRedemption;
+    };
+};
+
+export type RedeemCreditCodeResponse = RedeemCreditCodeResponses[keyof RedeemCreditCodeResponses];
+
+export type GetCreditBalanceData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/credits/balance';
+};
+
+export type GetCreditBalanceErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetCreditBalanceError = GetCreditBalanceErrors[keyof GetCreditBalanceErrors];
+
+export type GetCreditBalanceResponses = {
+    /**
+     * The organization credit balance.
+     */
+    200: SuccessEnvelope & {
+        data?: CreditBalance;
+    };
+};
+
+export type GetCreditBalanceResponse = GetCreditBalanceResponses[keyof GetCreditBalanceResponses];
 
 export type ListDomainsData = {
     body?: never;

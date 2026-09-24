@@ -1512,6 +1512,208 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-credit-balance",
+    "description": "Read the organization credit position. `prepaid_credit` is the prepaid\nusage credit (paid top-ups, redeemed credit codes and granted credit)\nthat can still pay for usage. `budget` is the active agent spending\nbudget an operator funded for top-ups, or null when there is none.\nAmounts are strings of integer micros (1 USD = 1000000 micros).\n",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getCreditBalance",
+    "path": "/credits/balance",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "budget"
+      ],
+      "properties": {
+        "budget": {
+          "description": "The active agent spending budget an operator funded for top-ups,\nor null when there is none.\n",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "max_amount_micros",
+            "spent_micros",
+            "remaining_micros",
+            "per_topup_cap_micros",
+            "expires_at",
+            "status"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "description": "Currency of the budget, for example `usd`."
+            },
+            "max_amount_micros": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "Total allowance the operator funded, in micros."
+            },
+            "spent_micros": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "How much of the allowance has been drawn down, in micros."
+            },
+            "remaining_micros": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "`max_amount_micros - spent_micros`, floored at zero."
+            },
+            "per_topup_cap_micros": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9]+$",
+              "description": "Largest single top-up allowed, in micros, or null for no per-top-up cap."
+            },
+            "expires_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "When the allowance expires, or null for no expiry."
+            },
+            "status": {
+              "type": "string",
+              "description": "Budget status. An active budget reads `active`."
+            }
+          }
+        },
+        "prepaid_credit": {
+          "description": "Prepaid usage credit (top-ups, redeemed credit codes and granted\ncredit) that can still pay for usage, or null when there is none.\nOmitted when an exact figure cannot be given right now; the budget\nis still returned.\n",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "remaining_micros",
+            "next_expires_at"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "description": "Currency of the credit, which is the organization billing currency."
+            },
+            "remaining_micros": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "description": "What the credit can still pay for, in micros."
+            },
+            "next_expires_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Earliest expiry among credits with a balance, or null when none of them expires."
+            }
+          }
+        }
+      }
+    },
+    "sdkName": "getCreditBalance",
+    "summary": "Get credit balance",
+    "tag": "Credits",
+    "tagCommand": "credits"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "redeem-credit-code",
+    "description": "Redeem a credit code for the authenticated organization. The credit is\nadded to the organization prepaid credit and shows in\n`GET /credits/balance` under `prepaid_credit`.\n\nRedeeming requires an organization owner or admin. An API key redeems\nwith the authority of the user who created it, based on that user's\ncurrent role; a key without that authority gets the same\n`credit_code_invalid` refusal as an unknown code.\n\nThe `Idempotency-Key` header is required. Retrying with the same key\nand code returns the original grant with `replayed: true` and grants\nnothing new; the same key with a different code is refused with\n`idempotency_key_reused`. Every refusal carries a human-readable\n`error.message` that can be shown to the user as is.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "redeemCreditCode",
+    "path": "/credits/redeem",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^\\s*\\S(?:[\\s\\S]{0,254}\\S)?\\s*$",
+          "description": "The credit code to redeem. Surrounding whitespace is ignored; the\nrest must be 1 to 256 characters.\n"
+        }
+      }
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "redemption_id",
+        "amount_micros",
+        "currency",
+        "granted_at",
+        "expires_at",
+        "label",
+        "replayed",
+        "message"
+      ],
+      "properties": {
+        "redemption_id": {
+          "type": "string",
+          "description": "Identifier of the redemption."
+        },
+        "amount_micros": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Credit granted, in micros of `currency` (1 USD = 1000000 micros)."
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency of the granted credit, for example `usd`."
+        },
+        "granted_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the credit was granted."
+        },
+        "expires_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When the granted credit expires, or null when it does not expire."
+        },
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Customer-facing label of the promotion, when it has one."
+        },
+        "replayed": {
+          "type": "boolean",
+          "description": "True when this Idempotency-Key already redeemed this code and the\noriginal grant is returned. No second grant is made.\n"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable summary of the grant, suitable to show as is."
+        }
+      }
+    },
+    "sdkName": "redeemCreditCode",
+    "summary": "Redeem a credit code",
+    "tag": "Credits",
+    "tagCommand": "credits"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "add-domain",
     "description": "Creates an unverified domain claim and returns the exact\nDNS records to publish in `dns_records`. Publish those\nrecords before calling the verify endpoint. To give users\nan importable DNS file, call `downloadDomainZoneFile` or run\n`primitive domains zone-file --id <domain-id>`.\n",

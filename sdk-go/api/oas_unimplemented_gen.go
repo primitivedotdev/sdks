@@ -624,6 +624,19 @@ func (UnimplementedHandler) GetConversation(ctx context.Context, params GetConve
 	return r, ht.ErrNotImplemented
 }
 
+// GetCreditBalance implements getCreditBalance operation.
+//
+// Read the organization credit position. `prepaid_credit` is the prepaid
+// usage credit (paid top-ups, redeemed credit codes and granted credit)
+// that can still pay for usage. `budget` is the active agent spending
+// budget an operator funded for top-ups, or null when there is none.
+// Amounts are strings of integer micros (1 USD = 1000000 micros).
+//
+// GET /credits/balance
+func (UnimplementedHandler) GetCreditBalance(ctx context.Context) (r GetCreditBalanceRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetEmail implements getEmail operation.
 //
 // Returns the full record for an inbound email received at one
@@ -1200,6 +1213,26 @@ func (UnimplementedHandler) PublishAgent(ctx context.Context, req *PublishAgentI
 //
 // POST /endpoints/{id}/pull
 func (UnimplementedHandler) PullWebhookEvent(ctx context.Context, req *PullWebhookInput, params PullWebhookEventParams) (r PullWebhookEventRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RedeemCreditCode implements redeemCreditCode operation.
+//
+// Redeem a credit code for the authenticated organization. The credit is
+// added to the organization prepaid credit and shows in
+// `GET /credits/balance` under `prepaid_credit`.
+// Redeeming requires an organization owner or admin. An API key redeems
+// with the authority of the user who created it, based on that user's
+// current role; a key without that authority gets the same
+// `credit_code_invalid` refusal as an unknown code.
+// The `Idempotency-Key` header is required. Retrying with the same key
+// and code returns the original grant with `replayed: true` and grants
+// nothing new; the same key with a different code is refused with
+// `idempotency_key_reused`. Every refusal carries a human-readable
+// `error.message` that can be shown to the user as is.
+//
+// POST /credits/redeem
+func (UnimplementedHandler) RedeemCreditCode(ctx context.Context, req *RedeemCreditCodeInput, params RedeemCreditCodeParams) (r RedeemCreditCodeRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

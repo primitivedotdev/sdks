@@ -46,6 +46,10 @@
       "description": "Manage your account settings, storage, and webhook secret"
     },
     {
+      "name": "Credits",
+      "description": "Redeem credit codes and read the organization credit balance"
+    },
+    {
       "name": "Domains",
       "description": "Claim, verify, and manage email domains"
     },
@@ -1276,6 +1280,209 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/credits/redeem": {
+      "post": {
+        "operationId": "redeemCreditCode",
+        "summary": "Redeem a credit code",
+        "description": "Redeem a credit code for the authenticated organization. The credit is\nadded to the organization prepaid credit and shows in\n`GET /credits/balance` under `prepaid_credit`.\n\nRedeeming requires an organization owner or admin. An API key redeems\nwith the authority of the user who created it, based on that user's\ncurrent role; a key without that authority gets the same\n`credit_code_invalid` refusal as an unknown code.\n\nThe `Idempotency-Key` header is required. Retrying with the same key\nand code returns the original grant with `replayed: true` and grants\nnothing new; the same key with a different code is refused with\n`idempotency_key_reused`. Every refusal carries a human-readable\n`error.message` that can be shown to the user as is.\n",
+        "tags": [
+          "Credits"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Required client-supplied key: 1 to 200 printable ASCII\ncharacters, without spaces. Use a new key for each code you\nredeem and reuse it only to retry the same request.\n",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[\\x21-\\x7E]{1,200}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeemCreditCodeInput"
+              },
+              "example": {
+                "code": "LAUNCH50"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The code was redeemed, or this request replayed an earlier\nredemption with the same Idempotency-Key.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CreditRedemption"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`idempotency_key_required` means the Idempotency-Key header is\nmissing. `validation_error` means the header is empty, longer than\n200 characters or not printable non-space ASCII, or the body is\ninvalid.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "idempotency_key_required",
+                    "message": "an Idempotency-Key header is required"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "The organization or user already redeemed this code, or already\nredeemed another code in the same exclusive group (a set of codes\nof which each organization or user may redeem only one).\n`error.code` is `credit_code_already_redeemed`.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "credit_code_already_redeemed",
+                    "message": "Your organization has already redeemed this promotion."
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The code cannot be redeemed. `credit_code_invalid` covers unknown,\nexpired and exhausted codes and callers without authority to\nredeem; `credit_code_not_eligible` means the organization does not\nmeet the promotion terms; `credit_code_balance_cap` means the\norganization already holds the most promotional credit it can;\n`idempotency_key_reused` means this Idempotency-Key already\nredeemed a different code.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "credit_code_invalid",
+                    "message": "That code isn't valid or is no longer available."
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests or redemption attempts. `error.code` is\n`rate_limited`. Wait for `Retry-After` when present. Like other\nrate-limited responses, it also carries the `ratelimit-limit`,\n`ratelimit-remaining`, `ratelimit-reset` and `ratelimit-policy`\nquota headers when the limiter reports them.\n",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limited",
+                    "message": "Rate limit exceeded. Try again shortly."
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The code could not be redeemed right now. Retry later with the\nsame Idempotency-Key. `error.code` is `service_unavailable`.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "service_unavailable",
+                    "message": "We couldn't redeem that code right now. Try again in a few minutes."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/credits/balance": {
+      "get": {
+        "operationId": "getCreditBalance",
+        "summary": "Get credit balance",
+        "description": "Read the organization credit position. `prepaid_credit` is the prepaid\nusage credit (paid top-ups, redeemed credit codes and granted credit)\nthat can still pay for usage. `budget` is the active agent spending\nbudget an operator funded for top-ups, or null when there is none.\nAmounts are strings of integer micros (1 USD = 1000000 micros).\n",
+        "tags": [
+          "Credits"
+        ],
+        "responses": {
+          "200": {
+            "description": "The organization credit balance.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CreditBalance"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
@@ -9724,7 +9931,15 @@
                   "event_content_unavailable",
                   "event_preparation_failed",
                   "subscription_unavailable",
-                  "stale_delivery"
+                  "stale_delivery",
+                  "idempotency_key_required",
+                  "idempotency_key_reused",
+                  "credit_code_invalid",
+                  "credit_code_already_redeemed",
+                  "credit_code_not_eligible",
+                  "credit_code_balance_cap",
+                  "rate_limited",
+                  "service_unavailable"
                 ]
               },
               "message": {
@@ -10869,6 +11084,161 @@
         "required": [
           "secret"
         ]
+      },
+      "RedeemCreditCodeInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^\\s*\\S(?:[\\s\\S]{0,254}\\S)?\\s*$",
+            "description": "The credit code to redeem. Surrounding whitespace is ignored; the\nrest must be 1 to 256 characters.\n"
+          }
+        }
+      },
+      "CreditRedemption": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "redemption_id",
+          "amount_micros",
+          "currency",
+          "granted_at",
+          "expires_at",
+          "label",
+          "replayed",
+          "message"
+        ],
+        "properties": {
+          "redemption_id": {
+            "type": "string",
+            "description": "Identifier of the redemption."
+          },
+          "amount_micros": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Credit granted, in micros of `currency` (1 USD = 1000000 micros)."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency of the granted credit, for example `usd`."
+          },
+          "granted_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the credit was granted."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the granted credit expires, or null when it does not expire.",
+            "nullable": true
+          },
+          "label": {
+            "type": "string",
+            "description": "Customer-facing label of the promotion, when it has one.",
+            "nullable": true
+          },
+          "replayed": {
+            "type": "boolean",
+            "description": "True when this Idempotency-Key already redeemed this code and the\noriginal grant is returned. No second grant is made.\n"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable summary of the grant, suitable to show as is."
+          }
+        }
+      },
+      "CreditBalance": {
+        "type": "object",
+        "required": [
+          "budget"
+        ],
+        "properties": {
+          "budget": {
+            "description": "The active agent spending budget an operator funded for top-ups,\nor null when there is none.\n",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "max_amount_micros",
+              "spent_micros",
+              "remaining_micros",
+              "per_topup_cap_micros",
+              "expires_at",
+              "status"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "description": "Currency of the budget, for example `usd`."
+              },
+              "max_amount_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "Total allowance the operator funded, in micros."
+              },
+              "spent_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "How much of the allowance has been drawn down, in micros."
+              },
+              "remaining_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "`max_amount_micros - spent_micros`, floored at zero."
+              },
+              "per_topup_cap_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "Largest single top-up allowed, in micros, or null for no per-top-up cap.",
+                "nullable": true
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When the allowance expires, or null for no expiry.",
+                "nullable": true
+              },
+              "status": {
+                "type": "string",
+                "description": "Budget status. An active budget reads `active`."
+              }
+            },
+            "nullable": true
+          },
+          "prepaid_credit": {
+            "description": "Prepaid usage credit (top-ups, redeemed credit codes and granted\ncredit) that can still pay for usage, or null when there is none.\nOmitted when an exact figure cannot be given right now; the budget\nis still returned.\n",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "remaining_micros",
+              "next_expires_at"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "description": "Currency of the credit, which is the organization billing currency."
+              },
+              "remaining_micros": {
+                "type": "string",
+                "pattern": "^[0-9]+$",
+                "description": "What the credit can still pay for, in micros."
+              },
+              "next_expires_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Earliest expiry among credits with a balance, or null when none of them expires.",
+                "nullable": true
+              }
+            },
+            "nullable": true
+          }
+        }
       },
       "InboxStatus": {
         "type": "object",

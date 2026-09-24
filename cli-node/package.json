@@ -55,6 +55,9 @@
       "agent": {
         "description": "Agent signup and authentication API operations"
       },
+      "credits": {
+        "description": "Redeem credit codes and check the organization credit balance"
+      },
       "domains": {
         "description": "Claim, verify, manage email domains, and download DNS zone files"
       },

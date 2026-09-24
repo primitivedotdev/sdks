@@ -6776,6 +6776,84 @@ func decodePullWebhookEventParams(args [1]string, argsEscaped bool, r *http.Requ
 	return params, nil
 }
 
+// RedeemCreditCodeParams is parameters of redeemCreditCode operation.
+type RedeemCreditCodeParams struct {
+	// Required client-supplied key: 1 to 200 printable ASCII
+	// characters, without spaces. Use a new key for each code you
+	// redeem and reuse it only to retry the same request.
+	IdempotencyKey string
+}
+
+func unpackRedeemCreditCodeParams(packed middleware.Parameters) (params RedeemCreditCodeParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		params.IdempotencyKey = packed[key].(string)
+	}
+	return params
+}
+
+func decodeRedeemCreditCodeParams(args [0]string, argsEscaped bool, r *http.Request) (params RedeemCreditCodeParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.IdempotencyKey = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     200,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         regexMap["^[\\x21-\\x7E]{1,200}$"],
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.IdempotencyKey)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // RemoveAgentConnectionParams is parameters of removeAgentConnection operation.
 type RemoveAgentConnectionParams struct {
 	// The email address identifying the revoked connection.
