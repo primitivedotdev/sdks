@@ -45,6 +45,8 @@ const SAMPLE: EmailDetail = {
   reply_count: 1,
   last_replied_at: "2026-05-03T00:01:00.000Z",
   awaiting: "them",
+  automated: true,
+  automated_reasons: ["list_unsubscribe", "list_id"],
   replies: [
     {
       id: "33333333-3333-3333-3333-333333333333",
@@ -122,5 +124,10 @@ describe("EmailDetail type contract", () => {
     expect(SAMPLE.reply_count).toBe(1);
     expect(SAMPLE.last_replied_at).toBe("2026-05-03T00:01:00.000Z");
     expect(SAMPLE.awaiting).toBe("them");
+  });
+
+  it("surfaces the automated verdict", () => {
+    expect(SAMPLE.automated).toBe(true);
+    expect(SAMPLE.automated_reasons).toEqual(["list_unsubscribe", "list_id"]);
   });
 });

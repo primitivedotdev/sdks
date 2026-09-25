@@ -50,6 +50,8 @@ const emailDetailSampleJSON = `{
   "reply_count": 1,
   "last_replied_at": "2026-05-03T00:01:00Z",
   "awaiting": "them",
+  "automated": true,
+  "automated_reasons": ["list_unsubscribe", "list_id"],
   "replies": [
     {
       "id": "33333333-3333-3333-3333-333333333333",
@@ -152,5 +154,18 @@ func TestEmailDetailUnmarshalsReplyState(t *testing.T) {
 	lastRepliedAt, ok := detail.LastRepliedAt.Get()
 	if !ok || !lastRepliedAt.Equal(time.Date(2026, 5, 3, 0, 1, 0, 0, time.UTC)) {
 		t.Errorf("last_replied_at: got (%v, %v)", lastRepliedAt, ok)
+	}
+}
+
+func TestEmailDetailUnmarshalsAutomatedVerdict(t *testing.T) {
+	var detail primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(emailDetailSampleJSON), &detail); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !detail.Automated {
+		t.Errorf("automated: got false, want true")
+	}
+	if len(detail.AutomatedReasons) != 2 || detail.AutomatedReasons[0] != "list_unsubscribe" || detail.AutomatedReasons[1] != "list_id" {
+		t.Errorf("automated_reasons: got %v", detail.AutomatedReasons)
 	}
 }

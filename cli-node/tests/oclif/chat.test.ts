@@ -113,6 +113,8 @@ function sentEmail(overrides: Partial<SendMailResult> = {}): SendMailResult {
 function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
   return {
     awaiting: "you",
+    automated: false,
+    automated_reasons: [],
     body_html: null,
     body_text: "Rotate your API key from the dashboard.",
     created_at: "2026-05-25T00:00:02.000Z",
@@ -1195,6 +1197,8 @@ describe("resolveIdempotentReplayReply", () => {
     return {
       attachment_count: 0,
       awaiting: "you",
+      automated: false,
+      automated_reasons: [],
       last_replied_at: null,
       reply_count: 0,
       created_at: "2026-06-01T15:00:00.000Z",

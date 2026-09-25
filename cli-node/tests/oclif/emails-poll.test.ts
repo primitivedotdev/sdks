@@ -16,6 +16,8 @@ function makeEmail(
   return {
     attachment_count: 0,
     awaiting: "you",
+    automated: false,
+    automated_reasons: [],
     last_replied_at: null,
     reply_count: 0,
     created_at: "2026-05-08T00:00:00.000Z",

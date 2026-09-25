@@ -45,6 +45,8 @@ SAMPLE = {
     "reply_count": 1,
     "last_replied_at": "2026-05-03T00:01:00Z",
     "awaiting": "them",
+    "automated": True,
+    "automated_reasons": ["list_unsubscribe", "list_id"],
     "replies": [
         {
             "id": "33333333-3333-3333-3333-333333333333",
@@ -115,6 +117,12 @@ def test_email_detail_surfaces_thread_parsed_auth() -> None:
     assert str(detail.thread_id) == "44444444-4444-4444-4444-444444444444"
     assert detail.parsed.status == "complete"
     assert detail.auth.spf == "pass"
+
+
+def test_email_detail_surfaces_automated_verdict() -> None:
+    detail = EmailDetail.from_dict(SAMPLE)
+    assert detail.automated is True
+    assert detail.automated_reasons == ["list_unsubscribe", "list_id"]
 
 
 def test_email_detail_surfaces_reply_state() -> None:
