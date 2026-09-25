@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.email_detail_awaiting import EmailDetailAwaiting
 from ..models.email_status import EmailStatus
 from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
 from ..models.email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
@@ -105,6 +106,30 @@ class EmailDetail:
                 `email.auth` object on the webhook payload. Field names are
                 camelCase to match that payload exactly. For messages received
                 before auth was recorded, the verdicts default to `none`.
+            reply_count (int): Number of replies recorded against this email: sends whose
+                `in_reply_to_email_id` is this email, the same linkage that populates
+                `EmailDetail.replies`, excluding sends that never went out (status
+                `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+                replies count. Under an agent connection, only the replies that agent
+                can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+                replies to this one email, not to the thread.
+            last_replied_at (datetime.datetime | None): `created_at` of the latest reply counted in `reply_count`, or
+                null when `reply_count` is 0.
+            awaiting (EmailDetailAwaiting): Whose turn it is in this email's conversation. A send counts as a
+                reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+                (queued and scheduled replies count: they are committed to go). For
+                an email with a `thread_id`: `them` when the thread's latest counted
+                outbound send (by send `created_at`, including any counted reply to
+                this email itself) is at or after the thread's latest inbound message
+                (by `received_at`); otherwise `you`. For an email with no
+                `thread_id`: `them` when it has at least one counted reply
+                (`reply_count > 0` for an API key), otherwise `you`. It is a
+                thread-level fact: every email in a thread carries the same value, and
+                it reflects sends made by any credential in the organization,
+                including other agent connections. It changes without a new inbound
+                message, for example when a reply is sent, a queued reply fails, a
+                scheduled reply is canceled, or a message is deleted, and is always
+                current when read.
             message_id (None | str | Unset):
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
@@ -195,6 +220,9 @@ class EmailDetail:
     replies: list[EmailDetailReply]
     parsed: ParsedEmailData
     auth: EmailAuth
+    reply_count: int
+    last_replied_at: datetime.datetime | None
+    awaiting: EmailDetailAwaiting
     message_id: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     org_id: None | Unset | UUID = UNSET
@@ -259,6 +287,16 @@ class EmailDetail:
         parsed = self.parsed.to_dict()
 
         auth = self.auth.to_dict()
+
+        reply_count = self.reply_count
+
+        last_replied_at: None | str
+        if isinstance(self.last_replied_at, datetime.datetime):
+            last_replied_at = self.last_replied_at.isoformat()
+        else:
+            last_replied_at = self.last_replied_at
+
+        awaiting = self.awaiting.value
 
         message_id: None | str | Unset
         if isinstance(self.message_id, Unset):
@@ -441,6 +479,9 @@ class EmailDetail:
             "replies": replies,
             "parsed": parsed,
             "auth": auth,
+            "reply_count": reply_count,
+            "last_replied_at": last_replied_at,
+            "awaiting": awaiting,
         })
         if message_id is not UNSET:
             field_dict["message_id"] = message_id
@@ -549,6 +590,31 @@ class EmailDetail:
 
 
         auth = EmailAuth.from_dict(d.pop("auth"))
+
+
+
+
+        reply_count = d.pop("reply_count")
+
+        def _parse_last_replied_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                last_replied_at_type_0 = isoparse(data)
+
+
+
+                return last_replied_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        last_replied_at = _parse_last_replied_at(d.pop("last_replied_at"))
+
+
+        awaiting = EmailDetailAwaiting(d.pop("awaiting"))
 
 
 
@@ -907,6 +973,9 @@ class EmailDetail:
             replies=replies,
             parsed=parsed,
             auth=auth,
+            reply_count=reply_count,
+            last_replied_at=last_replied_at,
+            awaiting=awaiting,
             message_id=message_id,
             domain_id=domain_id,
             org_id=org_id,

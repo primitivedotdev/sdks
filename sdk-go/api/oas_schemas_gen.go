@@ -8017,6 +8017,33 @@ type EmailDetail struct {
 	// to decide how much to trust a message before acting on
 	// instructions it contains.
 	Auth EmailAuth `json:"auth"`
+	// Number of replies recorded against this email: sends whose
+	// `in_reply_to_email_id` is this email, the same linkage that populates
+	// `EmailDetail.replies`, excluding sends that never went out (status
+	// `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+	// replies count. Under an agent connection, only the replies that agent
+	// can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+	// replies to this one email, not to the thread.
+	ReplyCount int `json:"reply_count"`
+	// `created_at` of the latest reply counted in `reply_count`, or
+	// null when `reply_count` is 0.
+	LastRepliedAt NilDateTime `json:"last_replied_at"`
+	// Whose turn it is in this email's conversation. A send counts as a
+	// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+	// (queued and scheduled replies count: they are committed to go). For
+	// an email with a `thread_id`: `them` when the thread's latest counted
+	// outbound send (by send `created_at`, including any counted reply to
+	// this email itself) is at or after the thread's latest inbound message
+	// (by `received_at`); otherwise `you`. For an email with no
+	// `thread_id`: `them` when it has at least one counted reply
+	// (`reply_count > 0` for an API key), otherwise `you`. It is a
+	// thread-level fact: every email in a thread carries the same value, and
+	// it reflects sends made by any credential in the organization,
+	// including other agent connections. It changes without a new inbound
+	// message, for example when a reply is sent, a queued reply fails, a
+	// scheduled reply is canceled, or a message is deleted, and is always
+	// current when read.
+	Awaiting EmailDetailAwaiting `json:"awaiting"`
 }
 
 // GetID returns the value of ID.
@@ -8204,6 +8231,21 @@ func (s *EmailDetail) GetAuth() EmailAuth {
 	return s.Auth
 }
 
+// GetReplyCount returns the value of ReplyCount.
+func (s *EmailDetail) GetReplyCount() int {
+	return s.ReplyCount
+}
+
+// GetLastRepliedAt returns the value of LastRepliedAt.
+func (s *EmailDetail) GetLastRepliedAt() NilDateTime {
+	return s.LastRepliedAt
+}
+
+// GetAwaiting returns the value of Awaiting.
+func (s *EmailDetail) GetAwaiting() EmailDetailAwaiting {
+	return s.Awaiting
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -8387,6 +8429,77 @@ func (s *EmailDetail) SetParsed(val ParsedEmailData) {
 // SetAuth sets the value of Auth.
 func (s *EmailDetail) SetAuth(val EmailAuth) {
 	s.Auth = val
+}
+
+// SetReplyCount sets the value of ReplyCount.
+func (s *EmailDetail) SetReplyCount(val int) {
+	s.ReplyCount = val
+}
+
+// SetLastRepliedAt sets the value of LastRepliedAt.
+func (s *EmailDetail) SetLastRepliedAt(val NilDateTime) {
+	s.LastRepliedAt = val
+}
+
+// SetAwaiting sets the value of Awaiting.
+func (s *EmailDetail) SetAwaiting(val EmailDetailAwaiting) {
+	s.Awaiting = val
+}
+
+// Whose turn it is in this email's conversation. A send counts as a
+// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+// (queued and scheduled replies count: they are committed to go). For
+// an email with a `thread_id`: `them` when the thread's latest counted
+// outbound send (by send `created_at`, including any counted reply to
+// this email itself) is at or after the thread's latest inbound message
+// (by `received_at`); otherwise `you`. For an email with no
+// `thread_id`: `them` when it has at least one counted reply
+// (`reply_count > 0` for an API key), otherwise `you`. It is a
+// thread-level fact: every email in a thread carries the same value, and
+// it reflects sends made by any credential in the organization,
+// including other agent connections. It changes without a new inbound
+// message, for example when a reply is sent, a queued reply fails, a
+// scheduled reply is canceled, or a message is deleted, and is always
+// current when read.
+type EmailDetailAwaiting string
+
+const (
+	EmailDetailAwaitingYou  EmailDetailAwaiting = "you"
+	EmailDetailAwaitingThem EmailDetailAwaiting = "them"
+)
+
+// AllValues returns all EmailDetailAwaiting values.
+func (EmailDetailAwaiting) AllValues() []EmailDetailAwaiting {
+	return []EmailDetailAwaiting{
+		EmailDetailAwaitingYou,
+		EmailDetailAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailDetailAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailDetailAwaitingYou:
+		return []byte(s), nil
+	case EmailDetailAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailDetailAwaiting) UnmarshalText(data []byte) error {
+	switch EmailDetailAwaiting(data) {
+	case EmailDetailAwaitingYou:
+		*s = EmailDetailAwaitingYou
+		return nil
+	case EmailDetailAwaitingThem:
+		*s = EmailDetailAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/EmailDetailReply
@@ -8732,6 +8845,33 @@ type EmailSearchResult struct {
 	// `/threads/{thread_id}` for the full ordered thread. NULL on
 	// messages received before threading was enabled.
 	ThreadID OptNilUUID `json:"thread_id"`
+	// Number of replies recorded against this email: sends whose
+	// `in_reply_to_email_id` is this email, the same linkage that populates
+	// `EmailDetail.replies`, excluding sends that never went out (status
+	// `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+	// replies count. Under an agent connection, only the replies that agent
+	// can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+	// replies to this one email, not to the thread.
+	ReplyCount int `json:"reply_count"`
+	// `created_at` of the latest reply counted in `reply_count`, or
+	// null when `reply_count` is 0.
+	LastRepliedAt NilDateTime `json:"last_replied_at"`
+	// Whose turn it is in this email's conversation. A send counts as a
+	// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+	// (queued and scheduled replies count: they are committed to go). For
+	// an email with a `thread_id`: `them` when the thread's latest counted
+	// outbound send (by send `created_at`, including any counted reply to
+	// this email itself) is at or after the thread's latest inbound message
+	// (by `received_at`); otherwise `you`. For an email with no
+	// `thread_id`: `them` when it has at least one counted reply
+	// (`reply_count > 0` for an API key), otherwise `you`. It is a
+	// thread-level fact: every email in a thread carries the same value, and
+	// it reflects sends made by any credential in the organization,
+	// including other agent connections. It changes without a new inbound
+	// message, for example when a reply is sent, a queued reply fails, a
+	// scheduled reply is canceled, or a message is deleted, and is always
+	// current when read.
+	Awaiting EmailSearchResultAwaiting `json:"awaiting"`
 	// Number of parsed attachments on the email.
 	AttachmentCount int `json:"attachment_count"`
 	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
@@ -8819,6 +8959,21 @@ func (s *EmailSearchResult) GetWebhookAttemptCount() int {
 // GetThreadID returns the value of ThreadID.
 func (s *EmailSearchResult) GetThreadID() OptNilUUID {
 	return s.ThreadID
+}
+
+// GetReplyCount returns the value of ReplyCount.
+func (s *EmailSearchResult) GetReplyCount() int {
+	return s.ReplyCount
+}
+
+// GetLastRepliedAt returns the value of LastRepliedAt.
+func (s *EmailSearchResult) GetLastRepliedAt() NilDateTime {
+	return s.LastRepliedAt
+}
+
+// GetAwaiting returns the value of Awaiting.
+func (s *EmailSearchResult) GetAwaiting() EmailSearchResultAwaiting {
+	return s.Awaiting
 }
 
 // GetAttachmentCount returns the value of AttachmentCount.
@@ -8921,6 +9076,21 @@ func (s *EmailSearchResult) SetThreadID(val OptNilUUID) {
 	s.ThreadID = val
 }
 
+// SetReplyCount sets the value of ReplyCount.
+func (s *EmailSearchResult) SetReplyCount(val int) {
+	s.ReplyCount = val
+}
+
+// SetLastRepliedAt sets the value of LastRepliedAt.
+func (s *EmailSearchResult) SetLastRepliedAt(val NilDateTime) {
+	s.LastRepliedAt = val
+}
+
+// SetAwaiting sets the value of Awaiting.
+func (s *EmailSearchResult) SetAwaiting(val EmailSearchResultAwaiting) {
+	s.Awaiting = val
+}
+
 // SetAttachmentCount sets the value of AttachmentCount.
 func (s *EmailSearchResult) SetAttachmentCount(val int) {
 	s.AttachmentCount = val
@@ -8939,6 +9109,62 @@ func (s *EmailSearchResult) SetScore(val OptFloat64) {
 // SetHighlights sets the value of Highlights.
 func (s *EmailSearchResult) SetHighlights(val OptEmailSearchHighlights) {
 	s.Highlights = val
+}
+
+// Whose turn it is in this email's conversation. A send counts as a
+// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+// (queued and scheduled replies count: they are committed to go). For
+// an email with a `thread_id`: `them` when the thread's latest counted
+// outbound send (by send `created_at`, including any counted reply to
+// this email itself) is at or after the thread's latest inbound message
+// (by `received_at`); otherwise `you`. For an email with no
+// `thread_id`: `them` when it has at least one counted reply
+// (`reply_count > 0` for an API key), otherwise `you`. It is a
+// thread-level fact: every email in a thread carries the same value, and
+// it reflects sends made by any credential in the organization,
+// including other agent connections. It changes without a new inbound
+// message, for example when a reply is sent, a queued reply fails, a
+// scheduled reply is canceled, or a message is deleted, and is always
+// current when read.
+type EmailSearchResultAwaiting string
+
+const (
+	EmailSearchResultAwaitingYou  EmailSearchResultAwaiting = "you"
+	EmailSearchResultAwaitingThem EmailSearchResultAwaiting = "them"
+)
+
+// AllValues returns all EmailSearchResultAwaiting values.
+func (EmailSearchResultAwaiting) AllValues() []EmailSearchResultAwaiting {
+	return []EmailSearchResultAwaiting{
+		EmailSearchResultAwaitingYou,
+		EmailSearchResultAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailSearchResultAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailSearchResultAwaitingYou:
+		return []byte(s), nil
+	case EmailSearchResultAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailSearchResultAwaiting) UnmarshalText(data []byte) error {
+	switch EmailSearchResultAwaiting(data) {
+	case EmailSearchResultAwaitingYou:
+		*s = EmailSearchResultAwaitingYou
+		return nil
+	case EmailSearchResultAwaitingThem:
+		*s = EmailSearchResultAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Lifecycle status of an INBOUND email (a row in the `emails`
@@ -9051,6 +9277,33 @@ type EmailSummary struct {
 	// `/threads/{thread_id}` for the full ordered thread. NULL on
 	// messages received before threading was enabled.
 	ThreadID OptNilUUID `json:"thread_id"`
+	// Number of replies recorded against this email: sends whose
+	// `in_reply_to_email_id` is this email, the same linkage that populates
+	// `EmailDetail.replies`, excluding sends that never went out (status
+	// `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+	// replies count. Under an agent connection, only the replies that agent
+	// can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+	// replies to this one email, not to the thread.
+	ReplyCount int `json:"reply_count"`
+	// `created_at` of the latest reply counted in `reply_count`, or
+	// null when `reply_count` is 0.
+	LastRepliedAt NilDateTime `json:"last_replied_at"`
+	// Whose turn it is in this email's conversation. A send counts as a
+	// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+	// (queued and scheduled replies count: they are committed to go). For
+	// an email with a `thread_id`: `them` when the thread's latest counted
+	// outbound send (by send `created_at`, including any counted reply to
+	// this email itself) is at or after the thread's latest inbound message
+	// (by `received_at`); otherwise `you`. For an email with no
+	// `thread_id`: `them` when it has at least one counted reply
+	// (`reply_count > 0` for an API key), otherwise `you`. It is a
+	// thread-level fact: every email in a thread carries the same value, and
+	// it reflects sends made by any credential in the organization,
+	// including other agent connections. It changes without a new inbound
+	// message, for example when a reply is sent, a queued reply fails, a
+	// scheduled reply is canceled, or a message is deleted, and is always
+	// current when read.
+	Awaiting EmailSummaryAwaiting `json:"awaiting"`
 }
 
 // GetID returns the value of ID.
@@ -9133,6 +9386,21 @@ func (s *EmailSummary) GetThreadID() OptNilUUID {
 	return s.ThreadID
 }
 
+// GetReplyCount returns the value of ReplyCount.
+func (s *EmailSummary) GetReplyCount() int {
+	return s.ReplyCount
+}
+
+// GetLastRepliedAt returns the value of LastRepliedAt.
+func (s *EmailSummary) GetLastRepliedAt() NilDateTime {
+	return s.LastRepliedAt
+}
+
+// GetAwaiting returns the value of Awaiting.
+func (s *EmailSummary) GetAwaiting() EmailSummaryAwaiting {
+	return s.Awaiting
+}
+
 // SetID sets the value of ID.
 func (s *EmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -9211,6 +9479,77 @@ func (s *EmailSummary) SetWebhookAttemptCount(val int) {
 // SetThreadID sets the value of ThreadID.
 func (s *EmailSummary) SetThreadID(val OptNilUUID) {
 	s.ThreadID = val
+}
+
+// SetReplyCount sets the value of ReplyCount.
+func (s *EmailSummary) SetReplyCount(val int) {
+	s.ReplyCount = val
+}
+
+// SetLastRepliedAt sets the value of LastRepliedAt.
+func (s *EmailSummary) SetLastRepliedAt(val NilDateTime) {
+	s.LastRepliedAt = val
+}
+
+// SetAwaiting sets the value of Awaiting.
+func (s *EmailSummary) SetAwaiting(val EmailSummaryAwaiting) {
+	s.Awaiting = val
+}
+
+// Whose turn it is in this email's conversation. A send counts as a
+// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+// (queued and scheduled replies count: they are committed to go). For
+// an email with a `thread_id`: `them` when the thread's latest counted
+// outbound send (by send `created_at`, including any counted reply to
+// this email itself) is at or after the thread's latest inbound message
+// (by `received_at`); otherwise `you`. For an email with no
+// `thread_id`: `them` when it has at least one counted reply
+// (`reply_count > 0` for an API key), otherwise `you`. It is a
+// thread-level fact: every email in a thread carries the same value, and
+// it reflects sends made by any credential in the organization,
+// including other agent connections. It changes without a new inbound
+// message, for example when a reply is sent, a queued reply fails, a
+// scheduled reply is canceled, or a message is deleted, and is always
+// current when read.
+type EmailSummaryAwaiting string
+
+const (
+	EmailSummaryAwaitingYou  EmailSummaryAwaiting = "you"
+	EmailSummaryAwaitingThem EmailSummaryAwaiting = "them"
+)
+
+// AllValues returns all EmailSummaryAwaiting values.
+func (EmailSummaryAwaiting) AllValues() []EmailSummaryAwaiting {
+	return []EmailSummaryAwaiting{
+		EmailSummaryAwaitingYou,
+		EmailSummaryAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailSummaryAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailSummaryAwaitingYou:
+		return []byte(s), nil
+	case EmailSummaryAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailSummaryAwaiting) UnmarshalText(data []byte) error {
+	switch EmailSummaryAwaiting(data) {
+	case EmailSummaryAwaitingYou:
+		*s = EmailSummaryAwaitingYou
+		return nil
+	case EmailSummaryAwaitingThem:
+		*s = EmailSummaryAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Webhook-delivery state for an inbound email. Tracks a
@@ -14654,6 +14993,47 @@ func (s *ListDomainsOK) SetData(val []Domain) {
 
 func (*ListDomainsOK) listDomainsRes() {}
 
+type ListEmailsAwaiting string
+
+const (
+	ListEmailsAwaitingYou  ListEmailsAwaiting = "you"
+	ListEmailsAwaitingThem ListEmailsAwaiting = "them"
+)
+
+// AllValues returns all ListEmailsAwaiting values.
+func (ListEmailsAwaiting) AllValues() []ListEmailsAwaiting {
+	return []ListEmailsAwaiting{
+		ListEmailsAwaitingYou,
+		ListEmailsAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailsAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailsAwaitingYou:
+		return []byte(s), nil
+	case ListEmailsAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailsAwaiting) UnmarshalText(data []byte) error {
+	switch ListEmailsAwaiting(data) {
+	case ListEmailsAwaitingYou:
+		*s = ListEmailsAwaitingYou
+		return nil
+	case ListEmailsAwaitingThem:
+		*s = ListEmailsAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ListEmailsBadRequest ErrorResponse
 
 func (*ListEmailsBadRequest) listEmailsRes() {}
@@ -18250,6 +18630,52 @@ func (o OptListDeliveriesStatus) Or(d ListDeliveriesStatus) ListDeliveriesStatus
 	return d
 }
 
+// NewOptListEmailsAwaiting returns new OptListEmailsAwaiting with value set to v.
+func NewOptListEmailsAwaiting(v ListEmailsAwaiting) OptListEmailsAwaiting {
+	return OptListEmailsAwaiting{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailsAwaiting is optional ListEmailsAwaiting.
+type OptListEmailsAwaiting struct {
+	Value ListEmailsAwaiting
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailsAwaiting was set.
+func (o OptListEmailsAwaiting) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailsAwaiting) Reset() {
+	var v ListEmailsAwaiting
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailsAwaiting) SetTo(v ListEmailsAwaiting) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailsAwaiting) Get() (v ListEmailsAwaiting, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailsAwaiting) Or(d ListEmailsAwaiting) ListEmailsAwaiting {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptMemoryJsonValue returns new OptMemoryJsonValue with value set to v.
 func NewOptMemoryJsonValue(v MemoryJsonValue) OptMemoryJsonValue {
 	return OptMemoryJsonValue{
@@ -19574,6 +20000,52 @@ func (o OptRecipientRouteMatchType) Get() (v RecipientRouteMatchType, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptRecipientRouteMatchType) Or(d RecipientRouteMatchType) RecipientRouteMatchType {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSearchEmailsAwaiting returns new OptSearchEmailsAwaiting with value set to v.
+func NewOptSearchEmailsAwaiting(v SearchEmailsAwaiting) OptSearchEmailsAwaiting {
+	return OptSearchEmailsAwaiting{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsAwaiting is optional SearchEmailsAwaiting.
+type OptSearchEmailsAwaiting struct {
+	Value SearchEmailsAwaiting
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsAwaiting was set.
+func (o OptSearchEmailsAwaiting) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsAwaiting) Reset() {
+	var v SearchEmailsAwaiting
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsAwaiting) SetTo(v SearchEmailsAwaiting) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsAwaiting) Get() (v SearchEmailsAwaiting, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsAwaiting) Or(d SearchEmailsAwaiting) SearchEmailsAwaiting {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -24109,6 +24581,47 @@ func (s *RunWakeScheduleOKData) init() RunWakeScheduleOKData {
 type RunWakeScheduleUnauthorized ErrorResponse
 
 func (*RunWakeScheduleUnauthorized) runWakeScheduleRes() {}
+
+type SearchEmailsAwaiting string
+
+const (
+	SearchEmailsAwaitingYou  SearchEmailsAwaiting = "you"
+	SearchEmailsAwaitingThem SearchEmailsAwaiting = "them"
+)
+
+// AllValues returns all SearchEmailsAwaiting values.
+func (SearchEmailsAwaiting) AllValues() []SearchEmailsAwaiting {
+	return []SearchEmailsAwaiting{
+		SearchEmailsAwaitingYou,
+		SearchEmailsAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsAwaitingYou:
+		return []byte(s), nil
+	case SearchEmailsAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsAwaiting) UnmarshalText(data []byte) error {
+	switch SearchEmailsAwaiting(data) {
+	case SearchEmailsAwaitingYou:
+		*s = SearchEmailsAwaitingYou
+		return nil
+	case SearchEmailsAwaitingThem:
+		*s = SearchEmailsAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type SearchEmailsBadRequest ErrorResponse
 

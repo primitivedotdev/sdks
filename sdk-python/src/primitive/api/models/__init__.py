@@ -151,6 +151,7 @@ from .email_address import EmailAddress
 from .email_attachment import EmailAttachment
 from .email_auth import EmailAuth
 from .email_detail import EmailDetail
+from .email_detail_awaiting import EmailDetailAwaiting
 from .email_detail_reply import EmailDetailReply
 from .email_search_facet_bucket import EmailSearchFacetBucket
 from .email_search_facets import EmailSearchFacets
@@ -161,6 +162,7 @@ from .email_search_meta_sort import EmailSearchMetaSort
 from .email_search_result import EmailSearchResult
 from .email_status import EmailStatus
 from .email_summary import EmailSummary
+from .email_summary_awaiting import EmailSummaryAwaiting
 from .email_webhook_status_type_1 import EmailWebhookStatusType1
 from .email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from .email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
@@ -251,6 +253,7 @@ from .list_declined_payments_response_200 import ListDeclinedPaymentsResponse200
 from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
 from .list_domains_response_200 import ListDomainsResponse200
+from .list_emails_awaiting import ListEmailsAwaiting
 from .list_emails_response_200 import ListEmailsResponse200
 from .list_endpoints_response_200 import ListEndpointsResponse200
 from .list_envelope import ListEnvelope
@@ -348,6 +351,7 @@ from .routing_topology_fallback_function_type_0 import RoutingTopologyFallbackFu
 from .routing_topology_unrouted_functions_item import RoutingTopologyUnroutedFunctionsItem
 from .run_wake_schedule_response_200 import RunWakeScheduleResponse200
 from .run_wake_schedule_response_200_data import RunWakeScheduleResponse200Data
+from .search_emails_awaiting import SearchEmailsAwaiting
 from .search_emails_has_attachment import SearchEmailsHasAttachment
 from .search_emails_include_facets import SearchEmailsIncludeFacets
 from .search_emails_response_200 import SearchEmailsResponse200
@@ -667,6 +671,7 @@ __all__ = (
     "EmailAttachment",
     "EmailAuth",
     "EmailDetail",
+    "EmailDetailAwaiting",
     "EmailDetailReply",
     "EmailSearchFacetBucket",
     "EmailSearchFacets",
@@ -677,6 +682,7 @@ __all__ = (
     "EmailSearchResult",
     "EmailStatus",
     "EmailSummary",
+    "EmailSummaryAwaiting",
     "EmailWebhookStatusType1",
     "EmailWebhookStatusType2Type1",
     "EmailWebhookStatusType3Type1",
@@ -767,6 +773,7 @@ __all__ = (
     "ListDeliveriesResponse200",
     "ListDeliveriesStatus",
     "ListDomainsResponse200",
+    "ListEmailsAwaiting",
     "ListEmailsResponse200",
     "ListEndpointsResponse200",
     "ListEnvelope",
@@ -864,6 +871,7 @@ __all__ = (
     "RoutingTopologyUnroutedFunctionsItem",
     "RunWakeScheduleResponse200",
     "RunWakeScheduleResponse200Data",
+    "SearchEmailsAwaiting",
     "SearchEmailsHasAttachment",
     "SearchEmailsIncludeFacets",
     "SearchEmailsResponse200",

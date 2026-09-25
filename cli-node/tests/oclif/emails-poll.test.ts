@@ -15,6 +15,9 @@ function makeEmail(
 ): EmailSearchResult {
   return {
     attachment_count: 0,
+    awaiting: "you",
+    last_replied_at: null,
+    reply_count: 0,
     created_at: "2026-05-08T00:00:00.000Z",
     domain: "example.com",
     from_known_address: false,

@@ -3939,6 +3939,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           ],
           "description": "SPF / DKIM / DMARC verdicts computed at ingest, matching\nthe `email.auth` object on the webhook payload. Use these\nto decide how much to trust a message before acting on\ninstructions it contains.\n"
+        },
+        "reply_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of replies recorded against this email: sends whose\n`in_reply_to_email_id` is this email, the same linkage that populates\n`EmailDetail.replies`, excluding sends that never went out (status\n`gate_denied`, `agent_failed`, `canceled`). Queued and scheduled\nreplies count. Under an agent connection, only the replies that agent\ncan see in `EmailDetail.replies`. Unlike `awaiting`, this counts\nreplies to this one email, not to the thread.\n"
+        },
+        "last_replied_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "`created_at` of the latest reply counted in `reply_count`, or\nnull when `reply_count` is 0.\n"
+        },
+        "awaiting": {
+          "type": "string",
+          "enum": [
+            "you",
+            "them"
+          ],
+          "description": "Whose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n"
         }
       },
       "required": [
@@ -3954,7 +3975,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "to_email",
         "replies",
         "parsed",
-        "auth"
+        "auth",
+        "reply_count",
+        "last_replied_at",
+        "awaiting"
       ]
     },
     "sdkName": "getEmail",
@@ -4040,6 +4064,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name": "wait",
         "required": false,
         "type": "integer"
+      },
+      {
+        "description": "Only return emails whose `awaiting` has this value. `awaiting=you`\nlists mail waiting on your reply. Combines with every other filter\nand with both `cursor` and `since`. Whose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n",
+        "enum": [
+          "you",
+          "them"
+        ],
+        "name": "awaiting",
+        "required": false,
+        "type": "string"
       }
     ],
     "requestSchema": null,
@@ -4143,6 +4177,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "format": "uuid",
             "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
+          },
+          "reply_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of replies recorded against this email: sends whose\n`in_reply_to_email_id` is this email, the same linkage that populates\n`EmailDetail.replies`, excluding sends that never went out (status\n`gate_denied`, `agent_failed`, `canceled`). Queued and scheduled\nreplies count. Under an agent connection, only the replies that agent\ncan see in `EmailDetail.replies`. Unlike `awaiting`, this counts\nreplies to this one email, not to the thread.\n"
+          },
+          "last_replied_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "`created_at` of the latest reply counted in `reply_count`, or\nnull when `reply_count` is 0.\n"
+          },
+          "awaiting": {
+            "type": "string",
+            "enum": [
+              "you",
+              "them"
+            ],
+            "description": "Whose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n"
           }
         },
         "required": [
@@ -4153,7 +4208,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "domain",
           "created_at",
           "received_at",
-          "webhook_attempt_count"
+          "webhook_attempt_count",
+          "reply_count",
+          "last_replied_at",
+          "awaiting"
         ]
       }
     },
@@ -4216,7 +4274,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [
       {
-        "description": "Full-text search DSL query.",
+        "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field).",
         "enum": null,
         "name": "q",
         "required": false,
@@ -4308,6 +4366,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name": "spam_score_gte",
         "required": false,
         "type": "number"
+      },
+      {
+        "description": "Only return emails whose `awaiting` has this value. Also available\nin `q` as `awaiting:you` or `awaiting:them`. Whose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n",
+        "enum": [
+          "you",
+          "them"
+        ],
+        "name": "awaiting",
+        "required": false,
+        "type": "string"
       },
       {
         "description": "Sort mode. Defaults to relevance when a text query is present,\notherwise `received_at_desc`.\n",
@@ -4463,6 +4531,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ],
                 "format": "uuid",
                 "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
+              },
+              "reply_count": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of replies recorded against this email: sends whose\n`in_reply_to_email_id` is this email, the same linkage that populates\n`EmailDetail.replies`, excluding sends that never went out (status\n`gate_denied`, `agent_failed`, `canceled`). Queued and scheduled\nreplies count. Under an agent connection, only the replies that agent\ncan see in `EmailDetail.replies`. Unlike `awaiting`, this counts\nreplies to this one email, not to the thread.\n"
+              },
+              "last_replied_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "`created_at` of the latest reply counted in `reply_count`, or\nnull when `reply_count` is 0.\n"
+              },
+              "awaiting": {
+                "type": "string",
+                "enum": [
+                  "you",
+                  "them"
+                ],
+                "description": "Whose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n"
               }
             },
             "required": [
@@ -4473,7 +4562,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "domain",
               "created_at",
               "received_at",
-              "webhook_attempt_count"
+              "webhook_attempt_count",
+              "reply_count",
+              "last_replied_at",
+              "awaiting"
             ]
           },
           {

@@ -1533,6 +1533,42 @@ export type EmailSummary = {
      *
      */
     thread_id?: string | null;
+    /**
+     * Number of replies recorded against this email: sends whose
+     * `in_reply_to_email_id` is this email, the same linkage that populates
+     * `EmailDetail.replies`, excluding sends that never went out (status
+     * `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+     * replies count. Under an agent connection, only the replies that agent
+     * can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+     * replies to this one email, not to the thread.
+     *
+     */
+    reply_count: number;
+    /**
+     * `created_at` of the latest reply counted in `reply_count`, or
+     * null when `reply_count` is 0.
+     *
+     */
+    last_replied_at: string | null;
+    /**
+     * Whose turn it is in this email's conversation. A send counts as a
+     * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+     * (queued and scheduled replies count: they are committed to go). For
+     * an email with a `thread_id`: `them` when the thread's latest counted
+     * outbound send (by send `created_at`, including any counted reply to
+     * this email itself) is at or after the thread's latest inbound message
+     * (by `received_at`); otherwise `you`. For an email with no
+     * `thread_id`: `them` when it has at least one counted reply
+     * (`reply_count > 0` for an API key), otherwise `you`. It is a
+     * thread-level fact: every email in a thread carries the same value, and
+     * it reflects sends made by any credential in the organization,
+     * including other agent connections. It changes without a new inbound
+     * message, for example when a reply is sent, a queued reply fails, a
+     * scheduled reply is canceled, or a message is deleted, and is always
+     * current when read.
+     *
+     */
+    awaiting: 'you' | 'them';
 };
 
 export type EmailSearchHighlights = {
@@ -1748,6 +1784,42 @@ export type EmailDetail = {
      *
      */
     auth: EmailAuth;
+    /**
+     * Number of replies recorded against this email: sends whose
+     * `in_reply_to_email_id` is this email, the same linkage that populates
+     * `EmailDetail.replies`, excluding sends that never went out (status
+     * `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+     * replies count. Under an agent connection, only the replies that agent
+     * can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+     * replies to this one email, not to the thread.
+     *
+     */
+    reply_count: number;
+    /**
+     * `created_at` of the latest reply counted in `reply_count`, or
+     * null when `reply_count` is 0.
+     *
+     */
+    last_replied_at: string | null;
+    /**
+     * Whose turn it is in this email's conversation. A send counts as a
+     * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+     * (queued and scheduled replies count: they are committed to go). For
+     * an email with a `thread_id`: `them` when the thread's latest counted
+     * outbound send (by send `created_at`, including any counted reply to
+     * this email itself) is at or after the thread's latest inbound message
+     * (by `received_at`); otherwise `you`. For an email with no
+     * `thread_id`: `them` when it has at least one counted reply
+     * (`reply_count > 0` for an API key), otherwise `you`. It is a
+     * thread-level fact: every email in a thread carries the same value, and
+     * it reflects sends made by any credential in the organization,
+     * including other agent connections. It changes without a new inbound
+     * message, for example when a reply is sent, a queued reply fails, a
+     * scheduled reply is canceled, or a message is deleted, and is always
+     * current when read.
+     *
+     */
+    awaiting: 'you' | 'them';
 };
 
 export type EmailDetailReply = {
@@ -5738,6 +5810,27 @@ export type ListEmailsData = {
          *
          */
         wait?: number;
+        /**
+         * Only return emails whose `awaiting` has this value. `awaiting=you`
+         * lists mail waiting on your reply. Combines with every other filter
+         * and with both `cursor` and `since`. Whose turn it is in this email's conversation. A send counts as a
+         * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+         * (queued and scheduled replies count: they are committed to go). For
+         * an email with a `thread_id`: `them` when the thread's latest counted
+         * outbound send (by send `created_at`, including any counted reply to
+         * this email itself) is at or after the thread's latest inbound message
+         * (by `received_at`); otherwise `you`. For an email with no
+         * `thread_id`: `them` when it has at least one counted reply
+         * (`reply_count > 0` for an API key), otherwise `you`. It is a
+         * thread-level fact: every email in a thread carries the same value, and
+         * it reflects sends made by any credential in the organization,
+         * including other agent connections. It changes without a new inbound
+         * message, for example when a reply is sent, a queued reply fails, a
+         * scheduled reply is canceled, or a message is deleted, and is always
+         * current when read.
+         *
+         */
+        awaiting?: 'you' | 'them';
     };
     url: '/emails';
 };
@@ -5771,7 +5864,7 @@ export type SearchEmailsData = {
     path?: never;
     query?: {
         /**
-         * Full-text search DSL query.
+         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field).
          */
         q?: string;
         /**
@@ -5833,6 +5926,26 @@ export type SearchEmailsData = {
          * Filter to emails with spam score greater than or equal to this value.
          */
         spam_score_gte?: number;
+        /**
+         * Only return emails whose `awaiting` has this value. Also available
+         * in `q` as `awaiting:you` or `awaiting:them`. Whose turn it is in this email's conversation. A send counts as a
+         * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+         * (queued and scheduled replies count: they are committed to go). For
+         * an email with a `thread_id`: `them` when the thread's latest counted
+         * outbound send (by send `created_at`, including any counted reply to
+         * this email itself) is at or after the thread's latest inbound message
+         * (by `received_at`); otherwise `you`. For an email with no
+         * `thread_id`: `them` when it has at least one counted reply
+         * (`reply_count > 0` for an API key), otherwise `you`. It is a
+         * thread-level fact: every email in a thread carries the same value, and
+         * it reflects sends made by any credential in the organization,
+         * including other agent connections. It changes without a new inbound
+         * message, for example when a reply is sent, a queued reply fails, a
+         * scheduled reply is canceled, or a message is deleted, and is always
+         * current when read.
+         *
+         */
+        awaiting?: 'you' | 'them';
         /**
          * Sort mode. Defaults to relevance when a text query is present,
          * otherwise `received_at_desc`.

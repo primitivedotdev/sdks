@@ -5,6 +5,11 @@ import {
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
+import {
+  AWAITING_FLAG_DESCRIPTION,
+  AWAITING_VALUES,
+  ReplyStateUnsupportedError,
+} from "../reply-state.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
   collectNewAcceptedEmails,
@@ -32,6 +37,7 @@ class EmailsWatchCommand extends Command {
     "<%= config.bin %> emails watch --to support@example.com",
     "<%= config.bin %> emails watch --subject verify --seconds 300",
     "<%= config.bin %> emails watch --number 20 --jsonl",
+    "<%= config.bin %> emails watch --awaiting you",
   ];
 
   static flags = {
@@ -45,6 +51,10 @@ class EmailsWatchCommand extends Command {
         "Override the primary API base URL. Internal testing only; not documented to customers.",
       env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
+    }),
+    awaiting: Flags.string({
+      description: AWAITING_FLAG_DESCRIPTION,
+      options: [...AWAITING_VALUES],
     }),
     body: Flags.string({
       description: "Full-text body filter",
@@ -133,13 +143,21 @@ class EmailsWatchCommand extends Command {
     let headerPrinted = false;
 
     while (deadline === null || Date.now() < deadline) {
-      const page = await fetchEmailSearchPage({
-        apiClient,
-        cursor,
-        filters,
-        pageSize: flags["page-size"],
-        since,
-      });
+      let page: Awaited<ReturnType<typeof fetchEmailSearchPage>>;
+      try {
+        page = await fetchEmailSearchPage({
+          apiClient,
+          cursor,
+          filters,
+          pageSize: flags["page-size"],
+          since,
+        });
+      } catch (error) {
+        if (error instanceof ReplyStateUnsupportedError) {
+          throw cliError(error.message);
+        }
+        throw error;
+      }
 
       if (!page.ok) {
         const payload = extractErrorPayload(page.error);

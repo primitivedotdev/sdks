@@ -5,12 +5,20 @@ import type {
   SearchEmailsResponse,
 } from "@primitivedotdev/api-core";
 import { searchEmails } from "@primitivedotdev/api-core";
+import {
+  type Awaiting,
+  assertReplyState,
+  awaitingRejectedError,
+  isAwaitingRejectedError,
+  queryUsesAwaiting,
+} from "../reply-state.js";
 
 export const DEFAULT_EMAIL_POLL_INTERVAL_SECONDS = 2;
 export const DEFAULT_EMAIL_POLL_PAGE_SIZE = 50;
 export const MAX_EMAIL_POLL_PAGE_SIZE = 100;
 
 export type EmailPollFilters = {
+  awaiting?: Awaiting;
   body?: string;
   domain?: string;
   domainId?: string;
@@ -25,6 +33,7 @@ export type EmailPollFilters = {
 };
 
 export type EmailPollFilterFlags = {
+  awaiting?: string;
   body?: string;
   domain?: string;
   "domain-id"?: string;
@@ -72,6 +81,7 @@ export function filtersFromFlags(
   flags: EmailPollFilterFlags,
 ): EmailPollFilters {
   return {
+    awaiting: flags.awaiting as Awaiting | undefined,
     body: flags.body,
     domain: flags.domain,
     domainId: flags["domain-id"],
@@ -109,6 +119,7 @@ export function buildEmailSearchQuery(params: {
 
   const q = combineQ(params.filters.q, params.filters.domain);
   if (q) query.q = q;
+  if (params.filters.awaiting) query.awaiting = params.filters.awaiting;
   if (params.filters.body) query.body = params.filters.body;
   if (params.filters.domainId) query.domain_id = params.filters.domainId;
   if (params.filters.from) query.from = params.filters.from;
@@ -188,10 +199,23 @@ export async function fetchEmailSearchPage(params: {
     responseStyle: "fields",
   });
 
-  if (result.error) return { ok: false, error: result.error };
+  const wantsReplyState =
+    Boolean(params.filters.awaiting) || queryUsesAwaiting(params.filters.q);
+  if (result.error) {
+    // An older server may reject the filter outright. Surface that as
+    // the reply-state error rather than a generic validation failure.
+    if (wantsReplyState && isAwaitingRejectedError(result.error)) {
+      throw awaitingRejectedError("GET /emails/search");
+    }
+    return { ok: false, error: result.error };
+  }
 
   const envelope = result.data as SearchEmailsResponse | undefined;
   const rows = envelope?.data ?? [];
+  // Search ignores query parameters it does not know, so an older
+  // server answers `awaiting=you` with unfiltered rows that lack the
+  // reply-state fields. Throw instead of printing them as matches.
+  if (wantsReplyState) assertReplyState(rows, "GET /emails/search");
   return {
     ok: true,
     cursor: envelope?.meta.cursor ?? cursorFromRows(rows),

@@ -10,6 +10,7 @@ from ... import errors
 
 from ...models.email_status import EmailStatus
 from ...models.error_response import ErrorResponse
+from ...models.search_emails_awaiting import SearchEmailsAwaiting
 from ...models.search_emails_has_attachment import SearchEmailsHasAttachment
 from ...models.search_emails_include_facets import SearchEmailsIncludeFacets
 from ...models.search_emails_response_200 import SearchEmailsResponse200
@@ -38,6 +39,7 @@ def _get_kwargs(
     has_attachment: SearchEmailsHasAttachment | Unset = UNSET,
     spam_score_lt: float | Unset = UNSET,
     spam_score_gte: float | Unset = UNSET,
+    awaiting: SearchEmailsAwaiting | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -96,6 +98,12 @@ def _get_kwargs(
     params["spam_score_lt"] = spam_score_lt
 
     params["spam_score_gte"] = spam_score_gte
+
+    json_awaiting: str | Unset = UNSET
+    if not isinstance(awaiting, Unset):
+        json_awaiting = awaiting.value
+
+    params["awaiting"] = json_awaiting
 
     json_sort: str | Unset = UNSET
     if not isinstance(sort, Unset):
@@ -194,6 +202,7 @@ def sync_detailed(
     has_attachment: SearchEmailsHasAttachment | Unset = UNSET,
     spam_score_lt: float | Unset = UNSET,
     spam_score_gte: float | Unset = UNSET,
+    awaiting: SearchEmailsAwaiting | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -255,6 +264,7 @@ def sync_detailed(
         has_attachment (SearchEmailsHasAttachment | Unset):
         spam_score_lt (float | Unset):
         spam_score_gte (float | Unset):
+        awaiting (SearchEmailsAwaiting | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -285,6 +295,7 @@ date_to=date_to,
 has_attachment=has_attachment,
 spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
+awaiting=awaiting,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -315,6 +326,7 @@ def sync(
     has_attachment: SearchEmailsHasAttachment | Unset = UNSET,
     spam_score_lt: float | Unset = UNSET,
     spam_score_gte: float | Unset = UNSET,
+    awaiting: SearchEmailsAwaiting | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -376,6 +388,7 @@ def sync(
         has_attachment (SearchEmailsHasAttachment | Unset):
         spam_score_lt (float | Unset):
         spam_score_gte (float | Unset):
+        awaiting (SearchEmailsAwaiting | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -407,6 +420,7 @@ date_to=date_to,
 has_attachment=has_attachment,
 spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
+awaiting=awaiting,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -431,6 +445,7 @@ async def asyncio_detailed(
     has_attachment: SearchEmailsHasAttachment | Unset = UNSET,
     spam_score_lt: float | Unset = UNSET,
     spam_score_gte: float | Unset = UNSET,
+    awaiting: SearchEmailsAwaiting | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -492,6 +507,7 @@ async def asyncio_detailed(
         has_attachment (SearchEmailsHasAttachment | Unset):
         spam_score_lt (float | Unset):
         spam_score_gte (float | Unset):
+        awaiting (SearchEmailsAwaiting | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -522,6 +538,7 @@ date_to=date_to,
 has_attachment=has_attachment,
 spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
+awaiting=awaiting,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -552,6 +569,7 @@ async def asyncio(
     has_attachment: SearchEmailsHasAttachment | Unset = UNSET,
     spam_score_lt: float | Unset = UNSET,
     spam_score_gte: float | Unset = UNSET,
+    awaiting: SearchEmailsAwaiting | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -613,6 +631,7 @@ async def asyncio(
         has_attachment (SearchEmailsHasAttachment | Unset):
         spam_score_lt (float | Unset):
         spam_score_gte (float | Unset):
+        awaiting (SearchEmailsAwaiting | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -644,6 +663,7 @@ date_to=date_to,
 has_attachment=has_attachment,
 spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
+awaiting=awaiting,
 sort=sort,
 cursor=cursor,
 limit=limit,

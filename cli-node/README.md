@@ -130,6 +130,7 @@ primitive functions deploy --name my-fn --file ./dist/handler.js
 
 primitive send --to alice@example.com --body "Hello!" --wait
 primitive emails latest --limit 5
+primitive inbox next
 ```
 
 Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
@@ -143,6 +144,54 @@ Use `primitive signin <email> --signup-code <code> --accept-terms`, then `primit
 Use `primitive logout --force` to remove local CLI credentials, pending email-code auth state, and stale credential locks without contacting Primitive. This is the recovery command when an interrupted auth command leaves the CLI saying another credential operation is already in progress.
 
 Use `primitive signup <email>` for new account creation, then `primitive signup confirm <email> <code>` with the emailed verification code. Non-interactive signup is available with `--accept-terms` (pass `--signup-code <code>` too if you have one).
+
+## Reply state and the agent loop
+
+Every inbound email carries reply state: `awaiting` is `you` when the latest
+message in its thread is inbound (it waits on your reply) and `them` when you
+replied last; `reply_count` and `last_replied_at` describe replies to that one
+email. A reply counts once it is sent or committed to go (queued and scheduled
+count; gate-denied, agent-failed and canceled sends do not).
+
+`primitive emails latest` shows it as the AWAITING and REPLIES columns, and
+`--json` carries the fields. Filter on it with `--awaiting you|them` on
+`emails latest`, `emails list`, `emails search`, `emails wait`, `emails watch`
+and `search`, or with `awaiting:you` in a search query.
+
+`primitive inbox next` returns the oldest email awaiting your reply, its whole
+conversation (roles `user` and `assistant`), an `automated` verdict with reasons,
+and the exact `primitive reply --id <id>` command that answers it. The loop is:
+
+```bash
+primitive inbox next --json > next.json   # exit 5: nothing awaits you
+primitive reply --id "$(jq -r .email.id next.json)" --body "..."
+primitive inbox next --json               # the next one
+```
+
+| Exit | Meaning |
+|---|---|
+| 0 | An email awaits your reply; it is printed. |
+| 1 | Error, including `reply_state_unsupported` from a server without reply state. |
+| 2 | Invalid flags or arguments. |
+| 5 | Nothing awaits your reply (with `--wait`: still nothing at `--timeout`). |
+
+- Automated mail is skipped unless you pass `--include-automated`: null envelope
+  sender (bounces), mailer-daemon and postmaster, mail from the inbox's own
+  addresses, and mail that declares itself automated (Auto-Submitted, Precedence
+  bulk/list/junk, List-Unsubscribe, List-Id). Skipped ids and reasons are in
+  `skipped_automated`.
+- `--wait [--timeout N]` blocks until something awaits you (default 300 seconds,
+  0 waits forever). It reads the inbox's newest position before checking reply
+  state, then long-polls from that position and re-checks on every arrival and
+  at least every 30 seconds, so mail that lands between the check and the wait is
+  not missed. Mail that arrives while you compose a reply is still `awaiting=you`
+  on the next call, because the state lives on the server, not in a cursor.
+- It is not a work queue. Nothing is claimed or locked, so two agents calling
+  `inbox next` on the same inbox get the same email until one replies. Run one
+  agent per inbox.
+- Against a server that does not report reply state, `inbox next` and every
+  `--awaiting` filter fail with `reply_state_unsupported` instead of treating
+  mail as unanswered.
 
 ## Command style
 
