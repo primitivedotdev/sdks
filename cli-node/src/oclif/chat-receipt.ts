@@ -20,6 +20,14 @@ type ReceiptData = {
 };
 export type ChatReceipt = { path: string; data: ReceiptData };
 
+/** A previous attempt may or may not have sent; the caller must not resend blindly. */
+export class UncertainChatSendError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "UncertainChatSendError";
+  }
+}
+
 /** Keep API credentials out of request fingerprints, including low-entropy local keys. */
 export function chatCredentialIdentity(
   key: string | undefined,
@@ -80,7 +88,7 @@ export function beginChatReceipt(
     previous = parseReceipt(readFileSync(path, "utf8"));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw new Error(
+      throw new UncertainChatSendError(
         `Cannot safely read chat receipt ${path}. Inspect it and sent history before retrying.`,
         { cause: error },
       );
@@ -88,7 +96,7 @@ export function beginChatReceipt(
   }
   if (previous && !previous.completed) {
     if (previous.sent === null) {
-      throw new Error(
+      throw new UncertainChatSendError(
         `A previous send has an uncertain outcome. Inspect sent history before sending again. Receipt: ${path}`,
       );
     }
