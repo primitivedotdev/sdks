@@ -158,9 +158,11 @@ count; gate-denied, agent-failed and canceled sends do not).
 `emails latest`, `emails list`, `emails search`, `emails wait`, `emails watch`
 and `search`, or with `awaiting:you` in a search query.
 
-`primitive inbox next` returns the oldest email awaiting your reply, its whole
-conversation (roles `user` and `assistant`), an `automated` verdict with reasons,
-and the exact `primitive reply --id <id>` command that answers it. The loop is:
+`primitive inbox next` returns the oldest email awaiting your reply, its
+conversation (roles `user` and `assistant`; the API caps long threads and sets
+`truncated` when older messages are omitted), an `automated` verdict with
+reasons, and the exact `primitive reply --id <id>` command that answers it. The
+loop is:
 
 ```bash
 primitive inbox next --json > next.json   # exit 5: nothing awaits you
@@ -179,7 +181,9 @@ primitive inbox next --json               # the next one
   sender (bounces), mailer-daemon and postmaster, mail from the inbox's own
   addresses, and mail that declares itself automated (Auto-Submitted, Precedence
   bulk/list/junk, List-Unsubscribe, List-Id). Skipped ids and reasons are in
-  `skipped_automated`.
+  `skipped_automated`. `automation_headers_known: false` means the email had no
+  automation headers on record (none declared, or received before they were
+  captured), so `automated: false` rests on the sender checks alone.
 - `--wait [--timeout N]` blocks until something awaits you (default 300 seconds,
   0 waits forever). It reads the inbox's newest position before checking reply
   state, then long-polls from that position and re-checks on every arrival and

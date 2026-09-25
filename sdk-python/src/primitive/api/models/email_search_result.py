@@ -20,6 +20,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.email_search_highlights import EmailSearchHighlights
+  from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
 
 
 
@@ -134,6 +135,13 @@ class EmailSearchResult:
             thread_id (None | Unset | UUID): Conversation thread this message belongs to. Fetch
                 `/threads/{thread_id}` for the full ordered thread. NULL on
                 messages received before threading was enabled.
+            automation_headers (EmailSummaryAutomationHeadersType0 | None | Unset): What the message declared about being
+                automated, verbatim:
+                `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+                `Auto-Submitted` (RFC 3834). Null or absent when the message
+                declared none, and on messages received before these headers
+                were captured, so a null value is not evidence that a person
+                sent the message.
             score (float | Unset): Relevance score. Present only when sorting by relevance.
             highlights (EmailSearchHighlights | Unset):
      """
@@ -159,6 +167,7 @@ class EmailSearchResult:
     raw_size_bytes: int | None | Unset = UNSET
     webhook_status: EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset = UNSET
     thread_id: None | Unset | UUID = UNSET
+    automation_headers: EmailSummaryAutomationHeadersType0 | None | Unset = UNSET
     score: float | Unset = UNSET
     highlights: EmailSearchHighlights | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -169,6 +178,7 @@ class EmailSearchResult:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_search_highlights import EmailSearchHighlights
+        from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
         id = str(self.id)
 
         status = self.status.value
@@ -259,6 +269,14 @@ class EmailSearchResult:
         else:
             thread_id = self.thread_id
 
+        automation_headers: dict[str, Any] | None | Unset
+        if isinstance(self.automation_headers, Unset):
+            automation_headers = UNSET
+        elif isinstance(self.automation_headers, EmailSummaryAutomationHeadersType0):
+            automation_headers = self.automation_headers.to_dict()
+        else:
+            automation_headers = self.automation_headers
+
         score = self.score
 
         highlights: dict[str, Any] | Unset = UNSET
@@ -299,6 +317,8 @@ class EmailSearchResult:
             field_dict["webhook_status"] = webhook_status
         if thread_id is not UNSET:
             field_dict["thread_id"] = thread_id
+        if automation_headers is not UNSET:
+            field_dict["automation_headers"] = automation_headers
         if score is not UNSET:
             field_dict["score"] = score
         if highlights is not UNSET:
@@ -311,6 +331,7 @@ class EmailSearchResult:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_search_highlights import EmailSearchHighlights
+        from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -509,6 +530,26 @@ class EmailSearchResult:
         thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
 
 
+        def _parse_automation_headers(data: object) -> EmailSummaryAutomationHeadersType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                automation_headers_type_0 = EmailSummaryAutomationHeadersType0.from_dict(data)
+
+
+
+                return automation_headers_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummaryAutomationHeadersType0 | None | Unset, data)
+
+        automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
+
+
         score = d.pop("score", UNSET)
 
         _highlights = d.pop("highlights", UNSET)
@@ -543,6 +584,7 @@ class EmailSearchResult:
             raw_size_bytes=raw_size_bytes,
             webhook_status=webhook_status,
             thread_id=thread_id,
+            automation_headers=automation_headers,
             score=score,
             highlights=highlights,
         )

@@ -329,13 +329,9 @@ export async function findNextAwaiting(params: {
       };
     }
 
-    // A short page means the tail is caught up; the forward tail also
-    // returns a null cursor once there is nothing further.
-    if (
-      page.rows.length < SCAN_PAGE_SIZE ||
-      !page.cursor ||
-      page.cursor === since
-    ) {
+    // The forward tail signals "caught up" with an empty page (and a
+    // null cursor); a short page is not final, so keep following it.
+    if (page.rows.length === 0 || !page.cursor || page.cursor === since) {
       return { outcome: "empty", skipped_automated: skipped };
     }
     since = page.cursor;
@@ -431,7 +427,11 @@ function formatMessage(message: ConversationMessage, index: number): string {
 }
 
 export function formatVerdict(verdict: AutomatedVerdict): string {
-  if (!verdict.automated) return "no";
+  if (!verdict.automated) {
+    return verdict.automation_headers_known
+      ? "no"
+      : "no (no automation headers recorded for this email, so a newsletter or auto-reply from an ordinary address cannot be ruled out; judge from its content)";
+  }
   return `yes: ${verdict.reasons
     .map((reason) => AUTOMATED_REASON_DESCRIPTIONS[reason])
     .join("; ")}`;
@@ -474,7 +474,7 @@ class InboxNextCommand extends Command {
   static summary = "Show the oldest email awaiting your reply";
 
   static description =
-    `Show the oldest inbound email that is waiting on your reply, with its whole conversation and the command that answers it. Built for agent loops:
+    `Show the oldest inbound email that is waiting on your reply, with its conversation and the command that answers it. The conversation comes from the API, which caps long threads; \`truncated\` (and the transcript header) says when older messages were left out. Built for agent loops:
 
     primitive inbox next            # read the email and its conversation
     primitive reply --id <id> ...   # answer it
@@ -488,7 +488,7 @@ class InboxNextCommand extends Command {
 
   --wait blocks until something awaits you. It takes the inbox's newest position before checking, then long-polls from that position, re-checking reply state whenever mail arrives and at least every 30 seconds, so nothing that arrives between the check and the wait is missed.
 
-  --json prints one stable envelope (version ${INBOX_NEXT_JSON_VERSION}): \`outcome\` ("email" | "empty" | "error"), \`email\` (id, thread_id, message_id, received_at, from, from_email, to, subject, awaiting, reply_count, last_replied_at, body_text), \`automated\` ({ automated, reasons[] }), \`conversation\` (thread_id, subject, message_count, truncated, messages[] with role user|assistant), \`reply_command\`, \`skipped_automated\` ([{ id, reasons[] }]), and \`error\` ({ code, message }) on failure.
+  --json prints one stable envelope (version ${INBOX_NEXT_JSON_VERSION}): \`outcome\` ("email" | "empty" | "error"), \`email\` (id, thread_id, message_id, received_at, from, from_email, to, subject, awaiting, reply_count, last_replied_at, body_text), \`automated\` ({ automated, reasons[], automation_headers_known }), \`conversation\` (thread_id, subject, message_count, truncated, messages[] with role user|assistant), \`reply_command\`, \`skipped_automated\` ([{ id, reasons[] }]), and \`error\` ({ code, message }) on failure.
 
   Requires a server that reports reply state. Against an older server it fails with code \`${REPLY_STATE_UNSUPPORTED_CODE}\` rather than guessing.
 

@@ -20,6 +20,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.email_auth import EmailAuth
+  from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
   from ..models.email_detail_reply import EmailDetailReply
   from ..models.parsed_email_data import ParsedEmailData
 
@@ -205,6 +206,13 @@ class EmailDetail:
                 `thread_id`; fetch `/threads/{thread_id}` for the full
                 ordered thread. Assigned at ingest. NULL on messages
                 received before threading was enabled (until backfilled).
+            automation_headers (EmailDetailAutomationHeadersType0 | None | Unset): What the message declared about being
+                automated, verbatim:
+                `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+                `Auto-Submitted` (RFC 3834). Null or absent when the message
+                declared none, and on messages received before these headers
+                were captured, so a null value is not evidence that a person
+                sent the message.
      """
 
     id: UUID
@@ -247,6 +255,7 @@ class EmailDetail:
     from_known_address: bool | Unset = UNSET
     reply_to_sent_email_id: None | Unset | UUID = UNSET
     thread_id: None | Unset | UUID = UNSET
+    automation_headers: EmailDetailAutomationHeadersType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -255,6 +264,7 @@ class EmailDetail:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_auth import EmailAuth
+        from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
         from ..models.email_detail_reply import EmailDetailReply
         from ..models.parsed_email_data import ParsedEmailData
         id = str(self.id)
@@ -462,6 +472,14 @@ class EmailDetail:
         else:
             thread_id = self.thread_id
 
+        automation_headers: dict[str, Any] | None | Unset
+        if isinstance(self.automation_headers, Unset):
+            automation_headers = UNSET
+        elif isinstance(self.automation_headers, EmailDetailAutomationHeadersType0):
+            automation_headers = self.automation_headers.to_dict()
+        else:
+            automation_headers = self.automation_headers
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -531,6 +549,8 @@ class EmailDetail:
             field_dict["reply_to_sent_email_id"] = reply_to_sent_email_id
         if thread_id is not UNSET:
             field_dict["thread_id"] = thread_id
+        if automation_headers is not UNSET:
+            field_dict["automation_headers"] = automation_headers
 
         return field_dict
 
@@ -539,6 +559,7 @@ class EmailDetail:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_auth import EmailAuth
+        from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
         from ..models.email_detail_reply import EmailDetailReply
         from ..models.parsed_email_data import ParsedEmailData
         d = dict(src_dict)
@@ -959,6 +980,26 @@ class EmailDetail:
         thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
 
 
+        def _parse_automation_headers(data: object) -> EmailDetailAutomationHeadersType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                automation_headers_type_0 = EmailDetailAutomationHeadersType0.from_dict(data)
+
+
+
+                return automation_headers_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailDetailAutomationHeadersType0 | None | Unset, data)
+
+        automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
+
+
         email_detail = cls(
             id=id,
             sender=sender,
@@ -1000,6 +1041,7 @@ class EmailDetail:
             from_known_address=from_known_address,
             reply_to_sent_email_id=reply_to_sent_email_id,
             thread_id=thread_id,
+            automation_headers=automation_headers,
         )
 
 

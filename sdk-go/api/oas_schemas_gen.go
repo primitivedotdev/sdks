@@ -8017,6 +8017,13 @@ type EmailDetail struct {
 	// to decide how much to trust a message before acting on
 	// instructions it contains.
 	Auth EmailAuth `json:"auth"`
+	// What the message declared about being automated, verbatim:
+	// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+	// `Auto-Submitted` (RFC 3834). Null or absent when the message
+	// declared none, and on messages received before these headers
+	// were captured, so a null value is not evidence that a person
+	// sent the message.
+	AutomationHeaders OptNilEmailDetailAutomationHeaders `json:"automation_headers"`
 	// Number of replies recorded against this email: sends whose
 	// `in_reply_to_email_id` is this email, the same linkage that populates
 	// `EmailDetail.replies`, excluding sends that never went out (status
@@ -8231,6 +8238,11 @@ func (s *EmailDetail) GetAuth() EmailAuth {
 	return s.Auth
 }
 
+// GetAutomationHeaders returns the value of AutomationHeaders.
+func (s *EmailDetail) GetAutomationHeaders() OptNilEmailDetailAutomationHeaders {
+	return s.AutomationHeaders
+}
+
 // GetReplyCount returns the value of ReplyCount.
 func (s *EmailDetail) GetReplyCount() int {
 	return s.ReplyCount
@@ -8431,6 +8443,11 @@ func (s *EmailDetail) SetAuth(val EmailAuth) {
 	s.Auth = val
 }
 
+// SetAutomationHeaders sets the value of AutomationHeaders.
+func (s *EmailDetail) SetAutomationHeaders(val OptNilEmailDetailAutomationHeaders) {
+	s.AutomationHeaders = val
+}
+
 // SetReplyCount sets the value of ReplyCount.
 func (s *EmailDetail) SetReplyCount(val int) {
 	s.ReplyCount = val
@@ -8444,6 +8461,70 @@ func (s *EmailDetail) SetLastRepliedAt(val NilDateTime) {
 // SetAwaiting sets the value of Awaiting.
 func (s *EmailDetail) SetAwaiting(val EmailDetailAwaiting) {
 	s.Awaiting = val
+}
+
+// What the message declared about being automated, verbatim:
+// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+// `Auto-Submitted` (RFC 3834). Null or absent when the message
+// declared none, and on messages received before these headers
+// were captured, so a null value is not evidence that a person
+// sent the message.
+type EmailDetailAutomationHeaders struct {
+	ListUnsubscribe OptString `json:"list_unsubscribe"`
+	Precedence      OptString `json:"precedence"`
+	AutoSubmitted   OptString `json:"auto_submitted"`
+	AdditionalProps EmailDetailAutomationHeadersAdditional
+}
+
+// GetListUnsubscribe returns the value of ListUnsubscribe.
+func (s *EmailDetailAutomationHeaders) GetListUnsubscribe() OptString {
+	return s.ListUnsubscribe
+}
+
+// GetPrecedence returns the value of Precedence.
+func (s *EmailDetailAutomationHeaders) GetPrecedence() OptString {
+	return s.Precedence
+}
+
+// GetAutoSubmitted returns the value of AutoSubmitted.
+func (s *EmailDetailAutomationHeaders) GetAutoSubmitted() OptString {
+	return s.AutoSubmitted
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EmailDetailAutomationHeaders) GetAdditionalProps() EmailDetailAutomationHeadersAdditional {
+	return s.AdditionalProps
+}
+
+// SetListUnsubscribe sets the value of ListUnsubscribe.
+func (s *EmailDetailAutomationHeaders) SetListUnsubscribe(val OptString) {
+	s.ListUnsubscribe = val
+}
+
+// SetPrecedence sets the value of Precedence.
+func (s *EmailDetailAutomationHeaders) SetPrecedence(val OptString) {
+	s.Precedence = val
+}
+
+// SetAutoSubmitted sets the value of AutoSubmitted.
+func (s *EmailDetailAutomationHeaders) SetAutoSubmitted(val OptString) {
+	s.AutoSubmitted = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EmailDetailAutomationHeaders) SetAdditionalProps(val EmailDetailAutomationHeadersAdditional) {
+	s.AdditionalProps = val
+}
+
+type EmailDetailAutomationHeadersAdditional map[string]jx.Raw
+
+func (s *EmailDetailAutomationHeadersAdditional) init() EmailDetailAutomationHeadersAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // Whose turn it is in this email's conversation. A send counts as a
@@ -8845,6 +8926,13 @@ type EmailSearchResult struct {
 	// `/threads/{thread_id}` for the full ordered thread. NULL on
 	// messages received before threading was enabled.
 	ThreadID OptNilUUID `json:"thread_id"`
+	// What the message declared about being automated, verbatim:
+	// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+	// `Auto-Submitted` (RFC 3834). Null or absent when the message
+	// declared none, and on messages received before these headers
+	// were captured, so a null value is not evidence that a person
+	// sent the message.
+	AutomationHeaders OptNilEmailSearchResultAutomationHeaders `json:"automation_headers"`
 	// Number of replies recorded against this email: sends whose
 	// `in_reply_to_email_id` is this email, the same linkage that populates
 	// `EmailDetail.replies`, excluding sends that never went out (status
@@ -8959,6 +9047,11 @@ func (s *EmailSearchResult) GetWebhookAttemptCount() int {
 // GetThreadID returns the value of ThreadID.
 func (s *EmailSearchResult) GetThreadID() OptNilUUID {
 	return s.ThreadID
+}
+
+// GetAutomationHeaders returns the value of AutomationHeaders.
+func (s *EmailSearchResult) GetAutomationHeaders() OptNilEmailSearchResultAutomationHeaders {
+	return s.AutomationHeaders
 }
 
 // GetReplyCount returns the value of ReplyCount.
@@ -9076,6 +9169,11 @@ func (s *EmailSearchResult) SetThreadID(val OptNilUUID) {
 	s.ThreadID = val
 }
 
+// SetAutomationHeaders sets the value of AutomationHeaders.
+func (s *EmailSearchResult) SetAutomationHeaders(val OptNilEmailSearchResultAutomationHeaders) {
+	s.AutomationHeaders = val
+}
+
 // SetReplyCount sets the value of ReplyCount.
 func (s *EmailSearchResult) SetReplyCount(val int) {
 	s.ReplyCount = val
@@ -9109,6 +9207,70 @@ func (s *EmailSearchResult) SetScore(val OptFloat64) {
 // SetHighlights sets the value of Highlights.
 func (s *EmailSearchResult) SetHighlights(val OptEmailSearchHighlights) {
 	s.Highlights = val
+}
+
+// What the message declared about being automated, verbatim:
+// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+// `Auto-Submitted` (RFC 3834). Null or absent when the message
+// declared none, and on messages received before these headers
+// were captured, so a null value is not evidence that a person
+// sent the message.
+type EmailSearchResultAutomationHeaders struct {
+	ListUnsubscribe OptString `json:"list_unsubscribe"`
+	Precedence      OptString `json:"precedence"`
+	AutoSubmitted   OptString `json:"auto_submitted"`
+	AdditionalProps EmailSearchResultAutomationHeadersAdditional
+}
+
+// GetListUnsubscribe returns the value of ListUnsubscribe.
+func (s *EmailSearchResultAutomationHeaders) GetListUnsubscribe() OptString {
+	return s.ListUnsubscribe
+}
+
+// GetPrecedence returns the value of Precedence.
+func (s *EmailSearchResultAutomationHeaders) GetPrecedence() OptString {
+	return s.Precedence
+}
+
+// GetAutoSubmitted returns the value of AutoSubmitted.
+func (s *EmailSearchResultAutomationHeaders) GetAutoSubmitted() OptString {
+	return s.AutoSubmitted
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EmailSearchResultAutomationHeaders) GetAdditionalProps() EmailSearchResultAutomationHeadersAdditional {
+	return s.AdditionalProps
+}
+
+// SetListUnsubscribe sets the value of ListUnsubscribe.
+func (s *EmailSearchResultAutomationHeaders) SetListUnsubscribe(val OptString) {
+	s.ListUnsubscribe = val
+}
+
+// SetPrecedence sets the value of Precedence.
+func (s *EmailSearchResultAutomationHeaders) SetPrecedence(val OptString) {
+	s.Precedence = val
+}
+
+// SetAutoSubmitted sets the value of AutoSubmitted.
+func (s *EmailSearchResultAutomationHeaders) SetAutoSubmitted(val OptString) {
+	s.AutoSubmitted = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EmailSearchResultAutomationHeaders) SetAdditionalProps(val EmailSearchResultAutomationHeadersAdditional) {
+	s.AdditionalProps = val
+}
+
+type EmailSearchResultAutomationHeadersAdditional map[string]jx.Raw
+
+func (s *EmailSearchResultAutomationHeadersAdditional) init() EmailSearchResultAutomationHeadersAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // Whose turn it is in this email's conversation. A send counts as a
@@ -9277,6 +9439,13 @@ type EmailSummary struct {
 	// `/threads/{thread_id}` for the full ordered thread. NULL on
 	// messages received before threading was enabled.
 	ThreadID OptNilUUID `json:"thread_id"`
+	// What the message declared about being automated, verbatim:
+	// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+	// `Auto-Submitted` (RFC 3834). Null or absent when the message
+	// declared none, and on messages received before these headers
+	// were captured, so a null value is not evidence that a person
+	// sent the message.
+	AutomationHeaders OptNilEmailSummaryAutomationHeaders `json:"automation_headers"`
 	// Number of replies recorded against this email: sends whose
 	// `in_reply_to_email_id` is this email, the same linkage that populates
 	// `EmailDetail.replies`, excluding sends that never went out (status
@@ -9386,6 +9555,11 @@ func (s *EmailSummary) GetThreadID() OptNilUUID {
 	return s.ThreadID
 }
 
+// GetAutomationHeaders returns the value of AutomationHeaders.
+func (s *EmailSummary) GetAutomationHeaders() OptNilEmailSummaryAutomationHeaders {
+	return s.AutomationHeaders
+}
+
 // GetReplyCount returns the value of ReplyCount.
 func (s *EmailSummary) GetReplyCount() int {
 	return s.ReplyCount
@@ -9481,6 +9655,11 @@ func (s *EmailSummary) SetThreadID(val OptNilUUID) {
 	s.ThreadID = val
 }
 
+// SetAutomationHeaders sets the value of AutomationHeaders.
+func (s *EmailSummary) SetAutomationHeaders(val OptNilEmailSummaryAutomationHeaders) {
+	s.AutomationHeaders = val
+}
+
 // SetReplyCount sets the value of ReplyCount.
 func (s *EmailSummary) SetReplyCount(val int) {
 	s.ReplyCount = val
@@ -9494,6 +9673,70 @@ func (s *EmailSummary) SetLastRepliedAt(val NilDateTime) {
 // SetAwaiting sets the value of Awaiting.
 func (s *EmailSummary) SetAwaiting(val EmailSummaryAwaiting) {
 	s.Awaiting = val
+}
+
+// What the message declared about being automated, verbatim:
+// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+// `Auto-Submitted` (RFC 3834). Null or absent when the message
+// declared none, and on messages received before these headers
+// were captured, so a null value is not evidence that a person
+// sent the message.
+type EmailSummaryAutomationHeaders struct {
+	ListUnsubscribe OptString `json:"list_unsubscribe"`
+	Precedence      OptString `json:"precedence"`
+	AutoSubmitted   OptString `json:"auto_submitted"`
+	AdditionalProps EmailSummaryAutomationHeadersAdditional
+}
+
+// GetListUnsubscribe returns the value of ListUnsubscribe.
+func (s *EmailSummaryAutomationHeaders) GetListUnsubscribe() OptString {
+	return s.ListUnsubscribe
+}
+
+// GetPrecedence returns the value of Precedence.
+func (s *EmailSummaryAutomationHeaders) GetPrecedence() OptString {
+	return s.Precedence
+}
+
+// GetAutoSubmitted returns the value of AutoSubmitted.
+func (s *EmailSummaryAutomationHeaders) GetAutoSubmitted() OptString {
+	return s.AutoSubmitted
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EmailSummaryAutomationHeaders) GetAdditionalProps() EmailSummaryAutomationHeadersAdditional {
+	return s.AdditionalProps
+}
+
+// SetListUnsubscribe sets the value of ListUnsubscribe.
+func (s *EmailSummaryAutomationHeaders) SetListUnsubscribe(val OptString) {
+	s.ListUnsubscribe = val
+}
+
+// SetPrecedence sets the value of Precedence.
+func (s *EmailSummaryAutomationHeaders) SetPrecedence(val OptString) {
+	s.Precedence = val
+}
+
+// SetAutoSubmitted sets the value of AutoSubmitted.
+func (s *EmailSummaryAutomationHeaders) SetAutoSubmitted(val OptString) {
+	s.AutoSubmitted = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EmailSummaryAutomationHeaders) SetAdditionalProps(val EmailSummaryAutomationHeadersAdditional) {
+	s.AdditionalProps = val
+}
+
+type EmailSummaryAutomationHeadersAdditional map[string]jx.Raw
+
+func (s *EmailSummaryAutomationHeadersAdditional) init() EmailSummaryAutomationHeadersAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
 }
 
 // Whose turn it is in this email's conversation. A send counts as a
@@ -19123,6 +19366,195 @@ func (o OptNilEmailAddressArray) Get() (v []EmailAddress, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailAddressArray) Or(d []EmailAddress) []EmailAddress {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailDetailAutomationHeaders returns new OptNilEmailDetailAutomationHeaders with value set to v.
+func NewOptNilEmailDetailAutomationHeaders(v EmailDetailAutomationHeaders) OptNilEmailDetailAutomationHeaders {
+	return OptNilEmailDetailAutomationHeaders{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailDetailAutomationHeaders is optional nullable EmailDetailAutomationHeaders.
+type OptNilEmailDetailAutomationHeaders struct {
+	Value EmailDetailAutomationHeaders
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailDetailAutomationHeaders was set.
+func (o OptNilEmailDetailAutomationHeaders) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailDetailAutomationHeaders) Reset() {
+	var v EmailDetailAutomationHeaders
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailDetailAutomationHeaders) SetTo(v EmailDetailAutomationHeaders) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailDetailAutomationHeaders) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailDetailAutomationHeaders) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailDetailAutomationHeaders
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailDetailAutomationHeaders) Get() (v EmailDetailAutomationHeaders, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailDetailAutomationHeaders) Or(d EmailDetailAutomationHeaders) EmailDetailAutomationHeaders {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailSearchResultAutomationHeaders returns new OptNilEmailSearchResultAutomationHeaders with value set to v.
+func NewOptNilEmailSearchResultAutomationHeaders(v EmailSearchResultAutomationHeaders) OptNilEmailSearchResultAutomationHeaders {
+	return OptNilEmailSearchResultAutomationHeaders{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSearchResultAutomationHeaders is optional nullable EmailSearchResultAutomationHeaders.
+type OptNilEmailSearchResultAutomationHeaders struct {
+	Value EmailSearchResultAutomationHeaders
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSearchResultAutomationHeaders was set.
+func (o OptNilEmailSearchResultAutomationHeaders) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSearchResultAutomationHeaders) Reset() {
+	var v EmailSearchResultAutomationHeaders
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSearchResultAutomationHeaders) SetTo(v EmailSearchResultAutomationHeaders) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSearchResultAutomationHeaders) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSearchResultAutomationHeaders) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSearchResultAutomationHeaders
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSearchResultAutomationHeaders) Get() (v EmailSearchResultAutomationHeaders, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSearchResultAutomationHeaders) Or(d EmailSearchResultAutomationHeaders) EmailSearchResultAutomationHeaders {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailSummaryAutomationHeaders returns new OptNilEmailSummaryAutomationHeaders with value set to v.
+func NewOptNilEmailSummaryAutomationHeaders(v EmailSummaryAutomationHeaders) OptNilEmailSummaryAutomationHeaders {
+	return OptNilEmailSummaryAutomationHeaders{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSummaryAutomationHeaders is optional nullable EmailSummaryAutomationHeaders.
+type OptNilEmailSummaryAutomationHeaders struct {
+	Value EmailSummaryAutomationHeaders
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSummaryAutomationHeaders was set.
+func (o OptNilEmailSummaryAutomationHeaders) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSummaryAutomationHeaders) Reset() {
+	var v EmailSummaryAutomationHeaders
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSummaryAutomationHeaders) SetTo(v EmailSummaryAutomationHeaders) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSummaryAutomationHeaders) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSummaryAutomationHeaders) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSummaryAutomationHeaders
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSummaryAutomationHeaders) Get() (v EmailSummaryAutomationHeaders, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSummaryAutomationHeaders) Or(d EmailSummaryAutomationHeaders) EmailSummaryAutomationHeaders {
 	if v, ok := o.Get(); ok {
 		return v
 	}

@@ -1534,6 +1534,21 @@ export type EmailSummary = {
      */
     thread_id?: string | null;
     /**
+     * What the message declared about being automated, verbatim:
+     * `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+     * `Auto-Submitted` (RFC 3834). Null or absent when the message
+     * declared none, and on messages received before these headers
+     * were captured, so a null value is not evidence that a person
+     * sent the message.
+     *
+     */
+    automation_headers?: {
+        list_unsubscribe?: string;
+        precedence?: string;
+        auto_submitted?: string;
+        [key: string]: unknown;
+    } | null;
+    /**
      * Number of replies recorded against this email: sends whose
      * `in_reply_to_email_id` is this email, the same linkage that populates
      * `EmailDetail.replies`, excluding sends that never went out (status
@@ -1784,6 +1799,21 @@ export type EmailDetail = {
      *
      */
     auth: EmailAuth;
+    /**
+     * What the message declared about being automated, verbatim:
+     * `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+     * `Auto-Submitted` (RFC 3834). Null or absent when the message
+     * declared none, and on messages received before these headers
+     * were captured, so a null value is not evidence that a person
+     * sent the message.
+     *
+     */
+    automation_headers?: {
+        list_unsubscribe?: string;
+        precedence?: string;
+        auto_submitted?: string;
+        [key: string]: unknown;
+    } | null;
     /**
      * Number of replies recorded against this email: sends whose
      * `in_reply_to_email_id` is this email, the same linkage that populates

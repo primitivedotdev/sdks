@@ -44,7 +44,12 @@ describe("classifyAutomatedMail", () => {
     expect(classifyAutomatedMail(input())).toEqual({
       automated: false,
       reasons: [],
+      automation_headers_known: false,
     });
+    expect(
+      classifyAutomatedMail(input({ automationHeaders: {} }))
+        .automation_headers_known,
+    ).toBe(true);
   });
 
   it("flags a null envelope sender as a bounce", () => {
@@ -131,6 +136,7 @@ describe("classifyAutomatedMail", () => {
     ).toEqual({
       automated: true,
       reasons: ["auto_submitted", "precedence", "list_unsubscribe", "list_id"],
+      automation_headers_known: true,
     });
   });
 });

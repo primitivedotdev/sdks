@@ -171,7 +171,7 @@ try {
   assert.equal(envelope.email.id, first.id);
   assert.equal(envelope.email.awaiting, "you");
   assert.equal(envelope.email.reply_count, 0);
-  assert.deepEqual(envelope.automated, { automated: false, reasons: [] });
+  assert.deepEqual(envelope.automated, { automated: false, reasons: [], automation_headers_known: false });
   assert.equal(envelope.conversation.messages[0].role, "user");
   assert.match(envelope.reply_command, new RegExp(` reply --id ${first.id}$`));
   assert.deepEqual(envelope.skipped_automated, [

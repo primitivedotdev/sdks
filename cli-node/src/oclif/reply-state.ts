@@ -53,7 +53,9 @@ export function hasReplyState(row: unknown): row is ReplyStateFields {
 }
 
 /**
- * Throw unless every row carries reply state. `surface` names the
+ * Throw unless every row carries reply state. An empty page passes: a
+ * server that ignored the filter returned a superset of the filtered
+ * result, so an empty superset means the filtered answer is empty too. `surface` names the
  * response for the error, e.g. "GET /emails".
  */
 export function assertReplyState(rows: readonly unknown[], surface: string) {

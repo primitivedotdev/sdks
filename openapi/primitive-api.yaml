@@ -8594,6 +8594,23 @@ components:
             Conversation thread this message belongs to. Fetch
             `/threads/{thread_id}` for the full ordered thread. NULL on
             messages received before threading was enabled.
+        automation_headers:
+          type: [object, 'null']
+          description: |
+            What the message declared about being automated, verbatim:
+            `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+            `Auto-Submitted` (RFC 3834). Null or absent when the message
+            declared none, and on messages received before these headers
+            were captured, so a null value is not evidence that a person
+            sent the message.
+          properties:
+            list_unsubscribe:
+              type: string
+            precedence:
+              type: string
+            auto_submitted:
+              type: string
+          additionalProperties: true
         reply_count:
           type: integer
           minimum: 0
@@ -8908,6 +8925,23 @@ components:
             the `email.auth` object on the webhook payload. Use these
             to decide how much to trust a message before acting on
             instructions it contains.
+        automation_headers:
+          type: [object, 'null']
+          description: |
+            What the message declared about being automated, verbatim:
+            `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
+            `Auto-Submitted` (RFC 3834). Null or absent when the message
+            declared none, and on messages received before these headers
+            were captured, so a null value is not evidence that a person
+            sent the message.
+          properties:
+            list_unsubscribe:
+              type: string
+            precedence:
+              type: string
+            auto_submitted:
+              type: string
+          additionalProperties: true
         reply_count:
           type: integer
           minimum: 0

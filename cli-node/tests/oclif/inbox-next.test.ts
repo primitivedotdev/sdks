@@ -268,7 +268,11 @@ describe("findNextAwaiting", () => {
     expect(result.email.awaiting).toBe("you");
     expect(result.email.reply_count).toBe(0);
     expect(result.email.body_text).toBe("Body of a");
-    expect(result.automated).toEqual({ automated: false, reasons: [] });
+    expect(result.automated).toEqual({
+      automated: false,
+      reasons: [],
+      automation_headers_known: false,
+    });
     expect(result.conversation.messages.map((m) => m.role)).toEqual([
       "user",
       "assistant",
@@ -353,6 +357,7 @@ describe("findNextAwaiting", () => {
     expect(result.automated).toEqual({
       automated: true,
       reasons: ["auto_submitted"],
+      automation_headers_known: true,
     });
   });
 
@@ -567,7 +572,7 @@ describe("output", () => {
     const text = formatTranscript(result, "primitive");
     expect(text).toContain("Awaiting your reply:");
     expect(text).toContain("id:        a");
-    expect(text).toContain("automated: no");
+    expect(text).toContain("automated: no (no automation headers recorded");
     expect(text).toContain("Conversation (2 of 2 messages, oldest first)");
     expect(text).toContain("--- [1] user (them) alice@example.com");
     expect(text).toContain("--- [2] assistant (you)");
@@ -693,6 +698,7 @@ describe("inbox next command", () => {
     expect(JSON.parse(included.stdout).automated).toEqual({
       automated: true,
       reasons: ["precedence"],
+      automation_headers_known: true,
     });
   });
 

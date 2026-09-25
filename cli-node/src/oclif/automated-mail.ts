@@ -53,6 +53,13 @@ export type AutomatedReason =
 export type AutomatedVerdict = {
   automated: boolean;
   reasons: AutomatedReason[];
+  /**
+   * Whether the message's automation headers were available. When false
+   * (none declared, or received before the API captured them) a
+   * newsletter or auto-reply with an ordinary sender cannot be told
+   * apart from a person, so `automated: false` is weaker evidence.
+   */
+  automation_headers_known: boolean;
 };
 
 export type AutomationHeaders = {
@@ -190,7 +197,12 @@ export function classifyAutomatedMail(
     ...loopReasons(input),
     ...declaredAutomationReasons(input.automationHeaders),
   ];
-  return { automated: reasons.length > 0, reasons };
+  const headers = input.automationHeaders;
+  return {
+    automated: reasons.length > 0,
+    reasons,
+    automation_headers_known: headers !== null && typeof headers === "object",
+  };
 }
 
 export const AUTOMATED_REASON_DESCRIPTIONS: Record<AutomatedReason, string> = {

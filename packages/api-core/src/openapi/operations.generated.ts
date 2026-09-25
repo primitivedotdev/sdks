@@ -3940,6 +3940,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "description": "SPF / DKIM / DMARC verdicts computed at ingest, matching\nthe `email.auth` object on the webhook payload. Use these\nto decide how much to trust a message before acting on\ninstructions it contains.\n"
         },
+        "automation_headers": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "What the message declared about being automated, verbatim:\n`List-Unsubscribe` (RFC 2369/8058), `Precedence`, and\n`Auto-Submitted` (RFC 3834). Null or absent when the message\ndeclared none, and on messages received before these headers\nwere captured, so a null value is not evidence that a person\nsent the message.\n",
+          "properties": {
+            "list_unsubscribe": {
+              "type": "string"
+            },
+            "precedence": {
+              "type": "string"
+            },
+            "auto_submitted": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
         "reply_count": {
           "type": "integer",
           "minimum": 0,
@@ -4177,6 +4196,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "format": "uuid",
             "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
+          },
+          "automation_headers": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "What the message declared about being automated, verbatim:\n`List-Unsubscribe` (RFC 2369/8058), `Precedence`, and\n`Auto-Submitted` (RFC 3834). Null or absent when the message\ndeclared none, and on messages received before these headers\nwere captured, so a null value is not evidence that a person\nsent the message.\n",
+            "properties": {
+              "list_unsubscribe": {
+                "type": "string"
+              },
+              "precedence": {
+                "type": "string"
+              },
+              "auto_submitted": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
           },
           "reply_count": {
             "type": "integer",
@@ -4531,6 +4569,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ],
                 "format": "uuid",
                 "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
+              },
+              "automation_headers": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "What the message declared about being automated, verbatim:\n`List-Unsubscribe` (RFC 2369/8058), `Precedence`, and\n`Auto-Submitted` (RFC 3834). Null or absent when the message\ndeclared none, and on messages received before these headers\nwere captured, so a null value is not evidence that a person\nsent the message.\n",
+                "properties": {
+                  "list_unsubscribe": {
+                    "type": "string"
+                  },
+                  "precedence": {
+                    "type": "string"
+                  },
+                  "auto_submitted": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
               },
               "reply_count": {
                 "type": "integer",

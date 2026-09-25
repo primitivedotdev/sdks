@@ -151,6 +151,7 @@ from .email_address import EmailAddress
 from .email_attachment import EmailAttachment
 from .email_auth import EmailAuth
 from .email_detail import EmailDetail
+from .email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
 from .email_detail_awaiting import EmailDetailAwaiting
 from .email_detail_reply import EmailDetailReply
 from .email_search_facet_bucket import EmailSearchFacetBucket
@@ -162,6 +163,7 @@ from .email_search_meta_sort import EmailSearchMetaSort
 from .email_search_result import EmailSearchResult
 from .email_status import EmailStatus
 from .email_summary import EmailSummary
+from .email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
 from .email_summary_awaiting import EmailSummaryAwaiting
 from .email_webhook_status_type_1 import EmailWebhookStatusType1
 from .email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
@@ -671,6 +673,7 @@ __all__ = (
     "EmailAttachment",
     "EmailAuth",
     "EmailDetail",
+    "EmailDetailAutomationHeadersType0",
     "EmailDetailAwaiting",
     "EmailDetailReply",
     "EmailSearchFacetBucket",
@@ -682,6 +685,7 @@ __all__ = (
     "EmailSearchResult",
     "EmailStatus",
     "EmailSummary",
+    "EmailSummaryAutomationHeadersType0",
     "EmailSummaryAwaiting",
     "EmailWebhookStatusType1",
     "EmailWebhookStatusType2Type1",
