@@ -299,6 +299,24 @@ describe("reply outcomes", () => {
     });
   });
 
+  it("reports already_sent when the API refuses because the earlier reply was deleted", async () => {
+    mocks.replyToEmail.mockResolvedValue(apiFailure(410, "sent_email_deleted"));
+
+    const result = await run("reply", replyArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(envelope).toMatchObject({
+      outcome: "already_sent",
+      exit_code: 0,
+      http_status: 410,
+      sent: null,
+      follow_up_commands: [],
+    });
+    expect(result.stderr).toContain("(HTTP 410 sent_email_deleted)");
+    expect(result.stderr).toContain("Nothing new was sent.");
+  });
+
   it("reports uncertain with exit 4 for a server error", async () => {
     mocks.replyToEmail.mockResolvedValue(apiFailure(502));
 

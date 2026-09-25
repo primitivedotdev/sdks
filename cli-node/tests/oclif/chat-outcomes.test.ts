@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type {
@@ -15,9 +15,25 @@ const mocks = vi.hoisted(() => ({
   pickDefaultFromAddress: vi.fn(),
   replyToEmail: vi.fn(),
   searchEmails: vi.fn(),
+  saveChatReceiptFailure: { error: null as Error | null },
   sendEmail: vi.fn(),
   sleep: vi.fn(),
 }));
+
+vi.mock("../../src/oclif/chat-receipt.js", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/oclif/chat-receipt.js")>();
+  return {
+    ...actual,
+    saveChatReceipt: (
+      receipt: Parameters<typeof actual.saveChatReceipt>[0],
+    ) => {
+      const failure = mocks.saveChatReceiptFailure.error;
+      if (failure !== null && receipt.data.completed) throw failure;
+      actual.saveChatReceipt(receipt);
+    },
+  };
+});
 
 vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
   const actual =
@@ -267,6 +283,7 @@ describe("chat send outcomes", () => {
     });
     mocks.getEmail.mockResolvedValue({ data: { data: inboundEmail() } });
     mocks.sleep.mockResolvedValue(undefined);
+    mocks.saveChatReceiptFailure.error = null;
   });
 
   afterEach(() => {
@@ -641,5 +658,69 @@ describe("chat send outcomes", () => {
 
     expect(result.stderr).not.toContain("You already replied");
     expect(JSON.parse(result.stdout).prior_replies).toEqual([]);
+  });
+
+  it("reports already_sent, not uncertain, when the API refuses because the earlier send was deleted", async () => {
+    mocks.sendEmail.mockResolvedValue(apiFailure(410, "sent_email_deleted"));
+
+    const result = await run("chat", freshChatArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(envelope).toMatchObject({
+      outcome: "already_sent",
+      exit_code: 0,
+      http_status: 410,
+      sent: null,
+      follow_up_commands: [],
+    });
+    expect(envelope.outcome_message).toContain("Nothing new was sent.");
+    expect(envelope.outcome_message).toContain("Do not resend");
+
+    // Nothing is left pending, so the same request is refused again by
+    // the API rather than stopped as an unresolved local send.
+    const retry = await run("chat", freshChatArgs("--json"));
+    expect(JSON.parse(retry.stdout).outcome).toBe("already_sent");
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps other HTTP 410 errors uncertain", async () => {
+    mocks.sendEmail.mockResolvedValue(apiFailure(410, "gone"));
+
+    const result = await run("chat", freshChatArgs("--json"));
+
+    expect(result.exitCode).toBe(4);
+    expect(JSON.parse(result.stdout).outcome).toBe("uncertain");
+  });
+
+  it("reports uncertain, not not_sent, when an earlier receipt cannot be read", async () => {
+    mocks.sendEmail.mockResolvedValueOnce(apiFailure(503));
+    expect((await run("chat", freshChatArgs("--json"))).exitCode).toBe(4);
+    const receiptDir = join(tempConfigHome, "primitive", "chat-receipts");
+    for (const file of readdirSync(receiptDir)) {
+      writeFileSync(join(receiptDir, file), "not json");
+    }
+
+    const retry = await run("chat", freshChatArgs("--json"));
+    const envelope = JSON.parse(retry.stdout);
+
+    expect(retry.exitCode).toBe(4);
+    expect(envelope.outcome).toBe("uncertain");
+    expect(envelope.error.message).toContain("Cannot safely read chat receipt");
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("still reports the fetched reply when local bookkeeping fails afterwards", async () => {
+    mocks.saveChatReceiptFailure.error = new Error("ENOSPC: no space left");
+
+    const result = await run("chat", freshChatArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(envelope).toMatchObject({
+      outcome: "replied",
+      reply: { id: "email-1" },
+    });
+    expect(result.stderr).toContain("Warning: ENOSPC: no space left");
   });
 });

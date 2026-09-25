@@ -179,7 +179,7 @@ sending again is safe. With `--json`, stdout is an envelope for every outcome
 |---|---|---|
 | `replied` | 0 | Chat only: the message was sent and a reply arrived. |
 | `sent` | 0 | Accepted for delivery. `status: "queued"` is a success, not a pending failure. |
-| `already_sent` | 0 | The server recognised an identical earlier send. Nothing new went out. Do not resend. |
+| `already_sent` | 0 | The server recognised an identical earlier send, or refused with HTTP 410 `sent_email_deleted` because that earlier send was deleted. Nothing new went out. Do not resend. |
 | `not_sent` | 1 | The API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429), or the command failed before sending. Nothing went out. |
 | (usage error) | 2 | Invalid flags or arguments. Nothing went out. |
 | `sent_awaiting_reply` | 3 | Chat only: the message was sent but no reply arrived before `--timeout`. Wait with the printed command; do not resend. |

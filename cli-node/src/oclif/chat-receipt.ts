@@ -22,8 +22,8 @@ export type ChatReceipt = { path: string; data: ReceiptData };
 
 /** A previous attempt may or may not have sent; the caller must not resend blindly. */
 export class UncertainChatSendError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = "UncertainChatSendError";
   }
 }
@@ -88,7 +88,7 @@ export function beginChatReceipt(
     previous = parseReceipt(readFileSync(path, "utf8"));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw new Error(
+      throw new UncertainChatSendError(
         `Cannot safely read chat receipt ${path}. Inspect it and sent history before retrying.`,
         { cause: error },
       );

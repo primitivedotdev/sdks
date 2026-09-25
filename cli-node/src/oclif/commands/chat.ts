@@ -45,13 +45,14 @@ import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 import {
   apiResultHttpStatus,
   buildFollowUpCommand,
+  classifySendError,
   type FollowUpCommand,
+  formatDeletedEarlierSendNotice,
   formatPriorRepliesWarning,
   formatSendFailureSummary,
   priorRepliesThatWentOut,
   SEND_OUTCOME_HELP,
   type SendOutcome,
-  sendFailureOutcome,
   sendOutcomeExitCode,
   sentHistoryWindowStart,
   serializeErrorPayload,
@@ -806,13 +807,17 @@ export function buildChatExistingReplyCommands(
   ];
 }
 
-/** The send failed or its result is unknown; nothing is known to have arrived. */
+/**
+ * The send request did not produce a send record: it was rejected,
+ * its result is unknown, or (already_sent) it was refused because a
+ * matching earlier send exists but was deleted.
+ */
 export function buildChatSendFailureEnvelope(params: {
   error: unknown;
   exitCode?: number;
   httpStatus?: number;
   noun: "Message" | "Reply";
-  outcome: "not_sent" | "uncertain";
+  outcome: "already_sent" | "not_sent" | "uncertain";
   outcomeMessage?: string;
   priorReplies?: EmailDetailReply[] | null;
   sentHistorySince?: string;
@@ -822,7 +827,13 @@ export function buildChatSendFailureEnvelope(params: {
     exit_code: params.exitCode ?? sendOutcomeExitCode(params.outcome),
     outcome_message:
       params.outcomeMessage ??
-      formatSendFailureSummary(params.noun, params.outcome, params.httpStatus),
+      (params.outcome === "already_sent"
+        ? formatDeletedEarlierSendNotice()
+        : formatSendFailureSummary(
+            params.noun,
+            params.outcome,
+            params.httpStatus,
+          )),
     sent: null,
     reply: null,
     local_chat_id: null,
@@ -1260,12 +1271,17 @@ class ChatCommand extends Command {
   // message is out and only the reply is missing.
   private chatProgress: {
     baseContext: ChatBaseContext | null;
+    replied: {
+      context: ChatOutputContext;
+      outcome: "already_sent" | "replied";
+    } | null;
     outcomeReported: boolean;
     phase: "pre_send" | "sending" | "sent";
     priorReplies: EmailDetailReply[] | null;
     sendStartedAtIso: string | null;
   } = {
     baseContext: null,
+    replied: null,
     outcomeReported: false,
     phase: "pre_send",
     priorReplies: null,
@@ -1283,7 +1299,15 @@ class ChatCommand extends Command {
       if (this.chatProgress.outcomeReported) throw error;
       this.chatProgress.outcomeReported = true;
       const detail = error instanceof Error ? error.message : String(error);
-      const { baseContext, phase } = this.chatProgress;
+      const { baseContext, phase, replied } = this.chatProgress;
+
+      if (replied !== null) {
+        // The reply is already in hand; a local bookkeeping failure
+        // after that must not hide it or send the caller back to wait.
+        process.stderr.write(`${chatFailureText(`Warning: ${detail}`)}\n`);
+        this.reportReplied(replied.context, replied.outcome);
+        return;
+      }
 
       if (phase === "sent" && baseContext !== null) {
         // The message is out; only the reply wait broke. Reporting
@@ -1703,6 +1727,10 @@ class ChatCommand extends Command {
               matchStrategy: "strict",
               reply: detail,
             };
+            this.chatProgress.replied = {
+              context: outputContext,
+              outcome: "already_sent",
+            };
             const localChatId = await persistActiveChat({
               configDir: this.config.configDir,
               context: outputContext,
@@ -1711,6 +1739,10 @@ class ChatCommand extends Command {
             });
             if (localChatId !== null) {
               outputContext = { ...outputContext, localChatId };
+              this.chatProgress.replied = {
+                context: outputContext,
+                outcome: "already_sent",
+              };
             }
             receipt.data.completed = localChatId !== null;
             saveChatReceipt(receipt);
@@ -1778,6 +1810,10 @@ class ChatCommand extends Command {
           matchStrategy: replyResult.matchStrategy,
           reply: replyResult.reply,
         };
+        this.chatProgress.replied = {
+          context: outputContext,
+          outcome: "replied",
+        };
 
         const localChatId = await persistActiveChat({
           configDir: this.config.configDir,
@@ -1787,6 +1823,10 @@ class ChatCommand extends Command {
         });
         if (localChatId !== null) {
           outputContext = { ...outputContext, localChatId };
+          this.chatProgress.replied = {
+            context: outputContext,
+            outcome: "replied",
+          };
         }
 
         receipt.data.completed = localChatId !== null;
@@ -1828,16 +1868,22 @@ class ChatCommand extends Command {
   }): void {
     this.chatProgress.outcomeReported = true;
     const httpStatus = apiResultHttpStatus(params.sendResult);
-    const outcome = sendFailureOutcome(httpStatus);
-    // A definitive rejection sent nothing, so a corrected retry is
-    // safe. Any other failure leaves the receipt pending so a retry
-    // stops for inspection instead of sending blindly.
-    if (outcome === "not_sent") {
+    const errorPayload = extractErrorPayload(params.sendResult.error);
+    const outcome = classifySendError(httpStatus, errorPayload);
+    // A definitive rejection sent nothing new, and a refusal because
+    // the matching earlier send was deleted is settled too, so neither
+    // leaves anything pending. Any other failure leaves the receipt
+    // pending so a retry stops for inspection instead of sending
+    // blindly.
+    if (outcome !== "uncertain") {
       params.receipt.data.completed = true;
       saveChatReceipt(params.receipt);
     }
-    params.progress?.fail(`${params.noun} send failed.`);
-    const errorPayload = extractErrorPayload(params.sendResult.error);
+    params.progress?.fail(
+      outcome === "already_sent"
+        ? `${params.noun} already sent earlier.`
+        : `${params.noun} send failed.`,
+    );
     writeErrorWithHints(errorPayload);
     surfaceUnauthorizedHint({
       ...params.authFailureContext,
@@ -1848,14 +1894,23 @@ class ChatCommand extends Command {
       httpStatus,
       noun: params.noun,
       outcome,
+      outcomeMessage:
+        outcome === "already_sent"
+          ? formatDeletedEarlierSendNotice()
+          : undefined,
       priorReplies: this.chatProgress.priorReplies,
       sentHistorySince: params.sentAtIso,
     });
-    process.stderr.write(`${chatFailureText(envelope.outcome_message)}\n`);
+    if (outcome === "already_sent") {
+      process.stderr.write(`${chatNoticeText(envelope.outcome_message)}\n`);
+      if (!params.json) this.log(envelope.outcome_message);
+    } else {
+      process.stderr.write(`${chatFailureText(envelope.outcome_message)}\n`);
+    }
     if (params.json) {
       this.log(JSON.stringify(envelope, null, 2));
     }
-    process.exitCode = envelope.exit_code;
+    if (envelope.exit_code !== 0) process.exitCode = envelope.exit_code;
   }
 }
 

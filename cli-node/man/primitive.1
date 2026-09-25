@@ -171,7 +171,7 @@ field of an envelope printed for every result.
 .B sent
 (accepted for delivery; queued counts) or
 .B already_sent
-(an identical earlier send; nothing new went out).
+(an identical earlier send, including HTTP 410 sent_email_deleted; nothing new went out).
 .TP
 .B 1
 .BR not_sent :

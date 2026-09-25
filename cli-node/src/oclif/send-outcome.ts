@@ -51,7 +51,7 @@ export const DEFINITIVE_SEND_REJECTION_STATUSES: readonly number[] = [
 export const SEND_OUTCOME_HELP = `Outcomes and exit codes, shared by chat, chat reply, send and reply (JSON output carries the name as "outcome"):
   - exit 0 replied: chat only. The message was sent and a reply arrived.
   - exit 0 sent: accepted for delivery. A queued status counts as sent.
-  - exit 0 already_sent: an identical earlier send exists. Nothing new went out. Do not resend.
+  - exit 0 already_sent: an identical earlier send exists (or was deleted: HTTP 410 sent_email_deleted). Nothing new went out. Do not resend.
   - exit 1 not_sent: the API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429) or the command failed before sending. Nothing went out.
   - exit 2: invalid flags or arguments. Nothing went out.
   - exit 3 sent_awaiting_reply: chat only. Sent, but no reply before the timeout. Wait; do not resend.
@@ -68,6 +68,43 @@ export function sendFailureOutcome(
     DEFINITIVE_SEND_REJECTION_STATUSES.includes(httpStatus)
     ? "not_sent"
     : "uncertain";
+}
+
+// HTTP 410 `sent_email_deleted`: an earlier send this request matches
+// went out and was later deleted from history. Its idempotency key (or
+// the reply suppression for the inbound) stays reserved, so the API
+// refused this request. Something already went out, nothing new did,
+// and the earlier send no longer shows in sent history.
+const SENT_EMAIL_DELETED_CODE = "sent_email_deleted";
+
+function errorPayloadCode(payload: unknown): string | undefined {
+  if (payload === null || typeof payload !== "object") return undefined;
+  const code = (payload as { code?: unknown }).code;
+  return typeof code === "string" ? code : undefined;
+}
+
+export function isDeletedEarlierSend(
+  httpStatus: number | undefined,
+  errorPayload: unknown,
+): boolean {
+  return (
+    httpStatus === 410 &&
+    errorPayloadCode(errorPayload) === SENT_EMAIL_DELETED_CODE
+  );
+}
+
+/** Classify an API error from a send request. */
+export function classifySendError(
+  httpStatus: number | undefined,
+  errorPayload: unknown,
+): FailedSendOutcome | "already_sent" {
+  return isDeletedEarlierSend(httpStatus, errorPayload)
+    ? "already_sent"
+    : sendFailureOutcome(httpStatus);
+}
+
+export function formatDeletedEarlierSendNotice(): string {
+  return "Already sent: an earlier send matching this request went out and its record was later deleted, so the API refused this one (HTTP 410 sent_email_deleted). Nothing new was sent. Do not resend or change the idempotency key to get around this.";
 }
 
 /** Read the HTTP status from a `responseStyle: "fields"` API result. */
@@ -345,8 +382,12 @@ export function reportSendCommandResult(params: {
   if (params.result.error) {
     errorPayload = extractErrorPayload(params.result.error);
     params.onApiError(errorPayload);
-    outcome = sendFailureOutcome(httpStatus);
-    outcomeMessage = formatSendFailureSummary(params.noun, outcome, httpStatus);
+    const failure = classifySendError(httpStatus, errorPayload);
+    outcome = failure;
+    outcomeMessage =
+      failure === "already_sent"
+        ? formatDeletedEarlierSendNotice()
+        : formatSendFailureSummary(params.noun, failure, httpStatus);
     params.writeStderr(`${outcomeMessage}\n`);
   } else {
     sent =
