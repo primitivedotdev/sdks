@@ -12962,6 +12962,10 @@ func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w htt
 					Name: "awaiting",
 					In:   "query",
 				}: params.Awaiting,
+				{
+					Name: "automated",
+					In:   "query",
+				}: params.Automated,
 			},
 			Raw: r,
 		}
@@ -19254,6 +19258,10 @@ func (s *Server) handleSearchEmailsRequest(args [0]string, argsEscaped bool, w h
 					Name: "awaiting",
 					In:   "query",
 				}: params.Awaiting,
+				{
+					Name: "automated",
+					In:   "query",
+				}: params.Automated,
 				{
 					Name: "sort",
 					In:   "query",

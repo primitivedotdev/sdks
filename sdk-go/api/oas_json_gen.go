@@ -22440,9 +22440,21 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 		e.FieldStart("awaiting")
 		s.Awaiting.Encode(e)
 	}
+	{
+		e.FieldStart("automated")
+		e.Bool(s.Automated)
+	}
+	{
+		e.FieldStart("automated_reasons")
+		e.ArrStart()
+		for _, elem := range s.AutomatedReasons {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
 }
 
-var jsonFieldsNameOfEmailDetail = [41]string{
+var jsonFieldsNameOfEmailDetail = [43]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -22484,6 +22496,8 @@ var jsonFieldsNameOfEmailDetail = [41]string{
 	38: "reply_count",
 	39: "last_replied_at",
 	40: "awaiting",
+	41: "automated",
+	42: "automated_reasons",
 }
 
 // Decode decodes EmailDetail from json.
@@ -22933,6 +22947,38 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"awaiting\"")
 			}
+		case "automated":
+			requiredBitSet[5] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.Automated = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"automated\"")
+			}
+		case "automated_reasons":
+			requiredBitSet[5] |= 1 << 2
+			if err := func() error {
+				s.AutomatedReasons = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.AutomatedReasons = append(s.AutomatedReasons, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"automated_reasons\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -22948,7 +22994,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 		0b00000100,
 		0b01100000,
 		0b11011001,
-		0b00000001,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -23010,6 +23056,12 @@ func (s *EmailDetailAutomationHeaders) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.ListID.Set {
+			e.FieldStart("list_id")
+			s.ListID.Encode(e)
+		}
+	}
+	{
 		if s.Precedence.Set {
 			e.FieldStart("precedence")
 			s.Precedence.Encode(e)
@@ -23030,10 +23082,11 @@ func (s *EmailDetailAutomationHeaders) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailDetailAutomationHeaders = [3]string{
+var jsonFieldsNameOfEmailDetailAutomationHeaders = [4]string{
 	0: "list_unsubscribe",
-	1: "precedence",
-	2: "auto_submitted",
+	1: "list_id",
+	2: "precedence",
+	3: "auto_submitted",
 }
 
 // Decode decodes EmailDetailAutomationHeaders from json.
@@ -23054,6 +23107,16 @@ func (s *EmailDetailAutomationHeaders) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"list_unsubscribe\"")
+			}
+		case "list_id":
+			if err := func() error {
+				s.ListID.Reset()
+				if err := s.ListID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"list_id\"")
 			}
 		case "precedence":
 			if err := func() error {
@@ -24233,6 +24296,18 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 		s.Awaiting.Encode(e)
 	}
 	{
+		e.FieldStart("automated")
+		e.Bool(s.Automated)
+	}
+	{
+		e.FieldStart("automated_reasons")
+		e.ArrStart()
+		for _, elem := range s.AutomatedReasons {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
+	{
 		e.FieldStart("attachment_count")
 		e.Int(s.AttachmentCount)
 	}
@@ -24254,7 +24329,7 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailSearchResult = [24]string{
+var jsonFieldsNameOfEmailSearchResult = [26]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -24275,10 +24350,12 @@ var jsonFieldsNameOfEmailSearchResult = [24]string{
 	17: "reply_count",
 	18: "last_replied_at",
 	19: "awaiting",
-	20: "attachment_count",
-	21: "from_known_address",
-	22: "score",
-	23: "highlights",
+	20: "automated",
+	21: "automated_reasons",
+	22: "attachment_count",
+	23: "from_known_address",
+	24: "score",
+	25: "highlights",
 }
 
 // Decode decodes EmailSearchResult from json.
@@ -24286,7 +24363,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode EmailSearchResult to nil")
 	}
-	var requiredBitSet [3]uint8
+	var requiredBitSet [4]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -24506,8 +24583,40 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"awaiting\"")
 			}
-		case "attachment_count":
+		case "automated":
 			requiredBitSet[2] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.Automated = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"automated\"")
+			}
+		case "automated_reasons":
+			requiredBitSet[2] |= 1 << 5
+			if err := func() error {
+				s.AutomatedReasons = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.AutomatedReasons = append(s.AutomatedReasons, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"automated_reasons\"")
+			}
+		case "attachment_count":
+			requiredBitSet[2] |= 1 << 6
 			if err := func() error {
 				v, err := d.Int()
 				s.AttachmentCount = int(v)
@@ -24519,7 +24628,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"attachment_count\"")
 			}
 		case "from_known_address":
-			requiredBitSet[2] |= 1 << 5
+			requiredBitSet[2] |= 1 << 7
 			if err := func() error {
 				v, err := d.Bool()
 				s.FromKnownAddress = bool(v)
@@ -24559,10 +24668,11 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [3]uint8{
+	for i, mask := range [4]uint8{
 		0b01110001,
 		0b01001101,
-		0b00111110,
+		0b11111110,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -24624,6 +24734,12 @@ func (s *EmailSearchResultAutomationHeaders) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.ListID.Set {
+			e.FieldStart("list_id")
+			s.ListID.Encode(e)
+		}
+	}
+	{
 		if s.Precedence.Set {
 			e.FieldStart("precedence")
 			s.Precedence.Encode(e)
@@ -24644,10 +24760,11 @@ func (s *EmailSearchResultAutomationHeaders) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailSearchResultAutomationHeaders = [3]string{
+var jsonFieldsNameOfEmailSearchResultAutomationHeaders = [4]string{
 	0: "list_unsubscribe",
-	1: "precedence",
-	2: "auto_submitted",
+	1: "list_id",
+	2: "precedence",
+	3: "auto_submitted",
 }
 
 // Decode decodes EmailSearchResultAutomationHeaders from json.
@@ -24668,6 +24785,16 @@ func (s *EmailSearchResultAutomationHeaders) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"list_unsubscribe\"")
+			}
+		case "list_id":
+			if err := func() error {
+				s.ListID.Reset()
+				if err := s.ListID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"list_id\"")
 			}
 		case "precedence":
 			if err := func() error {
@@ -24973,9 +25100,21 @@ func (s *EmailSummary) encodeFields(e *jx.Encoder) {
 		e.FieldStart("awaiting")
 		s.Awaiting.Encode(e)
 	}
+	{
+		e.FieldStart("automated")
+		e.Bool(s.Automated)
+	}
+	{
+		e.FieldStart("automated_reasons")
+		e.ArrStart()
+		for _, elem := range s.AutomatedReasons {
+			e.Str(elem)
+		}
+		e.ArrEnd()
+	}
 }
 
-var jsonFieldsNameOfEmailSummary = [20]string{
+var jsonFieldsNameOfEmailSummary = [22]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -24996,6 +25135,8 @@ var jsonFieldsNameOfEmailSummary = [20]string{
 	17: "reply_count",
 	18: "last_replied_at",
 	19: "awaiting",
+	20: "automated",
+	21: "automated_reasons",
 }
 
 // Decode decodes EmailSummary from json.
@@ -25223,6 +25364,38 @@ func (s *EmailSummary) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"awaiting\"")
 			}
+		case "automated":
+			requiredBitSet[2] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.Automated = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"automated\"")
+			}
+		case "automated_reasons":
+			requiredBitSet[2] |= 1 << 5
+			if err := func() error {
+				s.AutomatedReasons = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.AutomatedReasons = append(s.AutomatedReasons, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"automated_reasons\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -25235,7 +25408,7 @@ func (s *EmailSummary) Decode(d *jx.Decoder) error {
 	for i, mask := range [3]uint8{
 		0b01110001,
 		0b01001101,
-		0b00001110,
+		0b00111110,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -25297,6 +25470,12 @@ func (s *EmailSummaryAutomationHeaders) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.ListID.Set {
+			e.FieldStart("list_id")
+			s.ListID.Encode(e)
+		}
+	}
+	{
 		if s.Precedence.Set {
 			e.FieldStart("precedence")
 			s.Precedence.Encode(e)
@@ -25317,10 +25496,11 @@ func (s *EmailSummaryAutomationHeaders) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailSummaryAutomationHeaders = [3]string{
+var jsonFieldsNameOfEmailSummaryAutomationHeaders = [4]string{
 	0: "list_unsubscribe",
-	1: "precedence",
-	2: "auto_submitted",
+	1: "list_id",
+	2: "precedence",
+	3: "auto_submitted",
 }
 
 // Decode decodes EmailSummaryAutomationHeaders from json.
@@ -25341,6 +25521,16 @@ func (s *EmailSummaryAutomationHeaders) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"list_unsubscribe\"")
+			}
+		case "list_id":
+			if err := func() error {
+				s.ListID.Reset()
+				if err := s.ListID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"list_id\"")
 			}
 		case "precedence":
 			if err := func() error {

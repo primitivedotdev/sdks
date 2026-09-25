@@ -255,6 +255,7 @@ from .list_declined_payments_response_200 import ListDeclinedPaymentsResponse200
 from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
 from .list_domains_response_200 import ListDomainsResponse200
+from .list_emails_automated import ListEmailsAutomated
 from .list_emails_awaiting import ListEmailsAwaiting
 from .list_emails_response_200 import ListEmailsResponse200
 from .list_endpoints_response_200 import ListEndpointsResponse200
@@ -353,6 +354,7 @@ from .routing_topology_fallback_function_type_0 import RoutingTopologyFallbackFu
 from .routing_topology_unrouted_functions_item import RoutingTopologyUnroutedFunctionsItem
 from .run_wake_schedule_response_200 import RunWakeScheduleResponse200
 from .run_wake_schedule_response_200_data import RunWakeScheduleResponse200Data
+from .search_emails_automated import SearchEmailsAutomated
 from .search_emails_awaiting import SearchEmailsAwaiting
 from .search_emails_has_attachment import SearchEmailsHasAttachment
 from .search_emails_include_facets import SearchEmailsIncludeFacets
@@ -777,6 +779,7 @@ __all__ = (
     "ListDeliveriesResponse200",
     "ListDeliveriesStatus",
     "ListDomainsResponse200",
+    "ListEmailsAutomated",
     "ListEmailsAwaiting",
     "ListEmailsResponse200",
     "ListEndpointsResponse200",
@@ -875,6 +878,7 @@ __all__ = (
     "RoutingTopologyUnroutedFunctionsItem",
     "RunWakeScheduleResponse200",
     "RunWakeScheduleResponse200Data",
+    "SearchEmailsAutomated",
     "SearchEmailsAwaiting",
     "SearchEmailsHasAttachment",
     "SearchEmailsIncludeFacets",

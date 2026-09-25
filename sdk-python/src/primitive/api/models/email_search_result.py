@@ -100,6 +100,24 @@ class EmailSearchResult:
                 message, for example when a reply is sent, a queued reply fails, a
                 scheduled reply is canceled, or a message is deleted, and is always
                 current when read.
+            automated (bool): Whether the message was sent by a machine rather than a person.
+                An inbound email is `automated` when any of these holds, decided once
+                when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+                `no_identifiable_sender` (no address in the envelope or From);
+                `own_address` (a sender address is one the mail was delivered to, or
+                is on one of the organization's own active domains);
+                `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+                `auto_submitted` (Auto-Submitted with any keyword but `no`);
+                `precedence` (Precedence bulk, list, junk or auto_reply);
+                `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+                present). The header rules only see headers captured at ingest, so
+                older mail may lack them. This is loop and noise protection, not
+                sender authentication.
+            automated_reasons (list[str]): Why `automated` is true, in rule order; empty when it is false.
+                Current values: `null_envelope_sender`, `no_identifiable_sender`,
+                `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+                `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+                reason added after your client was built.
             attachment_count (int): Number of parsed attachments on the email.
             from_known_address (bool): Whether the parsed From address is known to this org from prior authenticated inbound
                 mail.
@@ -137,8 +155,8 @@ class EmailSearchResult:
                 messages received before threading was enabled.
             automation_headers (EmailSummaryAutomationHeadersType0 | None | Unset): What the message declared about being
                 automated, verbatim:
-                `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-                `Auto-Submitted` (RFC 3834). Null or absent when the message
+                `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+                `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
                 declared none, and on messages received before these headers
                 were captured, so a null value is not evidence that a person
                 sent the message.
@@ -157,6 +175,8 @@ class EmailSearchResult:
     reply_count: int
     last_replied_at: datetime.datetime | None
     awaiting: EmailSummaryAwaiting
+    automated: bool
+    automated_reasons: list[str]
     attachment_count: int
     from_known_address: bool
     message_id: None | str | Unset = UNSET
@@ -204,6 +224,12 @@ class EmailSearchResult:
             last_replied_at = self.last_replied_at
 
         awaiting = self.awaiting.value
+
+        automated = self.automated
+
+        automated_reasons = self.automated_reasons
+
+
 
         attachment_count = self.attachment_count
 
@@ -298,6 +324,8 @@ class EmailSearchResult:
             "reply_count": reply_count,
             "last_replied_at": last_replied_at,
             "awaiting": awaiting,
+            "automated": automated,
+            "automated_reasons": automated_reasons,
             "attachment_count": attachment_count,
             "from_known_address": from_known_address,
         })
@@ -384,6 +412,11 @@ class EmailSearchResult:
         awaiting = EmailSummaryAwaiting(d.pop("awaiting"))
 
 
+
+
+        automated = d.pop("automated")
+
+        automated_reasons = cast(list[str], d.pop("automated_reasons"))
 
 
         attachment_count = d.pop("attachment_count")
@@ -574,6 +607,8 @@ class EmailSearchResult:
             reply_count=reply_count,
             last_replied_at=last_replied_at,
             awaiting=awaiting,
+            automated=automated,
+            automated_reasons=automated_reasons,
             attachment_count=attachment_count,
             from_known_address=from_known_address,
             message_id=message_id,

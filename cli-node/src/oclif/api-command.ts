@@ -14,6 +14,14 @@ import {
   saveSignupCredentials,
 } from "./auth.js";
 import {
+  AutomatedFilterUnsupportedError,
+  assertAutomatedVerdict,
+  automatedRejectedError,
+  automatedSurfaceForOperation,
+  ensureSearchReportsAutomated,
+  isAutomatedRejectedError,
+} from "./automated-filter.js";
+import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
 } from "./endpoints-test-redirect.js";
@@ -1089,6 +1097,11 @@ export function createOperationCommand(
           operation.sdkName,
           query,
         );
+        // Same for the `automated` filter.
+        const automatedSurface = automatedSurfaceForOperation(
+          operation.sdkName,
+          query,
+        );
         const result = await operationFn({
           body,
           client: apiClient.client,
@@ -1104,6 +1117,11 @@ export function createOperationCommand(
           if (replyStateSurface && isAwaitingRejectedError(errorPayload)) {
             process.stderr.write(
               `${awaitingRejectedError(replyStateSurface).message}\n`,
+            );
+          }
+          if (automatedSurface && isAutomatedRejectedError(errorPayload)) {
+            process.stderr.write(
+              `${automatedRejectedError(automatedSurface).message}\n`,
             );
           }
           surfaceUnauthorizedHint({
@@ -1167,6 +1185,27 @@ export function createOperationCommand(
             }
           } catch (error) {
             if (!(error instanceof ReplyStateUnsupportedError)) throw error;
+            process.stderr.write(`${error.message}\n`);
+            process.exitCode = 1;
+            return;
+          }
+        }
+        if (automatedSurface) {
+          try {
+            const rows = Array.isArray(envelope?.data) ? envelope.data : [];
+            const expected =
+              query?.automated === "true"
+                ? true
+                : query?.automated === "false"
+                  ? false
+                  : undefined;
+            assertAutomatedVerdict(rows, automatedSurface, expected);
+            if (rows.length === 0 && operation.sdkName === "searchEmails") {
+              await ensureSearchReportsAutomated(apiClient);
+            }
+          } catch (error) {
+            if (!(error instanceof AutomatedFilterUnsupportedError))
+              throw error;
             process.stderr.write(`${error.message}\n`);
             process.exitCode = 1;
             return;

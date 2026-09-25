@@ -23,9 +23,12 @@ vi.mock("../../src/oclif/api-client.js", () => ({
   createAuthenticatedCliApiClient: mocks.createAuthenticatedCliApiClient,
 }));
 
+import { AutomatedFilterUnsupportedError } from "../../src/oclif/automated-filter.js";
+import { classifyAutomatedMail } from "../../src/oclif/automated-mail.js";
 import InboxNextCommand, {
   automatedInputFromEmail,
   baselineCursor,
+  countAutomatedAwaiting,
   EPOCH_CURSOR,
   errorJson,
   findNextAwaiting,
@@ -56,7 +59,18 @@ type FakeEmail = {
   automation_headers?: Record<string, string> | null;
 };
 
-type ServerMode = "current" | "old-strict" | "old-lenient";
+// "current": reply state and the automated filter. "old-strict" and
+// "old-lenient": neither (rejects unknown filters, or ignores them and
+// omits the fields). "no-automated-strict" and "no-automated-lenient":
+// reply state but not the automated filter. "ignores-automated": reports
+// the verdict but does not apply the filter.
+type ServerMode =
+  | "current"
+  | "old-strict"
+  | "old-lenient"
+  | "no-automated-strict"
+  | "no-automated-lenient"
+  | "ignores-automated";
 
 // In-memory stand-in for the three endpoints `inbox next` reads, with
 // the same forward-tail and long-poll semantics as the real API.
@@ -82,7 +96,16 @@ class FakeInbox {
     });
   }
 
-  private row(email: FakeEmail): Record<string, unknown> {
+  // The server decides at ingest with the same rules as automated-mail.ts
+  // (the shared fixture ties the two together).
+  verdict(email: FakeEmail) {
+    return classifyAutomatedMail({
+      ...automatedInputFromEmail(this.rawRow(email)),
+      daemonScope: "any",
+    });
+  }
+
+  private rawRow(email: FakeEmail): Record<string, unknown> {
     const base: Record<string, unknown> = {
       id: email.id,
       created_at: email.created_at,
@@ -100,10 +123,28 @@ class FakeInbox {
       webhook_attempt_count: 0,
       automation_headers: email.automation_headers,
     };
-    if (this.mode === "current") {
+    return base;
+  }
+
+  private hasReplyState(): boolean {
+    return this.mode !== "old-strict" && this.mode !== "old-lenient";
+  }
+
+  private hasAutomated(): boolean {
+    return this.mode === "current" || this.mode === "ignores-automated";
+  }
+
+  private row(email: FakeEmail): Record<string, unknown> {
+    const base = this.rawRow(email);
+    if (this.hasReplyState()) {
       base.awaiting = email.awaiting;
       base.reply_count = email.reply_count;
       base.last_replied_at = email.reply_count > 0 ? email.created_at : null;
+    }
+    if (this.hasAutomated()) {
+      const verdict = this.verdict(email);
+      base.automated = verdict.automated;
+      base.automated_reasons = verdict.reasons;
     }
     return base;
   }
@@ -118,19 +159,34 @@ class FakeInbox {
     }) => {
       const query = options.query ?? {};
       this.calls.push({ op: "list", query });
-      if (this.mode === "old-strict" && query.awaiting !== undefined) {
+      const rejected =
+        this.mode === "old-strict" && query.awaiting !== undefined
+          ? "awaiting"
+          : (this.mode === "old-strict" ||
+                this.mode === "no-automated-strict") &&
+              query.automated !== undefined
+            ? "automated"
+            : null;
+      if (rejected) {
         return {
           error: {
             success: false,
             error: {
               code: "validation_error",
-              message: "Unrecognized key(s) in object: 'awaiting'",
+              message: `Unrecognized key(s) in object: '${rejected}'`,
             },
           },
         };
       }
-      const filterAwaiting =
-        this.mode === "current" ? query.awaiting : undefined;
+      const filterAwaiting = this.hasReplyState() ? query.awaiting : undefined;
+      const filterAutomated =
+        this.mode === "current" && query.automated !== undefined
+          ? query.automated === "true"
+          : undefined;
+      const keep = (e: FakeEmail) =>
+        (!filterAwaiting || e.awaiting === filterAwaiting) &&
+        (filterAutomated === undefined ||
+          this.verdict(e).automated === filterAutomated);
       const limit = Number(query.limit ?? 50);
       if (typeof query.since === "string") {
         const since = query.since;
@@ -138,7 +194,7 @@ class FakeInbox {
           [...this.emails]
             .sort((a, b) => this.cursorOf(a).localeCompare(this.cursorOf(b)))
             .filter((e) => this.cursorOf(e) > since)
-            .filter((e) => !filterAwaiting || e.awaiting === filterAwaiting);
+            .filter(keep);
         let matched = select();
         if (matched.length === 0 && Number(query.wait ?? 0) > 0) {
           this.onWait?.();
@@ -158,15 +214,15 @@ class FakeInbox {
           },
         };
       }
-      const page = [...this.emails]
+      const matched = [...this.emails]
         .sort((a, b) => b.created_at.localeCompare(a.created_at))
-        .filter((e) => !filterAwaiting || e.awaiting === filterAwaiting)
-        .slice(0, limit);
+        .filter(keep);
+      const page = matched.slice(0, limit);
       return {
         data: {
           success: true,
           data: page.map((e) => this.row(e)),
-          meta: { total: page.length, limit, cursor: null },
+          meta: { total: matched.length, limit, cursor: null },
         },
       };
     }) as unknown as InboxNextApi["listEmails"];
@@ -281,7 +337,12 @@ describe("findNextAwaiting", () => {
     ]);
     expect(inbox.calls[0]).toEqual({
       op: "list",
-      query: { awaiting: "you", limit: 100, since: EPOCH_CURSOR },
+      query: {
+        awaiting: "you",
+        automated: "false",
+        limit: 100,
+        since: EPOCH_CURSOR,
+      },
     });
   });
 
@@ -297,10 +358,10 @@ describe("findNextAwaiting", () => {
       includeAutomated: false,
       api: inbox.api(),
     });
-    expect(result).toEqual({ outcome: "empty", skipped_automated: [] });
+    expect(result).toEqual({ outcome: "empty", automated_awaiting: null });
   });
 
-  it("skips automated mail by default and reports why", async () => {
+  it("leaves automated mail to the server's filter and never reads it", async () => {
     inbox.add({
       id: "bounce",
       created_at: "2026-09-18T00:00:00.000Z",
@@ -328,21 +389,41 @@ describe("findNextAwaiting", () => {
     expect(result.outcome).toBe("email");
     if (result.outcome !== "email") return;
     expect(result.email.id).toBe("human");
-    expect(result.skipped_automated).toEqual([
-      {
-        id: "bounce",
-        reasons: ["null_envelope_sender", "mailer_daemon"],
-      },
-      { id: "news", reasons: ["list_unsubscribe"] },
-      { id: "self", reasons: ["own_address"] },
-    ]);
-    // Automated rows are skipped from the list alone: no detail reads.
     expect(inbox.calls.filter((c) => c.op === "get").map((c) => c.id)).toEqual([
       "human",
     ]);
   });
 
-  it("returns automated mail with its verdict under includeAutomated", async () => {
+  it("costs one list request however much automated mail awaits", async () => {
+    for (let i = 0; i < 1000; i++) {
+      inbox.add({
+        id: `n${String(i).padStart(4, "0")}`,
+        created_at: `2026-09-01T00:00:${String(Math.floor(i / 100)).padStart(2, "0")}.${String(i % 100).padStart(3, "0")}Z`,
+        automation_headers: { list_unsubscribe: "<mailto:u@x.example>" },
+      });
+    }
+    inbox.add({ id: "human", created_at: "2026-09-02T00:00:00.000Z" });
+    const found = await findNextAwaiting({
+      apiClient,
+      includeAutomated: false,
+      api: inbox.api(),
+    });
+    expect(found.outcome === "email" && found.email.id).toBe("human");
+    expect(inbox.calls.filter((c) => c.op === "list")).toHaveLength(1);
+    expect(inbox.calls.filter((c) => c.op === "get")).toHaveLength(1);
+
+    inbox.emails = inbox.emails.filter((e) => e.id !== "human");
+    inbox.calls = [];
+    const empty = await findNextAwaiting({
+      apiClient,
+      includeAutomated: false,
+      api: inbox.api(),
+    });
+    expect(empty.outcome).toBe("empty");
+    expect(inbox.calls).toHaveLength(1);
+  });
+
+  it("returns automated mail with the server's verdict under includeAutomated", async () => {
     inbox.add({
       id: "auto",
       created_at: "2026-09-18T00:00:00.000Z",
@@ -361,38 +442,58 @@ describe("findNextAwaiting", () => {
       reasons: ["auto_submitted"],
       automation_headers_known: true,
     });
+    expect(inbox.calls[0]?.query).toEqual({
+      awaiting: "you",
+      limit: 100,
+      since: EPOCH_CURSOR,
+    });
   });
 
-  it("returns empty with the skipped list when only automated mail awaits", async () => {
+  it("reports an unfamiliar server reason as it is", async () => {
+    inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
+    inbox.detailOverride.a = {
+      automated: true,
+      automated_reasons: ["some_future_rule"],
+    };
+    const result = await findNextAwaiting({
+      apiClient,
+      includeAutomated: true,
+      api: inbox.api(),
+    });
+    if (result.outcome !== "email") throw new Error("expected email");
+    expect(formatTranscript(result, "primitive")).toContain(
+      "automated: yes: some_future_rule",
+    );
+  });
+
+  it("counts automated mail still awaiting with one bounded request", async () => {
     inbox.add({
       id: "auto",
       created_at: "2026-09-18T00:00:00.000Z",
       automation_headers: { precedence: "bulk" },
     });
-    const result = await findNextAwaiting({
-      apiClient,
-      includeAutomated: false,
-      api: inbox.api(),
-    });
-    expect(result).toEqual({
-      outcome: "empty",
-      skipped_automated: [{ id: "auto", reasons: ["precedence"] }],
-    });
+    inbox.add({ id: "human", created_at: "2026-09-19T00:00:00.000Z" });
+    expect(
+      await countAutomatedAwaiting({ apiClient, api: inbox.api() }),
+    ).toEqual({ total: 1, capped: false });
+    expect(inbox.calls).toEqual([
+      { op: "list", query: { awaiting: "you", automated: "true", limit: 1 } },
+    ]);
   });
 
-  it("uses detail-only automation signals the list did not carry", async () => {
+  it("skips an email the detail now reports automated (parsed since the list)", async () => {
     inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
     inbox.add({ id: "b", created_at: "2026-09-19T00:00:00.000Z" });
-    inbox.detailOverride.a = { smtp_mail_from: "<>" };
+    inbox.detailOverride.a = {
+      automated: true,
+      automated_reasons: ["list_id"],
+    };
     const result = await findNextAwaiting({
       apiClient,
       includeAutomated: false,
       api: inbox.api(),
     });
     expect(result.outcome === "email" && result.email.id).toBe("b");
-    expect(result.skipped_automated).toEqual([
-      { id: "a", reasons: ["null_envelope_sender"] },
-    ]);
   });
 
   it("moves on when the detail shows it was answered since the list", async () => {
@@ -419,25 +520,6 @@ describe("findNextAwaiting", () => {
       api: inbox.api(),
     });
     expect(result.outcome).toBe("empty");
-  });
-
-  it("pages past a full page of automated mail", async () => {
-    for (let i = 0; i < 150; i++) {
-      inbox.add({
-        id: `n${String(i).padStart(3, "0")}`,
-        created_at: `2026-09-01T00:00:00.${String(i).padStart(3, "0")}Z`,
-        automation_headers: { list_unsubscribe: "<mailto:u@x.example>" },
-      });
-    }
-    inbox.add({ id: "human", created_at: "2026-09-02T00:00:00.000Z" });
-    const result = await findNextAwaiting({
-      apiClient,
-      includeAutomated: false,
-      api: inbox.api(),
-    });
-    expect(result.outcome === "email" && result.email.id).toBe("human");
-    expect(result.skipped_automated).toHaveLength(150);
-    expect(inbox.calls.filter((c) => c.op === "list")).toHaveLength(2);
   });
 
   it("fails loudly when an older server rejects the awaiting filter", async () => {
@@ -474,6 +556,71 @@ describe("findNextAwaiting", () => {
         api: inbox.api(),
       }),
     ).rejects.toThrow(ReplyStateUnsupportedError);
+  });
+
+  it.each([
+    [
+      "rejects the filter",
+      "no-automated-strict",
+      /rejected the `automated` filter/,
+    ],
+    [
+      "ignores it and omits the fields",
+      "no-automated-lenient",
+      /without the `automated` and `automated_reasons` fields/,
+    ],
+    [
+      "reports the verdict but does not apply the filter",
+      "ignores-automated",
+      /ignored `automated=false`/,
+    ],
+  ] as const)("fails loudly, never scanning locally, when the server %s", async (_label, mode, message) => {
+    inbox.mode = mode;
+    inbox.add({
+      id: "news",
+      created_at: "2026-09-17T00:00:00.000Z",
+      automation_headers: { list_id: "<l.example>" },
+    });
+    inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
+    const error = await findNextAwaiting({
+      apiClient,
+      includeAutomated: false,
+      api: inbox.api(),
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(AutomatedFilterUnsupportedError);
+    expect((error as Error).message).toMatch(message);
+    expect((error as AutomatedFilterUnsupportedError).code).toBe(
+      "automated_filter_unsupported",
+    );
+    expect(inbox.calls.filter((c) => c.op === "list")).toHaveLength(1);
+    expect(inbox.calls.filter((c) => c.op === "get")).toHaveLength(0);
+  });
+
+  it("fails loudly when the detail lacks the automated verdict", async () => {
+    inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
+    inbox.detailOverride.a = { automated: undefined };
+    await expect(
+      findNextAwaiting({
+        apiClient,
+        includeAutomated: false,
+        api: inbox.api(),
+      }),
+    ).rejects.toThrow(AutomatedFilterUnsupportedError);
+  });
+
+  it("still works under includeAutomated on a server without the verdict", async () => {
+    inbox.mode = "no-automated-lenient";
+    inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
+    const result = await findNextAwaiting({
+      apiClient,
+      includeAutomated: true,
+      api: inbox.api(),
+    });
+    if (result.outcome !== "email") throw new Error("expected email");
+    expect(result.automated).toBeNull();
+    expect(formatTranscript(result, "primitive")).toContain(
+      "automated: not reported by the server",
+    );
   });
 });
 
@@ -561,7 +708,7 @@ describe("output", () => {
       "automated",
       "conversation",
       "reply_command",
-      "skipped_automated",
+      "automated_awaiting",
     ]);
     expect(json.version).toBe(1);
     expect(json.reply_command).toBe("primitive reply --id a");
@@ -611,14 +758,19 @@ describe("output", () => {
   });
 
   it("builds the empty and error envelopes", () => {
-    expect(toJson({ outcome: "empty", skipped_automated: [] }, "p")).toEqual({
+    expect(
+      toJson(
+        { outcome: "empty", automated_awaiting: { total: 3, capped: false } },
+        "p",
+      ),
+    ).toEqual({
       version: 1,
       outcome: "empty",
       email: null,
       automated: null,
       conversation: null,
       reply_command: null,
-      skipped_automated: [],
+      automated_awaiting: { total: 3, capped: false },
     });
     expect(errorJson("reply_state_unsupported", "old").error).toEqual({
       code: "reply_state_unsupported",
@@ -750,7 +902,7 @@ describe("inbox next command", () => {
     });
   });
 
-  it("mentions skipped automated mail on an empty result", async () => {
+  it("says how much automated mail also awaits on an empty result", async () => {
     inbox.add({
       id: "auto",
       created_at: "2026-09-18T00:00:00.000Z",
@@ -758,7 +910,15 @@ describe("inbox next command", () => {
     });
     const result = await runCommand([]);
     expect(result.exitCode).toBe(5);
-    expect(result.stderr).toContain("Skipped 1 automated email");
+    expect(result.stderr).toContain(
+      "Nothing awaits your reply. 1 automated email also awaits a reply; pass --include-automated to see it.",
+    );
+    const json = await runCommand(["--json"]);
+    expect(json.exitCode).toBe(5);
+    expect(JSON.parse(json.stdout).automated_awaiting).toEqual({
+      total: 1,
+      capped: false,
+    });
     const included = await runCommand(["--include-automated", "--json"]);
     expect(included.exitCode).toBe(0);
     expect(JSON.parse(included.stdout).automated).toEqual({
@@ -783,6 +943,28 @@ describe("inbox next command", () => {
     expect(strict.exitCode).toBe(1);
     expect(strict.stdout).toBe("");
     expect(strict.stderr).toContain("rejected the `awaiting` filter");
+  });
+
+  it("exits 1 with automated_filter_unsupported against a server without the filter", async () => {
+    inbox.mode = "no-automated-lenient";
+    inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
+    const result = await runCommand(["--json"]);
+    expect(result.exitCode).toBe(1);
+    const json = JSON.parse(result.stdout);
+    expect(json.outcome).toBe("error");
+    expect(json.error.code).toBe("automated_filter_unsupported");
+    expect(result.stderr).toContain(
+      "does not support the `automated` filter yet",
+    );
+
+    inbox.mode = "no-automated-strict";
+    const strict = await runCommand([]);
+    expect(strict.exitCode).toBe(1);
+    expect(strict.stderr).toContain("rejected the `automated` filter");
+
+    const included = await runCommand(["--include-automated", "--json"]);
+    expect(included.exitCode).toBe(0);
+    expect(JSON.parse(included.stdout).automated).toBeNull();
   });
 
   it("keeps --json on the envelope when the client cannot be created", async () => {
@@ -832,7 +1014,10 @@ describe("inbox next command", () => {
     // 1: baseline (newest row), 2: state check, 3: long-poll from the
     // baseline, 4: state check after the wake.
     expect(lists[0]?.query).toEqual({ limit: 1 });
-    expect(lists[1]?.query).toMatchObject({ awaiting: "you" });
+    expect(lists[1]?.query).toMatchObject({
+      awaiting: "you",
+      automated: "false",
+    });
     expect(lists[2]?.query).toMatchObject({
       since: "2026-09-18T00:00:00.000Z|old",
       wait: expect.any(Number),

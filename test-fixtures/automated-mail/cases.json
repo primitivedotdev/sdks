@@ -1,0 +1,596 @@
+{
+  "description": "Cases for the automated-mail rule set, shared by the Primitive API (which decides `automated` and `automated_reasons` when an email arrives) and the CLI's automated-mail module. Both run every case; keep the two copies identical. `email` uses the API's field names; `own_domains` are the organization's own domains.",
+  "cases": [
+    {
+      "name": "ordinary mail from a person",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": "alex@example.com",
+        "from_header": "Alex <alex@example.com>",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": [
+          "agent@acme.test"
+        ],
+        "to_addresses": [
+          {
+            "name": null,
+            "address": "agent@acme.test"
+          }
+        ],
+        "automation_headers": null
+      },
+      "own_domains": [
+        "acme.test"
+      ],
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "null envelope sender (bounce)",
+      "email": {
+        "sender": "",
+        "smtp_mail_from": "",
+        "from_header": "Alex <alex@example.com>",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "null_envelope_sender"
+        ]
+      }
+    },
+    {
+      "name": "envelope written as <>",
+      "email": {
+        "sender": "<>",
+        "smtp_mail_from": "<>",
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "null_envelope_sender"
+        ]
+      }
+    },
+    {
+      "name": "whitespace-only envelope",
+      "email": {
+        "sender": "  ",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "null_envelope_sender"
+        ]
+      }
+    },
+    {
+      "name": "empty smtp_mail_from falls back to sender",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": "",
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "no sender address anywhere",
+      "email": {
+        "sender": "",
+        "smtp_mail_from": null,
+        "from_header": "Undisclosed",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "null_envelope_sender",
+          "no_identifiable_sender"
+        ]
+      }
+    },
+    {
+      "name": "no sender address still reports declared headers",
+      "email": {
+        "sender": "nobody",
+        "smtp_mail_from": null,
+        "from_header": null,
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "precedence": "bulk"
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "no_identifiable_sender",
+          "precedence"
+        ]
+      }
+    },
+    {
+      "name": "from the address it was delivered to",
+      "email": {
+        "sender": "agent@acme.test",
+        "smtp_mail_from": "agent@acme.test",
+        "from_header": "Agent <Agent@Acme.test>",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": [
+          "agent@acme.test"
+        ],
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "own_address"
+        ]
+      }
+    },
+    {
+      "name": "from an address that was only in RCPT TO",
+      "email": {
+        "sender": "ops@other.test",
+        "smtp_mail_from": "ops@other.test",
+        "from_header": "ops@other.test",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": [
+          "agent@acme.test",
+          "OPS@other.test"
+        ],
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "own_address"
+        ]
+      }
+    },
+    {
+      "name": "from an address that was only in the To header",
+      "email": {
+        "sender": "team@other.test",
+        "smtp_mail_from": "team@other.test",
+        "from_header": "team@other.test",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": [
+          {
+            "name": "Agent",
+            "address": "agent@acme.test"
+          },
+          {
+            "name": "Team",
+            "address": "team@other.test"
+          }
+        ],
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "own_address"
+        ]
+      }
+    },
+    {
+      "name": "To header given as plain strings",
+      "email": {
+        "sender": "team@other.test",
+        "smtp_mail_from": null,
+        "from_header": "team@other.test",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": [
+          "Team <team@other.test>"
+        ],
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "own_address"
+        ]
+      }
+    },
+    {
+      "name": "from one of the org's own domains",
+      "email": {
+        "sender": "bot@acme.test",
+        "smtp_mail_from": "bot@acme.test",
+        "from_header": "Bot <bot@acme.test>",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [
+        "acme.test"
+      ],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "own_address"
+        ]
+      }
+    },
+    {
+      "name": "own domains match the whole domain, not a subdomain",
+      "email": {
+        "sender": "bot@mail.acme.test",
+        "smtp_mail_from": "bot@mail.acme.test",
+        "from_header": "bot@mail.acme.test",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [
+        "acme.test"
+      ],
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "mailer-daemon on a remote domain",
+      "email": {
+        "sender": "bounces@mx.remote.test",
+        "smtp_mail_from": "bounces@mx.remote.test",
+        "from_header": "Mail Delivery Subsystem <MAILER-DAEMON@mx.remote.test>",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "mailer_daemon"
+        ]
+      }
+    },
+    {
+      "name": "postmaster",
+      "email": {
+        "sender": "postmaster@remote.test",
+        "smtp_mail_from": null,
+        "from_header": "postmaster@remote.test",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "mailer_daemon"
+        ]
+      }
+    },
+    {
+      "name": "reasons follow the order the sender addresses appear",
+      "email": {
+        "sender": "agent@acme.test",
+        "smtp_mail_from": "agent@acme.test",
+        "from_header": "postmaster@remote.test",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "mailer_daemon",
+          "own_address"
+        ]
+      }
+    },
+    {
+      "name": "an address inside the display name counts",
+      "email": {
+        "sender": "relay@lists.test",
+        "smtp_mail_from": "relay@lists.test",
+        "from_header": "\"agent@acme.test via Lists\" <relay@lists.test>",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "own_address"
+        ]
+      }
+    },
+    {
+      "name": "Auto-Submitted auto-generated",
+      "email": {
+        "sender": "alerts@vendor.test",
+        "smtp_mail_from": null,
+        "from_header": "alerts@vendor.test",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "auto_submitted": "auto-generated"
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "auto_submitted"
+        ]
+      }
+    },
+    {
+      "name": "Auto-Submitted with parameters",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "auto_submitted": "Auto-Replied; owner-email=\"alex@example.com\""
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "auto_submitted"
+        ]
+      }
+    },
+    {
+      "name": "Auto-Submitted no is a person",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "auto_submitted": " No "
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "Auto-Submitted with an empty keyword",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "auto_submitted": "; x=y"
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "Precedence values that mean automated",
+      "email": {
+        "sender": "news@vendor.test",
+        "smtp_mail_from": null,
+        "from_header": "news@vendor.test",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "precedence": "\tJUNK\n"
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "precedence"
+        ]
+      }
+    },
+    {
+      "name": "Precedence auto_reply",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "precedence": "auto_reply"
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "precedence"
+        ]
+      }
+    },
+    {
+      "name": "Precedence first-class is a person",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "precedence": "first-class"
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "newsletter with List-Unsubscribe and List-Id",
+      "email": {
+        "sender": "bounce-123@esp.test",
+        "smtp_mail_from": "bounce-123@esp.test",
+        "from_header": "Weekly <news@brand.test>",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "list_unsubscribe": "<https://brand.test/u/1>",
+          "list_id": "<weekly.brand.test>"
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "list_unsubscribe",
+          "list_id"
+        ]
+      }
+    },
+    {
+      "name": "empty header values declare nothing",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "list_unsubscribe": "  ",
+          "list_id": "",
+          "precedence": " "
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "non-string header values are ignored",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "list_unsubscribe": 1,
+          "precedence": [
+            "bulk"
+          ],
+          "auto_submitted": null
+        }
+      },
+      "own_domains": [],
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "every loop rule and every declared header together, in rule order",
+      "email": {
+        "sender": "",
+        "smtp_mail_from": "",
+        "from_header": "MAILER-DAEMON@acme.test",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "list_id": "<l>",
+          "list_unsubscribe": "<u>",
+          "precedence": "list",
+          "auto_submitted": "auto-generated"
+        }
+      },
+      "own_domains": [
+        "acme.test"
+      ],
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "null_envelope_sender",
+          "own_address",
+          "mailer_daemon",
+          "auto_submitted",
+          "precedence",
+          "list_unsubscribe",
+          "list_id"
+        ]
+      }
+    }
+  ]
+}

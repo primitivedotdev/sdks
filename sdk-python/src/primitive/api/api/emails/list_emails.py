@@ -10,6 +10,7 @@ from ... import errors
 
 from ...models.email_status import EmailStatus
 from ...models.error_response import ErrorResponse
+from ...models.list_emails_automated import ListEmailsAutomated
 from ...models.list_emails_awaiting import ListEmailsAwaiting
 from ...models.list_emails_response_200 import ListEmailsResponse200
 from ...types import UNSET, Unset
@@ -32,6 +33,7 @@ def _get_kwargs(
     since: str | Unset = UNSET,
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
+    automated: ListEmailsAutomated | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -76,6 +78,12 @@ def _get_kwargs(
         json_awaiting = awaiting.value
 
     params["awaiting"] = json_awaiting
+
+    json_automated: str | Unset = UNSET
+    if not isinstance(automated, Unset):
+        json_automated = automated.value
+
+    params["automated"] = json_automated
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -142,6 +150,7 @@ def sync_detailed(
     since: str | Unset = UNSET,
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
+    automated: ListEmailsAutomated | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -199,6 +208,7 @@ def sync_detailed(
         since (str | Unset):
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
+        automated (ListEmailsAutomated | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -220,6 +230,7 @@ date_to=date_to,
 since=since,
 wait=wait,
 awaiting=awaiting,
+automated=automated,
 
     )
 
@@ -242,6 +253,7 @@ def sync(
     since: str | Unset = UNSET,
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
+    automated: ListEmailsAutomated | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -299,6 +311,7 @@ def sync(
         since (str | Unset):
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
+        automated (ListEmailsAutomated | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -321,6 +334,7 @@ date_to=date_to,
 since=since,
 wait=wait,
 awaiting=awaiting,
+automated=automated,
 
     ).parsed
 
@@ -337,6 +351,7 @@ async def asyncio_detailed(
     since: str | Unset = UNSET,
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
+    automated: ListEmailsAutomated | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -394,6 +409,7 @@ async def asyncio_detailed(
         since (str | Unset):
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
+        automated (ListEmailsAutomated | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -415,6 +431,7 @@ date_to=date_to,
 since=since,
 wait=wait,
 awaiting=awaiting,
+automated=automated,
 
     )
 
@@ -437,6 +454,7 @@ async def asyncio(
     since: str | Unset = UNSET,
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
+    automated: ListEmailsAutomated | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -494,6 +512,7 @@ async def asyncio(
         since (str | Unset):
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
+        automated (ListEmailsAutomated | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -516,5 +535,6 @@ date_to=date_to,
 since=since,
 wait=wait,
 awaiting=awaiting,
+automated=automated,
 
     )).parsed

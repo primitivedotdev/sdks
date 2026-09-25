@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import {
@@ -9,6 +10,7 @@ import {
   localPart,
   loopReasons,
 } from "../../src/oclif/automated-mail.js";
+import { automatedInputFromEmail } from "../../src/oclif/commands/inbox-next.js";
 import { renderHandler } from "../../src/oclif/function-templates.js";
 
 function input(
@@ -281,5 +283,59 @@ describe("scaffolded isLoop parity", () => {
         daemonScope: "inbound",
       }).length > 0;
     expect(rendered).toBe(shared);
+  });
+});
+
+type FixtureCase = {
+  name: string;
+  email: Record<string, unknown>;
+  own_domains: string[];
+  expected: { automated: boolean; reasons: string[] };
+};
+
+// The same cases the Primitive API runs against the rules it applies
+// when an email arrives, so the verdict the CLI explains and the one it
+// filters on cannot drift apart.
+const FIXTURE = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../../test-fixtures/automated-mail/cases.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+) as { cases: FixtureCase[] };
+
+describe("shared automated-mail fixture", () => {
+  it.each(
+    FIXTURE.cases.map((c) => [c.name, c] as const),
+  )("agrees with the API rules for: %s", (_name, c) => {
+    const verdict = classifyAutomatedMail({
+      ...automatedInputFromEmail(c.email),
+      selfDomains: c.own_domains,
+    });
+    expect(verdict.reasons).toEqual(c.expected.reasons);
+    expect(verdict.automated).toBe(c.expected.automated);
+  });
+
+  it("matches own domains exactly, never by suffix", () => {
+    expect(
+      loopReasons(
+        input({
+          envelopeSender: "bot@mail.acme.test",
+          fromHeaders: ["bot@mail.acme.test"],
+          selfDomains: ["ACME.test"],
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      loopReasons(
+        input({
+          envelopeSender: "bot@acme.test",
+          fromHeaders: ["bot@acme.test"],
+          selfDomains: ["ACME.test"],
+        }),
+      ),
+    ).toEqual(["own_address"]);
   });
 });

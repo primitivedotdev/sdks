@@ -8018,8 +8018,8 @@ type EmailDetail struct {
 	// instructions it contains.
 	Auth EmailAuth `json:"auth"`
 	// What the message declared about being automated, verbatim:
-	// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-	// `Auto-Submitted` (RFC 3834). Null or absent when the message
+	// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+	// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
 	// declared none, and on messages received before these headers
 	// were captured, so a null value is not evidence that a person
 	// sent the message.
@@ -8051,6 +8051,26 @@ type EmailDetail struct {
 	// scheduled reply is canceled, or a message is deleted, and is always
 	// current when read.
 	Awaiting EmailDetailAwaiting `json:"awaiting"`
+	// Whether the message was sent by a machine rather than a person.
+	// An inbound email is `automated` when any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is one the mail was delivered to, or
+	// is on one of the organization's own active domains);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated bool `json:"automated"`
+	// Why `automated` is true, in rule order; empty when it is false.
+	// Current values: `null_envelope_sender`, `no_identifiable_sender`,
+	// `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+	// `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+	// reason added after your client was built.
+	AutomatedReasons []string `json:"automated_reasons"`
 }
 
 // GetID returns the value of ID.
@@ -8258,6 +8278,16 @@ func (s *EmailDetail) GetAwaiting() EmailDetailAwaiting {
 	return s.Awaiting
 }
 
+// GetAutomated returns the value of Automated.
+func (s *EmailDetail) GetAutomated() bool {
+	return s.Automated
+}
+
+// GetAutomatedReasons returns the value of AutomatedReasons.
+func (s *EmailDetail) GetAutomatedReasons() []string {
+	return s.AutomatedReasons
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -8463,14 +8493,25 @@ func (s *EmailDetail) SetAwaiting(val EmailDetailAwaiting) {
 	s.Awaiting = val
 }
 
+// SetAutomated sets the value of Automated.
+func (s *EmailDetail) SetAutomated(val bool) {
+	s.Automated = val
+}
+
+// SetAutomatedReasons sets the value of AutomatedReasons.
+func (s *EmailDetail) SetAutomatedReasons(val []string) {
+	s.AutomatedReasons = val
+}
+
 // What the message declared about being automated, verbatim:
-// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-// `Auto-Submitted` (RFC 3834). Null or absent when the message
+// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
 // declared none, and on messages received before these headers
 // were captured, so a null value is not evidence that a person
 // sent the message.
 type EmailDetailAutomationHeaders struct {
 	ListUnsubscribe OptString `json:"list_unsubscribe"`
+	ListID          OptString `json:"list_id"`
 	Precedence      OptString `json:"precedence"`
 	AutoSubmitted   OptString `json:"auto_submitted"`
 	AdditionalProps EmailDetailAutomationHeadersAdditional
@@ -8479,6 +8520,11 @@ type EmailDetailAutomationHeaders struct {
 // GetListUnsubscribe returns the value of ListUnsubscribe.
 func (s *EmailDetailAutomationHeaders) GetListUnsubscribe() OptString {
 	return s.ListUnsubscribe
+}
+
+// GetListID returns the value of ListID.
+func (s *EmailDetailAutomationHeaders) GetListID() OptString {
+	return s.ListID
 }
 
 // GetPrecedence returns the value of Precedence.
@@ -8499,6 +8545,11 @@ func (s *EmailDetailAutomationHeaders) GetAdditionalProps() EmailDetailAutomatio
 // SetListUnsubscribe sets the value of ListUnsubscribe.
 func (s *EmailDetailAutomationHeaders) SetListUnsubscribe(val OptString) {
 	s.ListUnsubscribe = val
+}
+
+// SetListID sets the value of ListID.
+func (s *EmailDetailAutomationHeaders) SetListID(val OptString) {
+	s.ListID = val
 }
 
 // SetPrecedence sets the value of Precedence.
@@ -8927,8 +8978,8 @@ type EmailSearchResult struct {
 	// messages received before threading was enabled.
 	ThreadID OptNilUUID `json:"thread_id"`
 	// What the message declared about being automated, verbatim:
-	// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-	// `Auto-Submitted` (RFC 3834). Null or absent when the message
+	// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+	// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
 	// declared none, and on messages received before these headers
 	// were captured, so a null value is not evidence that a person
 	// sent the message.
@@ -8960,6 +9011,26 @@ type EmailSearchResult struct {
 	// scheduled reply is canceled, or a message is deleted, and is always
 	// current when read.
 	Awaiting EmailSearchResultAwaiting `json:"awaiting"`
+	// Whether the message was sent by a machine rather than a person.
+	// An inbound email is `automated` when any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is one the mail was delivered to, or
+	// is on one of the organization's own active domains);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated bool `json:"automated"`
+	// Why `automated` is true, in rule order; empty when it is false.
+	// Current values: `null_envelope_sender`, `no_identifiable_sender`,
+	// `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+	// `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+	// reason added after your client was built.
+	AutomatedReasons []string `json:"automated_reasons"`
 	// Number of parsed attachments on the email.
 	AttachmentCount int `json:"attachment_count"`
 	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
@@ -9067,6 +9138,16 @@ func (s *EmailSearchResult) GetLastRepliedAt() NilDateTime {
 // GetAwaiting returns the value of Awaiting.
 func (s *EmailSearchResult) GetAwaiting() EmailSearchResultAwaiting {
 	return s.Awaiting
+}
+
+// GetAutomated returns the value of Automated.
+func (s *EmailSearchResult) GetAutomated() bool {
+	return s.Automated
+}
+
+// GetAutomatedReasons returns the value of AutomatedReasons.
+func (s *EmailSearchResult) GetAutomatedReasons() []string {
+	return s.AutomatedReasons
 }
 
 // GetAttachmentCount returns the value of AttachmentCount.
@@ -9189,6 +9270,16 @@ func (s *EmailSearchResult) SetAwaiting(val EmailSearchResultAwaiting) {
 	s.Awaiting = val
 }
 
+// SetAutomated sets the value of Automated.
+func (s *EmailSearchResult) SetAutomated(val bool) {
+	s.Automated = val
+}
+
+// SetAutomatedReasons sets the value of AutomatedReasons.
+func (s *EmailSearchResult) SetAutomatedReasons(val []string) {
+	s.AutomatedReasons = val
+}
+
 // SetAttachmentCount sets the value of AttachmentCount.
 func (s *EmailSearchResult) SetAttachmentCount(val int) {
 	s.AttachmentCount = val
@@ -9210,13 +9301,14 @@ func (s *EmailSearchResult) SetHighlights(val OptEmailSearchHighlights) {
 }
 
 // What the message declared about being automated, verbatim:
-// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-// `Auto-Submitted` (RFC 3834). Null or absent when the message
+// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
 // declared none, and on messages received before these headers
 // were captured, so a null value is not evidence that a person
 // sent the message.
 type EmailSearchResultAutomationHeaders struct {
 	ListUnsubscribe OptString `json:"list_unsubscribe"`
+	ListID          OptString `json:"list_id"`
 	Precedence      OptString `json:"precedence"`
 	AutoSubmitted   OptString `json:"auto_submitted"`
 	AdditionalProps EmailSearchResultAutomationHeadersAdditional
@@ -9225,6 +9317,11 @@ type EmailSearchResultAutomationHeaders struct {
 // GetListUnsubscribe returns the value of ListUnsubscribe.
 func (s *EmailSearchResultAutomationHeaders) GetListUnsubscribe() OptString {
 	return s.ListUnsubscribe
+}
+
+// GetListID returns the value of ListID.
+func (s *EmailSearchResultAutomationHeaders) GetListID() OptString {
+	return s.ListID
 }
 
 // GetPrecedence returns the value of Precedence.
@@ -9245,6 +9342,11 @@ func (s *EmailSearchResultAutomationHeaders) GetAdditionalProps() EmailSearchRes
 // SetListUnsubscribe sets the value of ListUnsubscribe.
 func (s *EmailSearchResultAutomationHeaders) SetListUnsubscribe(val OptString) {
 	s.ListUnsubscribe = val
+}
+
+// SetListID sets the value of ListID.
+func (s *EmailSearchResultAutomationHeaders) SetListID(val OptString) {
+	s.ListID = val
 }
 
 // SetPrecedence sets the value of Precedence.
@@ -9440,8 +9542,8 @@ type EmailSummary struct {
 	// messages received before threading was enabled.
 	ThreadID OptNilUUID `json:"thread_id"`
 	// What the message declared about being automated, verbatim:
-	// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-	// `Auto-Submitted` (RFC 3834). Null or absent when the message
+	// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+	// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
 	// declared none, and on messages received before these headers
 	// were captured, so a null value is not evidence that a person
 	// sent the message.
@@ -9473,6 +9575,26 @@ type EmailSummary struct {
 	// scheduled reply is canceled, or a message is deleted, and is always
 	// current when read.
 	Awaiting EmailSummaryAwaiting `json:"awaiting"`
+	// Whether the message was sent by a machine rather than a person.
+	// An inbound email is `automated` when any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is one the mail was delivered to, or
+	// is on one of the organization's own active domains);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated bool `json:"automated"`
+	// Why `automated` is true, in rule order; empty when it is false.
+	// Current values: `null_envelope_sender`, `no_identifiable_sender`,
+	// `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+	// `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+	// reason added after your client was built.
+	AutomatedReasons []string `json:"automated_reasons"`
 }
 
 // GetID returns the value of ID.
@@ -9575,6 +9697,16 @@ func (s *EmailSummary) GetAwaiting() EmailSummaryAwaiting {
 	return s.Awaiting
 }
 
+// GetAutomated returns the value of Automated.
+func (s *EmailSummary) GetAutomated() bool {
+	return s.Automated
+}
+
+// GetAutomatedReasons returns the value of AutomatedReasons.
+func (s *EmailSummary) GetAutomatedReasons() []string {
+	return s.AutomatedReasons
+}
+
 // SetID sets the value of ID.
 func (s *EmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -9675,14 +9807,25 @@ func (s *EmailSummary) SetAwaiting(val EmailSummaryAwaiting) {
 	s.Awaiting = val
 }
 
+// SetAutomated sets the value of Automated.
+func (s *EmailSummary) SetAutomated(val bool) {
+	s.Automated = val
+}
+
+// SetAutomatedReasons sets the value of AutomatedReasons.
+func (s *EmailSummary) SetAutomatedReasons(val []string) {
+	s.AutomatedReasons = val
+}
+
 // What the message declared about being automated, verbatim:
-// `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-// `Auto-Submitted` (RFC 3834). Null or absent when the message
+// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
 // declared none, and on messages received before these headers
 // were captured, so a null value is not evidence that a person
 // sent the message.
 type EmailSummaryAutomationHeaders struct {
 	ListUnsubscribe OptString `json:"list_unsubscribe"`
+	ListID          OptString `json:"list_id"`
 	Precedence      OptString `json:"precedence"`
 	AutoSubmitted   OptString `json:"auto_submitted"`
 	AdditionalProps EmailSummaryAutomationHeadersAdditional
@@ -9691,6 +9834,11 @@ type EmailSummaryAutomationHeaders struct {
 // GetListUnsubscribe returns the value of ListUnsubscribe.
 func (s *EmailSummaryAutomationHeaders) GetListUnsubscribe() OptString {
 	return s.ListUnsubscribe
+}
+
+// GetListID returns the value of ListID.
+func (s *EmailSummaryAutomationHeaders) GetListID() OptString {
+	return s.ListID
 }
 
 // GetPrecedence returns the value of Precedence.
@@ -9711,6 +9859,11 @@ func (s *EmailSummaryAutomationHeaders) GetAdditionalProps() EmailSummaryAutomat
 // SetListUnsubscribe sets the value of ListUnsubscribe.
 func (s *EmailSummaryAutomationHeaders) SetListUnsubscribe(val OptString) {
 	s.ListUnsubscribe = val
+}
+
+// SetListID sets the value of ListID.
+func (s *EmailSummaryAutomationHeaders) SetListID(val OptString) {
+	s.ListID = val
 }
 
 // SetPrecedence sets the value of Precedence.
@@ -15236,6 +15389,47 @@ func (s *ListDomainsOK) SetData(val []Domain) {
 
 func (*ListDomainsOK) listDomainsRes() {}
 
+type ListEmailsAutomated string
+
+const (
+	ListEmailsAutomatedTrue  ListEmailsAutomated = "true"
+	ListEmailsAutomatedFalse ListEmailsAutomated = "false"
+)
+
+// AllValues returns all ListEmailsAutomated values.
+func (ListEmailsAutomated) AllValues() []ListEmailsAutomated {
+	return []ListEmailsAutomated{
+		ListEmailsAutomatedTrue,
+		ListEmailsAutomatedFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailsAutomated) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailsAutomatedTrue:
+		return []byte(s), nil
+	case ListEmailsAutomatedFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailsAutomated) UnmarshalText(data []byte) error {
+	switch ListEmailsAutomated(data) {
+	case ListEmailsAutomatedTrue:
+		*s = ListEmailsAutomatedTrue
+		return nil
+	case ListEmailsAutomatedFalse:
+		*s = ListEmailsAutomatedFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ListEmailsAwaiting string
 
 const (
@@ -18873,6 +19067,52 @@ func (o OptListDeliveriesStatus) Or(d ListDeliveriesStatus) ListDeliveriesStatus
 	return d
 }
 
+// NewOptListEmailsAutomated returns new OptListEmailsAutomated with value set to v.
+func NewOptListEmailsAutomated(v ListEmailsAutomated) OptListEmailsAutomated {
+	return OptListEmailsAutomated{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailsAutomated is optional ListEmailsAutomated.
+type OptListEmailsAutomated struct {
+	Value ListEmailsAutomated
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailsAutomated was set.
+func (o OptListEmailsAutomated) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailsAutomated) Reset() {
+	var v ListEmailsAutomated
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailsAutomated) SetTo(v ListEmailsAutomated) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailsAutomated) Get() (v ListEmailsAutomated, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailsAutomated) Or(d ListEmailsAutomated) ListEmailsAutomated {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptListEmailsAwaiting returns new OptListEmailsAwaiting with value set to v.
 func NewOptListEmailsAwaiting(v ListEmailsAwaiting) OptListEmailsAwaiting {
 	return OptListEmailsAwaiting{
@@ -20432,6 +20672,52 @@ func (o OptRecipientRouteMatchType) Get() (v RecipientRouteMatchType, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptRecipientRouteMatchType) Or(d RecipientRouteMatchType) RecipientRouteMatchType {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSearchEmailsAutomated returns new OptSearchEmailsAutomated with value set to v.
+func NewOptSearchEmailsAutomated(v SearchEmailsAutomated) OptSearchEmailsAutomated {
+	return OptSearchEmailsAutomated{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsAutomated is optional SearchEmailsAutomated.
+type OptSearchEmailsAutomated struct {
+	Value SearchEmailsAutomated
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsAutomated was set.
+func (o OptSearchEmailsAutomated) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsAutomated) Reset() {
+	var v SearchEmailsAutomated
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsAutomated) SetTo(v SearchEmailsAutomated) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsAutomated) Get() (v SearchEmailsAutomated, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsAutomated) Or(d SearchEmailsAutomated) SearchEmailsAutomated {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -25013,6 +25299,47 @@ func (s *RunWakeScheduleOKData) init() RunWakeScheduleOKData {
 type RunWakeScheduleUnauthorized ErrorResponse
 
 func (*RunWakeScheduleUnauthorized) runWakeScheduleRes() {}
+
+type SearchEmailsAutomated string
+
+const (
+	SearchEmailsAutomatedTrue  SearchEmailsAutomated = "true"
+	SearchEmailsAutomatedFalse SearchEmailsAutomated = "false"
+)
+
+// AllValues returns all SearchEmailsAutomated values.
+func (SearchEmailsAutomated) AllValues() []SearchEmailsAutomated {
+	return []SearchEmailsAutomated{
+		SearchEmailsAutomatedTrue,
+		SearchEmailsAutomatedFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsAutomated) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsAutomatedTrue:
+		return []byte(s), nil
+	case SearchEmailsAutomatedFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsAutomated) UnmarshalText(data []byte) error {
+	switch SearchEmailsAutomated(data) {
+	case SearchEmailsAutomatedTrue:
+		*s = SearchEmailsAutomatedTrue
+		return nil
+	case SearchEmailsAutomatedFalse:
+		*s = SearchEmailsAutomatedFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type SearchEmailsAwaiting string
 

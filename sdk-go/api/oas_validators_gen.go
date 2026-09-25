@@ -5293,6 +5293,17 @@ func (s *EmailDetail) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if s.AutomatedReasons == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "automated_reasons",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -5534,6 +5545,17 @@ func (s *EmailSearchResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if s.AutomatedReasons == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "automated_reasons",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Score.Get(); ok {
 			if err := func() error {
 				if err := (validate.Float{}).Validate(float64(value)); err != nil {
@@ -5683,6 +5705,17 @@ func (s *EmailSummary) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "awaiting",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.AutomatedReasons == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "automated_reasons",
 			Error: err,
 		})
 	}
@@ -8208,6 +8241,17 @@ func (s *ListDomainsOK) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s ListEmailsAutomated) Validate() error {
+	switch s {
+	case "true":
+		return nil
+	case "false":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s ListEmailsAwaiting) Validate() error {
@@ -11614,6 +11658,17 @@ func (s *RunWakeScheduleUnauthorized) Validate() error {
 		return err
 	}
 	return nil
+}
+
+func (s SearchEmailsAutomated) Validate() error {
+	switch s {
+	case "true":
+		return nil
+	case "false":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s SearchEmailsAwaiting) Validate() error {

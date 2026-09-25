@@ -21,19 +21,21 @@ T = TypeVar("T", bound="EmailDetailAutomationHeadersType0")
 @_attrs_define
 class EmailDetailAutomationHeadersType0:
     """ What the message declared about being automated, verbatim:
-    `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-    `Auto-Submitted` (RFC 3834). Null or absent when the message
+    `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+    `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
     declared none, and on messages received before these headers
     were captured, so a null value is not evidence that a person
     sent the message.
 
         Attributes:
             list_unsubscribe (str | Unset):
+            list_id (str | Unset):
             precedence (str | Unset):
             auto_submitted (str | Unset):
      """
 
     list_unsubscribe: str | Unset = UNSET
+    list_id: str | Unset = UNSET
     precedence: str | Unset = UNSET
     auto_submitted: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -44,6 +46,8 @@ class EmailDetailAutomationHeadersType0:
 
     def to_dict(self) -> dict[str, Any]:
         list_unsubscribe = self.list_unsubscribe
+
+        list_id = self.list_id
 
         precedence = self.precedence
 
@@ -56,6 +60,8 @@ class EmailDetailAutomationHeadersType0:
         })
         if list_unsubscribe is not UNSET:
             field_dict["list_unsubscribe"] = list_unsubscribe
+        if list_id is not UNSET:
+            field_dict["list_id"] = list_id
         if precedence is not UNSET:
             field_dict["precedence"] = precedence
         if auto_submitted is not UNSET:
@@ -70,12 +76,15 @@ class EmailDetailAutomationHeadersType0:
         d = dict(src_dict)
         list_unsubscribe = d.pop("list_unsubscribe", UNSET)
 
+        list_id = d.pop("list_id", UNSET)
+
         precedence = d.pop("precedence", UNSET)
 
         auto_submitted = d.pop("auto_submitted", UNSET)
 
         email_detail_automation_headers_type_0 = cls(
             list_unsubscribe=list_unsubscribe,
+            list_id=list_id,
             precedence=precedence,
             auto_submitted=auto_submitted,
         )

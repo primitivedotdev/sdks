@@ -4305,6 +4305,22 @@ type ListEmailsParams struct {
 	// scheduled reply is canceled, or a message is deleted, and is always
 	// current when read.
 	Awaiting OptListEmailsAwaiting `json:",omitempty,omitzero"`
+	// Only return emails whose `automated` has this value.
+	// `awaiting=you&automated=false` lists mail from people that is
+	// waiting on your reply. Combines with every other filter and with
+	// both `cursor` and `since`. An inbound email is `automated` when any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is one the mail was delivered to, or
+	// is on one of the organization's own active domains);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated OptListEmailsAutomated `json:",omitempty,omitzero"`
 }
 
 func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsParams) {
@@ -4396,6 +4412,15 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 		}
 		if v, ok := packed[key]; ok {
 			params.Awaiting = v.(OptListEmailsAwaiting)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "automated",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Automated = v.(OptListEmailsAutomated)
 		}
 	}
 	return params
@@ -4948,6 +4973,62 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "awaiting",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: automated.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "automated",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAutomatedVal ListEmailsAutomated
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAutomatedVal = ListEmailsAutomated(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Automated.SetTo(paramsDotAutomatedVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Automated.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "automated",
 			In:   "query",
 			Err:  err,
 		}
@@ -7497,7 +7578,8 @@ func decodeRunWakeScheduleParams(args [1]string, argsEscaped bool, r *http.Reque
 // SearchEmailsParams is parameters of searchEmails operation.
 type SearchEmailsParams struct {
 	// Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state
-	// (see the `awaiting` field).
+	// (see the `awaiting` field). Supports `automated:true` and `automated:false` to filter on the
+	// `automated` field.
 	Q OptString `json:",omitempty,omitzero"`
 	// Filter by sender address or sender domain.
 	From OptString `json:",omitempty,omitzero"`
@@ -7551,6 +7633,21 @@ type SearchEmailsParams struct {
 	// scheduled reply is canceled, or a message is deleted, and is always
 	// current when read.
 	Awaiting OptSearchEmailsAwaiting `json:",omitempty,omitzero"`
+	// Only return emails whose `automated` has this value. Also
+	// available in `q` as `automated:true` or `automated:false`. An inbound email is `automated` when
+	// any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is one the mail was delivered to, or
+	// is on one of the organization's own active domains);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated OptSearchEmailsAutomated `json:",omitempty,omitzero"`
 	// Sort mode. Defaults to relevance when a text query is present,
 	// otherwise `received_at_desc`.
 	Sort OptSearchEmailsSort `json:",omitempty,omitzero"`
@@ -7689,6 +7786,15 @@ func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmails
 		}
 		if v, ok := packed[key]; ok {
 			params.Awaiting = v.(OptSearchEmailsAwaiting)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "automated",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Automated = v.(OptSearchEmailsAutomated)
 		}
 	}
 	{
@@ -8521,6 +8627,62 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "awaiting",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: automated.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "automated",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAutomatedVal SearchEmailsAutomated
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAutomatedVal = SearchEmailsAutomated(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Automated.SetTo(paramsDotAutomatedVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Automated.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "automated",
 			In:   "query",
 			Err:  err,
 		}

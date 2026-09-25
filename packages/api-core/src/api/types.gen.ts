@@ -1535,8 +1535,8 @@ export type EmailSummary = {
     thread_id?: string | null;
     /**
      * What the message declared about being automated, verbatim:
-     * `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-     * `Auto-Submitted` (RFC 3834). Null or absent when the message
+     * `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+     * `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
      * declared none, and on messages received before these headers
      * were captured, so a null value is not evidence that a person
      * sent the message.
@@ -1544,6 +1544,7 @@ export type EmailSummary = {
      */
     automation_headers?: {
         list_unsubscribe?: string;
+        list_id?: string;
         precedence?: string;
         auto_submitted?: string;
         [key: string]: unknown;
@@ -1584,6 +1585,32 @@ export type EmailSummary = {
      *
      */
     awaiting: 'you' | 'them';
+    /**
+     * Whether the message was sent by a machine rather than a person.
+     * An inbound email is `automated` when any of these holds, decided once
+     * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+     * `no_identifiable_sender` (no address in the envelope or From);
+     * `own_address` (a sender address is one the mail was delivered to, or
+     * is on one of the organization's own active domains);
+     * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+     * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+     * `precedence` (Precedence bulk, list, junk or auto_reply);
+     * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+     * present). The header rules only see headers captured at ingest, so
+     * older mail may lack them. This is loop and noise protection, not
+     * sender authentication.
+     *
+     */
+    automated: boolean;
+    /**
+     * Why `automated` is true, in rule order; empty when it is false.
+     * Current values: `null_envelope_sender`, `no_identifiable_sender`,
+     * `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+     * `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+     * reason added after your client was built.
+     *
+     */
+    automated_reasons: Array<string>;
 };
 
 export type EmailSearchHighlights = {
@@ -1801,8 +1828,8 @@ export type EmailDetail = {
     auth: EmailAuth;
     /**
      * What the message declared about being automated, verbatim:
-     * `List-Unsubscribe` (RFC 2369/8058), `Precedence`, and
-     * `Auto-Submitted` (RFC 3834). Null or absent when the message
+     * `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+     * `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
      * declared none, and on messages received before these headers
      * were captured, so a null value is not evidence that a person
      * sent the message.
@@ -1810,6 +1837,7 @@ export type EmailDetail = {
      */
     automation_headers?: {
         list_unsubscribe?: string;
+        list_id?: string;
         precedence?: string;
         auto_submitted?: string;
         [key: string]: unknown;
@@ -1850,6 +1878,32 @@ export type EmailDetail = {
      *
      */
     awaiting: 'you' | 'them';
+    /**
+     * Whether the message was sent by a machine rather than a person.
+     * An inbound email is `automated` when any of these holds, decided once
+     * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+     * `no_identifiable_sender` (no address in the envelope or From);
+     * `own_address` (a sender address is one the mail was delivered to, or
+     * is on one of the organization's own active domains);
+     * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+     * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+     * `precedence` (Precedence bulk, list, junk or auto_reply);
+     * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+     * present). The header rules only see headers captured at ingest, so
+     * older mail may lack them. This is loop and noise protection, not
+     * sender authentication.
+     *
+     */
+    automated: boolean;
+    /**
+     * Why `automated` is true, in rule order; empty when it is false.
+     * Current values: `null_envelope_sender`, `no_identifiable_sender`,
+     * `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+     * `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+     * reason added after your client was built.
+     *
+     */
+    automated_reasons: Array<string>;
 };
 
 export type EmailDetailReply = {
@@ -5861,6 +5915,25 @@ export type ListEmailsData = {
          *
          */
         awaiting?: 'you' | 'them';
+        /**
+         * Only return emails whose `automated` has this value.
+         * `awaiting=you&automated=false` lists mail from people that is
+         * waiting on your reply. Combines with every other filter and with
+         * both `cursor` and `since`. An inbound email is `automated` when any of these holds, decided once
+         * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+         * `no_identifiable_sender` (no address in the envelope or From);
+         * `own_address` (a sender address is one the mail was delivered to, or
+         * is on one of the organization's own active domains);
+         * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+         * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+         * `precedence` (Precedence bulk, list, junk or auto_reply);
+         * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+         * present). The header rules only see headers captured at ingest, so
+         * older mail may lack them. This is loop and noise protection, not
+         * sender authentication.
+         *
+         */
+        automated?: 'true' | 'false';
     };
     url: '/emails';
 };
@@ -5894,7 +5967,7 @@ export type SearchEmailsData = {
     path?: never;
     query?: {
         /**
-         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field).
+         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field). Supports `automated:true` and `automated:false` to filter on the `automated` field.
          */
         q?: string;
         /**
@@ -5976,6 +6049,23 @@ export type SearchEmailsData = {
          *
          */
         awaiting?: 'you' | 'them';
+        /**
+         * Only return emails whose `automated` has this value. Also
+         * available in `q` as `automated:true` or `automated:false`. An inbound email is `automated` when any of these holds, decided once
+         * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+         * `no_identifiable_sender` (no address in the envelope or From);
+         * `own_address` (a sender address is one the mail was delivered to, or
+         * is on one of the organization's own active domains);
+         * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+         * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+         * `precedence` (Precedence bulk, list, junk or auto_reply);
+         * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+         * present). The header rules only see headers captured at ingest, so
+         * older mail may lack them. This is loop and noise protection, not
+         * sender authentication.
+         *
+         */
+        automated?: 'true' | 'false';
         /**
          * Sort mode. Defaults to relevance when a text query is present,
          * otherwise `received_at_desc`.

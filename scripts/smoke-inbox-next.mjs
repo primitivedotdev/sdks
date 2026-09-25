@@ -8,14 +8,17 @@ import { join, resolve } from "node:path";
 
 // Drive the installed CLI's `inbox next` (and the --awaiting filters)
 // against a local stand-in for the reply-state API: an email awaiting a
-// reply, the reply -> next loop, an empty inbox, automated mail, a
-// server without reply state, and --wait, including mail that lands
+// reply, the reply -> next loop, an empty inbox, automated mail left to
+// the server's `automated=false` filter, servers without reply state or
+// without the automated filter, and --wait, including mail that lands
 // between the reply-state check and the long-poll.
 const binary = resolve(process.argv[2] ?? "cli-node/bin/run.js");
 const config = await mkdtemp(join(tmpdir(), "primitive-inbox-next-smoke-"));
 const AGENT = "agent@acme.primitive.test";
 
-let mode = "current"; // "current" | "old-strict" | "old-lenient"
+// "current" | "old-strict" | "old-lenient" (no reply state) |
+// "no-automated" (reply state, but no automated verdict or filter)
+let mode = "current";
 const emails = [];
 const log = [];
 let afterStateCheck = null;
@@ -29,7 +32,9 @@ function addEmail(overrides = {}) {
     recipient: AGENT, to_addresses: [AGENT], subject: "Question", status: "completed",
     domain: "acme.primitive.test", thread_id: randomUUID(), message_id: `<${randomUUID()}@example.test>`,
     webhook_attempt_count: 0, automation_headers: null, awaiting: "you", reply_count: 0,
-    last_replied_at: null, body_text: "Can you help?", ...overrides,
+    last_replied_at: null, body_text: "Can you help?",
+    // Decided by the server when the mail arrives.
+    automated: false, automated_reasons: [], ...overrides,
   };
   emails.push(email);
   return email;
@@ -39,7 +44,9 @@ const cursorOf = (email) => `${email.created_at}|${email.id}`;
 
 function present(email) {
   if (mode === "current") return email;
-  const { awaiting: _a, reply_count: _r, last_replied_at: _l, ...rest } = email;
+  const { automated: _x, automated_reasons: _y, ...withoutVerdict } = email;
+  if (mode === "no-automated") return withoutVerdict;
+  const { awaiting: _a, reply_count: _r, last_replied_at: _l, ...rest } = withoutVerdict;
   return rest;
 }
 
@@ -49,10 +56,15 @@ function send(response, status, body) {
   response.end(JSON.stringify(body));
 }
 
-function forwardTail(since, awaiting) {
+function matches(email, awaiting, automated) {
+  return (!awaiting || email.awaiting === awaiting) &&
+    (automated === undefined || String(email.automated) === automated);
+}
+
+function forwardTail(since, awaiting, automated) {
   return emails
     .filter((email) => cursorOf(email) > since)
-    .filter((email) => !awaiting || email.awaiting === awaiting)
+    .filter((email) => matches(email, awaiting, automated))
     .sort((a, b) => cursorOf(a).localeCompare(cursorOf(b)));
 }
 
@@ -68,17 +80,22 @@ const server = createServer(async (request, response) => {
       send(response, 400, { success: false, error: { code: "validation_error", message: "Unrecognized key(s) in object: 'awaiting'" } });
       return;
     }
-    const awaiting = mode === "current" ? query.awaiting : undefined;
+    if (mode === "no-automated" && query.automated !== undefined) {
+      send(response, 400, { success: false, error: { code: "validation_error", message: "Unrecognized key(s) in object: 'automated'" } });
+      return;
+    }
+    const awaiting = mode === "current" || mode === "no-automated" ? query.awaiting : undefined;
+    const automated = mode === "current" ? query.automated : undefined;
     const limit = Number(query.limit ?? 50);
     if (query.since) {
-      let rows = forwardTail(query.since, awaiting);
+      let rows = forwardTail(query.since, awaiting, automated);
       const wait = Number(query.wait ?? 0);
       if (rows.length === 0 && wait > 0) {
         const deadline = Date.now() + wait * 1000;
         onLongPoll?.();
         while (rows.length === 0 && Date.now() < deadline) {
           await new Promise((done) => setTimeout(done, 100));
-          rows = forwardTail(query.since, awaiting);
+          rows = forwardTail(query.since, awaiting, automated);
         }
       }
       const page = rows.slice(0, limit);
@@ -90,9 +107,10 @@ const server = createServer(async (request, response) => {
       }
       return;
     }
-    const rows = [...emails].sort((a, b) => cursorOf(b).localeCompare(cursorOf(a)))
-      .filter((email) => !awaiting || email.awaiting === awaiting).slice(0, limit);
-    send(response, 200, { success: true, data: rows.map(present), meta: { total: rows.length, limit, cursor: null } });
+    const matched = [...emails].sort((a, b) => cursorOf(b).localeCompare(cursorOf(a)))
+      .filter((email) => matches(email, awaiting, automated));
+    const rows = matched.slice(0, limit);
+    send(response, 200, { success: true, data: rows.map(present), meta: { total: matched.length, total_capped: false, limit, cursor: null } });
     return;
   }
 
@@ -159,8 +177,10 @@ function run(args) {
 
 try {
   // An email awaiting a reply, behind an older bounce and newsletter.
-  const bounce = addEmail({ sender: "", from_header: "MAILER-DAEMON@mx.remote.test", from_email: "MAILER-DAEMON@mx.remote.test", subject: "Undeliverable" });
-  const newsletter = addEmail({ automation_headers: { list_unsubscribe: "<mailto:u@news.test>", precedence: "bulk" }, subject: "Weekly news" });
+  const bounce = addEmail({ sender: "", from_header: "MAILER-DAEMON@mx.remote.test", from_email: "MAILER-DAEMON@mx.remote.test", subject: "Undeliverable",
+    automated: true, automated_reasons: ["null_envelope_sender", "mailer_daemon"] });
+  addEmail({ automation_headers: { list_unsubscribe: "<mailto:u@news.test>", precedence: "bulk" }, subject: "Weekly news",
+    automated: true, automated_reasons: ["precedence", "list_unsubscribe"] });
   const first = addEmail({ subject: "First question" });
   const second = addEmail({ subject: "Second question" });
 
@@ -169,7 +189,13 @@ try {
   assert.match(human.stdout, /Awaiting your reply:/);
   assert.match(human.stdout, new RegExp(`id:\\s+${first.id}`));
   assert.match(human.stdout, new RegExp(`reply --id ${first.id} --body`));
-  assert.match(human.stderr, /skipped 2 older automated emails/);
+  // Automated mail is left to the server: one filtered list request, and
+  // no automated email is ever read.
+  const firstCheck = log.filter((entry) => entry.path === "/v1/emails");
+  assert.equal(firstCheck.length, 1);
+  assert.equal(firstCheck[0].query.awaiting, "you");
+  assert.equal(firstCheck[0].query.automated, "false");
+  assert.ok(!log.some((entry) => entry.path === `/v1/emails/${bounce.id}`));
 
   const asJson = await run(["inbox", "next", "--json"]);
   assert.equal(asJson.code, 0, asJson.stderr);
@@ -182,10 +208,7 @@ try {
   assert.deepEqual(envelope.automated, { automated: false, reasons: [], automation_headers_known: false });
   assert.equal(envelope.conversation.messages[0].role, "user");
   assert.match(envelope.reply_command, new RegExp(` reply --id ${first.id}$`));
-  assert.deepEqual(envelope.skipped_automated, [
-    { id: bounce.id, reasons: ["null_envelope_sender", "mailer_daemon"] },
-    { id: newsletter.id, reasons: ["precedence", "list_unsubscribe"] },
-  ]);
+  assert.equal(envelope.automated_awaiting, null);
 
   // The loop: reply, then next moves on; replying to the last empties it.
   const replyFirst = await run(["reply", "--id", first.id, "--body", "Here you go."]);
@@ -199,16 +222,19 @@ try {
   const empty = await run(["inbox", "next"]);
   assert.equal(empty.code, 5, empty.stderr);
   assert.equal(empty.stdout, "");
-  assert.match(empty.stderr, /Nothing awaits your reply\. Skipped 2 automated emails/);
+  assert.match(empty.stderr, /Nothing awaits your reply\. 2 automated emails also await a reply; pass --include-automated/);
   const emptyJson = await run(["inbox", "next", "--json"]);
   assert.equal(emptyJson.code, 5);
   assert.equal(JSON.parse(emptyJson.stdout).outcome, "empty");
+  assert.deepEqual(JSON.parse(emptyJson.stdout).automated_awaiting, { total: 2, capped: false });
 
   const automated = await run(["inbox", "next", "--include-automated", "--json"]);
   assert.equal(automated.code, 0, automated.stderr);
   const automatedEnvelope = JSON.parse(automated.stdout);
   assert.equal(automatedEnvelope.email.id, bounce.id);
-  assert.equal(automatedEnvelope.automated.automated, true);
+  assert.deepEqual(automatedEnvelope.automated, {
+    automated: true, reasons: ["null_envelope_sender", "mailer_daemon"], automation_headers_known: false,
+  });
 
   // Reply-state filters on the other surfaces.
   const latest = await run(["emails", "latest", "--awaiting", "them"]);
@@ -238,6 +264,16 @@ try {
   const strictLatest = await run(["emails", "latest", "--awaiting", "you"]);
   assert.equal(strictLatest.code, 1);
   assert.match(strictLatest.stderr, /does not support reply state yet/);
+  // A server with reply state but no automated filter must fail loudly
+  // too, never fall back to deciding it locally and scanning.
+  mode = "no-automated";
+  const noAutomated = await run(["inbox", "next", "--json"]);
+  assert.equal(noAutomated.code, 1);
+  assert.equal(JSON.parse(noAutomated.stdout).error.code, "automated_filter_unsupported");
+  assert.match(noAutomated.stderr, /rejected the `automated` filter/);
+  const noAutomatedIncluded = await run(["inbox", "next", "--include-automated", "--json"]);
+  assert.equal(noAutomatedIncluded.code, 0, noAutomatedIncluded.stderr);
+  assert.equal(JSON.parse(noAutomatedIncluded.stdout).automated, null);
   mode = "current";
   const currentEmptySearch = await run(["search", "nomatch", "--awaiting", "you"]);
   assert.equal(currentEmptySearch.code, 0, currentEmptySearch.stderr);

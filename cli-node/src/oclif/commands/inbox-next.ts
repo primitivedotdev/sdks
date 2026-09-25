@@ -18,11 +18,18 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  AUTOMATED_FILTER_UNSUPPORTED_CODE,
+  AutomatedFilterUnsupportedError,
+  assertAutomatedVerdict,
+  automatedRejectedError,
+  hasAutomatedVerdict,
+  isAutomatedRejectedError,
+} from "../automated-filter.js";
+import {
   AUTOMATED_REASON_DESCRIPTIONS,
   type AutomatedMailInput,
-  type AutomatedVerdict,
+  type AutomatedReason,
   type AutomationHeaders,
-  classifyAutomatedMail,
 } from "../automated-mail.js";
 import {
   assertReplyState,
@@ -40,7 +47,10 @@ import {
 //
 //   inbox next  ->  reply --id <id>  ->  inbox next  ->  ...
 //
-// It reads server-side reply state (`awaiting`), not a local cursor.
+// It reads server-side reply state (`awaiting`), not a local cursor, and
+// skips automated mail with the server's `automated=false` filter, so the
+// cost of a call does not grow with the unanswered bounces and newsletters
+// that pile up in an inbox.
 // An email stays "awaiting you" until a reply to its thread is sent or
 // queued, so mail that arrives while the agent is composing is still
 // there on the next call, and a reply that fails or is canceled puts
@@ -56,7 +66,7 @@ export const INBOX_NEXT_EXIT_CODES = {
 
 export const INBOX_NEXT_EXIT_CODE_HELP = `Exit codes:
   - 0: an email awaits your reply; it is printed.
-  - 1: error (API failure, auth, or a server without reply state). Nothing is printed as the next email.
+  - 1: error (API failure, auth, or a server without reply state or the automated filter). Nothing is printed as the next email.
   - 2: invalid flags or arguments.
   - 5: nothing awaits your reply (with --wait: still nothing when --timeout elapsed).`;
 
@@ -96,29 +106,45 @@ export type InboxNextEmail = {
   auth: { spf: string | null; dmarc: string | null } | null;
 };
 
-export type InboxNextSkipped = {
-  id: string;
-  reasons: AutomatedVerdict["reasons"];
+/**
+ * The server's verdict on whether a machine sent the email. Null under
+ * --include-automated against a server that does not report it.
+ */
+export type InboxNextAutomated = {
+  automated: boolean;
+  reasons: string[];
+  /**
+   * Whether the email's automation headers were recorded. When false, a
+   * newsletter or auto-reply from an ordinary address cannot be told
+   * apart from a person, so `automated: false` is weaker evidence.
+   */
+  automation_headers_known: boolean;
 };
+
+/**
+ * Automated mail also awaiting a reply, which the default filter left
+ * out: the server's bounded count (`capped` when it stopped counting).
+ * Reported only on the empty outcome, and null with --include-automated.
+ */
+export type InboxNextAutomatedAwaiting = { total: number; capped: boolean };
 
 export type InboxNextResult =
   | {
       outcome: "email";
       email: InboxNextEmail;
-      automated: AutomatedVerdict;
+      automated: InboxNextAutomated | null;
       conversation: Conversation;
-      skipped_automated: InboxNextSkipped[];
     }
-  | { outcome: "empty"; skipped_automated: InboxNextSkipped[] };
+  | { outcome: "empty"; automated_awaiting: InboxNextAutomatedAwaiting | null };
 
 export type InboxNextJson = {
   version: number;
   outcome: "email" | "empty" | "error";
   email: InboxNextEmail | null;
-  automated: AutomatedVerdict | null;
+  automated: InboxNextAutomated | null;
   conversation: Conversation | null;
   reply_command: string | null;
-  skipped_automated: InboxNextSkipped[];
+  automated_awaiting: InboxNextAutomatedAwaiting | null;
   error?: { code: string; message: string };
 };
 
@@ -149,7 +175,11 @@ function addressStrings(value: unknown): string[] {
   return [];
 }
 
-/** Build the automated-mail input from a list row or an email detail. */
+/**
+ * Build the automated-mail input from a list row or an email detail. The
+ * server decides `automated` with the same rules at ingest; this mapping
+ * is what the shared rule fixture runs through, so the two agree.
+ */
 export function automatedInputFromEmail(row: LooseRecord): AutomatedMailInput {
   const headers = row.automation_headers;
   return {
@@ -169,8 +199,15 @@ export function automatedInputFromEmail(row: LooseRecord): AutomatedMailInput {
   };
 }
 
-export function classifyEmail(row: LooseRecord): AutomatedVerdict {
-  return classifyAutomatedMail(automatedInputFromEmail(row));
+/** The server's verdict from a row, or null when it did not report one. */
+export function serverAutomated(row: LooseRecord): InboxNextAutomated | null {
+  const headers = row.automation_headers;
+  if (!hasAutomatedVerdict(row)) return null;
+  return {
+    automated: row.automated,
+    reasons: [...row.automated_reasons],
+    automation_headers_known: headers !== null && typeof headers === "object",
+  };
 }
 
 export function toInboxNextEmail(
@@ -283,13 +320,19 @@ export type InboxNextApi = {
 
 const DEFAULT_API: InboxNextApi = { getConversation, getEmail, listEmails };
 
-type ListPage = { rows: LooseRecord[]; cursor: string | null };
+type ListPage = {
+  rows: LooseRecord[];
+  cursor: string | null;
+  total: number | null;
+  totalCapped: boolean;
+};
 
 async function listPage(
   api: InboxNextApi,
   apiClient: PrimitiveApiClient,
   query: {
     awaiting?: "you";
+    automated?: "true" | "false";
     limit: number;
     since?: string;
     wait?: number;
@@ -305,22 +348,44 @@ async function listPage(
     if (query.awaiting && isAwaitingRejectedError(payload)) {
       throw awaitingRejectedError("GET /emails");
     }
+    if (query.automated && isAutomatedRejectedError(payload)) {
+      throw automatedRejectedError("GET /emails");
+    }
     throw new InboxNextApiError("GET /emails", payload);
   }
   const envelope = result.data as
-    | { data?: unknown[]; meta?: { cursor?: string | null } }
+    | {
+        data?: unknown[];
+        meta?: {
+          cursor?: string | null;
+          total?: number;
+          total_capped?: boolean;
+        };
+      }
     | undefined;
   const rows = (envelope?.data ?? []).filter(
     (row): row is LooseRecord => row !== null && typeof row === "object",
   );
-  return { rows, cursor: envelope?.meta?.cursor ?? null };
+  return {
+    rows,
+    cursor: envelope?.meta?.cursor ?? null,
+    total:
+      typeof envelope?.meta?.total === "number" ? envelope.meta.total : null,
+    totalCapped: envelope?.meta?.total_capped === true,
+  };
 }
 
 /**
  * Find the oldest inbound email awaiting your reply. Walks the
- * `awaiting=you` forward tail from the oldest row, skipping automated
- * mail unless `includeAutomated`, and re-reads the chosen email so a
- * reply sent a moment ago (by this or another agent) is honoured.
+ * `awaiting=you` forward tail from the oldest row with the server's
+ * `automated=false` filter (dropped with `includeAutomated`), so
+ * automated mail is never read, and re-reads the chosen email so a reply
+ * sent a moment ago (by this or another agent) is honoured.
+ *
+ * A server without the `automated` filter fails with
+ * AutomatedFilterUnsupportedError rather than falling back to deciding
+ * it here, which would re-read every unanswered automated email on every
+ * call.
  */
 export async function findNextAwaiting(params: {
   apiClient: PrimitiveApiClient;
@@ -328,29 +393,26 @@ export async function findNextAwaiting(params: {
   api?: InboxNextApi;
 }): Promise<InboxNextResult> {
   const api = params.api ?? DEFAULT_API;
-  const skipped: InboxNextSkipped[] = [];
+  const filterAutomated = !params.includeAutomated;
   let since = EPOCH_CURSOR;
 
   for (;;) {
     const page = await listPage(api, params.apiClient, {
       awaiting: "you",
+      ...(filterAutomated ? { automated: "false" as const } : {}),
       limit: SCAN_PAGE_SIZE,
       since,
     });
-    // An older server that ignored the filter would hand back every
-    // email without reply state. Never read that as "awaiting you".
+    // An older server that ignored a filter would hand back rows without
+    // the fields. Never read that as "awaiting you" or "from a person".
     assertReplyState(page.rows, "GET /emails");
+    if (filterAutomated)
+      assertAutomatedVerdict(page.rows, "GET /emails", false);
 
     for (const row of page.rows) {
       if (row.awaiting !== "you" || row.status === "rejected") continue;
       const id = str(row.id);
       if (!id) continue;
-
-      const listVerdict = classifyEmail(row);
-      if (listVerdict.automated && !params.includeAutomated) {
-        skipped.push({ id, reasons: listVerdict.reasons });
-        continue;
-      }
 
       const detailResult = await api.getEmail({
         client: params.apiClient.client,
@@ -378,11 +440,16 @@ export async function findNextAwaiting(params: {
       }
       // Answered since the list was read.
       if (detail.awaiting !== "you") continue;
-
-      const verdict = classifyEmail(detail as LooseRecord);
-      if (verdict.automated && !params.includeAutomated) {
-        skipped.push({ id, reasons: verdict.reasons });
-        continue;
+      const automated = serverAutomated(detail as LooseRecord);
+      if (filterAutomated) {
+        if (automated === null) {
+          throw new AutomatedFilterUnsupportedError(
+            `GET /emails/${id} returned the email without the \`automated\` and \`automated_reasons\` fields.`,
+          );
+        }
+        // Parsing finished between the list and this read and found
+        // automation headers: the server now says a machine sent it.
+        if (automated.automated) continue;
       }
 
       const conversationResult = await api.getConversation({
@@ -409,19 +476,36 @@ export async function findNextAwaiting(params: {
       return {
         outcome: "email",
         email: toInboxNextEmail(detail as LooseRecord & ReplyStateFields),
-        automated: verdict,
+        automated,
         conversation,
-        skipped_automated: skipped,
       };
     }
 
     // The forward tail signals "caught up" with an empty page (and a
     // null cursor); a short page is not final, so keep following it.
     if (page.rows.length === 0 || !page.cursor || page.cursor === since) {
-      return { outcome: "empty", skipped_automated: skipped };
+      return { outcome: "empty", automated_awaiting: null };
     }
     since = page.cursor;
   }
+}
+
+/**
+ * How much automated mail also awaits a reply: one request, answered by
+ * the server's bounded count, never a scan.
+ */
+export async function countAutomatedAwaiting(params: {
+  apiClient: PrimitiveApiClient;
+  api?: InboxNextApi;
+}): Promise<InboxNextAutomatedAwaiting> {
+  const api = params.api ?? DEFAULT_API;
+  const page = await listPage(api, params.apiClient, {
+    awaiting: "you",
+    automated: "true",
+    limit: 1,
+  });
+  assertAutomatedVerdict(page.rows, "GET /emails", true);
+  return { total: page.total ?? page.rows.length, capped: page.totalCapped };
 }
 
 /**
@@ -471,7 +555,7 @@ export function toJson(result: InboxNextResult, bin: string): InboxNextJson {
       automated: null,
       conversation: null,
       reply_command: null,
-      skipped_automated: result.skipped_automated,
+      automated_awaiting: result.automated_awaiting,
     };
   }
   return {
@@ -481,7 +565,7 @@ export function toJson(result: InboxNextResult, bin: string): InboxNextJson {
     automated: result.automated,
     conversation: result.conversation,
     reply_command: replyCommand(bin, result.email.id),
-    skipped_automated: result.skipped_automated,
+    automated_awaiting: null,
   };
 }
 
@@ -493,7 +577,7 @@ export function errorJson(code: string, message: string): InboxNextJson {
     automated: null,
     conversation: null,
     reply_command: null,
-    skipped_automated: [],
+    automated_awaiting: null,
     error: { code, message },
   };
 }
@@ -512,15 +596,18 @@ function formatMessage(message: ConversationMessage, index: number): string {
   return sanitizeForTerminal(`${header}\n${body.replace(/\s+$/, "")}`);
 }
 
-export function formatVerdict(verdict: AutomatedVerdict): string {
+function describeReason(reason: string): string {
+  return AUTOMATED_REASON_DESCRIPTIONS[reason as AutomatedReason] ?? reason;
+}
+
+export function formatVerdict(verdict: InboxNextAutomated | null): string {
+  if (verdict === null) return "not reported by the server";
   if (!verdict.automated) {
     return verdict.automation_headers_known
       ? "no"
       : "no (no automation headers recorded for this email, so a newsletter or auto-reply from an ordinary address cannot be ruled out; judge from its content)";
   }
-  return `yes: ${verdict.reasons
-    .map((reason) => AUTOMATED_REASON_DESCRIPTIONS[reason])
-    .join("; ")}`;
+  return `yes: ${verdict.reasons.map(describeReason).join("; ")}`;
 }
 
 /** The readable transcript printed without --json. */
@@ -569,15 +656,15 @@ class InboxNextCommand extends Command {
 
   "Waiting on your reply" is the server's reply state (\`awaiting=you\`): the latest message in the email's thread is inbound. Sending or queueing a reply with \`primitive reply\` moves the thread to \`awaiting=them\`, so the next call moves on. A reply that fails or is canceled puts the email back. Because this reads server state rather than a local cursor, mail that arrived while you were composing is never skipped.
 
-  Automated mail is skipped by default: bounces (null envelope sender), mailer-daemon and postmaster, mail from this inbox's own addresses, and mail whose headers declare it automated (Auto-Submitted, Precedence bulk/list/junk, List-Unsubscribe, List-Id). Pass --include-automated to get it anyway; the \`automated\` verdict and its reasons are always reported.
+  Automated mail is skipped by default, using the server's \`automated\` verdict (decided when the mail arrived) as a filter, so the call costs the same however much unanswered automated mail has piled up: bounces (null envelope sender), mailer-daemon and postmaster, mail from this inbox's own addresses or domains, and mail whose headers declare it automated (Auto-Submitted, Precedence bulk/list/junk, List-Unsubscribe, List-Id). Pass --include-automated to get it anyway; the \`automated\` verdict and its reasons are always reported.
 
   NOT A WORK QUEUE. Nothing is claimed or locked. Two agents running \`inbox next\` on the same inbox get the same email until one of them replies, and both may answer it. Run one agent per inbox, or coordinate outside Primitive.
 
   --wait blocks until something awaits you. It takes the inbox's newest position before checking, then long-polls from that position, re-checking reply state whenever mail arrives and at least every 30 seconds, so nothing that arrives between the check and the wait is missed.
 
-  --json prints one stable envelope (version ${INBOX_NEXT_JSON_VERSION}): \`outcome\` ("email" | "empty" | "error"), \`email\` (id, thread_id, message_id, received_at, from, from_email, to, subject, awaiting, reply_count, last_replied_at, body_text, from_known_address, auth { spf, dmarc }), \`automated\` ({ automated, reasons[], automation_headers_known }), \`conversation\` (thread_id, subject, message_count, truncated, messages[] with role user|assistant), \`reply_command\`, \`skipped_automated\` ([{ id, reasons[] }]), and \`error\` ({ code, message }) on failure.
+  --json prints one stable envelope (version ${INBOX_NEXT_JSON_VERSION}): \`outcome\` ("email" | "empty" | "error"), \`email\` (id, thread_id, message_id, received_at, from, from_email, to, subject, awaiting, reply_count, last_replied_at, body_text, from_known_address, auth { spf, dmarc }), \`automated\` ({ automated, reasons[], automation_headers_known }, the server's verdict), \`conversation\` (thread_id, subject, message_count, truncated, messages[] with role user|assistant), \`reply_command\`, \`automated_awaiting\` ({ total, capped }: automated mail also awaiting a reply, on the empty outcome; null otherwise), and \`error\` ({ code, message }) on failure.
 
-  Requires a server that reports reply state. Against an older server it fails with code \`${REPLY_STATE_UNSUPPORTED_CODE}\` rather than guessing.
+  Requires a server that reports reply state and the \`automated\` filter. Against an older server it fails with code \`${REPLY_STATE_UNSUPPORTED_CODE}\` or \`${AUTOMATED_FILTER_UNSUPPORTED_CODE}\` rather than guessing or scanning.
 
   ${INBOX_NEXT_EXIT_CODE_HELP}`;
 
@@ -614,7 +701,7 @@ class InboxNextCommand extends Command {
     }),
     "include-automated": Flags.boolean({
       description:
-        "Do not skip automated mail (bounces, mailer-daemon, own addresses, Auto-Submitted, bulk and list mail).",
+        "Do not skip automated mail (bounces, mailer-daemon, own addresses, Auto-Submitted, bulk and list mail): drops the server-side `automated=false` filter.",
     }),
   };
 
@@ -676,7 +763,7 @@ class InboxNextCommand extends Command {
         });
 
         if (result.outcome === "email" || !flags.wait || since === null) {
-          this.printResult(result, bin, flags.json);
+          await this.printResult(result, bin, flags, apiClient);
           return;
         }
 
@@ -685,7 +772,7 @@ class InboxNextCommand extends Command {
             ? MAX_LONG_POLL_SECONDS * 1000
             : deadline - Date.now();
         if (remainingMs <= 0) {
-          this.printResult(result, bin, flags.json);
+          await this.printResult(result, bin, flags, apiClient);
           return;
         }
         if (!announcedWait && !flags.json) {
@@ -717,7 +804,10 @@ class InboxNextCommand extends Command {
         }
       }
     } catch (error) {
-      if (error instanceof ReplyStateUnsupportedError) {
+      if (
+        error instanceof ReplyStateUnsupportedError ||
+        error instanceof AutomatedFilterUnsupportedError
+      ) {
         fail(error.code, error.message);
         return;
       }
@@ -733,29 +823,33 @@ class InboxNextCommand extends Command {
     }
   }
 
-  private printResult(
-    result: InboxNextResult,
+  private async printResult(
+    found: InboxNextResult,
     bin: string,
-    json: boolean,
-  ): void {
-    if (json) {
+    flags: { json: boolean; "include-automated": boolean },
+    apiClient: PrimitiveApiClient,
+  ): Promise<void> {
+    // Nothing from a person awaits: say how much automated mail does,
+    // from the server's bounded count (one request, never a scan).
+    const result =
+      found.outcome === "empty" && !flags["include-automated"]
+        ? {
+            ...found,
+            automated_awaiting: await countAutomatedAwaiting({ apiClient }),
+          }
+        : found;
+    if (flags.json) {
       this.log(JSON.stringify(toJson(result, bin), null, 2));
     } else if (result.outcome === "email") {
       this.log(formatTranscript(result, bin));
     } else {
-      const skipped = result.skipped_automated.length;
+      const pending = result.automated_awaiting;
+      const count = pending
+        ? `${pending.total}${pending.capped ? "+" : ""}`
+        : "";
+      const one = pending?.total === 1 && !pending.capped;
       process.stderr.write(
-        `Nothing awaits your reply.${skipped > 0 ? ` Skipped ${skipped} automated email${skipped === 1 ? "" : "s"}; pass --include-automated to see ${skipped === 1 ? "it" : "them"}.` : ""}\n`,
-      );
-    }
-    if (
-      result.outcome === "email" &&
-      result.skipped_automated.length > 0 &&
-      !json
-    ) {
-      const skipped = result.skipped_automated.length;
-      process.stderr.write(
-        `(skipped ${skipped} older automated email${skipped === 1 ? "" : "s"}; pass --include-automated to include ${skipped === 1 ? "it" : "them"})\n`,
+        `Nothing awaits your reply.${pending && pending.total > 0 ? ` ${count} automated email${one ? "" : "s"} also await${one ? "s" : ""} a reply; pass --include-automated to see ${one ? "it" : "them"}.` : ""}\n`,
       );
     }
     process.exitCode =
