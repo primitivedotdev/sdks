@@ -21,6 +21,7 @@ import {
   type Awaiting,
   assertReplyState,
   awaitingRejectedError,
+  ensureSearchReportsReplyState,
   isAwaitingRejectedError,
   queryUsesAwaiting,
   ReplyStateUnsupportedError,
@@ -368,6 +369,9 @@ class SearchCommand extends Command {
       if (wantsReplyState) {
         try {
           assertReplyState(envelope?.data ?? [], "GET /emails/search");
+          if ((envelope?.data ?? []).length === 0) {
+            await ensureSearchReportsReplyState(apiClient);
+          }
         } catch (error) {
           if (!(error instanceof ReplyStateUnsupportedError)) throw error;
           process.stderr.write(`${error.message}\n`);

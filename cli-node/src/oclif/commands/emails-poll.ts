@@ -9,6 +9,7 @@ import {
   type Awaiting,
   assertReplyState,
   awaitingRejectedError,
+  ensureSearchReportsReplyState,
   isAwaitingRejectedError,
   queryUsesAwaiting,
 } from "../reply-state.js";
@@ -215,7 +216,11 @@ export async function fetchEmailSearchPage(params: {
   // Search ignores query parameters it does not know, so an older
   // server answers `awaiting=you` with unfiltered rows that lack the
   // reply-state fields. Throw instead of printing them as matches.
-  if (wantsReplyState) assertReplyState(rows, "GET /emails/search");
+  if (wantsReplyState) {
+    assertReplyState(rows, "GET /emails/search");
+    if (rows.length === 0)
+      await ensureSearchReportsReplyState(params.apiClient);
+  }
   return {
     ok: true,
     cursor: envelope?.meta.cursor ?? cursorFromRows(rows),

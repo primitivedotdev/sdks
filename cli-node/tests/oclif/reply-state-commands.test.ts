@@ -232,6 +232,23 @@ describe("emails wait / watch --awaiting", () => {
     ).rejects.toThrow(ReplyStateUnsupportedError);
   });
 
+  it("probes once per client when polls come back empty", async () => {
+    const apiClient = { client: {} } as never;
+    mocks.searchEmails.mockResolvedValue({
+      data: { success: true, data: [], meta: { cursor: null } },
+    });
+    for (let i = 0; i < 3; i++) {
+      const page = await fetchEmailSearchPage({
+        apiClient,
+        filters: filtersFromFlags({ awaiting: "you" }),
+        pageSize: 10,
+      });
+      expect(page.ok).toBe(true);
+    }
+    // Three polls plus a single probe.
+    expect(mocks.searchEmails).toHaveBeenCalledTimes(4);
+  });
+
   it("does not require reply state without the filter", async () => {
     mocks.searchEmails.mockResolvedValue({
       data: { success: true, data: [oldRow()], meta: { cursor: null } },
@@ -312,6 +329,53 @@ describe("search --awaiting", () => {
     expect(result.stderr).toContain("rejected the `awaiting` filter");
   });
 
+  it("probes an empty filtered result and fails on an older server", async () => {
+    mocks.searchEmails
+      .mockResolvedValueOnce({
+        data: { success: true, data: [], meta: { cursor: null } },
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, data: [oldRow()], meta: { cursor: null } },
+      });
+    const result = await runCommand(SearchCommand, [
+      "invoice",
+      "--awaiting",
+      "you",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("does not support reply state yet");
+    expect(mocks.searchEmails.mock.calls[1]?.[0].query).toEqual({
+      limit: 1,
+      include_facets: "false",
+      snippet: "false",
+    });
+  });
+
+  it("keeps an empty filtered result when the server reports reply state", async () => {
+    mocks.searchEmails
+      .mockResolvedValueOnce({
+        data: { success: true, data: [], meta: { cursor: null } },
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, data: [row()], meta: { cursor: null } },
+      });
+    const result = await runCommand(SearchCommand, [
+      "invoice",
+      "--awaiting",
+      "you",
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain("No matching mail.");
+  });
+
+  it("keeps an empty filtered result for an empty mailbox", async () => {
+    mocks.searchEmails.mockResolvedValue({
+      data: { success: true, data: [], meta: { cursor: null } },
+    });
+    const result = await runCommand(SearchCommand, ["awaiting:them"]);
+    expect(result.exitCode).toBeUndefined();
+  });
+
   it("rejects --awaiting with --mode", async () => {
     const result = await runCommand(SearchCommand, [
       "x",
@@ -348,6 +412,22 @@ describe("generated emails list / search with --awaiting", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain("does not support reply state yet");
+  });
+
+  it("probes an empty generated search and fails on an older server", async () => {
+    mocks.searchEmails
+      .mockResolvedValueOnce({
+        data: { success: true, data: [], meta: { cursor: null } },
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, data: [oldRow()], meta: { cursor: null } },
+      });
+    const result = await runCommand(COMMANDS["emails:search-emails"], [
+      "--awaiting",
+      "you",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
   });
 
   it("explains a rejected filter", async () => {

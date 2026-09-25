@@ -21,6 +21,7 @@ import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.
 import {
   assertReplyState,
   awaitingRejectedError,
+  ensureSearchReportsReplyState,
   isAwaitingRejectedError,
   ReplyStateUnsupportedError,
   replyStateSurfaceForOperation,
@@ -1157,10 +1158,13 @@ export function createOperationCommand(
         const envelope = result.data as OperationResponseEnvelope;
         if (replyStateSurface) {
           try {
-            assertReplyState(
-              Array.isArray(envelope?.data) ? envelope.data : [],
-              replyStateSurface,
-            );
+            const rows = Array.isArray(envelope?.data) ? envelope.data : [];
+            assertReplyState(rows, replyStateSurface);
+            // Search ignores unknown parameters, so an empty page alone
+            // does not show the filter was applied. List rejects them.
+            if (rows.length === 0 && operation.sdkName === "searchEmails") {
+              await ensureSearchReportsReplyState(apiClient);
+            }
           } catch (error) {
             if (!(error instanceof ReplyStateUnsupportedError)) throw error;
             process.stderr.write(`${error.message}\n`);

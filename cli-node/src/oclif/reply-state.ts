@@ -1,3 +1,4 @@
+import { searchEmails } from "@primitivedotdev/api-core";
 /**
  * Reply state on inbound email: `reply_count`, `last_replied_at` and
  * `awaiting` ('you' | 'them', whose turn it is in the thread).
@@ -53,9 +54,9 @@ export function hasReplyState(row: unknown): row is ReplyStateFields {
 }
 
 /**
- * Throw unless every row carries reply state. An empty page passes: a
- * server that ignored the filter returned a superset of the filtered
- * result, so an empty superset means the filtered answer is empty too. `surface` names the
+ * Throw unless every row carries reply state. An empty page proves
+ * nothing either way; callers that asked for reply state follow an
+ * empty search page with ensureSearchReportsReplyState(). `surface` names the
  * response for the error, e.g. "GET /emails".
  */
 export function assertReplyState(rows: readonly unknown[], surface: string) {
@@ -126,4 +127,40 @@ export function replyStateSurfaceForOperation(
   if (!surface || !query) return null;
   const q = typeof query.q === "string" ? query.q : undefined;
   return query.awaiting !== undefined || queryUsesAwaiting(q) ? surface : null;
+}
+
+type SearchClient = { client: unknown };
+
+// One probe per API client per process: wait/watch poll repeatedly and
+// the answer cannot change mid-run.
+const searchSupportProbes = new WeakMap<object, Promise<void>>();
+
+/**
+ * GET /emails/search ignores unknown parameters, so an empty page for
+ * `awaiting=...` does not show that the server applied the filter.
+ * Read one unfiltered row: if it lacks reply state the server does not
+ * support it and this throws ReplyStateUnsupportedError. No rows at all
+ * means the mailbox is empty, so the empty answer stands.
+ */
+export function ensureSearchReportsReplyState(
+  apiClient: SearchClient,
+): Promise<void> {
+  const key = apiClient as object;
+  let probe = searchSupportProbes.get(key);
+  if (!probe) {
+    probe = (async () => {
+      const result = await searchEmails({
+        client: apiClient.client as never,
+        query: { limit: 1, include_facets: "false", snippet: "false" },
+        responseStyle: "fields",
+      });
+      // A failed probe proves nothing; the caller's own request
+      // succeeded, so leave its empty answer alone.
+      if (result.error) return;
+      const rows = (result.data as { data?: unknown[] } | undefined)?.data;
+      assertReplyState(rows ?? [], "GET /emails/search");
+    })();
+    searchSupportProbes.set(key, probe);
+  }
+  return probe;
 }

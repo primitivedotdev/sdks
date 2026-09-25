@@ -96,6 +96,14 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (request.method === "GET" && url.pathname === "/v1/emails/search") {
+    // Search ignores unknown parameters on a server without reply state.
+    const awaiting = mode === "current" ? query.awaiting : undefined;
+    const rows = emails.filter((email) => !(query.q ?? "").includes("nomatch"))
+      .filter((email) => !awaiting || email.awaiting === awaiting).slice(0, Number(query.limit ?? 50));
+    send(response, 200, { success: true, data: rows.map(present), meta: { total: rows.length, total_capped: false, limit: rows.length, cursor: null, sort: "received_at_desc" } });
+    return;
+  }
   const match = /^\/v1\/emails\/([^/]+)(\/conversation|\/reply)?$/.exec(url.pathname);
   const email = match && emails.find((candidate) => candidate.id === match[1]);
   if (match && !email) {
@@ -219,6 +227,9 @@ try {
   assert.equal(lenientList.code, 1);
   assert.equal(lenientList.stdout, "");
   assert.match(lenientList.stderr, /does not support reply state yet/);
+  const lenientEmptySearch = await run(["search", "nomatch", "--awaiting", "you"]);
+  assert.equal(lenientEmptySearch.code, 1, "an empty search must not hide a server without reply state");
+  assert.match(lenientEmptySearch.stderr, /does not support reply state yet/);
   mode = "old-strict";
   const strict = await run(["inbox", "next"]);
   assert.equal(strict.code, 1);
@@ -228,6 +239,9 @@ try {
   assert.equal(strictLatest.code, 1);
   assert.match(strictLatest.stderr, /does not support reply state yet/);
   mode = "current";
+  const currentEmptySearch = await run(["search", "nomatch", "--awaiting", "you"]);
+  assert.equal(currentEmptySearch.code, 0, currentEmptySearch.stderr);
+  assert.match(currentEmptySearch.stderr, /No matching mail/);
 
   // --wait: mail that arrives while the CLI holds the long-poll.
   let arrived;
