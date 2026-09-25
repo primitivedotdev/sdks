@@ -168,6 +168,35 @@ primitive deliveries replay --id <delivery-id>
 
 Generated API commands remain available for compatibility and full schema parity, for example `primitive emails:list-emails` and `primitive sending:reply-to-email`.
 
+## Send outcomes and exit codes
+
+`primitive chat`, `primitive chat reply`, `primitive send` and `primitive reply`
+report the same outcomes. Exit codes tell you whether a message left and whether
+sending again is safe. With `--json`, stdout is an envelope for every outcome
+(failures included) whose `outcome` field carries the name.
+
+| Outcome | Exit | Meaning |
+|---|---|---|
+| `replied` | 0 | Chat only: the message was sent and a reply arrived. |
+| `sent` | 0 | Accepted for delivery. `status: "queued"` is a success, not a pending failure. |
+| `already_sent` | 0 | The server recognised an identical earlier send. Nothing new went out. Do not resend. |
+| `not_sent` | 1 | The API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429), or the command failed before sending. Nothing went out. |
+| (usage error) | 2 | Invalid flags or arguments. Nothing went out. |
+| `sent_awaiting_reply` | 3 | Chat only: the message was sent but no reply arrived before `--timeout`. Wait with the printed command; do not resend. |
+| `uncertain` | 4 | Transport error, conflict or server error. The message may or may not have gone out; check `primitive sent list` before retrying. |
+
+A chat that times out prints `Message sent (id X). No reply yet after Ns. Do NOT
+resend; wait with: <command>`, and its `--json` envelope has `"reply": null`, the
+`sent` record, and `follow_up_commands` that only wait on or inspect that send.
+
+Without `--json`, `send` and `reply` keep printing the send record on stdout exactly
+as before and add a one-line stderr summary such as `Reply sent (queued for
+delivery, id X). Do not resend.` Before sending, `primitive reply` (and
+`primitive chat --reply`) warns on stderr when the inbound email already has a reply
+that went out. The warning never blocks the send; if the lookup fails, the reply is
+still sent and stderr says the check was skipped. `--json` includes the replies as
+`prior_replies`.
+
 ## Remove mailbox history
 
 `primitive sent delete --id <sent-email-id>` removes sender history and owned

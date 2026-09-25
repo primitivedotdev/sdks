@@ -20,6 +20,14 @@ type ReceiptData = {
 };
 export type ChatReceipt = { path: string; data: ReceiptData };
 
+/** A previous attempt may or may not have sent; the caller must not resend blindly. */
+export class UncertainChatSendError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UncertainChatSendError";
+  }
+}
+
 /** Keep API credentials out of request fingerprints, including low-entropy local keys. */
 export function chatCredentialIdentity(
   key: string | undefined,
@@ -88,7 +96,7 @@ export function beginChatReceipt(
   }
   if (previous && !previous.completed) {
     if (previous.sent === null) {
-      throw new Error(
+      throw new UncertainChatSendError(
         `A previous send has an uncertain outcome. Inspect sent history before sending again. Receipt: ${path}`,
       );
     }

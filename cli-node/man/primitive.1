@@ -154,6 +154,39 @@ Print command duration to standard error after completion.
 .TP
 .B --help
 Show command help.
+.SH EXIT STATUS
+.B primitive chat,
+.B primitive chat reply,
+.B primitive send
+and
+.B primitive reply
+share one outcome vocabulary. With
+.B --json
+the outcome is the
+.B outcome
+field of an envelope printed for every result.
+.TP
+.B 0
+.BR replied ,
+.B sent
+(accepted for delivery; queued counts) or
+.B already_sent
+(an identical earlier send; nothing new went out).
+.TP
+.B 1
+.BR not_sent :
+the API rejected the request or the command failed before sending.
+.TP
+.B 2
+Invalid flags or arguments. Nothing was sent.
+.TP
+.B 3
+.BR sent_awaiting_reply :
+chat sent the message but no reply arrived before the timeout. Wait; do not resend.
+.TP
+.B 4
+.BR uncertain :
+transport error, conflict or server error. The message may have gone out; check sent history before retrying.
 .SH ENVIRONMENT
 .TP
 .B PRIMITIVE_API_KEY
