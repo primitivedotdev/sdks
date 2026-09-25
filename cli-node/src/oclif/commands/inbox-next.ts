@@ -830,14 +830,24 @@ class InboxNextCommand extends Command {
     apiClient: PrimitiveApiClient,
   ): Promise<void> {
     // Nothing from a person awaits: say how much automated mail does,
-    // from the server's bounded count (one request, never a scan).
-    const result =
-      found.outcome === "empty" && !flags["include-automated"]
-        ? {
-            ...found,
-            automated_awaiting: await countAutomatedAwaiting({ apiClient }),
-          }
-        : found;
+    // from the server's bounded count (one request, never a scan). The
+    // count is supplementary: the filtered scan already established the
+    // empty result, so a failed count leaves `automated_awaiting` null and
+    // says so on stderr instead of turning exit 5 into an error.
+    let result = found;
+    if (found.outcome === "empty" && !flags["include-automated"]) {
+      try {
+        result = {
+          ...found,
+          automated_awaiting: await countAutomatedAwaiting({ apiClient }),
+        };
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        process.stderr.write(
+          `Could not count automated mail awaiting a reply (${detail}); \`automated_awaiting\` is null.\n`,
+        );
+      }
+    }
     if (flags.json) {
       this.log(JSON.stringify(toJson(result, bin), null, 2));
     } else if (result.outcome === "email") {

@@ -945,6 +945,27 @@ describe("inbox next command", () => {
     expect(strict.stderr).toContain("rejected the `awaiting` filter");
   });
 
+  it("still exits 5 when the supplementary automated count fails", async () => {
+    const api = inbox.api();
+    mocks.listEmails.mockImplementation(
+      async (options: { query?: Record<string, unknown> }) =>
+        options.query?.automated === "true"
+          ? {
+              error: {
+                success: false,
+                error: { code: "internal_error", message: "boom" },
+              },
+            }
+          : api.listEmails(options as never),
+    );
+    const result = await runCommand(["--json"]);
+    expect(result.exitCode).toBe(5);
+    const json = JSON.parse(result.stdout);
+    expect(json.outcome).toBe("empty");
+    expect(json.automated_awaiting).toBeNull();
+    expect(result.stderr).toContain("Could not count automated mail");
+  });
+
   it("exits 1 with automated_filter_unsupported against a server without the filter", async () => {
     inbox.mode = "no-automated-lenient";
     inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
