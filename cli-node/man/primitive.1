@@ -87,9 +87,11 @@ primitive inbox next
 .fi
 .RE
 .PP
-Automated mail (bounces, mailer-daemon, postmaster, the inbox's own addresses, Auto-Submitted, bulk and list mail) is skipped unless
+Automated mail (bounces, mailer-daemon, postmaster, the inbox's own addresses or domains, Auto-Submitted, bulk and list mail) is skipped unless
 .B --include-automated
-is given.
+is given. The server decides this when the mail arrives and filters on it, so the call does not slow down as unanswered automated mail accumulates; a server without that filter fails with
+.B automated_filter_unsupported
+instead of scanning.
 .B --wait
 blocks until something awaits you, taking the inbox position before checking so no arrival is missed;
 .B --timeout

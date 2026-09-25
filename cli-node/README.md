@@ -173,17 +173,23 @@ primitive inbox next --json               # the next one
 | Exit | Meaning |
 |---|---|
 | 0 | An email awaits your reply; it is printed. |
-| 1 | Error, including `reply_state_unsupported` from a server without reply state. |
+| 1 | Error, including `reply_state_unsupported` or `automated_filter_unsupported` from an older server. |
 | 2 | Invalid flags or arguments. |
 | 5 | Nothing awaits your reply (with `--wait`: still nothing at `--timeout`). |
 
 - Automated mail is skipped unless you pass `--include-automated`: null envelope
   sender (bounces), mailer-daemon and postmaster, mail from the inbox's own
-  addresses, and mail that declares itself automated (Auto-Submitted, Precedence
-  bulk/list/junk, List-Unsubscribe, List-Id). Skipped ids and reasons are in
-  `skipped_automated`. `automation_headers_known: false` means the email had no
-  automation headers on record (none declared, or received before they were
-  captured), so `automated: false` rests on the sender checks alone.
+  addresses or domains, and mail that declares itself automated (Auto-Submitted,
+  Precedence bulk/list/junk, List-Unsubscribe, List-Id). The API decides this
+  when the mail arrives (`automated`, `automated_reasons` on every email) and
+  `inbox next` filters on it server-side (`awaiting=you&automated=false`), so a
+  call costs the same however much unanswered automated mail has piled up. On
+  an empty result, `automated_awaiting` says how much automated mail also
+  awaits. `automation_headers_known: false` means the email had no automation
+  headers on record (none declared, or received before they were captured), so
+  `automated: false` rests on the sender checks alone. Filter on the verdict
+  yourself with `--automated true|false` on `emails list` and `emails search`,
+  or `automated:false` in a search query.
 - `--wait [--timeout N]` blocks until something awaits you (default 300 seconds,
   0 waits forever). It reads the inbox's newest position before checking reply
   state, then long-polls from that position and re-checks on every arrival and
@@ -196,6 +202,9 @@ primitive inbox next --json               # the next one
 - It is not a work queue. Nothing is claimed or locked, so two agents calling
   `inbox next` on the same inbox get the same email until one replies. Run one
   agent per inbox.
+- Against a server without the `automated` filter, `inbox next` fails with
+  `automated_filter_unsupported` rather than deciding automated mail itself and
+  re-reading all of it on every call; `--include-automated` still works there.
 - Against a server that does not report reply state, `inbox next` and every
   `--awaiting` filter fail with `reply_state_unsupported` instead of treating
   mail as unanswered.
