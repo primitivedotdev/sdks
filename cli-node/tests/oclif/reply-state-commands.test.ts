@@ -368,6 +368,41 @@ describe("search --awaiting", () => {
     expect(result.stderr).toContain("No matching mail.");
   });
 
+  it("fails, and retries later, when the verification probe fails", async () => {
+    const apiClient = { client: {} } as never;
+    mocks.searchEmails
+      .mockResolvedValueOnce({
+        data: { success: true, data: [], meta: { cursor: null } },
+      })
+      .mockResolvedValueOnce({
+        error: {
+          success: false,
+          error: { code: "internal_error", message: "boom" },
+        },
+      });
+    await expect(
+      fetchEmailSearchPage({
+        apiClient,
+        filters: filtersFromFlags({ awaiting: "you" }),
+        pageSize: 10,
+      }),
+    ).rejects.toThrow(/Could not verify that the server supports reply state/);
+    mocks.searchEmails
+      .mockResolvedValueOnce({
+        data: { success: true, data: [], meta: { cursor: null } },
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, data: [row()], meta: { cursor: null } },
+      });
+    const page = await fetchEmailSearchPage({
+      apiClient,
+      filters: filtersFromFlags({ awaiting: "you" }),
+      pageSize: 10,
+    });
+    expect(page.ok).toBe(true);
+    expect(mocks.searchEmails).toHaveBeenCalledTimes(4);
+  });
+
   it("keeps an empty filtered result for an empty mailbox", async () => {
     mocks.searchEmails.mockResolvedValue({
       data: { success: true, data: [], meta: { cursor: null } },

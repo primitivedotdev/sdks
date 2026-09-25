@@ -190,6 +190,9 @@ primitive inbox next --json               # the next one
   at least every 30 seconds, so mail that lands between the check and the wait is
   not missed. Mail that arrives while you compose a reply is still `awaiting=you`
   on the next call, because the state lives on the server, not in a cursor.
+- The email carries `from_known_address` and `auth` (SPF, DMARC) so an agent can
+  weigh instructions in it; the transcript prints them and strips terminal
+  control sequences from sender-supplied text.
 - It is not a work queue. Nothing is claimed or locked, so two agents calling
   `inbox next` on the same inbox get the same email until one replies. Run one
   agent per inbox.

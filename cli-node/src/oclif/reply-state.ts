@@ -26,13 +26,27 @@ export function queryUsesAwaiting(q: string | null | undefined): boolean {
 }
 
 export class ReplyStateUnsupportedError extends Error {
-  readonly code = REPLY_STATE_UNSUPPORTED_CODE;
+  code: string = REPLY_STATE_UNSUPPORTED_CODE;
 
   constructor(detail: string) {
     super(
       `The server does not support reply state yet: ${detail} Nothing was treated as awaiting your reply. Upgrade to a server that returns \`awaiting\` and \`reply_count\`, or run without reply-state options.`,
     );
     this.name = "ReplyStateUnsupportedError";
+  }
+}
+
+/**
+ * The server's reply-state support could not be established (a probe
+ * failed). Reported like ReplyStateUnsupportedError so callers never
+ * read an unverified empty answer as "nothing matched".
+ */
+export class ReplyStateUnverifiedError extends ReplyStateUnsupportedError {
+  constructor(detail: string) {
+    super(detail);
+    this.message = `Could not verify that the server supports reply state: ${detail} Nothing was treated as matching. Retry the command.`;
+    this.name = "ReplyStateUnverifiedError";
+    this.code = "reply_state_unverified";
   }
 }
 
@@ -154,13 +168,20 @@ export function ensureSearchReportsReplyState(
         query: { limit: 1, include_facets: "false", snippet: "false" },
         responseStyle: "fields",
       });
-      // A failed probe proves nothing; the caller's own request
-      // succeeded, so leave its empty answer alone.
-      if (result.error) return;
+      if (result.error) {
+        throw new ReplyStateUnverifiedError(
+          "the empty result could not be checked: reading one unfiltered row from GET /emails/search failed.",
+        );
+      }
       const rows = (result.data as { data?: unknown[] } | undefined)?.data;
       assertReplyState(rows ?? [], "GET /emails/search");
     })();
     searchSupportProbes.set(key, probe);
+    // Only a settled answer is cached; a failed probe is retried next time.
+    probe.catch(() => {
+      if (searchSupportProbes.get(key) === probe)
+        searchSupportProbes.delete(key);
+    });
   }
   return probe;
 }
