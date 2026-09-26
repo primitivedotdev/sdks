@@ -52,10 +52,10 @@ export const SEND_OUTCOME_HELP = `Outcomes and exit codes, shared by chat, chat 
   - exit 0 replied: chat only. The message was sent and a reply arrived.
   - exit 0 sent: accepted for delivery. A queued status counts as sent.
   - exit 0 already_sent: an identical earlier send exists (or was deleted: HTTP 410 sent_email_deleted). Nothing new went out. Do not resend.
-  - exit 1 not_sent: the API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429) or the command failed before sending. Nothing went out.
+  - exit 1 not_sent: the API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429), the command failed before sending, or the send record has status agent_failed, gate_denied or canceled. Nothing went out.
   - exit 2: invalid flags or arguments. Nothing went out.
   - exit 3 sent_awaiting_reply: chat only. Sent, but no reply before the timeout. Wait; do not resend.
-  - exit 4 uncertain: transport error, conflict or server error. It may or may not have gone out. Check sent history before retrying.`;
+  - exit 4 uncertain: transport error, conflict, server error, or a send record with status unknown. It may or may not have gone out. Check sent history before retrying.`;
 
 export function sendOutcomeExitCode(outcome: SendOutcome): number {
   return SEND_OUTCOME_EXIT_CODES[outcome];
@@ -115,10 +115,54 @@ export function apiResultHttpStatus(result: unknown): number | undefined {
   return typeof response?.status === "number" ? response.status : undefined;
 }
 
+// Sent-email statuses for attempts that never left Primitive: the
+// outbound agent rejected it, a recipient gate denied it, or a
+// scheduled send was canceled. Every other status (queued, delivered,
+// bounced, scheduled, ...) is a message that went out or will go out.
+const SEND_STATUSES_THAT_DID_NOT_GO_OUT: ReadonlySet<string> = new Set([
+  "agent_failed",
+  "canceled",
+  "gate_denied",
+]);
+
+// `unknown` is terminal but indeterminate: the delivery result could
+// not be classified, so the caller cannot tell whether it went out.
+const SEND_STATUSES_WITH_UNKNOWN_OUTCOME: ReadonlySet<string> = new Set([
+  "unknown",
+]);
+
+/**
+ * Classify a send record the API returned with a 2xx. A 2xx alone does
+ * not mean a message went out: the record's status can show the
+ * attempt was rejected or that its result is indeterminate. The same
+ * holds for an idempotent replay, which returns the earlier attempt's
+ * record as it stands.
+ */
 export function successfulSendOutcome(
-  sent: SendMailResult,
-): "already_sent" | "sent" {
+  sent: Pick<SendMailResult, "idempotent_replay" | "status">,
+): SendOutcome {
+  if (SEND_STATUSES_THAT_DID_NOT_GO_OUT.has(sent.status)) return "not_sent";
+  if (SEND_STATUSES_WITH_UNKNOWN_OUTCOME.has(sent.status)) return "uncertain";
   return sent.idempotent_replay === true ? "already_sent" : "sent";
+}
+
+/**
+ * Summary for a 2xx send record whose status shows it did not go out
+ * (`not_sent`) or that its result is indeterminate (`uncertain`).
+ */
+export function formatSendRecordFailureSummary(
+  noun: "Message" | "Reply",
+  outcome: FailedSendOutcome,
+  sent: Pick<SendMailResult, "id" | "idempotent_replay" | "status">,
+): string {
+  const record =
+    sent.idempotent_replay === true
+      ? `the earlier identical attempt (sent id ${sent.id}) has status ${sent.status}`
+      : `the send record (id ${sent.id}) has status ${sent.status}`;
+  if (outcome === "not_sent") {
+    return `${noun} not sent: ${record}. Nothing went out; fix the problem before retrying.`;
+  }
+  return `${noun} send outcome uncertain: ${record}. It may or may not have gone out. Do not resend blindly; check sent history first.`;
 }
 
 function describeSentStatus(status: string): string {
@@ -153,22 +197,13 @@ export function formatSendFailureSummary(
   return `${noun} send outcome uncertain (${reason}): it may or may not have gone out. Do not resend blindly; check sent history first.`;
 }
 
-// Sent-email statuses for attempts that never left Primitive. Every
-// other status (queued, delivered, bounced, scheduled, ...) is a reply
-// that went out or will go out.
-const REPLY_STATUSES_THAT_DID_NOT_GO_OUT: ReadonlySet<string> = new Set([
-  "agent_failed",
-  "canceled",
-  "gate_denied",
-]);
-
 export function priorRepliesThatWentOut(
   replies: readonly EmailDetailReply[] | null | undefined,
   options: { excludeSentId?: string } = {},
 ): EmailDetailReply[] {
   return (replies ?? []).filter(
     (reply) =>
-      !REPLY_STATUSES_THAT_DID_NOT_GO_OUT.has(reply.status) &&
+      !SEND_STATUSES_THAT_DID_NOT_GO_OUT.has(reply.status) &&
       reply.id !== options.excludeSentId,
   );
 }
@@ -400,9 +435,11 @@ export function reportSendCommandResult(params: {
     } else {
       outcome = successfulSendOutcome(sent);
       outcomeMessage =
-        outcome === "already_sent"
-          ? formatAlreadySentNotice(sent)
-          : formatSentSummary(params.noun, sent);
+        outcome === "not_sent" || outcome === "uncertain"
+          ? formatSendRecordFailureSummary(params.noun, outcome, sent)
+          : outcome === "already_sent"
+            ? formatAlreadySentNotice(sent)
+            : formatSentSummary(params.noun, sent);
     }
     params.writeStderr(`${outcomeMessage}\n`);
   }

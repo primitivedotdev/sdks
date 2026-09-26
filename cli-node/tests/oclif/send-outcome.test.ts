@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFINITIVE_SEND_REJECTION_STATUSES,
   formatPriorRepliesWarning,
+  formatSendRecordFailureSummary,
   priorRepliesThatWentOut,
   SEND_OUTCOME_EXIT_CODES,
   SEND_OUTCOME_HELP,
@@ -55,6 +56,59 @@ describe("send outcome vocabulary", () => {
     );
     expect(successfulSendOutcome({ ...base, idempotent_replay: true })).toBe(
       "already_sent",
+    );
+  });
+
+  it("classifies a successful response by the send record's status", () => {
+    for (const replay of [false, true]) {
+      for (const status of ["agent_failed", "gate_denied", "canceled"]) {
+        expect(
+          successfulSendOutcome({
+            idempotent_replay: replay,
+            status: status as "agent_failed",
+          }),
+        ).toBe("not_sent");
+      }
+      expect(
+        successfulSendOutcome({ idempotent_replay: replay, status: "unknown" }),
+      ).toBe("uncertain");
+      for (const status of [
+        "queued",
+        "submitted_to_agent",
+        "delivered",
+        "bounced",
+        "deferred",
+        "wait_timeout",
+        "scheduled",
+      ]) {
+        expect(
+          successfulSendOutcome({
+            idempotent_replay: replay,
+            status: status as "queued",
+          }),
+        ).toBe(replay ? "already_sent" : "sent");
+      }
+    }
+  });
+
+  it("describes a send record that did not go out or is indeterminate", () => {
+    expect(
+      formatSendRecordFailureSummary("Message", "not_sent", {
+        id: "sent-1",
+        idempotent_replay: false,
+        status: "agent_failed",
+      }),
+    ).toBe(
+      "Message not sent: the send record (id sent-1) has status agent_failed. Nothing went out; fix the problem before retrying.",
+    );
+    expect(
+      formatSendRecordFailureSummary("Reply", "uncertain", {
+        id: "sent-2",
+        idempotent_replay: true,
+        status: "unknown",
+      }),
+    ).toBe(
+      "Reply send outcome uncertain: the earlier identical attempt (sent id sent-2) has status unknown. It may or may not have gone out. Do not resend blindly; check sent history first.",
     );
   });
 });

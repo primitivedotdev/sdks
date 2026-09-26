@@ -710,6 +710,143 @@ describe("chat send outcomes", () => {
     expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
   });
 
+  it("points an uncertain retry at sent history from the earlier attempt's start", async () => {
+    mocks.sendEmail.mockResolvedValueOnce(apiFailure(503));
+    const first = JSON.parse(
+      (await run("chat", freshChatArgs("--json"))).stdout,
+    );
+    const firstHistory = first.follow_up_commands.find(
+      (c: { kind: string }) => c.kind === "list_recent_sent_emails",
+    );
+    expect(firstHistory).toBeDefined();
+
+    const retry = await run("chat", freshChatArgs("--json"));
+    const envelope = JSON.parse(retry.stdout);
+
+    expect(retry.exitCode).toBe(4);
+    expect(envelope.outcome).toBe("uncertain");
+    expect(envelope.follow_up_commands).toEqual([
+      expect.objectContaining({
+        kind: "list_recent_sent_emails",
+        argv: firstHistory.argv,
+      }),
+    ]);
+    expectNoResendCommand(envelope);
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("says the reply lookup failed, not that there is no reply, when a replay's search fails", async () => {
+    mocks.sendEmail.mockResolvedValue({
+      data: { data: sentEmail({ idempotent_replay: true }) },
+    });
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      ok: false,
+      error: { error: { code: "internal_error", message: "search down" } },
+    });
+
+    const result = await run("chat", freshChatArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBeUndefined();
+    expect(envelope).toMatchObject({
+      outcome: "already_sent",
+      exit_code: 0,
+      reply: null,
+      error: {
+        message: "the reply search failed (search down)",
+        detail: { code: "internal_error", message: "search down" },
+      },
+    });
+    expect(envelope.outcome_message).toContain(
+      "Loading its reply failed: the reply search failed (search down).",
+    );
+    expect(envelope.outcome_message).not.toContain("No reply to it yet");
+    expect(
+      envelope.follow_up_commands.map((c: { kind: string }) => c.kind),
+    ).toEqual(["wait_existing_reply", "inspect_sent_email"]);
+    expect(mocks.getEmail).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["agent_failed", false],
+    ["gate_denied", false],
+    ["canceled", false],
+    ["agent_failed", true],
+  ] as const)("reports not_sent, without waiting for a reply, for a %s send record (replay: %s)", async (status, replay) => {
+    mocks.sendEmail.mockResolvedValue({
+      data: {
+        data: sentEmail({
+          delivery_status: undefined,
+          idempotent_replay: replay,
+          queue_id: null,
+          status,
+        }),
+      },
+    });
+
+    const result = await run("chat", freshChatArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(envelope).toMatchObject({
+      outcome: "not_sent",
+      exit_code: 1,
+      sent: { id: "sent-1", status },
+      reply: null,
+      http_status: null,
+      error: null,
+    });
+    expect(envelope.outcome_message).toContain(`has status ${status}`);
+    expect(envelope.outcome_message).toContain("Nothing went out");
+    expect(
+      envelope.follow_up_commands.map((c: { kind: string }) => c.kind),
+    ).toEqual(["inspect_sent_email"]);
+    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
+    expect(`${result.stdout}${result.stderr}`).not.toContain("Already sent");
+  });
+
+  it("lets a retry through after a send record showed the message did not go out", async () => {
+    mocks.sendEmail.mockResolvedValueOnce({
+      data: { data: sentEmail({ status: "agent_failed" }) },
+    });
+    expect((await run("chat", freshChatArgs("--json"))).exitCode).toBe(1);
+
+    const retry = await run("chat", freshChatArgs("--json"));
+    expect(retry.exitCode).toBeUndefined();
+    expect(JSON.parse(retry.stdout).outcome).toBe("replied");
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports uncertain for an unknown send record and does not send again on retry", async () => {
+    mocks.sendEmail.mockResolvedValue({
+      data: {
+        data: sentEmail({ delivery_status: undefined, status: "unknown" }),
+      },
+    });
+
+    const result = await run("chat", freshChatArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(4);
+    expect(envelope).toMatchObject({
+      outcome: "uncertain",
+      exit_code: 4,
+      sent: { id: "sent-1", status: "unknown" },
+      reply: null,
+    });
+    expect(envelope.outcome_message).toContain("may or may not have gone out");
+    expect(
+      envelope.follow_up_commands.map((c: { kind: string }) => c.kind),
+    ).toEqual(["inspect_sent_email", "list_recent_sent_emails"]);
+    expectNoResendCommand(envelope);
+    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
+
+    const retry = await run("chat", freshChatArgs("--json"));
+    expect(retry.exitCode).toBe(4);
+    expect(JSON.parse(retry.stdout).outcome).toBe("uncertain");
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  });
+
   it("still reports the fetched reply when local bookkeeping fails afterwards", async () => {
     mocks.saveChatReceiptFailure.error = new Error("ENOSPC: no space left");
 

@@ -281,6 +281,27 @@ describe("reply outcomes", () => {
     );
   });
 
+  it("reports not_sent, not already_sent, when a replay returns a gate-denied record", async () => {
+    mocks.replyToEmail.mockResolvedValue({
+      data: {
+        data: sendResult({ idempotent_replay: true, status: "gate_denied" }),
+      },
+    });
+
+    const result = await run("reply", replyArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(envelope).toMatchObject({
+      outcome: "not_sent",
+      exit_code: 1,
+      sent: { id: "sent-1", status: "gate_denied" },
+    });
+    expect(result.stderr).toBe(
+      "Reply not sent: the earlier identical attempt (sent id sent-1) has status gate_denied. Nothing went out; fix the problem before retrying.\n",
+    );
+  });
+
   it("reports not_sent with exit 1 for a definitive rejection", async () => {
     mocks.replyToEmail.mockResolvedValue(apiFailure(422, "validation_error"));
 
@@ -426,6 +447,39 @@ describe("send outcomes", () => {
       message: "fetch failed",
       code: "ECONNRESET",
     });
+  });
+
+  it("reports not_sent with exit 1 when the send record shows the agent rejected it", async () => {
+    const failed = sendResult({ status: "agent_failed" });
+    mocks.sendEmail.mockResolvedValue({ data: { data: failed } });
+
+    const result = await run("send", sendArgs());
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe(`${JSON.stringify(failed, null, 2)}\n`);
+    expect(result.stderr).toBe(
+      "Message not sent: the send record (id sent-1) has status agent_failed. Nothing went out; fix the problem before retrying.\n",
+    );
+  });
+
+  it("reports uncertain with exit 4 when the send record status is unknown", async () => {
+    mocks.sendEmail.mockResolvedValue({
+      data: { data: sendResult({ status: "unknown" }) },
+    });
+
+    const result = await run("send", sendArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(4);
+    expect(envelope).toMatchObject({
+      outcome: "uncertain",
+      exit_code: 4,
+      sent: { id: "sent-1", status: "unknown" },
+    });
+    expect(
+      envelope.follow_up_commands.map((c: { kind: string }) => c.kind),
+    ).toEqual(["inspect_sent_email", "list_recent_sent_emails"]);
+    expect(result.stderr).toContain("may or may not have gone out");
   });
 
   it("reports uncertain when the API accepts the send but returns no record", async () => {

@@ -50,12 +50,14 @@ import {
   formatDeletedEarlierSendNotice,
   formatPriorRepliesWarning,
   formatSendFailureSummary,
+  formatSendRecordFailureSummary,
   priorRepliesThatWentOut,
   SEND_OUTCOME_HELP,
   type SendOutcome,
   sendOutcomeExitCode,
   sentHistoryWindowStart,
   serializeErrorPayload,
+  successfulSendOutcome,
   thrownErrorExitCode,
 } from "../send-outcome.js";
 import {
@@ -731,6 +733,7 @@ export function buildChatAwaitingReplyEnvelope(
   options: {
     outcome: "already_sent" | "sent_awaiting_reply";
     waitError?: string;
+    waitErrorPayload?: unknown;
   },
 ): ChatNoReplyEnvelope {
   return {
@@ -750,7 +753,14 @@ export function buildChatAwaitingReplyEnvelope(
     prior_replies: context.priorReplies ?? null,
     http_status: null,
     error:
-      options.waitError === undefined ? null : { message: options.waitError },
+      options.waitError === undefined
+        ? null
+        : {
+            message: options.waitError,
+            ...(options.waitErrorPayload === undefined
+              ? {}
+              : { detail: serializeErrorPayload(options.waitErrorPayload) }),
+          },
   };
 }
 
@@ -808,9 +818,11 @@ export function buildChatExistingReplyCommands(
 }
 
 /**
- * The send request did not produce a send record: it was rejected,
- * its result is unknown, or (already_sent) it was refused because a
- * matching earlier send exists but was deleted.
+ * The send did not put a message on the wire, or it is unknown
+ * whether it did: the request was rejected, its result is unknown,
+ * the returned send record shows it did not go out (or is
+ * indeterminate), or (already_sent) it was refused because a matching
+ * earlier send exists but was deleted.
  */
 export function buildChatSendFailureEnvelope(params: {
   error: unknown;
@@ -820,8 +832,37 @@ export function buildChatSendFailureEnvelope(params: {
   outcome: "already_sent" | "not_sent" | "uncertain";
   outcomeMessage?: string;
   priorReplies?: EmailDetailReply[] | null;
+  sent?: SendMailResult | null;
   sentHistorySince?: string;
 }): ChatNoReplyEnvelope {
+  const sent = params.sent ?? null;
+  const followUps: ChatFollowUpCommand[] = [];
+  if (sent !== null) {
+    followUps.push(
+      buildCommand("inspect_sent_email", "Inspect the outbound send", [
+        "primitive",
+        "sent",
+        "get",
+        "--id",
+        sent.id,
+      ]),
+    );
+  }
+  if (params.outcome === "uncertain" && params.sentHistorySince !== undefined) {
+    followUps.push(
+      buildCommand(
+        "list_recent_sent_emails",
+        "Check sent history for this attempt before retrying",
+        [
+          "primitive",
+          "sent",
+          "list",
+          "--date-from",
+          sentHistoryWindowStart(params.sentHistorySince),
+        ],
+      ),
+    );
+  }
   return {
     outcome: params.outcome,
     exit_code: params.exitCode ?? sendOutcomeExitCode(params.outcome),
@@ -834,28 +875,13 @@ export function buildChatSendFailureEnvelope(params: {
             params.outcome,
             params.httpStatus,
           )),
-    sent: null,
+    sent,
     reply: null,
     local_chat_id: null,
     response_body: null,
     response_body_format: null,
     match: null,
-    follow_up_commands:
-      params.outcome === "uncertain" && params.sentHistorySince !== undefined
-        ? [
-            buildCommand(
-              "list_recent_sent_emails",
-              "Check sent history for this attempt before retrying",
-              [
-                "primitive",
-                "sent",
-                "list",
-                "--date-from",
-                sentHistoryWindowStart(params.sentHistorySince),
-              ],
-            ),
-          ]
-        : [],
+    follow_up_commands: followUps,
     prior_replies: params.priorReplies ?? null,
     http_status: params.httpStatus ?? null,
     error: serializeErrorPayload(params.error),
@@ -922,6 +948,15 @@ export async function resolveIdempotentReplayReply(
     }
   }
   return latest?.id ?? null;
+}
+
+function describeLookupError(payload: unknown): string {
+  if (payload instanceof Error) return ` (${payload.message})`;
+  if (payload !== null && typeof payload === "object") {
+    const message = (payload as { message?: unknown }).message;
+    if (typeof message === "string" && message) return ` (${message})`;
+  }
+  return "";
 }
 
 export function formatChatResponse(context: ChatOutputContext): string {
@@ -1338,7 +1373,14 @@ class ChatCommand extends Command {
                   ? formatSendFailureSummary(noun, "not_sent", undefined)
                   : `${noun} send outcome uncertain: ${detail}`,
               priorReplies: this.chatProgress.priorReplies,
-              sentHistorySince: this.chatProgress.sendStartedAtIso ?? undefined,
+              // A retry refused by an unresolved receipt stops before
+              // this attempt records a start time; the earlier
+              // attempt's time is what sent history needs.
+              sentHistorySince:
+                this.chatProgress.sendStartedAtIso ??
+                (error instanceof UncertainChatSendError
+                  ? error.sentAtIso
+                  : undefined),
             }),
             null,
             2,
@@ -1359,6 +1401,7 @@ class ChatCommand extends Command {
     options: {
       outcome: "already_sent" | "sent_awaiting_reply";
       waitError?: string;
+      waitErrorPayload?: unknown;
     },
   ): void {
     this.chatProgress.outcomeReported = true;
@@ -1639,6 +1682,28 @@ class ChatCommand extends Command {
           );
         }
 
+        // A 2xx send record can still show the attempt did not go out
+        // (agent_failed, gate_denied, canceled) or that its result is
+        // indeterminate (unknown). Waiting for a reply to either would
+        // report sent_awaiting_reply and tell the caller not to resend.
+        const recordOutcome = successfulSendOutcome(sent);
+        if (recordOutcome === "not_sent" || recordOutcome === "uncertain") {
+          receipt.data.sent = sent;
+          // An indeterminate record stays pending so a retry resumes
+          // it instead of sending again.
+          receipt.data.completed = recordOutcome === "not_sent";
+          saveChatReceipt(receipt);
+          this.reportSendRecordFailure({
+            json: flags.json,
+            noun,
+            outcome: recordOutcome,
+            progress,
+            sent,
+            sentAtIso,
+          });
+          return;
+        }
+
         const replyAddress = sent.from || from;
         const baseContext: ChatBaseContext = {
           from: replyAddress,
@@ -1686,6 +1751,20 @@ class ChatCommand extends Command {
             // Intentionally NO `since`: the reply (if any) predates
             // this attempt.
           });
+          if (!existing.ok) {
+            // The earlier send exists; only finding its reply failed.
+            // Say so rather than reporting that no reply exists.
+            const payload = extractErrorPayload(existing.error);
+            writeErrorWithHints(payload);
+            surfaceUnauthorizedHint({ ...authFailureContext, payload });
+            progress?.fail("Could not look up the existing reply.");
+            this.reportAwaitingReply(baseContext, {
+              outcome: "already_sent",
+              waitError: `the reply search failed${describeLookupError(payload)}`,
+              waitErrorPayload: payload,
+            });
+            return;
+          }
           const replyId = await resolveIdempotentReplayReply(existing);
           if (replyId) {
             const full = await getEmail({
@@ -1855,6 +1934,40 @@ class ChatCommand extends Command {
     } else {
       this.log(formatChatResponse(context));
     }
+  }
+
+  private reportSendRecordFailure(params: {
+    json: boolean;
+    noun: "Message" | "Reply";
+    outcome: "not_sent" | "uncertain";
+    progress: ChatProgressIndicator | null;
+    sent: SendMailResult;
+    sentAtIso: string;
+  }): void {
+    this.chatProgress.outcomeReported = true;
+    params.progress?.fail(
+      params.outcome === "not_sent"
+        ? `${params.noun} was not sent (status ${params.sent.status}).`
+        : `${params.noun} send outcome is uncertain (status ${params.sent.status}).`,
+    );
+    const envelope = buildChatSendFailureEnvelope({
+      error: null,
+      noun: params.noun,
+      outcome: params.outcome,
+      outcomeMessage: formatSendRecordFailureSummary(
+        params.noun,
+        params.outcome,
+        params.sent,
+      ),
+      priorReplies: this.chatProgress.priorReplies,
+      sent: params.sent,
+      sentHistorySince: params.sentAtIso,
+    });
+    process.stderr.write(`${chatFailureText(envelope.outcome_message)}\n`);
+    if (params.json) {
+      this.log(JSON.stringify(envelope, null, 2));
+    }
+    process.exitCode = envelope.exit_code;
   }
 
   private reportSendFailure(params: {
