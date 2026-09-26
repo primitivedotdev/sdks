@@ -1,22 +1,46 @@
-import { Command, Errors, Flags } from "@oclif/core";
-import type { SendMailResult } from "@primitivedotdev/api-core";
+import { Command, Errors, Flags, type Interfaces } from "@oclif/core";
 import { replyToEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
-  extractErrorPayload,
   runWithTiming,
   surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
-import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
+import {
+  buildThrownSendFailureEnvelope,
+  checkPriorReplies,
+  formatPriorRepliesCheckSkipped,
+  formatPriorRepliesWarning,
+  formatSendFailureSummary,
+  type PriorRepliesCheck,
+  reportSendCommandResult,
+  SEND_OUTCOME_HELP,
+  sendOutcomeExitCode,
+} from "../send-outcome.js";
 
 class ReplyCommand extends Command {
   static description = `Reply to an inbound email.
 
-  The API derives recipients, the Re: subject, and threading headers from the inbound email id. Use \`primitive send --in-reply-to <message-id>\` only when you need to thread against a raw Message-Id instead of an inbound email stored by Primitive.`;
+  The API derives recipients, the Re: subject, and threading headers from the inbound email id. Use \`primitive send --in-reply-to <message-id>\` only when you need to thread against a raw Message-Id instead of an inbound email stored by Primitive.
+
+  Before sending, the CLI looks up the inbound email and warns on stderr
+  when you already replied to it ("You already replied to this email at
+  T (sent id S). Sending another reply."). The warning never blocks the
+  send. If the lookup fails, the reply is still sent and stderr says the
+  check was skipped.
+
+  Stdout is the send record as JSON. A one-line outcome summary goes to
+  stderr ("Reply sent (queued for delivery, id X). Do not resend."). A
+  queued status means the reply was accepted and is on its way; it is
+  not a failure. --json replaces stdout with an envelope { outcome,
+  exit_code, outcome_message, sent, http_status, error,
+  follow_up_commands, prior_replies, prior_replies_check } for every
+  outcome, including failures.
+
+  ${SEND_OUTCOME_HELP}`;
 
   static summary = "Reply to an inbound email";
 
@@ -82,14 +106,55 @@ class ReplyCommand extends Command {
       description:
         "Block until the receiving MTA returns an outcome. Without --wait, the call returns once Primitive has accepted the reply for delivery.",
     }),
+    json: Flags.boolean({
+      description:
+        "Emit an outcome envelope { outcome, exit_code, outcome_message, sent, http_status, error, follow_up_commands, prior_replies, prior_replies_check } on stdout for every outcome, including failures. Without --json, stdout is the send record as before.",
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
   };
 
+  private priorRepliesCheck: PriorRepliesCheck | null = null;
+  private sendRequestStarted = false;
+
   async run(): Promise<void> {
     const { flags } = await this.parse(ReplyCommand);
+    try {
+      await this.sendReply(flags);
+    } catch (error) {
+      // --json owes stdout an envelope for every outcome, including a
+      // failure that threw instead of returning an API result.
+      if (flags.json) {
+        this.log(
+          JSON.stringify(
+            buildThrownSendFailureEnvelope({
+              error,
+              extraEnvelopeFields: priorRepliesEnvelopeFields(
+                this.priorRepliesCheck,
+              ),
+              noun: "Reply",
+              requestStarted: this.sendRequestStarted,
+            }),
+            null,
+            2,
+          ),
+        );
+      }
+      if (this.sendRequestStarted) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Errors.CLIError(
+          `${formatSendFailureSummary("Reply", "uncertain", undefined)} ${detail}`,
+          { exit: sendOutcomeExitCode("uncertain") },
+        );
+      }
+      throw error;
+    }
+  }
 
+  private async sendReply(
+    flags: Interfaces.InferredFlags<typeof ReplyCommand.flags>,
+  ): Promise<void> {
     const bodies = resolveMessageBodies({
       body: flags.body,
       bodyFile: flags["body-file"],
@@ -111,6 +176,23 @@ class ReplyCommand extends Command {
         });
       const attachments = readAttachmentFiles(flags.attachment);
 
+      // Advisory only: a reply the caller already sent is worth a loud
+      // warning, but the caller may mean to follow up, so never block.
+      const priorRepliesCheck = await checkPriorReplies({
+        client: apiClient.client,
+        emailId: flags.id,
+      });
+      this.priorRepliesCheck = priorRepliesCheck;
+      const priorRepliesMessage =
+        priorRepliesCheck.status === "checked"
+          ? formatPriorRepliesWarning(priorRepliesCheck.prior)
+          : formatPriorRepliesCheckSkipped(flags.id, priorRepliesCheck.reason);
+      if (priorRepliesMessage !== null) {
+        process.stderr.write(`${priorRepliesMessage}\n`);
+      }
+
+      const attemptStartedAtIso = new Date().toISOString();
+      this.sendRequestStarted = true;
       const result = await replyToEmail({
         body: {
           ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
@@ -124,28 +206,51 @@ class ReplyCommand extends Command {
         responseStyle: "fields",
       });
 
-      if (result.error) {
-        const errorPayload = extractErrorPayload(result.error);
-        writeErrorWithHints(errorPayload);
-        surfaceUnauthorizedHint({
-          auth,
-          baseUrlOverridden,
-          configDir: this.config.configDir,
-          payload: errorPayload,
-        });
-        process.exitCode = 1;
-        return;
-      }
-
-      const envelope = result.data as { data?: SendMailResult } | undefined;
-      writeIdempotentReplayBannerIfReplay(envelope?.data, {
-        write: (chunk) => {
+      // Stdout JSON is unchanged without --json so
+      // `primitive reply ... | jq ...` keeps parsing; the outcome
+      // (including an idempotent replay, where nothing new went out)
+      // is summarised on stderr and in the exit code.
+      const outcome = reportSendCommandResult({
+        attemptStartedAtIso,
+        extraEnvelopeFields: priorRepliesEnvelopeFields(priorRepliesCheck),
+        json: flags.json,
+        log: (line) => this.log(line),
+        noun: "Reply",
+        onApiError: (errorPayload) => {
+          writeErrorWithHints(errorPayload);
+          surfaceUnauthorizedHint({
+            auth,
+            baseUrlOverridden,
+            configDir: this.config.configDir,
+            payload: errorPayload,
+          });
+        },
+        result,
+        writeStderr: (chunk) => {
           process.stderr.write(chunk);
         },
       });
-      this.log(JSON.stringify(envelope?.data ?? null, null, 2));
+      const exitCode = sendOutcomeExitCode(outcome);
+      if (exitCode !== 0) process.exitCode = exitCode;
     });
   }
+}
+
+function priorRepliesEnvelopeFields(
+  check: PriorRepliesCheck | null,
+): Record<string, unknown> {
+  if (check === null) {
+    return { prior_replies: null, prior_replies_check: null };
+  }
+  return check.status === "checked"
+    ? {
+        prior_replies: check.prior,
+        prior_replies_check: { status: "checked" },
+      }
+    : {
+        prior_replies: null,
+        prior_replies_check: { status: "skipped", reason: check.reason },
+      };
 }
 
 export default ReplyCommand;

@@ -1,18 +1,22 @@
-import { Command, Errors, Flags } from "@oclif/core";
-import type { SendMailResult } from "@primitivedotdev/api-core";
+import { Command, Errors, Flags, type Interfaces } from "@oclif/core";
 import { sendEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
-  extractErrorPayload,
   runWithTiming,
   surfaceUnauthorizedHint,
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
-import { writeIdempotentReplayBannerIfReplay } from "../idempotent-replay-banner.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
+import {
+  buildThrownSendFailureEnvelope,
+  formatSendFailureSummary,
+  reportSendCommandResult,
+  SEND_OUTCOME_HELP,
+  sendOutcomeExitCode,
+} from "../send-outcome.js";
 
 // `primitive send` is the agent-grade shortcut for the most common
 // case: send a fresh outbound email. It wraps `sending:send-email`
@@ -56,7 +60,16 @@ class SendCommand extends Command {
   --attachment attaches a file; repeat it to attach multiple files.
 
   For the full flag set (custom message-id threading on the wire,
-  references arrays, etc.), use \`primitive sending send\`.`;
+  references arrays, etc.), use \`primitive sending send\`.
+
+  Stdout is the send record as JSON. A one-line outcome summary goes to
+  stderr ("Message sent (queued for delivery, id X). Do not resend.").
+  A queued status means the message was accepted and is on its way;
+  it is not a failure. --json replaces stdout with an envelope
+  { outcome, exit_code, outcome_message, sent, http_status, error,
+  follow_up_commands } for every outcome, including failures.
+
+  ${SEND_OUTCOME_HELP}`;
 
   static summary = "Send an email (simplified, agent-friendly)";
 
@@ -146,14 +159,51 @@ class SendCommand extends Command {
       description:
         "Maximum time to wait when --wait is set. Defaults to 30000ms.",
     }),
+    json: Flags.boolean({
+      description:
+        "Emit an outcome envelope { outcome, exit_code, outcome_message, sent, http_status, error, follow_up_commands } on stdout for every outcome, including failures. Without --json, stdout is the send record as before.",
+    }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
   };
 
+  private sendRequestStarted = false;
+
   async run(): Promise<void> {
     const { flags } = await this.parse(SendCommand);
+    try {
+      await this.sendMessage(flags);
+    } catch (error) {
+      // --json owes stdout an envelope for every outcome, including a
+      // failure that threw instead of returning an API result.
+      if (flags.json) {
+        this.log(
+          JSON.stringify(
+            buildThrownSendFailureEnvelope({
+              error,
+              noun: "Message",
+              requestStarted: this.sendRequestStarted,
+            }),
+            null,
+            2,
+          ),
+        );
+      }
+      if (this.sendRequestStarted) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new Errors.CLIError(
+          `${formatSendFailureSummary("Message", "uncertain", undefined)} ${detail}`,
+          { exit: sendOutcomeExitCode("uncertain") },
+        );
+      }
+      throw error;
+    }
+  }
 
+  private async sendMessage(
+    flags: Interfaces.InferredFlags<typeof SendCommand.flags>,
+  ): Promise<void> {
     const bodies = resolveMessageBodies({
       body: flags.body,
       bodyFile: flags["body-file"],
@@ -186,6 +236,8 @@ class SendCommand extends Command {
       const subject =
         flags.subject ?? (bodies.body ? deriveSubject(bodies.body) : "Message");
 
+      const attemptStartedAtIso = new Date().toISOString();
+      this.sendRequestStarted = true;
       const result = await sendEmail({
         body: {
           from,
@@ -208,27 +260,29 @@ class SendCommand extends Command {
         responseStyle: "fields",
       });
 
-      if (result.error) {
-        const errorPayload = extractErrorPayload(result.error);
-        writeErrorWithHints(errorPayload);
-        surfaceUnauthorizedHint({
-          ...authFailureContext,
-          payload: errorPayload,
-        });
-        process.exitCode = 1;
-        return;
-      }
-
-      const envelope = result.data as { data?: SendMailResult } | undefined;
-      // Loud stderr banner when the server returned a cached row instead
-      // of putting fresh SMTP traffic on the wire. Stdout JSON is
-      // unchanged so `primitive send ... | jq ...` keeps parsing.
-      writeIdempotentReplayBannerIfReplay(envelope?.data, {
-        write: (chunk) => {
+      // Stdout JSON is unchanged without --json so
+      // `primitive send ... | jq ...` keeps parsing; the outcome
+      // (including an idempotent replay, where nothing new went out)
+      // is summarised on stderr and in the exit code.
+      const outcome = reportSendCommandResult({
+        attemptStartedAtIso,
+        json: flags.json,
+        log: (line) => this.log(line),
+        noun: "Message",
+        onApiError: (errorPayload) => {
+          writeErrorWithHints(errorPayload);
+          surfaceUnauthorizedHint({
+            ...authFailureContext,
+            payload: errorPayload,
+          });
+        },
+        result,
+        writeStderr: (chunk) => {
           process.stderr.write(chunk);
         },
       });
-      this.log(JSON.stringify(envelope?.data ?? null, null, 2));
+      const exitCode = sendOutcomeExitCode(outcome);
+      if (exitCode !== 0) process.exitCode = exitCode;
     });
   }
 }

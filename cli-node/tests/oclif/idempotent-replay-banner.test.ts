@@ -14,7 +14,7 @@ function makeSink(): { writes: string[]; write: (chunk: string) => void } {
 }
 
 describe("writeIdempotentReplayBannerIfReplay", () => {
-  it("emits a multi-line banner when idempotent_replay is true", () => {
+  it("says the message already went out and nothing new was sent", () => {
     const sink = makeSink();
     writeIdempotentReplayBannerIfReplay(
       {
@@ -25,15 +25,9 @@ describe("writeIdempotentReplayBannerIfReplay", () => {
       },
       sink,
     );
-    expect(sink.writes).toHaveLength(1);
-    const banner = sink.writes[0];
-    expect(banner).toMatch(/idempotent replay/i);
-    expect(banner).toMatch(/no new MX traffic/i);
-    expect(banner).toContain("b8925b20-271f-4338-bf77-6a3b28088bf4");
-    expect(banner).toMatch(/status=delivered/);
-    // Last line ends with a newline so the next stderr write doesn't
-    // glue onto our banner.
-    expect(banner.endsWith("\n")).toBe(true);
+    expect(sink.writes).toEqual([
+      "Already sent: this exact message went out earlier (sent id b8925b20-271f-4338-bf77-6a3b28088bf4, status delivered). Nothing new was sent.\n",
+    ]);
   });
 
   it("no-ops when idempotent_replay is false", () => {
@@ -64,7 +58,7 @@ describe("writeIdempotentReplayBannerIfReplay", () => {
     expect(sink.writes).toEqual([]);
   });
 
-  it("collapses redundant delivery_status when it duplicates status", () => {
+  it("names the status once when delivery_status duplicates it", () => {
     const sink = makeSink();
     writeIdempotentReplayBannerIfReplay(
       {
@@ -76,12 +70,8 @@ describe("writeIdempotentReplayBannerIfReplay", () => {
       sink,
     );
     const banner = sink.writes[0];
-    expect(banner).toMatch(/status=delivered/);
-    // delivery_status should NOT also be listed separately when it
-    // equals status (avoids "status=delivered, delivery_status=delivered").
-    expect(banner).not.toMatch(/delivery_status=/);
-    const occurrences = (banner.match(/delivered/g) ?? []).length;
-    expect(occurrences).toBe(1);
+    expect(banner).toContain("(sent id x, status delivered)");
+    expect((banner.match(/delivered/g) ?? []).length).toBe(1);
   });
 
   it("shows delivery_status separately when it diverges from status", () => {
@@ -95,25 +85,26 @@ describe("writeIdempotentReplayBannerIfReplay", () => {
       },
       sink,
     );
-    const banner = sink.writes[0];
-    expect(banner).toMatch(/status=delivered/);
-    expect(banner).toMatch(/delivery_status=deferred/);
+    expect(sink.writes[0]).toContain(
+      "(sent id x, status delivered, delivery status deferred)",
+    );
   });
 
-  it("works without id (still emits the explanatory text)", () => {
+  it("works without id or status", () => {
     const sink = makeSink();
     writeIdempotentReplayBannerIfReplay({ idempotent_replay: true }, sink);
-    const banner = sink.writes[0];
-    expect(banner).toMatch(/idempotent replay/i);
-    expect(banner).toMatch(/no new MX traffic/i);
-    expect(banner).not.toMatch(/cached row id:/);
+    expect(sink.writes).toEqual([
+      "Already sent: this exact message went out earlier. Nothing new was sent.\n",
+    ]);
   });
 
-  it("instructs how to bypass (vary content or supply explicit key)", () => {
+  it("never advises sending a fresh copy", () => {
     const sink = makeSink();
-    writeIdempotentReplayBannerIfReplay({ idempotent_replay: true }, sink);
+    writeIdempotentReplayBannerIfReplay(
+      { id: "x", idempotent_replay: true, status: "queued" },
+      sink,
+    );
     const banner = sink.writes[0];
-    expect(banner).toMatch(/fresh copy/i);
-    expect(banner).toMatch(/Idempotency-Key/);
+    expect(banner).not.toMatch(/fresh copy|vary|Idempotency-Key|retry/i);
   });
 });

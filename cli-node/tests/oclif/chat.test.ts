@@ -207,7 +207,11 @@ async function runOclifCommand(
     });
 
   try {
-    await command.run(argv, { root: CLI_ROOT });
+    if (command === ChatCommand) {
+      await ChatCommand.run(argv, { root: CLI_ROOT });
+    } else {
+      await ChatReplyCommand.run(argv, { root: CLI_ROOT });
+    }
     return {
       exitCode: process.exitCode,
       stderr: stderrChunks.join(""),
@@ -1135,8 +1139,10 @@ describe("chat command", () => {
     ]);
 
     nowSpy.mockRestore();
-    expect(result.exitCode).toBe(1);
-    expect(result.stdout).toBe("");
+    expect(result.exitCode).toBe(3);
+    expect(result.stdout).toMatch(
+      /^Message sent \(id sent-1\)\. No reply yet after 1s\. Do NOT resend; wait with: primitive emails wait --reply-to-sent-email-id sent-1 --to agent@sender\.example --since \S+ --timeout 1\n$/,
+    );
     expect(result.stderr).toContain(
       "Timed out after 1s waiting for a reply from help@agent.example.",
     );
