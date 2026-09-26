@@ -130,6 +130,7 @@ primitive functions deploy --name my-fn --file ./dist/handler.js
 
 primitive send --to alice@example.com --body "Hello!" --wait
 primitive emails latest --limit 5
+primitive inbox next
 ```
 
 Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
@@ -143,6 +144,74 @@ Use `primitive signin <email> --signup-code <code> --accept-terms`, then `primit
 Use `primitive logout --force` to remove local CLI credentials, pending email-code auth state, and stale credential locks without contacting Primitive. This is the recovery command when an interrupted auth command leaves the CLI saying another credential operation is already in progress.
 
 Use `primitive signup <email>` for new account creation, then `primitive signup confirm <email> <code>` with the emailed verification code. Non-interactive signup is available with `--accept-terms` (pass `--signup-code <code>` too if you have one).
+
+## Reply state and the agent loop
+
+Every inbound email carries reply state: `awaiting` is `you` when the latest
+message in its thread is inbound (it waits on your reply) and `them` when you
+replied last; `reply_count` and `last_replied_at` describe replies to that one
+email. A reply counts once it is sent or committed to go (queued and scheduled
+count; gate-denied, agent-failed and canceled sends do not).
+
+`primitive emails latest` shows it as the AWAITING and REPLIES columns, and
+`--json` carries the fields. Filter on it with `--awaiting you|them` on
+`emails latest`, `emails list`, `emails search`, `emails wait`, `emails watch`
+and `search`, or with `awaiting:you` in a search query.
+
+`primitive inbox next` returns the oldest email awaiting your reply, its
+conversation (roles `user` and `assistant`; the API caps long threads and sets
+`truncated` when older messages are omitted), an `automated` verdict with
+reasons, and the exact `primitive reply --id <id>` command that answers it. The
+loop is:
+
+```bash
+primitive inbox next --json > next.json   # exit 5: nothing awaits you
+primitive reply --id "$(jq -r .email.id next.json)" --body "..."
+primitive inbox next --json               # the next one
+```
+
+| Exit | Meaning |
+|---|---|
+| 0 | An email awaits your reply; it is printed. |
+| 1 | Error, including `reply_state_unsupported` or `automated_filter_unsupported` from an older server. |
+| 2 | Invalid flags or arguments. |
+| 5 | Nothing awaits your reply (with `--wait`: still nothing at `--timeout`). |
+
+- Automated mail is skipped unless you pass `--include-automated`: null envelope
+  sender (bounces), mailer-daemon and postmaster, mail sent from the very address
+  it was delivered to, and mail that declares itself automated (Auto-Submitted,
+  Precedence bulk/list/junk, List-Unsubscribe, List-Id). The API decides this
+  when the mail arrives (`automated`, `automated_reasons` on every email) and
+  `inbox next` filters on it server-side (`awaiting=you&automated=false`), so a
+  call costs the same however much unanswered automated mail has piled up. On
+  an empty result, `automated_awaiting` says how much automated mail also
+  awaits. `automation_headers_known: false` means the email had no automation
+  headers on record (none declared, or received before they were captured), so
+  `automated: false` rests on the sender checks alone. Filter on the verdict
+  yourself with `--automated true|false` on `emails list`, `emails search`,
+  `emails wait` and `emails watch`, or `automated:false` in a search query.
+- The `awaiting` filter covers delivered mail only: mail the server rejected
+  (for example over the storage limit) was never delivered and is never
+  returned as awaiting you. A server whose filter still returns rejected mail
+  fails with `awaiting_rejected_unsupported`.
+- `--wait [--timeout N]` blocks until something awaits you (default 300 seconds,
+  0 waits forever). It reads the inbox's newest position before checking reply
+  state, then long-polls from that position and re-checks on every arrival and
+  at least every 30 seconds, so mail that lands between the check and the wait is
+  not missed. Mail that arrives while you compose a reply is still `awaiting=you`
+  on the next call, because the state lives on the server, not in a cursor.
+- The email carries `from_known_address` and `auth` (SPF, DMARC) so an agent can
+  weigh instructions in it; the transcript prints them and strips terminal
+  control sequences from sender-supplied text.
+- It is not a work queue. Nothing is claimed or locked, so two agents calling
+  `inbox next` on the same inbox get the same email until one replies. Run one
+  agent per inbox.
+- Against a server without the `automated` filter, `inbox next` fails with
+  `automated_filter_unsupported` rather than deciding automated mail itself and
+  re-reading all of it on every call; `--include-automated` still works there.
+- Against a server that does not report reply state, `inbox next` and every
+  `--awaiting` filter fail with `reply_state_unsupported` instead of treating
+  mail as unanswered.
 
 ## Command style
 

@@ -66,6 +66,44 @@ expose local webhook delivery on API hosts where it is enabled. Each command
 makes one API request. Use their --help output for the input fields. Consumers
 deduplicate event IDs and report the outcome with the returned attempt and lease.
 Queue retention does not extend source-content retention; inspect gap counts.
+.SH AGENT LOOP
+Every inbound email carries reply state:
+.B awaiting
+is
+.B you
+when the latest message in its thread is inbound and
+.B them
+when you replied last (queued and scheduled replies count).
+.B primitive inbox next
+prints the oldest email awaiting you with its conversation, and
+.B primitive reply --id ID
+answers it, after which the next call moves on:
+.PP
+.RS
+.nf
+primitive inbox next
+primitive reply --id ID --body TEXT
+primitive inbox next
+.fi
+.RE
+.PP
+Automated mail (bounces, mailer-daemon, postmaster, mail from the very address it was delivered to, Auto-Submitted, bulk and list mail) is skipped unless
+.B --include-automated
+is given. The server decides this when the mail arrives and filters on it, so the call does not slow down as unanswered automated mail accumulates; a server without that filter fails with
+.B automated_filter_unsupported
+instead of scanning.
+.B --wait
+blocks until something awaits you, taking the inbox position before checking so no arrival is missed;
+.B --timeout
+bounds it.
+.B --json
+prints a stable envelope.
+.PP
+It is not a work queue: nothing is claimed, so two agents on one inbox get the same email until one replies.
+.PP
+Exit status of
+.BR "primitive inbox next" :
+0 an email awaits you; 1 error (including reply_state_unsupported from a server without reply state); 2 invalid flags; 5 nothing awaits you.
 .SH AUTHENTICATION
 .PP
 Commands use saved OAuth credentials from
@@ -116,7 +154,14 @@ Verify DNS records for a pending domain claim.
 Download DNS records as a BIND-format zone file.
 .TP
 .B primitive emails latest
-Show recent inbound emails.
+Show recent inbound emails, with whose turn it is (AWAITING) and the reply count.
+.TP
+.B primitive emails latest --awaiting you
+Show only inbound emails waiting on your reply.
+.TP
+.B primitive inbox next
+Show the oldest email awaiting your reply, its conversation, and the reply command. See
+.BR "AGENT LOOP" .
 .TP
 .B primitive functions init NAME
 Scaffold a Primitive Function.

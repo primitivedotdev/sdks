@@ -33,6 +33,7 @@ import FunctionsRoutingTopologyCommand from "./commands/functions-routing-topolo
 import FunctionsSetSecretCommand from "./commands/functions-set-secret.js";
 import FunctionsTemplatesCommand from "./commands/functions-templates.js";
 import FunctionsTestFunctionCommand from "./commands/functions-test-function.js";
+import InboxNextCommand from "./commands/inbox-next.js";
 import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
 import ListenCommand from "./commands/listen.js";
@@ -594,6 +595,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // domain verification, endpoint/function processing, and recent mail into
   // the server-owned status API instead of making agents compose those lists.
   "inbox:setup": InboxSetupCommand,
+  // `inbox:next` is the agent-loop verb: the oldest email awaiting your
+  // reply, with its conversation and the reply command. Pairs with
+  // `reply --id <id>`; reads server reply state, not a local cursor.
+  "inbox:next": InboxNextCommand,
   // WebSocket receiving, with explicit poll transport and bounded one-shot waits.
   listen: ListenCommand,
   "listen:init": ListenInitCommand,

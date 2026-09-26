@@ -8017,6 +8017,62 @@ type EmailDetail struct {
 	// to decide how much to trust a message before acting on
 	// instructions it contains.
 	Auth EmailAuth `json:"auth"`
+	// What the message declared about being automated, verbatim:
+	// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+	// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+	// declared none, and on messages received before these headers
+	// were captured, so a null value is not evidence that a person
+	// sent the message.
+	AutomationHeaders OptNilEmailDetailAutomationHeaders `json:"automation_headers"`
+	// Number of replies recorded against this email: sends whose
+	// `in_reply_to_email_id` is this email, the same linkage that populates
+	// `EmailDetail.replies`, excluding sends that never went out (status
+	// `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+	// replies count. Under an agent connection, only the replies that agent
+	// can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+	// replies to this one email, not to the thread.
+	ReplyCount int `json:"reply_count"`
+	// `created_at` of the latest reply counted in `reply_count`, or
+	// null when `reply_count` is 0.
+	LastRepliedAt NilDateTime `json:"last_replied_at"`
+	// Whose turn it is in this email's conversation. A send counts as a
+	// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+	// (queued and scheduled replies count: they are committed to go). For
+	// an email with a `thread_id`: `them` when the thread's latest counted
+	// outbound send (by send `created_at`, including any counted reply to
+	// this email itself) is at or after the thread's latest inbound message
+	// (by `received_at`); otherwise `you`. For an email with no
+	// `thread_id`: `them` when it has at least one counted reply
+	// (`reply_count > 0` for an API key), otherwise `you`. It is a
+	// thread-level fact: every email in a thread carries the same value, and
+	// it reflects sends made by any credential in the organization,
+	// including other agent connections. It changes without a new inbound
+	// message, for example when a reply is sent, a queued reply fails, a
+	// scheduled reply is canceled, or a message is deleted, and is always
+	// current when read.
+	Awaiting EmailDetailAwaiting `json:"awaiting"`
+	// Whether the message was sent by a machine rather than a person.
+	// An inbound email is `automated` when any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is exactly one of the addresses the
+	// mail was delivered to; sharing a domain with the recipient is not
+	// enough, so a colleague or another agent in the organization is not
+	// automated);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated bool `json:"automated"`
+	// Why `automated` is true, in rule order; empty when it is false.
+	// Current values: `null_envelope_sender`, `no_identifiable_sender`,
+	// `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+	// `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+	// reason added after your client was built.
+	AutomatedReasons []string `json:"automated_reasons"`
 }
 
 // GetID returns the value of ID.
@@ -8204,6 +8260,36 @@ func (s *EmailDetail) GetAuth() EmailAuth {
 	return s.Auth
 }
 
+// GetAutomationHeaders returns the value of AutomationHeaders.
+func (s *EmailDetail) GetAutomationHeaders() OptNilEmailDetailAutomationHeaders {
+	return s.AutomationHeaders
+}
+
+// GetReplyCount returns the value of ReplyCount.
+func (s *EmailDetail) GetReplyCount() int {
+	return s.ReplyCount
+}
+
+// GetLastRepliedAt returns the value of LastRepliedAt.
+func (s *EmailDetail) GetLastRepliedAt() NilDateTime {
+	return s.LastRepliedAt
+}
+
+// GetAwaiting returns the value of Awaiting.
+func (s *EmailDetail) GetAwaiting() EmailDetailAwaiting {
+	return s.Awaiting
+}
+
+// GetAutomated returns the value of Automated.
+func (s *EmailDetail) GetAutomated() bool {
+	return s.Automated
+}
+
+// GetAutomatedReasons returns the value of AutomatedReasons.
+func (s *EmailDetail) GetAutomatedReasons() []string {
+	return s.AutomatedReasons
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -8387,6 +8473,167 @@ func (s *EmailDetail) SetParsed(val ParsedEmailData) {
 // SetAuth sets the value of Auth.
 func (s *EmailDetail) SetAuth(val EmailAuth) {
 	s.Auth = val
+}
+
+// SetAutomationHeaders sets the value of AutomationHeaders.
+func (s *EmailDetail) SetAutomationHeaders(val OptNilEmailDetailAutomationHeaders) {
+	s.AutomationHeaders = val
+}
+
+// SetReplyCount sets the value of ReplyCount.
+func (s *EmailDetail) SetReplyCount(val int) {
+	s.ReplyCount = val
+}
+
+// SetLastRepliedAt sets the value of LastRepliedAt.
+func (s *EmailDetail) SetLastRepliedAt(val NilDateTime) {
+	s.LastRepliedAt = val
+}
+
+// SetAwaiting sets the value of Awaiting.
+func (s *EmailDetail) SetAwaiting(val EmailDetailAwaiting) {
+	s.Awaiting = val
+}
+
+// SetAutomated sets the value of Automated.
+func (s *EmailDetail) SetAutomated(val bool) {
+	s.Automated = val
+}
+
+// SetAutomatedReasons sets the value of AutomatedReasons.
+func (s *EmailDetail) SetAutomatedReasons(val []string) {
+	s.AutomatedReasons = val
+}
+
+// What the message declared about being automated, verbatim:
+// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+// declared none, and on messages received before these headers
+// were captured, so a null value is not evidence that a person
+// sent the message.
+type EmailDetailAutomationHeaders struct {
+	ListUnsubscribe OptString `json:"list_unsubscribe"`
+	ListID          OptString `json:"list_id"`
+	Precedence      OptString `json:"precedence"`
+	AutoSubmitted   OptString `json:"auto_submitted"`
+	AdditionalProps EmailDetailAutomationHeadersAdditional
+}
+
+// GetListUnsubscribe returns the value of ListUnsubscribe.
+func (s *EmailDetailAutomationHeaders) GetListUnsubscribe() OptString {
+	return s.ListUnsubscribe
+}
+
+// GetListID returns the value of ListID.
+func (s *EmailDetailAutomationHeaders) GetListID() OptString {
+	return s.ListID
+}
+
+// GetPrecedence returns the value of Precedence.
+func (s *EmailDetailAutomationHeaders) GetPrecedence() OptString {
+	return s.Precedence
+}
+
+// GetAutoSubmitted returns the value of AutoSubmitted.
+func (s *EmailDetailAutomationHeaders) GetAutoSubmitted() OptString {
+	return s.AutoSubmitted
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EmailDetailAutomationHeaders) GetAdditionalProps() EmailDetailAutomationHeadersAdditional {
+	return s.AdditionalProps
+}
+
+// SetListUnsubscribe sets the value of ListUnsubscribe.
+func (s *EmailDetailAutomationHeaders) SetListUnsubscribe(val OptString) {
+	s.ListUnsubscribe = val
+}
+
+// SetListID sets the value of ListID.
+func (s *EmailDetailAutomationHeaders) SetListID(val OptString) {
+	s.ListID = val
+}
+
+// SetPrecedence sets the value of Precedence.
+func (s *EmailDetailAutomationHeaders) SetPrecedence(val OptString) {
+	s.Precedence = val
+}
+
+// SetAutoSubmitted sets the value of AutoSubmitted.
+func (s *EmailDetailAutomationHeaders) SetAutoSubmitted(val OptString) {
+	s.AutoSubmitted = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EmailDetailAutomationHeaders) SetAdditionalProps(val EmailDetailAutomationHeadersAdditional) {
+	s.AdditionalProps = val
+}
+
+type EmailDetailAutomationHeadersAdditional map[string]jx.Raw
+
+func (s *EmailDetailAutomationHeadersAdditional) init() EmailDetailAutomationHeadersAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Whose turn it is in this email's conversation. A send counts as a
+// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+// (queued and scheduled replies count: they are committed to go). For
+// an email with a `thread_id`: `them` when the thread's latest counted
+// outbound send (by send `created_at`, including any counted reply to
+// this email itself) is at or after the thread's latest inbound message
+// (by `received_at`); otherwise `you`. For an email with no
+// `thread_id`: `them` when it has at least one counted reply
+// (`reply_count > 0` for an API key), otherwise `you`. It is a
+// thread-level fact: every email in a thread carries the same value, and
+// it reflects sends made by any credential in the organization,
+// including other agent connections. It changes without a new inbound
+// message, for example when a reply is sent, a queued reply fails, a
+// scheduled reply is canceled, or a message is deleted, and is always
+// current when read.
+type EmailDetailAwaiting string
+
+const (
+	EmailDetailAwaitingYou  EmailDetailAwaiting = "you"
+	EmailDetailAwaitingThem EmailDetailAwaiting = "them"
+)
+
+// AllValues returns all EmailDetailAwaiting values.
+func (EmailDetailAwaiting) AllValues() []EmailDetailAwaiting {
+	return []EmailDetailAwaiting{
+		EmailDetailAwaitingYou,
+		EmailDetailAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailDetailAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailDetailAwaitingYou:
+		return []byte(s), nil
+	case EmailDetailAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailDetailAwaiting) UnmarshalText(data []byte) error {
+	switch EmailDetailAwaiting(data) {
+	case EmailDetailAwaitingYou:
+		*s = EmailDetailAwaitingYou
+		return nil
+	case EmailDetailAwaitingThem:
+		*s = EmailDetailAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/EmailDetailReply
@@ -8732,6 +8979,62 @@ type EmailSearchResult struct {
 	// `/threads/{thread_id}` for the full ordered thread. NULL on
 	// messages received before threading was enabled.
 	ThreadID OptNilUUID `json:"thread_id"`
+	// What the message declared about being automated, verbatim:
+	// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+	// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+	// declared none, and on messages received before these headers
+	// were captured, so a null value is not evidence that a person
+	// sent the message.
+	AutomationHeaders OptNilEmailSearchResultAutomationHeaders `json:"automation_headers"`
+	// Number of replies recorded against this email: sends whose
+	// `in_reply_to_email_id` is this email, the same linkage that populates
+	// `EmailDetail.replies`, excluding sends that never went out (status
+	// `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+	// replies count. Under an agent connection, only the replies that agent
+	// can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+	// replies to this one email, not to the thread.
+	ReplyCount int `json:"reply_count"`
+	// `created_at` of the latest reply counted in `reply_count`, or
+	// null when `reply_count` is 0.
+	LastRepliedAt NilDateTime `json:"last_replied_at"`
+	// Whose turn it is in this email's conversation. A send counts as a
+	// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+	// (queued and scheduled replies count: they are committed to go). For
+	// an email with a `thread_id`: `them` when the thread's latest counted
+	// outbound send (by send `created_at`, including any counted reply to
+	// this email itself) is at or after the thread's latest inbound message
+	// (by `received_at`); otherwise `you`. For an email with no
+	// `thread_id`: `them` when it has at least one counted reply
+	// (`reply_count > 0` for an API key), otherwise `you`. It is a
+	// thread-level fact: every email in a thread carries the same value, and
+	// it reflects sends made by any credential in the organization,
+	// including other agent connections. It changes without a new inbound
+	// message, for example when a reply is sent, a queued reply fails, a
+	// scheduled reply is canceled, or a message is deleted, and is always
+	// current when read.
+	Awaiting EmailSearchResultAwaiting `json:"awaiting"`
+	// Whether the message was sent by a machine rather than a person.
+	// An inbound email is `automated` when any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is exactly one of the addresses the
+	// mail was delivered to; sharing a domain with the recipient is not
+	// enough, so a colleague or another agent in the organization is not
+	// automated);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated bool `json:"automated"`
+	// Why `automated` is true, in rule order; empty when it is false.
+	// Current values: `null_envelope_sender`, `no_identifiable_sender`,
+	// `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+	// `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+	// reason added after your client was built.
+	AutomatedReasons []string `json:"automated_reasons"`
 	// Number of parsed attachments on the email.
 	AttachmentCount int `json:"attachment_count"`
 	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
@@ -8819,6 +9122,36 @@ func (s *EmailSearchResult) GetWebhookAttemptCount() int {
 // GetThreadID returns the value of ThreadID.
 func (s *EmailSearchResult) GetThreadID() OptNilUUID {
 	return s.ThreadID
+}
+
+// GetAutomationHeaders returns the value of AutomationHeaders.
+func (s *EmailSearchResult) GetAutomationHeaders() OptNilEmailSearchResultAutomationHeaders {
+	return s.AutomationHeaders
+}
+
+// GetReplyCount returns the value of ReplyCount.
+func (s *EmailSearchResult) GetReplyCount() int {
+	return s.ReplyCount
+}
+
+// GetLastRepliedAt returns the value of LastRepliedAt.
+func (s *EmailSearchResult) GetLastRepliedAt() NilDateTime {
+	return s.LastRepliedAt
+}
+
+// GetAwaiting returns the value of Awaiting.
+func (s *EmailSearchResult) GetAwaiting() EmailSearchResultAwaiting {
+	return s.Awaiting
+}
+
+// GetAutomated returns the value of Automated.
+func (s *EmailSearchResult) GetAutomated() bool {
+	return s.Automated
+}
+
+// GetAutomatedReasons returns the value of AutomatedReasons.
+func (s *EmailSearchResult) GetAutomatedReasons() []string {
+	return s.AutomatedReasons
 }
 
 // GetAttachmentCount returns the value of AttachmentCount.
@@ -8921,6 +9254,36 @@ func (s *EmailSearchResult) SetThreadID(val OptNilUUID) {
 	s.ThreadID = val
 }
 
+// SetAutomationHeaders sets the value of AutomationHeaders.
+func (s *EmailSearchResult) SetAutomationHeaders(val OptNilEmailSearchResultAutomationHeaders) {
+	s.AutomationHeaders = val
+}
+
+// SetReplyCount sets the value of ReplyCount.
+func (s *EmailSearchResult) SetReplyCount(val int) {
+	s.ReplyCount = val
+}
+
+// SetLastRepliedAt sets the value of LastRepliedAt.
+func (s *EmailSearchResult) SetLastRepliedAt(val NilDateTime) {
+	s.LastRepliedAt = val
+}
+
+// SetAwaiting sets the value of Awaiting.
+func (s *EmailSearchResult) SetAwaiting(val EmailSearchResultAwaiting) {
+	s.Awaiting = val
+}
+
+// SetAutomated sets the value of Automated.
+func (s *EmailSearchResult) SetAutomated(val bool) {
+	s.Automated = val
+}
+
+// SetAutomatedReasons sets the value of AutomatedReasons.
+func (s *EmailSearchResult) SetAutomatedReasons(val []string) {
+	s.AutomatedReasons = val
+}
+
 // SetAttachmentCount sets the value of AttachmentCount.
 func (s *EmailSearchResult) SetAttachmentCount(val int) {
 	s.AttachmentCount = val
@@ -8939,6 +9302,137 @@ func (s *EmailSearchResult) SetScore(val OptFloat64) {
 // SetHighlights sets the value of Highlights.
 func (s *EmailSearchResult) SetHighlights(val OptEmailSearchHighlights) {
 	s.Highlights = val
+}
+
+// What the message declared about being automated, verbatim:
+// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+// declared none, and on messages received before these headers
+// were captured, so a null value is not evidence that a person
+// sent the message.
+type EmailSearchResultAutomationHeaders struct {
+	ListUnsubscribe OptString `json:"list_unsubscribe"`
+	ListID          OptString `json:"list_id"`
+	Precedence      OptString `json:"precedence"`
+	AutoSubmitted   OptString `json:"auto_submitted"`
+	AdditionalProps EmailSearchResultAutomationHeadersAdditional
+}
+
+// GetListUnsubscribe returns the value of ListUnsubscribe.
+func (s *EmailSearchResultAutomationHeaders) GetListUnsubscribe() OptString {
+	return s.ListUnsubscribe
+}
+
+// GetListID returns the value of ListID.
+func (s *EmailSearchResultAutomationHeaders) GetListID() OptString {
+	return s.ListID
+}
+
+// GetPrecedence returns the value of Precedence.
+func (s *EmailSearchResultAutomationHeaders) GetPrecedence() OptString {
+	return s.Precedence
+}
+
+// GetAutoSubmitted returns the value of AutoSubmitted.
+func (s *EmailSearchResultAutomationHeaders) GetAutoSubmitted() OptString {
+	return s.AutoSubmitted
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EmailSearchResultAutomationHeaders) GetAdditionalProps() EmailSearchResultAutomationHeadersAdditional {
+	return s.AdditionalProps
+}
+
+// SetListUnsubscribe sets the value of ListUnsubscribe.
+func (s *EmailSearchResultAutomationHeaders) SetListUnsubscribe(val OptString) {
+	s.ListUnsubscribe = val
+}
+
+// SetListID sets the value of ListID.
+func (s *EmailSearchResultAutomationHeaders) SetListID(val OptString) {
+	s.ListID = val
+}
+
+// SetPrecedence sets the value of Precedence.
+func (s *EmailSearchResultAutomationHeaders) SetPrecedence(val OptString) {
+	s.Precedence = val
+}
+
+// SetAutoSubmitted sets the value of AutoSubmitted.
+func (s *EmailSearchResultAutomationHeaders) SetAutoSubmitted(val OptString) {
+	s.AutoSubmitted = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EmailSearchResultAutomationHeaders) SetAdditionalProps(val EmailSearchResultAutomationHeadersAdditional) {
+	s.AdditionalProps = val
+}
+
+type EmailSearchResultAutomationHeadersAdditional map[string]jx.Raw
+
+func (s *EmailSearchResultAutomationHeadersAdditional) init() EmailSearchResultAutomationHeadersAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Whose turn it is in this email's conversation. A send counts as a
+// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+// (queued and scheduled replies count: they are committed to go). For
+// an email with a `thread_id`: `them` when the thread's latest counted
+// outbound send (by send `created_at`, including any counted reply to
+// this email itself) is at or after the thread's latest inbound message
+// (by `received_at`); otherwise `you`. For an email with no
+// `thread_id`: `them` when it has at least one counted reply
+// (`reply_count > 0` for an API key), otherwise `you`. It is a
+// thread-level fact: every email in a thread carries the same value, and
+// it reflects sends made by any credential in the organization,
+// including other agent connections. It changes without a new inbound
+// message, for example when a reply is sent, a queued reply fails, a
+// scheduled reply is canceled, or a message is deleted, and is always
+// current when read.
+type EmailSearchResultAwaiting string
+
+const (
+	EmailSearchResultAwaitingYou  EmailSearchResultAwaiting = "you"
+	EmailSearchResultAwaitingThem EmailSearchResultAwaiting = "them"
+)
+
+// AllValues returns all EmailSearchResultAwaiting values.
+func (EmailSearchResultAwaiting) AllValues() []EmailSearchResultAwaiting {
+	return []EmailSearchResultAwaiting{
+		EmailSearchResultAwaitingYou,
+		EmailSearchResultAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailSearchResultAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailSearchResultAwaitingYou:
+		return []byte(s), nil
+	case EmailSearchResultAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailSearchResultAwaiting) UnmarshalText(data []byte) error {
+	switch EmailSearchResultAwaiting(data) {
+	case EmailSearchResultAwaitingYou:
+		*s = EmailSearchResultAwaitingYou
+		return nil
+	case EmailSearchResultAwaitingThem:
+		*s = EmailSearchResultAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Lifecycle status of an INBOUND email (a row in the `emails`
@@ -9051,6 +9545,62 @@ type EmailSummary struct {
 	// `/threads/{thread_id}` for the full ordered thread. NULL on
 	// messages received before threading was enabled.
 	ThreadID OptNilUUID `json:"thread_id"`
+	// What the message declared about being automated, verbatim:
+	// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+	// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+	// declared none, and on messages received before these headers
+	// were captured, so a null value is not evidence that a person
+	// sent the message.
+	AutomationHeaders OptNilEmailSummaryAutomationHeaders `json:"automation_headers"`
+	// Number of replies recorded against this email: sends whose
+	// `in_reply_to_email_id` is this email, the same linkage that populates
+	// `EmailDetail.replies`, excluding sends that never went out (status
+	// `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+	// replies count. Under an agent connection, only the replies that agent
+	// can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+	// replies to this one email, not to the thread.
+	ReplyCount int `json:"reply_count"`
+	// `created_at` of the latest reply counted in `reply_count`, or
+	// null when `reply_count` is 0.
+	LastRepliedAt NilDateTime `json:"last_replied_at"`
+	// Whose turn it is in this email's conversation. A send counts as a
+	// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+	// (queued and scheduled replies count: they are committed to go). For
+	// an email with a `thread_id`: `them` when the thread's latest counted
+	// outbound send (by send `created_at`, including any counted reply to
+	// this email itself) is at or after the thread's latest inbound message
+	// (by `received_at`); otherwise `you`. For an email with no
+	// `thread_id`: `them` when it has at least one counted reply
+	// (`reply_count > 0` for an API key), otherwise `you`. It is a
+	// thread-level fact: every email in a thread carries the same value, and
+	// it reflects sends made by any credential in the organization,
+	// including other agent connections. It changes without a new inbound
+	// message, for example when a reply is sent, a queued reply fails, a
+	// scheduled reply is canceled, or a message is deleted, and is always
+	// current when read.
+	Awaiting EmailSummaryAwaiting `json:"awaiting"`
+	// Whether the message was sent by a machine rather than a person.
+	// An inbound email is `automated` when any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is exactly one of the addresses the
+	// mail was delivered to; sharing a domain with the recipient is not
+	// enough, so a colleague or another agent in the organization is not
+	// automated);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated bool `json:"automated"`
+	// Why `automated` is true, in rule order; empty when it is false.
+	// Current values: `null_envelope_sender`, `no_identifiable_sender`,
+	// `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+	// `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+	// reason added after your client was built.
+	AutomatedReasons []string `json:"automated_reasons"`
 }
 
 // GetID returns the value of ID.
@@ -9133,6 +9683,36 @@ func (s *EmailSummary) GetThreadID() OptNilUUID {
 	return s.ThreadID
 }
 
+// GetAutomationHeaders returns the value of AutomationHeaders.
+func (s *EmailSummary) GetAutomationHeaders() OptNilEmailSummaryAutomationHeaders {
+	return s.AutomationHeaders
+}
+
+// GetReplyCount returns the value of ReplyCount.
+func (s *EmailSummary) GetReplyCount() int {
+	return s.ReplyCount
+}
+
+// GetLastRepliedAt returns the value of LastRepliedAt.
+func (s *EmailSummary) GetLastRepliedAt() NilDateTime {
+	return s.LastRepliedAt
+}
+
+// GetAwaiting returns the value of Awaiting.
+func (s *EmailSummary) GetAwaiting() EmailSummaryAwaiting {
+	return s.Awaiting
+}
+
+// GetAutomated returns the value of Automated.
+func (s *EmailSummary) GetAutomated() bool {
+	return s.Automated
+}
+
+// GetAutomatedReasons returns the value of AutomatedReasons.
+func (s *EmailSummary) GetAutomatedReasons() []string {
+	return s.AutomatedReasons
+}
+
 // SetID sets the value of ID.
 func (s *EmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -9211,6 +9791,167 @@ func (s *EmailSummary) SetWebhookAttemptCount(val int) {
 // SetThreadID sets the value of ThreadID.
 func (s *EmailSummary) SetThreadID(val OptNilUUID) {
 	s.ThreadID = val
+}
+
+// SetAutomationHeaders sets the value of AutomationHeaders.
+func (s *EmailSummary) SetAutomationHeaders(val OptNilEmailSummaryAutomationHeaders) {
+	s.AutomationHeaders = val
+}
+
+// SetReplyCount sets the value of ReplyCount.
+func (s *EmailSummary) SetReplyCount(val int) {
+	s.ReplyCount = val
+}
+
+// SetLastRepliedAt sets the value of LastRepliedAt.
+func (s *EmailSummary) SetLastRepliedAt(val NilDateTime) {
+	s.LastRepliedAt = val
+}
+
+// SetAwaiting sets the value of Awaiting.
+func (s *EmailSummary) SetAwaiting(val EmailSummaryAwaiting) {
+	s.Awaiting = val
+}
+
+// SetAutomated sets the value of Automated.
+func (s *EmailSummary) SetAutomated(val bool) {
+	s.Automated = val
+}
+
+// SetAutomatedReasons sets the value of AutomatedReasons.
+func (s *EmailSummary) SetAutomatedReasons(val []string) {
+	s.AutomatedReasons = val
+}
+
+// What the message declared about being automated, verbatim:
+// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+// `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+// declared none, and on messages received before these headers
+// were captured, so a null value is not evidence that a person
+// sent the message.
+type EmailSummaryAutomationHeaders struct {
+	ListUnsubscribe OptString `json:"list_unsubscribe"`
+	ListID          OptString `json:"list_id"`
+	Precedence      OptString `json:"precedence"`
+	AutoSubmitted   OptString `json:"auto_submitted"`
+	AdditionalProps EmailSummaryAutomationHeadersAdditional
+}
+
+// GetListUnsubscribe returns the value of ListUnsubscribe.
+func (s *EmailSummaryAutomationHeaders) GetListUnsubscribe() OptString {
+	return s.ListUnsubscribe
+}
+
+// GetListID returns the value of ListID.
+func (s *EmailSummaryAutomationHeaders) GetListID() OptString {
+	return s.ListID
+}
+
+// GetPrecedence returns the value of Precedence.
+func (s *EmailSummaryAutomationHeaders) GetPrecedence() OptString {
+	return s.Precedence
+}
+
+// GetAutoSubmitted returns the value of AutoSubmitted.
+func (s *EmailSummaryAutomationHeaders) GetAutoSubmitted() OptString {
+	return s.AutoSubmitted
+}
+
+// GetAdditionalProps returns the value of AdditionalProps.
+func (s *EmailSummaryAutomationHeaders) GetAdditionalProps() EmailSummaryAutomationHeadersAdditional {
+	return s.AdditionalProps
+}
+
+// SetListUnsubscribe sets the value of ListUnsubscribe.
+func (s *EmailSummaryAutomationHeaders) SetListUnsubscribe(val OptString) {
+	s.ListUnsubscribe = val
+}
+
+// SetListID sets the value of ListID.
+func (s *EmailSummaryAutomationHeaders) SetListID(val OptString) {
+	s.ListID = val
+}
+
+// SetPrecedence sets the value of Precedence.
+func (s *EmailSummaryAutomationHeaders) SetPrecedence(val OptString) {
+	s.Precedence = val
+}
+
+// SetAutoSubmitted sets the value of AutoSubmitted.
+func (s *EmailSummaryAutomationHeaders) SetAutoSubmitted(val OptString) {
+	s.AutoSubmitted = val
+}
+
+// SetAdditionalProps sets the value of AdditionalProps.
+func (s *EmailSummaryAutomationHeaders) SetAdditionalProps(val EmailSummaryAutomationHeadersAdditional) {
+	s.AdditionalProps = val
+}
+
+type EmailSummaryAutomationHeadersAdditional map[string]jx.Raw
+
+func (s *EmailSummaryAutomationHeadersAdditional) init() EmailSummaryAutomationHeadersAdditional {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+// Whose turn it is in this email's conversation. A send counts as a
+// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+// (queued and scheduled replies count: they are committed to go). For
+// an email with a `thread_id`: `them` when the thread's latest counted
+// outbound send (by send `created_at`, including any counted reply to
+// this email itself) is at or after the thread's latest inbound message
+// (by `received_at`); otherwise `you`. For an email with no
+// `thread_id`: `them` when it has at least one counted reply
+// (`reply_count > 0` for an API key), otherwise `you`. It is a
+// thread-level fact: every email in a thread carries the same value, and
+// it reflects sends made by any credential in the organization,
+// including other agent connections. It changes without a new inbound
+// message, for example when a reply is sent, a queued reply fails, a
+// scheduled reply is canceled, or a message is deleted, and is always
+// current when read.
+type EmailSummaryAwaiting string
+
+const (
+	EmailSummaryAwaitingYou  EmailSummaryAwaiting = "you"
+	EmailSummaryAwaitingThem EmailSummaryAwaiting = "them"
+)
+
+// AllValues returns all EmailSummaryAwaiting values.
+func (EmailSummaryAwaiting) AllValues() []EmailSummaryAwaiting {
+	return []EmailSummaryAwaiting{
+		EmailSummaryAwaitingYou,
+		EmailSummaryAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailSummaryAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailSummaryAwaitingYou:
+		return []byte(s), nil
+	case EmailSummaryAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailSummaryAwaiting) UnmarshalText(data []byte) error {
+	switch EmailSummaryAwaiting(data) {
+	case EmailSummaryAwaitingYou:
+		*s = EmailSummaryAwaitingYou
+		return nil
+	case EmailSummaryAwaitingThem:
+		*s = EmailSummaryAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Webhook-delivery state for an inbound email. Tracks a
@@ -14654,6 +15395,88 @@ func (s *ListDomainsOK) SetData(val []Domain) {
 
 func (*ListDomainsOK) listDomainsRes() {}
 
+type ListEmailsAutomated string
+
+const (
+	ListEmailsAutomatedTrue  ListEmailsAutomated = "true"
+	ListEmailsAutomatedFalse ListEmailsAutomated = "false"
+)
+
+// AllValues returns all ListEmailsAutomated values.
+func (ListEmailsAutomated) AllValues() []ListEmailsAutomated {
+	return []ListEmailsAutomated{
+		ListEmailsAutomatedTrue,
+		ListEmailsAutomatedFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailsAutomated) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailsAutomatedTrue:
+		return []byte(s), nil
+	case ListEmailsAutomatedFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailsAutomated) UnmarshalText(data []byte) error {
+	switch ListEmailsAutomated(data) {
+	case ListEmailsAutomatedTrue:
+		*s = ListEmailsAutomatedTrue
+		return nil
+	case ListEmailsAutomatedFalse:
+		*s = ListEmailsAutomatedFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type ListEmailsAwaiting string
+
+const (
+	ListEmailsAwaitingYou  ListEmailsAwaiting = "you"
+	ListEmailsAwaitingThem ListEmailsAwaiting = "them"
+)
+
+// AllValues returns all ListEmailsAwaiting values.
+func (ListEmailsAwaiting) AllValues() []ListEmailsAwaiting {
+	return []ListEmailsAwaiting{
+		ListEmailsAwaitingYou,
+		ListEmailsAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailsAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailsAwaitingYou:
+		return []byte(s), nil
+	case ListEmailsAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailsAwaiting) UnmarshalText(data []byte) error {
+	switch ListEmailsAwaiting(data) {
+	case ListEmailsAwaitingYou:
+		*s = ListEmailsAwaitingYou
+		return nil
+	case ListEmailsAwaitingThem:
+		*s = ListEmailsAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ListEmailsBadRequest ErrorResponse
 
 func (*ListEmailsBadRequest) listEmailsRes() {}
@@ -18250,6 +19073,98 @@ func (o OptListDeliveriesStatus) Or(d ListDeliveriesStatus) ListDeliveriesStatus
 	return d
 }
 
+// NewOptListEmailsAutomated returns new OptListEmailsAutomated with value set to v.
+func NewOptListEmailsAutomated(v ListEmailsAutomated) OptListEmailsAutomated {
+	return OptListEmailsAutomated{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailsAutomated is optional ListEmailsAutomated.
+type OptListEmailsAutomated struct {
+	Value ListEmailsAutomated
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailsAutomated was set.
+func (o OptListEmailsAutomated) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailsAutomated) Reset() {
+	var v ListEmailsAutomated
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailsAutomated) SetTo(v ListEmailsAutomated) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailsAutomated) Get() (v ListEmailsAutomated, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailsAutomated) Or(d ListEmailsAutomated) ListEmailsAutomated {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailsAwaiting returns new OptListEmailsAwaiting with value set to v.
+func NewOptListEmailsAwaiting(v ListEmailsAwaiting) OptListEmailsAwaiting {
+	return OptListEmailsAwaiting{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailsAwaiting is optional ListEmailsAwaiting.
+type OptListEmailsAwaiting struct {
+	Value ListEmailsAwaiting
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailsAwaiting was set.
+func (o OptListEmailsAwaiting) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailsAwaiting) Reset() {
+	var v ListEmailsAwaiting
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailsAwaiting) SetTo(v ListEmailsAwaiting) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailsAwaiting) Get() (v ListEmailsAwaiting, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailsAwaiting) Or(d ListEmailsAwaiting) ListEmailsAwaiting {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptMemoryJsonValue returns new OptMemoryJsonValue with value set to v.
 func NewOptMemoryJsonValue(v MemoryJsonValue) OptMemoryJsonValue {
 	return OptMemoryJsonValue{
@@ -18697,6 +19612,195 @@ func (o OptNilEmailAddressArray) Get() (v []EmailAddress, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailAddressArray) Or(d []EmailAddress) []EmailAddress {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailDetailAutomationHeaders returns new OptNilEmailDetailAutomationHeaders with value set to v.
+func NewOptNilEmailDetailAutomationHeaders(v EmailDetailAutomationHeaders) OptNilEmailDetailAutomationHeaders {
+	return OptNilEmailDetailAutomationHeaders{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailDetailAutomationHeaders is optional nullable EmailDetailAutomationHeaders.
+type OptNilEmailDetailAutomationHeaders struct {
+	Value EmailDetailAutomationHeaders
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailDetailAutomationHeaders was set.
+func (o OptNilEmailDetailAutomationHeaders) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailDetailAutomationHeaders) Reset() {
+	var v EmailDetailAutomationHeaders
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailDetailAutomationHeaders) SetTo(v EmailDetailAutomationHeaders) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailDetailAutomationHeaders) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailDetailAutomationHeaders) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailDetailAutomationHeaders
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailDetailAutomationHeaders) Get() (v EmailDetailAutomationHeaders, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailDetailAutomationHeaders) Or(d EmailDetailAutomationHeaders) EmailDetailAutomationHeaders {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailSearchResultAutomationHeaders returns new OptNilEmailSearchResultAutomationHeaders with value set to v.
+func NewOptNilEmailSearchResultAutomationHeaders(v EmailSearchResultAutomationHeaders) OptNilEmailSearchResultAutomationHeaders {
+	return OptNilEmailSearchResultAutomationHeaders{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSearchResultAutomationHeaders is optional nullable EmailSearchResultAutomationHeaders.
+type OptNilEmailSearchResultAutomationHeaders struct {
+	Value EmailSearchResultAutomationHeaders
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSearchResultAutomationHeaders was set.
+func (o OptNilEmailSearchResultAutomationHeaders) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSearchResultAutomationHeaders) Reset() {
+	var v EmailSearchResultAutomationHeaders
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSearchResultAutomationHeaders) SetTo(v EmailSearchResultAutomationHeaders) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSearchResultAutomationHeaders) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSearchResultAutomationHeaders) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSearchResultAutomationHeaders
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSearchResultAutomationHeaders) Get() (v EmailSearchResultAutomationHeaders, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSearchResultAutomationHeaders) Or(d EmailSearchResultAutomationHeaders) EmailSearchResultAutomationHeaders {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailSummaryAutomationHeaders returns new OptNilEmailSummaryAutomationHeaders with value set to v.
+func NewOptNilEmailSummaryAutomationHeaders(v EmailSummaryAutomationHeaders) OptNilEmailSummaryAutomationHeaders {
+	return OptNilEmailSummaryAutomationHeaders{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSummaryAutomationHeaders is optional nullable EmailSummaryAutomationHeaders.
+type OptNilEmailSummaryAutomationHeaders struct {
+	Value EmailSummaryAutomationHeaders
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSummaryAutomationHeaders was set.
+func (o OptNilEmailSummaryAutomationHeaders) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSummaryAutomationHeaders) Reset() {
+	var v EmailSummaryAutomationHeaders
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSummaryAutomationHeaders) SetTo(v EmailSummaryAutomationHeaders) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSummaryAutomationHeaders) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSummaryAutomationHeaders) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSummaryAutomationHeaders
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSummaryAutomationHeaders) Get() (v EmailSummaryAutomationHeaders, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSummaryAutomationHeaders) Or(d EmailSummaryAutomationHeaders) EmailSummaryAutomationHeaders {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -19574,6 +20678,98 @@ func (o OptRecipientRouteMatchType) Get() (v RecipientRouteMatchType, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptRecipientRouteMatchType) Or(d RecipientRouteMatchType) RecipientRouteMatchType {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSearchEmailsAutomated returns new OptSearchEmailsAutomated with value set to v.
+func NewOptSearchEmailsAutomated(v SearchEmailsAutomated) OptSearchEmailsAutomated {
+	return OptSearchEmailsAutomated{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsAutomated is optional SearchEmailsAutomated.
+type OptSearchEmailsAutomated struct {
+	Value SearchEmailsAutomated
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsAutomated was set.
+func (o OptSearchEmailsAutomated) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsAutomated) Reset() {
+	var v SearchEmailsAutomated
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsAutomated) SetTo(v SearchEmailsAutomated) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsAutomated) Get() (v SearchEmailsAutomated, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsAutomated) Or(d SearchEmailsAutomated) SearchEmailsAutomated {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSearchEmailsAwaiting returns new OptSearchEmailsAwaiting with value set to v.
+func NewOptSearchEmailsAwaiting(v SearchEmailsAwaiting) OptSearchEmailsAwaiting {
+	return OptSearchEmailsAwaiting{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsAwaiting is optional SearchEmailsAwaiting.
+type OptSearchEmailsAwaiting struct {
+	Value SearchEmailsAwaiting
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsAwaiting was set.
+func (o OptSearchEmailsAwaiting) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsAwaiting) Reset() {
+	var v SearchEmailsAwaiting
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsAwaiting) SetTo(v SearchEmailsAwaiting) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsAwaiting) Get() (v SearchEmailsAwaiting, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsAwaiting) Or(d SearchEmailsAwaiting) SearchEmailsAwaiting {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -24109,6 +25305,88 @@ func (s *RunWakeScheduleOKData) init() RunWakeScheduleOKData {
 type RunWakeScheduleUnauthorized ErrorResponse
 
 func (*RunWakeScheduleUnauthorized) runWakeScheduleRes() {}
+
+type SearchEmailsAutomated string
+
+const (
+	SearchEmailsAutomatedTrue  SearchEmailsAutomated = "true"
+	SearchEmailsAutomatedFalse SearchEmailsAutomated = "false"
+)
+
+// AllValues returns all SearchEmailsAutomated values.
+func (SearchEmailsAutomated) AllValues() []SearchEmailsAutomated {
+	return []SearchEmailsAutomated{
+		SearchEmailsAutomatedTrue,
+		SearchEmailsAutomatedFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsAutomated) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsAutomatedTrue:
+		return []byte(s), nil
+	case SearchEmailsAutomatedFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsAutomated) UnmarshalText(data []byte) error {
+	switch SearchEmailsAutomated(data) {
+	case SearchEmailsAutomatedTrue:
+		*s = SearchEmailsAutomatedTrue
+		return nil
+	case SearchEmailsAutomatedFalse:
+		*s = SearchEmailsAutomatedFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SearchEmailsAwaiting string
+
+const (
+	SearchEmailsAwaitingYou  SearchEmailsAwaiting = "you"
+	SearchEmailsAwaitingThem SearchEmailsAwaiting = "them"
+)
+
+// AllValues returns all SearchEmailsAwaiting values.
+func (SearchEmailsAwaiting) AllValues() []SearchEmailsAwaiting {
+	return []SearchEmailsAwaiting{
+		SearchEmailsAwaitingYou,
+		SearchEmailsAwaitingThem,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsAwaiting) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsAwaitingYou:
+		return []byte(s), nil
+	case SearchEmailsAwaitingThem:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsAwaiting) UnmarshalText(data []byte) error {
+	switch SearchEmailsAwaiting(data) {
+	case SearchEmailsAwaitingYou:
+		*s = SearchEmailsAwaitingYou
+		return nil
+	case SearchEmailsAwaitingThem:
+		*s = SearchEmailsAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type SearchEmailsBadRequest ErrorResponse
 

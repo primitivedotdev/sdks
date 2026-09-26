@@ -5,6 +5,7 @@ from __future__ import annotations
 # drops one of these fields would silently break the SDK contract;
 # this test fails loudly when that happens.
 from primitive.api.models.email_detail import EmailDetail
+from primitive.api.models.email_detail_awaiting import EmailDetailAwaiting
 from primitive.api.models.email_detail_reply import EmailDetailReply
 
 SAMPLE = {
@@ -41,6 +42,11 @@ SAMPLE = {
     "to_email": "support@example.com",
     "from_known_address": True,
     "thread_id": "44444444-4444-4444-4444-444444444444",
+    "reply_count": 1,
+    "last_replied_at": "2026-05-03T00:01:00Z",
+    "awaiting": "them",
+    "automated": True,
+    "automated_reasons": ["list_unsubscribe", "list_id"],
     "replies": [
         {
             "id": "33333333-3333-3333-3333-333333333333",
@@ -111,6 +117,20 @@ def test_email_detail_surfaces_thread_parsed_auth() -> None:
     assert str(detail.thread_id) == "44444444-4444-4444-4444-444444444444"
     assert detail.parsed.status == "complete"
     assert detail.auth.spf == "pass"
+
+
+def test_email_detail_surfaces_automated_verdict() -> None:
+    detail = EmailDetail.from_dict(SAMPLE)
+    assert detail.automated is True
+    assert detail.automated_reasons == ["list_unsubscribe", "list_id"]
+
+
+def test_email_detail_surfaces_reply_state() -> None:
+    detail = EmailDetail.from_dict(SAMPLE)
+    assert detail.reply_count == 1
+    assert detail.awaiting == EmailDetailAwaiting.THEM
+    assert detail.last_replied_at is not None
+    assert detail.last_replied_at.isoformat() == "2026-05-03T00:01:00+00:00"
 
 
 def test_email_detail_round_trips_to_dict() -> None:

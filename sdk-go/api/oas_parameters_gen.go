@@ -4286,6 +4286,50 @@ type ListEmailsParams struct {
 	// which then fails the `wait` requires `since` check for plain history
 	// listings.
 	Wait OptInt `json:",omitempty,omitzero"`
+	// Only return emails whose `awaiting` has this value. `awaiting=you`
+	// lists mail waiting on your reply. Combines with every other filter
+	// and with both `cursor` and `since`.
+	// The filter (either value, here, on search and as the `awaiting:`
+	// search term) matches delivered mail only: emails whose `status` is
+	// `rejected` are never returned by it. A rejected email (for example
+	// one refused because the organization is over its storage limit) was
+	// never delivered, so nobody can answer it and it is awaiting no one;
+	// its own `awaiting` field still reports the stored value, usually
+	// `you`.
+	// Whose turn it is in this email's conversation. A send counts as a
+	// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+	// (queued and scheduled replies count: they are committed to go). For
+	// an email with a `thread_id`: `them` when the thread's latest counted
+	// outbound send (by send `created_at`, including any counted reply to
+	// this email itself) is at or after the thread's latest inbound message
+	// (by `received_at`); otherwise `you`. For an email with no
+	// `thread_id`: `them` when it has at least one counted reply
+	// (`reply_count > 0` for an API key), otherwise `you`. It is a
+	// thread-level fact: every email in a thread carries the same value, and
+	// it reflects sends made by any credential in the organization,
+	// including other agent connections. It changes without a new inbound
+	// message, for example when a reply is sent, a queued reply fails, a
+	// scheduled reply is canceled, or a message is deleted, and is always
+	// current when read.
+	Awaiting OptListEmailsAwaiting `json:",omitempty,omitzero"`
+	// Only return emails whose `automated` has this value.
+	// `awaiting=you&automated=false` lists mail from people that is
+	// waiting on your reply. Combines with every other filter and with
+	// both `cursor` and `since`. An inbound email is `automated` when any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is exactly one of the addresses the
+	// mail was delivered to; sharing a domain with the recipient is not
+	// enough, so a colleague or another agent in the organization is not
+	// automated);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated OptListEmailsAutomated `json:",omitempty,omitzero"`
 }
 
 func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsParams) {
@@ -4368,6 +4412,24 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 		}
 		if v, ok := packed[key]; ok {
 			params.Wait = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "awaiting",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Awaiting = v.(OptListEmailsAwaiting)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "automated",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Automated = v.(OptListEmailsAutomated)
 		}
 	}
 	return params
@@ -4864,6 +4926,118 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "wait",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: awaiting.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "awaiting",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAwaitingVal ListEmailsAwaiting
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAwaitingVal = ListEmailsAwaiting(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Awaiting.SetTo(paramsDotAwaitingVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Awaiting.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "awaiting",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: automated.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "automated",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAutomatedVal ListEmailsAutomated
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAutomatedVal = ListEmailsAutomated(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Automated.SetTo(paramsDotAutomatedVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Automated.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "automated",
 			In:   "query",
 			Err:  err,
 		}
@@ -7412,7 +7586,9 @@ func decodeRunWakeScheduleParams(args [1]string, argsEscaped bool, r *http.Reque
 
 // SearchEmailsParams is parameters of searchEmails operation.
 type SearchEmailsParams struct {
-	// Full-text search DSL query.
+	// Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state
+	// (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and
+	// `automated:false` to filter on the `automated` field.
 	Q OptString `json:",omitempty,omitzero"`
 	// Filter by sender address or sender domain.
 	From OptString `json:",omitempty,omitzero"`
@@ -7448,6 +7624,48 @@ type SearchEmailsParams struct {
 	SpamScoreLt OptFloat64 `json:",omitempty,omitzero"`
 	// Filter to emails with spam score greater than or equal to this value.
 	SpamScoreGte OptFloat64 `json:",omitempty,omitzero"`
+	// Only return emails whose `awaiting` has this value. Also available
+	// in `q` as `awaiting:you` or `awaiting:them`.
+	// The filter (either value, here, on search and as the `awaiting:`
+	// search term) matches delivered mail only: emails whose `status` is
+	// `rejected` are never returned by it. A rejected email (for example
+	// one refused because the organization is over its storage limit) was
+	// never delivered, so nobody can answer it and it is awaiting no one;
+	// its own `awaiting` field still reports the stored value, usually
+	// `you`.
+	// Whose turn it is in this email's conversation. A send counts as a
+	// reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+	// (queued and scheduled replies count: they are committed to go). For
+	// an email with a `thread_id`: `them` when the thread's latest counted
+	// outbound send (by send `created_at`, including any counted reply to
+	// this email itself) is at or after the thread's latest inbound message
+	// (by `received_at`); otherwise `you`. For an email with no
+	// `thread_id`: `them` when it has at least one counted reply
+	// (`reply_count > 0` for an API key), otherwise `you`. It is a
+	// thread-level fact: every email in a thread carries the same value, and
+	// it reflects sends made by any credential in the organization,
+	// including other agent connections. It changes without a new inbound
+	// message, for example when a reply is sent, a queued reply fails, a
+	// scheduled reply is canceled, or a message is deleted, and is always
+	// current when read.
+	Awaiting OptSearchEmailsAwaiting `json:",omitempty,omitzero"`
+	// Only return emails whose `automated` has this value. Also
+	// available in `q` as `automated:true` or `automated:false`. An inbound email is `automated` when
+	// any of these holds, decided once
+	// when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+	// `no_identifiable_sender` (no address in the envelope or From);
+	// `own_address` (a sender address is exactly one of the addresses the
+	// mail was delivered to; sharing a domain with the recipient is not
+	// enough, so a colleague or another agent in the organization is not
+	// automated);
+	// `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+	// `auto_submitted` (Auto-Submitted with any keyword but `no`);
+	// `precedence` (Precedence bulk, list, junk or auto_reply);
+	// `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+	// present). The header rules only see headers captured at ingest, so
+	// older mail may lack them. This is loop and noise protection, not
+	// sender authentication.
+	Automated OptSearchEmailsAutomated `json:",omitempty,omitzero"`
 	// Sort mode. Defaults to relevance when a text query is present,
 	// otherwise `received_at_desc`.
 	Sort OptSearchEmailsSort `json:",omitempty,omitzero"`
@@ -7577,6 +7795,24 @@ func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmails
 		}
 		if v, ok := packed[key]; ok {
 			params.SpamScoreGte = v.(OptFloat64)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "awaiting",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Awaiting = v.(OptSearchEmailsAwaiting)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "automated",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Automated = v.(OptSearchEmailsAutomated)
 		}
 	}
 	{
@@ -8353,6 +8589,118 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "spam_score_gte",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: awaiting.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "awaiting",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAwaitingVal SearchEmailsAwaiting
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAwaitingVal = SearchEmailsAwaiting(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Awaiting.SetTo(paramsDotAwaitingVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Awaiting.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "awaiting",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: automated.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "automated",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAutomatedVal SearchEmailsAutomated
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAutomatedVal = SearchEmailsAutomated(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Automated.SetTo(paramsDotAutomatedVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Automated.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "automated",
 			In:   "query",
 			Err:  err,
 		}

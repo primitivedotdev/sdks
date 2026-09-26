@@ -1533,6 +1533,86 @@ export type EmailSummary = {
      *
      */
     thread_id?: string | null;
+    /**
+     * What the message declared about being automated, verbatim:
+     * `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+     * `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+     * declared none, and on messages received before these headers
+     * were captured, so a null value is not evidence that a person
+     * sent the message.
+     *
+     */
+    automation_headers?: {
+        list_unsubscribe?: string;
+        list_id?: string;
+        precedence?: string;
+        auto_submitted?: string;
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Number of replies recorded against this email: sends whose
+     * `in_reply_to_email_id` is this email, the same linkage that populates
+     * `EmailDetail.replies`, excluding sends that never went out (status
+     * `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+     * replies count. Under an agent connection, only the replies that agent
+     * can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+     * replies to this one email, not to the thread.
+     *
+     */
+    reply_count: number;
+    /**
+     * `created_at` of the latest reply counted in `reply_count`, or
+     * null when `reply_count` is 0.
+     *
+     */
+    last_replied_at: string | null;
+    /**
+     * Whose turn it is in this email's conversation. A send counts as a
+     * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+     * (queued and scheduled replies count: they are committed to go). For
+     * an email with a `thread_id`: `them` when the thread's latest counted
+     * outbound send (by send `created_at`, including any counted reply to
+     * this email itself) is at or after the thread's latest inbound message
+     * (by `received_at`); otherwise `you`. For an email with no
+     * `thread_id`: `them` when it has at least one counted reply
+     * (`reply_count > 0` for an API key), otherwise `you`. It is a
+     * thread-level fact: every email in a thread carries the same value, and
+     * it reflects sends made by any credential in the organization,
+     * including other agent connections. It changes without a new inbound
+     * message, for example when a reply is sent, a queued reply fails, a
+     * scheduled reply is canceled, or a message is deleted, and is always
+     * current when read.
+     *
+     */
+    awaiting: 'you' | 'them';
+    /**
+     * Whether the message was sent by a machine rather than a person.
+     * An inbound email is `automated` when any of these holds, decided once
+     * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+     * `no_identifiable_sender` (no address in the envelope or From);
+     * `own_address` (a sender address is exactly one of the addresses the
+     * mail was delivered to; sharing a domain with the recipient is not
+     * enough, so a colleague or another agent in the organization is not
+     * automated);
+     * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+     * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+     * `precedence` (Precedence bulk, list, junk or auto_reply);
+     * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+     * present). The header rules only see headers captured at ingest, so
+     * older mail may lack them. This is loop and noise protection, not
+     * sender authentication.
+     *
+     */
+    automated: boolean;
+    /**
+     * Why `automated` is true, in rule order; empty when it is false.
+     * Current values: `null_envelope_sender`, `no_identifiable_sender`,
+     * `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+     * `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+     * reason added after your client was built.
+     *
+     */
+    automated_reasons: Array<string>;
 };
 
 export type EmailSearchHighlights = {
@@ -1748,6 +1828,86 @@ export type EmailDetail = {
      *
      */
     auth: EmailAuth;
+    /**
+     * What the message declared about being automated, verbatim:
+     * `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+     * `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+     * declared none, and on messages received before these headers
+     * were captured, so a null value is not evidence that a person
+     * sent the message.
+     *
+     */
+    automation_headers?: {
+        list_unsubscribe?: string;
+        list_id?: string;
+        precedence?: string;
+        auto_submitted?: string;
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Number of replies recorded against this email: sends whose
+     * `in_reply_to_email_id` is this email, the same linkage that populates
+     * `EmailDetail.replies`, excluding sends that never went out (status
+     * `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+     * replies count. Under an agent connection, only the replies that agent
+     * can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+     * replies to this one email, not to the thread.
+     *
+     */
+    reply_count: number;
+    /**
+     * `created_at` of the latest reply counted in `reply_count`, or
+     * null when `reply_count` is 0.
+     *
+     */
+    last_replied_at: string | null;
+    /**
+     * Whose turn it is in this email's conversation. A send counts as a
+     * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+     * (queued and scheduled replies count: they are committed to go). For
+     * an email with a `thread_id`: `them` when the thread's latest counted
+     * outbound send (by send `created_at`, including any counted reply to
+     * this email itself) is at or after the thread's latest inbound message
+     * (by `received_at`); otherwise `you`. For an email with no
+     * `thread_id`: `them` when it has at least one counted reply
+     * (`reply_count > 0` for an API key), otherwise `you`. It is a
+     * thread-level fact: every email in a thread carries the same value, and
+     * it reflects sends made by any credential in the organization,
+     * including other agent connections. It changes without a new inbound
+     * message, for example when a reply is sent, a queued reply fails, a
+     * scheduled reply is canceled, or a message is deleted, and is always
+     * current when read.
+     *
+     */
+    awaiting: 'you' | 'them';
+    /**
+     * Whether the message was sent by a machine rather than a person.
+     * An inbound email is `automated` when any of these holds, decided once
+     * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+     * `no_identifiable_sender` (no address in the envelope or From);
+     * `own_address` (a sender address is exactly one of the addresses the
+     * mail was delivered to; sharing a domain with the recipient is not
+     * enough, so a colleague or another agent in the organization is not
+     * automated);
+     * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+     * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+     * `precedence` (Precedence bulk, list, junk or auto_reply);
+     * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+     * present). The header rules only see headers captured at ingest, so
+     * older mail may lack them. This is loop and noise protection, not
+     * sender authentication.
+     *
+     */
+    automated: boolean;
+    /**
+     * Why `automated` is true, in rule order; empty when it is false.
+     * Current values: `null_envelope_sender`, `no_identifiable_sender`,
+     * `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+     * `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+     * reason added after your client was built.
+     *
+     */
+    automated_reasons: Array<string>;
 };
 
 export type EmailDetailReply = {
@@ -5738,6 +5898,56 @@ export type ListEmailsData = {
          *
          */
         wait?: number;
+        /**
+         * Only return emails whose `awaiting` has this value. `awaiting=you`
+         * lists mail waiting on your reply. Combines with every other filter
+         * and with both `cursor` and `since`.
+         * The filter (either value, here, on search and as the `awaiting:`
+         * search term) matches delivered mail only: emails whose `status` is
+         * `rejected` are never returned by it. A rejected email (for example
+         * one refused because the organization is over its storage limit) was
+         * never delivered, so nobody can answer it and it is awaiting no one;
+         * its own `awaiting` field still reports the stored value, usually
+         * `you`.
+         * Whose turn it is in this email's conversation. A send counts as a
+         * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+         * (queued and scheduled replies count: they are committed to go). For
+         * an email with a `thread_id`: `them` when the thread's latest counted
+         * outbound send (by send `created_at`, including any counted reply to
+         * this email itself) is at or after the thread's latest inbound message
+         * (by `received_at`); otherwise `you`. For an email with no
+         * `thread_id`: `them` when it has at least one counted reply
+         * (`reply_count > 0` for an API key), otherwise `you`. It is a
+         * thread-level fact: every email in a thread carries the same value, and
+         * it reflects sends made by any credential in the organization,
+         * including other agent connections. It changes without a new inbound
+         * message, for example when a reply is sent, a queued reply fails, a
+         * scheduled reply is canceled, or a message is deleted, and is always
+         * current when read.
+         *
+         */
+        awaiting?: 'you' | 'them';
+        /**
+         * Only return emails whose `automated` has this value.
+         * `awaiting=you&automated=false` lists mail from people that is
+         * waiting on your reply. Combines with every other filter and with
+         * both `cursor` and `since`. An inbound email is `automated` when any of these holds, decided once
+         * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+         * `no_identifiable_sender` (no address in the envelope or From);
+         * `own_address` (a sender address is exactly one of the addresses the
+         * mail was delivered to; sharing a domain with the recipient is not
+         * enough, so a colleague or another agent in the organization is not
+         * automated);
+         * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+         * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+         * `precedence` (Precedence bulk, list, junk or auto_reply);
+         * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+         * present). The header rules only see headers captured at ingest, so
+         * older mail may lack them. This is loop and noise protection, not
+         * sender authentication.
+         *
+         */
+        automated?: 'true' | 'false';
     };
     url: '/emails';
 };
@@ -5771,7 +5981,7 @@ export type SearchEmailsData = {
     path?: never;
     query?: {
         /**
-         * Full-text search DSL query.
+         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field.
          */
         q?: string;
         /**
@@ -5833,6 +6043,53 @@ export type SearchEmailsData = {
          * Filter to emails with spam score greater than or equal to this value.
          */
         spam_score_gte?: number;
+        /**
+         * Only return emails whose `awaiting` has this value. Also available
+         * in `q` as `awaiting:you` or `awaiting:them`.
+         * The filter (either value, here, on search and as the `awaiting:`
+         * search term) matches delivered mail only: emails whose `status` is
+         * `rejected` are never returned by it. A rejected email (for example
+         * one refused because the organization is over its storage limit) was
+         * never delivered, so nobody can answer it and it is awaiting no one;
+         * its own `awaiting` field still reports the stored value, usually
+         * `you`.
+         * Whose turn it is in this email's conversation. A send counts as a
+         * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+         * (queued and scheduled replies count: they are committed to go). For
+         * an email with a `thread_id`: `them` when the thread's latest counted
+         * outbound send (by send `created_at`, including any counted reply to
+         * this email itself) is at or after the thread's latest inbound message
+         * (by `received_at`); otherwise `you`. For an email with no
+         * `thread_id`: `them` when it has at least one counted reply
+         * (`reply_count > 0` for an API key), otherwise `you`. It is a
+         * thread-level fact: every email in a thread carries the same value, and
+         * it reflects sends made by any credential in the organization,
+         * including other agent connections. It changes without a new inbound
+         * message, for example when a reply is sent, a queued reply fails, a
+         * scheduled reply is canceled, or a message is deleted, and is always
+         * current when read.
+         *
+         */
+        awaiting?: 'you' | 'them';
+        /**
+         * Only return emails whose `automated` has this value. Also
+         * available in `q` as `automated:true` or `automated:false`. An inbound email is `automated` when any of these holds, decided once
+         * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+         * `no_identifiable_sender` (no address in the envelope or From);
+         * `own_address` (a sender address is exactly one of the addresses the
+         * mail was delivered to; sharing a domain with the recipient is not
+         * enough, so a colleague or another agent in the organization is not
+         * automated);
+         * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+         * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+         * `precedence` (Precedence bulk, list, junk or auto_reply);
+         * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+         * present). The header rules only see headers captured at ingest, so
+         * older mail may lack them. This is loop and noise protection, not
+         * sender authentication.
+         *
+         */
+        automated?: 'true' | 'false';
         /**
          * Sort mode. Defaults to relevance when a text query is present,
          * otherwise `received_at_desc`.

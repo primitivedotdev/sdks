@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.email_status import EmailStatus
+from ..models.email_summary_awaiting import EmailSummaryAwaiting
 from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
 from ..models.email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from ..models.email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
@@ -17,6 +18,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
 
 
 
@@ -72,6 +75,50 @@ class EmailSummary:
             created_at (datetime.datetime):
             received_at (datetime.datetime):
             webhook_attempt_count (int):
+            reply_count (int): Number of replies recorded against this email: sends whose
+                `in_reply_to_email_id` is this email, the same linkage that populates
+                `EmailDetail.replies`, excluding sends that never went out (status
+                `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+                replies count. Under an agent connection, only the replies that agent
+                can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+                replies to this one email, not to the thread.
+            last_replied_at (datetime.datetime | None): `created_at` of the latest reply counted in `reply_count`, or
+                null when `reply_count` is 0.
+            awaiting (EmailSummaryAwaiting): Whose turn it is in this email's conversation. A send counts as a
+                reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+                (queued and scheduled replies count: they are committed to go). For
+                an email with a `thread_id`: `them` when the thread's latest counted
+                outbound send (by send `created_at`, including any counted reply to
+                this email itself) is at or after the thread's latest inbound message
+                (by `received_at`); otherwise `you`. For an email with no
+                `thread_id`: `them` when it has at least one counted reply
+                (`reply_count > 0` for an API key), otherwise `you`. It is a
+                thread-level fact: every email in a thread carries the same value, and
+                it reflects sends made by any credential in the organization,
+                including other agent connections. It changes without a new inbound
+                message, for example when a reply is sent, a queued reply fails, a
+                scheduled reply is canceled, or a message is deleted, and is always
+                current when read.
+            automated (bool): Whether the message was sent by a machine rather than a person.
+                An inbound email is `automated` when any of these holds, decided once
+                when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+                `no_identifiable_sender` (no address in the envelope or From);
+                `own_address` (a sender address is exactly one of the addresses the
+                mail was delivered to; sharing a domain with the recipient is not
+                enough, so a colleague or another agent in the organization is not
+                automated);
+                `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+                `auto_submitted` (Auto-Submitted with any keyword but `no`);
+                `precedence` (Precedence bulk, list, junk or auto_reply);
+                `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+                present). The header rules only see headers captured at ingest, so
+                older mail may lack them. This is loop and noise protection, not
+                sender authentication.
+            automated_reasons (list[str]): Why `automated` is true, in rule order; empty when it is false.
+                Current values: `null_envelope_sender`, `no_identifiable_sender`,
+                `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+                `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+                reason added after your client was built.
             message_id (None | str | Unset):
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
@@ -104,6 +151,13 @@ class EmailSummary:
             thread_id (None | Unset | UUID): Conversation thread this message belongs to. Fetch
                 `/threads/{thread_id}` for the full ordered thread. NULL on
                 messages received before threading was enabled.
+            automation_headers (EmailSummaryAutomationHeadersType0 | None | Unset): What the message declared about being
+                automated, verbatim:
+                `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+                `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+                declared none, and on messages received before these headers
+                were captured, so a null value is not evidence that a person
+                sent the message.
      """
 
     id: UUID
@@ -114,6 +168,11 @@ class EmailSummary:
     created_at: datetime.datetime
     received_at: datetime.datetime
     webhook_attempt_count: int
+    reply_count: int
+    last_replied_at: datetime.datetime | None
+    awaiting: EmailSummaryAwaiting
+    automated: bool
+    automated_reasons: list[str]
     message_id: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     org_id: None | Unset | UUID = UNSET
@@ -122,6 +181,7 @@ class EmailSummary:
     raw_size_bytes: int | None | Unset = UNSET
     webhook_status: EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset = UNSET
     thread_id: None | Unset | UUID = UNSET
+    automation_headers: EmailSummaryAutomationHeadersType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -129,6 +189,7 @@ class EmailSummary:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
         id = str(self.id)
 
         status = self.status.value
@@ -144,6 +205,22 @@ class EmailSummary:
         received_at = self.received_at.isoformat()
 
         webhook_attempt_count = self.webhook_attempt_count
+
+        reply_count = self.reply_count
+
+        last_replied_at: None | str
+        if isinstance(self.last_replied_at, datetime.datetime):
+            last_replied_at = self.last_replied_at.isoformat()
+        else:
+            last_replied_at = self.last_replied_at
+
+        awaiting = self.awaiting.value
+
+        automated = self.automated
+
+        automated_reasons = self.automated_reasons
+
+
 
         message_id: None | str | Unset
         if isinstance(self.message_id, Unset):
@@ -205,6 +282,14 @@ class EmailSummary:
         else:
             thread_id = self.thread_id
 
+        automation_headers: dict[str, Any] | None | Unset
+        if isinstance(self.automation_headers, Unset):
+            automation_headers = UNSET
+        elif isinstance(self.automation_headers, EmailSummaryAutomationHeadersType0):
+            automation_headers = self.automation_headers.to_dict()
+        else:
+            automation_headers = self.automation_headers
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -217,6 +302,11 @@ class EmailSummary:
             "created_at": created_at,
             "received_at": received_at,
             "webhook_attempt_count": webhook_attempt_count,
+            "reply_count": reply_count,
+            "last_replied_at": last_replied_at,
+            "awaiting": awaiting,
+            "automated": automated,
+            "automated_reasons": automated_reasons,
         })
         if message_id is not UNSET:
             field_dict["message_id"] = message_id
@@ -234,6 +324,8 @@ class EmailSummary:
             field_dict["webhook_status"] = webhook_status
         if thread_id is not UNSET:
             field_dict["thread_id"] = thread_id
+        if automation_headers is not UNSET:
+            field_dict["automation_headers"] = automation_headers
 
         return field_dict
 
@@ -241,6 +333,7 @@ class EmailSummary:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -269,6 +362,36 @@ class EmailSummary:
 
 
         webhook_attempt_count = d.pop("webhook_attempt_count")
+
+        reply_count = d.pop("reply_count")
+
+        def _parse_last_replied_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                last_replied_at_type_0 = isoparse(data)
+
+
+
+                return last_replied_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        last_replied_at = _parse_last_replied_at(d.pop("last_replied_at"))
+
+
+        awaiting = EmailSummaryAwaiting(d.pop("awaiting"))
+
+
+
+
+        automated = d.pop("automated")
+
+        automated_reasons = cast(list[str], d.pop("automated_reasons"))
+
 
         def _parse_message_id(data: object) -> None | str | Unset:
             if data is None:
@@ -410,6 +533,26 @@ class EmailSummary:
         thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
 
 
+        def _parse_automation_headers(data: object) -> EmailSummaryAutomationHeadersType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                automation_headers_type_0 = EmailSummaryAutomationHeadersType0.from_dict(data)
+
+
+
+                return automation_headers_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummaryAutomationHeadersType0 | None | Unset, data)
+
+        automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
+
+
         email_summary = cls(
             id=id,
             status=status,
@@ -419,6 +562,11 @@ class EmailSummary:
             created_at=created_at,
             received_at=received_at,
             webhook_attempt_count=webhook_attempt_count,
+            reply_count=reply_count,
+            last_replied_at=last_replied_at,
+            awaiting=awaiting,
+            automated=automated,
+            automated_reasons=automated_reasons,
             message_id=message_id,
             domain_id=domain_id,
             org_id=org_id,
@@ -427,6 +575,7 @@ class EmailSummary:
             raw_size_bytes=raw_size_bytes,
             webhook_status=webhook_status,
             thread_id=thread_id,
+            automation_headers=automation_headers,
         )
 
 

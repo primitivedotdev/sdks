@@ -112,15 +112,20 @@ function sentEmail(overrides: Partial<SendMailResult> = {}): SendMailResult {
 
 function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
   return {
+    awaiting: "you",
+    automated: false,
+    automated_reasons: [],
     body_html: null,
     body_text: "Rotate your API key from the dashboard.",
     created_at: "2026-05-25T00:00:02.000Z",
     domain: "agent.example",
     from_email: "help@agent.example",
     id: "email-1",
+    last_replied_at: null,
     message_id: "<reply-1@agent.example>",
     recipient: "agent@sender.example",
     received_at: "2026-05-25T00:00:02.000Z",
+    reply_count: 0,
     reply_to_sent_email_id: "sent-1",
     replies: [],
     sender: "help@agent.example",
@@ -1191,6 +1196,11 @@ describe("resolveIdempotentReplayReply", () => {
   function makeRow(overrides: Partial<EmailSearchResult>): EmailSearchResult {
     return {
       attachment_count: 0,
+      awaiting: "you",
+      automated: false,
+      automated_reasons: [],
+      last_replied_at: null,
+      reply_count: 0,
       created_at: "2026-06-01T15:00:00.000Z",
       domain: "example.com",
       from_known_address: false,
