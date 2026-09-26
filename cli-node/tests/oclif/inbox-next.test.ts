@@ -41,7 +41,10 @@ import InboxNextCommand, {
   waitForActivity,
 } from "../../src/oclif/commands/inbox-next.js";
 import { COMMANDS } from "../../src/oclif/index.js";
-import { ReplyStateUnsupportedError } from "../../src/oclif/reply-state.js";
+import {
+  AwaitingIncludesRejectedError,
+  ReplyStateUnsupportedError,
+} from "../../src/oclif/reply-state.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const AGENT = "agent@acme.primitive.email";
@@ -64,13 +67,16 @@ type FakeEmail = {
 // omits the fields). "no-automated-strict" and "no-automated-lenient":
 // reply state but not the automated filter. "ignores-automated": reports
 // the verdict but does not apply the filter.
+// "awaiting-includes-rejected": the awaiting filter predates excluding
+// undelivered (rejected) mail.
 type ServerMode =
   | "current"
   | "old-strict"
   | "old-lenient"
   | "no-automated-strict"
   | "no-automated-lenient"
-  | "ignores-automated";
+  | "ignores-automated"
+  | "awaiting-includes-rejected";
 
 // In-memory stand-in for the three endpoints `inbox next` reads, with
 // the same forward-tail and long-poll semantics as the real API.
@@ -131,7 +137,11 @@ class FakeInbox {
   }
 
   private hasAutomated(): boolean {
-    return this.mode === "current" || this.mode === "ignores-automated";
+    return (
+      this.mode === "current" ||
+      this.mode === "ignores-automated" ||
+      this.mode === "awaiting-includes-rejected"
+    );
   }
 
   private row(email: FakeEmail): Record<string, unknown> {
@@ -180,10 +190,16 @@ class FakeInbox {
       }
       const filterAwaiting = this.hasReplyState() ? query.awaiting : undefined;
       const filterAutomated =
-        this.mode === "current" && query.automated !== undefined
+        (this.mode === "current" ||
+          this.mode === "awaiting-includes-rejected") &&
+        query.automated !== undefined
           ? query.automated === "true"
           : undefined;
+      // A current server's awaiting filter matches delivered mail only.
+      const excludesRejected =
+        Boolean(filterAwaiting) && this.mode !== "awaiting-includes-rejected";
       const keep = (e: FakeEmail) =>
+        !(excludesRejected && e.status === "rejected") &&
         (!filterAwaiting || e.awaiting === filterAwaiting) &&
         (filterAutomated === undefined ||
           this.verdict(e).automated === filterAutomated);
@@ -508,7 +524,7 @@ describe("findNextAwaiting", () => {
     expect(result.outcome === "email" && result.email.id).toBe("b");
   });
 
-  it("skips rejected mail", async () => {
+  it("leaves rejected mail to the server, which never returns it as awaiting", async () => {
     inbox.add({
       id: "a",
       created_at: "2026-09-18T00:00:00.000Z",
@@ -520,6 +536,27 @@ describe("findNextAwaiting", () => {
       api: inbox.api(),
     });
     expect(result.outcome).toBe("empty");
+    expect(inbox.calls.filter((c) => c.op === "get")).toHaveLength(0);
+  });
+
+  it("fails loudly when the server's awaiting filter returns rejected mail", async () => {
+    inbox.mode = "awaiting-includes-rejected";
+    inbox.add({
+      id: "a",
+      created_at: "2026-09-18T00:00:00.000Z",
+      status: "rejected",
+    });
+    inbox.add({ id: "b", created_at: "2026-09-19T00:00:00.000Z" });
+    const error = await findNextAwaiting({
+      apiClient,
+      includeAutomated: false,
+      api: inbox.api(),
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(AwaitingIncludesRejectedError);
+    expect((error as AwaitingIncludesRejectedError).code).toBe(
+      "awaiting_rejected_unsupported",
+    );
+    expect(inbox.calls.filter((c) => c.op === "get")).toHaveLength(0);
   });
 
   it("fails loudly when an older server rejects the awaiting filter", async () => {

@@ -32,7 +32,7 @@ import {
   type AutomationHeaders,
 } from "../automated-mail.js";
 import {
-  assertReplyState,
+  assertAwaitingFilterRows,
   awaitingRejectedError,
   hasReplyState,
   isAwaitingRejectedError,
@@ -405,12 +405,12 @@ export async function findNextAwaiting(params: {
     });
     // An older server that ignored a filter would hand back rows without
     // the fields. Never read that as "awaiting you" or "from a person".
-    assertReplyState(page.rows, "GET /emails");
+    assertAwaitingFilterRows(page.rows, "GET /emails");
     if (filterAutomated)
       assertAutomatedVerdict(page.rows, "GET /emails", false);
 
     for (const row of page.rows) {
-      if (row.awaiting !== "you" || row.status === "rejected") continue;
+      if (row.awaiting !== "you") continue;
       const id = str(row.id);
       if (!id) continue;
 
@@ -654,9 +654,9 @@ class InboxNextCommand extends Command {
     primitive reply --id <id> ...   # answer it
     primitive inbox next            # the next one (exit 5 when none are left)
 
-  "Waiting on your reply" is the server's reply state (\`awaiting=you\`): the latest message in the email's thread is inbound. Sending or queueing a reply with \`primitive reply\` moves the thread to \`awaiting=them\`, so the next call moves on. A reply that fails or is canceled puts the email back. Because this reads server state rather than a local cursor, mail that arrived while you were composing is never skipped.
+  "Waiting on your reply" is the server's reply state (\`awaiting=you\`): the latest message in the email's thread is inbound. The filter covers delivered mail only: mail the server rejected (for example over the storage limit) was never delivered and is never returned. Sending or queueing a reply with \`primitive reply\` moves the thread to \`awaiting=them\`, so the next call moves on. A reply that fails or is canceled puts the email back. Because this reads server state rather than a local cursor, mail that arrived while you were composing is never skipped.
 
-  Automated mail is skipped by default, using the server's \`automated\` verdict (decided when the mail arrived) as a filter, so the call costs the same however much unanswered automated mail has piled up: bounces (null envelope sender), mailer-daemon and postmaster, mail from this inbox's own addresses or domains, and mail whose headers declare it automated (Auto-Submitted, Precedence bulk/list/junk, List-Unsubscribe, List-Id). Pass --include-automated to get it anyway; the \`automated\` verdict and its reasons are always reported.
+  Automated mail is skipped by default, using the server's \`automated\` verdict (decided when the mail arrived) as a filter, so the call costs the same however much unanswered automated mail has piled up: bounces (null envelope sender), mailer-daemon and postmaster, mail sent from the very address it was delivered to, and mail whose headers declare it automated (Auto-Submitted, Precedence bulk/list/junk, List-Unsubscribe, List-Id). Pass --include-automated to get it anyway; the \`automated\` verdict and its reasons are always reported.
 
   NOT A WORK QUEUE. Nothing is claimed or locked. Two agents running \`inbox next\` on the same inbox get the same email until one of them replies, and both may answer it. Run one agent per inbox, or coordinate outside Primitive.
 

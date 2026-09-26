@@ -135,8 +135,10 @@ class EmailDetail:
                 An inbound email is `automated` when any of these holds, decided once
                 when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
                 `no_identifiable_sender` (no address in the envelope or From);
-                `own_address` (a sender address is one the mail was delivered to, or
-                is on one of the organization's own active domains);
+                `own_address` (a sender address is exactly one of the addresses the
+                mail was delivered to; sharing a domain with the recipient is not
+                enough, so a colleague or another agent in the organization is not
+                automated);
                 `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
                 `auto_submitted` (Auto-Submitted with any keyword but `no`);
                 `precedence` (Precedence bulk, list, junk or auto_reply);

@@ -6,6 +6,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  AUTOMATED_FLAG_DESCRIPTION,
+  AUTOMATED_VALUES,
+  AutomatedFilterUnsupportedError,
+} from "../automated-filter.js";
+import {
   AWAITING_FLAG_DESCRIPTION,
   AWAITING_VALUES,
   ReplyStateUnsupportedError,
@@ -51,6 +56,10 @@ class EmailsWatchCommand extends Command {
         "Override the primary API base URL. Internal testing only; not documented to customers.",
       env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
+    }),
+    automated: Flags.string({
+      description: AUTOMATED_FLAG_DESCRIPTION,
+      options: [...AUTOMATED_VALUES],
     }),
     awaiting: Flags.string({
       description: AWAITING_FLAG_DESCRIPTION,
@@ -153,7 +162,10 @@ class EmailsWatchCommand extends Command {
           since,
         });
       } catch (error) {
-        if (error instanceof ReplyStateUnsupportedError) {
+        if (
+          error instanceof ReplyStateUnsupportedError ||
+          error instanceof AutomatedFilterUnsupportedError
+        ) {
           throw cliError(error.message);
         }
         throw error;

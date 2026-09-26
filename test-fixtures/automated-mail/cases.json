@@ -1,5 +1,5 @@
 {
-  "description": "Cases for the automated-mail rule set, shared by the Primitive API (which decides `automated` and `automated_reasons` when an email arrives) and the CLI's automated-mail module. Both run every case; keep the two copies identical. `email` uses the API's field names; `own_domains` are the organization's own domains.",
+  "description": "Cases for the automated-mail rule set, shared by the Primitive API (which decides `automated` and `automated_reasons` when an email arrives) and the CLI's automated-mail module. Both run every case; keep the two copies identical. `email` uses the API's field names. own_address means a sender address that is exactly one of the addresses the mail was delivered to; sharing a domain with the recipient is not enough.",
   "cases": [
     {
       "name": "ordinary mail from a person",
@@ -19,9 +19,6 @@
         ],
         "automation_headers": null
       },
-      "own_domains": [
-        "acme.test"
-      ],
       "expected": {
         "automated": false,
         "reasons": []
@@ -38,7 +35,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -57,7 +53,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -76,7 +71,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -95,7 +89,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": false,
         "reasons": []
@@ -112,7 +105,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -134,7 +126,6 @@
           "precedence": "bulk"
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -156,7 +147,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -178,7 +168,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -206,7 +195,6 @@
         ],
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -227,7 +215,6 @@
         ],
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -236,40 +223,46 @@
       }
     },
     {
-      "name": "from one of the org's own domains",
+      "name": "a colleague on the recipient's own domain is a person",
       "email": {
-        "sender": "bot@acme.test",
-        "smtp_mail_from": "bot@acme.test",
-        "from_header": "Bot <bot@acme.test>",
+        "sender": "dana@acme.test",
+        "smtp_mail_from": "dana@acme.test",
+        "from_header": "Dana <dana@acme.test>",
         "recipient": "agent@acme.test",
-        "smtp_rcpt_to": null,
-        "to_addresses": null,
+        "smtp_rcpt_to": [
+          "agent@acme.test"
+        ],
+        "to_addresses": [
+          {
+            "name": null,
+            "address": "agent@acme.test"
+          }
+        ],
         "automation_headers": null
       },
-      "own_domains": [
-        "acme.test"
-      ],
       "expected": {
-        "automated": true,
-        "reasons": [
-          "own_address"
-        ]
+        "automated": false,
+        "reasons": []
       }
     },
     {
-      "name": "own domains match the whole domain, not a subdomain",
+      "name": "another agent in the same organization is not automated",
       "email": {
-        "sender": "bot@mail.acme.test",
-        "smtp_mail_from": "bot@mail.acme.test",
-        "from_header": "bot@mail.acme.test",
-        "recipient": "agent@acme.test",
-        "smtp_rcpt_to": null,
-        "to_addresses": null,
+        "sender": "billing-agent@acme.primitive.email",
+        "smtp_mail_from": "billing-agent@acme.primitive.email",
+        "from_header": "Billing agent <billing-agent@acme.primitive.email>",
+        "recipient": "support-agent@acme.primitive.email",
+        "smtp_rcpt_to": [
+          "support-agent@acme.primitive.email"
+        ],
+        "to_addresses": [
+          {
+            "name": null,
+            "address": "support-agent@acme.primitive.email"
+          }
+        ],
         "automation_headers": null
       },
-      "own_domains": [
-        "acme.test"
-      ],
       "expected": {
         "automated": false,
         "reasons": []
@@ -286,7 +279,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -305,7 +297,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -324,7 +315,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -344,7 +334,6 @@
         "to_addresses": null,
         "automation_headers": null
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -365,7 +354,6 @@
           "auto_submitted": "auto-generated"
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -386,7 +374,6 @@
           "auto_submitted": "Auto-Replied; owner-email=\"alex@example.com\""
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -407,7 +394,6 @@
           "auto_submitted": " No "
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": false,
         "reasons": []
@@ -426,7 +412,6 @@
           "auto_submitted": "; x=y"
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": false,
         "reasons": []
@@ -445,7 +430,6 @@
           "precedence": "\tJUNK\n"
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -466,7 +450,6 @@
           "precedence": "auto_reply"
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -487,7 +470,6 @@
           "precedence": "first-class"
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": false,
         "reasons": []
@@ -507,7 +489,6 @@
           "list_id": "<weekly.brand.test>"
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": true,
         "reasons": [
@@ -531,7 +512,6 @@
           "precedence": " "
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": false,
         "reasons": []
@@ -554,19 +534,18 @@
           "auto_submitted": null
         }
       },
-      "own_domains": [],
       "expected": {
         "automated": false,
         "reasons": []
       }
     },
     {
-      "name": "every loop rule and every declared header together, in rule order",
+      "name": "every rule and every declared header together, in rule order",
       "email": {
         "sender": "",
         "smtp_mail_from": "",
         "from_header": "MAILER-DAEMON@acme.test",
-        "recipient": "agent@acme.test",
+        "recipient": "mailer-daemon@acme.test",
         "smtp_rcpt_to": null,
         "to_addresses": null,
         "automation_headers": {
@@ -576,9 +555,6 @@
           "auto_submitted": "auto-generated"
         }
       },
-      "own_domains": [
-        "acme.test"
-      ],
       "expected": {
         "automated": true,
         "reasons": [

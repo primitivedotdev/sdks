@@ -27,7 +27,7 @@ import {
 } from "./endpoints-test-redirect.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
 import {
-  assertReplyState,
+  assertAwaitingFilterRows,
   awaitingRejectedError,
   ensureSearchReportsReplyState,
   isAwaitingRejectedError,
@@ -1177,7 +1177,7 @@ export function createOperationCommand(
         if (replyStateSurface) {
           try {
             const rows = Array.isArray(envelope?.data) ? envelope.data : [];
-            assertReplyState(rows, replyStateSurface);
+            assertAwaitingFilterRows(rows, replyStateSurface);
             // Search ignores unknown parameters, so an empty page alone
             // does not show the filter was applied. List rejects them.
             if (rows.length === 0 && operation.sdkName === "searchEmails") {

@@ -1590,8 +1590,10 @@ export type EmailSummary = {
      * An inbound email is `automated` when any of these holds, decided once
      * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
      * `no_identifiable_sender` (no address in the envelope or From);
-     * `own_address` (a sender address is one the mail was delivered to, or
-     * is on one of the organization's own active domains);
+     * `own_address` (a sender address is exactly one of the addresses the
+     * mail was delivered to; sharing a domain with the recipient is not
+     * enough, so a colleague or another agent in the organization is not
+     * automated);
      * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
      * `auto_submitted` (Auto-Submitted with any keyword but `no`);
      * `precedence` (Precedence bulk, list, junk or auto_reply);
@@ -1883,8 +1885,10 @@ export type EmailDetail = {
      * An inbound email is `automated` when any of these holds, decided once
      * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
      * `no_identifiable_sender` (no address in the envelope or From);
-     * `own_address` (a sender address is one the mail was delivered to, or
-     * is on one of the organization's own active domains);
+     * `own_address` (a sender address is exactly one of the addresses the
+     * mail was delivered to; sharing a domain with the recipient is not
+     * enough, so a colleague or another agent in the organization is not
+     * automated);
      * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
      * `auto_submitted` (Auto-Submitted with any keyword but `no`);
      * `precedence` (Precedence bulk, list, junk or auto_reply);
@@ -5897,7 +5901,15 @@ export type ListEmailsData = {
         /**
          * Only return emails whose `awaiting` has this value. `awaiting=you`
          * lists mail waiting on your reply. Combines with every other filter
-         * and with both `cursor` and `since`. Whose turn it is in this email's conversation. A send counts as a
+         * and with both `cursor` and `since`.
+         * The filter (either value, here, on search and as the `awaiting:`
+         * search term) matches delivered mail only: emails whose `status` is
+         * `rejected` are never returned by it. A rejected email (for example
+         * one refused because the organization is over its storage limit) was
+         * never delivered, so nobody can answer it and it is awaiting no one;
+         * its own `awaiting` field still reports the stored value, usually
+         * `you`.
+         * Whose turn it is in this email's conversation. A send counts as a
          * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
          * (queued and scheduled replies count: they are committed to go). For
          * an email with a `thread_id`: `them` when the thread's latest counted
@@ -5922,8 +5934,10 @@ export type ListEmailsData = {
          * both `cursor` and `since`. An inbound email is `automated` when any of these holds, decided once
          * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
          * `no_identifiable_sender` (no address in the envelope or From);
-         * `own_address` (a sender address is one the mail was delivered to, or
-         * is on one of the organization's own active domains);
+         * `own_address` (a sender address is exactly one of the addresses the
+         * mail was delivered to; sharing a domain with the recipient is not
+         * enough, so a colleague or another agent in the organization is not
+         * automated);
          * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
          * `auto_submitted` (Auto-Submitted with any keyword but `no`);
          * `precedence` (Precedence bulk, list, junk or auto_reply);
@@ -5967,7 +5981,7 @@ export type SearchEmailsData = {
     path?: never;
     query?: {
         /**
-         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field). Supports `automated:true` and `automated:false` to filter on the `automated` field.
+         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field.
          */
         q?: string;
         /**
@@ -6031,7 +6045,15 @@ export type SearchEmailsData = {
         spam_score_gte?: number;
         /**
          * Only return emails whose `awaiting` has this value. Also available
-         * in `q` as `awaiting:you` or `awaiting:them`. Whose turn it is in this email's conversation. A send counts as a
+         * in `q` as `awaiting:you` or `awaiting:them`.
+         * The filter (either value, here, on search and as the `awaiting:`
+         * search term) matches delivered mail only: emails whose `status` is
+         * `rejected` are never returned by it. A rejected email (for example
+         * one refused because the organization is over its storage limit) was
+         * never delivered, so nobody can answer it and it is awaiting no one;
+         * its own `awaiting` field still reports the stored value, usually
+         * `you`.
+         * Whose turn it is in this email's conversation. A send counts as a
          * reply unless its status is `gate_denied`, `agent_failed`, `canceled`
          * (queued and scheduled replies count: they are committed to go). For
          * an email with a `thread_id`: `them` when the thread's latest counted
@@ -6054,8 +6076,10 @@ export type SearchEmailsData = {
          * available in `q` as `automated:true` or `automated:false`. An inbound email is `automated` when any of these holds, decided once
          * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
          * `no_identifiable_sender` (no address in the envelope or From);
-         * `own_address` (a sender address is one the mail was delivered to, or
-         * is on one of the organization's own active domains);
+         * `own_address` (a sender address is exactly one of the addresses the
+         * mail was delivered to; sharing a domain with the recipient is not
+         * enough, so a colleague or another agent in the organization is not
+         * automated);
          * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
          * `auto_submitted` (Auto-Submitted with any keyword but `no`);
          * `precedence` (Precedence bulk, list, junk or auto_reply);

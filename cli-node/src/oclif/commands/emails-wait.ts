@@ -6,6 +6,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  AUTOMATED_FLAG_DESCRIPTION,
+  AUTOMATED_VALUES,
+  AutomatedFilterUnsupportedError,
+} from "../automated-filter.js";
+import {
   AWAITING_FLAG_DESCRIPTION,
   AWAITING_VALUES,
   ReplyStateUnsupportedError,
@@ -40,6 +45,7 @@ class EmailsWaitCommand extends Command {
     "<%= config.bin %> emails wait --subject verify --number 5 --timeout 120",
     "<%= config.bin %> emails wait --q 'domain:example.com' --table",
     "<%= config.bin %> emails wait --awaiting you --include-existing",
+    "<%= config.bin %> emails wait --awaiting you --automated false",
   ];
 
   static flags = {
@@ -53,6 +59,10 @@ class EmailsWaitCommand extends Command {
         "Override the primary API base URL. Internal testing only; not documented to customers.",
       env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
+    }),
+    automated: Flags.string({
+      description: AUTOMATED_FLAG_DESCRIPTION,
+      options: [...AUTOMATED_VALUES],
     }),
     awaiting: Flags.string({
       description: AWAITING_FLAG_DESCRIPTION,
@@ -163,7 +173,10 @@ class EmailsWaitCommand extends Command {
           since,
         });
       } catch (error) {
-        if (error instanceof ReplyStateUnsupportedError) {
+        if (
+          error instanceof ReplyStateUnsupportedError ||
+          error instanceof AutomatedFilterUnsupportedError
+        ) {
           throw cliError(error.message);
         }
         throw error;

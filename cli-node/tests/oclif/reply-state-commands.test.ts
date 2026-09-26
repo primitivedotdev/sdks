@@ -475,6 +475,23 @@ describe("generated emails list / search with --awaiting", () => {
     expect(result.stderr).toContain("rejected the `awaiting` filter");
   });
 
+  it("refuses rejected rows returned by the awaiting filter", async () => {
+    mocks.listEmails.mockResolvedValue({
+      data: {
+        success: true,
+        data: [row({ status: "rejected" })],
+        meta: { cursor: null },
+      },
+    });
+    const result = await runCommand(COMMANDS["emails:list-emails"], [
+      "--awaiting",
+      "you",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("does not exclude undelivered mail yet");
+  });
+
   it("prints rows that carry reply state", async () => {
     mocks.listEmails.mockResolvedValue({
       data: { success: true, data: [row()], meta: { cursor: null } },

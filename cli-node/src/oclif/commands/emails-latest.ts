@@ -13,7 +13,7 @@ import {
   AWAITING_FLAG_DESCRIPTION,
   AWAITING_VALUES,
   type Awaiting,
-  assertReplyState,
+  assertAwaitingFilterRows,
   awaitingRejectedError,
   formatAwaitingCell,
   formatRepliesCell,
@@ -211,7 +211,7 @@ class EmailsLatestCommand extends Command {
       // they were filtered.
       if (awaiting) {
         try {
-          assertReplyState(envelope?.data ?? [], "GET /emails");
+          assertAwaitingFilterRows(envelope?.data ?? [], "GET /emails");
         } catch (error) {
           if (!(error instanceof ReplyStateUnsupportedError)) throw error;
           process.stderr.write(`${error.message}\n`);

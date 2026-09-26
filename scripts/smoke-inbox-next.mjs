@@ -17,7 +17,8 @@ const config = await mkdtemp(join(tmpdir(), "primitive-inbox-next-smoke-"));
 const AGENT = "agent@acme.primitive.test";
 
 // "current" | "old-strict" | "old-lenient" (no reply state) |
-// "no-automated" (reply state, but no automated verdict or filter)
+// "no-automated" (reply state, but no automated verdict or filter) |
+// "includes-rejected" (an awaiting filter that still returns rejected mail)
 let mode = "current";
 const emails = [];
 const log = [];
@@ -43,7 +44,7 @@ function addEmail(overrides = {}) {
 const cursorOf = (email) => `${email.created_at}|${email.id}`;
 
 function present(email) {
-  if (mode === "current") return email;
+  if (mode === "current" || mode === "includes-rejected") return email;
   const { automated: _x, automated_reasons: _y, ...withoutVerdict } = email;
   if (mode === "no-automated") return withoutVerdict;
   const { awaiting: _a, reply_count: _r, last_replied_at: _l, ...rest } = withoutVerdict;
@@ -57,6 +58,8 @@ function send(response, status, body) {
 }
 
 function matches(email, awaiting, automated) {
+  // The awaiting filter matches delivered mail only.
+  if (awaiting && email.status === "rejected" && mode !== "includes-rejected") return false;
   return (!awaiting || email.awaiting === awaiting) &&
     (automated === undefined || String(email.automated) === automated);
 }
@@ -84,8 +87,8 @@ const server = createServer(async (request, response) => {
       send(response, 400, { success: false, error: { code: "validation_error", message: "Unrecognized key(s) in object: 'automated'" } });
       return;
     }
-    const awaiting = mode === "current" || mode === "no-automated" ? query.awaiting : undefined;
-    const automated = mode === "current" ? query.automated : undefined;
+    const awaiting = mode === "current" || mode === "no-automated" || mode === "includes-rejected" ? query.awaiting : undefined;
+    const automated = mode === "current" || mode === "includes-rejected" ? query.automated : undefined;
     const limit = Number(query.limit ?? 50);
     if (query.since) {
       let rows = forwardTail(query.since, awaiting, automated);
@@ -176,6 +179,9 @@ function run(args) {
 }
 
 try {
+  // Refused on arrival (over the storage limit): never delivered, so the
+  // server never returns it as awaiting you.
+  const rejected = addEmail({ status: "rejected", subject: "Refused" });
   // An email awaiting a reply, behind an older bounce and newsletter.
   const bounce = addEmail({ sender: "", from_header: "MAILER-DAEMON@mx.remote.test", from_email: "MAILER-DAEMON@mx.remote.test", subject: "Undeliverable",
     automated: true, automated_reasons: ["null_envelope_sender", "mailer_daemon"] });
@@ -196,6 +202,7 @@ try {
   assert.equal(firstCheck[0].query.awaiting, "you");
   assert.equal(firstCheck[0].query.automated, "false");
   assert.ok(!log.some((entry) => entry.path === `/v1/emails/${bounce.id}`));
+  assert.ok(!log.some((entry) => entry.path === `/v1/emails/${rejected.id}`));
 
   const asJson = await run(["inbox", "next", "--json"]);
   assert.equal(asJson.code, 0, asJson.stderr);
@@ -274,6 +281,11 @@ try {
   const noAutomatedIncluded = await run(["inbox", "next", "--include-automated", "--json"]);
   assert.equal(noAutomatedIncluded.code, 0, noAutomatedIncluded.stderr);
   assert.equal(JSON.parse(noAutomatedIncluded.stdout).automated, null);
+  // An awaiting filter that still returns rejected mail fails loudly.
+  mode = "includes-rejected";
+  const includesRejected = await run(["inbox", "next", "--json"]);
+  assert.equal(includesRejected.code, 1);
+  assert.equal(JSON.parse(includesRejected.stdout).error.code, "awaiting_rejected_unsupported");
   mode = "current";
   const currentEmptySearch = await run(["search", "nomatch", "--awaiting", "you"]);
   assert.equal(currentEmptySearch.code, 0, currentEmptySearch.stderr);
@@ -314,7 +326,7 @@ try {
   assert.match(timedOut.stderr, /waiting up to 2s/);
   assert.ok(Date.now() - started >= 1500, "--wait must actually hold until the timeout");
 
-  console.log("inbox next: email, reply loop, empty, automated, old servers, --wait arrival, --wait race and --wait timeout passed.");
+  console.log("inbox next: email, reply loop, empty, automated, rejected, old servers, --wait arrival, --wait race and --wait timeout passed.");
 } finally {
   server.closeAllConnections();
   await new Promise((done) => server.close(done));

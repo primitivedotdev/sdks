@@ -24,11 +24,10 @@
  *     to a null sender is forbidden and would itself bounce.
  *   - no_identifiable_sender: neither the envelope nor the From header
  *     carries an address. Treated as automated rather than guessed at.
- *   - own_address: From is one of the addresses the mail was delivered
- *     to (or an explicitly listed self address), or its domain is one
- *     of the explicitly listed self domains (the API passes the
- *     organization's own active domains), so answering it would talk to
- *     ourselves.
+ *   - own_address: From is exactly one of the addresses the mail was
+ *     delivered to (or an explicitly listed self address), so answering
+ *     it would talk to ourselves. Sharing a domain is not enough: a
+ *     colleague or another agent on the same domain is a person here.
  *   - mailer_daemon: From is mailer-daemon@ or postmaster@. The handler
  *     only applies this to the inbound domain (a backup for bounces
  *     with a non-empty envelope); the API applies it to any domain
@@ -83,8 +82,6 @@ export type AutomatedMailInput = {
   inboundAddresses: Array<string | null | undefined>;
   /** Extra addresses that count as our own. */
   extraSelfAddresses?: string[];
-  /** Domains whose every address counts as our own (exact match). */
-  selfDomains?: string[];
   /**
    * Which domains a mailer-daemon/postmaster sender must come from to
    * count. "inbound" matches the scaffolded handler; "any" is what the
@@ -145,21 +142,16 @@ export function loopReasons(input: AutomatedMailInput): AutomatedReason[] {
   const extraSelfAddresses = new Set(
     (input.extraSelfAddresses ?? []).map((address) => address.toLowerCase()),
   );
-  const selfDomains = new Set(
-    (input.selfDomains ?? []).map((domain) => domain.toLowerCase()),
-  );
   const daemonScope = input.daemonScope ?? "any";
 
   for (const from of fromAddresses) {
-    const fromDomain = domainPart(from);
     if (
-      (inboundAddresses.has(from) ||
-        extraSelfAddresses.has(from) ||
-        (fromDomain !== null && selfDomains.has(fromDomain))) &&
+      (inboundAddresses.has(from) || extraSelfAddresses.has(from)) &&
       !reasons.includes("own_address")
     ) {
       reasons.push("own_address");
     }
+    const fromDomain = domainPart(from);
     const daemonDomainMatches =
       daemonScope === "any" ||
       (fromDomain !== null && inboundDomains.has(fromDomain));
@@ -220,7 +212,7 @@ export function classifyAutomatedMail(
 export const AUTOMATED_REASON_DESCRIPTIONS: Record<AutomatedReason, string> = {
   null_envelope_sender: "null envelope sender (a bounce)",
   no_identifiable_sender: "no sender address in the envelope or From header",
-  own_address: "sent from one of this inbox's own addresses or domains",
+  own_address: "sent from the very address it was delivered to",
   mailer_daemon: "sent by mailer-daemon or postmaster",
   auto_submitted: "Auto-Submitted header marks it as machine-sent",
   precedence: "Precedence header is bulk, list, junk or auto_reply",

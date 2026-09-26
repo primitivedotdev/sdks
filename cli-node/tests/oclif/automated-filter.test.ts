@@ -36,6 +36,11 @@ import {
   isAutomatedRejectedError,
   queryUsesAutomated,
 } from "../../src/oclif/automated-filter.js";
+import {
+  buildEmailSearchQuery,
+  fetchEmailSearchPage,
+  filtersFromFlags,
+} from "../../src/oclif/commands/emails-poll.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
@@ -350,5 +355,84 @@ describe("generated emails list / search with --automated", () => {
     ]);
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("rejected the `automated` filter");
+  });
+});
+
+describe("emails wait / watch --automated", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("adds the flag to both commands", () => {
+    for (const id of ["emails:wait", "emails:watch"]) {
+      const flags = (
+        COMMANDS[id] as unknown as {
+          flags: Record<string, { options?: string[] }>;
+        }
+      ).flags;
+      expect(flags.automated?.options).toEqual(["true", "false"]);
+    }
+  });
+
+  it("sends the filter and requires matching rows", async () => {
+    const filters = filtersFromFlags({ automated: "false" });
+    expect(buildEmailSearchQuery({ filters, pageSize: 10 }).automated).toBe(
+      "false",
+    );
+    expect(
+      buildEmailSearchQuery({ filters: filtersFromFlags({}), pageSize: 10 })
+        .automated,
+    ).toBeUndefined();
+    mocks.searchEmails.mockResolvedValue({
+      data: { success: true, data: [row()], meta: { cursor: null } },
+    });
+    const page = await fetchEmailSearchPage({
+      apiClient: { client: {} } as never,
+      filters,
+      pageSize: 10,
+    });
+    expect(page.ok).toBe(true);
+  });
+
+  it("rejects an invalid value", () => {
+    expect(() => filtersFromFlags({ automated: "yes" })).toThrow(
+      "--automated must be true or false.",
+    );
+  });
+
+  it("fails loudly on an older server, rejected or ignored", async () => {
+    mocks.searchEmails.mockResolvedValue(REJECTED);
+    await expect(
+      fetchEmailSearchPage({
+        apiClient: { client: {} } as never,
+        filters: filtersFromFlags({ automated: "false" }),
+        pageSize: 10,
+      }),
+    ).rejects.toThrow(/rejected the `automated` filter/);
+    mocks.searchEmails.mockResolvedValue({
+      data: { success: true, data: [oldRow()], meta: { cursor: null } },
+    });
+    await expect(
+      fetchEmailSearchPage({
+        apiClient: { client: {} } as never,
+        filters: filtersFromFlags({ q: "automated:false" }),
+        pageSize: 10,
+      }),
+    ).rejects.toThrow(AutomatedFilterUnsupportedError);
+  });
+
+  it("probes an empty page", async () => {
+    mocks.searchEmails
+      .mockResolvedValueOnce({
+        data: { success: true, data: [], meta: { cursor: null } },
+      })
+      .mockResolvedValueOnce({
+        data: { success: true, data: [oldRow()], meta: { cursor: null } },
+      });
+    await expect(
+      fetchEmailSearchPage({
+        apiClient: { client: {} } as never,
+        filters: filtersFromFlags({ automated: "true" }),
+        pageSize: 10,
+      }),
+    ).rejects.toThrow(AutomatedFilterUnsupportedError);
   });
 });

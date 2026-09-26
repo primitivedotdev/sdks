@@ -289,7 +289,6 @@ describe("scaffolded isLoop parity", () => {
 type FixtureCase = {
   name: string;
   email: Record<string, unknown>;
-  own_domains: string[];
   expected: { automated: boolean; reasons: string[] };
 };
 
@@ -310,32 +309,19 @@ describe("shared automated-mail fixture", () => {
   it.each(
     FIXTURE.cases.map((c) => [c.name, c] as const),
   )("agrees with the API rules for: %s", (_name, c) => {
-    const verdict = classifyAutomatedMail({
-      ...automatedInputFromEmail(c.email),
-      selfDomains: c.own_domains,
-    });
+    const verdict = classifyAutomatedMail(automatedInputFromEmail(c.email));
     expect(verdict.reasons).toEqual(c.expected.reasons);
     expect(verdict.automated).toBe(c.expected.automated);
   });
 
-  it("matches own domains exactly, never by suffix", () => {
+  it("never treats a shared domain as its own address", () => {
     expect(
       loopReasons(
         input({
-          envelopeSender: "bot@mail.acme.test",
-          fromHeaders: ["bot@mail.acme.test"],
-          selfDomains: ["ACME.test"],
+          envelopeSender: "dana@acme.primitive.email",
+          fromHeaders: ["Dana <dana@acme.primitive.email>"],
         }),
       ),
     ).toEqual([]);
-    expect(
-      loopReasons(
-        input({
-          envelopeSender: "bot@acme.test",
-          fromHeaders: ["bot@acme.test"],
-          selfDomains: ["ACME.test"],
-        }),
-      ),
-    ).toEqual(["own_address"]);
   });
 });

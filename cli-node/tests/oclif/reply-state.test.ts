@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  AWAITING_REJECTED_UNSUPPORTED_CODE,
+  AwaitingIncludesRejectedError,
+  assertAwaitingFilterRows,
   assertReplyState,
   formatAwaitingCell,
   formatRepliesCell,
@@ -139,5 +142,41 @@ describe("table cells", () => {
     expect(formatRepliesCell({ ...WITH_STATE, reply_count: 3 })).toBe("3");
     expect(formatAwaitingCell({})).toBe("-");
     expect(formatRepliesCell({})).toBe("-");
+  });
+});
+
+describe("assertAwaitingFilterRows", () => {
+  it("passes delivered rows with reply state", () => {
+    expect(() =>
+      assertAwaitingFilterRows(
+        [{ ...WITH_STATE, status: "completed" }, WITH_STATE],
+        "GET /emails",
+      ),
+    ).not.toThrow();
+  });
+
+  it("refuses a rejected row returned by the awaiting filter", () => {
+    try {
+      assertAwaitingFilterRows(
+        [{ ...WITH_STATE, status: "rejected" }],
+        "GET /emails",
+      );
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(AwaitingIncludesRejectedError);
+      expect(error).toBeInstanceOf(ReplyStateUnsupportedError);
+      expect((error as AwaitingIncludesRejectedError).code).toBe(
+        AWAITING_REJECTED_UNSUPPORTED_CODE,
+      );
+      expect((error as Error).message).toContain(
+        "GET /emails returned 1 email with status `rejected`",
+      );
+    }
+  });
+
+  it("still requires reply state first", () => {
+    expect(() =>
+      assertAwaitingFilterRows([{ id: "x" }], "GET /emails"),
+    ).toThrow(/does not support reply state yet/);
   });
 });

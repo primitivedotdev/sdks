@@ -178,8 +178,8 @@ primitive inbox next --json               # the next one
 | 5 | Nothing awaits your reply (with `--wait`: still nothing at `--timeout`). |
 
 - Automated mail is skipped unless you pass `--include-automated`: null envelope
-  sender (bounces), mailer-daemon and postmaster, mail from the inbox's own
-  addresses or domains, and mail that declares itself automated (Auto-Submitted,
+  sender (bounces), mailer-daemon and postmaster, mail sent from the very address
+  it was delivered to, and mail that declares itself automated (Auto-Submitted,
   Precedence bulk/list/junk, List-Unsubscribe, List-Id). The API decides this
   when the mail arrives (`automated`, `automated_reasons` on every email) and
   `inbox next` filters on it server-side (`awaiting=you&automated=false`), so a
@@ -188,8 +188,12 @@ primitive inbox next --json               # the next one
   awaits. `automation_headers_known: false` means the email had no automation
   headers on record (none declared, or received before they were captured), so
   `automated: false` rests on the sender checks alone. Filter on the verdict
-  yourself with `--automated true|false` on `emails list` and `emails search`,
-  or `automated:false` in a search query.
+  yourself with `--automated true|false` on `emails list`, `emails search`,
+  `emails wait` and `emails watch`, or `automated:false` in a search query.
+- The `awaiting` filter covers delivered mail only: mail the server rejected
+  (for example over the storage limit) was never delivered and is never
+  returned as awaiting you. A server whose filter still returns rejected mail
+  fails with `awaiting_rejected_unsupported`.
 - `--wait [--timeout N]` blocks until something awaits you (default 300 seconds,
   0 waits forever). It reads the inbox's newest position before checking reply
   state, then long-polls from that position and re-checks on every arrival and

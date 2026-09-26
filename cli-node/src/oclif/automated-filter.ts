@@ -16,6 +16,11 @@ import { searchEmails } from "@primitivedotdev/api-core";
 
 export const AUTOMATED_FILTER_UNSUPPORTED_CODE = "automated_filter_unsupported";
 
+export const AUTOMATED_VALUES = ["true", "false"] as const;
+
+export const AUTOMATED_FLAG_DESCRIPTION =
+  "Only emails whose server-decided `automated` verdict is this value: `false` = sent by a person, `true` = bounces, auto-replies, list and newsletter mail, and mail from the address it was sent to. Fails if the server does not support the automated filter yet.";
+
 export class AutomatedFilterUnsupportedError extends Error {
   code: string = AUTOMATED_FILTER_UNSUPPORTED_CODE;
 

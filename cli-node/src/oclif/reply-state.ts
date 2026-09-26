@@ -16,7 +16,7 @@ export type Awaiting = "you" | "them";
 export const AWAITING_VALUES: readonly Awaiting[] = ["you", "them"];
 
 export const AWAITING_FLAG_DESCRIPTION =
-  "Only emails whose reply state is this value: `you` = waiting on your reply (the thread's latest message is inbound), `them` = you replied last. Queued and scheduled replies count as replied. Fails if the server does not report reply state yet.";
+  "Only emails whose reply state is this value: `you` = waiting on your reply (the thread's latest message is inbound), `them` = you replied last. Queued and scheduled replies count as replied. Delivered mail only: rejected mail is never returned. Fails if the server does not report reply state yet.";
 
 export const REPLY_STATE_UNSUPPORTED_CODE = "reply_state_unsupported";
 
@@ -78,6 +78,46 @@ export function assertReplyState(rows: readonly unknown[], surface: string) {
   if (missing > 0) {
     throw new ReplyStateUnsupportedError(
       `${surface} returned ${missing} of ${rows.length} email${rows.length === 1 ? "" : "s"} without the \`awaiting\` and \`reply_count\` fields.`,
+    );
+  }
+}
+
+export const AWAITING_REJECTED_UNSUPPORTED_CODE =
+  "awaiting_rejected_unsupported";
+
+/**
+ * The `awaiting` filter matches delivered mail only: a rejected email
+ * (for example refused over the storage limit) was never delivered, so it
+ * awaits no one. A server that returns one through the filter predates
+ * that, and an agent would be handed mail nobody can answer.
+ */
+export class AwaitingIncludesRejectedError extends ReplyStateUnsupportedError {
+  constructor(detail: string) {
+    super(detail);
+    this.message = `The server's \`awaiting\` filter does not exclude undelivered mail yet: ${detail} Upgrade to a server whose \`awaiting\` filter matches delivered mail only.`;
+    this.name = "AwaitingIncludesRejectedError";
+    this.code = AWAITING_REJECTED_UNSUPPORTED_CODE;
+  }
+}
+
+/**
+ * For rows returned BY an `awaiting` filter (not the unfiltered probe):
+ * every row carries reply state, and none has status `rejected`.
+ */
+export function assertAwaitingFilterRows(
+  rows: readonly unknown[],
+  surface: string,
+): void {
+  assertReplyState(rows, surface);
+  const rejected = rows.filter(
+    (row) =>
+      row !== null &&
+      typeof row === "object" &&
+      (row as { status?: unknown }).status === "rejected",
+  ).length;
+  if (rejected > 0) {
+    throw new AwaitingIncludesRejectedError(
+      `${surface} returned ${rejected} email${rejected === 1 ? "" : "s"} with status \`rejected\`.`,
     );
   }
 }

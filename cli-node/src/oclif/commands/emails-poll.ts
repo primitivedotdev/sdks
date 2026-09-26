@@ -6,8 +6,16 @@ import type {
 } from "@primitivedotdev/api-core";
 import { searchEmails } from "@primitivedotdev/api-core";
 import {
+  AUTOMATED_VALUES,
+  assertAutomatedVerdict,
+  automatedRejectedError,
+  ensureSearchReportsAutomated,
+  isAutomatedRejectedError,
+  queryUsesAutomated,
+} from "../automated-filter.js";
+import {
   type Awaiting,
-  assertReplyState,
+  assertAwaitingFilterRows,
   awaitingRejectedError,
   ensureSearchReportsReplyState,
   isAwaitingRejectedError,
@@ -19,6 +27,7 @@ export const DEFAULT_EMAIL_POLL_PAGE_SIZE = 50;
 export const MAX_EMAIL_POLL_PAGE_SIZE = 100;
 
 export type EmailPollFilters = {
+  automated?: boolean;
   awaiting?: Awaiting;
   body?: string;
   domain?: string;
@@ -34,6 +43,7 @@ export type EmailPollFilters = {
 };
 
 export type EmailPollFilterFlags = {
+  automated?: string;
   awaiting?: string;
   body?: string;
   domain?: string;
@@ -81,7 +91,15 @@ export function normalizeIsoDate(value: string, label: string): string {
 export function filtersFromFlags(
   flags: EmailPollFilterFlags,
 ): EmailPollFilters {
+  if (
+    flags.automated !== undefined &&
+    !(AUTOMATED_VALUES as readonly string[]).includes(flags.automated)
+  ) {
+    throw new Error("--automated must be true or false.");
+  }
   return {
+    automated:
+      flags.automated === undefined ? undefined : flags.automated === "true",
     awaiting: flags.awaiting as Awaiting | undefined,
     body: flags.body,
     domain: flags.domain,
@@ -121,6 +139,9 @@ export function buildEmailSearchQuery(params: {
   const q = combineQ(params.filters.q, params.filters.domain);
   if (q) query.q = q;
   if (params.filters.awaiting) query.awaiting = params.filters.awaiting;
+  if (params.filters.automated !== undefined) {
+    query.automated = params.filters.automated ? "true" : "false";
+  }
   if (params.filters.body) query.body = params.filters.body;
   if (params.filters.domainId) query.domain_id = params.filters.domainId;
   if (params.filters.from) query.from = params.filters.from;
@@ -202,11 +223,17 @@ export async function fetchEmailSearchPage(params: {
 
   const wantsReplyState =
     Boolean(params.filters.awaiting) || queryUsesAwaiting(params.filters.q);
+  const wantsAutomated =
+    params.filters.automated !== undefined ||
+    queryUsesAutomated(params.filters.q);
   if (result.error) {
     // An older server may reject the filter outright. Surface that as
     // the reply-state error rather than a generic validation failure.
     if (wantsReplyState && isAwaitingRejectedError(result.error)) {
       throw awaitingRejectedError("GET /emails/search");
+    }
+    if (wantsAutomated && isAutomatedRejectedError(result.error)) {
+      throw automatedRejectedError("GET /emails/search");
     }
     return { ok: false, error: result.error };
   }
@@ -217,9 +244,18 @@ export async function fetchEmailSearchPage(params: {
   // server answers `awaiting=you` with unfiltered rows that lack the
   // reply-state fields. Throw instead of printing them as matches.
   if (wantsReplyState) {
-    assertReplyState(rows, "GET /emails/search");
+    assertAwaitingFilterRows(rows, "GET /emails/search");
     if (rows.length === 0)
       await ensureSearchReportsReplyState(params.apiClient);
+  }
+  // Same for the automated filter: rows must carry the verdict and match it.
+  if (wantsAutomated) {
+    assertAutomatedVerdict(
+      rows,
+      "GET /emails/search",
+      params.filters.automated,
+    );
+    if (rows.length === 0) await ensureSearchReportsAutomated(params.apiClient);
   }
   return {
     ok: true,

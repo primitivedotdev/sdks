@@ -19,7 +19,7 @@ import {
 import {
   AWAITING_VALUES,
   type Awaiting,
-  assertReplyState,
+  assertAwaitingFilterRows,
   awaitingRejectedError,
   ensureSearchReportsReplyState,
   isAwaitingRejectedError,
@@ -368,7 +368,7 @@ class SearchCommand extends Command {
       // answers --awaiting with unfiltered rows that lack reply state.
       if (wantsReplyState) {
         try {
-          assertReplyState(envelope?.data ?? [], "GET /emails/search");
+          assertAwaitingFilterRows(envelope?.data ?? [], "GET /emails/search");
           if ((envelope?.data ?? []).length === 0) {
             await ensureSearchReportsReplyState(apiClient);
           }
