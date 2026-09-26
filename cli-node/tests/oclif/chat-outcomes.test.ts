@@ -551,8 +551,13 @@ describe("chat send outcomes", () => {
     expect(envelope.outcome).toBe("already_sent");
     expect(envelope.reply).toBeNull();
     expect(envelope.outcome_message).toContain(
-      "Loading its reply failed: its existing reply email-1 could not be loaded.",
+      "Loading its reply failed: its existing reply email-1 could not be loaded. Do NOT resend; read the reply with: primitive emails get --id email-1",
     );
+    expect(envelope.follow_up_commands[0]).toMatchObject({
+      kind: "inspect_reply",
+      argv: ["primitive", "emails", "get", "--id", "email-1"],
+    });
+    expectNoResendCommand(envelope);
   });
 
   it("emits a not_sent envelope when chat fails before sending", async () => {
@@ -803,6 +808,25 @@ describe("chat send outcomes", () => {
     ).toEqual(["inspect_sent_email"]);
     expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
     expect(`${result.stdout}${result.stderr}`).not.toContain("Already sent");
+  });
+
+  it("still reports not_sent when saving the receipt fails after a not-sent record", async () => {
+    mocks.sendEmail.mockResolvedValue({
+      data: { data: sentEmail({ status: "agent_failed" }) },
+    });
+    mocks.saveChatReceiptFailure.error = new Error("ENOSPC: no space left");
+
+    const result = await run("chat", freshChatArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(1);
+    expect(envelope).toMatchObject({
+      outcome: "not_sent",
+      exit_code: 1,
+      sent: { id: "sent-1", status: "agent_failed" },
+    });
+    expect(result.stderr).toContain("Warning: could not update chat receipt");
+    expect(result.stderr).toContain("ENOSPC: no space left");
   });
 
   it("lets a retry through after a send record showed the message did not go out", async () => {

@@ -731,6 +731,7 @@ export function buildChatJsonEnvelope(
 export function buildChatAwaitingReplyEnvelope(
   context: ChatBaseContext,
   options: {
+    existingReplyId?: string;
     outcome: "already_sent" | "sent_awaiting_reply";
     waitError?: string;
     waitErrorPayload?: unknown;
@@ -748,7 +749,7 @@ export function buildChatAwaitingReplyEnvelope(
     match: null,
     follow_up_commands:
       options.outcome === "already_sent"
-        ? buildChatExistingReplyCommands(context)
+        ? buildChatExistingReplyCommands(context, options.existingReplyId)
         : buildChatRecoveryCommands(context),
     prior_replies: context.priorReplies ?? null,
     http_status: null,
@@ -767,17 +768,23 @@ export function buildChatAwaitingReplyEnvelope(
 export function formatChatAwaitingReplyMessage(
   context: ChatBaseContext,
   options: {
+    existingReplyId?: string;
     outcome: "already_sent" | "sent_awaiting_reply";
     waitError?: string;
   },
 ): string {
   if (options.outcome === "already_sent") {
-    const [wait] = buildChatExistingReplyCommands(context);
+    const [next] = buildChatExistingReplyCommands(
+      context,
+      options.existingReplyId,
+    );
     const status =
       options.waitError === undefined
         ? "No reply to it yet."
         : `Loading its reply failed: ${options.waitError}.`;
-    return `${formatAlreadySentNotice(context.sent)} ${status} Do NOT resend; wait with: ${wait.command}`;
+    const action =
+      next.kind === "inspect_reply" ? "read the reply with" : "wait with";
+    return `${formatAlreadySentNotice(context.sent)} ${status} Do NOT resend; ${action}: ${next.command}`;
   }
   const [wait] = buildChatRecoveryCommands(context);
   const status =
@@ -789,8 +796,24 @@ export function formatChatAwaitingReplyMessage(
 
 export function buildChatExistingReplyCommands(
   context: ChatBaseContext,
+  existingReplyId?: string,
 ): ChatFollowUpCommand[] {
+  // When the reply is already known (only loading it failed), reading
+  // it by id recovers the full email; `emails wait` prints summaries.
+  const inspectReply =
+    existingReplyId === undefined
+      ? []
+      : [
+          buildCommand("inspect_reply", "Read the existing reply", [
+            "primitive",
+            "emails",
+            "get",
+            "--id",
+            existingReplyId,
+          ]),
+        ];
   return [
+    ...inspectReply,
     buildCommand(
       "wait_existing_reply",
       "Wait for a reply to the earlier send",
@@ -1399,6 +1422,7 @@ class ChatCommand extends Command {
   private reportAwaitingReply(
     context: ChatBaseContext,
     options: {
+      existingReplyId?: string;
       outcome: "already_sent" | "sent_awaiting_reply";
       waitError?: string;
       waitErrorPayload?: unknown;
@@ -1692,7 +1716,17 @@ class ChatCommand extends Command {
           // An indeterminate record stays pending so a retry resumes
           // it instead of sending again.
           receipt.data.completed = recordOutcome === "not_sent";
-          saveChatReceipt(receipt);
+          try {
+            saveChatReceipt(receipt);
+          } catch (error) {
+            // The record already settles the outcome; a local write
+            // failure must not turn a known result into an uncertain one.
+            const detail =
+              error instanceof Error ? error.message : String(error);
+            process.stderr.write(
+              `${chatFailureText(`Warning: could not update chat receipt ${receipt.path}: ${detail}`)}\n`,
+            );
+          }
           this.reportSendRecordFailure({
             json: flags.json,
             noun,
@@ -1792,6 +1826,7 @@ class ChatCommand extends Command {
               progress?.fail("Could not load the existing reply.");
               this.reportAwaitingReply(baseContext, {
                 outcome: "already_sent",
+                existingReplyId: replyId,
                 waitError: `its existing reply ${replyId} could not be loaded`,
               });
               return;
