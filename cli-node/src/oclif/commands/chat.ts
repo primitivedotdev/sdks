@@ -1723,8 +1723,15 @@ class ChatCommand extends Command {
             // failure must not turn a known result into an uncertain one.
             const detail =
               error instanceof Error ? error.message : String(error);
+            // The receipt on disk still records this attempt as
+            // unresolved, so a retry of the same message stops as
+            // uncertain until someone reconciles it.
+            const reconcile =
+              recordOutcome === "not_sent"
+                ? ` It still records this attempt as unresolved, so retrying the same message will stop as uncertain. After confirming with primitive sent get --id ${sent.id} that it did not go out, delete ${receipt.path} before retrying.`
+                : "";
             process.stderr.write(
-              `${chatFailureText(`Warning: could not update chat receipt ${receipt.path}: ${detail}`)}\n`,
+              `${chatFailureText(`Warning: could not update chat receipt ${receipt.path}: ${detail}.${reconcile}`)}\n`,
             );
           }
           this.reportSendRecordFailure({

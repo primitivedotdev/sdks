@@ -827,6 +827,9 @@ describe("chat send outcomes", () => {
     });
     expect(result.stderr).toContain("Warning: could not update chat receipt");
     expect(result.stderr).toContain("ENOSPC: no space left");
+    expect(result.stderr).toContain(
+      "retrying the same message will stop as uncertain. After confirming with primitive sent get --id sent-1 that it did not go out, delete",
+    );
   });
 
   it("lets a retry through after a send record showed the message did not go out", async () => {
