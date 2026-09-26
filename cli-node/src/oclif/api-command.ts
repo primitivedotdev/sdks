@@ -19,6 +19,7 @@ import {
   automatedRejectedError,
   automatedSurfaceForOperation,
   ensureSearchReportsAutomated,
+  expectedAutomatedVerdicts,
   isAutomatedRejectedError,
 } from "./automated-filter.js";
 import {
@@ -1193,12 +1194,14 @@ export function createOperationCommand(
         if (automatedSurface) {
           try {
             const rows = Array.isArray(envelope?.data) ? envelope.data : [];
-            const expected =
+            const expected = expectedAutomatedVerdicts(
               query?.automated === "true"
                 ? true
                 : query?.automated === "false"
                   ? false
-                  : undefined;
+                  : undefined,
+              typeof query?.q === "string" ? query.q : undefined,
+            );
             assertAutomatedVerdict(rows, automatedSurface, expected);
             if (rows.length === 0 && operation.sdkName === "searchEmails") {
               await ensureSearchReportsAutomated(apiClient);

@@ -58,14 +58,14 @@ export function hasAutomatedVerdict(row: unknown): row is AutomatedFields {
 }
 
 /**
- * Throw unless every row carries the verdict, and, when `expected` is
- * given, unless every row has that value: a server that accepted the
- * filter but did not apply it must not pass for one that did.
+ * Throw unless every row carries the verdict, and, for each `expected`
+ * value given, unless every row has that value: a server that accepted
+ * the filter but did not apply it must not pass for one that did.
  */
 export function assertAutomatedVerdict(
   rows: readonly unknown[],
   surface: string,
-  expected?: boolean,
+  expected?: boolean | readonly boolean[],
 ): void {
   const missing = rows.filter((row) => !hasAutomatedVerdict(row)).length;
   if (missing > 0) {
@@ -73,15 +73,55 @@ export function assertAutomatedVerdict(
       `${surface} returned ${missing} of ${rows.length} email${rows.length === 1 ? "" : "s"} without the \`automated\` and \`automated_reasons\` fields.`,
     );
   }
-  if (expected === undefined) return;
-  const wrong = rows.filter(
-    (row) => (row as AutomatedFields).automated !== expected,
-  ).length;
-  if (wrong > 0) {
-    throw new AutomatedFilterUnsupportedError(
-      `${surface} ignored \`automated=${expected}\` and returned ${wrong} email${wrong === 1 ? "" : "s"} with \`automated=${!expected}\`.`,
-    );
+  const verdicts =
+    expected === undefined
+      ? []
+      : typeof expected === "boolean"
+        ? [expected]
+        : expected;
+  for (const verdict of verdicts) {
+    const wrong = rows.filter(
+      (row) => (row as AutomatedFields).automated !== verdict,
+    ).length;
+    if (wrong > 0) {
+      throw new AutomatedFilterUnsupportedError(
+        `${surface} ignored \`automated=${verdict}\` and returned ${wrong} email${wrong === 1 ? "" : "s"} with \`automated=${!verdict}\`.`,
+      );
+    }
   }
+}
+
+/**
+ * The verdicts the `automated:` terms in a search DSL query require.
+ * The DSL joins its terms with AND, so every `automated:true|false`
+ * term must hold for every returned row. Quoted text is skipped, so a
+ * phrase that merely contains "automated:false" does not count.
+ */
+export function automatedVerdictsFromQuery(
+  q: string | null | undefined,
+): boolean[] {
+  if (typeof q !== "string") return [];
+  const verdicts: boolean[] = [];
+  const tokens = q.match(/(?:[^\s"]|"(?:[^"\\]|\\.)*"?)+/g) ?? [];
+  for (const token of tokens) {
+    const match = /^automated:"?(true|false)"?$/i.exec(token);
+    if (match) verdicts.push(match[1].toLowerCase() === "true");
+  }
+  return verdicts;
+}
+
+/**
+ * Every verdict a list or search call asked for: the `automated`
+ * parameter plus any `automated:` terms in the search query.
+ */
+export function expectedAutomatedVerdicts(
+  automated: boolean | undefined,
+  q: string | null | undefined,
+): boolean[] {
+  return [
+    ...(automated === undefined ? [] : [automated]),
+    ...automatedVerdictsFromQuery(q),
+  ];
 }
 
 /** True when a search DSL query uses the `automated:` term. */

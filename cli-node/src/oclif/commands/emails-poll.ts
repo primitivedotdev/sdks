@@ -10,6 +10,7 @@ import {
   assertAutomatedVerdict,
   automatedRejectedError,
   ensureSearchReportsAutomated,
+  expectedAutomatedVerdicts,
   isAutomatedRejectedError,
   queryUsesAutomated,
 } from "../automated-filter.js";
@@ -253,7 +254,7 @@ export async function fetchEmailSearchPage(params: {
     assertAutomatedVerdict(
       rows,
       "GET /emails/search",
-      params.filters.automated,
+      expectedAutomatedVerdicts(params.filters.automated, params.filters.q),
     );
     if (rows.length === 0) await ensureSearchReportsAutomated(params.apiClient);
   }

@@ -31,7 +31,9 @@ import {
   AutomatedFilterUnsupportedError,
   assertAutomatedVerdict,
   automatedSurfaceForOperation,
+  automatedVerdictsFromQuery,
   ensureSearchReportsAutomated,
+  expectedAutomatedVerdicts,
   hasAutomatedVerdict,
   isAutomatedRejectedError,
   queryUsesAutomated,
@@ -149,6 +151,33 @@ describe("filter detection", () => {
     expect(queryUsesAutomated("invoice (-automated:true)")).toBe(true);
     expect(queryUsesAutomated("notautomated:true")).toBe(false);
     expect(queryUsesAutomated(null)).toBe(false);
+  });
+
+  it("derives the verdicts the DSL terms require", () => {
+    expect(automatedVerdictsFromQuery("automated:false invoice")).toEqual([
+      false,
+    ]);
+    expect(automatedVerdictsFromQuery('AUTOMATED:"True"')).toEqual([true]);
+    expect(
+      automatedVerdictsFromQuery('subject:"automated:false" invoice'),
+    ).toEqual([]);
+    expect(automatedVerdictsFromQuery('"automated:true"')).toEqual([]);
+    expect(automatedVerdictsFromQuery("notautomated:true")).toEqual([]);
+    expect(automatedVerdictsFromQuery(undefined)).toEqual([]);
+    expect(expectedAutomatedVerdicts(true, "automated:false")).toEqual([
+      true,
+      false,
+    ]);
+    expect(expectedAutomatedVerdicts(undefined, null)).toEqual([]);
+  });
+
+  it("checks every expected verdict", () => {
+    expect(() =>
+      assertAutomatedVerdict([row()], "GET /emails", [false, false]),
+    ).not.toThrow();
+    expect(() =>
+      assertAutomatedVerdict([row()], "GET /emails", [false, true]),
+    ).toThrow(/ignored `automated=true`/);
   });
 
   it("recognizes a rejected parameter or term", () => {
@@ -331,6 +360,23 @@ describe("generated emails list / search with --automated", () => {
     expect(result.stderr).toContain("ignored `automated=false`");
   });
 
+  it("refuses rows that contradict an automated: search term", async () => {
+    mocks.searchEmails.mockResolvedValue({
+      data: {
+        success: true,
+        data: [row({ automated: true, automated_reasons: ["precedence"] })],
+        meta: { cursor: null },
+      },
+    });
+    const result = await runCommand(COMMANDS["emails:search-emails"], [
+      "--q",
+      "automated:false",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("ignored `automated=false`");
+  });
+
   it("probes an empty generated search and fails on an older server", async () => {
     mocks.searchEmails
       .mockResolvedValueOnce({
@@ -417,6 +463,32 @@ describe("emails wait / watch --automated", () => {
         pageSize: 10,
       }),
     ).rejects.toThrow(AutomatedFilterUnsupportedError);
+  });
+
+  it("checks rows against an automated: term in --q", async () => {
+    mocks.searchEmails.mockResolvedValue({
+      data: {
+        success: true,
+        data: [row({ automated: true, automated_reasons: ["list_id"] })],
+        meta: { cursor: null },
+      },
+    });
+    await expect(
+      fetchEmailSearchPage({
+        apiClient: { client: {} } as never,
+        filters: filtersFromFlags({ q: "automated:false invoice" }),
+        pageSize: 10,
+      }),
+    ).rejects.toThrow(/ignored `automated=false`/);
+    mocks.searchEmails.mockResolvedValue({
+      data: { success: true, data: [row()], meta: { cursor: null } },
+    });
+    const page = await fetchEmailSearchPage({
+      apiClient: { client: {} } as never,
+      filters: filtersFromFlags({ q: "automated:false invoice" }),
+      pageSize: 10,
+    });
+    expect(page.ok).toBe(true);
   });
 
   it("probes an empty page", async () => {
