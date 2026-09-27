@@ -595,7 +595,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // the server-owned status API instead of making agents compose those lists.
   "inbox:setup": InboxSetupCommand,
   // WebSocket receiving, with explicit poll transport and bounded one-shot waits.
-  // One listener route owns stdout, webhook, native notifications, and receipt status.
+  // One listener route owns stdout, webhook, native notifications, and paginated receipt status.
   listen: ListenCommand,
   "listen:init": ListenInitCommand,
   "inbox:status": InboxStatusCommand,

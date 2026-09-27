@@ -29,6 +29,37 @@ function eventFixture(): EmailReceivedEvent {
 }
 const signal = new AbortController().signal;
 describe("notification content reads", () => {
+  it.each([
+    "html",
+    "mime",
+  ])("notifies known non-routine %s mail without downloading an unavailable attachment", async (kind) => {
+    const event = eventFixture();
+    if (event.email.parsed.status !== "complete") throw new Error("fixture");
+    event.email.parsed.body_html =
+      kind === "html" ? "<p>A task request</p>" : null;
+    event.email.parsed.attachments = [
+      {
+        filename: "interaction.json",
+        content_type: kind === "mime" ? "text/plain" : "application/json",
+        size_bytes: 10,
+        sha256: "0".repeat(64),
+        part_index: 0,
+        tar_path: "interaction.json",
+      },
+    ];
+    let reads = 0;
+    expect(
+      await isRoutineNotification(
+        event,
+        async () => {
+          reads++;
+          throw new Error("unavailable");
+        },
+        signal,
+      ),
+    ).toBe(false);
+    expect(reads).toBe(0);
+  });
   it("refreshes current detail by exact ID and rejects a different recipient", async () => {
     const event = eventFixture();
     let recipient = "recipient@domain.com";

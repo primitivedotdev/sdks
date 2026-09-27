@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { chmod, mkdtemp, readFile, rm } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join, resolve } from "node:path";
 import { WebSocketServer } from "ws";
@@ -78,6 +78,13 @@ try {
   const conflict = await invoke([...notify, "--exec", "true"]); assert.notEqual(conflict.code, 0);
   const offline = await invoke(notify.map((value) => value === socketPath ? `${socketPath}.absent` : value)); assert.notEqual(offline.code, 0); assert.equal(apiCalls.length, 0);
   const initialStatus = await invoke(["listen", "--status", "--notify-session", sessionId]); assert.equal(initialStatus.code, 0); assert.deepEqual(JSON.parse(initialStatus.stdout).receipts, []); assert.equal(apiCalls.length, 0);
+  await mkdir(env.PRIMITIVE_CONFIG_DIR, { recursive: true, mode: 0o700 });
+  const credentialsPath = join(env.PRIMITIVE_CONFIG_DIR, "credentials.json");
+  const expiredCredentials = JSON.stringify({ auth_method: "oauth", access_token: "expired", refresh_token: "expired-refresh", token_type: "Bearer", expires_at: "2020-01-01T00:00:00.000Z", oauth_grant_id: randomUUID(), oauth_client_id: "cli", org_id: randomUUID(), org_name: null, api_base_url: env.PRIMITIVE_API_BASE_URL, created_at: "2020-01-01T00:00:00.000Z" });
+  await writeFile(credentialsPath, expiredCredentials, { mode: 0o600 });
+  const connectedKey = env.PRIMITIVE_API_KEY; delete env.PRIMITIVE_API_KEY;
+  const oauthStatus = await invoke(["listen", "--status", "--notify-session", sessionId]); assert.notEqual(oauthStatus.code, 0); assert.match(oauthStatus.stderr, /connected-agent credential/); assert.equal(apiCalls.length, 0); assert.equal(await readFile(credentialsPath, "utf8"), expiredCredentials);
+  env.PRIMITIVE_API_KEY = connectedKey;
   const first = await invoke(notify); assert.equal(first.code, 0, first.stderr); assert.equal(queued.length, 1); assert.equal(completions.at(-1).mode, "sdk"); assert.equal(completions.at(-1).accepted, true);
   const repeated = await invoke(notify); assert.equal(repeated.code, 0, repeated.stderr); assert.equal(queued.length, 1);
   assert.equal(queued[0].threadId, sessionId); assert.match(queued[0].input[0].text, /External email notification/); assert.ok(!queued[0].input[0].text.includes(event.email.headers.subject));
@@ -86,6 +93,9 @@ try {
   const held = await invoke(notify); assert.notEqual(held.code, 0); assert.match(held.stderr, /unknown outcome/); assert.equal(queued.length, 2);
   const count = apiCalls.length;
   const status = await invoke(["listen", "--status", "--notify-session", sessionId]); assert.equal(status.code, 0); assert.equal(JSON.parse(status.stdout).receipts.filter((receipt) => receipt.state === "unknown").length, 1); assert.equal(apiCalls.length, count);
+  const pageOne = await invoke(["listen", "--status", "--notify-session", sessionId, "--limit", "1"]); assert.equal(pageOne.code, 0, pageOne.stderr); const firstPage = JSON.parse(pageOne.stdout); assert.equal(firstPage.receipts.length, 1); assert.ok(firstPage.nextCursor);
+  const pageTwo = await invoke(["listen", "--status", "--notify-session", sessionId, "--limit", "1", "--cursor", firstPage.nextCursor]); assert.equal(pageTwo.code, 0, pageTwo.stderr); const secondPage = JSON.parse(pageTwo.stdout); assert.equal(secondPage.receipts.length, 1); assert.equal(secondPage.nextCursor, null); assert.notEqual(secondPage.receipts[0].emailId, firstPage.receipts[0].emailId);
+  const badFilter = await invoke([...notify, "--events", "email.received,payment.settled"]); assert.notEqual(badFilter.code, 0); assert.match(badFilter.stderr, /email.received only/);
   const bare = await invoke(["listen", "--transport", "poll", "--once"]); assert.equal(bare.code, 0, bare.stderr); assert.equal(JSON.parse(bare.stdout).event, "email.received");
   assert.ok(methods.every((method) => ["initialize", "initialized", "thread/loaded/list", "thread/read", "thread/queue/add"].includes(method)));
   console.log("Native session notification CLI smoke passed.");

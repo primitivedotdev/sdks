@@ -101,7 +101,10 @@ export async function openSessionNotifications(
       },
     });
     // The authenticated event stream, not email-controlled headers, is the source.
-    if (delivery.event_type !== "email.received") return accepted();
+    if (delivery.event_type !== "email.received")
+      throw new ListenStateError(
+        "Notification mode received an unrelated event. It remains uncompleted; use an email.received-only subscription.",
+      );
     let event: ReturnType<typeof parseWebhookEvent>;
     try {
       event = parseWebhookEvent(JSON.parse(delivery.body), delivery.event_type);
@@ -158,7 +161,7 @@ export async function openSessionNotifications(
       return accepted();
     const previous = store.find(event.email.id, delivery.event_id);
     if (previous) {
-      if (previous.emailId !== event.email.id)
+      if (previous.emailId !== event.email.id.toLowerCase())
         throw new ListenStateError(
           "A notification event identity changed. Delivery has been held.",
         );

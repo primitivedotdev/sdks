@@ -204,6 +204,8 @@ describe("native email notifications", () => {
     second.notifications.close();
     resources.splice(resources.indexOf(second.notifications), 1);
     const store = openNotificationReceipts(directory, scope, threadId);
+    event.email.id = randomUUID();
+    delivery.event_id = randomUUID();
     store.save({
       emailId: event.email.id,
       eventId: delivery.event_id,
@@ -261,7 +263,7 @@ describe("native email notifications", () => {
     });
     await first.handle();
     delivery.event_type = "interaction.ack";
-    await first.handle();
+    await expect(first.handle()).rejects.toThrow("unrelated event");
     expect(first.queue).not.toHaveBeenCalled();
     delivery.event_type = "email.received";
     envelope = { ...envelope, protocol: "wake.dispatch", step: "dispatch" };

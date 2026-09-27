@@ -231,6 +231,8 @@ describe("COMMANDS / manifest coverage", () => {
       "sender",
       "session-socket",
       "status",
+      "limit",
+      "cursor",
     ]) {
       expect(listener.flags[flag]).toBeDefined();
     }

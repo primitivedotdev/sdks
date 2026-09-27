@@ -374,6 +374,7 @@ Codex session of authenticated mail from explicitly approved senders:
 primitive listen --notify-session <session-uuid> --sender person@example.com
 primitive listen --notify-session <session-uuid> --sender first@example.com,second@example.com
 primitive listen --status --notify-session <session-uuid>
+primitive listen --status --notify-session <session-uuid> --limit 100 --cursor <nextCursor>
 ```
 
 This first notification path uses the native local-session Unix socket in
@@ -385,6 +386,12 @@ subscription. It does not launch a daemon, start/resume a conversation, install 
 connector, or change model, approval, or sandbox settings. Windows and other
 harnesses are not supported by this path. `CODEX_HOME` selects the native runtime
 home when it differs from `~/.codex`.
+
+Notification mode registers an `email.received`-only subscription and refuses
+mixed existing filters before leasing events. If an existing subscription has
+other filters, select a separate `--subscription` name. An unexpected non-email
+event remains uncompleted. `--once` means one processed delivery, including an
+email filtered by sender policy; it does not promise one session notification.
 
 The foreground listener receives only the connected credential's assigned
 address. `--sender` requires exact addresses with authenticated From-domain
@@ -400,7 +407,11 @@ Local private receipts are scoped to the API environment, connected credential,
 and exact session. Accepted means queued, not read or answered. A lost queue
 response or interrupted submission is held as unknown across restarts because
 the runtime does not deduplicate client message IDs. Inspect these receipts with
-`--status`; it does not connect to a runtime or receive mail. Unknown outcomes
+`--status`; it does not connect to a runtime or receive mail. Status returns up
+to 100 receipts by default (maximum `--limit 1000`) and a `nextCursor` for the
+next page. Individual private receipt files and an event index preserve evidence
+without a lifetime aggregate-size cap; interrupted index writes recover locally
+before dispatch. Unknown outcomes
 require inspection of that exact session before a manual resend. Do not delete
 receipt state to force a retry. Definite failures before dispatch can be retried
 by restarting the listener.

@@ -24,7 +24,7 @@ afterEach(() => {
   for (const directory of directories.splice(0))
     rmSync(directory, { recursive: true, force: true });
 });
-function setup(modes = ["sdk"]) {
+function setup(modes = ["sdk"], eventTypes = ["email.received"]) {
   const configDir = mkdtempSync(join(tmpdir(), "primitive-notify-runner-"));
   directories.push(configDir);
   const order: string[] = [];
@@ -55,6 +55,7 @@ function setup(modes = ["sdk"]) {
             kind: "pull",
             enabled: true,
             recipient: "device@example.com",
+            rules: { event_types: eventTypes },
             receiver_capabilities: {
               completion_modes: modes,
               stream_protocols: ["primitive.events.v1"],
@@ -97,6 +98,20 @@ function setup(modes = ["sdk"]) {
   return { options, order, completions, handler, close };
 }
 describe("notification listener integration", () => {
+  it("refuses explicit mixed filters and resumed mixed subscriptions before leasing", async () => {
+    const f = setup(["sdk"], ["email.received", "payment.settled"]);
+    await expect(
+      runListen({
+        ...f.options,
+        events: ["email.received", "payment.settled"],
+      }),
+    ).rejects.toThrow("email.received only");
+    expect(f.order).toEqual([]);
+    await expect(runListen(f.options)).rejects.toThrow(
+      "email.received-only subscription",
+    );
+    expect(f.order).toEqual(["native-ready", "/v1/endpoints"]);
+  });
   it("checks native readiness before registration and requires SDK capability for polling", async () => {
     const f = setup(["stdout"]);
     await expect(runListen(f.options)).rejects.toThrow(

@@ -1,12 +1,12 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import { createAuthenticatedCliApiClient } from "../api-client.js";
+import { resolveCliApiRequestConfig } from "../api-client.js";
 import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
 import { createListenHandler } from "../listen-handlers.js";
 import { ListenError, runListen } from "../listen-runner.js";
 import { ListenStateError } from "../listen-state.js";
 import { notificationScope, notificationSenders } from "../notify-session.js";
 import { SESSION_UUID } from "../notify-session-native.js";
-import { readNotificationReceipts } from "../notify-session-state.js";
+import { notificationReceiptPage } from "../notify-session-state.js";
 
 export default class ListenCommand extends Command {
   static summary = "Receive webhook events locally without a public endpoint";
@@ -81,6 +81,18 @@ export default class ListenCommand extends Command {
         "timeout",
       ],
     }),
+    limit: Flags.integer({
+      description:
+        "Maximum notification receipts in a status page (default 100).",
+      min: 1,
+      max: 1000,
+      dependsOn: ["status"],
+    }),
+    cursor: Flags.string({
+      description:
+        "Continue receipt status after the previous page's nextCursor UUID.",
+      dependsOn: ["status"],
+    }),
     events: Flags.string({
       description:
         "Comma-separated event types. Omit when reconnecting to preserve the existing selection.",
@@ -110,24 +122,28 @@ export default class ListenCommand extends Command {
         "--notify-session requires an exact session UUID.",
       );
     if (flags.status && flags["notify-session"]) {
-      const { auth } = await createAuthenticatedCliApiClient({
+      const requestConfig = resolveCliApiRequestConfig({
         configDir: this.config.configDir,
-        apiKey: flags["api-key"],
         apiBaseUrl: flags["api-base-url"],
       });
-      const receipts = readNotificationReceipts(
+      const page = notificationReceiptPage(
         this.config.configDir,
-        notificationScope(auth.apiBaseUrl, auth.apiKey),
+        notificationScope(
+          requestConfig.resolvedApiBaseUrl,
+          flags["api-key"]?.trim(),
+        ),
         flags["notify-session"],
+        { limit: flags.limit, cursor: flags.cursor },
       );
       this.log(
         JSON.stringify(
           {
             sessionId: flags["notify-session"],
-            receipts: receipts.map((receipt) => ({
+            receipts: page.receipts.map((receipt) => ({
               ...receipt,
               state: receipt.state === "submitting" ? "unknown" : receipt.state,
             })),
+            nextCursor: page.nextCursor,
             guidance:
               "Accepted means queued, not read or answered. Unknown receipts are held and are never resent automatically; inspect the exact session before any manual resend.",
           },

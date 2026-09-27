@@ -139,55 +139,67 @@ export async function isRoutineNotification(
   const canonical = parsed.attachments.filter(
     (part) => part.filename?.toLowerCase() === "interaction.json",
   );
-  let bytes: Uint8Array | null = null;
-  if (
-    parsed.attachments.length === 1 &&
-    canonical.length === 1 &&
-    canonical[0] &&
-    canonical[0].size_bytes <= MAX_INTERACTION_BYTES
-  ) {
-    if (!readPart)
-      throw new NotificationRetryError(
-        "Interaction classification requires authenticated attachment access.",
-      );
-    const part = canonical[0];
-    try {
-      bytes = await readPart(event.email.id, part.part_index, signal);
-    } catch {
-      throw new NotificationRetryError(
-        "Interaction content is unavailable; retrying through the delivery queue.",
-      );
-    }
-    if (
-      bytes.byteLength !== part.size_bytes ||
-      createHash("sha256").update(bytes).digest("hex") !==
-        part.sha256.toLowerCase()
-    )
-      throw new NotificationRetryError(
-        "Interaction attachment changed; retrying through the delivery queue.",
-      );
-  } else if (canonical.length === 1 && parsed.attachments.length === 1) {
-    // Oversized content cannot be a supported routine status envelope.
-    return false;
-  }
-  const classification = classifySignalContent({
+  const content = {
     inventory: {
-      status: "complete",
+      status: "complete" as const,
       parts: parsed.attachments.map((part) => ({
         filename: part.filename,
         contentType: part.content_type,
       })),
     },
     bodies: {
-      status: "complete",
+      status: "complete" as const,
       text: parsed.body_text,
       html: parsed.body_html,
     },
+  };
+  const preliminary = classifySignalContent({
+    ...content,
+    canonicalPartBytes: null,
+  });
+  if (preliminary.classification !== "unavailable")
+    return preliminary.classification === "informational_only";
+  const part = canonical[0];
+  if (!part)
+    throw new NotificationRetryError(
+      "Interaction classification is unavailable.",
+    );
+  // Fetch eligibility only: these known non-routine cases must still notify.
+  // The shared classifier remains authoritative for suppressing any message.
+  if (
+    (parsed.body_html !== null && parsed.body_html !== "") ||
+    part.content_type.split(";")[0]?.trim().toLowerCase() !==
+      "application/json" ||
+    part.size_bytes > MAX_INTERACTION_BYTES
+  )
+    return false;
+  if (!readPart)
+    throw new NotificationRetryError(
+      "Interaction classification requires authenticated attachment access.",
+    );
+  let bytes: Uint8Array;
+  try {
+    bytes = await readPart(event.email.id, part.part_index, signal);
+  } catch {
+    throw new NotificationRetryError(
+      "Interaction content is unavailable; retrying through the delivery queue.",
+    );
+  }
+  if (
+    bytes.byteLength !== part.size_bytes ||
+    createHash("sha256").update(bytes).digest("hex") !==
+      part.sha256.toLowerCase()
+  )
+    throw new NotificationRetryError(
+      "Interaction attachment changed; retrying through the delivery queue.",
+    );
+  const classification = classifySignalContent({
+    ...content,
     canonicalPartBytes: bytes,
   });
   if (classification.classification === "unavailable")
-    throw new ListenStateError(
-      "Interaction classification is unavailable; notification delivery remains uncompleted.",
+    throw new NotificationRetryError(
+      "Interaction classification is unavailable; retrying through the delivery queue.",
     );
   return classification.classification === "informational_only";
 }

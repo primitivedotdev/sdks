@@ -138,6 +138,15 @@ export async function runListen(options: ListenOptions): Promise<number> {
   const signal = options.signal;
   const mode = options.notifySession ? "sdk" : (options.mode ?? "stdout");
   if (
+    options.notifySession &&
+    options.events !== undefined &&
+    (options.events.length !== 1 || options.events[0] !== "email.received")
+  )
+    throw new ListenStateError(
+      "Session notifications require --events email.received only.",
+    );
+  const events = options.notifySession ? ["email.received"] : options.events;
+  if (
     options.number !== undefined &&
     (!Number.isSafeInteger(options.number) || options.number < 1)
   )
@@ -294,9 +303,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
         body: {
           kind: "pull",
           name: subscription.name,
-          ...(options.events === undefined
-            ? {}
-            : { rules: { event_types: options.events } }),
+          ...(events === undefined ? {} : { rules: { event_types: events } }),
         },
       });
       if (result.response?.ok) resumed = result.response.status !== 201;
@@ -315,6 +322,14 @@ export async function runListen(options: ListenOptions): Promise<number> {
       );
     const streamClient = await freshClient();
     notifications?.bindRecipient(endpoint.recipient);
+    if (
+      notifications &&
+      (endpoint.rules?.event_types?.length !== 1 ||
+        endpoint.rules.event_types[0] !== "email.received")
+    )
+      throw new ListenStateError(
+        "Session notifications require an email.received-only subscription. Use a separate --subscription name; unrelated queued events have not been leased.",
+      );
     if (
       notifications &&
       !endpoint.receiver_capabilities?.completion_modes.includes("sdk")
