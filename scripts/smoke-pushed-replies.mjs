@@ -12,7 +12,9 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 const binary = resolve(process.argv[2] ?? "cli-node/bin/run.js");
-const includeNative = process.argv[3] !== "waits";
+const mode = process.argv[3] ?? "notifications";
+const includeNative = mode === "notifications";
+const handoff = mode === "handoff";
 const directory = await mkdtemp("/tmp/primitive-pushed-replies-");
 await chmod(directory, 0o700);
 const owner = "device@example.com", peer = "peer@example.net";
@@ -143,11 +145,21 @@ try {
     invoke(["listen", "--notify-session", sessionId, "--sender", peer, "--session-socket", socketPath]);
     await until(() => streamOpens > 0, "Notification receiver did not open WebSocket");
   }
-  const waits = parents.map(id => invoke(["emails", "wait", "--reply-to-sent-email-id", id, "--from", peer, "--timeout", "10"]));
+  const startWait = id => invoke(["emails", "wait", "--reply-to-sent-email-id", id, "--from", peer, "--timeout", "10"]);
+  const waits = [startWait(parents[0])];
+  await until(() => searched.has(parents[0]), "First wait must own the ready subscription");
+  waits.push(startWait(parents[1]));
   await until(() => searched.size === 2, "Both exact waits must register and recover before receiving");
   const answers = parents.map((id, index) => inbound(id, `Answer ${index + 1}`));
   const unsolicited = inbound(null, "Separate update");
-  pending.push(answers[1], ...(includeNative ? [unsolicited] : []), answers[0]); dispatch();
+  if (handoff) {
+    pending.push(answers[0]); dispatch();
+    await until(() => waits[0].result, "Original subscription owner must finish");
+    await until(() => streamOpens >= 2, "Remaining waiter must take over the subscription");
+    pending.push(answers[1]); dispatch();
+  } else {
+    pending.push(answers[1], ...(includeNative ? [unsolicited] : []), answers[0]); dispatch();
+  }
   await until(() => waits.every(run => run.result), "Both waits must finish");
   for (let index = 0; index < waits.length; index++) {
     assert.equal(waits[index].result.code, 0, waits[index].stderr);
@@ -161,7 +173,7 @@ try {
     for (const answer of answers) assert.ok(!queued[0].input[0].text.includes(answer.detail.id));
   } else assert.equal(queued.length, 0);
   assert.deepEqual(failures, []);
-  console.log(`Pushed reply CLI smoke passed: two exact waits, ${includeNative ? "one native notification, " : ""}one WebSocket, no inbox scans.`);
+  console.log(`Pushed reply CLI smoke passed: two exact waits, ${includeNative ? "one native notification, " : ""}${handoff ? "subscription ownership handoff, " : ""}one concurrent WebSocket, no inbox scans.`);
 } finally {
   for (const run of children) if (run.result === null) run.child.kill("SIGTERM");
   await Promise.race([Promise.allSettled(children.map(run => run.closed)), new Promise(done => setTimeout(done, 2000))]);
