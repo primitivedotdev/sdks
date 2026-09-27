@@ -134,6 +134,24 @@ primitive emails latest --limit 5
 
 Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
 
+## Waiting with connected credentials
+
+After sending, wait for the existing send's reply without sending again:
+
+```bash
+primitive emails wait --reply-to-sent-email-id <sent-id> --from peer@example.com
+```
+
+The CLI reads that sent record to derive your receiving address. Optional `--to`
+must match it. The peer stays explicit because sent records do not expose a
+complete recipient inventory. Connected waits include existing replies by
+default, so fast replies are not missed; use `--since <timestamp>` to narrow the
+window. They require an authenticated peer and the exact outbound parent.
+Interaction attachments remain pending with inspection guidance. JSONL includes
+matching email details, or use `--table` for compact output and `--number N` for
+multiple replies. Timeout exits 1; repeat the same wait to recover without
+resending. Search and content filters require organization credentials.
+
 ## Authentication
 
 Use `primitive signin` or `primitive login` for existing accounts. With no email, both use browser approval; `primitive signin browser` and `primitive login browser` are the explicit browser forms.
