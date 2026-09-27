@@ -420,8 +420,10 @@ WebSocket and the shared saved subscription; `--transport poll` and a custom
 `--subscription` are rejected. Generic stdout, exec, and forwarding listeners
 retain their separate transport and subscription options. The `local-mail-*`
 subscription namespace is reserved for shared receiving. An unexpected non-email
-event remains uncompleted. `--once` means one processed delivery, including an
-email filtered by sender policy; it does not promise one session notification.
+event remains uncompleted. In notification mode, `--once` means one candidate
+processed during this invocation, including a policy or routine-status skip.
+Waiter-owned replies and existing accepted notification receipts do not count.
+It does not promise one session notification.
 
 The foreground listener receives only the connected credential's assigned
 address. `--sender` requires exact addresses with authenticated From-domain
@@ -430,8 +432,10 @@ Notifications contain email/event IDs, the approved sender, and an inspection
 command. Email bodies, subjects, attachments, and terminal transcripts are not
 injected into the session. Verified routine ack/read/working/typing interactions
 are suppressed; mixed content and unsupported protocols remain external mail
-notifications. When parsing is incomplete, the listener checks current email
-detail and leaves unavailable content to the server's retry policy.
+notifications. Inbound IDs are saved before the server delivery is acknowledged.
+When parsing or authentication is pending, the listener retries those exact IDs
+locally using current email details; an ingress acknowledgement does not mean
+a native notification was accepted.
 
 Local private receipts are scoped to the API environment, connected credential,
 and exact session. Accepted means queued, not read or answered. A lost queue
@@ -441,8 +445,7 @@ the runtime does not deduplicate client message IDs. Inspect these receipts with
 to 100 receipts by default (maximum `--limit 1000`) and a `nextCursor` for the
 next page. Individual private receipt files and an event index preserve evidence
 without a lifetime aggregate-size cap; interrupted index writes recover locally
-before dispatch. Unknown outcomes
-require inspection of that exact session before a manual resend. Do not delete
+before dispatch. Unknown outcomes require inspection of that exact session before a manual resend. Do not delete
 receipt state to force a retry. Definite failures before dispatch can be retried
 by restarting the listener.
 
@@ -451,11 +454,17 @@ The native queue API cannot atomically fence a terminal closing between that
 check and acceptance, so a concurrent close can leave input queued for that
 same session. The CLI never retargets a different session.
 
-This is a low-level listener path, not complete onboarding. Automatic runtime
-configuration, contact-policy synchronization, history backfill, and coordination
-with simultaneous `emails wait`/watch consumers are not provided. Use one
-notification listener for a connected credential and session. Existing queue
-retention and delivery-gap reporting still apply.
+Connected chat, exact-parent `emails wait`, and native notification listeners
+share one receiver for the same local installation, API environment, and connected
+credential. Expected replies stay with their wait; other approved mail can notify
+the selected session. Another foreground participant can resume receiving when
+the owner exits. Generic stdout, exec, forwarding, and `emails watch` remain
+separate consumers.
+
+Automatic runtime configuration, contact-policy synchronization, and notification
+history backfill are not provided. Reply waits use targeted recovery for their
+exact sent parent. Existing server queue retention and delivery-gap reporting
+still apply; keep a foreground listener running for ongoing notifications.
 
 ### Connected-agent listeners
 

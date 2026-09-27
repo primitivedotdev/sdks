@@ -28,7 +28,8 @@ export default class ListenCommand extends Command {
       default: "websocket",
     }),
     once: Flags.boolean({
-      description: "Exit after one successfully handled and confirmed event.",
+      description:
+        "Exit after one handled delivery, or one processed local candidate in notification mode.",
       exclusive: ["number"],
     }),
     timeout: Flags.integer({
@@ -100,7 +101,7 @@ export default class ListenCommand extends Command {
     }),
     number: Flags.integer({
       description:
-        "Exit after this many successfully handled and confirmed deliveries.",
+        "Exit after this many handled deliveries, or processed local notification candidates.",
       min: 1,
     }),
     "api-key": Flags.string({

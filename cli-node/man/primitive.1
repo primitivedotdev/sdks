@@ -41,7 +41,15 @@ session. Accepted means queued; unknown outcomes are held across restarts and ar
 never automatically resent. Inspect the exact session before a manual resend.
 Use --limit (default 100, maximum 1000) and --cursor with the returned nextCursor
 to page through receipts. Notification subscriptions accept email.received only;
---once counts a processed delivery, including filtered email, not a model wake.
+--once counts a candidate processed during this invocation, including filtered
+or routine email, not a model wake. Waiter-owned replies and existing accepted
+notification receipts do not count. Inbound IDs are saved before server
+acknowledgement; pending authentication or parsing retries exact IDs locally.
+.PP
+Connected chat, exact-parent emails wait, and native notifications share one
+receiver per local installation, API environment, and credential. A remaining
+foreground participant can resume receiving after the owner exits. Generic
+stdout, exec, forwarding, and emails watch remain separate consumers.
 .PP
 .B primitive listen init --language python
 creates a Python starter in a new primitive-listener directory. Generation is
