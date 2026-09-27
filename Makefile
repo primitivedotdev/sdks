@@ -70,6 +70,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	send_outcomes_smoke_script="$$(pwd)/scripts/smoke-send-outcomes.mjs" && \
 	scoped_chat_smoke_script="$$(pwd)/scripts/smoke-scoped-chat.mjs" && \
 	scoped_wait_smoke_script="$$(pwd)/scripts/smoke-scoped-email-wait.mjs" && \
+	pushed_replies_smoke_script="$$(pwd)/scripts/smoke-pushed-replies.mjs" && \
 	pack_dir=$$(mktemp -d) && \
 	smoke_dir=$$(mktemp -d) && \
 	tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && \
@@ -91,6 +92,9 @@ cli-smoke: cli-build cli-tarball-isolation
 	node "$$send_outcomes_smoke_script" "$$bin" && \
 	node "$$scoped_chat_smoke_script" "$$bin" && \
 	node "$$scoped_wait_smoke_script" "$$bin" && \
+	node "$$pushed_replies_smoke_script" "$$bin" waits && \
+	node "$$pushed_replies_smoke_script" "$$bin" handoff && \
+	node "$$pushed_replies_smoke_script" "$$bin" notifications && \
 	"$$bin" list-operations >/dev/null && \
 	"$$bin" completion fish >/dev/null && \
 	"$$bin" completion bash >/dev/null && \
