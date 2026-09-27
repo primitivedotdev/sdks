@@ -441,6 +441,46 @@ describe("chat command", () => {
     );
   });
 
+  it("keeps a failed lookup of an unresolved saved send uncertain", async () => {
+    connectedAuth();
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
+    await expect(runChatCommand(args)).rejects.toThrow("lost response");
+    mocks.reconcileChatSend.mockRejectedValueOnce(
+      new Error("lookup unavailable"),
+    );
+    await expect(runChatCommand(args)).rejects.toMatchObject({
+      oclif: { exit: 4 },
+    });
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("preserves the known send outcome when a resumed receiver cannot start", async () => {
+    connectedAuth();
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    mocks.next.mockResolvedValueOnce(null);
+    await runChatCommand(args);
+    mocks.openConnectedReplyWait.mockRejectedValueOnce(
+      new Error("receiver unavailable"),
+    );
+    const resumed = await runChatCommand(args);
+    expect(JSON.parse(resumed.stdout).outcome).toBe("sent_awaiting_reply");
+    expect(resumed.exitCode).toBe(3);
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+  });
+
   it("uses targeted peer search for automatic continuation", async () => {
     connectedAuth();
     mocks.getEmail.mockResolvedValue({ data: { data: trustedReply() } });

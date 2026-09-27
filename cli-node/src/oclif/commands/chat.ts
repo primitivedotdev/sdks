@@ -1697,6 +1697,30 @@ class ChatCommand extends Command {
           { connected: isConnectedChatCredential(auth.apiKey) },
         );
         const sentAtIso = receipt.data.sent_at;
+        const restoreReceiptProgress = () => {
+          this.chatProgress.sendStartedAtIso = sentAtIso;
+          if (receipt.data.sent) {
+            this.chatProgress.phase = "sent";
+            this.chatProgress.baseContext = {
+              scopedInbox: isConnectedChatCredential(auth.apiKey),
+              from: receipt.data.sent.from || from,
+              json: flags.json,
+              parentReply,
+              quiet: flags.quiet,
+              recipient: args.recipient,
+              sent: receipt.data.sent,
+              sentAtIso,
+              strictOnly:
+                flags["strict-only"] || isConnectedChatCredential(auth.apiKey),
+              strictPhaseSeconds: flags["strict-phase-seconds"],
+              subject,
+              timeoutSeconds: flags.timeout,
+            };
+          } else if (receipt.data.send_attempted) {
+            this.chatProgress.phase = "sending";
+          }
+        };
+        restoreReceiptProgress();
         process.stderr.write(`Chat receipt: ${receipt.path}\n`);
         if (isConnectedChatCredential(auth.apiKey)) {
           const parsedFrom = parseFromHeader(from);
@@ -1769,6 +1793,7 @@ class ChatCommand extends Command {
               idempotent_replay: true,
             };
             saveChatReceipt(receipt);
+            restoreReceiptProgress();
           }
           if (receipt.data.sent) await connectedWait.bind(receipt.data.sent.id);
         }

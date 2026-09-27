@@ -140,6 +140,24 @@ describe("connected pushed reply waits", () => {
     expect(f.searches()).toBe(1);
     await waiter.close();
   });
+  it("starts a new active claim when the prior wait for that parent completed", async () => {
+    const f = fixture();
+    const first = await openConnectedReplyWait(f.options);
+    const email = await first.next();
+    expect(email).not.toBeNull();
+    await first.observed(f.state.detail.id);
+    await first.finish();
+    await first.close();
+    const second = await openConnectedReplyWait({
+      ...f.options,
+      requestId: first.requestId,
+    });
+    expect(second.requestId).not.toBe(first.requestId);
+    expect(
+      (await second.receiver.store.readWait(second.requestId))?.status,
+    ).toBe("bound");
+    await second.close();
+  });
   it("retains a claimed reply for resume before local output completes", async () => {
     const f = fixture();
     const first = await openConnectedReplyWait(f.options);

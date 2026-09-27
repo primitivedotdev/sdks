@@ -16,7 +16,7 @@ export async function scopedMailFixture(binaryArgument) {
   const requests = [], failures = [], children = [], pending = [], completions = [];
   const searched = new Set(), pushAfterSearch = new Map();
   let receiveSocket, authenticated = 0, posts = 0, activeStreams = 0, maximumStreams = 0;
-  let stallPath = "";
+  let stallPath = "", lookupUnavailable = false;
   function json(response, data, cursor = null) {
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify({success:true,data,meta:{cursor}}));
@@ -78,6 +78,7 @@ export async function scopedMailFixture(binaryArgument) {
         json(response,row);
       } else if(request.method==="GET"&&url.pathname==="/v1/sent-emails") {
         const key=url.searchParams.get("idempotency_key");assert.ok(key,"Send reconciliation must use its saved key");
+        if(lookupUnavailable){response.statusCode=503;json(response,{});return;}
         json(response,[...sends.values()].filter(row=>row.client_idempotency_key===key));
       } else if(request.method==="GET"&&url.pathname.startsWith("/v1/sent-emails/")) {
         const row=sends.get(url.pathname.split("/").at(-1));assert.ok(row);json(response,row);
@@ -127,6 +128,7 @@ export async function scopedMailFixture(binaryArgument) {
   return {owner,peer,emails,sends,requests,failures,searched,completions,inbound,sent,push,invoke,until,
     run:async args=>invoke(args).closed,posts:()=>posts,maximumStreams:()=>maximumStreams,
     stall:path=>{stallPath=path;},
+    failLookup:value=>{lookupUnavailable=value;},
     async close(){
       for(const run of children)if(run.code===undefined)run.child.kill("SIGKILL");
       await Promise.allSettled(children.map(run=>run.closed));

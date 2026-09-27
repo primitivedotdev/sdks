@@ -15,6 +15,8 @@ try {
   const progress=f.inbound(sent.id,{parsed:{status:"complete",attachments:[{filename:"interaction.json",size_bytes:10}]}});f.push(progress);
   const reply=f.inbound(sent.id);f.push(reply);await wait.closed;
   assert.equal(wait.code,0,wait.stderr);assert.equal(JSON.parse(wait.stdout).id,reply.id);assert.match(wait.stderr,/interaction attachment/);
+  const additional=f.inbound(sent.id);f.emails.set(additional.id,additional);
+  const more=await f.run(args(sent));assert.equal(more.code,0,more.stderr);assert.equal(JSON.parse(more.stdout).id,additional.id);
   const filtered=f.sent(),old=f.inbound(filtered.id,{created_at:"2026-01-01T00:00:00Z",received_at:"2026-01-01T00:00:00Z"});f.emails.set(old.id,old);
   const excluded=await f.run([...args(filtered),"--since","2026-02-01"]);assert.equal(excluded.code,1);assert.equal(excluded.stdout,"");
   const later=f.inbound(filtered.id,{created_at:"2026-01-01T00:00:00Z",received_at:"2026-02-01T00:00:00Z"});f.emails.set(later.id,later);

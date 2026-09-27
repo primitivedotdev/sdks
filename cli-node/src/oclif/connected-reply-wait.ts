@@ -49,13 +49,14 @@ export async function openConnectedReplyWait(options: {
   let sentId = options.sentId;
   try {
     const prior = sentId ? await store.findWaitByParent(sentId) : null;
-    if (prior) {
+    if (prior?.status === "bound") {
       if (prior.peer !== options.recipient.toLowerCase())
         throw new Error(
           "The existing wait for this send belongs to a different peer.",
         );
       requestId = prior.requestId;
     } else {
+      if (prior?.requestId === requestId) requestId = randomUUID();
       await store.registerWait({
         requestId,
         peer: options.recipient,

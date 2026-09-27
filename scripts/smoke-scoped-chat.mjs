@@ -19,6 +19,8 @@ try {
   const uncertainArgs=chat("uncertain send"),beforeUnknown=f.posts();
   const uncertain=await f.run(uncertainArgs);assert.notEqual(uncertain.code,0,uncertain.stderr);
   assert.equal(JSON.parse(uncertain.stdout).outcome,"uncertain");assert.equal(f.posts(),beforeUnknown+1);
+  f.failLookup(true);const unavailable=await f.run(uncertainArgs);assert.equal(unavailable.code,4,unavailable.stderr);
+  assert.equal(JSON.parse(unavailable.stdout).outcome,"uncertain");assert.equal(f.posts(),beforeUnknown+1);f.failLookup(false);
   const recovered=await f.run(uncertainArgs);assert.equal(recovered.code,0,recovered.stderr);
   assert.equal(JSON.parse(recovered.stdout).reply.body_text,"The answer");assert.equal(f.posts(),beforeUnknown+1,"Unknown send recovery must never POST again");
   assert.ok(f.requests.some(request=>request.url.pathname==="/v1/sent-emails"&&request.url.searchParams.has("idempotency_key")));
