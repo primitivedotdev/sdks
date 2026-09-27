@@ -133,11 +133,17 @@ export async function findScopedChatReply(params: {
         seenIds.has(row.id)
       )
         continue;
+      if (
+        typeof row.recipient === "string" &&
+        address(row.recipient) !== address(params.from)
+      )
+        continue;
       const result = await getEmail({
         client: params.apiClient.client,
         path: { id: row.id },
         responseStyle: "fields",
       });
+      if (params.deadline != null && Date.now() >= params.deadline) return null;
       if (result.error || !result.data?.data)
         throw new Errors.CLIError(
           `Could not inspect chat candidate ${row.id}.`,
@@ -146,6 +152,18 @@ export async function findScopedChatReply(params: {
       const detail = result.data.data;
       // Processing rows must remain eligible for inspection on the next poll.
       if (!["accepted", "completed"].includes(detail.status)) continue;
+      // A fully parsed reply linked to a different send cannot become ours.
+      // Null linkage and incomplete parsing/auth must stay eligible for retry.
+      if (
+        params.sentId !== undefined &&
+        detail.reply_to_sent_email_id != null &&
+        detail.reply_to_sent_email_id !== params.sentId &&
+        detail.parsed?.status === "complete" &&
+        Array.isArray(detail.parsed.attachments)
+      ) {
+        seenIds.add(row.id);
+        continue;
+      }
       if (!isScopedChatReply(detail, params)) continue;
       if (isPlainChatReply(detail)) return detail;
       if (params.requireLatestParent) {

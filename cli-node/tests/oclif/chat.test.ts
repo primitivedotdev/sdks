@@ -421,6 +421,64 @@ describe("chat command", () => {
     expect(mocks.getEmail).not.toHaveBeenCalled();
   });
 
+  it("avoids fetching other recipients and refetching completed replies to other sends", async () => {
+    connectedAuth();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    mocks.sleep.mockImplementation(async (ms: number) => {
+      vi.setSystemTime(Date.now() + ms);
+    });
+    const otherRecipient = trustedReply({
+      id: "other-recipient",
+      recipient: "other@sender.example",
+    });
+    const otherThread = trustedReply({
+      id: "other-thread",
+      reply_to_sent_email_id: "other-send",
+    });
+    mocks.listEmails.mockResolvedValue({
+      data: { data: [otherRecipient, otherThread], meta: { cursor: null } },
+    });
+    mocks.getEmail.mockResolvedValue({ data: { data: otherThread } });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+      "--timeout",
+      "3",
+      "--interval",
+      "1",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("sent_awaiting_reply");
+    expect(mocks.getEmail).toHaveBeenCalledTimes(1);
+    expect(mocks.getEmail.mock.calls[0]?.[0].path.id).toBe("other-thread");
+    expect(mocks.listEmails).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps a reply arriving after the detail-request deadline pending", async () => {
+    connectedAuth();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    mocks.listEmails.mockResolvedValue({
+      data: { data: [searchRow()], meta: { cursor: null } },
+    });
+    mocks.getEmail.mockImplementation(async () => {
+      vi.setSystemTime(Date.now() + 2000);
+      return { data: { data: trustedReply() } };
+    });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+      "--timeout",
+      "1",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("sent_awaiting_reply");
+    expect(JSON.parse(result.stdout).reply).toBeNull();
+  });
+
   it("requires an explicit sender even with an exact parent ID", async () => {
     connectedAuth();
     await expect(
