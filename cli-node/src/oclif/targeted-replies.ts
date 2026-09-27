@@ -19,7 +19,11 @@ export interface ReplyTarget {
 
 export type TargetedReplyInspection =
   | { kind: "reply"; email: EmailDetail }
-  | { kind: "pending" | "inspection" | "unrelated"; id: string };
+  | {
+      kind: "pending" | "inspection" | "unrelated";
+      id: string;
+      email: EmailDetail;
+    };
 
 function invalid(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
@@ -49,7 +53,7 @@ export async function inspectTargetedReply(
     email.reply_to_sent_email_id != null &&
     email.reply_to_sent_email_id !== params.sentId
   )
-    return { kind: "unrelated", id: params.id };
+    return { kind: "unrelated", id: params.id, email };
   if (typeof email.recipient !== "string" || typeof email.to_email !== "string")
     throw invalid(
       `Reply candidate ${params.id} has invalid recipient metadata.`,
@@ -58,25 +62,26 @@ export async function inspectTargetedReply(
     email.recipient.trim().toLowerCase() !== params.from.trim().toLowerCase() ||
     email.to_email.trim().toLowerCase() !== params.from.trim().toLowerCase()
   )
-    return { kind: "unrelated", id: params.id };
-  if (email.status === "rejected") return { kind: "unrelated", id: params.id };
+    return { kind: "unrelated", id: params.id, email };
+  if (email.status === "rejected")
+    return { kind: "unrelated", id: params.id, email };
   // Pending parse/auth/linkage is not an observed reply and must stay retryable.
   if (
     !isScopedChatReply(email, params) ||
     email.parsed?.status !== "complete" ||
     !Array.isArray(email.parsed.attachments)
   )
-    return { kind: "pending", id: params.id };
+    return { kind: "pending", id: params.id, email };
   const received = Date.parse(email.received_at);
   if (!Number.isFinite(received))
     throw invalid(
       `Reply candidate ${params.id} has an invalid receipt timestamp.`,
     );
   if (params.since !== undefined && received < Date.parse(params.since))
-    return { kind: "unrelated", id: params.id };
+    return { kind: "unrelated", id: params.id, email };
   return isPlainChatReply(email)
     ? { kind: "reply", email }
-    : { kind: "inspection", id: params.id };
+    : { kind: "inspection", id: params.id, email };
 }
 
 /** One targeted recovery page. The event owner decides when recovery is needed. */

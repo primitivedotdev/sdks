@@ -6,10 +6,8 @@ import {
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
-import {
-  findScopedChatReply,
-  isConnectedChatCredential,
-} from "../scoped-chat.js";
+import { openConnectedReplyWait } from "../connected-reply-wait.js";
+import { isConnectedChatCredential } from "../scoped-chat.js";
 import { resolveScopedEmailWait } from "../scoped-email-wait.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
@@ -32,7 +30,7 @@ function cliError(message: string): Errors.CLIError {
 
 class EmailsWaitCommand extends Command {
   static description =
-    `Poll until matching inbound emails arrive, printing each match as it is found.
+    `Wait until matching inbound emails arrive, printing each match as it is found.
 
   Connected agents require --reply-to-sent-email-id and an exact peer --from.
   The receiving address is derived from the existing sent email; optional --to
@@ -42,7 +40,8 @@ class EmailsWaitCommand extends Command {
   pending for inspection. JSONL contains each matching email detail; --table
   prints compact rows. A plain reply does not prove task completion.
 
-  Connected waits do not support account-wide search or additional content
+  Connected waits share an address event subscription and recover replies with
+  exact-parent search. They never scan inbox history. Additional content
   filters. The command never sends mail. On timeout it exits 1; run the same
   wait again to recover a reply to the existing send without resending it.`;
 
@@ -180,43 +179,40 @@ class EmailsWaitCommand extends Command {
       matched += 1;
     };
 
-    while (
-      (!connected || scoped !== null) &&
-      (deadline === null || Date.now() < deadline)
-    ) {
-      if (scoped) {
-        const email = await findScopedChatReply({
+    if (scoped) {
+      let waiter:
+        | Awaited<ReturnType<typeof openConnectedReplyWait>>
+        | undefined;
+      try {
+        waiter = await openConnectedReplyWait({
           apiClient,
+          apiKey: auth.apiKey,
+          baseUrl: auth.apiBaseUrl,
+          configDir: this.config.configDir,
           ...scoped,
-          // Inbox date_from is created_at, so apply received --since locally.
-          // A reply created before the cutoff may have been received later.
-          deadline,
-          seenIds,
+          since,
           pageSize: flags["page-size"],
+          deadline,
           notice: (message) => process.stderr.write(`${message}\n`),
         });
-        if (email) {
-          seenIds.add(email.id);
-          // The list API filters created_at; wait's --since promises received_at.
-          const receivedAt = Date.parse(email.received_at);
-          if (!Number.isFinite(receivedAt))
-            throw cliError(
-              "The matching reply has an invalid received timestamp.",
-            );
-          if (since !== undefined && receivedAt < Date.parse(since)) continue;
+        while (matched < flags.number) {
+          const email = await waiter.next();
+          if (!email) break;
           printEmail(email);
-          if (matched >= flags.number) return;
-          continue;
+          await waiter.observed(email.id);
         }
-        if (deadline !== null && Date.now() >= deadline) break;
-        await sleep(
-          Math.min(
-            flags.interval * 1000,
-            deadline === null ? Infinity : Math.max(0, deadline - Date.now()),
-          ),
-        );
-        continue;
+        if (matched >= flags.number) {
+          await waiter.finish();
+          return;
+        }
+      } catch (error) {
+        if (deadline === null || Date.now() < deadline) throw error;
+      } finally {
+        await waiter?.close();
       }
+    }
+
+    while (!connected && (deadline === null || Date.now() < deadline)) {
       const page = await fetchEmailSearchPage({
         apiClient,
         cursor,
