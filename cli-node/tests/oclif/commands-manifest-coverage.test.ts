@@ -51,6 +51,8 @@ describe("COMMANDS / manifest coverage", () => {
     expect(wait.description).toContain(
       "Connected agents require --reply-to-sent-email-id",
     );
+    expect(wait.description).toContain("exact-parent search");
+    expect(wait.description).toContain("never scan inbox history");
     for (const flag of [
       "from",
       "to",
@@ -69,6 +71,7 @@ describe("COMMANDS / manifest coverage", () => {
       flags: Record<string, unknown>;
     };
     expect(chat.description).toContain("Connected agents must supply --from");
+    expect(chat.description).toContain("share an address event receiver");
     expect(chat.flags.from).toBeDefined();
     expect(COMMANDS["chat:reply"]).toBeDefined();
   });

@@ -18,6 +18,28 @@ vi.mock("../../src/oclif/commands/emails-poll.js", async (original) => ({
   sleep: mocks.sleep,
 }));
 
+import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
+
+vi.mock("../../src/oclif/shared-mail-receiver.js", () => ({
+  openSharedMailReceiver: async (options: {
+    configDir: string;
+    recipient: string;
+  }) => {
+    const store = await openSharedMailStore({
+      ...options,
+      scope: "scoped-wait-test",
+    });
+    return {
+      store,
+      ready: async () => ({ generation: "one", gapCount: 0 }),
+      changed: async () => {
+        vi.setSystemTime(Date.now() + 1000);
+      },
+      close: async () => {},
+    };
+  },
+}));
+
 import EmailsWaitCommand from "../../src/oclif/commands/emails-wait.js";
 import { readBeforeDeadline } from "../../src/oclif/scoped-chat.js";
 
@@ -36,7 +58,7 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
     created_at: "2026-05-25T00:00:02.000Z",
     domain: "agent.example",
     from_email: "help@agent.example",
-    id: "email-1",
+    id: "22222222-2222-4222-8222-222222222222",
     message_id: "<reply-1@agent.example>",
     recipient: "agent@sender.example",
     received_at: "2026-05-25T00:00:02.000Z",
@@ -92,7 +114,7 @@ function setup(connected = true) {
         auth: { ...replyEmail().auth, dmarcFromDomain: "agent.example" },
       }),
     ],
-    pages: [["email-1"]],
+    pages: [["22222222-2222-4222-8222-222222222222"]],
     requests: [] as URL[],
     error: false,
     stallPath: "",
@@ -125,7 +147,7 @@ function setup(connected = true) {
             : { data: fixture.sent },
           { status: fixture.error ? 404 : 200 },
         );
-      if (url.pathname === "/v1/emails") {
+      if (connected && url.pathname === "/v1/emails/search") {
         const page = Number(url.searchParams.get("cursor") ?? "0");
         return Response.json({
           data: (fixture.pages[page] ?? [])
@@ -134,7 +156,7 @@ function setup(connected = true) {
               (email) =>
                 !url.searchParams.has("date_from") ||
                 (email &&
-                  Date.parse(email.created_at) >=
+                  Date.parse(email.received_at) >=
                     Date.parse(url.searchParams.get("date_from") ?? "")),
             ),
           meta: {
@@ -235,18 +257,20 @@ describe("connected emails wait", () => {
     expect(aborted).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
   });
-  it("derives its receiving address and returns an existing fast reply without search or sends", async () => {
+  it("derives its receiving address and returns an existing fast reply through targeted search without sends", async () => {
     const fixture = setup();
     const result = await run(args);
     expect(result.failure).toBeUndefined();
-    expect(JSON.parse(result.stdout).id).toBe("email-1");
+    expect(JSON.parse(result.stdout).id).toBe(
+      "22222222-2222-4222-8222-222222222222",
+    );
     expect(JSON.parse(result.stdout).body_text).toContain(
       "Rotate your API key",
     );
     expect(fixture.requests.map((url) => url.pathname)).toEqual([
       `/v1/sent-emails/${sentId}`,
-      "/v1/emails",
-      "/v1/emails/email-1",
+      "/v1/emails/search",
+      "/v1/emails/22222222-2222-4222-8222-222222222222",
     ]);
     expect(fixture.requests[1]?.searchParams.has("date_from")).toBe(false);
   });
@@ -260,7 +284,9 @@ describe("connected emails wait", () => {
       "--include-existing",
     ]);
     expect(result.failure).toBeUndefined();
-    expect(JSON.parse(result.stdout).id).toBe("email-1");
+    expect(JSON.parse(result.stdout).id).toBe(
+      "22222222-2222-4222-8222-222222222222",
+    );
   });
   it.each([
     [],
@@ -292,8 +318,8 @@ describe("connected emails wait", () => {
   });
   it.each([
     `/v1/sent-emails/${sentId}`,
-    "/v1/emails",
-    "/v1/emails/email-1",
+    "/v1/emails/search",
+    "/v1/emails/22222222-2222-4222-8222-222222222222",
   ])("cancels a stalled %s read with a clean timeout", async (path) => {
     const fixture = setup();
     fixture.stallPath = path;
@@ -318,41 +344,66 @@ describe("connected emails wait", () => {
     fixture.replies = [
       {
         ...good,
-        id: "progress",
+        id: "44444444-4444-4444-8444-444444444444",
         parsed: {
           status: "complete",
           attachments: [{ filename: "interaction.json", size_bytes: 1 }],
         },
       },
-      { ...good, id: "wrong-thread", reply_to_sent_email_id: "other-send" },
-      { ...good, id: "wrong-sender", from_header: "other@agent.example" },
-      { ...good, id: "wrong-recipient", recipient: "other@sender.example" },
+      {
+        ...good,
+        id: "55555555-5555-4555-8555-555555555555",
+        reply_to_sent_email_id: "other-send",
+      },
+      {
+        ...good,
+        id: "66666666-6666-4666-8666-666666666666",
+        from_header: "other@agent.example",
+      },
+      {
+        ...good,
+        id: "77777777-7777-4777-8777-777777777777",
+        recipient: "other@sender.example",
+      },
       good,
     ];
     fixture.pages = [
-      ["progress", "wrong-thread", "wrong-sender", "wrong-recipient"],
+      [
+        "44444444-4444-4444-8444-444444444444",
+        "55555555-5555-4555-8555-555555555555",
+        "66666666-6666-4666-8666-666666666666",
+        "77777777-7777-4777-8777-777777777777",
+      ],
       [good.id],
     ];
     const result = await run(args);
     expect(result.failure).toBeUndefined();
     expect(JSON.parse(result.stdout).id).toBe(good.id);
-    expect(result.stderr).toContain("progress needs inspection");
+    expect(result.stderr).toContain("contains an interaction attachment");
     expect(
       fixture.requests.some((url) => url.searchParams.get("cursor") === "1"),
     ).toBe(true);
   });
   it("prints each of multiple matching replies once using the existing table shape", async () => {
     const fixture = setup();
-    fixture.replies.push({ ...fixture.replies[0], id: "email-2" });
-    fixture.pages = [["email-1", "email-2"]];
+    fixture.replies.push({
+      ...fixture.replies[0],
+      id: "33333333-3333-4333-8333-333333333333",
+    });
+    fixture.pages = [
+      [
+        "22222222-2222-4222-8222-222222222222",
+        "33333333-3333-4333-8333-333333333333",
+      ],
+    ];
     const result = await run([...args, "--number", "2", "--table"]);
     expect(result.failure).toBeUndefined();
     expect(result.stdout.split("\n")).toHaveLength(2);
-    expect(result.stdout).toContain("email-1");
-    expect(result.stdout).toContain("email-2");
+    expect(result.stdout).toContain("22222222-2222-4222-8222-222222222222");
+    expect(result.stdout).toContain("33333333-3333-4333-8333-333333333333");
     expect(result.stderr.match(/RECEIVED/g)).toHaveLength(1);
   });
-  it("honors explicit received --since even when a list page contains older mail", async () => {
+  it("honors explicit received --since using the search receipt cutoff", async () => {
     const fixture = setup();
     const result = await run([
       ...args,
@@ -363,7 +414,7 @@ describe("connected emails wait", () => {
     ]);
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe("");
-    expect(fixture.requests[1]?.searchParams.has("date_from")).toBe(false);
+    expect(fixture.requests[1]?.searchParams.has("date_from")).toBe(true);
   });
   it("includes mail created before --since but received on or after it", async () => {
     const fixture = setup();
@@ -379,8 +430,10 @@ describe("connected emails wait", () => {
       "1",
     ]);
     expect(result.failure).toBeUndefined();
-    expect(JSON.parse(result.stdout).id).toBe("email-1");
-    expect(fixture.requests[1]?.searchParams.has("date_from")).toBe(false);
+    expect(JSON.parse(result.stdout).id).toBe(
+      "22222222-2222-4222-8222-222222222222",
+    );
+    expect(fixture.requests[1]?.searchParams.has("date_from")).toBe(true);
   });
   it("keeps progress pending on timeout and lets the same standalone wait recover later", async () => {
     const fixture = setup();
@@ -407,7 +460,9 @@ describe("connected emails wait", () => {
     const fixture = setup(false);
     const result = await run(["--subject", "verify"]);
     expect(result.failure).toBeUndefined();
-    expect(JSON.parse(result.stdout).id).toBe("email-1");
+    expect(JSON.parse(result.stdout).id).toBe(
+      "22222222-2222-4222-8222-222222222222",
+    );
     expect(fixture.requests).toHaveLength(1);
     expect(fixture.requests[0]?.pathname).toBe("/v1/emails/search");
     expect(fixture.requests[0]?.searchParams.get("date_from")).toBe(

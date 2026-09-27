@@ -3,7 +3,11 @@ import type {
   EmailDetail,
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
-import { openSharedMailReceiver } from "./shared-mail-receiver.js";
+import {
+  openSharedMailReceiver,
+  sharedMailScope,
+} from "./shared-mail-receiver.js";
+import { openSharedMailStore } from "./shared-mail-state.js";
 import {
   inspectTargetedReply,
   readTargetedReplyPage,
@@ -31,6 +35,11 @@ export async function openConnectedReplyWait(options: {
   deadline?: number | null;
   notice?: (message: string) => void;
 }) {
+  options = {
+    ...options,
+    from: options.from.trim().toLowerCase(),
+    recipient: options.recipient.trim().toLowerCase(),
+  };
   const receiver = await openSharedMailReceiver({
     ...options,
     recipient: options.from,
@@ -126,7 +135,16 @@ export async function openConnectedReplyWait(options: {
       recoveryNeeded = true;
     },
     uncertain: () => store.markWaitUncertain(requestId),
-    cancelBeforeSend: () => store.cancelWaitBeforeSend(requestId),
+    async cancelBeforeSend() {
+      // Definite pre-send cleanup must remain possible after the receive deadline.
+      const cleanup = await openSharedMailStore({
+        configDir: options.configDir,
+        scope: sharedMailScope(options.apiKey, options.baseUrl),
+        recipient: options.from,
+        signal: AbortSignal.timeout(2000),
+      });
+      return cleanup.cancelWaitBeforeSend(requestId);
+    },
     observed: (emailId: string) => store.markWaitObserved(emailId, requestId),
     finish: () => store.finishWait(requestId),
     close: () => receiver.close(),
