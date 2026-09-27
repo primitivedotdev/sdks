@@ -145,7 +145,7 @@ describe("targeted reply recovery", () => {
       expect(
         (await inspectTargetedReply({ apiClient, ...target, id: "reply-1" }))
           ?.kind,
-      ).not.toBe("reply");
+      ).toBe("unrelated");
     }
   });
   it("leaves incomplete parsing/auth retryable and separates progress from replies", async () => {

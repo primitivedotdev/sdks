@@ -8,6 +8,7 @@ import {
   isPlainChatReply,
   isScopedChatReply,
   readBeforeDeadline,
+  scopedChatSenderTrust,
 } from "./scoped-chat.js";
 
 export interface ReplyTarget {
@@ -64,6 +65,19 @@ export async function inspectTargetedReply(
   )
     return { kind: "unrelated", id: params.id, email };
   if (email.status === "rejected")
+    return { kind: "unrelated", id: params.id, email };
+  // A different authenticated identity cannot become this peer. Do not keep
+  // rereading unrelated pushed mail on every local state reconciliation.
+  const trust = scopedChatSenderTrust(email, params.recipient);
+  if (
+    [
+      "dmarc-domain-mismatch",
+      "from-domain-mismatch",
+      "sender-mismatch",
+      "from-header-multiple-addresses",
+      "from-header-invalid",
+    ].includes(trust.reason)
+  )
     return { kind: "unrelated", id: params.id, email };
   // Pending parse/auth/linkage is not an observed reply and must stay retryable.
   if (
