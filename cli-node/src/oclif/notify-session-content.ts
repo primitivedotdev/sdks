@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import type { PrimitiveApiClient } from "@primitivedotdev/api-core";
+import type {
+  EmailAttachment,
+  PrimitiveApiClient,
+} from "@primitivedotdev/api-core";
 import {
   downloadEmailAttachmentPart,
   getEmail,
@@ -131,8 +134,28 @@ export async function isRoutineNotification(
   readPart: ReadNotificationPart | undefined,
   signal: AbortSignal,
 ): Promise<boolean> {
-  const parsed = event.email.parsed;
-  if (parsed.status !== "complete")
+  return isRoutineNotificationContent(event.email, readPart, signal);
+}
+
+// A local projection from an authenticated detail read, not a webhook envelope.
+export type NotificationContent = {
+  id: string;
+  body_text?: string | null;
+  body_html?: string | null;
+  parsed?: {
+    status: string;
+    attachments?: EmailAttachment[];
+    body_text?: string | null;
+    body_html?: string | null;
+  } | null;
+};
+export async function isRoutineNotificationContent(
+  email: NotificationContent,
+  readPart: ReadNotificationPart | undefined,
+  signal: AbortSignal,
+): Promise<boolean> {
+  const parsed = email.parsed;
+  if (parsed?.status !== "complete" || !Array.isArray(parsed.attachments))
     throw new NotificationRetryError(
       "Email parsing is incomplete; retrying through the delivery queue.",
     );
@@ -143,14 +166,14 @@ export async function isRoutineNotification(
     inventory: {
       status: "complete" as const,
       parts: parsed.attachments.map((part) => ({
-        filename: part.filename,
-        contentType: part.content_type,
+        filename: part.filename ?? null,
+        contentType: part.content_type ?? null,
       })),
     },
     bodies: {
       status: "complete" as const,
-      text: parsed.body_text,
-      html: parsed.body_html,
+      text: email.body_text ?? parsed.body_text ?? null,
+      html: email.body_html ?? parsed.body_html ?? null,
     },
   };
   const preliminary = classifySignalContent({
@@ -167,19 +190,28 @@ export async function isRoutineNotification(
   // Fetch eligibility only: these known non-routine cases must still notify.
   // The shared classifier remains authoritative for suppressing any message.
   if (
-    (parsed.body_html !== null && parsed.body_html !== "") ||
-    part.content_type.split(";")[0]?.trim().toLowerCase() !==
+    (content.bodies.html !== null && content.bodies.html !== "") ||
+    part.content_type?.split(";")[0]?.trim().toLowerCase() !==
       "application/json" ||
     part.size_bytes > MAX_INTERACTION_BYTES
   )
     return false;
-  if (!readPart)
+  if (
+    !readPart ||
+    !Number.isSafeInteger(part.part_index) ||
+    part.part_index === undefined ||
+    part.part_index < 0 ||
+    !Number.isSafeInteger(part.size_bytes) ||
+    part.size_bytes < 0 ||
+    typeof part.sha256 !== "string" ||
+    !/^[a-f0-9]{64}$/i.test(part.sha256)
+  )
     throw new NotificationRetryError(
       "Interaction classification requires authenticated attachment access.",
     );
   let bytes: Uint8Array;
   try {
-    bytes = await readPart(event.email.id, part.part_index, signal);
+    bytes = await readPart(email.id, part.part_index, signal);
   } catch {
     throw new NotificationRetryError(
       "Interaction content is unavailable; retrying through the delivery queue.",

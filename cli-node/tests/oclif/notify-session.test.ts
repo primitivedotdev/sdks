@@ -2,7 +2,10 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PrimitiveApiClient } from "@primitivedotdev/api-core";
+import {
+  type EmailDetail,
+  PrimitiveApiClient,
+} from "@primitivedotdev/api-core";
 import type { EmailReceivedEvent } from "@primitivedotdev/sdk/webhook";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ListenDelivery } from "../../src/oclif/listen-types.js";
@@ -87,8 +90,67 @@ async function open(
     notifications.handler({ ...delivery, body: JSON.stringify(event) }, signal);
   return { notifications, queue, handle };
 }
+function currentDetail(): EmailDetail {
+  return {
+    id: event.email.id,
+    recipient,
+    to_email: recipient,
+    sender,
+    from_email: sender,
+    from_header: event.email.headers.from,
+    status: "completed",
+    parsed: event.email.parsed,
+    auth: event.email.auth,
+    body_text: event.email.parsed.body_text,
+    body_html: event.email.parsed.body_html,
+    created_at: new Date().toISOString(),
+    received_at: new Date().toISOString(),
+    subject: "Private subject",
+    webhook_attempt_count: 0,
+    spam_score: 0,
+    domain: recipient.slice(recipient.lastIndexOf("@") + 1),
+    replies: [],
+  } as EmailDetail;
+}
 
 describe("native email notifications", () => {
+  it("accepts authoritative detail without a webhook and reuses native receipt evidence", async () => {
+    const first = await open();
+    const detail = currentDetail();
+    expect(
+      await first.notifications.handleDetail(detail, delivery.event_id, signal),
+    ).toEqual({ disposition: "notified" });
+    expect(
+      await first.notifications.handleDetail(detail, delivery.event_id, signal),
+    ).toEqual({ disposition: "notified" });
+    expect(first.queue).toHaveBeenCalledTimes(1);
+    expect(first.queue.mock.calls[0]?.[0]).not.toContain(detail.body_text);
+    expect(first.queue.mock.calls[0]?.[0]).not.toContain(detail.subject);
+    expect(
+      first.notifications.receipt(detail.id, delivery.event_id)?.state,
+    ).toBe("accepted");
+  });
+  it("rejects wrong-recipient detail and keeps incomplete processing retryable", async () => {
+    const first = await open();
+    await expect(
+      first.notifications.handleDetail(
+        { ...currentDetail(), recipient: "other@example.com" },
+        delivery.event_id,
+        signal,
+      ),
+    ).rejects.toThrow("recipient");
+    await expect(
+      first.notifications.handleDetail(
+        { ...currentDetail(), status: "pending" },
+        delivery.event_id,
+        signal,
+      ),
+    ).rejects.toThrow("not ready");
+    expect(first.queue).not.toHaveBeenCalled();
+    expect(
+      first.notifications.receipt(event.email.id, delivery.event_id),
+    ).toBeNull();
+  });
   it("defers pending authentication, then notifies once when current detail is accepted", async () => {
     const authenticated = structuredClone(event);
     event.email.auth.dmarc = "none";
@@ -262,6 +324,13 @@ describe("native email notifications", () => {
       tar_path: "interaction.json",
     });
     await first.handle();
+    expect(
+      await first.notifications.handleDetail(
+        currentDetail(),
+        delivery.event_id,
+        signal,
+      ),
+    ).toEqual({ disposition: "skipped" });
     delivery.event_type = "interaction.ack";
     await expect(first.handle()).rejects.toThrow("unrelated event");
     expect(first.queue).not.toHaveBeenCalled();
@@ -273,6 +342,13 @@ describe("native email notifications", () => {
       .update(bytes)
       .digest("hex");
     await first.handle();
+    expect(
+      await first.notifications.handleDetail(
+        currentDetail(),
+        delivery.event_id,
+        signal,
+      ),
+    ).toEqual({ disposition: "notified" });
     expect(first.queue).toHaveBeenCalledTimes(1);
   });
   it("refreshes incomplete snapshot content and never dispatches while still unavailable", async () => {
