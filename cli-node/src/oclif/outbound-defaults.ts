@@ -21,6 +21,7 @@ import {
   writeErrorWithHints,
 } from "./api-command.js";
 import type { ResolvedCliAuth } from "./auth.js";
+import { isConnectedChatCredential } from "./scoped-chat.js";
 
 // 200 chars is a generous cap that almost never trips on natural
 // first-line subjects (a sentence is typically <120 chars). The
@@ -66,6 +67,12 @@ export async function pickDefaultFromAddress(
   apiClient: PrimitiveApiClient,
   authFailureContext: AuthFailureContext,
 ): Promise<string> {
+  if (isConnectedChatCredential(authFailureContext.auth.apiKey)) {
+    throw new Errors.CLIError(
+      "Connected agents must pass --from with their connected email address.",
+      { exit: 1 },
+    );
+  }
   const result = await listDomains({
     client: apiClient.client,
     responseStyle: "fields",

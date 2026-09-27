@@ -43,6 +43,15 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("keeps scoped chat discoverable under the existing command shapes", () => {
+    const chat = COMMANDS.chat as unknown as {
+      description: string;
+      flags: Record<string, unknown>;
+    };
+    expect(chat.description).toContain("Connected agents must supply --from");
+    expect(chat.flags.from).toBeDefined();
+    expect(COMMANDS["chat:reply"]).toBeDefined();
+  });
   it("registers mailbox deletion operations and the sent alias", () => {
     expect(COMMANDS["sending:delete-sent-email"]).toBeDefined();
     expect(COMMANDS["agent-connections:remove-agent-connection"]).toBeDefined();

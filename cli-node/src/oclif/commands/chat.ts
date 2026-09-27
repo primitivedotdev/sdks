@@ -43,6 +43,10 @@ import {
 import { formatAlreadySentNotice } from "../idempotent-replay-banner.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 import {
+  findScopedChatReply,
+  isConnectedChatCredential,
+} from "../scoped-chat.js";
+import {
   apiResultHttpStatus,
   buildFollowUpCommand,
   classifySendError,
@@ -133,6 +137,7 @@ type ChatFollowUpCommandKind =
   | "continue_active_chat"
   | "continue_chat"
   | "continue_chat_explicit"
+  | "inspect_inbox"
   | "inspect_reply"
   | "inspect_sent_email"
   | "list_recent_sent_emails"
@@ -155,6 +160,7 @@ type ChatResponseBody = {
 };
 
 type ChatBaseContext = {
+  scopedInbox?: boolean;
   from: string;
   json: boolean;
   parentReply?: EmailDetail;
@@ -575,6 +581,10 @@ export function buildChatFollowUpCommands(
       context.reply.id,
     ]),
   );
+  if (context.scopedInbox) {
+    commands.push(scopedInboxCommand(context));
+    return commands;
+  }
   commands.push(
     buildCommand("wait_for_more", "Wait for future replies to this send", [
       "primitive",
@@ -593,9 +603,26 @@ export function buildChatFollowUpCommands(
   return commands;
 }
 
+function scopedInboxCommand(
+  context: ChatBaseContext,
+  includeExisting = false,
+): ChatFollowUpCommand {
+  return buildCommand(
+    "inspect_inbox",
+    "Inspect the connected inbox for replies",
+    [
+      "primitive",
+      "emails",
+      "list",
+      ...(includeExisting ? [] : ["--date-from", context.sentAtIso]),
+    ],
+  );
+}
+
 export function buildChatRecoveryCommands(
   context: ChatBaseContext,
 ): ChatFollowUpCommand[] {
+  if (context.scopedInbox) return [scopedInboxCommand(context)];
   const commands: ChatFollowUpCommand[] = [
     buildCommand("wait_threaded_reply", "Wait for the threaded reply again", [
       "primitive",
@@ -783,7 +810,11 @@ export function formatChatAwaitingReplyMessage(
         ? "No reply to it yet."
         : `Loading its reply failed: ${options.waitError}.`;
     const action =
-      next.kind === "inspect_reply" ? "read the reply with" : "wait with";
+      next.kind === "inspect_reply"
+        ? "read the reply with"
+        : next.kind === "inspect_inbox"
+          ? "inspect the inbox with"
+          : "wait with";
     return `${formatAlreadySentNotice(context.sent)} ${status} Do NOT resend; ${action}: ${next.command}`;
   }
   const [wait] = buildChatRecoveryCommands(context);
@@ -791,7 +822,7 @@ export function formatChatAwaitingReplyMessage(
     options.waitError === undefined
       ? `No reply yet after ${context.timeoutSeconds}s.`
       : `Waiting for the reply failed: ${options.waitError}`;
-  return `${chatNoun(context)} sent (id ${context.sent.id}). ${status} Do NOT resend; wait with: ${wait.command}`;
+  return `${chatNoun(context)} sent (id ${context.sent.id}). ${status} Do NOT resend; ${context.scopedInbox ? "inspect the inbox" : "wait"} with: ${wait.command}`;
 }
 
 export function buildChatExistingReplyCommands(
@@ -812,6 +843,8 @@ export function buildChatExistingReplyCommands(
             existingReplyId,
           ]),
         ];
+  if (context.scopedInbox)
+    return [...inspectReply, scopedInboxCommand(context, true)];
   return [
     ...inspectReply,
     buildCommand(
@@ -1120,6 +1153,9 @@ async function findLatestInboundFromRecipient(params: {
   pageSize: number;
   recipient: string;
 }): Promise<EmailDetail | null> {
+  if (isConnectedChatCredential(params.authFailureContext.auth.apiKey)) {
+    return findScopedChatReply(params);
+  }
   const result = await searchEmails({
     client: params.apiClient.client,
     query: {
@@ -1158,6 +1194,10 @@ async function findLatestInboundFromRecipient(params: {
 
 class ChatCommand extends Command {
   static description = `Send a message to an address and wait for the reply.
+
+  Connected agents must supply --from. They wait within their scoped inbox for
+  an authenticated, exactly threaded reply. Interaction attachments remain
+  pending for inspection; a plain reply does not prove task completion.
 
   This is the first-party verb for talking to agents that live behind
   email addresses. \`primitive send\` is transport (fire-and-forget);
@@ -1372,7 +1412,10 @@ class ChatCommand extends Command {
         // this as a failure is what made callers send twice.
         process.stderr.write(`${chatFailureText(`Error: ${detail}`)}\n`);
         this.reportAwaitingReply(baseContext, {
-          outcome: "sent_awaiting_reply",
+          outcome:
+            baseContext.scopedInbox && baseContext.sent.idempotent_replay
+              ? "already_sent"
+              : "sent_awaiting_reply",
           waitError: detail,
         });
         return;
@@ -1747,6 +1790,7 @@ class ChatCommand extends Command {
 
         const replyAddress = sent.from || from;
         const baseContext: ChatBaseContext = {
+          scopedInbox: isConnectedChatCredential(auth.apiKey),
           from: replyAddress,
           json: flags.json,
           parentReply,
@@ -1755,7 +1799,8 @@ class ChatCommand extends Command {
           recipient: args.recipient,
           sent,
           sentAtIso,
-          strictOnly: flags["strict-only"],
+          strictOnly:
+            flags["strict-only"] || isConnectedChatCredential(auth.apiKey),
           strictPhaseSeconds: flags["strict-phase-seconds"],
           subject,
           timeoutSeconds: flags.timeout,
@@ -1784,14 +1829,26 @@ class ChatCommand extends Command {
           progress?.update(
             "Server returned idempotent_replay: looking up the existing reply",
           );
-          const existing = await fetchEmailSearchPage({
-            apiClient,
-            cursor: null,
-            filters: { replyToSentEmailId: sent.id },
-            pageSize: flags["page-size"],
-            // Intentionally NO `since`: the reply (if any) predates
-            // this attempt.
-          });
+          const scoped = isConnectedChatCredential(auth.apiKey);
+          const scopedReply = scoped
+            ? await findScopedChatReply({
+                apiClient,
+                from: replyAddress,
+                recipient: args.recipient,
+                sentId: sent.id,
+                pageSize: flags["page-size"],
+              })
+            : null;
+          const existing = scoped
+            ? { ok: true as const, rows: [], cursor: null }
+            : await fetchEmailSearchPage({
+                apiClient,
+                cursor: null,
+                filters: { replyToSentEmailId: sent.id },
+                pageSize: flags["page-size"],
+                // Intentionally NO `since`: the reply (if any) predates
+                // this attempt.
+              });
           if (!existing.ok) {
             // The earlier send exists; only finding its reply failed.
             // Say so rather than reporting that no reply exists.
@@ -1806,13 +1863,16 @@ class ChatCommand extends Command {
             });
             return;
           }
-          const replyId = await resolveIdempotentReplayReply(existing);
+          const replyId =
+            scopedReply?.id ?? (await resolveIdempotentReplayReply(existing));
           if (replyId) {
-            const full = await getEmail({
-              client: apiClient.client,
-              path: { id: replyId },
-              responseStyle: "fields",
-            });
+            const full = scopedReply
+              ? { data: { data: scopedReply }, error: undefined }
+              : await getEmail({
+                  client: apiClient.client,
+                  path: { id: replyId },
+                  responseStyle: "fields",
+                });
             const detail = full.error
               ? null
               : emailDetailFromEnvelope(
@@ -2335,6 +2395,30 @@ type WaitForReplyParams = {
 async function waitForReply(
   params: WaitForReplyParams,
 ): Promise<ChatReplyResult | null> {
+  if (isConnectedChatCredential(params.authFailureContext.auth.apiKey)) {
+    const deadline =
+      params.timeoutSeconds === 0
+        ? null
+        : Date.now() + params.timeoutSeconds * 1000;
+    const seenIds = new Set<string>();
+    while (deadline === null || Date.now() < deadline) {
+      const reply = await findScopedChatReply({
+        ...params,
+        since: params.sentAtIso,
+        seenIds,
+        deadline,
+      });
+      if (reply) return { reply, matchStrategy: "strict" };
+      if (deadline !== null && Date.now() >= deadline) break;
+      await sleep(
+        Math.min(
+          params.interval * 1000,
+          deadline === null ? Infinity : Math.max(0, deadline - Date.now()),
+        ),
+      );
+    }
+    return null;
+  }
   const notice =
     params.notice ??
     ((message: string) => {

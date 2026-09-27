@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
   fetchEmailSearchPage: vi.fn(),
   getEmail: vi.fn(),
+  listEmails: vi.fn(),
   pickDefaultFromAddress: vi.fn(),
   replyToEmail: vi.fn(),
   searchEmails: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
   return {
     ...actual,
     getEmail: mocks.getEmail,
+    listEmails: mocks.listEmails,
     replyToEmail: mocks.replyToEmail,
     searchEmails: mocks.searchEmails,
     sendEmail: mocks.sendEmail,
@@ -84,6 +86,11 @@ import ChatCommand, {
   resolveChatResponseBody,
 } from "../../src/oclif/commands/chat.js";
 import { COMMANDS } from "../../src/oclif/index.js";
+
+import {
+  isPlainChatReply,
+  isScopedChatReply,
+} from "../../src/oclif/scoped-chat.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 let tempConfigHome: string;
@@ -283,6 +290,204 @@ describe("chat command", () => {
     rmSync(tempConfigHome, { force: true, recursive: true });
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  function connectedAuth() {
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { client: {} },
+      auth: {
+        apiKey: ["pconn", "fixture"].join("_"),
+        apiBaseUrl: "https://api.example.test/v1",
+      },
+      baseUrlOverridden: false,
+    });
+  }
+
+  function trustedReply(overrides: Partial<EmailDetail> = {}) {
+    return replyEmail({
+      from_header: '"Helper" <help@agent.example>',
+      auth: { ...replyEmail().auth, dmarcFromDomain: "agent.example" },
+      ...overrides,
+    });
+  }
+
+  it("uses scoped inbox pagination and skips progress and unrelated mail", async () => {
+    connectedAuth();
+    const progress = trustedReply({
+      id: "progress",
+      parsed: {
+        status: "complete",
+        attachments: [
+          {
+            filename: "INTERACTION.JSON",
+            content_type: "application/json",
+            size_bytes: 12,
+          },
+        ],
+      },
+    });
+    const unrelated = trustedReply({
+      id: "unrelated",
+      reply_to_sent_email_id: "different-send",
+    });
+    const reply = trustedReply();
+    mocks.listEmails
+      .mockResolvedValueOnce({
+        data: { data: [progress, unrelated], meta: { cursor: "next" } },
+      })
+      .mockResolvedValueOnce({
+        data: { data: [reply], meta: { cursor: null } },
+      });
+    mocks.getEmail.mockImplementation(({ path }: { path: { id: string } }) =>
+      Promise.resolve({
+        data: {
+          data:
+            path.id === "progress"
+              ? progress
+              : path.id === "unrelated"
+                ? unrelated
+                : reply,
+        },
+      }),
+    );
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+      "--strict-phase-seconds",
+      "1",
+    ]);
+    expect(JSON.parse(result.stdout).reply.id).toBe(reply.id);
+    expect(result.stderr).toContain("progress needs inspection");
+    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
+    expect(mocks.searchEmails).not.toHaveBeenCalled();
+    expect(mocks.listEmails.mock.calls[1]?.[0].query.cursor).toBe("next");
+    expect(
+      JSON.parse(result.stdout).follow_up_commands.some(
+        (command: { command: string }) =>
+          command.command.includes("emails wait"),
+      ),
+    ).toBe(false);
+  });
+
+  it.each([
+    "processing",
+    "parsing",
+    "auth",
+  ])("revisits %s rows on the next scoped poll", async (pending) => {
+    connectedAuth();
+    mocks.listEmails.mockResolvedValue({
+      data: { data: [searchRow()], meta: { cursor: null } },
+    });
+    mocks.getEmail
+      .mockResolvedValueOnce({
+        data: {
+          data: trustedReply(
+            pending === "pending"
+              ? { status: "pending" }
+              : pending === "parsing"
+                ? { parsed: { status: "failed" } }
+                : { auth: { ...replyEmail().auth, dmarc: "temperror" } },
+          ),
+        },
+      })
+      .mockResolvedValueOnce({ data: { data: trustedReply() } });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).reply.id).toBe("email-1");
+    expect(mocks.getEmail).toHaveBeenCalledTimes(2);
+    expect(mocks.listEmails).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not accept a reply from a malformed inbox page", async () => {
+    connectedAuth();
+    mocks.listEmails.mockResolvedValue({ data: { data: [searchRow()] } });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).reply).toBeNull();
+    expect(JSON.parse(result.stdout).error.message).toContain("invalid page");
+    expect(mocks.getEmail).not.toHaveBeenCalled();
+  });
+
+  it("recovers connected idempotent sends through the scoped inbox", async () => {
+    connectedAuth();
+    mocks.sendEmail.mockResolvedValue({
+      data: { data: sentEmail({ idempotent_replay: true }) },
+    });
+    mocks.listEmails.mockResolvedValue({
+      data: { data: [searchRow()], meta: { cursor: null } },
+    });
+    mocks.getEmail.mockResolvedValue({ data: { data: trustedReply() } });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).reply.id).toBe("email-1");
+    expect(mocks.listEmails.mock.calls[0]?.[0].query.date_from).toBeUndefined();
+    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
+  });
+
+  it("keeps unauthenticated and interaction replies pending until timeout", async () => {
+    connectedAuth();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    mocks.sleep.mockImplementation(async (ms: number) => {
+      vi.setSystemTime(Date.now() + ms);
+    });
+    const untrusted = trustedReply({
+      id: "spoof",
+      auth: { ...replyEmail().auth, dmarcFromDomain: "attacker.example" },
+    });
+    const progress = trustedReply({
+      id: "progress",
+      parsed: {
+        status: "complete",
+        attachments: [
+          {
+            filename: "interaction.json",
+            content_type: "application/json",
+            size_bytes: 1,
+          },
+        ],
+      },
+    });
+    mocks.listEmails.mockResolvedValue({
+      data: { data: [untrusted, progress], meta: { cursor: null } },
+    });
+    mocks.getEmail.mockImplementation(({ path }: { path: { id: string } }) =>
+      Promise.resolve({
+        data: { data: path.id === "spoof" ? untrusted : progress },
+      }),
+    );
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+      "--timeout",
+      "1",
+      "--strict-phase-seconds",
+      "1",
+    ]);
+    expect(result.exitCode).toBe(3);
+    expect(JSON.parse(result.stdout).outcome).toBe("sent_awaiting_reply");
+    expect(JSON.parse(result.stdout).reply).toBeNull();
+    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
   });
 
   it("registers the first-party chat command", () => {
@@ -1275,5 +1480,60 @@ describe("resolveIdempotentReplayReply", () => {
       ],
     });
     expect(id).toBe("newest");
+  });
+});
+
+describe("scoped chat trust and content", () => {
+  const params = {
+    from: "agent@sender.example",
+    recipient: "help@agent.example",
+    sentId: "sent-1",
+  };
+  const detail = () =>
+    replyEmail({
+      from_header: "Helper <help@agent.example>",
+      auth: { ...replyEmail().auth, dmarcFromDomain: "agent.example" },
+    });
+  it("requires exact ancestry, recipient, raw From and authenticated domain", () => {
+    expect(isScopedChatReply(detail(), params)).toBe(true);
+    for (const mutation of [
+      { reply_to_sent_email_id: "other" },
+      { recipient: "other@sender.example" },
+      { to_email: "other@sender.example" },
+      { from_header: null },
+      { from_header: "other@agent.example" },
+      { from_header: "help@agent.example, other@agent.example" },
+      { auth: { ...detail().auth, dmarcFromDomain: "other.example" } },
+      { auth: { ...detail().auth, dmarc: "fail" } },
+    ])
+      expect(isScopedChatReply({ ...detail(), ...mutation }, params)).toBe(
+        false,
+      );
+  });
+  it("keeps unavailable parsing and all canonical interaction attachments pending", () => {
+    expect(isPlainChatReply(detail())).toBe(true);
+    expect(
+      isPlainChatReply({ ...detail(), parsed: { status: "failed" } }),
+    ).toBe(false);
+    expect(
+      isPlainChatReply({ ...detail(), parsed: { status: "complete" } }),
+    ).toBe(false);
+    for (const name of ["interaction.json", "INTERACTION.JSON"]) {
+      expect(
+        isPlainChatReply({
+          ...detail(),
+          parsed: {
+            status: "complete",
+            attachments: [
+              {
+                filename: name,
+                content_type: "application/json",
+                size_bytes: 1,
+              },
+            ],
+          },
+        }),
+      ).toBe(false);
+    }
   });
 });
