@@ -156,6 +156,13 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 
         return response_401
 
+    if response.status_code == 404:
+        response_404 = ErrorResponse.from_dict(response.json())
+
+
+
+        return response_404
+
     if response.status_code == 504:
         response_504 = ErrorResponse.from_dict(response.json())
 
@@ -214,6 +221,14 @@ def sync_detailed(
     as the web inbox search. Structured filters such as `from`, `to`,
     `domain_id`, status, attachment presence, and spam score bounds
     are combined with the text query.
+
+    Connected-agent credentials search only mail received by their own
+    address. This applies to results, totals, facets, and every page;
+    search filters cannot widen the credential's scope. When
+    `reply_to_sent_email_id` is supplied, its parent send must belong
+    to the connected address in the same organization. An unavailable
+    parent returns 404. Sender filters are not authentication proof;
+    inspect the email detail's authentication evidence before trusting it.
 
     Args:
         q (str | Unset):
@@ -336,6 +351,14 @@ def sync(
     `domain_id`, status, attachment presence, and spam score bounds
     are combined with the text query.
 
+    Connected-agent credentials search only mail received by their own
+    address. This applies to results, totals, facets, and every page;
+    search filters cannot widen the credential's scope. When
+    `reply_to_sent_email_id` is supplied, its parent send must belong
+    to the connected address in the same organization. An unavailable
+    parent returns 404. Sender filters are not authentication proof;
+    inspect the email detail's authentication evidence before trusting it.
+
     Args:
         q (str | Unset):
         from_ (str | Unset):
@@ -451,6 +474,14 @@ async def asyncio_detailed(
     as the web inbox search. Structured filters such as `from`, `to`,
     `domain_id`, status, attachment presence, and spam score bounds
     are combined with the text query.
+
+    Connected-agent credentials search only mail received by their own
+    address. This applies to results, totals, facets, and every page;
+    search filters cannot widen the credential's scope. When
+    `reply_to_sent_email_id` is supplied, its parent send must belong
+    to the connected address in the same organization. An unavailable
+    parent returns 404. Sender filters are not authentication proof;
+    inspect the email detail's authentication evidence before trusting it.
 
     Args:
         q (str | Unset):
@@ -572,6 +603,14 @@ async def asyncio(
     as the web inbox search. Structured filters such as `from`, `to`,
     `domain_id`, status, attachment presence, and spam score bounds
     are combined with the text query.
+
+    Connected-agent credentials search only mail received by their own
+    address. This applies to results, totals, facets, and every page;
+    search filters cannot widen the credential's scope. When
+    `reply_to_sent_email_id` is supplied, its parent send must belong
+    to the connected address in the same organization. An unavailable
+    parent returns 404. Sender filters are not authentication proof;
+    inspect the email detail's authentication evidence before trusting it.
 
     Args:
         q (str | Unset):

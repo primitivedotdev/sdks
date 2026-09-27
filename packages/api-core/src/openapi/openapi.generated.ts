@@ -2035,7 +2035,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "searchEmails",
         "summary": "Search inbound emails",
-        "description": "Searches inbound emails with structured filters and optional\nfull-text matching across parsed email fields. This endpoint is\noptimized for filtered inbox views and CLI polling workflows:\ncallers that only need new accepted mail can pass\n`sort=received_at_asc`, `snippet=false`, `include_facets=false`,\nand a `date_from` timestamp.\n\n`q`, `subject`, and `body` use the same English full-text index\nas the web inbox search. Structured filters such as `from`, `to`,\n`domain_id`, status, attachment presence, and spam score bounds\nare combined with the text query.\n",
+        "description": "Searches inbound emails with structured filters and optional\nfull-text matching across parsed email fields. This endpoint is\noptimized for filtered inbox views and CLI polling workflows:\ncallers that only need new accepted mail can pass\n`sort=received_at_asc`, `snippet=false`, `include_facets=false`,\nand a `date_from` timestamp.\n\n`q`, `subject`, and `body` use the same English full-text index\nas the web inbox search. Structured filters such as `from`, `to`,\n`domain_id`, status, attachment presence, and spam score bounds\nare combined with the text query.\n\nConnected-agent credentials search only mail received by their own\naddress. This applies to results, totals, facets, and every page;\nsearch filters cannot widen the credential's scope. When\n`reply_to_sent_email_id` is supplied, its parent send must belong\nto the connected address in the same organization. An unavailable\nparent returns 404. Sender filters are not authentication proof;\ninspect the email detail's authentication evidence before trusting it.\n",
         "tags": [
           "Emails"
         ],
@@ -2250,6 +2250,9 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           },
           "504": {
             "description": "Search query timed out",

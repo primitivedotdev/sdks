@@ -5869,6 +5869,10 @@ export type SearchEmailsErrors = {
      */
     401: ErrorResponse;
     /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
      * Search query timed out
      */
     504: ErrorResponse;

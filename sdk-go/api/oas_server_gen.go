@@ -1099,6 +1099,13 @@ type Handler interface {
 	// as the web inbox search. Structured filters such as `from`, `to`,
 	// `domain_id`, status, attachment presence, and spam score bounds
 	// are combined with the text query.
+	// Connected-agent credentials search only mail received by their own
+	// address. This applies to results, totals, facets, and every page;
+	// search filters cannot widen the credential's scope. When
+	// `reply_to_sent_email_id` is supplied, its parent send must belong
+	// to the connected address in the same organization. An unavailable
+	// parent returns 404. Sender filters are not authentication proof;
+	// inspect the email detail's authentication evidence before trusting it.
 	//
 	// GET /emails/search
 	SearchEmails(ctx context.Context, params SearchEmailsParams) (SearchEmailsRes, error)
