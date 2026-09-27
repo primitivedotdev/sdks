@@ -188,7 +188,8 @@ class EmailsWaitCommand extends Command {
         const email = await findScopedChatReply({
           apiClient,
           ...scoped,
-          since,
+          // Inbox date_from is created_at, so apply received --since locally.
+          // A reply created before the cutoff may have been received later.
           deadline,
           seenIds,
           pageSize: flags["page-size"],
