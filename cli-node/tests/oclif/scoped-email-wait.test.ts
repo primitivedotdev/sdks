@@ -128,9 +128,15 @@ function setup(connected = true) {
       if (url.pathname === "/v1/emails") {
         const page = Number(url.searchParams.get("cursor") ?? "0");
         return Response.json({
-          data: (fixture.pages[page] ?? []).map((id) =>
-            fixture.replies.find((email) => email.id === id),
-          ),
+          data: (fixture.pages[page] ?? [])
+            .map((id) => fixture.replies.find((email) => email.id === id))
+            .filter(
+              (email) =>
+                !url.searchParams.has("date_from") ||
+                (email &&
+                  Date.parse(email.created_at) >=
+                    Date.parse(url.searchParams.get("date_from") ?? "")),
+            ),
           meta: {
             cursor: page + 1 < fixture.pages.length ? String(page + 1) : null,
           },
@@ -357,9 +363,24 @@ describe("connected emails wait", () => {
     ]);
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toBe("");
-    expect(fixture.requests[1]?.searchParams.get("date_from")).toBe(
-      "2026-09-27T00:00:00.000Z",
-    );
+    expect(fixture.requests[1]?.searchParams.has("date_from")).toBe(false);
+  });
+  it("includes mail created before --since but received on or after it", async () => {
+    const fixture = setup();
+    fixture.replies[0] = {
+      ...fixture.replies[0],
+      received_at: "2026-09-27T00:00:00.000Z",
+    };
+    const result = await run([
+      ...args,
+      "--since",
+      "2026-09-27",
+      "--timeout",
+      "1",
+    ]);
+    expect(result.failure).toBeUndefined();
+    expect(JSON.parse(result.stdout).id).toBe("email-1");
+    expect(fixture.requests[1]?.searchParams.has("date_from")).toBe(false);
   });
   it("keeps progress pending on timeout and lets the same standalone wait recover later", async () => {
     const fixture = setup();

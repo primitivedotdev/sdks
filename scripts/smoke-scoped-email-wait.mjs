@@ -31,7 +31,7 @@ const server = createServer((request, response) => {
     if (url.pathname === `/v1/sent-emails/${sentId}`) {
       json(response, { id: sentId, from_address: owner, from_header: `Agent <${owner}>`, to_address: peer });
     } else if (url.pathname === "/v1/emails") {
-      json(response, [reply]);
+      json(response, !url.searchParams.has("date_from") || Date.parse(reply.created_at) >= Date.parse(url.searchParams.get("date_from")) ? [reply] : []);
     } else if (url.pathname === `/v1/emails/${reply.id}`) {
       json(response, progress ? { ...reply, parsed: { status: "complete", attachments: [{ filename: "interaction.json", size_bytes: 10 }] } } : reply);
     } else throw new Error(`Forbidden request: ${url.pathname}`);
@@ -79,6 +79,10 @@ try {
   assert.equal(since.code, 1, since.stderr);
   assert.equal(since.stdout, "");
   assert.match(since.stderr, /Timed out/);
+  reply.received_at = "2026-02-01T00:00:00Z";
+  const receivedLater = await run([...args, "--since", "2026-02-01"]);
+  assert.equal(receivedLater.code, 0, receivedLater.stderr);
+  assert.equal(JSON.parse(receivedLater.stdout).id, reply.id);
   progress = true;
   const pending = await run(args);
   assert.equal(pending.code, 1, pending.stderr);
