@@ -43,6 +43,7 @@ describe("notification content reads", () => {
           success: true,
           data: {
             id: event.email.id,
+            status: "accepted",
             recipient,
             from_header: event.email.headers.from,
             auth: event.email.auth,

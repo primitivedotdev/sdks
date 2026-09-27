@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import type { EmailReceivedEvent } from "@primitivedotdev/sdk/webhook";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ListenDelivery } from "../../src/oclif/listen-types.js";
@@ -10,6 +11,7 @@ import {
   notificationSenders,
   openSessionNotifications,
 } from "../../src/oclif/notify-session.js";
+import { notificationEventReader } from "../../src/oclif/notify-session-content.js";
 import { NativeSessionError } from "../../src/oclif/notify-session-native.js";
 import {
   openNotificationReceipts,
@@ -87,6 +89,67 @@ async function open(
 }
 
 describe("native email notifications", () => {
+  it("defers pending authentication, then notifies once when current detail is accepted", async () => {
+    const authenticated = structuredClone(event);
+    event.email.auth.dmarc = "none";
+    let status = "pending";
+    const client = new PrimitiveApiClient({
+      apiKey: "fixture",
+      apiBaseUrl: "https://example.test/v1",
+      fetch: async () =>
+        Response.json({
+          success: true,
+          data: {
+            id: event.email.id,
+            status,
+            recipient,
+            from_header: sender,
+            parsed: event.email.parsed,
+            auth:
+              status === "pending"
+                ? event.email.auth
+                : authenticated.email.auth,
+          },
+        }),
+    });
+    const first = await open(undefined, {
+      refreshEvent: notificationEventReader(async () => client.client),
+    });
+    await expect(first.handle()).rejects.toThrow("processing is not ready");
+    expect(first.queue).not.toHaveBeenCalled();
+    expect(readNotificationReceipts(directory, scope, threadId)).toEqual([]);
+    status = "accepted";
+    await first.handle();
+    await first.handle();
+    expect(first.queue).toHaveBeenCalledTimes(1);
+  });
+  it("drains permanently untrusted processed mail without notifying", async () => {
+    event.email.auth.dmarc = "none";
+    const client = new PrimitiveApiClient({
+      apiKey: "fixture",
+      apiBaseUrl: "https://example.test/v1",
+      fetch: async () =>
+        Response.json({
+          success: true,
+          data: {
+            id: event.email.id,
+            status: "completed",
+            recipient,
+            from_header: sender,
+            parsed: event.email.parsed,
+            auth: event.email.auth,
+          },
+        }),
+    });
+    const first = await open(undefined, {
+      refreshEvent: notificationEventReader(async () => client.client),
+    });
+    expect(await first.handle()).toMatchObject({
+      succeeded: true,
+      outcome: { mode: "sdk", accepted: true },
+    });
+    expect(first.queue).not.toHaveBeenCalled();
+  });
   it("requires exact addresses and connected credential scope", () => {
     expect(
       notificationSenders([`${sender},OTHER@example.com`, sender]),

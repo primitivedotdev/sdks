@@ -41,6 +41,7 @@ export function notificationEventReader(
       if (
         result.error ||
         current?.id !== event.email.id ||
+        !["accepted", "completed", "rejected"].includes(current.status) ||
         current.recipient.toLowerCase() !== recipient ||
         typeof current.from_header !== "string" ||
         current.parsed?.status !== "complete" ||
