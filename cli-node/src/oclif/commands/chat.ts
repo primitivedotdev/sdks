@@ -1154,7 +1154,7 @@ async function findLatestInboundFromRecipient(params: {
   recipient: string;
 }): Promise<EmailDetail | null> {
   if (isConnectedChatCredential(params.authFailureContext.auth.apiKey)) {
-    return findScopedChatReply(params);
+    return findScopedChatReply({ ...params, requireLatestParent: true });
   }
   const result = await searchEmails({
     client: params.apiClient.client,
@@ -1198,6 +1198,8 @@ class ChatCommand extends Command {
   Connected agents must supply --from. They wait within their scoped inbox for
   an authenticated, exactly threaded reply. Interaction attachments remain
   pending for inspection; a plain reply does not prove task completion.
+  Automatic continuation stops when its latest matching parent needs
+  inspection. Use --reply-to-email-id to choose that parent explicitly.
 
   This is the first-party verb for talking to agents that live behind
   email addresses. \`primitive send\` is transport (fire-and-forget);
@@ -1537,6 +1539,12 @@ class ChatCommand extends Command {
             configDir: this.config.configDir,
           });
 
+        if (isConnectedChatCredential(auth.apiKey) && !flags.from?.trim()) {
+          throw cliError(
+            "Connected agents must pass --from with their connected email address.",
+          );
+        }
+
         const authFailureContext: ChatAuthFailureContext = {
           auth,
           baseUrlOverridden,
@@ -1837,6 +1845,10 @@ class ChatCommand extends Command {
                 recipient: args.recipient,
                 sentId: sent.id,
                 pageSize: flags["page-size"],
+                notice: (message) => {
+                  if (progress) progress.notice(message);
+                  else process.stderr.write(`${message}\n`);
+                },
               })
             : null;
           const existing = scoped

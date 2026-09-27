@@ -78,6 +78,7 @@ export async function findScopedChatReply(params: {
   since?: string;
   pageSize: number;
   seenIds?: Set<string>;
+  requireLatestParent?: boolean;
   notice?: (message: string) => void;
   deadline?: number | null;
 }): Promise<EmailDetail | null> {
@@ -147,6 +148,12 @@ export async function findScopedChatReply(params: {
       if (!["accepted", "completed"].includes(detail.status)) continue;
       if (!isScopedChatReply(detail, params)) continue;
       if (isPlainChatReply(detail)) return detail;
+      if (params.requireLatestParent) {
+        throw new Errors.CLIError(
+          `Latest reply ${detail.id} needs inspection. Use primitive emails get --id ${detail.id}, then choose --reply-to-email-id explicitly.`,
+          { exit: 1 },
+        );
+      }
       if (
         detail.parsed?.status === "complete" &&
         Array.isArray(detail.parsed.attachments)
