@@ -18,6 +18,7 @@ let sent;
 let candidates = [];
 let posts = 0;
 let ready = true;
+let latestBlocked = false;
 function json(response, data, cursor = null) {
   response.setHeader("Content-Type", "application/json");
   response.end(JSON.stringify({ success: true, data, meta: { cursor } }));
@@ -58,7 +59,8 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (request.method === "GET" && url.pathname === "/v1/emails") {
-      if (url.searchParams.get("cursor") === "second") json(response, ready ? candidates.slice(-1) : []);
+      if (!url.searchParams.has("date_from") && ready && !latestBlocked) json(response, [candidates.at(-1), ...candidates.slice(0, -1)]);
+      else if (url.searchParams.get("cursor") === "second") json(response, ready ? candidates.slice(-1) : []);
       else json(response, candidates.slice(0, -1), "second");
       return;
     }
@@ -101,6 +103,10 @@ try {
   assert.notEqual(missing.code, 0);
   assert.match(missing.stderr, /must pass --from/);
   assert.equal(requests.length, 0);
+  const missingReplySender = await run(["chat", peer, "--reply", "hello", "--reply-to-email-id", randomUUID(), ...flags]);
+  assert.notEqual(missingReplySender.code, 0);
+  assert.match(missingReplySender.stderr, /must pass --from/);
+  assert.equal(requests.length, 0);
   for (const args of [
     ["chat", peer, "hello", "--from", owner, ...flags],
     ["chat", "reply", "follow up", ...flags],
@@ -114,6 +120,13 @@ try {
     assert.equal(output.match.strategy, "strict");
     assert.ok(output.follow_up_commands.every((command) => !command.command.includes("emails wait")));
   }
+  latestBlocked = true;
+  const beforeBlocked = posts;
+  const blocked = await run(["chat", peer, "--reply", "inspect latest", "--from", owner, ...flags]);
+  assert.notEqual(blocked.code, 0);
+  assert.match(blocked.stderr, /Latest reply .* needs inspection/);
+  assert.equal(posts, beforeBlocked);
+  latestBlocked = false;
   const waitingArgs = ["chat", peer, "wait only", "--from", owner, ...flags];
   const waiting = await run(waitingArgs);
   assert.equal(waiting.code, 3, waiting.stderr);

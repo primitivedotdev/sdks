@@ -373,7 +373,7 @@ describe("chat command", () => {
   });
 
   it.each([
-    "processing",
+    "pending",
     "parsing",
     "auth",
   ])("revisits %s rows on the next scoped poll", async (pending) => {
@@ -419,6 +419,82 @@ describe("chat command", () => {
     expect(JSON.parse(result.stdout).reply).toBeNull();
     expect(JSON.parse(result.stdout).error.message).toContain("invalid page");
     expect(mocks.getEmail).not.toHaveBeenCalled();
+  });
+
+  it("requires an explicit sender even with an exact parent ID", async () => {
+    connectedAuth();
+    await expect(
+      runChatCommand([
+        "help@agent.example",
+        "--reply",
+        "hello",
+        "--reply-to-email-id",
+        "email-1",
+      ]),
+    ).rejects.toThrow("must pass --from");
+    expect(mocks.getEmail).not.toHaveBeenCalled();
+    expect(mocks.replyToEmail).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "interaction",
+    "incomplete",
+  ])("does not continue an older parent behind a newer %s reply", async (kind) => {
+    connectedAuth();
+    const latest = trustedReply({
+      id: "latest",
+      parsed:
+        kind === "interaction"
+          ? {
+              status: "complete",
+              attachments: [{ filename: "interaction.json", size_bytes: 1 }],
+            }
+          : { status: "failed" },
+    });
+    mocks.listEmails.mockResolvedValue({
+      data: { data: [latest, trustedReply()], meta: { cursor: null } },
+    });
+    mocks.getEmail.mockResolvedValue({ data: { data: latest } });
+    await expect(
+      runChatCommand([
+        "help@agent.example",
+        "--reply",
+        "hello",
+        "--from",
+        "agent@sender.example",
+      ]),
+    ).rejects.toThrow("Latest reply latest needs inspection");
+    expect(mocks.replyToEmail).not.toHaveBeenCalled();
+    expect(mocks.getEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows inspection guidance for a replay's interaction reply", async () => {
+    connectedAuth();
+    mocks.sendEmail.mockResolvedValue({
+      data: { data: sentEmail({ idempotent_replay: true }) },
+    });
+    const progress = trustedReply({
+      id: "progress",
+      parsed: {
+        status: "complete",
+        attachments: [{ filename: "interaction.json", size_bytes: 1 }],
+      },
+    });
+    mocks.listEmails.mockResolvedValue({
+      data: { data: [progress], meta: { cursor: null } },
+    });
+    mocks.getEmail.mockResolvedValue({ data: { data: progress } });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+      "--quiet",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("already_sent");
+    expect(JSON.parse(result.stdout).reply).toBeNull();
+    expect(result.stderr).toContain("primitive emails get --id progress");
   });
 
   it("recovers connected idempotent sends through the scoped inbox", async () => {
