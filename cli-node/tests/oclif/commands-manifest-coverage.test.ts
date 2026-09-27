@@ -43,6 +43,26 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("keeps connected waits on the existing emails wait command", () => {
+    const wait = COMMANDS["emails:wait"] as unknown as {
+      description: string;
+      flags: Record<string, unknown>;
+    };
+    expect(wait.description).toContain(
+      "Connected agents require --reply-to-sent-email-id",
+    );
+    for (const flag of [
+      "from",
+      "to",
+      "reply-to-sent-email-id",
+      "since",
+      "include-existing",
+      "number",
+      "timeout",
+      "table",
+    ])
+      expect(wait.flags[flag]).toBeDefined();
+  });
   it("keeps scoped chat discoverable under the existing command shapes", () => {
     const chat = COMMANDS.chat as unknown as {
       description: string;

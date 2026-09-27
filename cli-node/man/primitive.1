@@ -158,6 +158,16 @@ Print the generated API operation manifest.
 .TP
 .B primitive describe COMMAND_OR_OPERATION
 Describe a generated API operation, including request and response schemas.
+
+.SS Waiting with connected credentials
+.B primitive emails wait --reply-to-sent-email-id <sent-id> --from peer@example.com
+waits on an existing send without resending it. The receiving address comes
+from the sent record; an optional --to must match. Existing replies are included
+by default, and --since narrows the window. Only authenticated, exactly threaded
+plain replies are returned; interaction attachments remain pending for inspection.
+JSONL contains matching email details; --table prints compact rows. Timeout exits
+1. Organization credentials retain the existing search-based wait behavior.
+
 .SH GLOBAL OPTIONS
 .TP
 .B --api-key KEY

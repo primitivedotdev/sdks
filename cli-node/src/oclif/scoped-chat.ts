@@ -11,6 +11,37 @@ export function isConnectedChatCredential(apiKey: string | undefined): boolean {
   return apiKey?.startsWith("pconn_") ?? false;
 }
 
+// Cancel a stalled request at the caller's deadline and leave timeout reporting
+// to the command. Clearing the timer avoids retaining completed requests.
+export async function readBeforeDeadline<T>(
+  deadline: number | null | undefined,
+  read: (signal: AbortSignal | undefined) => Promise<T>,
+): Promise<T | null> {
+  if (deadline == null) return read(undefined);
+  if (Date.now() >= deadline) return null;
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const arm = () => {
+    const remaining = Math.max(0, deadline - Date.now());
+    // Node clamps longer timer delays to 1ms. Rearm instead of expiring early.
+    const maximumDelay = 2 ** 31 - 1;
+    timer = setTimeout(
+      remaining > maximumDelay ? arm : () => controller.abort(),
+      Math.min(remaining, maximumDelay),
+    );
+  };
+  arm();
+  try {
+    const result = await read(controller.signal);
+    return controller.signal.aborted || Date.now() >= deadline ? null : result;
+  } catch (error) {
+    if (controller.signal.aborted) return null;
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function address(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -93,11 +124,15 @@ export async function findScopedChatReply(params: {
         { exit: 1 },
       );
     if (params.deadline != null && Date.now() >= params.deadline) return null;
-    const page = await listEmails({
-      client: params.apiClient.client,
-      query: { limit: params.pageSize, cursor, date_from: params.since },
-      responseStyle: "fields",
-    });
+    const page = await readBeforeDeadline(params.deadline, (signal) =>
+      listEmails({
+        signal,
+        client: params.apiClient.client,
+        query: { limit: params.pageSize, cursor, date_from: params.since },
+        responseStyle: "fields",
+      }),
+    );
+    if (page === null) return null;
     if (page.error)
       throw new Errors.CLIError(
         "Could not list the connected agent's inbox for chat.",
@@ -138,11 +173,15 @@ export async function findScopedChatReply(params: {
         address(row.recipient) !== address(params.from)
       )
         continue;
-      const result = await getEmail({
-        client: params.apiClient.client,
-        path: { id: row.id },
-        responseStyle: "fields",
-      });
+      const result = await readBeforeDeadline(params.deadline, (signal) =>
+        getEmail({
+          signal,
+          client: params.apiClient.client,
+          path: { id: row.id },
+          responseStyle: "fields",
+        }),
+      );
+      if (result === null) return null;
       if (params.deadline != null && Date.now() >= params.deadline) return null;
       if (result.error || !result.data?.data)
         throw new Errors.CLIError(

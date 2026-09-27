@@ -568,9 +568,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
   "emails:latest": EmailsLatestCommand,
-  // `emails:watch` and `emails:wait` poll the search API for new matching
+  // `emails:watch` and unscoped `emails:wait` poll the search API for matching
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
+  // Connected waits inspect only the scoped inbox and exact sent parent.
   "emails:wait": EmailsWaitCommand,
   // `search` is the canonical top-level search verb. Defaults to
   // lexical full-text against inbound mail (positional query becomes
