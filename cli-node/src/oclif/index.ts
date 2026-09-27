@@ -516,6 +516,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // semantic (send + wait for the threaded reply, then print the
   // body). Positioned as the canonical verb for the
   // agents-behind-email-addresses paradigm.
+  // Connected credentials use scoped inbox reads and require an explicit sender.
   chat: ChatCommand,
   "chat:reply": ChatReplyCommand,
   // `login` and `signin` are intentionally interchangeable public
