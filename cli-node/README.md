@@ -150,7 +150,16 @@ window. They require an authenticated peer and the exact outbound parent.
 Interaction attachments remain pending with inspection guidance. JSONL includes
 matching email details, or use `--table` for compact output and `--number N` for
 multiple replies. Timeout exits 1; repeat the same wait to recover without
-resending. Search and content filters require organization credentials.
+resending. Connected waits share one local address event receiver and recover
+through exact-parent search, without scanning inbox history. Additional content
+filters on this command require organization credentials.
+
+Connected `primitive chat <peer> <message> --from <own-address>` registers its
+reply wait and authenticates the receiver before sending. It records an explicit
+idempotency key before the request. If the send response is lost, repeating the
+same command looks up that key without sending again. A timeout retains the exact
+parent claim for resume. A plain reply is an email response, not proof that a task
+is complete.
 
 ## Authentication
 
@@ -406,8 +415,11 @@ harnesses are not supported by this path. `CODEX_HOME` selects the native runtim
 home when it differs from `~/.codex`.
 
 Notification mode registers an `email.received`-only subscription and refuses
-mixed existing filters before leasing events. If an existing subscription has
-other filters, select a separate `--subscription` name. An unexpected non-email
+mixed existing filters before leasing events. Native notification mode requires
+WebSocket and the shared saved subscription; `--transport poll` and a custom
+`--subscription` are rejected. Generic stdout, exec, and forwarding listeners
+retain their separate transport and subscription options. The `local-mail-*`
+subscription namespace is reserved for shared receiving. An unexpected non-email
 event remains uncompleted. `--once` means one processed delivery, including an
 email filtered by sender policy; it does not promise one session notification.
 

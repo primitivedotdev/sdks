@@ -275,6 +275,17 @@ describe("COMMANDS / manifest coverage", () => {
     expect(starter.flags["out-dir"]).toBeDefined();
   });
 
+  it("documents the shared native notification transport", () => {
+    const listen = COMMANDS.listen as unknown as {
+      flags: Record<string, { description: string }>;
+    };
+    expect(listen.flags["notify-session"].description).toContain(
+      "shared WebSocket subscription",
+    );
+    expect(listen.flags.subscription.description).toContain(
+      "generic listeners",
+    );
+  });
   it("registers inbox status commands", () => {
     expect(COMMANDS["inbox:setup"]).toBeDefined();
     expect(COMMANDS["inbox:status"]).toBeDefined();

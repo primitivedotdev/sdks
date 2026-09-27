@@ -95,7 +95,12 @@ import {
 //     email; future transports (Primitive-native fast-path, etc.)
 //     can ride under the same verb without breaking callers.
 //
-// Reply-matching strategy. Two-phase, hybrid:
+// Connected credentials first arm the shared address event receiver. Replies
+// arrive through its durable local journal, with exact-parent search used for
+// startup and gap recovery. Authenticated sender, recipient and ancestry are
+// checked on each authoritative detail; no inbox scan or loose fallback runs.
+//
+// Organization-credential reply matching remains two-phase:
 //
 //   1. STRICT phase. Filter by reply_to_sent_email_id = <sent.id>.
 //      The server resolves this FK at inbound ingest by matching the

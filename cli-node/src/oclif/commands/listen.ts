@@ -22,7 +22,8 @@ export default class ListenCommand extends Command {
   ];
   static flags = {
     transport: Flags.string({
-      description: "Event transport; WebSocket is the default.",
+      description:
+        "Event transport; native session notifications require WebSocket.",
       options: ["websocket", "poll"],
       default: "websocket",
     }),
@@ -38,7 +39,7 @@ export default class ListenCommand extends Command {
     }),
     subscription: Flags.string({
       description:
-        "Stable subscription name. Defaults to a saved name for this credential scope and API environment.",
+        "Stable subscription name for generic listeners. Native notifications use the shared saved subscription; local-mail-* names are reserved.",
     }),
     exec: Flags.string({
       description:
@@ -51,7 +52,7 @@ export default class ListenCommand extends Command {
     }),
     "notify-session": Flags.string({
       description:
-        "Notify this exact loaded native session UUID of authenticated email from approved senders.",
+        "Notify this exact loaded native session UUID using the shared WebSocket subscription and approved senders.",
       exclusive: ["exec", "forward-to"],
     }),
     sender: Flags.string({
@@ -120,6 +121,18 @@ export default class ListenCommand extends Command {
     )
       throw new Errors.CLIError(
         "--notify-session requires an exact session UUID.",
+      );
+    if (flags["notify-session"] && flags.transport === "poll")
+      throw new Errors.CLIError(
+        "--notify-session requires --transport websocket.",
+      );
+    if (flags["notify-session"] && flags.subscription !== undefined)
+      throw new Errors.CLIError(
+        "--notify-session uses the shared saved subscription; omit --subscription.",
+      );
+    if (flags.subscription?.trim().startsWith("local-mail-"))
+      throw new Errors.CLIError(
+        "Subscription names beginning local-mail- are reserved for shared mail receiving.",
       );
     if (flags.status && flags["notify-session"]) {
       const requestConfig = resolveCliApiRequestConfig({
