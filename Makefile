@@ -66,6 +66,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	deletion_smoke_script="$$(pwd)/scripts/smoke-mail-deletion.mjs" && \
 	listen_smoke_script="$$(pwd)/scripts/smoke-listen.mjs" && \
 	notification_smoke_script="$$(pwd)/scripts/smoke-session-notifications.mjs" && \
+	listen_validation_smoke_script="$$(pwd)/scripts/smoke-listen-validation.mjs" && \
 	chat_smoke_script="$$(pwd)/scripts/smoke-concurrent-chats.mjs" && \
 	send_outcomes_smoke_script="$$(pwd)/scripts/smoke-send-outcomes.mjs" && \
 	scoped_chat_smoke_script="$$(pwd)/scripts/smoke-scoped-chat.mjs" && \
@@ -88,6 +89,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	node "$$deletion_smoke_script" "$$bin" && \
 	node "$$listen_smoke_script" "$$bin" && \
 	node "$$notification_smoke_script" "$$bin" && \
+	node "$$listen_validation_smoke_script" "$$bin" && \
 	node "$$chat_smoke_script" "$$bin" && \
 	node "$$send_outcomes_smoke_script" "$$bin" && \
 	node "$$scoped_chat_smoke_script" "$$bin" && \
