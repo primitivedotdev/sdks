@@ -251,6 +251,54 @@ function fileIds(
   return { ids, nextCursor: more ? (ids.at(-1) ?? null) : null };
 }
 
+/** Reserve the one local subscription before its server-verified recipient is known. */
+export async function reserveSharedMailSubscription(options: {
+  configDir: string;
+  scope: string;
+  recipient?: string;
+  signal?: AbortSignal;
+}) {
+  options.signal?.throwIfAborted();
+  const directory = join(
+    options.configDir,
+    "shared-mail",
+    hash(mailString(options.scope, 1024)),
+  );
+  privateMailDirectory(directory, true);
+  privateMailDirectory(dirname(directory));
+  return withMailLock(
+    directory,
+    () => {
+      const path = join(directory, "subscription.json"),
+        raw = readMailJson(path);
+      const requested =
+        options.recipient === undefined ? null : mailAddress(options.recipient);
+      let name = `local-mail-${randomUUID()}`,
+        recipient: string | null = requested;
+      if (raw !== null) {
+        const saved = mailObject(raw, ["name", "recipient"]);
+        if (
+          typeof saved.name !== "string" ||
+          !saved.name.startsWith("local-mail-")
+        )
+          throw invalidSharedMail();
+        mailId(saved.name.slice("local-mail-".length));
+        name = saved.name;
+        const prior =
+          saved.recipient === null ? null : mailAddress(saved.recipient);
+        if (prior !== null && requested !== null && prior !== requested)
+          throw invalidSharedMail();
+        recipient = prior ?? requested;
+        if (recipient !== prior) writeMailJson(path, { name, recipient });
+      } else writeMailJson(path, { name, recipient });
+      for (const current of [directory, dirname(directory), options.configDir])
+        syncMailDirectory(current);
+      return { directory, name, recipient };
+    },
+    options.signal,
+  );
+}
+
 /** Metadata only. Callers validate exact GET recipient, authentication and ancestry before hydration. */
 export async function openSharedMailStore(options: {
   configDir: string;
@@ -260,13 +308,8 @@ export async function openSharedMailStore(options: {
 }) {
   options.signal?.throwIfAborted();
   const recipient = mailAddress(options.recipient);
-  const directory = join(
-    options.configDir,
-    "shared-mail",
-    hash(mailString(options.scope, 1024)),
-  );
-  privateMailDirectory(directory, true);
-  privateMailDirectory(dirname(directory));
+  const reserved = await reserveSharedMailSubscription(options);
+  const directory = reserved.directory;
   for (const kind of [
     "emails",
     "events",
@@ -355,25 +398,8 @@ export async function openSharedMailStore(options: {
       },
       options.signal,
     );
-  const subscriptionName = await transaction(() => {
-    const path = join(directory, "subscription.json"),
-      current = readMailJson(path);
-    if (current !== null) {
-      const s = mailObject(current, ["name", "recipient"]);
-      if (
-        typeof s.name !== "string" ||
-        !/^local-mail-[a-f0-9-]{36}$/.test(s.name) ||
-        mailAddress(s.recipient) !== recipient
-      )
-        throw invalidSharedMail();
-      return s.name;
-    }
-    const name = `local-mail-${randomUUID()}`;
-    writeMailJson(path, { name, recipient });
-    for (const path of [directory, dirname(directory), options.configDir])
-      syncMailDirectory(path);
-    return name;
-  });
+  await transaction(() => {});
+  const subscriptionName = reserved.name;
   const unboundPath = (w: SharedMailWait) =>
     `unbound/${hash(w.peer)}/${w.requestId}.json`;
   return {

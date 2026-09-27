@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   openSharedMailStore,
+  reserveSharedMailSubscription,
   type SharedMailStore,
 } from "../../src/oclif/shared-mail-state.js";
 
@@ -54,6 +55,37 @@ async function received(
   return { emailId, eventId, receivedAt };
 }
 describe("shared mail ingress and claims", () => {
+  it("bootstraps notify first and wait first with one immutable recipient and subscription", async () => {
+    const scope = "notify-first";
+    const reserved = await reserveSharedMailSubscription({ configDir, scope });
+    expect(reserved.recipient).toBeNull();
+    const [waiter, notifier] = await Promise.all([
+      openSharedMailStore({ configDir, scope, recipient }),
+      reserveSharedMailSubscription({ configDir, scope, recipient }),
+    ]);
+    expect(waiter.subscriptionName).toBe(reserved.name);
+    expect(notifier.name).toBe(reserved.name);
+    expect(
+      (await reserveSharedMailSubscription({ configDir, scope })).recipient,
+    ).toBe(recipient);
+    await expect(
+      reserveSharedMailSubscription({ configDir, scope, recipient: peer }),
+    ).rejects.toThrow("inconsistent");
+    const alreadyWaiting = await openSharedMailStore({
+      configDir,
+      scope: "wait-first",
+      recipient,
+    });
+    const joining = await reserveSharedMailSubscription({
+      configDir,
+      scope: "wait-first",
+    });
+    expect(joining).toMatchObject({
+      name: alreadyWaiting.subscriptionName,
+      recipient,
+    });
+  });
+
   it("persists a local stable subscription, isolates credentials, and rejects recipient changes", async () => {
     expect(
       (await openSharedMailStore({ configDir, scope: "fixture", recipient }))

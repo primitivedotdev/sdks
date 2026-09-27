@@ -30,6 +30,57 @@ function record(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+export async function ensureSharedMailSubscription(options: {
+  apiClient: PrimitiveApiClient;
+  subscription: string;
+  recipient?: string;
+  signal: AbortSignal;
+}) {
+  const signal = options.signal;
+  const result = await createEndpoint({
+    client: options.apiClient.client,
+    body: {
+      kind: "pull",
+      name: options.subscription,
+      rules: { event_types: ["email.received"] },
+    },
+    signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
+    responseStyle: "fields",
+  });
+  if (result.error || !result.data?.data)
+    throw new EventReceiverError(
+      "Could not open the shared inbound subscription.",
+      "subscription_failed",
+      result.response?.status ?? 0,
+    );
+  const created = result.data.data;
+  if (
+    typeof created.id !== "string" ||
+    !created.id ||
+    created.kind !== "pull" ||
+    created.enabled !== true ||
+    !Array.isArray(created.rules?.event_types) ||
+    created.rules.event_types.length !== 1 ||
+    created.rules.event_types[0] !== "email.received" ||
+    typeof created.recipient !== "string" ||
+    !/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(created.recipient) ||
+    (options.recipient !== undefined &&
+      created.recipient.trim().toLowerCase() !==
+        options.recipient.trim().toLowerCase()) ||
+    !created.receiver_capabilities?.stream_protocols.includes(
+      "primitive.events.v1",
+    ) ||
+    !created.receiver_capabilities.completion_modes.includes("sdk")
+  )
+    throw invalid(
+      "The API did not return a compatible subscription for the connected address.",
+    );
+  return {
+    endpointId: created.id,
+    recipient: created.recipient.trim().toLowerCase(),
+  };
+}
+
 /** The elected foreground owner journals IDs before accepting remote delivery. */
 export async function runSharedMailTransport(
   options: SharedMailTransportOptions,
@@ -70,43 +121,9 @@ export async function runSharedMailTransport(
       }
     }
   }
-  const created = await retry(async () => {
-    const result = await createEndpoint({
-      client: options.apiClient.client,
-      body: {
-        kind: "pull",
-        name: options.subscription,
-        rules: { event_types: ["email.received"] },
-      },
-      signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
-      responseStyle: "fields",
-    });
-    if (result.error || !result.data?.data)
-      throw new EventReceiverError(
-        "Could not open the shared inbound subscription.",
-        "subscription_failed",
-        result.response?.status ?? 0,
-      );
-    return result.data.data;
-  });
-  if (
-    typeof created.id !== "string" ||
-    !created.id ||
-    created.kind !== "pull" ||
-    created.enabled !== true ||
-    !Array.isArray(created.rules?.event_types) ||
-    created.rules.event_types.length !== 1 ||
-    created.rules.event_types[0] !== "email.received" ||
-    created.recipient?.trim().toLowerCase() !==
-      options.recipient.trim().toLowerCase() ||
-    !created.receiver_capabilities?.stream_protocols.includes(
-      "primitive.events.v1",
-    ) ||
-    !created.receiver_capabilities.completion_modes.includes("sdk")
-  )
-    throw invalid(
-      "The API did not return a compatible subscription for the connected address.",
-    );
+  const created = await retry(() =>
+    ensureSharedMailSubscription({ ...options, signal }),
+  );
   let statusWork = Promise.resolve();
   const publishStatus = (value: {
     gap_count: number;
@@ -120,9 +137,13 @@ export async function runSharedMailTransport(
     );
     void statusWork.catch((error: unknown) => failed.abort(error));
   };
-  const stream = new EventConnection(options.apiClient.client, created.id, {
-    onStatus: publishStatus,
-  });
+  const stream = new EventConnection(
+    options.apiClient.client,
+    created.endpointId,
+    {
+      onStatus: publishStatus,
+    },
+  );
   const ensureOpen = async () => {
     if (connected) return;
     await stream.open(signal);

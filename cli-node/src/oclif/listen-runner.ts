@@ -8,6 +8,7 @@ import {
 } from "@primitivedotdev/api-core";
 import { EventConnection, EventReceiverError } from "@primitivedotdev/sdk/api";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
+import { runSharedNotificationListen } from "./listen-notifications.js";
 import {
   ListenStateError,
   listenIdentity,
@@ -15,15 +16,7 @@ import {
   resolveListenSubscription,
 } from "./listen-state.js";
 import type { ListenDelivery, ListenHandler } from "./listen-types.js";
-import {
-  type NotifySessionOptions,
-  openSessionNotifications,
-} from "./notify-session.js";
-import {
-  NotificationRetryError,
-  notificationEventReader,
-  notificationPartReader,
-} from "./notify-session-content.js";
+import type { NotifySessionOptions } from "./notify-session.js";
 
 export class ListenError extends Error {}
 class RequestFailure extends ListenError {
@@ -131,21 +124,22 @@ function validDelivery(value: unknown): value is ListenDelivery {
 }
 
 export async function runListen(options: ListenOptions): Promise<number> {
+  if (options.notifySession) return runSharedNotificationListen(options);
+  if (options.subscription?.startsWith("local-mail-"))
+    throw new ListenStateError(
+      "This subscription name is reserved for shared mail receiving. Use a different --subscription for stdout, exec, or HTTP delivery.",
+    );
+  return runStandaloneListen(options);
+}
+
+async function runStandaloneListen(options: ListenOptions): Promise<number> {
   const now = options.now ?? Date.now;
   const random = options.random ?? Math.random;
   const sleep = options.sleep ?? listenSleep;
   const stderr = options.stderr ?? process.stderr;
   const signal = options.signal;
-  const mode = options.notifySession ? "sdk" : (options.mode ?? "stdout");
-  if (
-    options.notifySession &&
-    options.events !== undefined &&
-    (options.events.length !== 1 || options.events[0] !== "email.received")
-  )
-    throw new ListenStateError(
-      "Session notifications require --events email.received only.",
-    );
-  const events = options.notifySession ? ["email.received"] : options.events;
+  const mode = options.mode ?? "stdout";
+  const events = options.events;
   if (
     options.number !== undefined &&
     (!Number.isSafeInteger(options.number) || options.number < 1)
@@ -159,9 +153,6 @@ export async function runListen(options: ListenOptions): Promise<number> {
   let confirmed = 0;
   let release: (() => void) | undefined;
   let stream: EventConnection | undefined;
-  let notifications:
-    | Awaited<ReturnType<typeof openSessionNotifications>>
-    | undefined;
 
   async function retry<T>(operation: () => Promise<ApiResult<T>>): Promise<T> {
     for (let attempt = 0; ; attempt++) {
@@ -274,20 +265,6 @@ export async function runListen(options: ListenOptions): Promise<number> {
     signal.throwIfAborted();
     if (!origin || !accountId)
       throw new ListenError("The API returned no account identity.");
-    if (options.notifySession) {
-      if (!connectedCredential)
-        throw new ListenStateError(
-          "--notify-session requires a connected-agent credential scoped to its own address.",
-        );
-      notifications = await openSessionNotifications({
-        ...options.notifySession,
-        configDir: options.configDir,
-        scope: listenIdentity(origin, accountId),
-        signal,
-        readPart: notificationPartReader(freshClient),
-        refreshEvent: notificationEventReader(freshClient),
-      });
-    }
     const subscription = resolveListenSubscription(
       options.configDir,
       listenIdentity(origin, accountId),
@@ -321,22 +298,6 @@ export async function runListen(options: ListenOptions): Promise<number> {
         "The API did not return an enabled pull subscription.",
       );
     const streamClient = await freshClient();
-    notifications?.bindRecipient(endpoint.recipient);
-    if (
-      notifications &&
-      (endpoint.rules?.event_types?.length !== 1 ||
-        endpoint.rules.event_types[0] !== "email.received")
-    )
-      throw new ListenStateError(
-        "Session notifications require an email.received-only subscription. Use a separate --subscription name; unrelated queued events have not been leased.",
-      );
-    if (
-      notifications &&
-      !endpoint.receiver_capabilities?.completion_modes.includes("sdk")
-    )
-      throw new ListenStateError(
-        "This API does not advertise SDK acceptance for session notifications.",
-      );
     if (options.transport !== "poll") {
       if (
         !endpoint.receiver_capabilities?.stream_protocols.includes(
@@ -442,29 +403,13 @@ export async function runListen(options: ListenOptions): Promise<number> {
       signal.throwIfAborted();
       let handled: Awaited<ReturnType<ListenHandler>>;
       try {
-        handled = await (notifications?.handler ?? options.handler)(
-          delivery,
-          signal,
-        );
+        handled = await options.handler(delivery, signal);
       } catch (error) {
         if (signal.aborted) throw signal.reason;
-        if (error instanceof NotificationRetryError) {
-          stderr.write(`${error.message}\n`);
-          handled = {
-            succeeded: false,
-            outcome: {
-              mode: "sdk",
-              accepted: false,
-              transport_error: "io",
-              duration_ms: 0,
-            },
-          };
-        } else {
-          if (error instanceof ListenStateError) throw error;
-          throw new ListenError(
-            "The event handler did not finish. Its delivery remains uncompleted.",
-          );
-        }
+        if (error instanceof ListenStateError) throw error;
+        throw new ListenError(
+          "The event handler did not finish. Its delivery remains uncompleted.",
+        );
       }
       signal.throwIfAborted();
       const completion = {
@@ -530,7 +475,6 @@ export async function runListen(options: ListenOptions): Promise<number> {
   } finally {
     stream?.close();
     release?.();
-    notifications?.close();
   }
   return confirmed;
 }

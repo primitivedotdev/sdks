@@ -5,9 +5,10 @@ import { join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { authenticate, prepare } = vi.hoisted(() => ({
+const { authenticate, prepare, receive } = vi.hoisted(() => ({
   authenticate: vi.fn(),
   prepare: vi.fn(),
+  receive: vi.fn(),
 }));
 vi.mock("../../src/oclif/api-client.js", () => ({
   createAuthenticatedCliApiClient: authenticate,
@@ -15,42 +16,91 @@ vi.mock("../../src/oclif/api-client.js", () => ({
 vi.mock("../../src/oclif/notify-session.js", () => ({
   openSessionNotifications: prepare,
 }));
+vi.mock("../../src/oclif/shared-mail-receiver.js", async (original) => ({
+  ...(await original<
+    typeof import("../../src/oclif/shared-mail-receiver.js")
+  >()),
+  openSharedMailReceiver: receive,
+}));
 
 import { runListen } from "../../src/oclif/listen-runner.js";
-import { NotificationRetryError } from "../../src/oclif/notify-session-content.js";
+import { ListenStateError } from "../../src/oclif/listen-state.js";
+import { sharedMailScope } from "../../src/oclif/shared-mail-receiver.js";
+import {
+  openSharedMailStore,
+  type SharedMailStore,
+} from "../../src/oclif/shared-mail-state.js";
 
 const directories: string[] = [];
 afterEach(() => {
   for (const directory of directories.splice(0))
     rmSync(directory, { recursive: true, force: true });
 });
-function setup(modes = ["sdk"], eventTypes = ["email.received"]) {
+function setup(
+  modes = ["sdk"],
+  eventTypes = ["email.received"],
+  hydrated = false,
+) {
   const configDir = mkdtempSync(join(tmpdir(), "primitive-notify-runner-"));
   directories.push(configDir);
-  const order: string[] = [];
-  const completions: unknown[] = [];
-  const handler = vi.fn(async () => ({
-    succeeded: true,
-    outcome: { mode: "sdk" as const, accepted: true, duration_ms: 1 },
-  }));
-  const close = vi.fn();
+  const order: string[] = [],
+    endpointNames: string[] = [];
+  const apiKey = `pconn_${"a".repeat(64)}`,
+    baseUrl = "https://example.test/v1";
+  const emailId = randomUUID(),
+    eventId = randomUUID(),
+    receivedAt = new Date().toISOString();
+  const detail = {
+    id: emailId,
+    recipient: "device@example.com",
+    to_email: "device@example.com",
+    from_header: "sender@example.com",
+    status: "completed",
+    received_at: receivedAt,
+    reply_to_sent_email_id: null,
+    parsed: { status: "complete", attachments: [] },
+    auth: {
+      dmarc: "pass",
+      dmarcFromDomain: "example.com",
+      dmarcSpfAligned: true,
+      dmarcDkimAligned: true,
+      spf: "pass",
+      dkimSignatures: [],
+    },
+  };
+  let receipt: {
+    emailId: string;
+    eventId: string;
+    clientId: string;
+    state: string;
+  } | null = null;
+  const handleDetail = vi.fn(async () => {
+    receipt = { emailId, eventId, clientId: randomUUID(), state: "accepted" };
+    return { disposition: "notified" };
+  });
+  const close = vi.fn(),
+    closeReceiver = vi.fn();
   prepare.mockReset().mockImplementation(async () => {
     order.push("native-ready");
-    return { handler, close, bindRecipient: vi.fn() };
+    return {
+      handleDetail,
+      receipt: () => receipt,
+      close,
+      bindRecipient: vi.fn(),
+    };
   });
-  const apiKey = `pconn_${"a".repeat(64)}`;
-  authenticate.mockReset().mockResolvedValue({
-    auth: { apiKey, apiBaseUrl: "https://example.test/v1" },
-    apiClient: new PrimitiveApiClient({
-      apiKey,
-      apiBaseUrl: "https://example.test/v1",
-      fetch: async (input, init) => {
-        const request = new Request(input, init);
-        const path = new URL(request.url).pathname;
-        order.push(path);
-        let data: unknown;
-        if (path === "/v1/endpoints")
-          data = {
+  const apiClient = new PrimitiveApiClient({
+    apiKey,
+    apiBaseUrl: baseUrl,
+    fetch: async (input, init) => {
+      const request = new Request(input, init),
+        path = new URL(request.url).pathname;
+      order.push(path);
+      if (path === "/v1/endpoints") {
+        endpointNames.push((await request.json()).name);
+        return Response.json({
+          success: true,
+          data: {
             id: "endpoint",
             kind: "pull",
             enabled: true,
@@ -60,79 +110,158 @@ function setup(modes = ["sdk"], eventTypes = ["email.received"]) {
               completion_modes: modes,
               stream_protocols: ["primitive.events.v1"],
             },
-          };
-        else if (path.endsWith("/complete")) {
-          completions.push(await request.json());
-          data = { result: "completed" };
-        } else
-          data = {
-            gap_count: 0,
-            last_gap_reason: null,
-            backlog: 0,
-            handler_timeout_seconds: 30,
-            retention_seconds: 86400,
-            delivery: {
-              queue_id: randomUUID(),
-              event_id: randomUUID(),
-              delivery_id: randomUUID(),
-              lease_token: "lease-fixture",
-              event_type: "email.received",
-              lease_expires_at: new Date(Date.now() + 60_000).toISOString(),
-              body: "{}",
-              headers: {},
-            },
-          };
-        return Response.json({ success: true, data });
-      },
-    }),
+          },
+        });
+      }
+      if (path === `/v1/emails/${emailId}`)
+        return Response.json({ success: true, data: detail });
+      throw new Error(`Unexpected remote request ${path}`);
+    },
+  });
+  authenticate
+    .mockReset()
+    .mockResolvedValue({ auth: { apiKey, apiBaseUrl: baseUrl }, apiClient });
+  let opened: SharedMailStore | undefined;
+  receive.mockReset().mockImplementation(async () => {
+    opened = await openSharedMailStore({
+      configDir,
+      scope: sharedMailScope(apiKey, baseUrl),
+      recipient: detail.recipient,
+    });
+    await opened.ingest({ emailId, eventId, receivedAt });
+    if (hydrated)
+      await opened.hydrate(emailId, {
+        recipient: detail.recipient,
+        peer: "sender@example.com",
+        replyToSentEmailId: null,
+        receivedAt,
+        authorization: "trusted",
+      });
+    return {
+      store: opened,
+      ready: vi.fn(async () => ({ ready: true })),
+      changed: vi.fn(async () => {
+        detail.parsed.status = "complete";
+      }),
+      close: closeReceiver,
+    };
   });
   const options = {
     configDir,
-    transport: "poll" as const,
+    transport: "websocket" as const,
     signal: new AbortController().signal,
     number: 1,
-    handler,
+    handler: vi.fn(),
     stderr: { write: vi.fn() },
     notifySession: { threadId: randomUUID(), senders: ["sender@example.com"] },
   };
-  return { options, order, completions, handler, close };
+  return {
+    options,
+    order,
+    detail,
+    endpointNames,
+    apiKey,
+    baseUrl,
+    handleDetail,
+    close,
+    closeReceiver,
+    store: () => opened,
+    unknown: () => {
+      receipt = { emailId, eventId, clientId: randomUUID(), state: "unknown" };
+    },
+  };
 }
-describe("notification listener integration", () => {
-  it("refuses explicit mixed filters and resumed mixed subscriptions before leasing", async () => {
-    const f = setup(["sdk"], ["email.received", "payment.settled"]);
+describe("shared notification listener integration", () => {
+  it("rejects competing subscription modes before authentication", async () => {
+    const f = setup();
+    for (const extra of [
+      { transport: "poll" as const },
+      { subscription: "custom" },
+      { events: ["email.received", "payment.settled"] },
+    ])
+      await expect(runListen({ ...f.options, ...extra })).rejects.toThrow();
     await expect(
       runListen({
         ...f.options,
-        events: ["email.received", "payment.settled"],
+        notifySession: undefined,
+        subscription: "local-mail-reserved",
       }),
-    ).rejects.toThrow("email.received only");
-    expect(f.order).toEqual([]);
+    ).rejects.toThrow("reserved");
+    expect(authenticate).not.toHaveBeenCalled();
+  });
+  it.each([
+    { modes: ["stdout"] },
+    { modes: [] },
+  ])("checks native readiness then refuses incompatible SDK completion %j", async ({
+    modes,
+  }) => {
+    const f = setup(modes);
     await expect(runListen(f.options)).rejects.toThrow(
-      "email.received-only subscription",
+      "compatible subscription",
     );
     expect(f.order).toEqual(["native-ready", "/v1/endpoints"]);
+    expect(receive).not.toHaveBeenCalled();
+    expect(f.close).toHaveBeenCalledOnce();
   });
-  it("checks native readiness before registration and requires SDK capability for polling", async () => {
-    const f = setup(["stdout"]);
-    await expect(runListen(f.options)).rejects.toThrow(
-      "does not advertise SDK acceptance",
-    );
-    expect(f.order).toEqual(["native-ready", "/v1/endpoints"]);
-    expect(f.close).toHaveBeenCalledTimes(1);
-  });
-  it("releases a temporary content failure through failed SDK acceptance and continues", async () => {
+  it("uses one stable name and accepts only through the shared receiver", async () => {
     const f = setup();
-    f.handler.mockRejectedValueOnce(
-      new NotificationRetryError("processing pending"),
-    );
     expect(await runListen(f.options)).toBe(1);
-    expect(f.completions).toHaveLength(2);
-    expect(f.completions[0]).toMatchObject({
-      mode: "sdk",
-      accepted: false,
-      transport_error: "io",
+    expect(f.endpointNames).toEqual([f.store()?.subscriptionName]);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.order).toEqual([
+      "native-ready",
+      "/v1/endpoints",
+      `/v1/emails/${f.detail.id}`,
+    ]);
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      kind: "notification",
+      state: "accepted",
     });
-    expect(f.completions[1]).toMatchObject({ mode: "sdk", accepted: true });
-    expect(f.close).toHaveBeenCalledTimes(1);
+    expect(f.closeReceiver).toHaveBeenCalledOnce();
+    expect(f.close).toHaveBeenCalledOnce();
+  });
+  it("retries pending exact detail locally without leasing or completing events itself", async () => {
+    const f = setup();
+    f.detail.parsed.status = "pending";
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.order.filter((path) => path.includes("/emails/"))).toHaveLength(2);
+  });
+  it("leaves preflight errors selected and retryable, without claiming submission", async () => {
+    const f = setup();
+    f.handleDetail.mockRejectedValueOnce(
+      new ListenStateError("session offline"),
+    );
+    await expect(runListen(f.options)).rejects.toThrow("session offline");
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      state: "selected",
+    });
+  });
+  it("does not let another native allowlist reserve an already hydrated email", async () => {
+    const f = setup(["sdk"], ["email.received"], true);
+    f.options.notifySession.senders = ["other@example.com"];
+    expect(await runListen(f.options)).toBe(1);
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toBeNull();
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    f.options.notifySession = {
+      ...f.options.notifySession,
+      threadId: randomUUID(),
+      senders: ["sender@example.com"],
+    };
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
+  it("holds ambiguous native acceptance and never invokes a second dispatch", async () => {
+    const f = setup();
+    f.handleDetail.mockImplementationOnce(async () => {
+      f.unknown();
+      throw new ListenStateError("unknown outcome");
+    });
+    await expect(runListen(f.options)).rejects.toThrow("unknown outcome");
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      state: "unknown",
+    });
+    await expect(runListen(f.options)).rejects.toThrow("unknown outcome");
+    expect(f.handleDetail).toHaveBeenCalledOnce();
   });
 });
