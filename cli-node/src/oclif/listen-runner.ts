@@ -9,11 +9,21 @@ import {
 import { EventConnection, EventReceiverError } from "@primitivedotdev/sdk/api";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
 import {
+  ListenStateError,
   listenIdentity,
   normalizeListenOrigin,
   resolveListenSubscription,
 } from "./listen-state.js";
 import type { ListenDelivery, ListenHandler } from "./listen-types.js";
+import {
+  type NotifySessionOptions,
+  openSessionNotifications,
+} from "./notify-session.js";
+import {
+  NotificationRetryError,
+  notificationEventReader,
+  notificationPartReader,
+} from "./notify-session-content.js";
 
 export class ListenError extends Error {}
 class RequestFailure extends ListenError {
@@ -44,7 +54,8 @@ export interface ListenOptions {
   events?: string[];
   number?: number;
   handler: ListenHandler;
-  mode?: "exec" | "http" | "stdout";
+  mode?: "exec" | "http" | "stdout" | "sdk";
+  notifySession?: NotifySessionOptions;
   signal: AbortSignal;
   stderr?: { write(value: string): unknown };
   now?: () => number;
@@ -125,6 +136,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
   const sleep = options.sleep ?? listenSleep;
   const stderr = options.stderr ?? process.stderr;
   const signal = options.signal;
+  const mode = options.notifySession ? "sdk" : (options.mode ?? "stdout");
   if (
     options.number !== undefined &&
     (!Number.isSafeInteger(options.number) || options.number < 1)
@@ -138,6 +150,9 @@ export async function runListen(options: ListenOptions): Promise<number> {
   let confirmed = 0;
   let release: (() => void) | undefined;
   let stream: EventConnection | undefined;
+  let notifications:
+    | Awaited<ReturnType<typeof openSessionNotifications>>
+    | undefined;
 
   async function retry<T>(operation: () => Promise<ApiResult<T>>): Promise<T> {
     for (let attempt = 0; ; attempt++) {
@@ -250,6 +265,20 @@ export async function runListen(options: ListenOptions): Promise<number> {
     signal.throwIfAborted();
     if (!origin || !accountId)
       throw new ListenError("The API returned no account identity.");
+    if (options.notifySession) {
+      if (!connectedCredential)
+        throw new ListenStateError(
+          "--notify-session requires a connected-agent credential scoped to its own address.",
+        );
+      notifications = await openSessionNotifications({
+        ...options.notifySession,
+        configDir: options.configDir,
+        scope: listenIdentity(origin, accountId),
+        signal,
+        readPart: notificationPartReader(freshClient),
+        refreshEvent: notificationEventReader(freshClient),
+      });
+    }
     const subscription = resolveListenSubscription(
       options.configDir,
       listenIdentity(origin, accountId),
@@ -285,6 +314,14 @@ export async function runListen(options: ListenOptions): Promise<number> {
         "The API did not return an enabled pull subscription.",
       );
     const streamClient = await freshClient();
+    notifications?.bindRecipient(endpoint.recipient);
+    if (
+      notifications &&
+      !endpoint.receiver_capabilities?.completion_modes.includes("sdk")
+    )
+      throw new ListenStateError(
+        "This API does not advertise SDK acceptance for session notifications.",
+      );
     if (options.transport !== "poll") {
       if (
         !endpoint.receiver_capabilities?.stream_protocols.includes(
@@ -294,11 +331,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
         throw new ListenError(
           "This API does not support WebSocket events. Use --transport poll explicitly for an older API.",
         );
-      if (
-        !endpoint.receiver_capabilities.completion_modes.includes(
-          options.mode ?? "stdout",
-        )
-      )
+      if (!endpoint.receiver_capabilities.completion_modes.includes(mode))
         throw new ListenError(
           "This API does not support the selected listener handler mode.",
         );
@@ -315,7 +348,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
           ? `inbound email for ${JSON.stringify(endpoint.recipient)}`
           : "all events";
     stderr.write(
-      `Listening on subscription ${subscription.name} (${endpoint.id}); ${resumed ? "resumed" : "created"}, mode ${options.mode ?? "stdout"}, selection: ${selection}. Retention: 24 hours; handler limit: 30 seconds. Pending count follows the first poll. Ctrl-C disconnects; delete with primitive endpoints delete --id ${endpoint.id}.\n`,
+      `Listening on subscription ${subscription.name} (${endpoint.id}); ${resumed ? "resumed" : "created"}, mode ${mode}, selection: ${selection}. Retention: 24 hours; handler limit: 30 seconds. Pending count follows the first poll. Ctrl-C disconnects; delete with primitive endpoints delete --id ${endpoint.id}.\n`,
     );
     let lastGap = -1;
     let lastBacklog = -1;
@@ -394,12 +427,29 @@ export async function runListen(options: ListenOptions): Promise<number> {
       signal.throwIfAborted();
       let handled: Awaited<ReturnType<ListenHandler>>;
       try {
-        handled = await options.handler(delivery, signal);
-      } catch {
-        if (signal.aborted) throw signal.reason;
-        throw new ListenError(
-          "The event handler did not finish. Its delivery remains uncompleted.",
+        handled = await (notifications?.handler ?? options.handler)(
+          delivery,
+          signal,
         );
+      } catch (error) {
+        if (signal.aborted) throw signal.reason;
+        if (error instanceof NotificationRetryError) {
+          stderr.write(`${error.message}\n`);
+          handled = {
+            succeeded: false,
+            outcome: {
+              mode: "sdk",
+              accepted: false,
+              transport_error: "io",
+              duration_ms: 0,
+            },
+          };
+        } else {
+          if (error instanceof ListenStateError) throw error;
+          throw new ListenError(
+            "The event handler did not finish. Its delivery remains uncompleted.",
+          );
+        }
       }
       signal.throwIfAborted();
       const completion = {
@@ -465,6 +515,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
   } finally {
     stream?.close();
     release?.();
+    notifications?.close();
   }
   return confirmed;
 }

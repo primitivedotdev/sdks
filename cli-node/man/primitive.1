@@ -27,6 +27,17 @@ receives existing webhook events without a public endpoint. It prints complete
 JSONL bodies on stdout and status on stderr. Use saved login credentials or
 PRIMITIVE_API_KEY. A private default destination is saved per API host and account.
 .PP
+.B primitive listen --notify-session UUID --sender person@example.com
+queues external email metadata into one exact loaded native Codex session.
+Requires an existing private native local-session Unix socket and a connected-agent
+credential. No runtime is launched. Repeat --sender or use comma-separated exact
+addresses. Routine authenticated status interactions do not notify the session.
+.PP
+.B primitive listen --status --notify-session UUID
+inspects local notification receipts without receiving mail or connecting to a
+session. Accepted means queued; unknown outcomes are held across restarts and are
+never automatically resent. Inspect the exact session before a manual resend.
+.PP
 .B primitive listen init --language python
 creates a Python starter in a new primitive-listener directory. Generation is
 offline and refuses to overwrite files. Change into that directory and run

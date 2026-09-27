@@ -365,6 +365,57 @@ line. Use `--transport poll` explicitly for HTTP polling. Accept or enqueue each
 event within 30 seconds. Closing preserves pending work, and retries can deliver
 an event more than once.
 
+### Native session email notifications
+
+With a connected-agent credential already configured, notify one exact loaded
+Codex session of authenticated mail from explicitly approved senders:
+
+```bash
+primitive listen --notify-session <session-uuid> --sender person@example.com
+primitive listen --notify-session <session-uuid> --sender first@example.com,second@example.com
+primitive listen --status --notify-session <session-uuid>
+```
+
+This first notification path uses the native local-session Unix socket in
+Codex 0.156.1. Live runtime behavior was verified on macOS; Linux uses the same
+Unix transport but has not been verified against a live runtime. The session must already be open in a terminal with
+native daemon support enabled. If its socket is unavailable, this is an
+unsupported runtime setup: the CLI reports the gap and exits before creating a
+subscription. It does not launch a daemon, start/resume a conversation, install a
+connector, or change model, approval, or sandbox settings. Windows and other
+harnesses are not supported by this path. `CODEX_HOME` selects the native runtime
+home when it differs from `~/.codex`.
+
+The foreground listener receives only the connected credential's assigned
+address. `--sender` requires exact addresses with authenticated From-domain
+evidence. Domain authentication does not independently prove a person's identity.
+Notifications contain email/event IDs, the approved sender, and an inspection
+command. Email bodies, subjects, attachments, and terminal transcripts are not
+injected into the session. Verified routine ack/read/working/typing interactions
+are suppressed; mixed content and unsupported protocols remain external mail
+notifications. When parsing is incomplete, the listener checks current email
+detail and leaves unavailable content to the server's retry policy.
+
+Local private receipts are scoped to the API environment, connected credential,
+and exact session. Accepted means queued, not read or answered. A lost queue
+response or interrupted submission is held as unknown across restarts because
+the runtime does not deduplicate client message IDs. Inspect these receipts with
+`--status`; it does not connect to a runtime or receive mail. Unknown outcomes
+require inspection of that exact session before a manual resend. Do not delete
+receipt state to force a retry. Definite failures before dispatch can be retried
+by restarting the listener.
+
+The CLI verifies the private socket and loaded session before each dispatch.
+The native queue API cannot atomically fence a terminal closing between that
+check and acceptance, so a concurrent close can leave input queued for that
+same session. The CLI never retargets a different session.
+
+This is a low-level listener path, not complete onboarding. Automatic runtime
+configuration, contact-policy synchronization, history backfill, and coordination
+with simultaneous `emails wait`/watch consumers are not provided. Use one
+notification listener for a connected credential and session. Existing queue
+retention and delivery-gap reporting still apply.
+
 ### Connected-agent listeners
 
 Use the agent's existing connected-address credential with the same listener API.

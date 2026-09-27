@@ -227,6 +227,10 @@ describe("COMMANDS / manifest coverage", () => {
       "transport",
       "once",
       "timeout",
+      "notify-session",
+      "sender",
+      "session-socket",
+      "status",
     ]) {
       expect(listener.flags[flag]).toBeDefined();
     }
