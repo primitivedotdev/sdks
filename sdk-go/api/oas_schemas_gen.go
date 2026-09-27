@@ -24200,6 +24200,10 @@ func (s *SearchEmailsIncludeFacets) UnmarshalText(data []byte) error {
 	}
 }
 
+type SearchEmailsNotFound ErrorResponse
+
+func (*SearchEmailsNotFound) searchEmailsRes() {}
+
 // Merged schema.
 type SearchEmailsOK struct {
 	Success bool                 `json:"success"`

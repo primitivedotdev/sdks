@@ -11514,6 +11514,14 @@ func (s SearchEmailsIncludeFacets) Validate() error {
 	}
 }
 
+func (s *SearchEmailsNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *SearchEmailsOK) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
