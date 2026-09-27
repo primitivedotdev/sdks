@@ -313,12 +313,21 @@ export function notificationReceiptPage(
         ? pending.receipt
         : readReceipt(directory, id);
     if (!current) throw invalid();
-    const entry = readIndex(directory, current.eventId);
+    const matches = (entry: EventIndex | null) =>
+      entry?.emailId === id && entry.clientId === current.clientId;
     if (
-      (!entry || entry.emailId !== id || entry.clientId !== current.clientId) &&
+      !matches(readIndex(directory, current.eventId)) &&
       pending?.receipt.emailId !== id
-    )
-      throw invalid();
+    ) {
+      // A writer can publish the email after our initial journal read. Its
+      // durable marker must still exist, or its event index is now complete.
+      const latest = pendingWrite(directory);
+      if (latest?.receipt.emailId === id) {
+        checkCoherence(directory, latest);
+        return latest.receipt;
+      }
+      if (!matches(readIndex(directory, current.eventId))) throw invalid();
+    }
     return current;
   });
   return { receipts, nextCursor: hasMore ? (ids.at(-1) ?? null) : null };

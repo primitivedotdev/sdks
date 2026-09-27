@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import * as fs from "node:fs";
 import {
   chmodSync,
   existsSync,
@@ -11,12 +12,16 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type NotificationReceipt,
   notificationReceiptPage,
   openNotificationReceipts,
 } from "../../src/oclif/notify-session-state.js";
+
+vi.mock("node:fs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("node:fs")>()),
+}));
 
 let directory: string;
 const scope = "fixture-scope",
@@ -26,6 +31,7 @@ beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "primitive-receipt-"));
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const release of releases.splice(0)) release();
   rmSync(directory, { recursive: true, force: true });
 });
@@ -141,6 +147,43 @@ describe("indexed notification receipts", () => {
     write(p.pending, { receipt: r, eventId: r.eventId });
     chmodSync(p.pending, 0o644);
     expect(() => open()).toThrow("inconsistent");
+  });
+  it.each([
+    "journal-present",
+    "journal-cleared",
+  ])("reads status across a concurrent write with %s", (phase) => {
+    const r = makeReceipt(),
+      store = open(),
+      p = paths(r);
+    const originalOpen = fs.opendirSync;
+    vi.spyOn(fs, "opendirSync").mockImplementationOnce(
+      (...args: Parameters<typeof fs.opendirSync>) => {
+        write(p.pending, { receipt: r, eventId: r.eventId });
+        write(p.email, r);
+        return originalOpen(...args);
+      },
+    );
+    if (phase === "journal-cleared") {
+      const originalStat = fs.lstatSync;
+      vi.spyOn(fs, "lstatSync").mockImplementation(((
+        ...args: Parameters<typeof fs.lstatSync>
+      ) => {
+        if (args[0] === p.event && !existsSync(p.event)) {
+          write(p.event, {
+            emailId: r.emailId,
+            eventId: r.eventId,
+            clientId: r.clientId,
+          });
+          unlinkSync(p.pending);
+          throw Object.assign(new Error("not yet visible"), { code: "ENOENT" });
+        }
+        return originalStat(...args);
+      }) as typeof fs.lstatSync);
+    }
+    expect(
+      notificationReceiptPage(directory, scope, threadId).receipts,
+    ).toEqual([r]);
+    store.release();
   });
   it("normalizes UUID filenames, indexes aliases, and paginates without modifying receipts", () => {
     const store = open(),
