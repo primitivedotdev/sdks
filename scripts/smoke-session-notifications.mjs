@@ -33,11 +33,37 @@ const api = createServer(async (request, response) => {
   apiCalls.push(request.url);
   let data;
   if (request.url === "/v1/endpoints") data = { id: endpointId, kind: "pull", enabled: true, recipient: "device@example.com", rules: { event_types: ["email.received"] }, receiver_capabilities: { completion_modes: ["sdk", "stdout"], stream_protocols: ["primitive.events.v1"] } };
+  else if (request.url === `/v1/emails/${event.email.id}`) data = {
+    id: event.email.id, recipient: "device@example.com", to_email: "device@example.com",
+    from_header: event.email.headers.from, status: "completed", received_at: event.email.received_at,
+    reply_to_sent_email_id: null, parsed: event.email.parsed, body_text: event.email.parsed.body_text,
+    body_html: event.email.parsed.body_html, auth: event.email.auth,
+  };
   else if (request.url.endsWith("/pull")) data = { delivery: { queue_id: randomUUID(), event_id: eventId, delivery_id: randomUUID(), event_type: "email.received", lease_token: randomUUID(), lease_expires_at: new Date(Date.now() + 60000).toISOString(), body: JSON.stringify(event), headers: {} }, gap_count: 0, last_gap_reason: null, backlog: 0, retention_seconds: 86400, handler_timeout_seconds: 30 };
   else if (request.url.endsWith("/complete")) { completions.push(body); data = { result: "completed" }; }
   else { response.statusCode = 404; data = {}; }
   response.setHeader("content-type", "application/json");
   response.end(JSON.stringify({ success: true, data }));
+});
+const streams = new WebSocketServer({ server: api });
+streams.on("connection", (socket) => {
+  let delivered;
+  socket.on("message", (bytes) => {
+    const frame = JSON.parse(bytes.toString());
+    if (frame.type === "authenticate") socket.send(JSON.stringify({ type: "ready", protocol: "primitive.events.v1" }));
+    else if (frame.type === "receive" && delivered !== eventId) {
+      delivered = eventId;
+      socket.send(JSON.stringify({ type: "event", data: {
+        delivery: { queue_id: randomUUID(), event_id: eventId, delivery_id: randomUUID(),
+          event_type: "email.received", lease_token: randomUUID(), lease_expires_at: new Date(Date.now() + 60000).toISOString(),
+          body: JSON.stringify(event), headers: {} },
+        gap_count: 0, last_gap_reason: null, backlog: 0, retention_seconds: 86400, handler_timeout_seconds: 30,
+      } }));
+    } else if (frame.type === "complete") {
+      completions.push(frame.body);
+      socket.send(JSON.stringify({ type: "receipt", data: { result: "completed" } }));
+    }
+  });
 });
 await new Promise((resolve) => api.listen(0, "127.0.0.1", resolve));
 const nativeHttp = createServer();
@@ -71,7 +97,7 @@ function invoke(args) {
     child.once("exit", (code) => { clearTimeout(timer); resolve({ code, stdout, stderr }); });
   });
 }
-const notify = ["listen", "--notify-session", sessionId, "--sender", "sender@example.com", "--session-socket", socketPath, "--transport", "poll", "--once"];
+const notify = ["listen", "--notify-session", sessionId, "--sender", "sender@example.com", "--session-socket", socketPath, "--once"];
 try {
   const help = await invoke(["listen", "--help"]); assert.equal(help.code, 0); assert.match(help.stdout, /--notify-session/); assert.match(help.stdout, /--status/);
   const missing = await invoke(["listen", "--notify-session", sessionId]); assert.notEqual(missing.code, 0); assert.match(missing.stderr, /--sender/);
@@ -86,7 +112,7 @@ try {
   const oauthStatus = await invoke(["listen", "--status", "--notify-session", sessionId]); assert.notEqual(oauthStatus.code, 0); assert.match(oauthStatus.stderr, /connected-agent credential/); assert.equal(apiCalls.length, 0); assert.equal(await readFile(credentialsPath, "utf8"), expiredCredentials);
   env.PRIMITIVE_API_KEY = connectedKey;
   const first = await invoke(notify); assert.equal(first.code, 0, first.stderr); assert.equal(queued.length, 1); assert.equal(completions.at(-1).mode, "sdk"); assert.equal(completions.at(-1).accepted, true);
-  const repeated = await invoke(notify); assert.equal(repeated.code, 0, repeated.stderr); assert.equal(queued.length, 1);
+  const repeated = await invoke([...notify, "--timeout", "1"]); assert.equal(repeated.code, 2, repeated.stderr); assert.equal(queued.length, 1);
   assert.equal(queued[0].threadId, sessionId); assert.match(queued[0].input[0].text, /External email notification/); assert.ok(!queued[0].input[0].text.includes(event.email.headers.subject));
   event.email.id = randomUUID(); eventId = randomUUID(); dropQueue = true;
   const unknown = await invoke(notify); assert.notEqual(unknown.code, 0); assert.match(unknown.stderr, /unknown outcome/); assert.equal(queued.length, 2);
@@ -100,7 +126,9 @@ try {
   assert.ok(methods.every((method) => ["initialize", "initialized", "thread/loaded/list", "thread/read", "thread/queue/add"].includes(method)));
   console.log("Native session notification CLI smoke passed.");
 } finally {
+  for (const socket of streams.clients) socket.terminate();
   for (const socket of native.clients) socket.terminate();
+  await new Promise((resolve) => streams.close(resolve));
   await new Promise((resolve) => native.close(resolve));
   await new Promise((resolve) => nativeHttp.close(resolve));
   await new Promise((resolve) => api.close(resolve));
