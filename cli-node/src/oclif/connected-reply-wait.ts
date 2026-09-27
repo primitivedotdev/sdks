@@ -146,6 +146,16 @@ export async function openConnectedReplyWait(options: {
       });
       return cleanup.cancelWaitBeforeSend(requestId);
     },
+    async cancelRejectedSend() {
+      // A classified refusal is authoritative even if the receive deadline elapsed.
+      const cleanup = await openSharedMailStore({
+        configDir: options.configDir,
+        scope: sharedMailScope(options.apiKey, options.baseUrl),
+        recipient: options.from,
+        signal: AbortSignal.timeout(2000),
+      });
+      return cleanup.cancelRejectedSend(requestId);
+    },
     observed: (emailId: string) => store.markWaitObserved(emailId, requestId),
     finish: () => store.finishWait(requestId),
     close: () => receiver.close(),

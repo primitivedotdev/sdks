@@ -1736,7 +1736,11 @@ class ChatCommand extends Command {
             configDir: this.config.configDir,
             from: parsedFrom.value.address,
             recipient: args.recipient,
-            sentId: receipt.data.sent?.id,
+            sentId:
+              receipt.data.sent &&
+              successfulSendOutcome(receipt.data.sent) !== "not_sent"
+                ? receipt.data.sent.id
+                : undefined,
             ...(key
               ? {
                   requestId: key.replace(/^primitive-chat-/, ""),
@@ -1795,7 +1799,11 @@ class ChatCommand extends Command {
             saveChatReceipt(receipt);
             restoreReceiptProgress();
           }
-          if (receipt.data.sent) await connectedWait.bind(receipt.data.sent.id);
+          if (
+            receipt.data.sent &&
+            successfulSendOutcome(receipt.data.sent) !== "not_sent"
+          )
+            await connectedWait.bind(receipt.data.sent.id);
         }
         const resumed = receipt.data.sent !== null;
         this.chatProgress.sendStartedAtIso = sentAtIso;
@@ -1875,6 +1883,13 @@ class ChatCommand extends Command {
                 });
 
         if (sendResult.error) {
+          if (
+            classifySendError(
+              apiResultHttpStatus(sendResult),
+              extractErrorPayload(sendResult.error),
+            ) === "not_sent"
+          )
+            await connectedWait?.cancelRejectedSend();
           this.reportSendFailure({
             authFailureContext,
             json: flags.json,
@@ -1904,6 +1919,8 @@ class ChatCommand extends Command {
         // report sent_awaiting_reply and tell the caller not to resend.
         const recordOutcome = successfulSendOutcome(sent);
         if (recordOutcome === "not_sent" || recordOutcome === "uncertain") {
+          if (recordOutcome === "not_sent")
+            await connectedWait?.cancelRejectedSend();
           receipt.data.sent = sent;
           // An indeterminate record stays pending so a retry resumes
           // it instead of sending again.

@@ -548,6 +548,23 @@ export async function openSharedMailStore(options: {
         return next;
       });
     },
+    // Only the send outcome classifier may authorize this post-attempt cleanup.
+    cancelRejectedSend(requestId: string) {
+      return transaction(() => {
+        const previous = requiredWait(requestId);
+        if (
+          previous.sentEmailId !== null ||
+          !["unbound", "uncertain", "cancelled"].includes(previous.status)
+        )
+          throw invalidSharedMail();
+        const next: SharedMailWait = { ...previous, status: "cancelled" };
+        commit([
+          { path: pathFor("waits", requestId), value: next },
+          { path: unboundPath(previous), value: null },
+        ]);
+        return next;
+      });
+    },
     finishWait(requestId: string) {
       return transaction(() => {
         const previous = requiredWait(requestId);

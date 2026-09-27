@@ -35,6 +35,7 @@ const mocks = vi.hoisted(() => ({
   bind: vi.fn(),
   uncertain: vi.fn(),
   cancelBeforeSend: vi.fn(),
+  cancelRejectedSend: vi.fn(),
   next: vi.fn(),
   observed: vi.fn(),
   finish: vi.fn(),
@@ -304,6 +305,7 @@ describe("chat command", () => {
       bind: mocks.bind,
       uncertain: mocks.uncertain,
       cancelBeforeSend: mocks.cancelBeforeSend,
+      cancelRejectedSend: mocks.cancelRejectedSend,
       next: mocks.next,
       observed: mocks.observed,
       finish: mocks.finish,
@@ -439,6 +441,87 @@ describe("chat command", () => {
     expect(mocks.reconcileChatSend.mock.calls[0][0].idempotencyKey).toBe(
       mocks.sendEmail.mock.calls[0][0].headers["Idempotency-Key"],
     );
+  });
+
+  it("releases the peer hold after a definitive API refusal", async () => {
+    connectedAuth();
+    mocks.sendEmail.mockResolvedValueOnce({
+      error: { error: { code: "forbidden", message: "Refused" } },
+      response: new Response(null, { status: 403 }),
+    });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+    expect(mocks.cancelRejectedSend).toHaveBeenCalledOnce();
+    expect(mocks.bind).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "agent_failed",
+    "gate_denied",
+    "canceled",
+  ] as const)("releases the peer hold for a definitive %s send record", async (status) => {
+    connectedAuth();
+    mocks.sendEmail.mockResolvedValueOnce({
+      data: { data: sentEmail({ status }) },
+    });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+    expect(mocks.cancelRejectedSend).toHaveBeenCalledOnce();
+    expect(mocks.bind).not.toHaveBeenCalled();
+  });
+
+  it("keeps a server-error send hold uncertain", async () => {
+    connectedAuth();
+    mocks.sendEmail.mockResolvedValueOnce({
+      error: { error: { code: "server_error", message: "Unavailable" } },
+      response: new Response(null, { status: 503 }),
+    });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("uncertain");
+    expect(mocks.cancelRejectedSend).not.toHaveBeenCalled();
+  });
+
+  it("releases a reconciled rejected send before binding a parent", async () => {
+    connectedAuth();
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
+    await expect(runChatCommand(args)).rejects.toThrow("lost response");
+    mocks.reconcileChatSend.mockResolvedValueOnce({
+      id: "sent-1",
+      from_address: "agent@sender.example",
+      status: "gate_denied",
+      request_id: "req-1",
+      content_hash: "hash",
+    });
+    const resumed = await runChatCommand(args);
+    expect(JSON.parse(resumed.stdout).outcome).toBe("not_sent");
+    expect(mocks.cancelRejectedSend).toHaveBeenCalledOnce();
+    expect(mocks.bind).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
   });
 
   it("keeps a failed lookup of an unresolved saved send uncertain", async () => {

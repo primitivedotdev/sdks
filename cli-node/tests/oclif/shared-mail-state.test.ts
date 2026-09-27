@@ -136,6 +136,45 @@ describe("shared mail ingress and claims", () => {
       "claimed",
     );
   });
+  it("releases an attempted peer hold only after definitive send rejection", async () => {
+    const w = intent();
+    await store.registerWait(w);
+    await store.markWaitUncertain(w.requestId);
+    const email = await received();
+    expect(
+      (await store.claimForNotification(email.emailId, "runtime:session"))
+        .status,
+    ).toBe("held");
+    await expect(store.cancelWaitBeforeSend(w.requestId)).rejects.toThrow(
+      "inconsistent",
+    );
+    await store.cancelRejectedSend(w.requestId);
+    await store.cancelRejectedSend(w.requestId);
+    store = await openSharedMailStore({
+      configDir,
+      scope: "fixture",
+      recipient,
+    });
+    expect((await store.readWait(w.requestId))?.status).toBe("cancelled");
+    expect(
+      (await store.claimForNotification(email.emailId, "runtime:session"))
+        .status,
+    ).toBe("claimed");
+  });
+  it("refuses rejected-send cleanup of an accepted bound send", async () => {
+    const w = intent(),
+      parent = randomUUID();
+    await store.registerWait(w);
+    await store.bindWait(w.requestId, parent);
+    await expect(store.cancelRejectedSend(w.requestId)).rejects.toThrow(
+      "inconsistent",
+    );
+    const email = await received(parent);
+    expect(
+      (await store.claimForNotification(email.emailId, "runtime:session"))
+        .status,
+    ).toBe("held");
+  });
   it("routes concurrent asks to the same peer by parent, preserving unrelated mail", async () => {
     const first = intent(),
       second = intent(),
