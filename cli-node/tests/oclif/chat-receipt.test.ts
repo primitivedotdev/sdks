@@ -51,6 +51,29 @@ describe("chat send recovery", () => {
     );
   });
 
+  it("persists a connected send key and resumes pre-send or uncertain intents without creating another key", () => {
+    const receipt = beginChatReceipt(directory, "parent", "same", {
+      connected: true,
+    });
+    expect(receipt.data.idempotency_key).toMatch(/^primitive-chat-/);
+    expect(receipt.data.send_attempted).toBe(false);
+    expect(
+      beginChatReceipt(directory, "parent", "same", { connected: true }).data
+        .idempotency_key,
+    ).toBe(receipt.data.idempotency_key);
+    receipt.data.send_attempted = true;
+    saveChatReceipt(receipt);
+    const unknown = beginChatReceipt(directory, "parent", "same", {
+      connected: true,
+    });
+    expect(unknown.data.send_attempted).toBe(true);
+    expect(unknown.data.sent).toBeNull();
+    expect(unknown.data.idempotency_key).toBe(receipt.data.idempotency_key);
+    expect(() =>
+      beginChatReceipt(directory, "parent", "changed", { connected: true }),
+    ).toThrow("unresolved send intent");
+  });
+
   it("resumes an acknowledged send and keeps the original receive window", () => {
     const receipt = beginChatReceipt(directory, "parent", "same-request");
     receipt.data.sent = sent;
