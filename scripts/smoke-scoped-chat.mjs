@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { scopedMailFixture } from "./scoped-mail-smoke-fixture.mjs";
+
 const f = await scopedMailFixture(process.argv[2]);
 const flags = ["--json", "--timeout", "3"];
+const repliedIds = [];
 const chat = (body) => ["chat", f.peer, body, "--from", f.owner, ...flags];
 try {
   const bare = await f.run(["chat"]);
@@ -25,6 +27,7 @@ try {
     const result = await f.run(args);
     assert.equal(result.code, 0, result.stderr);
     const output = JSON.parse(result.stdout);
+    repliedIds.push(output.reply.id);
     assert.equal(output.reply.body_text, "The answer");
     assert.equal(output.match.strategy, "strict");
     assert.ok(
@@ -49,6 +52,7 @@ try {
   const recovered = await f.run(uncertainArgs);
   assert.equal(recovered.code, 0, recovered.stderr);
   assert.equal(JSON.parse(recovered.stdout).reply.body_text, "The answer");
+  repliedIds.push(JSON.parse(recovered.stdout).reply.id);
   assert.equal(
     f.posts(),
     beforeUnknown + 1,
@@ -72,9 +76,18 @@ try {
     resumed = await f.run(waitingArgs);
   assert.equal(resumed.code, 0, resumed.stderr);
   assert.equal(JSON.parse(resumed.stdout).reply.id, answer.id);
+  repliedIds.push(answer.id);
   assert.equal(f.posts(), beforeResume);
   assert.equal(f.maximumStreams(), 1);
-  assert.ok(f.completions.length >= 12);
+  assert.ok(f.completions.length > 0);
+  // A satisfied receiver may exit before remote completion. Its returned reply
+  // must already remain durable and observed, including across later commands.
+  for (const id of repliedIds) {
+    const stored = await f.storedEmail(id);
+    assert.equal(stored.emailId, id);
+    assert.equal(stored.route.kind, "wait");
+    assert.equal(stored.route.observed, true);
+  }
   assert.ok(
     f.requests.every((request) => request.url.pathname !== "/v1/emails"),
   );

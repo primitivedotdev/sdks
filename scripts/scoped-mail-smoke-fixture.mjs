@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -22,7 +22,8 @@ export async function scopedMailFixture(binaryArgument) {
     pending = [],
     completions = [];
   const searched = new Set(),
-    pushAfterSearch = new Map();
+    pushAfterSearch = new Map(),
+    pushAfterNotice = new Map();
   let receiveSocket,
     authenticated = 0,
     posts = 0,
@@ -173,24 +174,27 @@ export async function scopedMailFixture(binaryArgument) {
         }
         if (input.body_text !== "timeout then resume") {
           pushAfterSearch.set(row.id, () => {
-            push(
-              inbound(row.id, {
-                body_text: "Working",
-                parsed: {
-                  status: "complete",
-                  attachments: [
-                    {
-                      filename: "interaction.json",
-                      content_type: "application/json",
-                      size_bytes: 10,
-                    },
-                  ],
-                },
-              }),
-            );
-            push(inbound(randomUUID()));
-            push(inbound(row.id, { from_header: "attacker@agent.example" }));
-            push(inbound(row.id));
+            const progress = inbound(row.id, {
+              body_text: "Working",
+              parsed: {
+                status: "complete",
+                attachments: [
+                  {
+                    filename: "interaction.json",
+                    content_type: "application/json",
+                    size_bytes: 10,
+                  },
+                ],
+              },
+            });
+            // Journal UUID ordering is not event ordering. Make the inspection
+            // notice causal before any plain answer is available to this wait.
+            pushAfterNotice.set(progress.id, () => {
+              push(inbound(randomUUID()));
+              push(inbound(row.id, { from_header: "attacker@agent.example" }));
+              push(inbound(row.id));
+            });
+            push(progress);
           });
         }
         json(response, row);
@@ -340,6 +344,14 @@ export async function scopedMailFixture(binaryArgument) {
     });
     child.stderr.on("data", (bytes) => {
       run.stderr += bytes;
+      for (const [id, release] of pushAfterNotice) {
+        if (
+          run.stderr.includes(`Reply ${id} contains an interaction attachment`)
+        ) {
+          pushAfterNotice.delete(id);
+          release();
+        }
+      }
     });
     run.closed = new Promise((done, reject) => {
       child.once("error", reject);
@@ -377,6 +389,20 @@ export async function scopedMailFixture(binaryArgument) {
     invoke,
     until,
     run: async (args) => invoke(args).closed,
+    storedEmail: async (id) => {
+      const roots = await readdir(join(directory, "shared-mail"));
+      assert.equal(
+        roots.length,
+        1,
+        "One credential must use one shared journal",
+      );
+      return JSON.parse(
+        await readFile(
+          join(directory, "shared-mail", roots[0], "emails", `${id}.json`),
+          "utf8",
+        ),
+      );
+    },
     posts: () => posts,
     maximumStreams: () => maximumStreams,
     stall: (path) => {
