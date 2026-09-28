@@ -329,7 +329,7 @@ function invoke(args) {
 }
 async function until(check, label) {
   const deadline = Date.now() + 12000;
-  while (!check()) {
+  while (!(await check())) {
     if (failures.length) throw failures[0];
     if (Date.now() >= deadline)
       throw new Error(
@@ -493,10 +493,18 @@ try {
     assert.ok(event.toolOutput.output.includes(peer));
     assert.ok(!event.toolOutput.output.includes(body), "Native notices must keep mail bodies outside the event");
     await until(() => completions.length === 4, "The late reply must be acknowledged");
+    await until(async () => {
+      const status = invoke(["listen", "--status", "--notify-session", sessionId]);
+      await status.closed;
+      assert.equal(status.result.code, 0, status.stderr);
+      return JSON.parse(status.stdout).receipts.some(
+        (receipt) => receipt.emailId === late.detail.id && receipt.state === "accepted",
+      );
+    }, "The native runtime must accept the late reply before restart");
 
     notification.child.kill("SIGTERM");
     await until(() => notification.result, "The listener must stop before restart");
-    assert.equal(notification.result.code, 0, notification.stderr);
+    assert.equal(notification.result.code, 130, notification.stderr);
     await until(() => activeStreams === 0, "The stopped receiver must release its socket");
     const previousStreams = streamOpens;
     notification = startNotification();
