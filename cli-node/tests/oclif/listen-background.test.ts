@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
+  chmodSync,
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -13,9 +14,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { Parser } from "@oclif/core";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveCliAuth, saveCliCredentials } from "../../src/oclif/auth.js";
+import ListenCommand from "../../src/oclif/commands/listen.js";
 import {
   BACKGROUND_LISTEN_TARGET_ENV,
   BACKGROUND_LISTEN_TOKEN_ENV,
@@ -143,12 +148,23 @@ function childFiles() {
     import { backgroundListenToken, runBackgroundListen } from './listen-background.js';
     import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
     let policyModule;
-    if (process.env.TEST_LISTEN_MODE === 'policy-retry') {
+    if (process.env.TEST_LISTEN_MODE === 'policy-retry' || process.env.TEST_EXPECT_AUTH) {
       const { register } = await import('tsx/esm/api');
       register();
+    }
+    if (process.env.TEST_LISTEN_MODE === 'policy-retry') {
       policyModule = await import('./notification-contact-policy.js');
     }
     const target = JSON.parse(process.env.TEST_LISTEN_TARGET);
+    if (process.env.TEST_EXPECT_AUTH) {
+      const { Parser } = await import('@oclif/core');
+      const { default: ListenCommand } = await import(${JSON.stringify(pathToFileURL(resolve("src/oclif/commands/listen.ts")).href)});
+      const { resolveCliAuth } = await import(${JSON.stringify(pathToFileURL(resolve("src/oclif/auth.ts")).href)});
+      const { flags } = await Parser.parse(process.argv.slice(2), { flags: ListenCommand.flags });
+      const auth = resolveCliAuth({ configDir: target.configDir, apiKey: flags['api-key'] });
+      if (JSON.stringify([auth.apiKey ?? null, auth.source]) !== process.env.TEST_EXPECT_AUTH)
+        throw new Error('child selected a different connection');
+    }
     if (process.env.TEST_IPC_CAPTURE && process.send) {
       const send = process.send.bind(process);
       process.send = (...args) => {
@@ -191,6 +207,59 @@ function childFiles() {
 }
 
 describe("listener lifecycle state", () => {
+  it.skipIf(process.platform === "win32")(
+    "keeps a readable config root unchanged while foreground state remains private",
+    async () => {
+      chmodSync(directory, 0o755);
+      expect(backgroundListenStatus(target).reason).toBe("absent");
+      expect((await stopBackgroundListen(target)).phase).toBeNull();
+      const f = running();
+      expect(backgroundListenStatus(target).phase).toBe("receiving");
+      expect(statSync(directory).mode & 0o777).toBe(0o755);
+      expect(statSync(join(directory, "listen-background")).mode & 0o777).toBe(
+        0o700,
+      );
+      expect(statSync(join(stateFile(), "..")).mode & 0o777).toBe(0o700);
+      expect(statSync(stateFile()).mode & 0o777).toBe(0o600);
+      expect((await stopBackgroundListen(target, f.token)).phase).toBe(
+        "stopped",
+      );
+      await f.done;
+      expect(statSync(directory).mode & 0o777).toBe(0o755);
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "refuses a config root writable by other users before creating listener state",
+    async () => {
+      chmodSync(directory, 0o775);
+      expect(() => backgroundListenStatus(target)).toThrow("write access");
+      await expect(stopBackgroundListen(target)).rejects.toThrow(
+        "write access",
+      );
+      await expect(
+        startBackgroundListen({ ...target, argv: ["unused"] }),
+      ).rejects.toThrow("write access");
+      expect(existsSync(join(directory, "listen-background"))).toBe(false);
+    },
+  );
+
+  it("refuses a symlinked config root before reading or creating listener state", async () => {
+    const link = join(directory, "config-link");
+    symlinkSync(
+      directory,
+      link,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const linked = { ...target, configDir: link };
+    expect(() => backgroundListenStatus(linked)).toThrow("symlink");
+    await expect(stopBackgroundListen(linked)).rejects.toThrow("symlink");
+    await expect(
+      startBackgroundListen({ ...linked, argv: ["unused"] }),
+    ).rejects.toThrow("symlink");
+    expect(existsSync(join(directory, "listen-background"))).toBe(false);
+  });
+
   it("keeps missing records distinct from receiving and records private verified foreground ownership", async () => {
     expect(backgroundListenStatus(target)).toMatchObject({
       phase: null,
@@ -516,6 +585,74 @@ describe("listener lifecycle state", () => {
 });
 
 describe("detached synthetic listener processes", () => {
+  describe.each([false, true])("saved login: %s", (savedLogin) => {
+    it.each([
+      ["no override", []],
+      ["split empty", ["--api-key", ""]],
+      ["split whitespace", ["--api-key", " \t "]],
+      ["equals empty", ["--api-key="]],
+      ["equals whitespace", ["--api-key= \t "]],
+    ])("keeps the parsed parent and detached child identity equal for %s", async (_name, keyArgs) => {
+      const inherited = ["inert", "inherited"].join("-");
+      const stored = ["inert", "stored"].join("-");
+      vi.stubEnv("PRIMITIVE_API_KEY", inherited);
+      if (savedLogin)
+        saveCliCredentials(directory, {
+          auth_method: "oauth",
+          access_token: stored,
+          refresh_token: ["inert", "refresh"].join("-"),
+          token_type: "Bearer",
+          expires_at: "2099-01-01T00:00:00.000Z",
+          oauth_grant_id: randomUUID(),
+          oauth_client_id: "fixture",
+          org_id: randomUUID(),
+          org_name: null,
+          api_base_url: "https://example.test/v1",
+          created_at: "2026-01-01T00:00:00.000Z",
+        });
+      if (process.platform !== "win32") chmodSync(directory, 0o755);
+      const argv = [
+        "--background",
+        "--notify-session",
+        target.threadId,
+        "--sender",
+        "owner@example.com",
+        ...keyArgs,
+      ];
+      const parsed = await Parser.parse(argv, { flags: ListenCommand.flags });
+      const auth = resolveCliAuth({
+        configDir: directory,
+        apiKey: parsed.flags["api-key"],
+      });
+      expect([auth.apiKey, auth.source]).toEqual(
+        !keyArgs.length
+          ? [inherited, "flag-or-env"]
+          : savedLogin
+            ? [stored, "stored"]
+            : [undefined, "none"],
+      );
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [childFiles(), ...argv],
+        env: {
+          TEST_LISTEN_TARGET: JSON.stringify(target),
+          TEST_EXPECT_AUTH: JSON.stringify([auth.apiKey ?? null, auth.source]),
+        },
+        startupTimeoutMs: 5000,
+      });
+      expect(result.status).toMatchObject({
+        phase: "receiving",
+        healthy: true,
+        detached: true,
+      });
+      expect(readFileSync(stateFile(), "utf8")).not.toContain(inherited);
+      expect(readFileSync(stateFile(), "utf8")).not.toContain(stored);
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+      if (process.platform !== "win32")
+        expect(statSync(directory).mode & 0o777).toBe(0o755);
+    });
+  });
+
   it("reports startup policy retries before readiness times out and receives after restoration", async () => {
     const restored = join(directory, "policy-restored");
     const result = await startBackgroundListen({

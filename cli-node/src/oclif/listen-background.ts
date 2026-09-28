@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { realpathSync } from "node:fs";
+import { lstatSync, realpathSync, type Stats } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import {
@@ -146,6 +146,26 @@ export function verifyBackgroundListenTarget(
   }
 }
 
+function configDirectory(path: string, create: boolean) {
+  let info: Stats;
+  try {
+    info = lstatSync(path);
+  } catch (error) {
+    if (!create || (error as NodeJS.ErrnoException).code !== "ENOENT")
+      throw error;
+    privateMailDirectory(path, true);
+    info = lstatSync(path);
+  }
+  if (
+    !info.isDirectory() ||
+    (process.platform !== "win32" &&
+      (info.uid !== process.getuid?.() || (info.mode & 0o022) !== 0))
+  )
+    throw new ListenStateError(
+      "Listener config directory must be an owned directory without group or other write access, not a symlink.",
+    );
+}
+
 function files(target: BackgroundListenTarget, create = false) {
   const key = createHash("sha256")
     .update(JSON.stringify([mailString(target.scope), mailId(target.threadId)]))
@@ -154,7 +174,8 @@ function files(target: BackgroundListenTarget, create = false) {
   const directory = join(root, key);
   for (const path of [target.configDir, root, directory]) {
     try {
-      privateMailDirectory(path, create);
+      if (path === target.configDir) configDirectory(path, create);
+      else privateMailDirectory(path, create);
     } catch (error) {
       if (!create && (error as NodeJS.ErrnoException).code === "ENOENT") break;
       throw error;
@@ -539,11 +560,13 @@ export async function startBackgroundListen(
       if (arg === "--background" || arg.startsWith("--background=")) continue;
       if (arg === "--api-key") {
         const key = options.argv[++index];
-        if (!key) throw new ListenStateError("An API key value is required.");
+        if (key === undefined)
+          throw new ListenStateError("An API key value is required.");
+        env.PRIMITIVE_API_KEY = key.trim();
+      } else if (arg.startsWith("--api-key=")) {
+        const key = arg.slice("--api-key=".length).trim();
         env.PRIMITIVE_API_KEY = key;
-      } else if (arg.startsWith("--api-key="))
-        env.PRIMITIVE_API_KEY = arg.slice("--api-key=".length);
-      else argv.push(arg);
+      } else argv.push(arg);
     }
     if (!argv.length)
       throw new ListenStateError("The CLI entrypoint is required.");
