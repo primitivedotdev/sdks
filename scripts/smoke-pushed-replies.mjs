@@ -490,7 +490,8 @@ try {
     assert.deepEqual(Object.keys(event).sort(), ["input", "threadId", "toolOutput"]);
     assert.equal(event.toolOutput.name, "mail_received");
     assert.equal(event.toolOutput.namespace, "primitive");
-    assert.ok(event.toolOutput.output.includes(body));
+    assert.ok(event.toolOutput.output.includes(peer));
+    assert.ok(!event.toolOutput.output.includes(body), "Native notices must keep mail bodies outside the event");
     await until(() => completions.length === 4, "The late reply must be acknowledged");
 
     notification.child.kill("SIGTERM");
