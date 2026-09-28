@@ -13,7 +13,6 @@ import {
   resolveCliAuth,
   saveSignupCredentials,
 } from "./auth.js";
-import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import {
   AutomatedFilterUnsupportedError,
   assertAutomatedVerdict,
@@ -23,6 +22,7 @@ import {
   expectedAutomatedVerdicts,
   isAutomatedRejectedError,
 } from "./automated-filter.js";
+import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,

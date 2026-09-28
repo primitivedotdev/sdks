@@ -110,6 +110,11 @@ function currentDetail(): EmailDetail {
     spam_score: 0,
     domain: recipient.slice(recipient.lastIndexOf("@") + 1),
     replies: [],
+    reply_count: 0,
+    last_replied_at: null,
+    awaiting: "you",
+    automated: false,
+    automated_reasons: [],
   } as EmailDetail;
 }
 
