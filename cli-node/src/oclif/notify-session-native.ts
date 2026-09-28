@@ -310,15 +310,8 @@ export async function connectNativeSession(options: {
   }
   return {
     close: () => close(),
-    async queue(
-      text: string,
-      clientUserMessageId: string,
-      beforeDispatch: () => void,
-    ) {
-      if (
-        !SESSION_UUID.test(clientUserMessageId) ||
-        Buffer.byteLength(text) > 16_384
-      )
+    async queue(text: string, receiptId: string, beforeDispatch: () => void) {
+      if (!SESSION_UUID.test(receiptId) || Buffer.byteLength(text) > 16_384)
         throw failure();
       try {
         await verify();
@@ -330,16 +323,25 @@ export async function connectNativeSession(options: {
       beforeDispatch();
       try {
         const result = record(
-          await request("thread/queue/add", {
+          await request("turn/start", {
             threadId: options.threadId,
-            clientUserMessageId,
-            input: [{ type: "text", text, text_elements: [] }],
+            input: [],
+            toolOutput: {
+              name: "mail_received",
+              namespace: "primitive",
+              output: text,
+            },
           }),
         );
-        const queued = record(result.queuedSubmission);
+        const turn = record(result.turn);
         if (
-          typeof queued.id !== "string" ||
-          queued.clientUserMessageId !== clientUserMessageId
+          typeof turn.id !== "string" ||
+          turn.id.length === 0 ||
+          !Array.isArray(turn.items) ||
+          typeof turn.status !== "string" ||
+          !["completed", "interrupted", "failed", "inProgress"].includes(
+            turn.status,
+          )
         )
           throw failure();
       } catch {

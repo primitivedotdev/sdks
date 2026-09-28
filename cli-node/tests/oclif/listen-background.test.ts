@@ -32,6 +32,7 @@ import {
   ListenStateError,
   listenProcessIdentity,
 } from "../../src/oclif/listen-state.js";
+import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 vi.mock("../../src/oclif/listen-state.js", async (original) => {
   const actual =
@@ -112,6 +113,10 @@ function childFiles() {
     "listen-background",
     "listen-state",
     "shared-mail-files",
+    "notification-contact-policy",
+    "notify-session-content",
+    "contact-policy",
+    "contact-rule-matcher",
   ]) {
     writeFileSync(
       join(directory, `${name}.js`),
@@ -130,12 +135,19 @@ function childFiles() {
     join(directory, "package.json"),
     JSON.stringify({ type: "module" }),
   );
+  symlinkSync(resolve("node_modules"), join(directory, "node_modules"));
   const child = join(directory, "synthetic-child.mjs");
   writeFileSync(
     child,
     `
     import { backgroundListenToken, runBackgroundListen } from './listen-background.js';
-    import { appendFileSync, writeFileSync } from 'node:fs';
+    import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
+    let policyModule;
+    if (process.env.TEST_LISTEN_MODE === 'policy-retry') {
+      const { register } = await import('tsx/esm/api');
+      register();
+      policyModule = await import('./notification-contact-policy.js');
+    }
     const target = JSON.parse(process.env.TEST_LISTEN_TARGET);
     if (process.env.TEST_IPC_CAPTURE && process.send) {
       const send = process.send.bind(process);
@@ -148,7 +160,7 @@ function childFiles() {
     await runBackgroundListen({ ...target, token: backgroundListenToken(), detached: true,
       configuration: process.env.TEST_CONFIGURATION,
       heartbeatMs: 30, retryDelayMs: 250,
-      retryable: error => error?.message === 'synthetic-preflight',
+      retryable: error => (policyModule && error instanceof policyModule.ContactPolicyReadRetryError) || error?.message === 'synthetic-preflight',
       failureCode: () => process.env.TEST_FAILURE_CODE,
       run: async (signal, ready) => {
         if (process.env.TEST_RUN_MARKER) writeFileSync(process.env.TEST_RUN_MARKER, 'ran');
@@ -157,6 +169,17 @@ function childFiles() {
         if (process.env.TEST_EXPECT_KEY && process.env.PRIMITIVE_API_KEY !== process.env.TEST_EXPECT_KEY)
           throw new Error('missing private environment override');
         if (process.env.TEST_LISTEN_MODE === 'retry' && attempts++ === 0) throw new Error('synthetic-preflight');
+        if (process.env.TEST_LISTEN_MODE === 'policy-retry') {
+          const policy = policyModule.createNotificationContactPolicy({
+            recipient: 'agent@example.com',
+            readPolicy: async () => {
+              if (!existsSync(process.env.TEST_POLICY_RESTORED)) throw new policyModule.ContactPolicyReadRetryError();
+              return JSON.parse(process.env.TEST_POLICY_DOCUMENT);
+            },
+            readPage: async () => ({ data: [], cursor: null }),
+          });
+          await policy.refresh(signal);
+        }
         if (process.env.TEST_LISTEN_MODE === 'failed') throw new Error(process.env.TEST_FAILURE_DETAIL);
         if (process.env.TEST_LISTEN_MODE !== 'blocked') ready();
         if (!signal.aborted) await new Promise(resolve => signal.addEventListener('abort', resolve, { once: true }));
@@ -493,6 +516,35 @@ describe("listener lifecycle state", () => {
 });
 
 describe("detached synthetic listener processes", () => {
+  it("reports startup policy retries before readiness times out and receives after restoration", async () => {
+    const restored = join(directory, "policy-restored");
+    const result = await startBackgroundListen({
+      ...target,
+      argv: [childFiles()],
+      env: {
+        TEST_LISTEN_TARGET: JSON.stringify(target),
+        TEST_LISTEN_MODE: "policy-retry",
+        TEST_POLICY_RESTORED: restored,
+        TEST_POLICY_DOCUMENT: JSON.stringify(
+          emptyContactPolicy("agent@example.com"),
+        ),
+      },
+      startupTimeoutMs: 1500,
+    });
+    expect(result.status.phase).toBe("reconnecting");
+    expect(backgroundListenStatus(target).phase).toBe("reconnecting");
+    writeFileSync(restored, "ready");
+    await vi.waitFor(
+      () =>
+        expect(backgroundListenStatus(target)).toMatchObject({
+          phase: "receiving",
+          healthy: true,
+        }),
+      { timeout: 3000 },
+    );
+    expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+  }, 10_000);
+
   it.each([
     ["native-session-unavailable", "same native session"],
     ["notification-outcome-unknown", "do not delete receipts"],

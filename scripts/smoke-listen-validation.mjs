@@ -51,6 +51,9 @@ try {
   const help = await run(["listen", "--help"]);
   assert.equal(help.code, 0, help.stderr);
   assert.match(help.stdout, /--notify-session/);
+  assert.match(help.stdout, /external mail events/);
+  assert.match(help.stdout, /tool[- ]output/);
+  assert.match(help.stdout, /never\s+(synthetic\s+)?user messages/);
   assert.match(help.stdout, /--background/);
   assert.match(help.stdout, /--stop/);
   const session = "11111111-1111-4111-8111-111111111111";

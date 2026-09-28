@@ -31,6 +31,7 @@ vi.mock("../../src/oclif/shared-mail-receiver.js", async (original) => ({
 
 import { runListen } from "../../src/oclif/listen-runner.js";
 import { ListenStateError } from "../../src/oclif/listen-state.js";
+import { CONTACT_POLICY_RETRY_MIN_MS } from "../../src/oclif/notification-contact-policy.js";
 import type { DetailNotificationAuthorization } from "../../src/oclif/notify-session.js";
 import { sharedMailScope } from "../../src/oclif/shared-mail-receiver.js";
 import {
@@ -468,6 +469,43 @@ describe("first-contact intake", () => {
       contactPreferences: true,
       contactRequests: true,
     },
+  });
+  it("keeps ordinary mail uncompleted through a transient request-only policy refresh", async () => {
+    const f = setup();
+    f.requests(false);
+    const original = receive.getMockImplementation();
+    if (!original) throw new Error("Missing shared receiver fixture");
+    receive.mockImplementationOnce(async (...args: unknown[]) => {
+      // Startup has a valid request-only snapshot. Its admission refresh fails.
+      f.contacts([], 503);
+      return original(...args);
+    });
+    const clock = vi.spyOn(performance, "now");
+    f.changed.mockImplementationOnce(async () => {
+      expect(f.handleDetail).not.toHaveBeenCalled();
+      expect((await f.store()?.readEmail(f.detail.id))?.route).toBeNull();
+      f.contacts([
+        {
+          agent_address: f.detail.recipient,
+          contact_address: f.detail.from_email,
+          version: randomUUID(),
+          notify: true,
+          notification_generation: randomUUID(),
+          notify_since: new Date(Date.now() - 60_000).toISOString(),
+        },
+      ]);
+      clock.mockReturnValue(performance.now() + CONTACT_POLICY_RETRY_MIN_MS);
+    });
+    try {
+      expect(await runListen(requestOptions(f))).toBe(1);
+      expect(f.changed).toHaveBeenCalledOnce();
+      expect(f.handleDetail).toHaveBeenCalledOnce();
+      expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+        state: "accepted",
+      });
+    } finally {
+      clock.mockRestore();
+    }
   });
   it("notifies one authenticated structured request but does not widen to ordinary unknown mail", async () => {
     const plain = setup();

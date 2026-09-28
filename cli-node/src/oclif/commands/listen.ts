@@ -18,6 +18,7 @@ import {
   runListen,
 } from "../listen-runner.js";
 import { ListenStateError } from "../listen-state.js";
+import { ContactPolicyReadRetryError } from "../notification-contact-policy.js";
 import { notificationScope, notificationSenders } from "../notify-session.js";
 import { NotificationOutcomeUnknownError } from "../notify-session-errors.js";
 import {
@@ -32,7 +33,7 @@ import { notificationReceiptPage } from "../notify-session-state.js";
 export default class ListenCommand extends Command {
   static summary = "Receive webhook events locally without a public endpoint";
   static description =
-    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use --notify-session with an exact loaded session UUID and --contacts for saved contact preferences, or approved --sender addresses, for native session notifications, a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Add --background to keep native receiving independent of the calling terminal process; --status reports receiver health and receipts, and --stop stops that receiver. Notifications require an existing native local-session socket; the CLI never launches or resumes a session.";
+    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use --notify-session with an exact loaded session UUID and --contacts for saved contact preferences, or approved --sender addresses, for external mail events at tool-output authority, never synthetic user messages, a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Add --background to keep native receiving independent of the calling terminal process; --status reports receiver health and receipts, and --stop stops that receiver. Notifications require an existing native local-session socket; the CLI never launches or resumes a session.";
   static examples = [
     "<%= config.bin %> listen",
     '<%= config.bin %> listen --subscription my-agent --exec "python3 accept.py"',
@@ -77,7 +78,7 @@ export default class ListenCommand extends Command {
     }),
     "notify-session": Flags.string({
       description:
-        "Notify this exact loaded native session UUID using the shared WebSocket subscription and approved senders.",
+        "Send external mail events as tool output to this exact loaded native session UUID using the shared WebSocket subscription and approved senders; never user messages.",
       exclusive: ["exec", "forward-to"],
     }),
     contacts: Flags.boolean({
@@ -281,7 +282,7 @@ export default class ListenCommand extends Command {
             })),
             nextCursor: page.nextCursor,
             guidance:
-              "Listener health describes the tracked local receiver, not proof a message was read. Older untracked listeners have no health record. Accepted means queued, not read or answered. Unknown receipts are held and are never resent automatically; inspect the exact session before any manual resend.",
+              "Listener health describes the tracked local receiver, not proof a message was read. Older untracked listeners have no health record. Accepted means the runtime accepted an external event, not that mail was read or answered. Unknown receipts are held and are never resent automatically; inspect the exact session before any manual resend.",
           },
           null,
           2,
@@ -376,10 +377,11 @@ export default class ListenCommand extends Command {
                   ? "native-session-unavailable"
                   : "receiving-failed",
           retryable: (error) =>
-            childToken !== null &&
-            (error instanceof NativeSessionDisconnectedError ||
-              (expectedCwd !== undefined &&
-                error instanceof NativeSessionNotLoadedError)),
+            error instanceof ContactPolicyReadRetryError ||
+            (childToken !== null &&
+              (error instanceof NativeSessionDisconnectedError ||
+                (expectedCwd !== undefined &&
+                  error instanceof NativeSessionNotLoadedError))),
           run: async (signal, onReady) => {
             // A retry must never adopt a replaced profile, credential or origin.
             const current = resolveCliAuth({

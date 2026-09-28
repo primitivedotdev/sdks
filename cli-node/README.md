@@ -406,8 +406,14 @@ primitive listen --status --notify-session <session-uuid> --limit 100 --cursor <
 primitive listen --stop --notify-session <session-uuid>
 ```
 
-This notification path uses the native local-session Unix socket in
-Codex. Live runtime behavior was verified on macOS; Linux uses the same
+Notifications arrive as external `primitive.mail_received` tool-output events,
+never synthetic user messages. An idle session can wake to evaluate the notice;
+a busy session receives it in its active turn. The notice does not grant user
+authority or permission to execute requests from email.
+
+This notification path uses `turn/start` with empty `input` and `toolOutput` over
+the native local-session Unix socket in Codex. It requires runtime support for
+external tool-output turns and has no user-message fallback. Live runtime behavior was verified on macOS; Linux uses the same
 Unix transport but has not been verified against a live runtime. The session must already be open in a terminal with
 native daemon support enabled, with compatible client and server versions.
 The foreground command exits if its socket is unavailable; a background receiver
@@ -463,9 +469,10 @@ locally using current email details; an ingress acknowledgement does not mean
 a native notification was accepted.
 
 Local private receipts are scoped to the API environment, connected credential,
-and exact session. Accepted means queued, not read or answered. A lost queue
-response or interrupted submission is held as unknown across restarts because
-the runtime does not deduplicate client message IDs. Inspect these receipts with
+and exact session. Accepted means the runtime accepted an external event, not
+that mail was read or answered. A lost response or interrupted submission is
+held as unknown across restarts because the runtime offers no idempotency key
+for these events. Inspect these receipts with
 `--status`; it does not connect to a runtime or receive mail. Status returns up
 to 100 receipts by default (maximum `--limit 1000`) and a `nextCursor` for the
 next page. Individual private receipt files and an event index preserve evidence
@@ -475,9 +482,9 @@ receipt state to force a retry. Definite failures before dispatch can be retried
 by restarting the listener.
 
 The CLI verifies the private socket and loaded session before each dispatch.
-The native queue API cannot atomically fence a terminal closing between that
-check and acceptance, so a concurrent close can leave input queued for that
-same session. The CLI never retargets a different session.
+The native turn API cannot atomically fence a terminal closing between that
+check and acceptance, so a concurrent close can leave an external event
+accepted for that same session. The CLI never retargets a different session.
 
 Connected chat, exact-parent `emails wait`, and native notification listeners
 share one receiver for the same local installation, API environment, and connected

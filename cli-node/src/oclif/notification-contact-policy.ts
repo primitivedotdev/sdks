@@ -9,6 +9,15 @@ import { NotificationRetryError } from "./notify-session-content.js";
 import { mailAddress, mailId, mailTime } from "./shared-mail-files.js";
 
 export const CONTACT_POLICY_MAX_AGE_MS = 30_000;
+export const CONTACT_POLICY_RETRY_MIN_MS = 1000;
+export const CONTACT_POLICY_RETRY_MAX_MS = 30_000;
+export class ContactPolicyReadRetryError extends NotificationRetryError {
+  constructor() {
+    super(
+      "Contact notification policy is temporarily unavailable. Mail remains pending while permissions are refreshed.",
+    );
+  }
+}
 export type ContactPolicyPage = { data: unknown; cursor: unknown };
 export type ContactNotificationAdmission = {
   sender: string;
@@ -47,16 +56,20 @@ export function createNotificationContactPolicy(options: {
   const recipient = mailAddress(options.recipient);
   const now = options.now ?? (() => performance.now());
   let snapshot: Snapshot | undefined;
+  let retryAt = 0;
+  let retryDelay = CONTACT_POLICY_RETRY_MIN_MS;
 
   function fresh(value: Snapshot | undefined): value is Snapshot {
     if (!value) return false;
     const elapsed = now() - value.startedAt;
     return elapsed >= 0 && elapsed < CONTACT_POLICY_MAX_AGE_MS;
   }
-  async function refresh(signal: AbortSignal): Promise<Snapshot> {
+  async function refreshOnce(signal: AbortSignal): Promise<Snapshot> {
     // Invalidate first: neither a failed page nor an overlapping dispatch can
     // fall back to an older policy while a refresh is unresolved.
     snapshot = undefined;
+    signal.throwIfAborted();
+    if (now() < retryAt) throw new ContactPolicyReadRetryError();
     const startedAt = now();
     const peers = new Set<string>();
     let cursor: string | undefined;
@@ -114,10 +127,17 @@ export function createNotificationContactPolicy(options: {
       } while (cursor !== undefined);
       if (!fresh(next)) throw unavailable();
       snapshot = next;
+      retryAt = 0;
+      retryDelay = CONTACT_POLICY_RETRY_MIN_MS;
       return next;
-    } catch {
+    } catch (error) {
       snapshot = undefined;
       signal.throwIfAborted();
+      if (error instanceof ContactPolicyReadRetryError) {
+        retryAt = now() + retryDelay;
+        retryDelay = Math.min(retryDelay * 2, CONTACT_POLICY_RETRY_MAX_MS);
+        throw error;
+      }
       throw unavailable();
     }
   }
@@ -154,7 +174,7 @@ export function createNotificationContactPolicy(options: {
     );
   }
   return {
-    refresh,
+    refresh: refreshOnce,
     members() {
       if (!fresh(snapshot)) throw unavailable();
       return snapshot.senders.keys();
@@ -169,12 +189,12 @@ export function createNotificationContactPolicy(options: {
       }
       const received = mailTime(receivedAt);
       const cached = fresh(snapshot);
-      let current = cached && snapshot ? snapshot : await refresh(signal);
+      let current = cached && snapshot ? snapshot : await refreshOnce(signal);
       let allowed = admission(current, peer, received);
       if (cached && allowed?.kind !== "allowed") {
         // Cached denial or request-only intake cannot discard ordinary mail
         // from a newly approved contact before its dispatch permission is read.
-        current = await refresh(signal);
+        current = await refreshOnce(signal);
         allowed = admission(current, peer, received);
       }
       return allowed;
@@ -183,7 +203,7 @@ export function createNotificationContactPolicy(options: {
       admission: ContactNotificationAdmission,
       signal: AbortSignal,
     ) {
-      const current = await refresh(signal);
+      const current = await refreshOnce(signal);
       if (!permits(current, admission)) throw changed();
       // The native adapter invokes this synchronously before its durable
       // submitting receipt, after socket/session preflight has completed.

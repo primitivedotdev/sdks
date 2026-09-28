@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
   CONTACT_POLICY_MAX_AGE_MS,
+  CONTACT_POLICY_RETRY_MAX_MS,
+  CONTACT_POLICY_RETRY_MIN_MS,
   type ContactPolicyPage,
+  ContactPolicyReadRetryError,
   createNotificationContactPolicy,
 } from "../../src/oclif/notification-contact-policy.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
@@ -70,6 +73,84 @@ function requestFixture() {
 }
 
 describe("contact notification policy", () => {
+  it("keeps cached request-only mail pending through a paced transient refresh", async () => {
+    const f = requestFixture();
+    expect(await f.policy.admit(sender, received, signal)).toMatchObject({
+      kind: "request",
+    });
+    f.readPolicy.mockRejectedValueOnce(new ContactPolicyReadRetryError());
+    await expect(
+      f.policy.admit(sender, received, signal),
+    ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
+    expect(() => f.policy.members()).toThrow("unavailable");
+    f.rows([row()]);
+    for (let attempt = 0; attempt < 100; attempt++)
+      await expect(
+        f.policy.admit(sender, received, signal),
+      ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
+    expect(f.readPolicy).toHaveBeenCalledTimes(2);
+    f.advance(CONTACT_POLICY_RETRY_MIN_MS);
+    expect(await f.policy.admit(sender, received, signal)).toMatchObject({
+      kind: "allowed",
+    });
+    expect(f.readPolicy).toHaveBeenCalledTimes(3);
+  });
+
+  it("invalidates prior dispatch permission and bounds repeated transient read attempts", async () => {
+    const f = fixture();
+    const admission = await f.policy.admit(sender, received, signal);
+    if (!admission) throw new Error("Expected admission");
+    const dispatch = await f.policy.recheck(admission, signal);
+    f.readPage.mockRejectedValue(new ContactPolicyReadRetryError());
+    await expect(f.policy.recheck(admission, signal)).rejects.toBeInstanceOf(
+      ContactPolicyReadRetryError,
+    );
+    expect(dispatch).toThrow("changed or expired");
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const count = f.readPage.mock.calls.length;
+      const backoff = Math.min(
+        CONTACT_POLICY_RETRY_MIN_MS * 2 ** attempt,
+        CONTACT_POLICY_RETRY_MAX_MS,
+      );
+      f.advance(backoff - 1);
+      await expect(
+        f.policy.admit(sender, received, signal),
+      ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
+      expect(f.readPage).toHaveBeenCalledTimes(count);
+      f.advance(1);
+      await expect(
+        f.policy.admit(sender, received, signal),
+      ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
+      expect(f.readPage).toHaveBeenCalledTimes(count + 1);
+    }
+  });
+
+  it("exposes temporary startup failure to supervision without retaining authority", async () => {
+    const f = fixture();
+    f.readPolicy.mockRejectedValueOnce(new ContactPolicyReadRetryError());
+    await expect(f.policy.refresh(signal)).rejects.toBeInstanceOf(
+      ContactPolicyReadRetryError,
+    );
+    expect(f.readPolicy).toHaveBeenCalledTimes(1);
+    expect(() => f.policy.members()).toThrow("unavailable");
+    await expect(f.policy.refresh(signal)).rejects.toBeInstanceOf(
+      ContactPolicyReadRetryError,
+    );
+    expect(f.readPolicy).toHaveBeenCalledTimes(1);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(f.policy.refresh(controller.signal)).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    expect(f.readPolicy).toHaveBeenCalledTimes(1);
+    f.advance(CONTACT_POLICY_RETRY_MIN_MS);
+    await f.policy.refresh(signal);
+    expect(f.readPolicy).toHaveBeenCalledTimes(2);
+    expect(await f.policy.admit(sender, received, signal)).toMatchObject({
+      kind: "allowed",
+    });
+  });
+
   it("requires an enabled exact membership and mail at or after activation", async () => {
     const f = fixture();
     expect(await f.policy.admit(sender, activation, signal)).toMatchObject({

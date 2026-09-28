@@ -239,13 +239,10 @@ native.on("connection", (socket) =>
       result = {
         thread: { id: sessionId, cwd: directory, canAcceptDirectInput: true },
       };
-    else if (frame.method === "thread/queue/add") {
+    else if (frame.method === "turn/start") {
       queued.push(frame.params);
       result = {
-        queuedSubmission: {
-          id: randomUUID(),
-          clientUserMessageId: frame.params.clientUserMessageId,
-        },
+        turn: { id: randomUUID(), items: [], status: "inProgress" },
       };
     } else {
       failures.push(new Error(`Unexpected native operation ${frame.method}`));
@@ -418,13 +415,17 @@ try {
   );
   await until(
     () =>
-      queued.some((item) => item.input[0].text.includes(unsolicited.detail.id)),
+      queued.some((item) => item.toolOutput.output.includes(unsolicited.detail.id)),
     "The follow-on update must reach the native session after reconciliation",
   );
   assert.equal(queued.length, 1, "Only the independent update may notify");
-  assert.ok(queued[0].input[0].text.includes(unsolicited.detail.id));
+  assert.deepEqual(queued[0].input, []);
+  assert.deepEqual(Object.keys(queued[0]).sort(), ["input", "threadId", "toolOutput"]);
+  assert.equal(queued[0].toolOutput.name, "mail_received");
+  assert.equal(queued[0].toolOutput.namespace, "primitive");
+  assert.ok(queued[0].toolOutput.output.includes(unsolicited.detail.id));
   for (const answer of answers)
-    assert.ok(!queued[0].input[0].text.includes(answer.detail.id));
+    assert.ok(!queued[0].toolOutput.output.includes(answer.detail.id));
   assert.deepEqual(failures, []);
   console.log(
     `Pushed reply CLI smoke passed: two exact waits, one native notification, ${handoff ? "subscription ownership handoff, " : ""}one concurrent WebSocket, no inbox scans.`,

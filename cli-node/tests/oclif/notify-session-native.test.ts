@@ -46,7 +46,8 @@ async function fixture() {
     loadedComplete: true,
     cwd: directory,
     direct: true,
-    dropQueue: false,
+    dropOutput: false,
+    turn: { id: randomUUID(), items: [], status: "inProgress" } as unknown,
   };
   const calls: Array<{
     id?: number;
@@ -58,7 +59,7 @@ async function fixture() {
       const call = JSON.parse(raw.toString());
       calls.push(call);
       if (call.id === undefined) return;
-      if (call.method === "thread/queue/add" && state.dropQueue) return;
+      if (call.method === "turn/start" && state.dropOutput) return;
       const result =
         call.method === "initialize"
           ? {}
@@ -78,10 +79,7 @@ async function fixture() {
                   },
                 }
               : {
-                  queuedSubmission: {
-                    id: randomUUID(),
-                    clientUserMessageId: call.params.clientUserMessageId,
-                  },
+                  turn: state.turn,
                 };
       socket.send(JSON.stringify({ id: call.id, result }));
     }),
@@ -111,7 +109,7 @@ async function fixture() {
 describe.skipIf(process.platform === "win32")(
   "native session transport",
   () => {
-    it("uses only read-only attachment and exact queue submission", async () => {
+    it("uses only read-only attachment and external tool output without user input", async () => {
       const f = await fixture();
       const native = await f.connect();
       let persisted = false;
@@ -121,13 +119,15 @@ describe.skipIf(process.platform === "win32")(
       });
       expect(persisted).toBe(true);
       expect(
-        f.calls.filter((call) => call.method === "thread/queue/add")[0]?.params,
+        f.calls.filter((call) => call.method === "turn/start")[0]?.params,
       ).toEqual({
         threadId: f.threadId,
-        clientUserMessageId: id,
-        input: [
-          { type: "text", text: "External event metadata", text_elements: [] },
-        ],
+        input: [],
+        toolOutput: {
+          name: "mail_received",
+          namespace: "primitive",
+          output: "External event metadata",
+        },
       });
       expect(
         f.calls.every((call) =>
@@ -136,7 +136,7 @@ describe.skipIf(process.platform === "win32")(
             "initialized",
             "thread/loaded/list",
             "thread/read",
-            "thread/queue/add",
+            "turn/start",
           ].includes(call.method),
         ),
       ).toBe(true);
@@ -164,6 +164,45 @@ describe.skipIf(process.platform === "win32")(
         }),
       ).rejects.toMatchObject({ submitted: false });
       expect(persisted).toBe(false);
+    });
+    it.each([
+      "inProgress",
+      "completed",
+      "interrupted",
+      "failed",
+    ])("acknowledges a valid %s turn without requiring a new user message", async (status) => {
+      const f = await fixture();
+      const native = await f.connect();
+      const existingTurnId = randomUUID();
+      f.state.turn = { id: existingTurnId, items: [], status };
+      const beforeDispatch = vi.fn();
+      await native.queue("External event", randomUUID(), beforeDispatch);
+      expect(beforeDispatch).toHaveBeenCalledOnce();
+      expect(
+        f.calls.filter((call) => call.method === "turn/start"),
+      ).toHaveLength(1);
+      expect(f.calls.some((call) => call.method === "turn/interrupt")).toBe(
+        false,
+      );
+    });
+    it.each([
+      { items: [], status: "inProgress" },
+      { id: "", items: [], status: "inProgress" },
+      { id: "turn", items: null, status: "inProgress" },
+      { id: "turn", items: [], status: "unknown" },
+      { id: "turn", items: [], status: ["inProgress"] },
+    ])("holds a malformed turn acknowledgement as unknown: %j", async (turn) => {
+      const f = await fixture();
+      const native = await f.connect();
+      f.state.turn = turn;
+      const beforeDispatch = vi.fn();
+      await expect(
+        native.queue("External event", randomUUID(), beforeDispatch),
+      ).rejects.toMatchObject({ submitted: true });
+      expect(beforeDispatch).toHaveBeenCalledOnce();
+      expect(
+        f.calls.filter((call) => call.method === "turn/start"),
+      ).toHaveLength(1);
     });
     it("identifies a completely listed but unloaded session without submitting input", async () => {
       const f = await fixture();
@@ -213,9 +252,7 @@ describe.skipIf(process.platform === "win32")(
         f.calls.filter((call) => call.method === "thread/loaded/list"),
       ).toHaveLength(100);
       expect(f.calls.some((call) => call.method === "thread/read")).toBe(false);
-      expect(f.calls.some((call) => call.method === "thread/queue/add")).toBe(
-        false,
-      );
+      expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
     });
     it("rejects socket permission and symlink identity changes", async () => {
       const f = await fixture();
@@ -230,9 +267,7 @@ describe.skipIf(process.platform === "win32")(
       await expect(
         native.queue("Event", randomUUID(), () => {}),
       ).rejects.toMatchObject({ submitted: false });
-      expect(f.calls.some((call) => call.method === "thread/queue/add")).toBe(
-        false,
-      );
+      expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
     });
     it("marks post-dispatch timeouts unknown and leaves approvals unanswered", async () => {
       const f = await fixture();
@@ -245,7 +280,7 @@ describe.skipIf(process.platform === "win32")(
             params: {},
           }),
         );
-      f.state.dropQueue = true;
+      f.state.dropOutput = true;
       await expect(
         native.queue("Event", randomUUID(), () => {}),
       ).rejects.toMatchObject({ submitted: true });
@@ -262,9 +297,7 @@ describe.skipIf(process.platform === "win32")(
       expect(disconnected.mock.calls[0]?.[0]).toBeInstanceOf(
         NativeSessionDisconnectedError,
       );
-      expect(f.calls.some((call) => call.method === "thread/queue/add")).toBe(
-        false,
-      );
+      expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
     });
     it("does not report deliberate close or cancellation as a lost connection", async () => {
       const f = await fixture();
@@ -284,20 +317,18 @@ describe.skipIf(process.platform === "win32")(
         () => controller.abort(),
         controller.signal,
       );
-      f.state.dropQueue = true;
+      f.state.dropOutput = true;
       const outcome = expect(
         native.queue("Event", randomUUID(), () => {}),
       ).rejects.toMatchObject({ submitted: true });
       await vi.waitFor(() =>
-        expect(f.calls.some((call) => call.method === "thread/queue/add")).toBe(
-          true,
-        ),
+        expect(f.calls.some((call) => call.method === "turn/start")).toBe(true),
       );
       for (const socket of f.sockets.clients) socket.terminate();
       await outcome;
       expect(controller.signal.aborted).toBe(true);
       expect(
-        f.calls.filter((call) => call.method === "thread/queue/add"),
+        f.calls.filter((call) => call.method === "turn/start"),
       ).toHaveLength(1);
     });
     it("retries a missing socket but refuses unsafe socket permissions", async () => {
@@ -341,9 +372,7 @@ describe.skipIf(process.platform === "win32")(
         .catch((error: unknown) => error);
       expect(error).toBeInstanceOf(NativeSessionError);
       expect(error).not.toBeInstanceOf(NativeSessionDisconnectedError);
-      expect(f.calls.some((call) => call.method === "thread/queue/add")).toBe(
-        false,
-      );
+      expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
     });
   },
 );

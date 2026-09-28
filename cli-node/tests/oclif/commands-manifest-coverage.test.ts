@@ -323,6 +323,13 @@ describe("COMMANDS / manifest coverage", () => {
       flags: Record<string, unknown>;
     };
     expect(listener.description).toContain("Connected-agent credentials");
+    expect(listener.description).toContain(
+      "external mail events at tool-output authority",
+    );
+    expect(listener.description).toContain("never synthetic user messages");
+    expect(readCliPackageJson().oclif?.topics?.listen?.description).toContain(
+      "external mail events as tool output",
+    );
     for (const flag of [
       "subscription",
       "events",

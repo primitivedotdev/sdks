@@ -86,7 +86,7 @@ async function startNativeServer() {
       result = { data: nativeLoaded ? [sessionId] : [], nextCursor: null };
     }
     else if (message.method === "thread/read") result = { thread: { id: sessionId, cwd: directory, canAcceptDirectInput: true } };
-    else if (message.method === "thread/queue/add") { queued.push(message.params); if (dropQueue) return; result = { queuedSubmission: { id: randomUUID(), clientUserMessageId: message.params.clientUserMessageId } }; }
+    else if (message.method === "turn/start") { queued.push(message.params); if (dropQueue) return; result = { turn: { id: randomUUID(), items: [], status: "inProgress" } }; }
     else assert.fail(`Unexpected native method ${message.method}`);
     socket.send(JSON.stringify({ id: message.id, result }));
   }));
@@ -135,7 +135,7 @@ try {
   env.PRIMITIVE_API_KEY = connectedKey;
   const first = await invoke(notify); assert.equal(first.code, 0, first.stderr); assert.equal(queued.length, 1); assert.equal(completions.at(-1).mode, "sdk"); assert.equal(completions.at(-1).accepted, true);
   const repeated = await invoke([...notify, "--timeout", "1"]); assert.equal(repeated.code, 2, repeated.stderr); assert.equal(queued.length, 1);
-  assert.equal(queued[0].threadId, sessionId); assert.match(queued[0].input[0].text, /External email notification/); assert.ok(!queued[0].input[0].text.includes(event.email.headers.subject));
+  assert.equal(queued[0].threadId, sessionId); assert.deepEqual(Object.keys(queued[0]).sort(), ["input", "threadId", "toolOutput"]); assert.deepEqual(queued[0].input, []); assert.equal(queued[0].toolOutput.name, "mail_received"); assert.equal(queued[0].toolOutput.namespace, "primitive"); assert.match(queued[0].toolOutput.output, /External email notification/); assert.ok(!queued[0].toolOutput.output.includes(event.email.headers.subject));
 
   const backgroundArgs = [...notify.filter((value) => value !== "--once"), "--background"];
   const started = await invoke(backgroundArgs); assert.equal(started.code, 0, started.stderr);
@@ -153,14 +153,14 @@ try {
   await waitFor(() => absentLoads > 0);
   const reconnecting = JSON.parse((await invoke(statusArgs)).stdout).listener;
   assert.equal(reconnecting.phase, "reconnecting"); assert.equal(reconnecting.pid, runningPid);
-  assert.equal(queued.length, 1, "An unloaded session cannot receive or replay input");
+  assert.equal(queued.length, 1, "An unloaded session cannot receive or replay external events");
   nativeLoaded = true;
   await waitFor(() => methods.filter((method) => method === "initialize").length > initializations);
   await waitFor(async () => {
     const health = JSON.parse((await invoke(statusArgs)).stdout).listener;
     return health.healthy && health.phase === "receiving" && health.pid === runningPid;
   });
-  assert.equal(queued.length, 1, "Native reconnect must not replay accepted input");
+  assert.equal(queued.length, 1, "Native reconnect must not replay accepted external events");
   event.email.id = randomUUID(); eventId = randomUUID();
   for (const socket of streams.clients) socket.terminate();
   await waitFor(() => queued.length === 2);
@@ -178,7 +178,7 @@ try {
   const pageTwo = await invoke(["listen", "--status", "--notify-session", sessionId, "--limit", "2", "--cursor", firstPage.nextCursor]); assert.equal(pageTwo.code, 0, pageTwo.stderr); const secondPage = JSON.parse(pageTwo.stdout); assert.equal(secondPage.receipts.length, 2); assert.equal(secondPage.nextCursor, null); assert.ok(secondPage.receipts.every((receipt) => receipt.emailId !== firstPage.receipts[0].emailId));
   const badFilter = await invoke([...notify, "--events", "email.received,payment.settled"]); assert.notEqual(badFilter.code, 0); assert.match(badFilter.stderr, /email.received only/);
   const bare = await invoke(["listen", "--transport", "poll", "--once"]); assert.equal(bare.code, 0, bare.stderr); assert.equal(JSON.parse(bare.stdout).event, "email.received");
-  assert.ok(methods.every((method) => ["initialize", "initialized", "thread/loaded/list", "thread/read", "thread/queue/add"].includes(method)));
+  assert.ok(methods.every((method) => ["initialize", "initialized", "thread/loaded/list", "thread/read", "turn/start"].includes(method)));
   console.log("Native session notification CLI smoke passed.");
 } finally {
   await invoke(stopArgs).catch(() => {});

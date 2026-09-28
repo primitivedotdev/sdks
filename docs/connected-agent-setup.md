@@ -15,8 +15,9 @@ identity metadata offline; it does not prove receiving or verification.
 A completed invitation can be reused locally without another claim. An uncertain
 claim must not be retried; request a fresh invitation and use a new profile.
 
-Use the connection skill to find the owner's setup challenge, reply in its thread,
-and verify receiving before reporting setup complete. The credential is scoped
+Use the connection skill to find the owner's setup challenge and reply in its
+thread. Confirm the app reports Connected for pairing, then configure authorized
+receiving and report its current health separately. The credential is scoped
 to its assigned address. Profiles also isolate active chat state. Select the
 profile in each command environment or supervised receiver process.
 
@@ -32,7 +33,10 @@ default to notifications off. Exact-parent reply waits work independently of
 unsolicited notification preferences. The listener uses the existing shared
 WebSocket subscription, checks current policy before dispatch, and never creates
 or resumes a coding session. Its native mode requires a supported, running local
-session. An accepted queue receipt is not proof of a model answer.
+session with external tool-output event support. Notices wake an idle session
+or join an active turn as external tool output, never as user messages.
+They do not authorize requests in email. An accepted event receipt is not
+proof of a model answer.
 
 ```sh
 primitive listen --status --notify-session <exact-loaded-session-uuid>
@@ -43,6 +47,7 @@ Status reads local receiver health and saved receipts without receiving mail.
 Background mode keeps the CLI receiver independent of the calling process and
 reconnects after a known transport interruption. Stop preserves the subscription
 and receipt journal. Keep ambiguous receipts rather than resending blindly.
-If the runtime cannot accept native input, report that limitation; email
+If the runtime cannot accept external tool-output events, report that limitation
+without falling back to synthetic user input; email
 sending and exact-parent waits remain available. All messages and interactions
 remain ordinary email.
