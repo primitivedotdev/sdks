@@ -48,9 +48,8 @@ function envelope(response, data, meta) {
     JSON.stringify({ success: true, data, ...(meta ? { meta } : {}) }),
   );
 }
-function inbound(parent, body) {
-  const id = randomUUID(),
-    now = new Date().toISOString();
+function inbound(parent, body, id = randomUUID()) {
+  const now = new Date().toISOString();
   const auth = {
     spf: "pass",
     dmarc: "pass",
@@ -352,7 +351,13 @@ try {
   const answers = parents.map((id, index) =>
     inbound(id, `Answer ${index + 1}`),
   );
-  const unsolicited = inbound(null, "Separate update");
+  const unsolicited = inbound(
+    null,
+    "Separate update",
+    // Journal pages sort by UUID. Put the takeover sentinel after both replies
+    // so its native receipt proves the listener reconciled those earlier rows.
+    includeNative ? randomUUID() : "ffffffff-ffff-4fff-bfff-ffffffffffff",
+  );
   if (handoff) {
     pending.push(answers[0]);
     dispatch();
@@ -399,9 +404,11 @@ try {
       () => streamOpens >= (handoff ? 3 : 2),
       "A subsequent receiver must reopen the shared subscription",
     );
+    pending.push(unsolicited);
+    dispatch();
   }
   await until(
-    () => completions.length === (includeNative ? 3 : 2),
+    () => completions.length === 3,
     "A subsequent receiver must acknowledge any durable redelivery",
   );
   assert.equal(
@@ -409,18 +416,18 @@ try {
     1,
     "Foreground participants must share one subscription owner",
   );
-  if (includeNative) {
-    await until(
-      () => queued.length === 1,
-      "The independent update must notify exactly once",
-    );
-    assert.ok(queued[0].input[0].text.includes(unsolicited.detail.id));
-    for (const answer of answers)
-      assert.ok(!queued[0].input[0].text.includes(answer.detail.id));
-  } else assert.equal(queued.length, 0);
+  await until(
+    () =>
+      queued.some((item) => item.input[0].text.includes(unsolicited.detail.id)),
+    "The follow-on update must reach the native session after reconciliation",
+  );
+  assert.equal(queued.length, 1, "Only the independent update may notify");
+  assert.ok(queued[0].input[0].text.includes(unsolicited.detail.id));
+  for (const answer of answers)
+    assert.ok(!queued[0].input[0].text.includes(answer.detail.id));
   assert.deepEqual(failures, []);
   console.log(
-    `Pushed reply CLI smoke passed: two exact waits, ${includeNative ? "one native notification, " : ""}${handoff ? "subscription ownership handoff, " : ""}one concurrent WebSocket, no inbox scans.`,
+    `Pushed reply CLI smoke passed: two exact waits, one native notification, ${handoff ? "subscription ownership handoff, " : ""}one concurrent WebSocket, no inbox scans.`,
   );
 } finally {
   for (const run of children)
