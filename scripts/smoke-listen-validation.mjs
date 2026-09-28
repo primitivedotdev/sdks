@@ -36,7 +36,11 @@ async function run(args) {
     child.once("error", reject);
     child.once("close", (code) => {
       clearTimeout(timer);
-      done({ code, stdout, stderr });
+      done({
+        code,
+        stdout,
+        stderr: stderr.replace(/^\s*›\s*/gm, "").replace(/\s+/g, " "),
+      });
     });
   });
 }
@@ -59,7 +63,10 @@ try {
       value,
     ]);
     assert.notEqual(result.code, 0);
-    assert.match(result.stderr, message);
+    assert.match(
+      result.stderr.replace(/^\s*›\s*/gm, "").replace(/\s+/g, " "),
+      message,
+    );
     assert.doesNotMatch(
       result.stderr,
       /sign.?in|native socket|private socket|API key is required/i,
