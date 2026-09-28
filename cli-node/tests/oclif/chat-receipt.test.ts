@@ -86,6 +86,33 @@ describe("chat send recovery", () => {
     ).toThrow("still awaits a response");
   });
 
+  it("retains the exact reply finalization marker while its chat remains incomplete", () => {
+    const receipt = beginChatReceipt(directory, "parent", "same-request", {
+      connected: true,
+    });
+    receipt.data.sent = sent;
+    receipt.data.reply = {
+      emailId: "reply-fixture",
+      requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    };
+    saveChatReceipt(receipt);
+    expect(
+      beginChatReceipt(directory, "parent", "same-request", { connected: true })
+        .data.reply,
+    ).toEqual(receipt.data.reply);
+    writeFileSync(
+      receipt.path,
+      JSON.stringify({
+        ...receipt.data,
+        reply: { emailId: "reply-fixture", requestId: [] },
+      }),
+    );
+    expect(() =>
+      beginChatReceipt(directory, "parent", "same-request", {
+        connected: true,
+      }),
+    ).toThrow("Cannot safely read chat receipt");
+  });
   it("does not reuse a completed conversation as a pending send", () => {
     const receipt = beginChatReceipt(directory, "parent", "same-request");
     receipt.data.sent = sent;

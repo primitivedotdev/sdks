@@ -274,6 +274,62 @@ describe("connected pushed reply waits", () => {
     expect((await store.readWait(requestId))?.status).toBe(status);
   });
 
+  it.each([
+    "claimed",
+    "observed",
+    "completed",
+  ] as const)("recovers only the saved exact reply after interrupted %s finalization", async (phase) => {
+    const f = fixture();
+    const first = await openConnectedReplyWait(f.options);
+    expect((await first.next())?.id).toBe(f.state.detail.id);
+    if (phase !== "claimed") await first.observed(f.state.detail.id);
+    if (phase === "completed") await first.finish();
+    await first.close();
+    const searchCount = f.searches();
+    f.requests.length = 0;
+    f.state.page = { data: [{ id: randomUUID() }], meta: { cursor: null } };
+    const resumed = await openConnectedReplyWait({
+      ...f.options,
+      resumeReply: { emailId: f.state.detail.id, requestId: first.requestId },
+    });
+    expect(resumed.requestId).toBe(first.requestId);
+    await resumed.bind(target.sentId);
+    expect((await resumed.next())?.id).toBe(f.state.detail.id);
+    await resumed.observed(f.state.detail.id);
+    await resumed.finish();
+    expect(
+      (await resumed.receiver.store.readWait(first.requestId))?.status,
+    ).toBe("completed");
+    expect(
+      (
+        await resumed.receiver.store.claimForNotification(
+          f.state.detail.id,
+          "runtime:session",
+        )
+      ).status,
+    ).toBe("held");
+    expect(f.searches()).toBe(searchCount);
+    expect(f.requests).toEqual([`/v1/emails/${f.state.detail.id}`]);
+    await resumed.close();
+  });
+  it("rejects a saved reply whose peer or claimed email differs", async () => {
+    const f = fixture();
+    const first = await openConnectedReplyWait(f.options);
+    await first.next();
+    await first.close();
+    for (const changed of [{ recipient: "other@agent.example" }, {}]) {
+      await expect(
+        openConnectedReplyWait({
+          ...f.options,
+          ...changed,
+          resumeReply: {
+            emailId: changed.recipient ? f.state.detail.id : randomUUID(),
+            requestId: first.requestId,
+          },
+        }),
+      ).rejects.toThrow("saved reply does not match");
+    }
+  });
   it("retains a claimed reply for resume before local output completes", async () => {
     const f = fixture();
     const first = await openConnectedReplyWait(f.options);

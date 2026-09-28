@@ -1747,6 +1747,7 @@ class ChatCommand extends Command {
                   idempotencyKey: key,
                 }
               : {}),
+            resumeReply: receipt.data.reply,
             createdAt: sentAtIso,
             deadline,
             pageSize: flags["page-size"],
@@ -2139,6 +2140,17 @@ class ChatCommand extends Command {
           return;
         }
 
+        if (connectedWait) {
+          // Keep the exact reply recoverable across either shared-state write.
+          receipt.data.reply = {
+            emailId: replyResult.reply.id,
+            requestId: connectedWait.requestId,
+          };
+          saveChatReceipt(receipt);
+          await connectedWait.observed(replyResult.reply.id);
+          await connectedWait.finish();
+        }
+
         progress?.succeed(
           `Reply received from ${replyResult.reply.from_email}`,
         );
@@ -2170,10 +2182,6 @@ class ChatCommand extends Command {
         receipt.data.completed = localChatId !== null;
         saveChatReceipt(receipt);
         this.reportReplied(outputContext, "replied");
-        if (connectedWait) {
-          await connectedWait.observed(replyResult.reply.id);
-          await connectedWait.finish();
-        }
       } finally {
         try {
           await connectedWait?.close();

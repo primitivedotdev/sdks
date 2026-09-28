@@ -28,6 +28,7 @@ export async function openConnectedReplyWait(options: {
   recipient: string;
   sentId?: string;
   requestId?: string;
+  resumeReply?: { emailId: string; requestId: string };
   idempotencyKey?: string;
   createdAt?: string;
   since?: string;
@@ -49,25 +50,43 @@ export async function openConnectedReplyWait(options: {
   let sentId = options.sentId;
   let newlyRegisteredId: string | undefined;
   try {
-    const prior = sentId ? await store.findWaitByParent(sentId) : null;
-    if (prior?.status === "bound") {
-      if (prior.peer !== options.recipient.toLowerCase())
+    if (options.resumeReply) {
+      const saved = await store.readWait(options.resumeReply.requestId);
+      const email = await store.readEmail(options.resumeReply.emailId);
+      if (
+        !sentId ||
+        !saved ||
+        !["bound", "completed"].includes(saved.status) ||
+        saved.sentEmailId !== sentId ||
+        saved.peer !== options.recipient ||
+        email?.route?.kind !== "wait" ||
+        email.route.requestId !== saved.requestId
+      )
         throw new Error(
-          "The existing wait for this send belongs to a different peer.",
+          "The saved reply does not match its durable wait claim.",
         );
-      requestId = prior.requestId;
+      requestId = saved.requestId;
     } else {
-      if (prior?.requestId === requestId) requestId = randomUUID();
-      const existing = await store.readWait(requestId);
-      if (!existing) newlyRegisteredId = requestId;
-      await store.registerWait({
-        requestId,
-        peer: options.recipient,
-        idempotencyKey: options.idempotencyKey ?? `wait-${requestId}`,
-        createdAt: options.createdAt ?? new Date().toISOString(),
-      });
-      if (sentId)
-        requestId = (await store.bindWait(requestId, sentId)).requestId;
+      const prior = sentId ? await store.findWaitByParent(sentId) : null;
+      if (prior?.status === "bound") {
+        if (prior.peer !== options.recipient.toLowerCase())
+          throw new Error(
+            "The existing wait for this send belongs to a different peer.",
+          );
+        requestId = prior.requestId;
+      } else {
+        if (prior?.requestId === requestId) requestId = randomUUID();
+        const existing = await store.readWait(requestId);
+        if (!existing) newlyRegisteredId = requestId;
+        await store.registerWait({
+          requestId,
+          peer: options.recipient,
+          idempotencyKey: options.idempotencyKey ?? `wait-${requestId}`,
+          createdAt: options.createdAt ?? new Date().toISOString(),
+        });
+        if (sentId)
+          requestId = (await store.bindWait(requestId, sentId)).requestId;
+      }
     }
   } catch (error) {
     try {
@@ -141,7 +160,11 @@ export async function openConnectedReplyWait(options: {
     }
     const claim = await store.claimForWait(id, requestId);
     settled.add(id);
-    return claim.status === "claimed" ? email : null;
+    return claim.status === "claimed" ||
+      (claim.status === "already_observed" &&
+        options.resumeReply?.emailId === id)
+      ? email
+      : null;
   }
   return {
     receiver,
@@ -150,6 +173,11 @@ export async function openConnectedReplyWait(options: {
     },
     ready: () => receiver.ready(options.deadline),
     async bind(id: string) {
+      if (options.resumeReply) {
+        if (id !== sentId)
+          throw new Error("The saved reply belongs to a different send.");
+        return;
+      }
       const bound = await store.bindWait(requestId, id);
       requestId = bound.requestId;
       sentId = bound.sentEmailId ?? undefined;
@@ -186,6 +214,12 @@ export async function openConnectedReplyWait(options: {
         while (!timedOut()) {
           const owner = await receiver.ready(options.deadline);
           if (!owner) return null;
+          if (options.resumeReply) {
+            const reply = await inspect(options.resumeReply.emailId);
+            if (reply) return reply;
+            await receiver.changed(options.deadline);
+            continue;
+          }
           if (generation !== owner.generation || gapCount !== owner.gapCount) {
             generation = owner.generation;
             gapCount = owner.gapCount;

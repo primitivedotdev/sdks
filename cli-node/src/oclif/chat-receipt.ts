@@ -20,6 +20,7 @@ type ReceiptData = {
   sent_at: string;
   sent: SendMailResult | null;
   completed: boolean;
+  reply?: { emailId: string; requestId: string };
   idempotency_key?: string;
   send_attempted?: boolean;
 };
@@ -93,6 +94,15 @@ function parseReceipt(raw: string): ReceiptData {
     typeof value.sent_at !== "string" ||
     !Number.isFinite(Date.parse(value.sent_at)) ||
     typeof value.completed !== "boolean" ||
+    (value.reply !== undefined &&
+      (!value.reply ||
+        typeof value.reply !== "object" ||
+        typeof value.reply.emailId !== "string" ||
+        !value.reply.emailId ||
+        typeof value.reply.requestId !== "string" ||
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
+          value.reply.requestId,
+        ))) ||
     (value.idempotency_key !== undefined &&
       (typeof value.idempotency_key !== "string" ||
         !/^[!-~]{1,255}$/.test(value.idempotency_key))) ||

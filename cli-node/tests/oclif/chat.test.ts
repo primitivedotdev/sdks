@@ -300,6 +300,7 @@ describe("chat command", () => {
     mocks.next.mockResolvedValue(replyEmail());
     mocks.reconcileChatSend.mockResolvedValue(null);
     mocks.openConnectedReplyWait.mockResolvedValue({
+      requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       receiver: { signal: new AbortController().signal },
       ready: mocks.ready,
       bind: mocks.bind,
@@ -380,6 +381,41 @@ describe("chat command", () => {
     expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
   });
 
+  it.each([
+    "observed",
+    "finish",
+  ] as const)("retains the exact reply for restart when shared %s fails", async (phase) => {
+    connectedAuth();
+    mocks[phase].mockRejectedValueOnce(
+      new Error("interrupted shared finalization"),
+    );
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    const first = await runChatCommand(args);
+    expect(JSON.parse(first.stdout).outcome).toBe("sent_awaiting_reply");
+    expect(first.exitCode).toBe(3);
+    const path = first.stderr.match(/Chat receipt: (.+)\n/)?.[1];
+    expect(path).toBeDefined();
+    const saved = JSON.parse(readFileSync(path ?? "", "utf8"));
+    expect(saved.completed).toBe(false);
+    expect(saved.reply).toEqual({
+      emailId: "email-1",
+      requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+    const resumed = await runChatCommand(args);
+    expect(JSON.parse(resumed.stdout).outcome).toBe("replied");
+    expect(mocks.openConnectedReplyWait.mock.calls[1][0].resumeReply).toEqual(
+      saved.reply,
+    );
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
+    expect(JSON.parse(readFileSync(path ?? "", "utf8")).completed).toBe(true);
+  });
   it("retains a timed-out send and resumes without another POST", async () => {
     connectedAuth();
     mocks.next
