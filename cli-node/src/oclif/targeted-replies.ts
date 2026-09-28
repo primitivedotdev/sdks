@@ -5,6 +5,12 @@ import type {
 } from "@primitivedotdev/api-core";
 import { getEmail, searchEmails } from "@primitivedotdev/api-core";
 import {
+  type ContactRequestReference,
+  isContactAcceptance,
+  readContactInteraction,
+} from "./contact-interactions.js";
+import { notificationPartReader } from "./notify-session-content.js";
+import {
   isPlainChatReply,
   isScopedChatReply,
   readBeforeDeadline,
@@ -36,6 +42,7 @@ export async function inspectTargetedReply(
     apiClient: PrimitiveApiClient;
     id: string;
     deadline?: number | null;
+    contactRequest?: ContactRequestReference;
   },
 ): Promise<TargetedReplyInspection | null> {
   const result = await readBeforeDeadline(params.deadline, (signal) =>
@@ -95,6 +102,18 @@ export async function inspectTargetedReply(
     );
   if (params.since !== undefined && received < Date.parse(params.since))
     return { kind: "unrelated", id: params.id, email };
+  if (params.contactRequest) {
+    const control = await readBeforeDeadline(params.deadline, (signal) =>
+      readContactInteraction(
+        email,
+        notificationPartReader(async () => params.apiClient.client),
+        signal ?? new AbortController().signal,
+      ),
+    );
+    return isContactAcceptance(control, params.contactRequest)
+      ? { kind: "reply", email }
+      : { kind: "inspection", id: params.id, email };
+  }
   return isPlainChatReply(email)
     ? { kind: "reply", email }
     : { kind: "inspection", id: params.id, email };

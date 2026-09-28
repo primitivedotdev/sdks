@@ -3,6 +3,7 @@ import type {
   EmailDetail,
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
+import type { ContactRequestReference } from "./contact-interactions.js";
 import {
   openSharedMailReceiver,
   sharedMailScope,
@@ -20,6 +21,7 @@ function recoveryEventId(id: string): string {
 
 /** A durable wait joins the address receiver before sending or recovering replies. */
 export async function openConnectedReplyWait(options: {
+  contactRequest?: ContactRequestReference;
   apiClient: PrimitiveApiClient;
   apiKey: string | undefined;
   baseUrl: string;
@@ -59,6 +61,8 @@ export async function openConnectedReplyWait(options: {
         !["bound", "completed"].includes(saved.status) ||
         saved.sentEmailId !== sentId ||
         saved.peer !== options.recipient ||
+        JSON.stringify(saved.contactRequest ?? null) !==
+          JSON.stringify(options.contactRequest ?? null) ||
         email?.route?.kind !== "wait" ||
         email.route.requestId !== saved.requestId
       )
@@ -68,17 +72,35 @@ export async function openConnectedReplyWait(options: {
       requestId = saved.requestId;
     } else {
       const prior = sentId ? await store.findWaitByParent(sentId) : null;
+      if (
+        prior &&
+        JSON.stringify(prior.contactRequest ?? null) !==
+          JSON.stringify(options.contactRequest ?? null)
+      )
+        throw new Error(
+          "The existing wait has a different reply type. Resume it with the matching contact or task command.",
+        );
       if (prior?.status === "bound") {
         if (prior.peer !== options.recipient.toLowerCase())
           throw new Error(
             "The existing wait for this send belongs to a different peer.",
           );
         requestId = prior.requestId;
+        if (
+          JSON.stringify(prior.contactRequest ?? null) !==
+          JSON.stringify(options.contactRequest ?? null)
+        )
+          throw new Error(
+            "The existing wait has a different reply type. Resume it with the matching contact or task command.",
+          );
       } else {
         if (prior?.requestId === requestId) requestId = randomUUID();
         const existing = await store.readWait(requestId);
         if (!existing) newlyRegisteredId = requestId;
         await store.registerWait({
+          ...(options.contactRequest
+            ? { contactRequest: options.contactRequest }
+            : {}),
           requestId,
           peer: options.recipient,
           idempotencyKey: options.idempotencyKey ?? `wait-${requestId}`,
@@ -152,7 +174,9 @@ export async function openConnectedReplyWait(options: {
       if (!notices.has(id)) {
         notices.add(id);
         options.notice?.(
-          `Reply ${id} contains an interaction attachment; inspect it with primitive emails get --id ${id}. Waiting for a plain reply.`,
+          options.contactRequest
+            ? `Reply ${id} does not complete this contact acceptance wait; inspect it with primitive emails get --id ${id}.`
+            : `Reply ${id} contains an interaction attachment; inspect it with primitive emails get --id ${id}. Waiting for a plain reply.`,
         );
       }
       settled.add(id);

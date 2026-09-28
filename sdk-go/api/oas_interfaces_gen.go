@@ -177,12 +177,20 @@ type GetAccountRes interface {
 	getAccountRes()
 }
 
+type GetAgentContactPolicyRes interface {
+	getAgentContactPolicyRes()
+}
+
 type GetAgentRes interface {
 	getAgentRes()
 }
 
 type GetChallengeRes interface {
 	getChallengeRes()
+}
+
+type GetContactPolicyRes interface {
+	getContactPolicyRes()
 }
 
 type GetContactRes interface {
@@ -373,8 +381,16 @@ type PullWebhookEventRes interface {
 	pullWebhookEventRes()
 }
 
+type PutAgentContactPolicyRes interface {
+	putAgentContactPolicyRes()
+}
+
 type PutAgentContactRes interface {
 	putAgentContactRes()
+}
+
+type PutContactPolicyRes interface {
+	putContactPolicyRes()
 }
 
 type PutContactRes interface {

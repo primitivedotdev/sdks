@@ -10,6 +10,7 @@ import {
 } from "../../src/oclif/notification-contact-policy.js";
 import { openSessionNotifications } from "../../src/oclif/notify-session.js";
 import { readNotificationReceipts } from "../../src/oclif/notify-session-state.js";
+import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 const resources: Array<{ close(): void }> = [];
 const directories: string[] = [];
@@ -58,6 +59,7 @@ async function setup() {
   let preflightDelay = 0;
   const generation = randomUUID();
   const policy = createNotificationContactPolicy({
+    readPolicy: async () => emptyContactPolicy(recipient),
     recipient,
     now: () => clock,
     readPage: async () => ({
@@ -154,4 +156,39 @@ it("cannot bypass contact policy by omitting per-detail authorization", async ()
   ).rejects.toThrow("authorization is missing");
   expect(f.queue).not.toHaveBeenCalled();
   expect(f.receipts()).toEqual([]);
+});
+
+it("settles suppressed first-contact admission before the durable native receipt and queue write", async () => {
+  const f = await setup();
+  const reserve = vi.fn(() => false);
+  expect(
+    await f.notifications.handleDetail(f.detail, f.eventId, f.signal, {
+      sender: "sender@example.com",
+      contactRequest: true,
+      recheck: async () => () => {},
+      reserve,
+    }),
+  ).toEqual({ disposition: "skipped" });
+  expect(reserve).toHaveBeenCalledOnce();
+  expect(f.dispatch).not.toHaveBeenCalled();
+  expect(f.receipts()).toEqual([]);
+});
+
+it("queues only IDs and sender for a request, with no request body or private-context grant", async () => {
+  const f = await setup();
+  f.detail.body_text =
+    "External request reason must not enter the native queue";
+  await f.notifications.handleDetail(f.detail, f.eventId, f.signal, {
+    sender: "sender@example.com",
+    contactRequest: true,
+    recheck: async () => () => {},
+    reserve: () => true,
+  });
+  const text = f.queue.mock.calls[0]?.[0];
+  expect(text).toContain("first-contact request");
+  expect(text).toContain(f.detail.id);
+  expect(text).toContain(
+    "No contact relationship, task permission, private history, or tool authority",
+  );
+  expect(text).not.toContain(f.detail.body_text);
 });

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { opendirSync } from "node:fs";
 import { dirname, join } from "node:path";
+import type { ContactRequestReference } from "./contact-interactions.js";
 import {
   invalidSharedMail,
   mailAddress,
@@ -25,6 +26,7 @@ export type SharedMailDetails = {
   authorization: "pending" | "trusted" | "rejected";
 };
 export type SharedMailWait = {
+  contactRequest?: ContactRequestReference;
   requestId: string;
   peer: string;
   sessionKey: string | null;
@@ -86,7 +88,13 @@ function details(value: unknown): SharedMailDetails {
   };
 }
 function wait(value: unknown): SharedMailWait {
+  const hasControl = Boolean(
+    value &&
+      typeof value === "object" &&
+      Object.hasOwn(value, "contactRequest"),
+  );
   const w = mailObject(value, [
+    ...(hasControl ? ["contactRequest"] : []),
     "requestId",
     "peer",
     "sessionKey",
@@ -110,6 +118,9 @@ function wait(value: unknown): SharedMailWait {
   )
     throw invalidSharedMail();
   return {
+    ...(hasControl
+      ? { contactRequest: contactRequestReference(w.contactRequest) }
+      : {}),
     requestId: mailId(w.requestId),
     peer: mailAddress(w.peer),
     sessionKey: w.sessionKey === null ? null : mailString(w.sessionKey),
@@ -117,6 +128,18 @@ function wait(value: unknown): SharedMailWait {
     createdAt: mailTime(w.createdAt),
     status: w.status,
     sentEmailId: w.sentEmailId === null ? null : mailId(w.sentEmailId),
+  };
+}
+function contactRequestReference(value: unknown): ContactRequestReference {
+  const r = mailObject(value, ["interactionId", "stepId", "expiresAt"]);
+  const interactionId = mailString(r.interactionId);
+  const at = interactionId.indexOf("@");
+  mailId(interactionId.slice(0, at));
+  mailAddress(interactionId);
+  return {
+    interactionId,
+    stepId: mailId(r.stepId),
+    expiresAt: mailTime(r.expiresAt),
   };
 }
 function email(value: unknown): SharedMailEmail {
@@ -461,6 +484,7 @@ export async function openSharedMailStore(options: {
       });
     },
     registerWait(input: {
+      contactRequest?: ContactRequestReference;
       requestId: string;
       peer: string;
       sessionKey?: string | null;
@@ -515,7 +539,11 @@ export async function openSharedMailStore(options: {
           const canonical = requiredWait(occupied.requestId);
           if (
             canonical.sentEmailId !== parent ||
-            canonical.peer !== previous.peer
+            canonical.peer !== previous.peer ||
+            !same(
+              canonical.contactRequest ?? null,
+              previous.contactRequest ?? null,
+            )
           )
             throw invalidSharedMail();
           if (canonical.status === "bound") {

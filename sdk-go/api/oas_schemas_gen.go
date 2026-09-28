@@ -661,6 +661,168 @@ func (s *AgentClaimStartResult) SetExpiresInSeconds(val int) {
 	s.ExpiresInSeconds = val
 }
 
+// Ref: #/components/schemas/AgentContactPolicy
+type AgentContactPolicy struct {
+	AgentAddress             string                     `json:"agent_address"`
+	OrgPolicy                ContactPolicy              `json:"org_policy"`
+	AgentPolicy              AgentContactPolicyOverride `json:"agent_policy"`
+	EffectiveVersion         string                     `json:"effective_version"`
+	EffectiveSince           time.Time                  `json:"effective_since"`
+	AllowContactRequests     bool                       `json:"allow_contact_requests"`
+	ContactRequestSince      NilDateTime                `json:"contact_request_since"`
+	ContactRequestGeneration NilString                  `json:"contact_request_generation"`
+}
+
+// GetAgentAddress returns the value of AgentAddress.
+func (s *AgentContactPolicy) GetAgentAddress() string {
+	return s.AgentAddress
+}
+
+// GetOrgPolicy returns the value of OrgPolicy.
+func (s *AgentContactPolicy) GetOrgPolicy() ContactPolicy {
+	return s.OrgPolicy
+}
+
+// GetAgentPolicy returns the value of AgentPolicy.
+func (s *AgentContactPolicy) GetAgentPolicy() AgentContactPolicyOverride {
+	return s.AgentPolicy
+}
+
+// GetEffectiveVersion returns the value of EffectiveVersion.
+func (s *AgentContactPolicy) GetEffectiveVersion() string {
+	return s.EffectiveVersion
+}
+
+// GetEffectiveSince returns the value of EffectiveSince.
+func (s *AgentContactPolicy) GetEffectiveSince() time.Time {
+	return s.EffectiveSince
+}
+
+// GetAllowContactRequests returns the value of AllowContactRequests.
+func (s *AgentContactPolicy) GetAllowContactRequests() bool {
+	return s.AllowContactRequests
+}
+
+// GetContactRequestSince returns the value of ContactRequestSince.
+func (s *AgentContactPolicy) GetContactRequestSince() NilDateTime {
+	return s.ContactRequestSince
+}
+
+// GetContactRequestGeneration returns the value of ContactRequestGeneration.
+func (s *AgentContactPolicy) GetContactRequestGeneration() NilString {
+	return s.ContactRequestGeneration
+}
+
+// SetAgentAddress sets the value of AgentAddress.
+func (s *AgentContactPolicy) SetAgentAddress(val string) {
+	s.AgentAddress = val
+}
+
+// SetOrgPolicy sets the value of OrgPolicy.
+func (s *AgentContactPolicy) SetOrgPolicy(val ContactPolicy) {
+	s.OrgPolicy = val
+}
+
+// SetAgentPolicy sets the value of AgentPolicy.
+func (s *AgentContactPolicy) SetAgentPolicy(val AgentContactPolicyOverride) {
+	s.AgentPolicy = val
+}
+
+// SetEffectiveVersion sets the value of EffectiveVersion.
+func (s *AgentContactPolicy) SetEffectiveVersion(val string) {
+	s.EffectiveVersion = val
+}
+
+// SetEffectiveSince sets the value of EffectiveSince.
+func (s *AgentContactPolicy) SetEffectiveSince(val time.Time) {
+	s.EffectiveSince = val
+}
+
+// SetAllowContactRequests sets the value of AllowContactRequests.
+func (s *AgentContactPolicy) SetAllowContactRequests(val bool) {
+	s.AllowContactRequests = val
+}
+
+// SetContactRequestSince sets the value of ContactRequestSince.
+func (s *AgentContactPolicy) SetContactRequestSince(val NilDateTime) {
+	s.ContactRequestSince = val
+}
+
+// SetContactRequestGeneration sets the value of ContactRequestGeneration.
+func (s *AgentContactPolicy) SetContactRequestGeneration(val NilString) {
+	s.ContactRequestGeneration = val
+}
+
+// Ref: #/components/schemas/AgentContactPolicyOverride
+type AgentContactPolicyOverride struct {
+	Rules                    []ContactPolicyRule `json:"rules"`
+	ContactRequestSince      NilDateTime         `json:"contact_request_since"`
+	ContactRequestGeneration NilUUID             `json:"contact_request_generation"`
+	Version                  NilUUID             `json:"version"`
+	UpdatedAt                NilDateTime         `json:"updated_at"`
+	AllowContactRequests     NilBool             `json:"allow_contact_requests"`
+}
+
+// GetRules returns the value of Rules.
+func (s *AgentContactPolicyOverride) GetRules() []ContactPolicyRule {
+	return s.Rules
+}
+
+// GetContactRequestSince returns the value of ContactRequestSince.
+func (s *AgentContactPolicyOverride) GetContactRequestSince() NilDateTime {
+	return s.ContactRequestSince
+}
+
+// GetContactRequestGeneration returns the value of ContactRequestGeneration.
+func (s *AgentContactPolicyOverride) GetContactRequestGeneration() NilUUID {
+	return s.ContactRequestGeneration
+}
+
+// GetVersion returns the value of Version.
+func (s *AgentContactPolicyOverride) GetVersion() NilUUID {
+	return s.Version
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *AgentContactPolicyOverride) GetUpdatedAt() NilDateTime {
+	return s.UpdatedAt
+}
+
+// GetAllowContactRequests returns the value of AllowContactRequests.
+func (s *AgentContactPolicyOverride) GetAllowContactRequests() NilBool {
+	return s.AllowContactRequests
+}
+
+// SetRules sets the value of Rules.
+func (s *AgentContactPolicyOverride) SetRules(val []ContactPolicyRule) {
+	s.Rules = val
+}
+
+// SetContactRequestSince sets the value of ContactRequestSince.
+func (s *AgentContactPolicyOverride) SetContactRequestSince(val NilDateTime) {
+	s.ContactRequestSince = val
+}
+
+// SetContactRequestGeneration sets the value of ContactRequestGeneration.
+func (s *AgentContactPolicyOverride) SetContactRequestGeneration(val NilUUID) {
+	s.ContactRequestGeneration = val
+}
+
+// SetVersion sets the value of Version.
+func (s *AgentContactPolicyOverride) SetVersion(val NilUUID) {
+	s.Version = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *AgentContactPolicyOverride) SetUpdatedAt(val NilDateTime) {
+	s.UpdatedAt = val
+}
+
+// SetAllowContactRequests sets the value of AllowContactRequests.
+func (s *AgentContactPolicyOverride) SetAllowContactRequests(val NilBool) {
+	s.AllowContactRequests = val
+}
+
 // Ref: #/components/schemas/AgentOrgRef
 type AgentOrgRef struct {
 	ID   uuid.UUID `json:"id"`
@@ -3309,6 +3471,234 @@ func (s *CompleteWebhookStdoutInputTransportError) UnmarshalText(data []byte) er
 	switch CompleteWebhookStdoutInputTransportError(data) {
 	case CompleteWebhookStdoutInputTransportErrorIo:
 		*s = CompleteWebhookStdoutInputTransportErrorIo
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/ContactPolicy
+type ContactPolicy struct {
+	Rules                    []ContactPolicyRule `json:"rules"`
+	ContactRequestSince      NilDateTime         `json:"contact_request_since"`
+	ContactRequestGeneration NilUUID             `json:"contact_request_generation"`
+	Version                  NilUUID             `json:"version"`
+	UpdatedAt                NilDateTime         `json:"updated_at"`
+	AllowContactRequests     bool                `json:"allow_contact_requests"`
+}
+
+// GetRules returns the value of Rules.
+func (s *ContactPolicy) GetRules() []ContactPolicyRule {
+	return s.Rules
+}
+
+// GetContactRequestSince returns the value of ContactRequestSince.
+func (s *ContactPolicy) GetContactRequestSince() NilDateTime {
+	return s.ContactRequestSince
+}
+
+// GetContactRequestGeneration returns the value of ContactRequestGeneration.
+func (s *ContactPolicy) GetContactRequestGeneration() NilUUID {
+	return s.ContactRequestGeneration
+}
+
+// GetVersion returns the value of Version.
+func (s *ContactPolicy) GetVersion() NilUUID {
+	return s.Version
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *ContactPolicy) GetUpdatedAt() NilDateTime {
+	return s.UpdatedAt
+}
+
+// GetAllowContactRequests returns the value of AllowContactRequests.
+func (s *ContactPolicy) GetAllowContactRequests() bool {
+	return s.AllowContactRequests
+}
+
+// SetRules sets the value of Rules.
+func (s *ContactPolicy) SetRules(val []ContactPolicyRule) {
+	s.Rules = val
+}
+
+// SetContactRequestSince sets the value of ContactRequestSince.
+func (s *ContactPolicy) SetContactRequestSince(val NilDateTime) {
+	s.ContactRequestSince = val
+}
+
+// SetContactRequestGeneration sets the value of ContactRequestGeneration.
+func (s *ContactPolicy) SetContactRequestGeneration(val NilUUID) {
+	s.ContactRequestGeneration = val
+}
+
+// SetVersion sets the value of Version.
+func (s *ContactPolicy) SetVersion(val NilUUID) {
+	s.Version = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *ContactPolicy) SetUpdatedAt(val NilDateTime) {
+	s.UpdatedAt = val
+}
+
+// SetAllowContactRequests sets the value of AllowContactRequests.
+func (s *ContactPolicy) SetAllowContactRequests(val bool) {
+	s.AllowContactRequests = val
+}
+
+// Ref: #/components/schemas/ContactPolicyRule
+type ContactPolicyRule struct {
+	// Exact mailbox or restricted mailbox glob. See operation description.
+	Pattern                string                  `json:"pattern"`
+	Effect                 ContactPolicyRuleEffect `json:"effect"`
+	NotifySince            NilDateTime             `json:"notify_since"`
+	NotificationGeneration NilUUID                 `json:"notification_generation"`
+}
+
+// GetPattern returns the value of Pattern.
+func (s *ContactPolicyRule) GetPattern() string {
+	return s.Pattern
+}
+
+// GetEffect returns the value of Effect.
+func (s *ContactPolicyRule) GetEffect() ContactPolicyRuleEffect {
+	return s.Effect
+}
+
+// GetNotifySince returns the value of NotifySince.
+func (s *ContactPolicyRule) GetNotifySince() NilDateTime {
+	return s.NotifySince
+}
+
+// GetNotificationGeneration returns the value of NotificationGeneration.
+func (s *ContactPolicyRule) GetNotificationGeneration() NilUUID {
+	return s.NotificationGeneration
+}
+
+// SetPattern sets the value of Pattern.
+func (s *ContactPolicyRule) SetPattern(val string) {
+	s.Pattern = val
+}
+
+// SetEffect sets the value of Effect.
+func (s *ContactPolicyRule) SetEffect(val ContactPolicyRuleEffect) {
+	s.Effect = val
+}
+
+// SetNotifySince sets the value of NotifySince.
+func (s *ContactPolicyRule) SetNotifySince(val NilDateTime) {
+	s.NotifySince = val
+}
+
+// SetNotificationGeneration sets the value of NotificationGeneration.
+func (s *ContactPolicyRule) SetNotificationGeneration(val NilUUID) {
+	s.NotificationGeneration = val
+}
+
+type ContactPolicyRuleEffect string
+
+const (
+	ContactPolicyRuleEffectAllow   ContactPolicyRuleEffect = "allow"
+	ContactPolicyRuleEffectSilence ContactPolicyRuleEffect = "silence"
+)
+
+// AllValues returns all ContactPolicyRuleEffect values.
+func (ContactPolicyRuleEffect) AllValues() []ContactPolicyRuleEffect {
+	return []ContactPolicyRuleEffect{
+		ContactPolicyRuleEffectAllow,
+		ContactPolicyRuleEffectSilence,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContactPolicyRuleEffect) MarshalText() ([]byte, error) {
+	switch s {
+	case ContactPolicyRuleEffectAllow:
+		return []byte(s), nil
+	case ContactPolicyRuleEffectSilence:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContactPolicyRuleEffect) UnmarshalText(data []byte) error {
+	switch ContactPolicyRuleEffect(data) {
+	case ContactPolicyRuleEffectAllow:
+		*s = ContactPolicyRuleEffectAllow
+		return nil
+	case ContactPolicyRuleEffectSilence:
+		*s = ContactPolicyRuleEffectSilence
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/ContactPolicyRuleInput
+type ContactPolicyRuleInput struct {
+	// Exact mailbox or restricted mailbox glob. See operation description.
+	Pattern string                       `json:"pattern"`
+	Effect  ContactPolicyRuleInputEffect `json:"effect"`
+}
+
+// GetPattern returns the value of Pattern.
+func (s *ContactPolicyRuleInput) GetPattern() string {
+	return s.Pattern
+}
+
+// GetEffect returns the value of Effect.
+func (s *ContactPolicyRuleInput) GetEffect() ContactPolicyRuleInputEffect {
+	return s.Effect
+}
+
+// SetPattern sets the value of Pattern.
+func (s *ContactPolicyRuleInput) SetPattern(val string) {
+	s.Pattern = val
+}
+
+// SetEffect sets the value of Effect.
+func (s *ContactPolicyRuleInput) SetEffect(val ContactPolicyRuleInputEffect) {
+	s.Effect = val
+}
+
+type ContactPolicyRuleInputEffect string
+
+const (
+	ContactPolicyRuleInputEffectAllow   ContactPolicyRuleInputEffect = "allow"
+	ContactPolicyRuleInputEffectSilence ContactPolicyRuleInputEffect = "silence"
+)
+
+// AllValues returns all ContactPolicyRuleInputEffect values.
+func (ContactPolicyRuleInputEffect) AllValues() []ContactPolicyRuleInputEffect {
+	return []ContactPolicyRuleInputEffect{
+		ContactPolicyRuleInputEffectAllow,
+		ContactPolicyRuleInputEffectSilence,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ContactPolicyRuleInputEffect) MarshalText() ([]byte, error) {
+	switch s {
+	case ContactPolicyRuleInputEffectAllow:
+		return []byte(s), nil
+	case ContactPolicyRuleInputEffectSilence:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ContactPolicyRuleInputEffect) UnmarshalText(data []byte) error {
+	switch ContactPolicyRuleInputEffect(data) {
+	case ContactPolicyRuleInputEffectAllow:
+		*s = ContactPolicyRuleInputEffectAllow
+		return nil
+	case ContactPolicyRuleInputEffectSilence:
+		*s = ContactPolicyRuleInputEffectSilence
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -13598,6 +13988,80 @@ type GetAccountUnauthorized ErrorResponse
 
 func (*GetAccountUnauthorized) getAccountRes() {}
 
+type GetAgentContactPolicyBadRequest ErrorResponse
+
+func (*GetAgentContactPolicyBadRequest) getAgentContactPolicyRes() {}
+
+type GetAgentContactPolicyConflict ErrorResponse
+
+func (*GetAgentContactPolicyConflict) getAgentContactPolicyRes() {}
+
+type GetAgentContactPolicyForbidden ErrorResponse
+
+func (*GetAgentContactPolicyForbidden) getAgentContactPolicyRes() {}
+
+type GetAgentContactPolicyNotFound ErrorResponse
+
+func (*GetAgentContactPolicyNotFound) getAgentContactPolicyRes() {}
+
+// Merged schema.
+type GetAgentContactPolicyOK struct {
+	Success bool               `json:"success"`
+	Data    AgentContactPolicy `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetAgentContactPolicyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetAgentContactPolicyOK) GetData() AgentContactPolicy {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetAgentContactPolicyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetAgentContactPolicyOK) SetData(val AgentContactPolicy) {
+	s.Data = val
+}
+
+// GetAgentContactPolicyOKHeaders wraps GetAgentContactPolicyOK with response headers.
+type GetAgentContactPolicyOKHeaders struct {
+	CacheControl OptString
+	Response     GetAgentContactPolicyOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *GetAgentContactPolicyOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *GetAgentContactPolicyOKHeaders) GetResponse() GetAgentContactPolicyOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *GetAgentContactPolicyOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *GetAgentContactPolicyOKHeaders) SetResponse(val GetAgentContactPolicyOK) {
+	s.Response = val
+}
+
+func (*GetAgentContactPolicyOKHeaders) getAgentContactPolicyRes() {}
+
+type GetAgentContactPolicyUnauthorized ErrorResponse
+
+func (*GetAgentContactPolicyUnauthorized) getAgentContactPolicyRes() {}
+
 // Merged schema.
 type GetAgentOK struct {
 	Success bool          `json:"success"`
@@ -13843,6 +14307,80 @@ func (s *GetContactOKHeaders) SetResponse(val GetContactOK) {
 }
 
 func (*GetContactOKHeaders) getContactRes() {}
+
+type GetContactPolicyBadRequest ErrorResponse
+
+func (*GetContactPolicyBadRequest) getContactPolicyRes() {}
+
+type GetContactPolicyConflict ErrorResponse
+
+func (*GetContactPolicyConflict) getContactPolicyRes() {}
+
+type GetContactPolicyForbidden ErrorResponse
+
+func (*GetContactPolicyForbidden) getContactPolicyRes() {}
+
+type GetContactPolicyNotFound ErrorResponse
+
+func (*GetContactPolicyNotFound) getContactPolicyRes() {}
+
+// Merged schema.
+type GetContactPolicyOK struct {
+	Success bool          `json:"success"`
+	Data    ContactPolicy `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetContactPolicyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetContactPolicyOK) GetData() ContactPolicy {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetContactPolicyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetContactPolicyOK) SetData(val ContactPolicy) {
+	s.Data = val
+}
+
+// GetContactPolicyOKHeaders wraps GetContactPolicyOK with response headers.
+type GetContactPolicyOKHeaders struct {
+	CacheControl OptString
+	Response     GetContactPolicyOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *GetContactPolicyOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *GetContactPolicyOKHeaders) GetResponse() GetContactPolicyOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *GetContactPolicyOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *GetContactPolicyOKHeaders) SetResponse(val GetContactPolicyOK) {
+	s.Response = val
+}
+
+func (*GetContactPolicyOKHeaders) getContactPolicyRes() {}
+
+type GetContactPolicyUnauthorized ErrorResponse
+
+func (*GetContactPolicyUnauthorized) getContactPolicyRes() {}
 
 type GetContactUnauthorized ErrorResponse
 
@@ -23757,6 +24295,223 @@ func (s *PutAgentContactOKHeaders) SetResponse(val PutAgentContactOK) {
 
 func (*PutAgentContactOKHeaders) putAgentContactRes() {}
 
+type PutAgentContactPolicyBadRequest ErrorResponse
+
+func (*PutAgentContactPolicyBadRequest) putAgentContactPolicyRes() {}
+
+type PutAgentContactPolicyConflict ErrorResponse
+
+func (*PutAgentContactPolicyConflict) putAgentContactPolicyRes() {}
+
+// Ref: #/components/schemas/PutAgentContactPolicyCreate
+type PutAgentContactPolicyCreate struct {
+	Rules                []ContactPolicyRuleInput `json:"rules"`
+	AllowContactRequests NilBool                  `json:"allow_contact_requests"`
+	IfAbsent             bool                     `json:"if_absent"`
+}
+
+// GetRules returns the value of Rules.
+func (s *PutAgentContactPolicyCreate) GetRules() []ContactPolicyRuleInput {
+	return s.Rules
+}
+
+// GetAllowContactRequests returns the value of AllowContactRequests.
+func (s *PutAgentContactPolicyCreate) GetAllowContactRequests() NilBool {
+	return s.AllowContactRequests
+}
+
+// GetIfAbsent returns the value of IfAbsent.
+func (s *PutAgentContactPolicyCreate) GetIfAbsent() bool {
+	return s.IfAbsent
+}
+
+// SetRules sets the value of Rules.
+func (s *PutAgentContactPolicyCreate) SetRules(val []ContactPolicyRuleInput) {
+	s.Rules = val
+}
+
+// SetAllowContactRequests sets the value of AllowContactRequests.
+func (s *PutAgentContactPolicyCreate) SetAllowContactRequests(val NilBool) {
+	s.AllowContactRequests = val
+}
+
+// SetIfAbsent sets the value of IfAbsent.
+func (s *PutAgentContactPolicyCreate) SetIfAbsent(val bool) {
+	s.IfAbsent = val
+}
+
+type PutAgentContactPolicyForbidden ErrorResponse
+
+func (*PutAgentContactPolicyForbidden) putAgentContactPolicyRes() {}
+
+type PutAgentContactPolicyNotFound ErrorResponse
+
+func (*PutAgentContactPolicyNotFound) putAgentContactPolicyRes() {}
+
+// Merged schema.
+type PutAgentContactPolicyOK struct {
+	Success bool               `json:"success"`
+	Data    AgentContactPolicy `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *PutAgentContactPolicyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *PutAgentContactPolicyOK) GetData() AgentContactPolicy {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *PutAgentContactPolicyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *PutAgentContactPolicyOK) SetData(val AgentContactPolicy) {
+	s.Data = val
+}
+
+// PutAgentContactPolicyOKHeaders wraps PutAgentContactPolicyOK with response headers.
+type PutAgentContactPolicyOKHeaders struct {
+	CacheControl OptString
+	Response     PutAgentContactPolicyOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *PutAgentContactPolicyOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *PutAgentContactPolicyOKHeaders) GetResponse() PutAgentContactPolicyOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *PutAgentContactPolicyOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *PutAgentContactPolicyOKHeaders) SetResponse(val PutAgentContactPolicyOK) {
+	s.Response = val
+}
+
+func (*PutAgentContactPolicyOKHeaders) putAgentContactPolicyRes() {}
+
+// Ref: #/components/schemas/PutAgentContactPolicyReplace
+type PutAgentContactPolicyReplace struct {
+	Rules                []ContactPolicyRuleInput `json:"rules"`
+	AllowContactRequests NilBool                  `json:"allow_contact_requests"`
+	IfVersion            uuid.UUID                `json:"if_version"`
+}
+
+// GetRules returns the value of Rules.
+func (s *PutAgentContactPolicyReplace) GetRules() []ContactPolicyRuleInput {
+	return s.Rules
+}
+
+// GetAllowContactRequests returns the value of AllowContactRequests.
+func (s *PutAgentContactPolicyReplace) GetAllowContactRequests() NilBool {
+	return s.AllowContactRequests
+}
+
+// GetIfVersion returns the value of IfVersion.
+func (s *PutAgentContactPolicyReplace) GetIfVersion() uuid.UUID {
+	return s.IfVersion
+}
+
+// SetRules sets the value of Rules.
+func (s *PutAgentContactPolicyReplace) SetRules(val []ContactPolicyRuleInput) {
+	s.Rules = val
+}
+
+// SetAllowContactRequests sets the value of AllowContactRequests.
+func (s *PutAgentContactPolicyReplace) SetAllowContactRequests(val NilBool) {
+	s.AllowContactRequests = val
+}
+
+// SetIfVersion sets the value of IfVersion.
+func (s *PutAgentContactPolicyReplace) SetIfVersion(val uuid.UUID) {
+	s.IfVersion = val
+}
+
+// Ref: #/components/schemas/PutAgentContactPolicyRequest
+// PutAgentContactPolicyRequest represents sum type.
+type PutAgentContactPolicyRequest struct {
+	Type                         PutAgentContactPolicyRequestType // switch on this field
+	PutAgentContactPolicyCreate  PutAgentContactPolicyCreate
+	PutAgentContactPolicyReplace PutAgentContactPolicyReplace
+}
+
+// PutAgentContactPolicyRequestType is oneOf type of PutAgentContactPolicyRequest.
+type PutAgentContactPolicyRequestType string
+
+// Possible values for PutAgentContactPolicyRequestType.
+const (
+	PutAgentContactPolicyCreatePutAgentContactPolicyRequest  PutAgentContactPolicyRequestType = "PutAgentContactPolicyCreate"
+	PutAgentContactPolicyReplacePutAgentContactPolicyRequest PutAgentContactPolicyRequestType = "PutAgentContactPolicyReplace"
+)
+
+// IsPutAgentContactPolicyCreate reports whether PutAgentContactPolicyRequest is PutAgentContactPolicyCreate.
+func (s PutAgentContactPolicyRequest) IsPutAgentContactPolicyCreate() bool {
+	return s.Type == PutAgentContactPolicyCreatePutAgentContactPolicyRequest
+}
+
+// IsPutAgentContactPolicyReplace reports whether PutAgentContactPolicyRequest is PutAgentContactPolicyReplace.
+func (s PutAgentContactPolicyRequest) IsPutAgentContactPolicyReplace() bool {
+	return s.Type == PutAgentContactPolicyReplacePutAgentContactPolicyRequest
+}
+
+// SetPutAgentContactPolicyCreate sets PutAgentContactPolicyRequest to PutAgentContactPolicyCreate.
+func (s *PutAgentContactPolicyRequest) SetPutAgentContactPolicyCreate(v PutAgentContactPolicyCreate) {
+	s.Type = PutAgentContactPolicyCreatePutAgentContactPolicyRequest
+	s.PutAgentContactPolicyCreate = v
+}
+
+// GetPutAgentContactPolicyCreate returns PutAgentContactPolicyCreate and true boolean if PutAgentContactPolicyRequest is PutAgentContactPolicyCreate.
+func (s PutAgentContactPolicyRequest) GetPutAgentContactPolicyCreate() (v PutAgentContactPolicyCreate, ok bool) {
+	if !s.IsPutAgentContactPolicyCreate() {
+		return v, false
+	}
+	return s.PutAgentContactPolicyCreate, true
+}
+
+// NewPutAgentContactPolicyCreatePutAgentContactPolicyRequest returns new PutAgentContactPolicyRequest from PutAgentContactPolicyCreate.
+func NewPutAgentContactPolicyCreatePutAgentContactPolicyRequest(v PutAgentContactPolicyCreate) PutAgentContactPolicyRequest {
+	var s PutAgentContactPolicyRequest
+	s.SetPutAgentContactPolicyCreate(v)
+	return s
+}
+
+// SetPutAgentContactPolicyReplace sets PutAgentContactPolicyRequest to PutAgentContactPolicyReplace.
+func (s *PutAgentContactPolicyRequest) SetPutAgentContactPolicyReplace(v PutAgentContactPolicyReplace) {
+	s.Type = PutAgentContactPolicyReplacePutAgentContactPolicyRequest
+	s.PutAgentContactPolicyReplace = v
+}
+
+// GetPutAgentContactPolicyReplace returns PutAgentContactPolicyReplace and true boolean if PutAgentContactPolicyRequest is PutAgentContactPolicyReplace.
+func (s PutAgentContactPolicyRequest) GetPutAgentContactPolicyReplace() (v PutAgentContactPolicyReplace, ok bool) {
+	if !s.IsPutAgentContactPolicyReplace() {
+		return v, false
+	}
+	return s.PutAgentContactPolicyReplace, true
+}
+
+// NewPutAgentContactPolicyReplacePutAgentContactPolicyRequest returns new PutAgentContactPolicyRequest from PutAgentContactPolicyReplace.
+func NewPutAgentContactPolicyReplacePutAgentContactPolicyRequest(v PutAgentContactPolicyReplace) PutAgentContactPolicyRequest {
+	var s PutAgentContactPolicyRequest
+	s.SetPutAgentContactPolicyReplace(v)
+	return s
+}
+
+type PutAgentContactPolicyUnauthorized ErrorResponse
+
+func (*PutAgentContactPolicyUnauthorized) putAgentContactPolicyRes() {}
+
 // PutAgentContactReq represents sum type.
 type PutAgentContactReq struct {
 	Type                PutAgentContactReqType // switch on this field
@@ -24076,6 +24831,223 @@ func (s *PutContactOKHeaders) SetResponse(val PutContactOK) {
 
 func (*PutContactOKHeaders) putContactRes() {}
 
+type PutContactPolicyBadRequest ErrorResponse
+
+func (*PutContactPolicyBadRequest) putContactPolicyRes() {}
+
+type PutContactPolicyConflict ErrorResponse
+
+func (*PutContactPolicyConflict) putContactPolicyRes() {}
+
+// Ref: #/components/schemas/PutContactPolicyCreate
+type PutContactPolicyCreate struct {
+	Rules                []ContactPolicyRuleInput `json:"rules"`
+	AllowContactRequests bool                     `json:"allow_contact_requests"`
+	IfAbsent             bool                     `json:"if_absent"`
+}
+
+// GetRules returns the value of Rules.
+func (s *PutContactPolicyCreate) GetRules() []ContactPolicyRuleInput {
+	return s.Rules
+}
+
+// GetAllowContactRequests returns the value of AllowContactRequests.
+func (s *PutContactPolicyCreate) GetAllowContactRequests() bool {
+	return s.AllowContactRequests
+}
+
+// GetIfAbsent returns the value of IfAbsent.
+func (s *PutContactPolicyCreate) GetIfAbsent() bool {
+	return s.IfAbsent
+}
+
+// SetRules sets the value of Rules.
+func (s *PutContactPolicyCreate) SetRules(val []ContactPolicyRuleInput) {
+	s.Rules = val
+}
+
+// SetAllowContactRequests sets the value of AllowContactRequests.
+func (s *PutContactPolicyCreate) SetAllowContactRequests(val bool) {
+	s.AllowContactRequests = val
+}
+
+// SetIfAbsent sets the value of IfAbsent.
+func (s *PutContactPolicyCreate) SetIfAbsent(val bool) {
+	s.IfAbsent = val
+}
+
+type PutContactPolicyForbidden ErrorResponse
+
+func (*PutContactPolicyForbidden) putContactPolicyRes() {}
+
+type PutContactPolicyNotFound ErrorResponse
+
+func (*PutContactPolicyNotFound) putContactPolicyRes() {}
+
+// Merged schema.
+type PutContactPolicyOK struct {
+	Success bool          `json:"success"`
+	Data    ContactPolicy `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *PutContactPolicyOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *PutContactPolicyOK) GetData() ContactPolicy {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *PutContactPolicyOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *PutContactPolicyOK) SetData(val ContactPolicy) {
+	s.Data = val
+}
+
+// PutContactPolicyOKHeaders wraps PutContactPolicyOK with response headers.
+type PutContactPolicyOKHeaders struct {
+	CacheControl OptString
+	Response     PutContactPolicyOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *PutContactPolicyOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *PutContactPolicyOKHeaders) GetResponse() PutContactPolicyOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *PutContactPolicyOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *PutContactPolicyOKHeaders) SetResponse(val PutContactPolicyOK) {
+	s.Response = val
+}
+
+func (*PutContactPolicyOKHeaders) putContactPolicyRes() {}
+
+// Ref: #/components/schemas/PutContactPolicyReplace
+type PutContactPolicyReplace struct {
+	Rules                []ContactPolicyRuleInput `json:"rules"`
+	AllowContactRequests bool                     `json:"allow_contact_requests"`
+	IfVersion            uuid.UUID                `json:"if_version"`
+}
+
+// GetRules returns the value of Rules.
+func (s *PutContactPolicyReplace) GetRules() []ContactPolicyRuleInput {
+	return s.Rules
+}
+
+// GetAllowContactRequests returns the value of AllowContactRequests.
+func (s *PutContactPolicyReplace) GetAllowContactRequests() bool {
+	return s.AllowContactRequests
+}
+
+// GetIfVersion returns the value of IfVersion.
+func (s *PutContactPolicyReplace) GetIfVersion() uuid.UUID {
+	return s.IfVersion
+}
+
+// SetRules sets the value of Rules.
+func (s *PutContactPolicyReplace) SetRules(val []ContactPolicyRuleInput) {
+	s.Rules = val
+}
+
+// SetAllowContactRequests sets the value of AllowContactRequests.
+func (s *PutContactPolicyReplace) SetAllowContactRequests(val bool) {
+	s.AllowContactRequests = val
+}
+
+// SetIfVersion sets the value of IfVersion.
+func (s *PutContactPolicyReplace) SetIfVersion(val uuid.UUID) {
+	s.IfVersion = val
+}
+
+// Ref: #/components/schemas/PutContactPolicyRequest
+// PutContactPolicyRequest represents sum type.
+type PutContactPolicyRequest struct {
+	Type                    PutContactPolicyRequestType // switch on this field
+	PutContactPolicyCreate  PutContactPolicyCreate
+	PutContactPolicyReplace PutContactPolicyReplace
+}
+
+// PutContactPolicyRequestType is oneOf type of PutContactPolicyRequest.
+type PutContactPolicyRequestType string
+
+// Possible values for PutContactPolicyRequestType.
+const (
+	PutContactPolicyCreatePutContactPolicyRequest  PutContactPolicyRequestType = "PutContactPolicyCreate"
+	PutContactPolicyReplacePutContactPolicyRequest PutContactPolicyRequestType = "PutContactPolicyReplace"
+)
+
+// IsPutContactPolicyCreate reports whether PutContactPolicyRequest is PutContactPolicyCreate.
+func (s PutContactPolicyRequest) IsPutContactPolicyCreate() bool {
+	return s.Type == PutContactPolicyCreatePutContactPolicyRequest
+}
+
+// IsPutContactPolicyReplace reports whether PutContactPolicyRequest is PutContactPolicyReplace.
+func (s PutContactPolicyRequest) IsPutContactPolicyReplace() bool {
+	return s.Type == PutContactPolicyReplacePutContactPolicyRequest
+}
+
+// SetPutContactPolicyCreate sets PutContactPolicyRequest to PutContactPolicyCreate.
+func (s *PutContactPolicyRequest) SetPutContactPolicyCreate(v PutContactPolicyCreate) {
+	s.Type = PutContactPolicyCreatePutContactPolicyRequest
+	s.PutContactPolicyCreate = v
+}
+
+// GetPutContactPolicyCreate returns PutContactPolicyCreate and true boolean if PutContactPolicyRequest is PutContactPolicyCreate.
+func (s PutContactPolicyRequest) GetPutContactPolicyCreate() (v PutContactPolicyCreate, ok bool) {
+	if !s.IsPutContactPolicyCreate() {
+		return v, false
+	}
+	return s.PutContactPolicyCreate, true
+}
+
+// NewPutContactPolicyCreatePutContactPolicyRequest returns new PutContactPolicyRequest from PutContactPolicyCreate.
+func NewPutContactPolicyCreatePutContactPolicyRequest(v PutContactPolicyCreate) PutContactPolicyRequest {
+	var s PutContactPolicyRequest
+	s.SetPutContactPolicyCreate(v)
+	return s
+}
+
+// SetPutContactPolicyReplace sets PutContactPolicyRequest to PutContactPolicyReplace.
+func (s *PutContactPolicyRequest) SetPutContactPolicyReplace(v PutContactPolicyReplace) {
+	s.Type = PutContactPolicyReplacePutContactPolicyRequest
+	s.PutContactPolicyReplace = v
+}
+
+// GetPutContactPolicyReplace returns PutContactPolicyReplace and true boolean if PutContactPolicyRequest is PutContactPolicyReplace.
+func (s PutContactPolicyRequest) GetPutContactPolicyReplace() (v PutContactPolicyReplace, ok bool) {
+	if !s.IsPutContactPolicyReplace() {
+		return v, false
+	}
+	return s.PutContactPolicyReplace, true
+}
+
+// NewPutContactPolicyReplacePutContactPolicyRequest returns new PutContactPolicyRequest from PutContactPolicyReplace.
+func NewPutContactPolicyReplacePutContactPolicyRequest(v PutContactPolicyReplace) PutContactPolicyRequest {
+	var s PutContactPolicyRequest
+	s.SetPutContactPolicyReplace(v)
+	return s
+}
+
+type PutContactPolicyUnauthorized ErrorResponse
+
+func (*PutContactPolicyUnauthorized) putContactPolicyRes() {}
+
 // PutContactReq represents sum type.
 type PutContactReq struct {
 	Type           PutContactReqType // switch on this field
@@ -24231,7 +25203,9 @@ func (*RateLimitedHeaders) deleteMemoryRes()           {}
 func (*RateLimitedHeaders) deleteSentEmailRes()        {}
 func (*RateLimitedHeaders) discardEmailContentRes()    {}
 func (*RateLimitedHeaders) downloadDomainZoneFileRes() {}
+func (*RateLimitedHeaders) getAgentContactPolicyRes()  {}
 func (*RateLimitedHeaders) getChallengeRes()           {}
+func (*RateLimitedHeaders) getContactPolicyRes()       {}
 func (*RateLimitedHeaders) getCreditBalanceRes()       {}
 func (*RateLimitedHeaders) getInboxStatusRes()         {}
 func (*RateLimitedHeaders) getMemoryRes()              {}
@@ -24244,6 +25218,8 @@ func (*RateLimitedHeaders) listPayoutAddressesRes()    {}
 func (*RateLimitedHeaders) listTemplatesRes()          {}
 func (*RateLimitedHeaders) payChallengeRes()           {}
 func (*RateLimitedHeaders) pullWebhookEventRes()       {}
+func (*RateLimitedHeaders) putAgentContactPolicyRes()  {}
+func (*RateLimitedHeaders) putContactPolicyRes()       {}
 func (*RateLimitedHeaders) registerPayoutAddressRes()  {}
 func (*RateLimitedHeaders) removeAgentConnectionRes()  {}
 func (*RateLimitedHeaders) replayDeliveryRes()         {}

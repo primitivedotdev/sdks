@@ -18,11 +18,14 @@ import {
   ConfigSetCommand,
   ConfigUseCommand,
 } from "./commands/config.js";
+import ContactsAcceptCommand from "./commands/contacts-accept.js";
 import ContactsAddCommand from "./commands/contacts-add.js";
 import ContactsGetCommand from "./commands/contacts-get.js";
 import ContactsListCommand from "./commands/contacts-list.js";
 import ContactsRemoveCommand from "./commands/contacts-remove.js";
+import ContactsRequestCommand from "./commands/contacts-request.js";
 import ContactsUpdateCommand from "./commands/contacts-update.js";
+import ContactsWaitCommand from "./commands/contacts-wait.js";
 import {
   CreditsBalanceCommand,
   CreditsRedeemCommand,
@@ -505,6 +508,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   // on top of the generated agent:claim / agent:claim-verify operations.
   "agent:upgrade": AgentUpgradeCommand,
   "agent:connect": AgentConnectCommand,
+  "contacts:request": ContactsRequestCommand,
+  "contacts:accept": ContactsAcceptCommand,
+  "contacts:wait": ContactsWaitCommand,
   "contacts:list": ContactsListCommand,
   "contacts:get": ContactsGetCommand,
   "contacts:add": ContactsAddCommand,

@@ -1,3 +1,9 @@
+import {
+  type AgentContactPolicy,
+  evaluateContactPolicy,
+  type NotificationMembership,
+  parseAgentContactPolicy,
+} from "./contact-policy.js";
 import { ListenStateError } from "./listen-state.js";
 import { NotificationRetryError } from "./notify-session-content.js";
 import { mailAddress, mailId, mailTime } from "./shared-mail-files.js";
@@ -9,9 +15,14 @@ export type ContactNotificationAdmission = {
   receivedAt: string;
   generation: string;
   notifySince: string;
+  kind: "allowed" | "request";
+  effectiveVersion: string;
 };
-type Preference = { generation: string; notifySince: string };
-type Snapshot = { startedAt: number; senders: Map<string, Preference> };
+type Snapshot = {
+  startedAt: number;
+  senders: Map<string, NotificationMembership>;
+  policy: AgentContactPolicy;
+};
 
 const unavailable = () =>
   new ListenStateError(
@@ -29,6 +40,8 @@ export function createNotificationContactPolicy(options: {
     cursor: string | undefined,
     signal: AbortSignal,
   ): Promise<ContactPolicyPage>;
+  readPolicy(signal: AbortSignal): Promise<unknown>;
+  contactRequests?: boolean;
   now?: () => number;
 }) {
   const recipient = mailAddress(options.recipient);
@@ -44,10 +57,18 @@ export function createNotificationContactPolicy(options: {
     // Invalidate first: neither a failed page nor an overlapping dispatch can
     // fall back to an older policy while a refresh is unresolved.
     snapshot = undefined;
-    const next: Snapshot = { startedAt: now(), senders: new Map() };
+    const startedAt = now();
     const peers = new Set<string>();
     let cursor: string | undefined;
     try {
+      const next: Snapshot = {
+        startedAt,
+        senders: new Map(),
+        policy: parseAgentContactPolicy(
+          await options.readPolicy(signal),
+          recipient,
+        ),
+      };
       do {
         signal.throwIfAborted();
         const page = await options.readPage(cursor, signal);
@@ -73,6 +94,7 @@ export function createNotificationContactPolicy(options: {
           previous = peer;
           if (row.notify) {
             next.senders.set(peer, {
+              notify: true,
               generation: mailId(row.notification_generation),
               notifySince: mailTime(row.notify_since),
             });
@@ -81,6 +103,7 @@ export function createNotificationContactPolicy(options: {
             row.notify_since !== null
           )
             throw unavailable();
+          else next.senders.set(peer, { notify: false });
         }
         if (page.cursor === null) cursor = undefined;
         else {
@@ -98,16 +121,44 @@ export function createNotificationContactPolicy(options: {
       throw unavailable();
     }
   }
-  function permits(value: Snapshot, admission: ContactNotificationAdmission) {
-    const preference = value.senders.get(admission.sender);
+  function admission(
+    value: Snapshot,
+    sender: string,
+    receivedAt: string,
+  ): ContactNotificationAdmission | null {
+    const decision = evaluateContactPolicy({
+      policy: value.policy,
+      sender,
+      receivedAt,
+      membership: value.senders.get(sender),
+      contactRequests: options.contactRequests === true,
+    });
+    if (decision.kind === "silent") return null;
+    return {
+      sender,
+      receivedAt,
+      generation: decision.generation,
+      notifySince: decision.notifySince,
+      kind: decision.kind,
+      effectiveVersion: value.policy.effective_version,
+    };
+  }
+  function permits(value: Snapshot, prior: ContactNotificationAdmission) {
+    const current = admission(value, prior.sender, prior.receivedAt);
     return (
-      preference?.generation === admission.generation &&
-      preference.notifySince === admission.notifySince &&
-      Date.parse(admission.receivedAt) >= Date.parse(preference.notifySince)
+      current !== null &&
+      current.kind === prior.kind &&
+      current.generation === prior.generation &&
+      current.notifySince === prior.notifySince &&
+      current.effectiveVersion === prior.effectiveVersion
     );
   }
   return {
     refresh,
+    members() {
+      if (!fresh(snapshot)) throw unavailable();
+      return snapshot.senders.keys();
+    },
     async admit(sender: string, receivedAt: string, signal: AbortSignal) {
       signal.throwIfAborted();
       let peer: string;
@@ -119,28 +170,13 @@ export function createNotificationContactPolicy(options: {
       const received = mailTime(receivedAt);
       const cached = fresh(snapshot);
       let current = cached && snapshot ? snapshot : await refresh(signal);
-      let preference = current.senders.get(peer);
-      if (
-        cached &&
-        (!preference ||
-          Date.parse(received) < Date.parse(preference.notifySince))
-      ) {
-        // A cached denial must not permanently discard mail received after a
-        // newly enabled preference. Fetch current policy before settling it.
+      let allowed = admission(current, peer, received);
+      if (cached && !allowed) {
+        // Cached denials cannot permanently discard newly authorized mail.
         current = await refresh(signal);
-        preference = current.senders.get(peer);
+        allowed = admission(current, peer, received);
       }
-      if (
-        !preference ||
-        Date.parse(received) < Date.parse(preference.notifySince)
-      )
-        return null;
-      return {
-        sender: peer,
-        receivedAt: received,
-        generation: preference.generation,
-        notifySince: preference.notifySince,
-      } satisfies ContactNotificationAdmission;
+      return allowed;
     },
     async recheck(
       admission: ContactNotificationAdmission,

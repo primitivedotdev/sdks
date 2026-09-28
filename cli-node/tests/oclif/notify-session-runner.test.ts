@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,6 +7,9 @@ import {
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { prepareContactRequest } from "../../src/oclif/contact-interactions.js";
+import { openContactRequestNotices } from "../../src/oclif/contact-request-state.js";
+import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 const { authenticate, prepare, receive } = vi.hoisted(() => ({
   authenticate: vi.fn(),
@@ -87,10 +90,27 @@ function setup(
       authorization?: DetailNotificationAuthorization,
     ) => {
       if (authorization) (await authorization.recheck(signal))();
-      receipt = { emailId, eventId, clientId: randomUUID(), state: "accepted" };
+      const next = {
+        emailId,
+        eventId,
+        clientId: randomUUID(),
+        state: "submitting" as const,
+      };
+      if (authorization?.reserve && !authorization.reserve(next))
+        return { disposition: "skipped" };
+      receipt = { ...next, state: "accepted" };
       return { disposition: "notified" };
     },
   );
+  const policy = emptyContactPolicy(detail.recipient);
+  let contactBytes: Buffer | undefined;
+  const identity = {
+    profileName: "test",
+    orgId: randomUUID(),
+    agentAddress: detail.recipient,
+    ownerAddress: "owner@example.com",
+    apiBaseUrl: baseUrl,
+  };
   let contactStatus = 200;
   let contactRows: unknown[] = [
     {
@@ -139,6 +159,11 @@ function setup(
       }
       if (path === `/v1/emails/${emailId}`)
         return Response.json({ success: true, data: detail });
+      if (path === `/v1/agent-contact-policy/${detail.recipient}`)
+        return Response.json({
+          success: true,
+          data: policy,
+        });
       if (path === `/v1/agent-contacts/${detail.recipient}`)
         return Response.json(
           contactStatus === 200
@@ -149,12 +174,15 @@ function setup(
               },
           { status: contactStatus },
         );
+      if (path === `/v1/emails/${emailId}/attachments/0` && contactBytes)
+        return new Response(new Uint8Array(contactBytes));
       throw new Error(`Unexpected remote request ${path}`);
     },
   });
-  authenticate
-    .mockReset()
-    .mockResolvedValue({ auth: { apiKey, apiBaseUrl: baseUrl }, apiClient });
+  authenticate.mockReset().mockResolvedValue({
+    auth: { apiKey, apiBaseUrl: baseUrl, connectedAgent: identity },
+    apiClient,
+  });
   let opened: SharedMailStore | undefined;
   receive.mockReset().mockImplementation(async () => {
     opened = await openSharedMailStore({
@@ -198,6 +226,42 @@ function setup(
     baseUrl,
     handleDetail,
     apiClient,
+    requests: (structured = true) => {
+      contactRows = [];
+      const since = new Date(Date.now() - 1000).toISOString();
+      policy.agent_policy = {
+        rules: [],
+        allow_contact_requests: true,
+        contact_request_since: since,
+        contact_request_generation: randomUUID(),
+        version: randomUUID(),
+        updated_at: since,
+      };
+      policy.allow_contact_requests = true;
+      policy.contact_request_since = since;
+      policy.contact_request_generation = "b".repeat(64);
+      openContactRequestNotices(configDir, identity).activate(
+        Date.now() - 1000,
+      );
+      if (structured) {
+        contactBytes = Buffer.from(
+          JSON.stringify(
+            prepareContactRequest(
+              detail.from_email,
+              "Collaborate on public research",
+              600,
+            ),
+          ),
+        );
+        (detail.parsed.attachments as unknown[]).push({
+          filename: "interaction.json",
+          content_type: "application/json",
+          size_bytes: contactBytes.length,
+          part_index: 0,
+          sha256: createHash("sha256").update(contactBytes).digest("hex"),
+        });
+      }
+    },
     contacts: (rows: unknown[], status = 200) => {
       contactRows = rows;
       contactStatus = status;
@@ -387,5 +451,62 @@ describe("shared notification listener integration", () => {
     });
     await expect(runListen(f.options)).rejects.toThrow("unknown outcome");
     expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
+});
+
+describe("first-contact intake", () => {
+  const requestOptions = (f: ReturnType<typeof setup>) => ({
+    ...f.options,
+    notifySession: {
+      ...f.options.notifySession,
+      senders: [],
+      contactPreferences: true,
+      contactRequests: true,
+    },
+  });
+  it("notifies one authenticated structured request but does not widen to ordinary unknown mail", async () => {
+    const plain = setup();
+    plain.requests(false);
+    expect(await runListen(requestOptions(plain))).toBe(1);
+    expect(plain.handleDetail).not.toHaveBeenCalled();
+    const request = setup();
+    request.requests();
+    expect(await runListen(requestOptions(request))).toBe(1);
+    expect(request.handleDetail).toHaveBeenCalledOnce();
+    expect(request.handleDetail.mock.calls[0][3]).toMatchObject({
+      contactRequest: true,
+    });
+  });
+  it("keeps a request eligible after a crash between ingest and native dispatch", async () => {
+    const f = setup();
+    f.requests();
+    f.handleDetail.mockRejectedValueOnce(
+      new Error("Native session disconnected before dispatch"),
+    );
+    await expect(runListen(requestOptions(f))).rejects.toThrow("disconnected");
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      state: "selected",
+    });
+    expect(await runListen(requestOptions(f))).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(2);
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      state: "accepted",
+    });
+  });
+  it("never interprets an explicit disabled membership as an unknown request sender", async () => {
+    const f = setup();
+    f.requests();
+    f.contacts([
+      {
+        agent_address: f.detail.recipient,
+        contact_address: f.detail.from_email,
+        version: randomUUID(),
+        notify: false,
+        notify_since: null,
+        notification_generation: null,
+      },
+    ]);
+    expect(await runListen(requestOptions(f))).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
   });
 });

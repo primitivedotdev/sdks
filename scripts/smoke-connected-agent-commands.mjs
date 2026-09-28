@@ -59,7 +59,7 @@ async function run(args, options={}) {
 }
 const api=args=>run([...args,'--api-base-url',base,'--api-key',['fixture','key'].join('-')]);
 try {
-  for (const route of [['contacts'],['agent'],['agent','contacts'],['agent','connect'],['agent-connections','claim-agent-connection'],['listen'],...['list','get','add','update','remove'].map(x=>['contacts',x]),...['list','add','update','remove'].map(x=>['agent','contacts',x])]) await run([...route,'--help']);
+  for (const route of [['contacts'],['agent'],['agent','contacts'],['agent','connect'],['agent-connections','claim-agent-connection'],['listen'],...['list','get','add','update','remove','request','accept','wait'].map(x=>['contacts',x]),...['list','add','update','remove'].map(x=>['agent','contacts',x])]) await run([...route,'--help']);
   for (const route of [['contacts'],['agent'],['agent','contacts']]) { const result=await run(route);assert.match(result.stdout+result.stderr,/COMMANDS|USAGE/i); }
   await api(['contacts','add',peer,'--name','Peer']);
   await api(['contacts','list']);
@@ -72,7 +72,7 @@ try {
   await api(['agent','contacts','remove',peer,'--agent',agent]);
   await api(['contacts','remove',peer]);assert.equal(contact,undefined);assert.equal(member,undefined);
   const session=version;
-  for(const args of [['--contacts'],['--notify-session',session,'--contacts','--sender',peer],['--notify-session',session,'--contacts','--status']]) await run(['listen',...args],{exit:2});
+  for(const args of [['--contact-requests'],['--notify-session',session,'--contact-requests'],['--notify-session',session,'--contacts','--contact-requests','--sender',peer],['--notify-session',session,'--contacts','--sender',peer],['--notify-session',session,'--contacts','--status']]) await run(['listen',...args],{exit:2});
   const token=['inert','invitation','x'.repeat(48)].join('_');
   const credential=['pconn','x'.repeat(48)].join('_');
   const preload=join(directory,'claim-fixture.mjs');

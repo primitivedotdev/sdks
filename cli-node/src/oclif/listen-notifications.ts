@@ -1,12 +1,10 @@
-import {
-  type EmailDetail,
-  getEmail,
-  listAgentContacts,
-} from "@primitivedotdev/api-core";
+import { type EmailDetail, getEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
+import { readContactInteraction } from "./contact-interactions.js";
+import { apiContactPolicy } from "./contact-policy-client.js";
+import { openContactRequestNotices } from "./contact-request-state.js";
 import type { ListenOptions } from "./listen-runner.js";
 import { ListenStateError } from "./listen-state.js";
-import { createNotificationContactPolicy } from "./notification-contact-policy.js";
 import { openSessionNotifications } from "./notify-session.js";
 import {
   NotificationRetryError,
@@ -31,6 +29,8 @@ export async function runSharedNotificationListen(
   if (!options.notifySession)
     throw new ListenStateError("A native notification target is required.");
   const notify = options.notifySession;
+  if (notify.contactRequests && !notify.contactPreferences)
+    throw new ListenStateError("--contact-requests requires --contacts.");
   if (notify.contactPreferences && notify.senders.length)
     throw new ListenStateError(
       "Contact preferences and explicit notification senders cannot be combined.",
@@ -101,25 +101,25 @@ export async function runSharedNotificationListen(
         "The receiving address does not match the selected connected-agent profile.",
       );
     const contactPolicy = notify.contactPreferences
-      ? createNotificationContactPolicy({
+      ? apiContactPolicy(
+          auth.apiClient.client,
           recipient,
-          async readPage(cursor, nextSignal) {
-            const result = await listAgentContacts({
-              client: auth.apiClient.client,
-              path: { agent_address: recipient },
-              query: { limit: 100, ...(cursor ? { cursor } : {}) },
-              signal: AbortSignal.any([nextSignal, AbortSignal.timeout(5000)]),
-              responseStyle: "fields",
-            });
-            if (result.error || !result.data)
-              throw new ListenStateError(
-                "Contact notification preferences could not be read.",
-              );
-            return { data: result.data.data, cursor: result.data.meta?.cursor };
-          },
-        })
+          notify.contactRequests,
+        )
       : undefined;
     if (contactPolicy) await contactPolicy.refresh(signal);
+    if (notify.contactRequests && !auth.auth.connectedAgent)
+      throw new ListenStateError(
+        "Contact request notices require a saved connected-agent profile.",
+      );
+    const requestNotices =
+      notify.contactRequests && auth.auth.connectedAgent
+        ? openContactRequestNotices(options.configDir, auth.auth.connectedAgent)
+        : undefined;
+    const startedAt = requestNotices
+      ? Date.parse(requestNotices.activate())
+      : Date.now();
+    let budgetWarned = false;
     receiver = await openSharedMailReceiver({
       configDir: options.configDir,
       apiClient: auth.apiClient,
@@ -221,6 +221,23 @@ export async function runSharedNotificationListen(
       }));
       const trusted = choices.find((choice) => choice.trust.trusted);
       if (!trusted) return !choices.some((choice) => choice.trust.retryable);
+      let requestExpiry: number | undefined;
+      if (admission?.kind === "request") {
+        // Opting in never backfills the retained local journal or queued old mail.
+        if (
+          !requestNotices ||
+          Date.parse(row.firstSeenAt) < startedAt ||
+          Date.parse(detail.received_at) < startedAt
+        )
+          return true;
+        const interaction = await readContactInteraction(
+          detail,
+          notificationPartReader(async () => auth.apiClient.client),
+          signal,
+        );
+        if (interaction?.step !== "request") return true;
+        requestExpiry = Date.parse(interaction.expires_at);
+      }
       await hydrateNotification(store, detail, trusted.peer);
       const claim = await store.claimForNotification(row.emailId, sessionKey);
       if (claim.status === "held") return false;
@@ -229,8 +246,40 @@ export async function runSharedNotificationListen(
         if (contactPolicy && admission)
           await native.handleDetail(detail, row.eventId, signal, {
             sender: admission.sender,
-            recheck: (nextSignal) =>
-              contactPolicy.recheck(admission, nextSignal),
+            contactRequest: admission.kind === "request",
+            recheck: async (nextSignal) => {
+              const allowed = await contactPolicy.recheck(
+                admission,
+                nextSignal,
+              );
+              return () => {
+                allowed();
+              };
+            },
+            ...(admission.kind === "request" && requestNotices
+              ? {
+                  reserve: (receipt) => {
+                    if (
+                      requestExpiry === undefined ||
+                      Date.now() >= requestExpiry
+                    )
+                      return false;
+                    const result = requestNotices.reserve(
+                      admission.sender,
+                      notify.threadId,
+                      receipt,
+                      contactPolicy.members(),
+                    );
+                    if (result === "full" && !budgetWarned) {
+                      budgetWarned = true;
+                      (options.stderr ?? process.stderr).write(
+                        "First-contact notice capacity reached. Known contacts continue; review existing requests before admitting more.\n",
+                      );
+                    }
+                    return result === "reserved";
+                  },
+                }
+              : {}),
           });
         else await native.handleDetail(detail, row.eventId, signal);
       } finally {

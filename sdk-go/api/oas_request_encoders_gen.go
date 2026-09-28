@@ -368,8 +368,36 @@ func encodePutAgentContactRequest(
 	return nil
 }
 
+func encodePutAgentContactPolicyRequest(
+	req PutAgentContactPolicyRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodePutContactRequest(
 	req PutContactReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodePutContactPolicyRequest(
+	req PutContactPolicyRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

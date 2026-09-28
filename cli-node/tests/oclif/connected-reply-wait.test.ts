@@ -7,6 +7,10 @@ import {
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  contactReference,
+  prepareContactRequest,
+} from "../../src/oclif/contact-interactions.js";
 import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
 
 const hooks = vi.hoisted(() => ({ ready: vi.fn(), changed: vi.fn() }));
@@ -340,4 +344,26 @@ describe("connected pushed reply waits", () => {
     expect((await second.next())?.id).toBe(f.state.detail.id);
     await second.close();
   });
+});
+
+it("persists the contact wait classifier and refuses reuse as an ordinary task wait", async () => {
+  const f = fixture();
+  const contactRequest = contactReference(
+    prepareContactRequest(target.from, "Public research", 600),
+  );
+  const first = await openConnectedReplyWait({ ...f.options, contactRequest });
+  const requestId = first.requestId;
+  expect(
+    (await first.receiver.store.readWait(requestId))?.contactRequest,
+  ).toEqual(contactRequest);
+  await first.close();
+  await expect(openConnectedReplyWait(f.options)).rejects.toThrow(
+    "different reply type",
+  );
+  const resumed = await openConnectedReplyWait({
+    ...f.options,
+    contactRequest,
+  });
+  expect(resumed.requestId).toBe(requestId);
+  await resumed.close();
 });

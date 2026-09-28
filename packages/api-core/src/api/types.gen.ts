@@ -4,6 +4,81 @@ export type ClientOptions = {
     baseUrl: 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | (string & {});
 };
 
+export type ContactPolicyRuleInput = {
+    /**
+     * Exact mailbox or restricted mailbox glob. See operation description.
+     */
+    pattern: string;
+    effect: 'allow' | 'silence';
+};
+
+export type ContactPolicyRule = {
+    /**
+     * Exact mailbox or restricted mailbox glob. See operation description.
+     */
+    pattern: string;
+    effect: 'allow' | 'silence';
+    notify_since: string | null;
+    notification_generation: string | null;
+};
+
+export type ContactPolicy = {
+    rules: Array<ContactPolicyRule>;
+    contact_request_since: string | null;
+    contact_request_generation: string | null;
+    version: string | null;
+    updated_at: string | null;
+    allow_contact_requests: boolean;
+};
+
+export type AgentContactPolicyOverride = {
+    rules: Array<ContactPolicyRule>;
+    contact_request_since: string | null;
+    contact_request_generation: string | null;
+    version: string | null;
+    updated_at: string | null;
+    allow_contact_requests: boolean | null;
+};
+
+export type AgentContactPolicy = {
+    agent_address: string;
+    org_policy: ContactPolicy;
+    agent_policy: AgentContactPolicyOverride;
+    effective_version: string;
+    effective_since: string;
+    allow_contact_requests: boolean;
+    contact_request_since: string | null;
+    contact_request_generation: string | null;
+};
+
+export type PutContactPolicyRequest = PutContactPolicyCreate | PutContactPolicyReplace;
+
+export type PutAgentContactPolicyRequest = PutAgentContactPolicyCreate | PutAgentContactPolicyReplace;
+
+export type PutContactPolicyCreate = {
+    rules: Array<ContactPolicyRuleInput>;
+    allow_contact_requests: boolean;
+    if_absent: boolean;
+};
+
+export type PutContactPolicyReplace = {
+    rules: Array<ContactPolicyRuleInput>;
+    allow_contact_requests: boolean;
+    if_version: string;
+};
+
+export type PutAgentContactPolicyCreate = {
+    rules: Array<ContactPolicyRuleInput>;
+    allow_contact_requests: boolean | null;
+    if_absent: boolean;
+};
+
+export type PutAgentContactPolicyReplace = {
+    rules: Array<ContactPolicyRuleInput>;
+    allow_contact_requests: boolean | null;
+    if_version: string;
+};
+
 /**
  * Who may publish into a registry. owner_only: only the registry owner.
  * request: anyone may request and the owner approves. open: anyone may
@@ -11146,3 +11221,201 @@ export type ClaimAgentConnectionResponses = {
 };
 
 export type ClaimAgentConnectionResponse = ClaimAgentConnectionResponses[keyof ClaimAgentConnectionResponses];
+
+export type GetContactPolicyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/contact-policy';
+};
+
+export type GetContactPolicyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: policy precondition did not match
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetContactPolicyError = GetContactPolicyErrors[keyof GetContactPolicyErrors];
+
+export type GetContactPolicyResponses = {
+    /**
+     * Current policy
+     */
+    200: SuccessEnvelope & {
+        data: ContactPolicy;
+    };
+};
+
+export type GetContactPolicyResponse = GetContactPolicyResponses[keyof GetContactPolicyResponses];
+
+export type PutContactPolicyData = {
+    body: PutContactPolicyRequest;
+    path?: never;
+    query?: never;
+    url: '/contact-policy';
+};
+
+export type PutContactPolicyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: policy precondition did not match
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type PutContactPolicyError = PutContactPolicyErrors[keyof PutContactPolicyErrors];
+
+export type PutContactPolicyResponses = {
+    /**
+     * Current policy
+     */
+    200: SuccessEnvelope & {
+        data: ContactPolicy;
+    };
+};
+
+export type PutContactPolicyResponse = PutContactPolicyResponses[keyof PutContactPolicyResponses];
+
+export type GetAgentContactPolicyData = {
+    body?: never;
+    path: {
+        /**
+         * Canonical address of an agent connection in the current organization.
+         */
+        agent_address: string;
+    };
+    query?: never;
+    url: '/agent-contact-policy/{agent_address}';
+};
+
+export type GetAgentContactPolicyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: policy precondition did not match
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetAgentContactPolicyError = GetAgentContactPolicyErrors[keyof GetAgentContactPolicyErrors];
+
+export type GetAgentContactPolicyResponses = {
+    /**
+     * Current policy
+     */
+    200: SuccessEnvelope & {
+        data: AgentContactPolicy;
+    };
+};
+
+export type GetAgentContactPolicyResponse = GetAgentContactPolicyResponses[keyof GetAgentContactPolicyResponses];
+
+export type PutAgentContactPolicyData = {
+    body: PutAgentContactPolicyRequest;
+    path: {
+        /**
+         * Canonical address of an agent connection in the current organization.
+         */
+        agent_address: string;
+    };
+    query?: never;
+    url: '/agent-contact-policy/{agent_address}';
+};
+
+export type PutAgentContactPolicyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: policy precondition did not match
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type PutAgentContactPolicyError = PutAgentContactPolicyErrors[keyof PutAgentContactPolicyErrors];
+
+export type PutAgentContactPolicyResponses = {
+    /**
+     * Current policy
+     */
+    200: SuccessEnvelope & {
+        data: AgentContactPolicy;
+    };
+};
+
+export type PutAgentContactPolicyResponse = PutAgentContactPolicyResponses[keyof PutAgentContactPolicyResponses];

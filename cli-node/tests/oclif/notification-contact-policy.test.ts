@@ -5,6 +5,7 @@ import {
   type ContactPolicyPage,
   createNotificationContactPolicy,
 } from "../../src/oclif/notification-contact-policy.js";
+import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 const recipient = "agent@example.com";
 const sender = "owner@example.com";
@@ -28,13 +29,18 @@ function fixture(initial = row()) {
   const readPage = vi.fn(
     async (): Promise<ContactPolicyPage> => ({ data: rows, cursor: null }),
   );
+  const document = emptyContactPolicy(recipient);
+  const readPolicy = vi.fn(async () => document);
   const policy = createNotificationContactPolicy({
+    readPolicy,
     recipient,
     readPage,
     now: () => clock,
   });
   return {
     policy,
+    document,
+    readPolicy,
     readPage,
     rows: (next: ReturnType<typeof row>[]) => {
       rows = next;
@@ -149,7 +155,11 @@ describe("contact notification policy", () => {
           }
         : { data: [row()], cursor: null },
     );
-    const policy = createNotificationContactPolicy({ recipient, readPage });
+    const policy = createNotificationContactPolicy({
+      readPolicy: async () => emptyContactPolicy(recipient),
+      recipient,
+      readPage,
+    });
     expect(await policy.admit(sender, received, signal)).toMatchObject({
       sender,
     });
@@ -200,6 +210,7 @@ describe("contact notification policy", () => {
   it("measures freshness from the first page rather than the final response", async () => {
     let clock = 0;
     const policy = createNotificationContactPolicy({
+      readPolicy: async () => emptyContactPolicy(recipient),
       recipient,
       now: () => clock,
       readPage: async () => {
@@ -224,4 +235,36 @@ describe("contact notification policy", () => {
       f.policy.admit(sender, received, controller.signal),
     ).rejects.toThrow();
   });
+});
+
+it("rechecks owner policy changes even when exact membership remains enabled", async () => {
+  const f = fixture();
+  const admission = await f.policy.admit(sender, received, signal);
+  if (!admission) throw new Error("Expected admission");
+  f.document.org_policy = {
+    ...f.document.org_policy,
+    version: randomUUID(),
+    updated_at: activation,
+    rules: [
+      {
+        pattern: "*@example.com",
+        effect: "silence",
+        notify_since: null,
+        notification_generation: null,
+      },
+    ],
+  };
+  f.document.effective_version = "b".repeat(64);
+  await expect(f.policy.recheck(admission, signal)).rejects.toThrow(
+    "changed or expired",
+  );
+});
+it("does not fall back to exact membership when the policy read is unavailable", async () => {
+  const f = fixture();
+  const admission = await f.policy.admit(sender, received, signal);
+  if (!admission) throw new Error("Expected admission");
+  f.readPolicy.mockRejectedValueOnce(new Error("revoked"));
+  await expect(f.policy.recheck(admission, signal)).rejects.toThrow(
+    "unavailable or invalid",
+  );
 });
