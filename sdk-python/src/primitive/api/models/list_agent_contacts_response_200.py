@@ -28,12 +28,12 @@ class ListAgentContactsResponse200:
         Attributes:
             success (bool):
             data (list[ListAgentContactsResponse200DataItem]):
-            meta (ListAgentContactsResponse200Meta | Unset):
+            meta (ListAgentContactsResponse200Meta):
      """
 
     success: bool
     data: list[ListAgentContactsResponse200DataItem]
-    meta: ListAgentContactsResponse200Meta | Unset = UNSET
+    meta: ListAgentContactsResponse200Meta
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -52,9 +52,7 @@ class ListAgentContactsResponse200:
 
 
 
-        meta: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.meta, Unset):
-            meta = self.meta.to_dict()
+        meta = self.meta.to_dict()
 
 
         field_dict: dict[str, Any] = {}
@@ -62,9 +60,8 @@ class ListAgentContactsResponse200:
         field_dict.update({
             "success": success,
             "data": data,
+            "meta": meta,
         })
-        if meta is not UNSET:
-            field_dict["meta"] = meta
 
         return field_dict
 
@@ -87,12 +84,7 @@ class ListAgentContactsResponse200:
             data.append(data_item)
 
 
-        _meta = d.pop("meta", UNSET)
-        meta: ListAgentContactsResponse200Meta | Unset
-        if isinstance(_meta,  Unset):
-            meta = UNSET
-        else:
-            meta = ListAgentContactsResponse200Meta.from_dict(_meta)
+        meta = ListAgentContactsResponse200Meta.from_dict(d.pop("meta"))
 
 
 

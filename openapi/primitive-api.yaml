@@ -6188,6 +6188,7 @@ paths:
                     required:
                       - success
                       - data
+                      - meta
                   - type: object
                     properties:
                       data:
@@ -6224,6 +6225,8 @@ paths:
                             - updated_at
                       meta:
                         type: object
+                        required:
+                          - cursor
                         properties:
                           limit:
                             type: integer
@@ -6926,6 +6929,7 @@ paths:
                     required:
                       - success
                       - data
+                      - meta
                   - type: object
                     properties:
                       data:
@@ -6983,6 +6987,8 @@ paths:
                             - updated_at
                       meta:
                         type: object
+                        required:
+                          - cursor
                         properties:
                           limit:
                             type: integer

@@ -39654,10 +39654,8 @@ func (s *ListAgentContactsOK) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
-		if s.Meta.Set {
-			e.FieldStart("meta")
-			s.Meta.Encode(e)
-		}
+		e.FieldStart("meta")
+		s.Meta.Encode(e)
 	}
 }
 
@@ -39707,8 +39705,8 @@ func (s *ListAgentContactsOK) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"data\"")
 			}
 		case "meta":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				s.Meta.Reset()
 				if err := s.Meta.Decode(d); err != nil {
 					return err
 				}
@@ -39726,7 +39724,7 @@ func (s *ListAgentContactsOK) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -40015,10 +40013,8 @@ func (s *ListAgentContactsOKMeta) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.Cursor.Set {
-			e.FieldStart("cursor")
-			s.Cursor.Encode(e)
-		}
+		e.FieldStart("cursor")
+		s.Cursor.Encode(e)
 	}
 }
 
@@ -40032,6 +40028,7 @@ func (s *ListAgentContactsOKMeta) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ListAgentContactsOKMeta to nil")
 	}
+	var requiredBitSet [1]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -40046,8 +40043,8 @@ func (s *ListAgentContactsOKMeta) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"limit\"")
 			}
 		case "cursor":
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				s.Cursor.Reset()
 				if err := s.Cursor.Decode(d); err != nil {
 					return err
 				}
@@ -40061,6 +40058,38 @@ func (s *ListAgentContactsOKMeta) Decode(d *jx.Decoder) error {
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode ListAgentContactsOKMeta")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000010,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListAgentContactsOKMeta) {
+					name = jsonFieldsNameOfListAgentContactsOKMeta[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
 	}
 
 	return nil
@@ -40291,10 +40320,8 @@ func (s *ListContactsOK) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
-		if s.Meta.Set {
-			e.FieldStart("meta")
-			s.Meta.Encode(e)
-		}
+		e.FieldStart("meta")
+		s.Meta.Encode(e)
 	}
 }
 
@@ -40344,8 +40371,8 @@ func (s *ListContactsOK) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"data\"")
 			}
 		case "meta":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				s.Meta.Reset()
 				if err := s.Meta.Decode(d); err != nil {
 					return err
 				}
@@ -40363,7 +40390,7 @@ func (s *ListContactsOK) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -40587,10 +40614,8 @@ func (s *ListContactsOKMeta) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.Cursor.Set {
-			e.FieldStart("cursor")
-			s.Cursor.Encode(e)
-		}
+		e.FieldStart("cursor")
+		s.Cursor.Encode(e)
 	}
 }
 
@@ -40604,6 +40629,7 @@ func (s *ListContactsOKMeta) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode ListContactsOKMeta to nil")
 	}
+	var requiredBitSet [1]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -40618,8 +40644,8 @@ func (s *ListContactsOKMeta) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"limit\"")
 			}
 		case "cursor":
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				s.Cursor.Reset()
 				if err := s.Cursor.Decode(d); err != nil {
 					return err
 				}
@@ -40633,6 +40659,38 @@ func (s *ListContactsOKMeta) Decode(d *jx.Decoder) error {
 		return nil
 	}); err != nil {
 		return errors.Wrap(err, "decode ListContactsOKMeta")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000010,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListContactsOKMeta) {
+					name = jsonFieldsNameOfListContactsOKMeta[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
 	}
 
 	return nil
@@ -47386,72 +47444,6 @@ func (s OptInt) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptInt) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes ListAgentContactsOKMeta as json.
-func (o OptListAgentContactsOKMeta) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes ListAgentContactsOKMeta from json.
-func (o *OptListAgentContactsOKMeta) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptListAgentContactsOKMeta to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptListAgentContactsOKMeta) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptListAgentContactsOKMeta) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes ListContactsOKMeta as json.
-func (o OptListContactsOKMeta) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes ListContactsOKMeta from json.
-func (o *OptListContactsOKMeta) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptListContactsOKMeta to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptListContactsOKMeta) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptListContactsOKMeta) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

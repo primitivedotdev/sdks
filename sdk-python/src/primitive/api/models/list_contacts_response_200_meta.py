@@ -23,12 +23,12 @@ T = TypeVar("T", bound="ListContactsResponse200Meta")
 class ListContactsResponse200Meta:
     """ 
         Attributes:
+            cursor (None | str):
             limit (int | Unset):
-            cursor (None | str | Unset):
      """
 
+    cursor: None | str
     limit: int | Unset = UNSET
-    cursor: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -36,23 +36,19 @@ class ListContactsResponse200Meta:
 
 
     def to_dict(self) -> dict[str, Any]:
-        limit = self.limit
+        cursor: None | str
+        cursor = self.cursor
 
-        cursor: None | str | Unset
-        if isinstance(self.cursor, Unset):
-            cursor = UNSET
-        else:
-            cursor = self.cursor
+        limit = self.limit
 
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
+            "cursor": cursor,
         })
         if limit is not UNSET:
             field_dict["limit"] = limit
-        if cursor is not UNSET:
-            field_dict["cursor"] = cursor
 
         return field_dict
 
@@ -61,21 +57,19 @@ class ListContactsResponse200Meta:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        limit = d.pop("limit", UNSET)
-
-        def _parse_cursor(data: object) -> None | str | Unset:
+        def _parse_cursor(data: object) -> None | str:
             if data is None:
                 return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
+            return cast(None | str, data)
 
-        cursor = _parse_cursor(d.pop("cursor", UNSET))
+        cursor = _parse_cursor(d.pop("cursor"))
 
+
+        limit = d.pop("limit", UNSET)
 
         list_contacts_response_200_meta = cls(
-            limit=limit,
             cursor=cursor,
+            limit=limit,
         )
 
 

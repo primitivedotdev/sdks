@@ -15316,7 +15316,7 @@ func (*ListAgentContactsNotFound) listAgentContactsRes() {}
 type ListAgentContactsOK struct {
 	Success bool                          `json:"success"`
 	Data    []ListAgentContactsOKDataItem `json:"data"`
-	Meta    OptListAgentContactsOKMeta    `json:"meta"`
+	Meta    ListAgentContactsOKMeta       `json:"meta"`
 }
 
 // GetSuccess returns the value of Success.
@@ -15330,7 +15330,7 @@ func (s *ListAgentContactsOK) GetData() []ListAgentContactsOKDataItem {
 }
 
 // GetMeta returns the value of Meta.
-func (s *ListAgentContactsOK) GetMeta() OptListAgentContactsOKMeta {
+func (s *ListAgentContactsOK) GetMeta() ListAgentContactsOKMeta {
 	return s.Meta
 }
 
@@ -15345,7 +15345,7 @@ func (s *ListAgentContactsOK) SetData(val []ListAgentContactsOKDataItem) {
 }
 
 // SetMeta sets the value of Meta.
-func (s *ListAgentContactsOK) SetMeta(val OptListAgentContactsOKMeta) {
+func (s *ListAgentContactsOK) SetMeta(val ListAgentContactsOKMeta) {
 	s.Meta = val
 }
 
@@ -15527,8 +15527,8 @@ func (s *ListAgentContactsOKHeaders) SetResponse(val ListAgentContactsOK) {
 func (*ListAgentContactsOKHeaders) listAgentContactsRes() {}
 
 type ListAgentContactsOKMeta struct {
-	Limit  OptInt       `json:"limit"`
-	Cursor OptNilString `json:"cursor"`
+	Limit  OptInt    `json:"limit"`
+	Cursor NilString `json:"cursor"`
 }
 
 // GetLimit returns the value of Limit.
@@ -15537,7 +15537,7 @@ func (s *ListAgentContactsOKMeta) GetLimit() OptInt {
 }
 
 // GetCursor returns the value of Cursor.
-func (s *ListAgentContactsOKMeta) GetCursor() OptNilString {
+func (s *ListAgentContactsOKMeta) GetCursor() NilString {
 	return s.Cursor
 }
 
@@ -15547,7 +15547,7 @@ func (s *ListAgentContactsOKMeta) SetLimit(val OptInt) {
 }
 
 // SetCursor sets the value of Cursor.
-func (s *ListAgentContactsOKMeta) SetCursor(val OptNilString) {
+func (s *ListAgentContactsOKMeta) SetCursor(val NilString) {
 	s.Cursor = val
 }
 
@@ -15575,7 +15575,7 @@ func (*ListContactsNotFound) listContactsRes() {}
 type ListContactsOK struct {
 	Success bool                     `json:"success"`
 	Data    []ListContactsOKDataItem `json:"data"`
-	Meta    OptListContactsOKMeta    `json:"meta"`
+	Meta    ListContactsOKMeta       `json:"meta"`
 }
 
 // GetSuccess returns the value of Success.
@@ -15589,7 +15589,7 @@ func (s *ListContactsOK) GetData() []ListContactsOKDataItem {
 }
 
 // GetMeta returns the value of Meta.
-func (s *ListContactsOK) GetMeta() OptListContactsOKMeta {
+func (s *ListContactsOK) GetMeta() ListContactsOKMeta {
 	return s.Meta
 }
 
@@ -15604,7 +15604,7 @@ func (s *ListContactsOK) SetData(val []ListContactsOKDataItem) {
 }
 
 // SetMeta sets the value of Meta.
-func (s *ListContactsOK) SetMeta(val OptListContactsOKMeta) {
+func (s *ListContactsOK) SetMeta(val ListContactsOKMeta) {
 	s.Meta = val
 }
 
@@ -15741,8 +15741,8 @@ func (s *ListContactsOKHeaders) SetResponse(val ListContactsOK) {
 func (*ListContactsOKHeaders) listContactsRes() {}
 
 type ListContactsOKMeta struct {
-	Limit  OptInt       `json:"limit"`
-	Cursor OptNilString `json:"cursor"`
+	Limit  OptInt    `json:"limit"`
+	Cursor NilString `json:"cursor"`
 }
 
 // GetLimit returns the value of Limit.
@@ -15751,7 +15751,7 @@ func (s *ListContactsOKMeta) GetLimit() OptInt {
 }
 
 // GetCursor returns the value of Cursor.
-func (s *ListContactsOKMeta) GetCursor() OptNilString {
+func (s *ListContactsOKMeta) GetCursor() NilString {
 	return s.Cursor
 }
 
@@ -15761,7 +15761,7 @@ func (s *ListContactsOKMeta) SetLimit(val OptInt) {
 }
 
 // SetCursor sets the value of Cursor.
-func (s *ListContactsOKMeta) SetCursor(val OptNilString) {
+func (s *ListContactsOKMeta) SetCursor(val NilString) {
 	s.Cursor = val
 }
 
@@ -19479,98 +19479,6 @@ func (o OptInt) Get() (v int, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInt) Or(d int) int {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListAgentContactsOKMeta returns new OptListAgentContactsOKMeta with value set to v.
-func NewOptListAgentContactsOKMeta(v ListAgentContactsOKMeta) OptListAgentContactsOKMeta {
-	return OptListAgentContactsOKMeta{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListAgentContactsOKMeta is optional ListAgentContactsOKMeta.
-type OptListAgentContactsOKMeta struct {
-	Value ListAgentContactsOKMeta
-	Set   bool
-}
-
-// IsSet returns true if OptListAgentContactsOKMeta was set.
-func (o OptListAgentContactsOKMeta) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListAgentContactsOKMeta) Reset() {
-	var v ListAgentContactsOKMeta
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListAgentContactsOKMeta) SetTo(v ListAgentContactsOKMeta) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListAgentContactsOKMeta) Get() (v ListAgentContactsOKMeta, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListAgentContactsOKMeta) Or(d ListAgentContactsOKMeta) ListAgentContactsOKMeta {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptListContactsOKMeta returns new OptListContactsOKMeta with value set to v.
-func NewOptListContactsOKMeta(v ListContactsOKMeta) OptListContactsOKMeta {
-	return OptListContactsOKMeta{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptListContactsOKMeta is optional ListContactsOKMeta.
-type OptListContactsOKMeta struct {
-	Value ListContactsOKMeta
-	Set   bool
-}
-
-// IsSet returns true if OptListContactsOKMeta was set.
-func (o OptListContactsOKMeta) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptListContactsOKMeta) Reset() {
-	var v ListContactsOKMeta
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptListContactsOKMeta) SetTo(v ListContactsOKMeta) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptListContactsOKMeta) Get() (v ListContactsOKMeta, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptListContactsOKMeta) Or(d ListContactsOKMeta) ListContactsOKMeta {
 	if v, ok := o.Get(); ok {
 		return v
 	}

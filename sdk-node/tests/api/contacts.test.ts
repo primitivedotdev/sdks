@@ -10,6 +10,7 @@ import {
   putAgentContact,
   putContact,
 } from "../../src/api/index.js";
+import { openapiDocument } from "../../src/openapi/index.js";
 
 const address = "peer+research@example.com";
 const agent = "worker+one@example.com";
@@ -17,6 +18,43 @@ const version = "11111111-1111-4111-8111-111111111111";
 const key = ["fixture", "credential"].join("-");
 
 describe("public contact operations", () => {
+  it.each([
+    "/contacts",
+    "/agent-contacts/{agent_address}",
+  ] as const)("requires explicit terminal pagination metadata for %s", (path) => {
+    expect(openapiDocument).toMatchObject({
+      paths: {
+        [path]: {
+          get: {
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      allOf: [
+                        { required: expect.arrayContaining(["meta"]) },
+                        {
+                          properties: {
+                            meta: {
+                              required: expect.arrayContaining(["cursor"]),
+                              properties: {
+                                cursor: { type: ["string", "null"] },
+                              },
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  });
+
   it("preserves exact address paths, pagination and conditional writes", async () => {
     const requests: {
       method: string;

@@ -8514,7 +8514,8 @@ export const openapiDocument: Record<string, unknown> = {
                       },
                       "required": [
                         "success",
-                        "data"
+                        "data",
+                        "meta"
                       ]
                     },
                     {
@@ -8564,6 +8565,9 @@ export const openapiDocument: Record<string, unknown> = {
                         },
                         "meta": {
                           "type": "object",
+                          "required": [
+                            "cursor"
+                          ],
                           "properties": {
                             "limit": {
                               "type": "integer"
@@ -9551,7 +9555,8 @@ export const openapiDocument: Record<string, unknown> = {
                       },
                       "required": [
                         "success",
-                        "data"
+                        "data",
+                        "meta"
                       ]
                     },
                     {
@@ -9628,6 +9633,9 @@ export const openapiDocument: Record<string, unknown> = {
                         },
                         "meta": {
                           "type": "object",
+                          "required": [
+                            "cursor"
+                          ],
                           "properties": {
                             "limit": {
                               "type": "integer"

@@ -8505,7 +8505,8 @@
                       },
                       "required": [
                         "success",
-                        "data"
+                        "data",
+                        "meta"
                       ]
                     },
                     {
@@ -8553,6 +8554,9 @@
                         },
                         "meta": {
                           "type": "object",
+                          "required": [
+                            "cursor"
+                          ],
                           "properties": {
                             "limit": {
                               "type": "integer"
@@ -9530,7 +9534,8 @@
                       },
                       "required": [
                         "success",
-                        "data"
+                        "data",
+                        "meta"
                       ]
                     },
                     {
@@ -9601,6 +9606,9 @@
                         },
                         "meta": {
                           "type": "object",
+                          "required": [
+                            "cursor"
+                          ],
                           "properties": {
                             "limit": {
                               "type": "integer"

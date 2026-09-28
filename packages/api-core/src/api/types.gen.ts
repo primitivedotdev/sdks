@@ -10627,7 +10627,7 @@ export type ListContactsResponses = {
         }>;
         meta?: {
             limit?: number;
-            cursor?: string | null;
+            cursor: string | null;
         };
     };
 };
@@ -10915,7 +10915,7 @@ export type ListAgentContactsResponses = {
         }>;
         meta?: {
             limit?: number;
-            cursor?: string | null;
+            cursor: string | null;
         };
     };
 };
