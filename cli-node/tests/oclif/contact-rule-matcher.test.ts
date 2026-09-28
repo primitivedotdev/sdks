@@ -93,11 +93,15 @@ describe("contact approval selectors", () => {
     ["pattern", "research-*x@example.com"],
     ["address", "a@@example.com"],
     ["address", "a..b@example.com"],
+    ["address", "K@example.com"],
+    ["pattern", "*@K.example"],
+    ["domain", "K.example"],
   ] as const)("rejects unsafe or ambiguous %s selector %s", (kind, value) => {
     expect(() => canonicalContactSelector({ kind, value })).toThrow("selector");
   });
 
   it("rejects invalid runtime kinds and bounded input sizes", () => {
+    expect(matchesContactPattern("*@example.com", "K@example.com")).toBe(false);
     expect(() =>
       canonicalContactSelector({
         kind: "regex",

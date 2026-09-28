@@ -1,6 +1,6 @@
 {
   "grammar": {
-    "normalization": "Trim outer whitespace, lowercase ASCII. Maximum 254 total characters and 64 local characters including a terminal wildcard.",
+    "normalization": "Trim outer whitespace, reject non-ASCII characters, then lowercase ASCII. Maximum 254 total characters and 64 local characters including a terminal wildcard.",
     "local": "Whole * or ASCII dot-atom, optionally followed by one terminal *. Dot-atom characters: a-z 0-9 ! # $ % & ' + / = ^ _ ` { | } ~ -. Dot only separates nonempty atoms. No ? or quoted mailboxes.",
     "domain": "Optional leading *. followed by at least two literal DNS labels. Each label 1-63 ASCII letters/digits/hyphens, begins and ends alphanumeric. Literal domain at most 253 characters. Final label must contain an ASCII letter. No other domain wildcard.",
     "matching": "Full canonical mailbox matching. Local terminal * matches zero or more characters. Domain *. matches one or more complete labels and excludes the apex. Bare domains are UI shorthand, not API patterns."
@@ -16,7 +16,7 @@
     { "input": "a@xn--example-9db.test", "normalized": "a@xn--example-9db.test" },
     { "input": "a@123.4a", "normalized": "a@123.4a" }
   ],
-  "invalid": [
+  "invalid": ["K@example.com", "*@K.example", "research-K*@example.com", 
     "example.com", "*.example.com", "*@*", "*@*.com", "*@example.*", "*@*example.com", "*@example.*.com", "*@example..com", "*@-example.com", "*@example-.com", "*@example_com.test", "*@example.com.", "*@127.0.0.1", "*@example.123", "a?@example.com", "re*search@example.com", "research**@example.com", "research.*@example.com", ".alice@example.com", "alice.@example.com", "a..b@example.com", "\"alice\"@example.com", "alice (team)@example.com", "a@[127.0.0.1]", "a@example", "a@éxample.com", "álîce@example.com", "*@*.example.com.evil.*", "a\\b@example.com", "a\nb@example.com"
   ],
   "matches": [

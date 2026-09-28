@@ -32,8 +32,11 @@ function splitAddress(value: string): [string, string] | null {
 export function canonicalContactSelector(
   input: ContactRuleSelector,
 ): ContactRuleSelector {
-  const value = input.value.trim().toLowerCase();
   const invalid = () => new Error("Invalid contact approval selector.");
+  const trimmed = input.value.trim();
+  for (const character of trimmed)
+    if (character.charCodeAt(0) > 127) throw invalid();
+  const value = trimmed.toLowerCase();
   if (!value || value.length > 254) throw invalid();
   if (input.kind === "domain") {
     if (!domainPattern(value)) throw invalid();
