@@ -3106,6 +3106,92 @@ func decodeGetAgentParams(args [1]string, argsEscaped bool, r *http.Request) (pa
 	return params, nil
 }
 
+// GetAgentContactPolicyParams is parameters of getAgentContactPolicy operation.
+type GetAgentContactPolicyParams struct {
+	// Canonical address of an agent connection in the current organization.
+	AgentAddress string
+}
+
+func unpackGetAgentContactPolicyParams(packed middleware.Parameters) (params GetAgentContactPolicyParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "agent_address",
+			In:   "path",
+		}
+		params.AgentAddress = packed[key].(string)
+	}
+	return params
+}
+
+func decodeGetAgentContactPolicyParams(args [1]string, argsEscaped bool, r *http.Request) (params GetAgentContactPolicyParams, _ error) {
+	// Decode path: agent_address.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "agent_address",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.AgentAddress = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     254,
+					MaxLengthSet:  true,
+					Email:         true,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.AgentAddress)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "agent_address",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetChallengeParams is parameters of getChallenge operation.
 type GetChallengeParams struct {
 	// Resource UUID.
@@ -7867,6 +7953,92 @@ func decodePutAgentContactParams(args [2]string, argsEscaped bool, r *http.Reque
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "contact_address",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// PutAgentContactPolicyParams is parameters of putAgentContactPolicy operation.
+type PutAgentContactPolicyParams struct {
+	// Canonical address of an agent connection in the current organization.
+	AgentAddress string
+}
+
+func unpackPutAgentContactPolicyParams(packed middleware.Parameters) (params PutAgentContactPolicyParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "agent_address",
+			In:   "path",
+		}
+		params.AgentAddress = packed[key].(string)
+	}
+	return params
+}
+
+func decodePutAgentContactPolicyParams(args [1]string, argsEscaped bool, r *http.Request) (params PutAgentContactPolicyParams, _ error) {
+	// Decode path: agent_address.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "agent_address",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.AgentAddress = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     254,
+					MaxLengthSet:  true,
+					Email:         true,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.AgentAddress)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "agent_address",
 			In:   "path",
 			Err:  err,
 		}

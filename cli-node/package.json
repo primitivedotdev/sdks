@@ -129,10 +129,10 @@
         "description": "Schedule and send wake commands to your own functions over signed email, and manage which senders may wake them. Use `primitive wake schedules list|create|get|update|delete|run`, `primitive wake authorizations list|create|update|delete`, and `primitive wake dispatches list`."
       },
       "listen": {
-        "description": "Receive events locally as JSONL, use --exec or --forward-to, or notify an exact loaded native session with --notify-session and approved --sender addresses. Use --status --notify-session to inspect durable notification receipts."
+        "description": "Receive events locally as JSONL, use --exec or --forward-to, or notify an exact loaded native session using --notify-session with --contacts or approved --sender addresses. Add --contact-requests for owner-enabled structured first-contact intake. Use --status --notify-session to inspect durable notification receipts."
       },
       "contacts": {
-        "description": "Shared organization contacts. Use list, get, add, update, or remove; edits use conditional versions."
+        "description": "Shared organization contacts plus structured request, accept, and wait commands for connected agents. Directory list, get, add, update, and remove use conditional versions."
       },
       "agent:contacts": {
         "description": "Contacts and notification preferences for one agent address. Connected profiles default to their own address."

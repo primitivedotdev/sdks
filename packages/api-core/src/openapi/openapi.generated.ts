@@ -10676,6 +10676,350 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       }
+    },
+    "/contact-policy": {
+      "get": {
+        "operationId": "getContactPolicy",
+        "summary": "Read organization contact policy",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Receiver-side email notification admission preferences; never task, tool, code execution or account authority. Rules take effect only in receivers implementing this current contact-policy contract. Older receivers may continue their previous exact-contact notifications until updated. Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may read/write policies. Connected credentials may only GET their own agent composite; they cannot write either policy. Function and signed capability credentials are not granted access. Rules are unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise matching organization rules; silence wins ties within that scope. If neither scope matches, existing exact membership notify:true allows using its own activation metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise 409. A missing document reads as empty rules, null version/timestamps, false request intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op writes preserve versions. Agent composite effective_version changes with either policy document, connection identity, generation or successful claim; effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require received_at >= both the selected activation time and effective_since. Consequently even unrelated policy edits suppress queued older rule/request admissions, without deleting email history or affecting explicit reply waits. Exact membership fallback retains its own notify_since and generation but must still recheck current policy denies and effective_version. Before dispatch, receivers must recheck the current composite version and applicable activation generation and membership; stop new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the API does not execute tasks or dispatch notifications.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Current policy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ContactPolicy"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "contact_conflict: policy precondition did not match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "put": {
+        "operationId": "putContactPolicy",
+        "summary": "Replace organization contact policy",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Receiver-side email notification admission preferences; never task, tool, code execution or account authority. Rules take effect only in receivers implementing this current contact-policy contract. Older receivers may continue their previous exact-contact notifications until updated. Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may read/write policies. Connected credentials may only GET their own agent composite; they cannot write either policy. Function and signed capability credentials are not granted access. Rules are unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise matching organization rules; silence wins ties within that scope. If neither scope matches, existing exact membership notify:true allows using its own activation metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise 409. A missing document reads as empty rules, null version/timestamps, false request intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op writes preserve versions. Agent composite effective_version changes with either policy document, connection identity, generation or successful claim; effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require received_at >= both the selected activation time and effective_since. Consequently even unrelated policy edits suppress queued older rule/request admissions, without deleting email history or affecting explicit reply waits. Exact membership fallback retains its own notify_since and generation but must still recheck current policy denies and effective_version. Before dispatch, receivers must recheck the current composite version and applicable activation generation and membership; stop new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the API does not execute tasks or dispatch notifications.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutContactPolicyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current policy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ContactPolicy"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "contact_conflict: policy precondition did not match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/agent-contact-policy/{agent_address}": {
+      "get": {
+        "operationId": "getAgentContactPolicy",
+        "summary": "Read agent contact policy",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Receiver-side email notification admission preferences; never task, tool, code execution or account authority. Rules take effect only in receivers implementing this current contact-policy contract. Older receivers may continue their previous exact-contact notifications until updated. Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may read/write policies. Connected credentials may only GET their own agent composite; they cannot write either policy. Function and signed capability credentials are not granted access. Rules are unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise matching organization rules; silence wins ties within that scope. If neither scope matches, existing exact membership notify:true allows using its own activation metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise 409. A missing document reads as empty rules, null version/timestamps, false request intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op writes preserve versions. Agent composite effective_version changes with either policy document, connection identity, generation or successful claim; effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require received_at >= both the selected activation time and effective_since. Consequently even unrelated policy edits suppress queued older rule/request admissions, without deleting email history or affecting explicit reply waits. Exact membership fallback retains its own notify_since and generation but must still recheck current policy denies and effective_version. Before dispatch, receivers must recheck the current composite version and applicable activation generation and membership; stop new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the API does not execute tasks or dispatch notifications.",
+        "parameters": [
+          {
+            "name": "agent_address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254
+            },
+            "description": "Canonical address of an agent connection in the current organization."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current policy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentContactPolicy"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "contact_conflict: policy precondition did not match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "put": {
+        "operationId": "putAgentContactPolicy",
+        "summary": "Replace agent contact policy",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Receiver-side email notification admission preferences; never task, tool, code execution or account authority. Rules take effect only in receivers implementing this current contact-policy contract. Older receivers may continue their previous exact-contact notifications until updated. Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may read/write policies. Connected credentials may only GET their own agent composite; they cannot write either policy. Function and signed capability credentials are not granted access. Rules are unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise matching organization rules; silence wins ties within that scope. If neither scope matches, existing exact membership notify:true allows using its own activation metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise 409. A missing document reads as empty rules, null version/timestamps, false request intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op writes preserve versions. Agent composite effective_version changes with either policy document, connection identity, generation or successful claim; effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require received_at >= both the selected activation time and effective_since. Consequently even unrelated policy edits suppress queued older rule/request admissions, without deleting email history or affecting explicit reply waits. Exact membership fallback retains its own notify_since and generation but must still recheck current policy denies and effective_version. Before dispatch, receivers must recheck the current composite version and applicable activation generation and membership; stop new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the API does not execute tasks or dispatch notifications.",
+        "parameters": [
+          {
+            "name": "agent_address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254
+            },
+            "description": "Canonical address of an agent connection in the current organization."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutAgentContactPolicyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current policy",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "data"
+                      ],
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentContactPolicy"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "contact_conflict: policy precondition did not match",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -11088,6 +11432,353 @@ export const openapiDocument: Record<string, unknown> = {
       }
     },
     "schemas": {
+      "ContactPolicyRuleInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+            "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+          },
+          "effect": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "silence"
+            ]
+          }
+        },
+        "required": [
+          "pattern",
+          "effect"
+        ]
+      },
+      "ContactPolicyRule": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+            "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+          },
+          "effect": {
+            "type": "string",
+            "enum": [
+              "allow",
+              "silence"
+            ]
+          },
+          "notify_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "notification_generation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "pattern",
+          "effect",
+          "notify_since",
+          "notification_generation"
+        ]
+      },
+      "ContactPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rules": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/ContactPolicyRule"
+            }
+          },
+          "contact_request_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "contact_request_generation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "allow_contact_requests": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rules",
+          "contact_request_since",
+          "contact_request_generation",
+          "version",
+          "updated_at",
+          "allow_contact_requests"
+        ]
+      },
+      "AgentContactPolicyOverride": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rules": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/ContactPolicyRule"
+            }
+          },
+          "contact_request_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "contact_request_generation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "allow_contact_requests": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "rules",
+          "contact_request_since",
+          "contact_request_generation",
+          "version",
+          "updated_at",
+          "allow_contact_requests"
+        ]
+      },
+      "AgentContactPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "agent_address": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "org_policy": {
+            "$ref": "#/components/schemas/ContactPolicy"
+          },
+          "agent_policy": {
+            "$ref": "#/components/schemas/AgentContactPolicyOverride"
+          },
+          "effective_version": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "effective_since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "allow_contact_requests": {
+            "type": "boolean"
+          },
+          "contact_request_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "contact_request_generation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "agent_address",
+          "org_policy",
+          "agent_policy",
+          "effective_version",
+          "effective_since",
+          "allow_contact_requests",
+          "contact_request_since",
+          "contact_request_generation"
+        ]
+      },
+      "PutContactPolicyRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PutContactPolicyCreate"
+          },
+          {
+            "$ref": "#/components/schemas/PutContactPolicyReplace"
+          }
+        ]
+      },
+      "PutAgentContactPolicyRequest": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PutAgentContactPolicyCreate"
+          },
+          {
+            "$ref": "#/components/schemas/PutAgentContactPolicyReplace"
+          }
+        ]
+      },
+      "PutContactPolicyCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rules": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/ContactPolicyRuleInput"
+            }
+          },
+          "allow_contact_requests": {
+            "type": "boolean"
+          },
+          "if_absent": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "rules",
+          "allow_contact_requests",
+          "if_absent"
+        ]
+      },
+      "PutContactPolicyReplace": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rules": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/ContactPolicyRuleInput"
+            }
+          },
+          "allow_contact_requests": {
+            "type": "boolean"
+          },
+          "if_version": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "rules",
+          "allow_contact_requests",
+          "if_version"
+        ]
+      },
+      "PutAgentContactPolicyCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rules": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/ContactPolicyRuleInput"
+            }
+          },
+          "allow_contact_requests": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "if_absent": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "rules",
+          "allow_contact_requests",
+          "if_absent"
+        ]
+      },
+      "PutAgentContactPolicyReplace": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "rules": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/ContactPolicyRuleInput"
+            }
+          },
+          "allow_contact_requests": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "if_version": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "rules",
+          "allow_contact_requests",
+          "if_version"
+        ]
+      },
       "PublishPolicy": {
         "type": "string",
         "enum": [

@@ -461,8 +461,17 @@ the selected session. Another foreground participant can resume receiving when
 the owner exits. Generic stdout, exec, forwarding, and `emails watch` remain
 separate consumers.
 
-Automatic runtime configuration, contact-policy synchronization, and notification
-history backfill are not provided. Reply waits use targeted recovery for their
+With `--contacts`, the listener reads the connected agent's current owner policy
+and exact preferences before admission and again before dispatch. Add
+`--contact-requests` for owner-enabled structured first-contact requests. Use
+`primitive contacts request <address> --reason <purpose> --wait` to initiate and
+`primitive contacts accept --id <received-request-id>` to accept under the owner's
+instructions. Request acceptance is separate from a substantive task reply. See
+[contact requests and policy](../docs/contact-requests.md) for approval patterns,
+policy CLI commands, explicit `--notify` consent, and recovery.
+
+Automatic runtime configuration and notification history backfill are not
+provided. Reply waits use targeted recovery for their
 exact sent parent. Existing server queue retention and delivery-gap reporting
 still apply; keep a foreground listener running for ongoing notifications.
 

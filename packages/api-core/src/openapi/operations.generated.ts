@@ -1771,6 +1771,256 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "get-agent-contact-policy",
+    "description": "Receiver-side email notification admission preferences; never task, tool, code execution or account authority. Rules take effect only in receivers implementing this current contact-policy contract. Older receivers may continue their previous exact-contact notifications until updated. Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may read/write policies. Connected credentials may only GET their own agent composite; they cannot write either policy. Function and signed capability credentials are not granted access. Rules are unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise matching organization rules; silence wins ties within that scope. If neither scope matches, existing exact membership notify:true allows using its own activation metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise 409. A missing document reads as empty rules, null version/timestamps, false request intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op writes preserve versions. Agent composite effective_version changes with either policy document, connection identity, generation or successful claim; effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require received_at >= both the selected activation time and effective_since. Consequently even unrelated policy edits suppress queued older rule/request admissions, without deleting email history or affecting explicit reply waits. Exact membership fallback retains its own notify_since and generation but must still recheck current policy denies and effective_version. Before dispatch, receivers must recheck the current composite version and applicable activation generation and membership; stop new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the API does not execute tasks or dispatch notifications.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getAgentContactPolicy",
+    "path": "/agent-contact-policy/{agent_address}",
+    "pathParams": [
+      {
+        "description": "Canonical address of an agent connection in the current organization.",
+        "enum": null,
+        "name": "agent_address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent_address": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "org_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rules": {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                    "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+                  },
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "silence"
+                    ]
+                  },
+                  "notify_since": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "notification_generation": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "effect",
+                  "notify_since",
+                  "notification_generation"
+                ]
+              }
+            },
+            "contact_request_since": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "contact_request_generation": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "updated_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "allow_contact_requests": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "rules",
+            "contact_request_since",
+            "contact_request_generation",
+            "version",
+            "updated_at",
+            "allow_contact_requests"
+          ]
+        },
+        "agent_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rules": {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                    "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+                  },
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "silence"
+                    ]
+                  },
+                  "notify_since": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "notification_generation": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "effect",
+                  "notify_since",
+                  "notification_generation"
+                ]
+              }
+            },
+            "contact_request_since": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "contact_request_generation": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "updated_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "allow_contact_requests": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "rules",
+            "contact_request_since",
+            "contact_request_generation",
+            "version",
+            "updated_at",
+            "allow_contact_requests"
+          ]
+        },
+        "effective_version": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "effective_since": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "allow_contact_requests": {
+          "type": "boolean"
+        },
+        "contact_request_since": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "contact_request_generation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "agent_address",
+        "org_policy",
+        "agent_policy",
+        "effective_version",
+        "effective_since",
+        "allow_contact_requests",
+        "contact_request_since",
+        "contact_request_generation"
+      ]
+    },
+    "sdkName": "getAgentContactPolicy",
+    "summary": "Read agent contact policy",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "get-contact",
     "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
     "hasJsonBody": false,
@@ -1829,6 +2079,111 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "getContact",
     "summary": "get Contact",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-contact-policy",
+    "description": "Receiver-side email notification admission preferences; never task, tool, code execution or account authority. Rules take effect only in receivers implementing this current contact-policy contract. Older receivers may continue their previous exact-contact notifications until updated. Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may read/write policies. Connected credentials may only GET their own agent composite; they cannot write either policy. Function and signed capability credentials are not granted access. Rules are unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise matching organization rules; silence wins ties within that scope. If neither scope matches, existing exact membership notify:true allows using its own activation metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise 409. A missing document reads as empty rules, null version/timestamps, false request intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op writes preserve versions. Agent composite effective_version changes with either policy document, connection identity, generation or successful claim; effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require received_at >= both the selected activation time and effective_since. Consequently even unrelated policy edits suppress queued older rule/request admissions, without deleting email history or affecting explicit reply waits. Exact membership fallback retains its own notify_since and generation but must still recheck current policy denies and effective_version. Before dispatch, receivers must recheck the current composite version and applicable activation generation and membership; stop new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the API does not execute tasks or dispatch notifications.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getContactPolicy",
+    "path": "/contact-policy",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rules": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "maxLength": 254,
+                "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+              },
+              "effect": {
+                "type": "string",
+                "enum": [
+                  "allow",
+                  "silence"
+                ]
+              },
+              "notify_since": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "notification_generation": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "pattern",
+              "effect",
+              "notify_since",
+              "notification_generation"
+            ]
+          }
+        },
+        "contact_request_since": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "contact_request_generation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "updated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "allow_contact_requests": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "rules",
+        "contact_request_since",
+        "contact_request_generation",
+        "version",
+        "updated_at",
+        "allow_contact_requests"
+      ]
+    },
+    "sdkName": "getContactPolicy",
+    "summary": "Read organization contact policy",
     "tag": "Contacts",
     "tagCommand": "contacts"
   },
@@ -2172,6 +2527,355 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": true,
+    "command": "put-agent-contact-policy",
+    "description": "Receiver-side email notification admission preferences; never task, tool, code execution or account authority. Rules take effect only in receivers implementing this current contact-policy contract. Older receivers may continue their previous exact-contact notifications until updated. Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may read/write policies. Connected credentials may only GET their own agent composite; they cannot write either policy. Function and signed capability credentials are not granted access. Rules are unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise matching organization rules; silence wins ties within that scope. If neither scope matches, existing exact membership notify:true allows using its own activation metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise 409. A missing document reads as empty rules, null version/timestamps, false request intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op writes preserve versions. Agent composite effective_version changes with either policy document, connection identity, generation or successful claim; effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require received_at >= both the selected activation time and effective_since. Consequently even unrelated policy edits suppress queued older rule/request admissions, without deleting email history or affecting explicit reply waits. Exact membership fallback retains its own notify_since and generation but must still recheck current policy denies and effective_version. Before dispatch, receivers must recheck the current composite version and applicable activation generation and membership; stop new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the API does not execute tasks or dispatch notifications.",
+    "hasJsonBody": true,
+    "method": "PUT",
+    "operationId": "putAgentContactPolicy",
+    "path": "/agent-contact-policy/{agent_address}",
+    "pathParams": [
+      {
+        "description": "Canonical address of an agent connection in the current organization.",
+        "enum": null,
+        "name": "agent_address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rules": {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                    "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+                  },
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "silence"
+                    ]
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "effect"
+                ]
+              }
+            },
+            "allow_contact_requests": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "if_absent": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "rules",
+            "allow_contact_requests",
+            "if_absent"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rules": {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                    "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+                  },
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "silence"
+                    ]
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "effect"
+                ]
+              }
+            },
+            "allow_contact_requests": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "if_version": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "rules",
+            "allow_contact_requests",
+            "if_version"
+          ]
+        }
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent_address": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254
+        },
+        "org_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rules": {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                    "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+                  },
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "silence"
+                    ]
+                  },
+                  "notify_since": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "notification_generation": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "effect",
+                  "notify_since",
+                  "notification_generation"
+                ]
+              }
+            },
+            "contact_request_since": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "contact_request_generation": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "updated_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "allow_contact_requests": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "rules",
+            "contact_request_since",
+            "contact_request_generation",
+            "version",
+            "updated_at",
+            "allow_contact_requests"
+          ]
+        },
+        "agent_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rules": {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                    "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+                  },
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "silence"
+                    ]
+                  },
+                  "notify_since": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "notification_generation": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "effect",
+                  "notify_since",
+                  "notification_generation"
+                ]
+              }
+            },
+            "contact_request_since": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "contact_request_generation": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "version": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "updated_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            },
+            "allow_contact_requests": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "rules",
+            "contact_request_since",
+            "contact_request_generation",
+            "version",
+            "updated_at",
+            "allow_contact_requests"
+          ]
+        },
+        "effective_version": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "effective_since": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "allow_contact_requests": {
+          "type": "boolean"
+        },
+        "contact_request_since": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "contact_request_generation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "agent_address",
+        "org_policy",
+        "agent_policy",
+        "effective_version",
+        "effective_since",
+        "allow_contact_requests",
+        "contact_request_since",
+        "contact_request_generation"
+      ]
+    },
+    "sdkName": "putAgentContactPolicy",
+    "summary": "Replace agent contact policy",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
     "command": "put-contact",
     "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
     "hasJsonBody": true,
@@ -2274,6 +2978,204 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "putContact",
     "summary": "put Contact",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "put-contact-policy",
+    "description": "Receiver-side email notification admission preferences; never task, tool, code execution or account authority. Rules take effect only in receivers implementing this current contact-policy contract. Older receivers may continue their previous exact-contact notifications until updated. Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may read/write policies. Connected credentials may only GET their own agent composite; they cannot write either policy. Function and signed capability credentials are not granted access. Rules are unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise matching organization rules; silence wins ties within that scope. If neither scope matches, existing exact membership notify:true allows using its own activation metadata; otherwise only enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise 409. A missing document reads as empty rules, null version/timestamps, false request intake for the organization and null (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op writes preserve versions. Agent composite effective_version changes with either policy document, connection identity, generation or successful claim; effective_since is the latest policy mutation, connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require received_at >= both the selected activation time and effective_since. Consequently even unrelated policy edits suppress queued older rule/request admissions, without deleting email history or affecting explicit reply waits. Exact membership fallback retains its own notify_since and generation but must still recheck current policy denies and effective_version. Before dispatch, receivers must recheck the current composite version and applicable activation generation and membership; stop new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope and matched rules locally; the API does not execute tasks or dispatch notifications.",
+    "hasJsonBody": true,
+    "method": "PUT",
+    "operationId": "putContactPolicy",
+    "path": "/contact-policy",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rules": {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                    "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+                  },
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "silence"
+                    ]
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "effect"
+                ]
+              }
+            },
+            "allow_contact_requests": {
+              "type": "boolean"
+            },
+            "if_absent": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "rules",
+            "allow_contact_requests",
+            "if_absent"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rules": {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "pattern": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                    "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+                  },
+                  "effect": {
+                    "type": "string",
+                    "enum": [
+                      "allow",
+                      "silence"
+                    ]
+                  }
+                },
+                "required": [
+                  "pattern",
+                  "effect"
+                ]
+              }
+            },
+            "allow_contact_requests": {
+              "type": "boolean"
+            },
+            "if_version": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "rules",
+            "allow_contact_requests",
+            "if_version"
+          ]
+        }
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rules": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pattern": {
+                "type": "string",
+                "maxLength": 254,
+                "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
+                "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
+              },
+              "effect": {
+                "type": "string",
+                "enum": [
+                  "allow",
+                  "silence"
+                ]
+              },
+              "notify_since": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "notification_generation": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "pattern",
+              "effect",
+              "notify_since",
+              "notification_generation"
+            ]
+          }
+        },
+        "contact_request_since": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "contact_request_generation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "updated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "allow_contact_requests": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "rules",
+        "contact_request_since",
+        "contact_request_generation",
+        "version",
+        "updated_at",
+        "allow_contact_requests"
+      ]
+    },
+    "sdkName": "putContactPolicy",
+    "summary": "Replace organization contact policy",
     "tag": "Contacts",
     "tagCommand": "contacts"
   },

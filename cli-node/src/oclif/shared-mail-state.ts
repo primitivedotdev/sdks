@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { opendirSync } from "node:fs";
 import { dirname, join } from "node:path";
+import type { ContactRequestReference } from "./contact-interactions.js";
 import {
   invalidSharedMail,
   mailAddress,
@@ -25,6 +26,7 @@ export type SharedMailDetails = {
   authorization: "pending" | "trusted" | "rejected";
 };
 export type SharedMailWait = {
+  contactRequest?: ContactRequestReference;
   requestId: string;
   peer: string;
   sessionKey: string | null;
@@ -38,7 +40,7 @@ export type SharedMailRoute =
   | {
       kind: "notification";
       sessionKey: string;
-      state: "selected" | "submitting" | "accepted" | "unknown";
+      state: "selected" | "submitting" | "accepted" | "unknown" | "skipped";
     };
 export type SharedMailEmail = {
   emailId: string;
@@ -86,7 +88,13 @@ function details(value: unknown): SharedMailDetails {
   };
 }
 function wait(value: unknown): SharedMailWait {
+  const hasControl = Boolean(
+    value &&
+      typeof value === "object" &&
+      Object.hasOwn(value, "contactRequest"),
+  );
   const w = mailObject(value, [
+    ...(hasControl ? ["contactRequest"] : []),
     "requestId",
     "peer",
     "sessionKey",
@@ -110,6 +118,9 @@ function wait(value: unknown): SharedMailWait {
   )
     throw invalidSharedMail();
   return {
+    ...(hasControl
+      ? { contactRequest: contactRequestReference(w.contactRequest) }
+      : {}),
     requestId: mailId(w.requestId),
     peer: mailAddress(w.peer),
     sessionKey: w.sessionKey === null ? null : mailString(w.sessionKey),
@@ -117,6 +128,18 @@ function wait(value: unknown): SharedMailWait {
     createdAt: mailTime(w.createdAt),
     status: w.status,
     sentEmailId: w.sentEmailId === null ? null : mailId(w.sentEmailId),
+  };
+}
+function contactRequestReference(value: unknown): ContactRequestReference {
+  const r = mailObject(value, ["interactionId", "stepId", "expiresAt"]);
+  const interactionId = mailString(r.interactionId);
+  const at = interactionId.indexOf("@");
+  mailId(interactionId.slice(0, at));
+  mailAddress(interactionId);
+  return {
+    interactionId,
+    stepId: mailId(r.stepId),
+    expiresAt: mailTime(r.expiresAt),
   };
 }
 function email(value: unknown): SharedMailEmail {
@@ -146,6 +169,7 @@ function email(value: unknown): SharedMailEmail {
         (r.state !== "selected" &&
           r.state !== "submitting" &&
           r.state !== "accepted" &&
+          r.state !== "skipped" &&
           r.state !== "unknown")
       )
         throw invalidSharedMail();
@@ -461,6 +485,7 @@ export async function openSharedMailStore(options: {
       });
     },
     registerWait(input: {
+      contactRequest?: ContactRequestReference;
       requestId: string;
       peer: string;
       sessionKey?: string | null;
@@ -515,7 +540,11 @@ export async function openSharedMailStore(options: {
           const canonical = requiredWait(occupied.requestId);
           if (
             canonical.sentEmailId !== parent ||
-            canonical.peer !== previous.peer
+            canonical.peer !== previous.peer ||
+            !same(
+              canonical.contactRequest ?? null,
+              previous.contactRequest ?? null,
+            )
           )
             throw invalidSharedMail();
           if (canonical.status === "bound") {
@@ -698,13 +727,16 @@ export async function openSharedMailStore(options: {
           return {
             status:
               record.route.kind === "notification" &&
-              record.route.sessionKey === session
-                ? record.route.state === "selected"
-                  ? "claimed"
-                  : record.route.state === "accepted"
-                    ? "already_observed"
-                    : "held"
-                : "held",
+              record.route.state === "skipped"
+                ? "already_observed"
+                : record.route.kind === "notification" &&
+                    record.route.sessionKey === session
+                  ? record.route.state === "selected"
+                    ? "claimed"
+                    : record.route.state === "accepted"
+                      ? "already_observed"
+                      : "held"
+                  : "held",
             email: record,
           };
         if (!d || d.authorization === "pending")
@@ -753,6 +785,39 @@ export async function openSharedMailStore(options: {
         };
         commit([{ path: pathFor("emails", emailId), value: next }]);
         return { status: "claimed", email: next };
+      });
+    },
+    releaseNotification(emailId: string, sessionKey: string) {
+      return transaction(() => {
+        const record = requiredEmail(emailId),
+          route = record.route;
+        if (
+          route?.kind !== "notification" ||
+          route.sessionKey !== mailString(sessionKey) ||
+          route.state !== "selected"
+        )
+          throw invalidSharedMail();
+        const next: SharedMailEmail = { ...record, route: null };
+        commit([{ path: pathFor("emails", emailId), value: next }]);
+        return next;
+      });
+    },
+    skipNotification(emailId: string, sessionKey: string) {
+      return transaction(() => {
+        const record = requiredEmail(emailId),
+          route = record.route;
+        if (
+          route?.kind !== "notification" ||
+          route.sessionKey !== mailString(sessionKey) ||
+          (route.state !== "selected" && route.state !== "skipped")
+        )
+          throw invalidSharedMail();
+        const next: SharedMailEmail = {
+          ...record,
+          route: { ...route, state: "skipped" },
+        };
+        commit([{ path: pathFor("emails", emailId), value: next }]);
+        return next;
       });
     },
     markNotification(

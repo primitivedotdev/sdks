@@ -5,6 +5,15 @@ import type {
 } from "@primitivedotdev/api-core";
 import { getEmail, searchEmails } from "@primitivedotdev/api-core";
 import {
+  type ContactRequestReference,
+  isContactAcceptance,
+  readContactInteraction,
+} from "./contact-interactions.js";
+import {
+  NotificationRetryError,
+  notificationPartReader,
+} from "./notify-session-content.js";
+import {
   isPlainChatReply,
   isScopedChatReply,
   readBeforeDeadline,
@@ -36,6 +45,7 @@ export async function inspectTargetedReply(
     apiClient: PrimitiveApiClient;
     id: string;
     deadline?: number | null;
+    contactRequest?: ContactRequestReference;
   },
 ): Promise<TargetedReplyInspection | null> {
   const result = await readBeforeDeadline(params.deadline, (signal) =>
@@ -95,6 +105,26 @@ export async function inspectTargetedReply(
     );
   if (params.since !== undefined && received < Date.parse(params.since))
     return { kind: "unrelated", id: params.id, email };
+  if (params.contactRequest) {
+    try {
+      const control = await readBeforeDeadline(params.deadline, (signal) =>
+        readContactInteraction(
+          email,
+          notificationPartReader(async () => params.apiClient.client),
+          signal ?? new AbortController().signal,
+          // Recovery time must not invalidate an acceptance received in time.
+          received,
+        ),
+      );
+      return isContactAcceptance(control, params.contactRequest)
+        ? { kind: "reply", email }
+        : { kind: "inspection", id: params.id, email };
+    } catch (error) {
+      if (error instanceof NotificationRetryError)
+        return { kind: "pending", id: params.id, email };
+      throw error;
+    }
+  }
   return isPlainChatReply(email)
     ? { kind: "reply", email }
     : { kind: "inspection", id: params.id, email };

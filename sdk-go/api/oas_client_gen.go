@@ -533,6 +533,45 @@ type Invoker interface {
 	//
 	// GET /agents/{address}
 	GetAgent(ctx context.Context, params GetAgentParams) (GetAgentRes, error)
+	// GetAgentContactPolicy invokes getAgentContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// GET /agent-contact-policy/{agent_address}
+	GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (GetAgentContactPolicyRes, error)
 	// GetChallenge invokes getChallenge operation.
 	//
 	// Fetch a challenge you created, to poll its `status` and settlement
@@ -558,6 +597,45 @@ type Invoker interface {
 	//
 	// GET /contacts/{address}
 	GetContact(ctx context.Context, params GetContactParams) (GetContactRes, error)
+	// GetContactPolicy invokes getContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// GET /contact-policy
+	GetContactPolicy(ctx context.Context) (GetContactPolicyRes, error)
 	// GetConversation invokes getConversation operation.
 	//
 	// Returns the full conversation the given inbound email belongs
@@ -1093,6 +1171,45 @@ type Invoker interface {
 	//
 	// PUT /agent-contacts/{agent_address}/{contact_address}
 	PutAgentContact(ctx context.Context, request PutAgentContactReq, params PutAgentContactParams) (PutAgentContactRes, error)
+	// PutAgentContactPolicy invokes putAgentContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// PUT /agent-contact-policy/{agent_address}
+	PutAgentContactPolicy(ctx context.Context, request PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (PutAgentContactPolicyRes, error)
 	// PutContact invokes putContact operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -1111,6 +1228,45 @@ type Invoker interface {
 	//
 	// PUT /contacts/{address}
 	PutContact(ctx context.Context, request PutContactReq, params PutContactParams) (PutContactRes, error)
+	// PutContactPolicy invokes putContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// PUT /contact-policy
+	PutContactPolicy(ctx context.Context, request PutContactPolicyRequest) (PutContactPolicyRes, error)
 	// RedeemCreditCode invokes redeemCreditCode operation.
 	//
 	// Redeem a credit code for the authenticated organization. The credit is
@@ -7529,6 +7685,170 @@ func (c *Client) sendGetAgent(ctx context.Context, params GetAgentParams) (res G
 	return result, nil
 }
 
+// GetAgentContactPolicy invokes getAgentContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// GET /agent-contact-policy/{agent_address}
+func (c *Client) GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (GetAgentContactPolicyRes, error) {
+	res, err := c.sendGetAgentContactPolicy(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (res GetAgentContactPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getAgentContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-contact-policy/{agent_address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetAgentContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-contact-policy/"
+	{
+		// Encode "agent_address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "agent_address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.AgentAddress))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetAgentContactPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetAgentContactPolicyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetChallenge invokes getChallenge operation.
 //
 // Fetch a challenge you created, to poll its `status` and settlement
@@ -7785,6 +8105,152 @@ func (c *Client) sendGetContact(ctx context.Context, params GetContactParams) (r
 
 	stage = "DecodeResponse"
 	result, err := decodeGetContactResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetContactPolicy invokes getContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// GET /contact-policy
+func (c *Client) GetContactPolicy(ctx context.Context) (GetContactPolicyRes, error) {
+	res, err := c.sendGetContactPolicy(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetContactPolicy(ctx context.Context) (res GetContactPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/contact-policy"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/contact-policy"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetContactPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetContactPolicyResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -14231,6 +14697,173 @@ func (c *Client) sendPutAgentContact(ctx context.Context, request PutAgentContac
 	return result, nil
 }
 
+// PutAgentContactPolicy invokes putAgentContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// PUT /agent-contact-policy/{agent_address}
+func (c *Client) PutAgentContactPolicy(ctx context.Context, request PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (PutAgentContactPolicyRes, error) {
+	res, err := c.sendPutAgentContactPolicy(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendPutAgentContactPolicy(ctx context.Context, request PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (res PutAgentContactPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("putAgentContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/agent-contact-policy/{agent_address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PutAgentContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-contact-policy/"
+	{
+		// Encode "agent_address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "agent_address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.AgentAddress))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePutAgentContactPolicyRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PutAgentContactPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePutAgentContactPolicyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // PutContact invokes putContact operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -14364,6 +14997,155 @@ func (c *Client) sendPutContact(ctx context.Context, request PutContactReq, para
 
 	stage = "DecodeResponse"
 	result, err := decodePutContactResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// PutContactPolicy invokes putContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// PUT /contact-policy
+func (c *Client) PutContactPolicy(ctx context.Context, request PutContactPolicyRequest) (PutContactPolicyRes, error) {
+	res, err := c.sendPutContactPolicy(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendPutContactPolicy(ctx context.Context, request PutContactPolicyRequest) (res PutContactPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("putContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/contact-policy"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PutContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/contact-policy"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePutContactPolicyRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PutContactPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePutContactPolicyResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

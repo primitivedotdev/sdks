@@ -34,7 +34,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   for (const release of releases.splice(0)) release();
   rmSync(directory, { recursive: true, force: true });
-});
+}, 60_000); // The large-history fixture also needs its full budget for disk cleanup.
 function open() {
   const store = openNotificationReceipts(directory, scope, threadId);
   releases.push(store.release);

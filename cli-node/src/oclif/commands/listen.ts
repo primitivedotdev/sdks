@@ -64,6 +64,12 @@ export default class ListenCommand extends Command {
       dependsOn: ["notify-session"],
       exclusive: ["sender", "status"],
     }),
+    "contact-requests": Flags.boolean({
+      description:
+        "Also consider one authenticated structured first-contact request per unknown sender when owner policy enables requests. No ordinary unknown mail or task authority is admitted.",
+      dependsOn: ["contacts", "notify-session"],
+      exclusive: ["sender", "status"],
+    }),
     sender: Flags.string({
       description:
         "Approved exact sender address for session notifications; repeat or separate with commas.",
@@ -224,6 +230,7 @@ export default class ListenCommand extends Command {
               threadId: flags["notify-session"],
               senders: senders ?? [],
               contactPreferences: flags.contacts,
+              contactRequests: flags["contact-requests"],
               socketPath: flags["session-socket"],
             }
           : undefined,

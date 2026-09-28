@@ -8711,6 +8711,232 @@ func (s *Server) handleGetAgentRequest(args [1]string, argsEscaped bool, w http.
 	}
 }
 
+// handleGetAgentContactPolicyRequest handles getAgentContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// GET /agent-contact-policy/{agent_address}
+func (s *Server) handleGetAgentContactPolicyRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getAgentContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/agent-contact-policy/{agent_address}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), GetAgentContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetAgentContactPolicyOperation,
+			ID:   "getAgentContactPolicy",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, GetAgentContactPolicyOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeGetAgentContactPolicyParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response GetAgentContactPolicyRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetAgentContactPolicyOperation,
+			OperationSummary: "Read agent contact policy",
+			OperationID:      "getAgentContactPolicy",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "agent_address",
+					In:   "path",
+				}: params.AgentAddress,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetAgentContactPolicyParams
+			Response = GetAgentContactPolicyRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetAgentContactPolicyParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetAgentContactPolicy(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetAgentContactPolicy(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetAgentContactPolicyResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetChallengeRequest handles getChallenge operation.
 //
 // Fetch a challenge you created, to poll its `status` and settlement
@@ -9090,6 +9316,217 @@ func (s *Server) handleGetContactRequest(args [1]string, argsEscaped bool, w htt
 	}
 
 	if err := encodeGetContactResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleGetContactPolicyRequest handles getContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// GET /contact-policy
+func (s *Server) handleGetContactPolicyRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/contact-policy"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), GetContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetContactPolicyOperation,
+			ID:   "getContactPolicy",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, GetContactPolicyOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+
+	var rawBody []byte
+
+	var response GetContactPolicyRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetContactPolicyOperation,
+			OperationSummary: "Read organization contact policy",
+			OperationID:      "getContactPolicy",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = struct{}
+			Response = GetContactPolicyRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetContactPolicy(ctx)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetContactPolicy(ctx)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetContactPolicyResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -18054,6 +18491,247 @@ func (s *Server) handlePutAgentContactRequest(args [2]string, argsEscaped bool, 
 	}
 }
 
+// handlePutAgentContactPolicyRequest handles putAgentContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// PUT /agent-contact-policy/{agent_address}
+func (s *Server) handlePutAgentContactPolicyRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("putAgentContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.HTTPRouteKey.String("/agent-contact-policy/{agent_address}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), PutAgentContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: PutAgentContactPolicyOperation,
+			ID:   "putAgentContactPolicy",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, PutAgentContactPolicyOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodePutAgentContactPolicyParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodePutAgentContactPolicyRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response PutAgentContactPolicyRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    PutAgentContactPolicyOperation,
+			OperationSummary: "Replace agent contact policy",
+			OperationID:      "putAgentContactPolicy",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "agent_address",
+					In:   "path",
+				}: params.AgentAddress,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = PutAgentContactPolicyRequest
+			Params   = PutAgentContactPolicyParams
+			Response = PutAgentContactPolicyRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackPutAgentContactPolicyParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.PutAgentContactPolicy(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.PutAgentContactPolicy(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodePutAgentContactPolicyResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handlePutContactRequest handles putContact operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -18260,6 +18938,232 @@ func (s *Server) handlePutContactRequest(args [1]string, argsEscaped bool, w htt
 	}
 
 	if err := encodePutContactResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handlePutContactPolicyRequest handles putContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// PUT /contact-policy
+func (s *Server) handlePutContactPolicyRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("putContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.HTTPRouteKey.String("/contact-policy"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), PutContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: PutContactPolicyOperation,
+			ID:   "putContactPolicy",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, PutContactPolicyOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodePutContactPolicyRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response PutContactPolicyRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    PutContactPolicyOperation,
+			OperationSummary: "Replace organization contact policy",
+			OperationID:      "putContactPolicy",
+			Body:             request,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = PutContactPolicyRequest
+			Params   = struct{}
+			Response = PutContactPolicyRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.PutContactPolicy(ctx, request)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.PutContactPolicy(ctx, request)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodePutContactPolicyResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

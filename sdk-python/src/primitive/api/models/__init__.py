@@ -12,6 +12,8 @@ from .agent_claim_link_result import AgentClaimLinkResult
 from .agent_claim_result import AgentClaimResult
 from .agent_claim_result_plan import AgentClaimResultPlan
 from .agent_claim_start_result import AgentClaimStartResult
+from .agent_contact_policy import AgentContactPolicy
+from .agent_contact_policy_override import AgentContactPolicyOverride
 from .agent_org_ref import AgentOrgRef
 from .agent_signup_resend_result import AgentSignupResendResult
 from .agent_signup_start_result import AgentSignupStartResult
@@ -55,6 +57,11 @@ from .complete_webhook_sdk_input_transport_error import CompleteWebhookSdkInputT
 from .complete_webhook_stdout_input import CompleteWebhookStdoutInput
 from .complete_webhook_stdout_input_mode import CompleteWebhookStdoutInputMode
 from .complete_webhook_stdout_input_transport_error import CompleteWebhookStdoutInputTransportError
+from .contact_policy import ContactPolicy
+from .contact_policy_rule import ContactPolicyRule
+from .contact_policy_rule_effect import ContactPolicyRuleEffect
+from .contact_policy_rule_input import ContactPolicyRuleInput
+from .contact_policy_rule_input_effect import ContactPolicyRuleInputEffect
 from .conversation import Conversation
 from .conversation_message import ConversationMessage
 from .conversation_message_direction import ConversationMessageDirection
@@ -221,8 +228,10 @@ from .gate_denial_reason import GateDenialReason
 from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
+from .get_agent_contact_policy_response_200 import GetAgentContactPolicyResponse200
 from .get_agent_response_200 import GetAgentResponse200
 from .get_challenge_response_200 import GetChallengeResponse200
+from .get_contact_policy_response_200 import GetContactPolicyResponse200
 from .get_contact_response_200 import GetContactResponse200
 from .get_contact_response_200_data import GetContactResponse200Data
 from .get_conversation_response_200 import GetConversationResponse200
@@ -329,10 +338,16 @@ from .pull_webhook_response_data_retention_seconds import PullWebhookResponseDat
 from .pull_webhook_response_meta import PullWebhookResponseMeta
 from .put_agent_contact_body_type_0 import PutAgentContactBodyType0
 from .put_agent_contact_body_type_1 import PutAgentContactBodyType1
+from .put_agent_contact_policy_create import PutAgentContactPolicyCreate
+from .put_agent_contact_policy_replace import PutAgentContactPolicyReplace
+from .put_agent_contact_policy_response_200 import PutAgentContactPolicyResponse200
 from .put_agent_contact_response_200 import PutAgentContactResponse200
 from .put_agent_contact_response_200_data import PutAgentContactResponse200Data
 from .put_contact_body_type_0 import PutContactBodyType0
 from .put_contact_body_type_1 import PutContactBodyType1
+from .put_contact_policy_create import PutContactPolicyCreate
+from .put_contact_policy_replace import PutContactPolicyReplace
+from .put_contact_policy_response_200 import PutContactPolicyResponse200
 from .put_contact_response_200 import PutContactResponse200
 from .put_contact_response_200_data import PutContactResponse200Data
 from .recipient_route import RecipientRoute
@@ -553,6 +568,8 @@ __all__ = (
     "AgentClaimResult",
     "AgentClaimResultPlan",
     "AgentClaimStartResult",
+    "AgentContactPolicy",
+    "AgentContactPolicyOverride",
     "AgentOrgRef",
     "AgentSignupResendResult",
     "AgentSignupStartResult",
@@ -596,6 +613,11 @@ __all__ = (
     "CompleteWebhookStdoutInput",
     "CompleteWebhookStdoutInputMode",
     "CompleteWebhookStdoutInputTransportError",
+    "ContactPolicy",
+    "ContactPolicyRule",
+    "ContactPolicyRuleEffect",
+    "ContactPolicyRuleInput",
+    "ContactPolicyRuleInputEffect",
     "Conversation",
     "ConversationMessage",
     "ConversationMessageDirection",
@@ -762,8 +784,10 @@ __all__ = (
     "GateFix",
     "GateFixAction",
     "GetAccountResponse200",
+    "GetAgentContactPolicyResponse200",
     "GetAgentResponse200",
     "GetChallengeResponse200",
+    "GetContactPolicyResponse200",
     "GetContactResponse200",
     "GetContactResponse200Data",
     "GetConversationResponse200",
@@ -870,10 +894,16 @@ __all__ = (
     "PullWebhookResponseMeta",
     "PutAgentContactBodyType0",
     "PutAgentContactBodyType1",
+    "PutAgentContactPolicyCreate",
+    "PutAgentContactPolicyReplace",
+    "PutAgentContactPolicyResponse200",
     "PutAgentContactResponse200",
     "PutAgentContactResponse200Data",
     "PutContactBodyType0",
     "PutContactBodyType1",
+    "PutContactPolicyCreate",
+    "PutContactPolicyReplace",
+    "PutContactPolicyResponse200",
     "PutContactResponse200",
     "PutContactResponse200Data",
     "RecipientRoute",

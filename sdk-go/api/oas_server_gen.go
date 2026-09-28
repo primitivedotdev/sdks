@@ -513,6 +513,45 @@ type Handler interface {
 	//
 	// GET /agents/{address}
 	GetAgent(ctx context.Context, params GetAgentParams) (GetAgentRes, error)
+	// GetAgentContactPolicy implements getAgentContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// GET /agent-contact-policy/{agent_address}
+	GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (GetAgentContactPolicyRes, error)
 	// GetChallenge implements getChallenge operation.
 	//
 	// Fetch a challenge you created, to poll its `status` and settlement
@@ -538,6 +577,45 @@ type Handler interface {
 	//
 	// GET /contacts/{address}
 	GetContact(ctx context.Context, params GetContactParams) (GetContactRes, error)
+	// GetContactPolicy implements getContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// GET /contact-policy
+	GetContactPolicy(ctx context.Context) (GetContactPolicyRes, error)
 	// GetConversation implements getConversation operation.
 	//
 	// Returns the full conversation the given inbound email belongs
@@ -1073,6 +1151,45 @@ type Handler interface {
 	//
 	// PUT /agent-contacts/{agent_address}/{contact_address}
 	PutAgentContact(ctx context.Context, req PutAgentContactReq, params PutAgentContactParams) (PutAgentContactRes, error)
+	// PutAgentContactPolicy implements putAgentContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// PUT /agent-contact-policy/{agent_address}
+	PutAgentContactPolicy(ctx context.Context, req PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (PutAgentContactPolicyRes, error)
 	// PutContact implements putContact operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -1091,6 +1208,45 @@ type Handler interface {
 	//
 	// PUT /contacts/{address}
 	PutContact(ctx context.Context, req PutContactReq, params PutContactParams) (PutContactRes, error)
+	// PutContactPolicy implements putContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// PUT /contact-policy
+	PutContactPolicy(ctx context.Context, req PutContactPolicyRequest) (PutContactPolicyRes, error)
 	// RedeemCreditCode implements redeemCreditCode operation.
 	//
 	// Redeem a credit code for the authenticated organization. The credit is
