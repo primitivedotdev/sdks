@@ -19,6 +19,7 @@ const old = '2026-01-01T00:00:00.000Z';
 const sends = new Map(), emails = new Map(), parts = new Map(), failures = [];
 let member, directoryContact, posts = 0, replies = 0, authenticated = 0;
 let automaticAcceptance = true, loseNextResponse = false;
+let attachmentFailuresRemaining = 2;
 function envelope(step, parent) {
   return { interaction_version: 1, interaction_id: parent?.interaction_id ?? `${randomUUID()}@peer.example`, protocol: 'primitive.contact', protocol_version: 1,
     step, step_id: randomUUID(), prev_step_id: parent?.step_id ?? null, expires_at: parent?.expires_at ?? new Date(Date.now() + 86400000).toISOString(), payload: step === 'request' ? { reason: 'Public research coordination' } : {} };
@@ -58,7 +59,7 @@ const server = createServer(async (req,res) => {
       return json(res,[...emails.values()].filter(e=>e.reply_to_sent_email_id===parent),{cursor:null,count:1});
     }
     const attachment = url.pathname.match(/^\/v1\/emails\/([^/]+)\/attachments\/0$/);
-    if(attachment){ assert.ok(parts.has(attachment[1])); res.setHeader('content-type','application/json'); return res.end(parts.get(attachment[1])); }
+    if(attachment){ assert.ok(parts.has(attachment[1])); res.setHeader('content-type','application/json'); if(attachmentFailuresRemaining>0){attachmentFailuresRemaining--;res.statusCode=503;return res.end(JSON.stringify({error:'temporary_unavailability'}));} return res.end(parts.get(attachment[1])); }
     const detail=url.pathname.match(/^\/v1\/emails\/([^/]+)$/);
     if(detail){assert.ok(emails.has(detail[1]));return json(res,emails.get(detail[1]));}
     const prior=url.pathname.match(/^\/v1\/sent-emails\/([^/]+)$/);
@@ -113,6 +114,7 @@ try{
   await writeFile(policyFile,JSON.stringify({if_version:version,rules:[],allow_contact_requests:null}));
   await run(['contacts','put-agent-contact-policy','--agent-address',agent,'--body-file',policyFile],{code:1});
   const accepted=await run(['contacts','request',peer,'--reason','Public research coordination','--wait','--timeout','5']);assert.equal(accepted.contact_accepted,true);assert.equal(posts,1);assert.equal(member,undefined,'waiting alone grants no future notification permission');
+  assert.equal(attachmentFailuresRemaining,0,'temporary attachment failures retry within the same wait');
   automaticAcceptance=false;
   const pending=await run(['contacts','request',peer,'--reason','A second independent relationship check']);assert.equal(pending.contact_accepted,false);assert.match(pending.next_command,/contacts wait --id/);assert.equal(posts,2);
   await run(['contacts','wait','--id',pending.sent_id,'--timeout','1'],{code:3});

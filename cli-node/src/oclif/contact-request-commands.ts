@@ -364,15 +364,6 @@ export async function waitForContact(
           "This contact acceptance was already observed. It is not task completion.",
       },
     };
-  if (Date.parse(saved.contactRequest.expiresAt) <= Date.now())
-    return {
-      exitCode: 3,
-      data: {
-        outcome: "request_expired",
-        sent_id: id,
-        contact_accepted: false,
-      },
-    };
   const wait = await openConnectedReplyWait({
     ...context,
     baseUrl: context.identity.apiBaseUrl,
@@ -381,10 +372,8 @@ export async function waitForContact(
     sentId: id,
     contactRequest: saved.contactRequest,
     pageSize: 50,
-    deadline: Math.min(
-      timeout(timeoutSeconds),
-      Date.parse(saved.contactRequest.expiresAt),
-    ),
+    // Search for timely arrivals even when resuming after request expiry.
+    deadline: timeout(timeoutSeconds),
   });
   try {
     const accepted = await wait.next();

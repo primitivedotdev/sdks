@@ -40,7 +40,7 @@ export type SharedMailRoute =
   | {
       kind: "notification";
       sessionKey: string;
-      state: "selected" | "submitting" | "accepted" | "unknown";
+      state: "selected" | "submitting" | "accepted" | "unknown" | "skipped";
     };
 export type SharedMailEmail = {
   emailId: string;
@@ -169,6 +169,7 @@ function email(value: unknown): SharedMailEmail {
         (r.state !== "selected" &&
           r.state !== "submitting" &&
           r.state !== "accepted" &&
+          r.state !== "skipped" &&
           r.state !== "unknown")
       )
         throw invalidSharedMail();
@@ -726,13 +727,16 @@ export async function openSharedMailStore(options: {
           return {
             status:
               record.route.kind === "notification" &&
-              record.route.sessionKey === session
-                ? record.route.state === "selected"
-                  ? "claimed"
-                  : record.route.state === "accepted"
-                    ? "already_observed"
-                    : "held"
-                : "held",
+              record.route.state === "skipped"
+                ? "already_observed"
+                : record.route.kind === "notification" &&
+                    record.route.sessionKey === session
+                  ? record.route.state === "selected"
+                    ? "claimed"
+                    : record.route.state === "accepted"
+                      ? "already_observed"
+                      : "held"
+                  : "held",
             email: record,
           };
         if (!d || d.authorization === "pending")
@@ -781,6 +785,24 @@ export async function openSharedMailStore(options: {
         };
         commit([{ path: pathFor("emails", emailId), value: next }]);
         return { status: "claimed", email: next };
+      });
+    },
+    skipNotification(emailId: string, sessionKey: string) {
+      return transaction(() => {
+        const record = requiredEmail(emailId),
+          route = record.route;
+        if (
+          route?.kind !== "notification" ||
+          route.sessionKey !== mailString(sessionKey) ||
+          (route.state !== "selected" && route.state !== "skipped")
+        )
+          throw invalidSharedMail();
+        const next: SharedMailEmail = {
+          ...record,
+          route: { ...route, state: "skipped" },
+        };
+        commit([{ path: pathFor("emails", emailId), value: next }]);
+        return next;
       });
     },
     markNotification(

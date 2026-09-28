@@ -28,6 +28,10 @@ sending again:
 primitive contacts wait --id <sent-request-email-id>
 ```
 
+A resumed wait can recover an acceptance received before the request expired,
+even when resumed afterward. The authenticated email's receipt time determines
+timeliness; an acceptance received at or after expiry does not qualify.
+
 If sending returned an uncertain outcome without a sent ID, use its durable
 local request ID instead. This performs a bounded lookup by the saved idempotency
 key, verifies the pinned sender and recipient, and binds the original send:

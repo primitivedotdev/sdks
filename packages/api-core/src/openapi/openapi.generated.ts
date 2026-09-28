@@ -11439,7 +11439,8 @@ export const openapiDocument: Record<string, unknown> = {
           "pattern": {
             "type": "string",
             "maxLength": 254,
-            "description": "Exact mailbox or restricted mailbox glob. See operation description."
+            "pattern": "^\\s*[\\x00-\\x7f]*\\s*$",
+            "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
           },
           "effect": {
             "type": "string",
@@ -11461,7 +11462,8 @@ export const openapiDocument: Record<string, unknown> = {
           "pattern": {
             "type": "string",
             "maxLength": 254,
-            "description": "Exact mailbox or restricted mailbox glob. See operation description."
+            "pattern": "^\\s*[\\x00-\\x7f]*\\s*$",
+            "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
           },
           "effect": {
             "type": "string",

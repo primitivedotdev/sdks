@@ -183,6 +183,9 @@ function setup(
     auth: { apiKey, apiBaseUrl: baseUrl, connectedAgent: identity },
     apiClient,
   });
+  const changed = vi.fn(async () => {
+    detail.parsed.status = "complete";
+  });
   let opened: SharedMailStore | undefined;
   receive.mockReset().mockImplementation(async () => {
     opened = await openSharedMailStore({
@@ -202,9 +205,7 @@ function setup(
     return {
       store: opened,
       ready: vi.fn(async () => ({ ready: true })),
-      changed: vi.fn(async () => {
-        detail.parsed.status = "complete";
-      }),
+      changed,
       close: closeReceiver,
     };
   });
@@ -219,6 +220,9 @@ function setup(
   };
   return {
     options,
+    changed,
+    notices: () => openContactRequestNotices(configDir, identity),
+    receipt: () => receipt,
     order,
     detail,
     endpointNames,
@@ -492,6 +496,71 @@ describe("first-contact intake", () => {
     expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
       state: "accepted",
     });
+  });
+  it.each([
+    "duplicate",
+    "capacity",
+    "expired",
+  ])("durably settles a %s request without a native receipt or retry after restart", async (reason) => {
+    const f = setup();
+    f.requests();
+    if (reason !== "expired") {
+      for (let index = 0; index < (reason === "capacity" ? 32 : 1); index++) {
+        expect(
+          f.notices().reserve(
+            reason === "duplicate"
+              ? f.detail.from_email
+              : `peer${index}@example.com`,
+            f.options.notifySession.threadId,
+            {
+              emailId: randomUUID(),
+              eventId: randomUUID(),
+              clientId: randomUUID(),
+              state: "submitting",
+            },
+            [],
+          ),
+        ).toBe("reserved");
+      }
+    } else {
+      const original = f.handleDetail.getMockImplementation();
+      if (!original) throw new Error("Missing notification fixture");
+      f.handleDetail.mockImplementationOnce(async (...args) => {
+        const now = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 601_000);
+        try {
+          return await original(...args);
+        } finally {
+          now.mockRestore();
+        }
+      });
+    }
+    expect(await runListen(requestOptions(f))).toBe(1);
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      state: "skipped",
+    });
+    expect(f.receipt()).toBeNull();
+    for (const threadId of [f.options.notifySession.threadId, randomUUID()]) {
+      const controller = new AbortController();
+      f.changed.mockImplementationOnce(async () => {
+        controller.abort();
+      });
+      const options = requestOptions(f);
+      expect(
+        await runListen({
+          ...options,
+          signal: controller.signal,
+          notifySession: { ...options.notifySession, threadId },
+        }),
+      ).toBe(0);
+      expect(
+        (
+          await f
+            .store()
+            ?.claimForNotification(f.detail.id, `codex:${threadId}`)
+        )?.status,
+      ).toBe("already_observed");
+    }
+    expect(f.handleDetail).toHaveBeenCalledOnce();
   });
   it("never interprets an explicit disabled membership as an unknown request sender", async () => {
     const f = setup();

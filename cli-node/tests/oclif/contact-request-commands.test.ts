@@ -21,6 +21,7 @@ import {
   acceptContact,
   recoverContactRequest,
   requestContact,
+  waitForContact,
 } from "../../src/oclif/contact-request-commands.js";
 
 const directories: string[] = [];
@@ -416,6 +417,40 @@ it("recovers a lost send response using only its durable exact idempotency looku
     data: { outcome: "contact_accepted", sent_id: f.sentId },
   });
   expect((await store.readWait(requestId))?.sentEmailId).toBe(f.sentId);
+  expect(f.writes).toEqual([]);
+});
+
+it("resumes an expired request to recover an acceptance without resending", async () => {
+  const f = fixture();
+  const createdAt = Date.now() - 3600_000;
+  const reference = contactReference(
+    prepareContactRequest(f.recipient, "Public coordination", 600, createdAt),
+  );
+  const store = await openSharedMailStore({
+    configDir: f.context.configDir,
+    scope: sharedMailScope(f.context.apiKey, f.context.identity.apiBaseUrl),
+    recipient: f.recipient,
+  });
+  const requestId = randomUUID();
+  await store.registerWait({
+    requestId,
+    peer: f.peer,
+    idempotencyKey: `contact-${randomUUID()}`,
+    createdAt: new Date(createdAt).toISOString(),
+    contactRequest: reference,
+  });
+  await store.bindWait(requestId, f.sentId);
+  f.wait.next.mockResolvedValue({ id: f.emailId });
+  expect(await waitForContact(f.context, f.sentId, 5)).toMatchObject({
+    data: { outcome: "contact_accepted", acceptance_email_id: f.emailId },
+  });
+  expect(hooks.open.mock.calls[0][0]).toMatchObject({
+    sentId: f.sentId,
+    contactRequest: reference,
+  });
+  expect(hooks.open.mock.calls[0][0].deadline).toBeGreaterThan(Date.now());
+  expect(f.wait.observed).toHaveBeenCalledWith(f.emailId);
+  expect(f.wait.finish).toHaveBeenCalledOnce();
   expect(f.writes).toEqual([]);
 });
 

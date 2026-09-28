@@ -27,7 +27,8 @@ T = TypeVar("T", bound="ContactPolicyRule")
 class ContactPolicyRule:
     """ 
         Attributes:
-            pattern (str): Exact mailbox or restricted mailbox glob. See operation description.
+            pattern (str): Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or
+                restricted mailbox glob. See operation description.
             effect (ContactPolicyRuleEffect):
             notify_since (datetime.datetime | None):
             notification_generation (None | UUID):

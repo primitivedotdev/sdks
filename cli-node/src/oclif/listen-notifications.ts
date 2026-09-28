@@ -155,6 +155,7 @@ export async function runSharedNotificationListen(
     async function processMail(row: SharedMailEmail): Promise<boolean> {
       if (row.route?.kind === "wait") return true;
       if (row.route?.kind === "notification") {
+        if (row.route.state === "skipped") return true;
         if (row.route.sessionKey !== sessionKey) return true;
         if (native.receipt(row.emailId, row.eventId)) {
           await reconcile(row);
@@ -243,45 +244,50 @@ export async function runSharedNotificationListen(
       if (claim.status === "held") return false;
       if (claim.status === "already_observed") return true;
       try {
-        if (contactPolicy && admission)
-          await native.handleDetail(detail, row.eventId, signal, {
-            sender: admission.sender,
-            contactRequest: admission.kind === "request",
-            recheck: async (nextSignal) => {
-              const allowed = await contactPolicy.recheck(
-                admission,
-                nextSignal,
-              );
-              return () => {
-                allowed();
-              };
-            },
-            ...(admission.kind === "request" && requestNotices
-              ? {
-                  reserve: (receipt) => {
-                    if (
-                      requestExpiry === undefined ||
-                      Date.now() >= requestExpiry
-                    )
-                      return false;
-                    const result = requestNotices.reserve(
-                      admission.sender,
-                      notify.threadId,
-                      receipt,
-                      contactPolicy.members(),
-                    );
-                    if (result === "full" && !budgetWarned) {
-                      budgetWarned = true;
-                      (options.stderr ?? process.stderr).write(
-                        "First-contact notice capacity reached. Known contacts continue; review existing requests before admitting more.\n",
-                      );
+        const outcome =
+          contactPolicy && admission
+            ? await native.handleDetail(detail, row.eventId, signal, {
+                sender: admission.sender,
+                contactRequest: admission.kind === "request",
+                recheck: async (nextSignal) => {
+                  const allowed = await contactPolicy.recheck(
+                    admission,
+                    nextSignal,
+                  );
+                  return () => {
+                    allowed();
+                  };
+                },
+                ...(admission.kind === "request" && requestNotices
+                  ? {
+                      reserve: (receipt) => {
+                        if (
+                          requestExpiry === undefined ||
+                          Date.now() >= requestExpiry
+                        )
+                          return false;
+                        const result = requestNotices.reserve(
+                          admission.sender,
+                          notify.threadId,
+                          receipt,
+                          contactPolicy.members(),
+                        );
+                        if (result === "full" && !budgetWarned) {
+                          budgetWarned = true;
+                          (options.stderr ?? process.stderr).write(
+                            "First-contact notice capacity reached. Known contacts continue; review existing requests before admitting more.\n",
+                          );
+                        }
+                        return result === "reserved";
+                      },
                     }
-                    return result === "reserved";
-                  },
-                }
-              : {}),
-          });
-        else await native.handleDetail(detail, row.eventId, signal);
+                  : {}),
+              })
+            : await native.handleDetail(detail, row.eventId, signal);
+        // Suppression is a terminal non-dispatch decision, not an unknown send.
+        // Persist it separately from native receipts so restarts cannot reclaim it.
+        if (outcome.disposition === "skipped")
+          await store.skipNotification(row.emailId, sessionKey);
       } finally {
         // Only the native write-before-dispatch journal establishes submission.
         // Socket/thread preflight errors leave the shared reservation selected.
@@ -307,7 +313,8 @@ export async function runSharedNotificationListen(
             const historical =
               row.route?.kind === "wait" ||
               (row.route?.kind === "notification" &&
-                row.route.state === "accepted") ||
+                (row.route.state === "accepted" ||
+                  row.route.state === "skipped")) ||
               native.receipt(row.emailId, row.eventId)?.state === "accepted";
             if (await processMail(row)) {
               settled.add(row.emailId);

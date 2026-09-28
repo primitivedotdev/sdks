@@ -23,7 +23,8 @@ T = TypeVar("T", bound="ContactPolicyRuleInput")
 class ContactPolicyRuleInput:
     """ 
         Attributes:
-            pattern (str): Exact mailbox or restricted mailbox glob. See operation description.
+            pattern (str): Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or
+                restricted mailbox glob. See operation description.
             effect (ContactPolicyRuleInputEffect):
      """
 

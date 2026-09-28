@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,6 +9,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   contactReference,
+  prepareContactAcceptance,
   prepareContactRequest,
 } from "../../src/oclif/contact-interactions.js";
 import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
@@ -86,6 +87,8 @@ function fixture() {
   let searches = 0;
   const state = {
     detail,
+    partBytes: new Uint8Array(),
+    partFailure: null as "http" | "stream" | null,
     pages: [] as unknown[],
     page: { data: [{ id: detail.id }], meta: { cursor: null } } as unknown,
   };
@@ -101,6 +104,19 @@ function fixture() {
       }
       if (url.pathname === `/v1/emails/${detail.id}`)
         return Response.json({ data: state.detail });
+      if (url.pathname === `/v1/emails/${detail.id}/attachments/0`) {
+        if (state.partFailure === "http")
+          return Response.json({ error: "unavailable" }, { status: 503 });
+        if (state.partFailure === "stream")
+          return new Response(
+            new ReadableStream({
+              start(controller) {
+                controller.error(new Error("Temporary stream interruption"));
+              },
+            }),
+          );
+        return new Response(state.partBytes);
+      }
       throw new Error(`Unexpected request ${url.pathname}`);
     },
   });
@@ -192,6 +208,58 @@ describe("connected pushed reply waits", () => {
     });
     expect((await waiter.next())?.id).toBe(f.state.detail.id);
     expect(f.searches()).toBe(1);
+    await waiter.close();
+  });
+  it.each([
+    "http",
+    "stream",
+  ] as const)("retries a temporary %s contact download on the same wait and exact ID", async (failure) => {
+    const f = fixture();
+    const receivedAt = Date.now() - 3600_000;
+    const request = prepareContactRequest(
+      target.from,
+      "Public coordination",
+      600,
+      receivedAt,
+    );
+    const bytes = Buffer.from(
+      JSON.stringify(prepareContactAcceptance(request)),
+    );
+    f.state.partBytes = bytes;
+    f.state.partFailure = failure;
+    f.state.detail.received_at = new Date(receivedAt + 1000).toISOString();
+    f.state.detail.parsed = {
+      status: "complete",
+      attachments: [
+        {
+          filename: "interaction.json",
+          content_type: "application/json",
+          part_index: 0,
+          size_bytes: bytes.length,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        },
+      ],
+    };
+    const waiter = await openConnectedReplyWait({
+      ...f.options,
+      contactRequest: contactReference(request),
+      deadline: Date.now() + 5000,
+    });
+    hooks.changed.mockImplementation(async () => {
+      expect(
+        await waiter.receiver.store.readEmail(f.state.detail.id),
+      ).toBeNull();
+      f.state.partFailure = null;
+    });
+    expect((await waiter.next())?.id).toBe(f.state.detail.id);
+    expect(hooks.changed).toHaveBeenCalledOnce();
+    expect(f.searches()).toBe(1);
+    expect(
+      f.requests.filter((path) => path.endsWith("/attachments/0")).length,
+    ).toBeGreaterThan(1);
+    expect(
+      (await waiter.receiver.store.readEmail(f.state.detail.id))?.route,
+    ).toMatchObject({ kind: "wait", requestId: waiter.requestId });
     await waiter.close();
   });
   it("starts a new active claim when the prior wait for that parent completed", async () => {

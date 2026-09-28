@@ -3549,7 +3549,8 @@ func (s *ContactPolicy) SetAllowContactRequests(val bool) {
 
 // Ref: #/components/schemas/ContactPolicyRule
 type ContactPolicyRule struct {
-	// Exact mailbox or restricted mailbox glob. See operation description.
+	// Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or
+	// restricted mailbox glob. See operation description.
 	Pattern                string                  `json:"pattern"`
 	Effect                 ContactPolicyRuleEffect `json:"effect"`
 	NotifySince            NilDateTime             `json:"notify_since"`
@@ -3639,7 +3640,8 @@ func (s *ContactPolicyRuleEffect) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/ContactPolicyRuleInput
 type ContactPolicyRuleInput struct {
-	// Exact mailbox or restricted mailbox glob. See operation description.
+	// Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or
+	// restricted mailbox glob. See operation description.
 	Pattern string                       `json:"pattern"`
 	Effect  ContactPolicyRuleInputEffect `json:"effect"`
 }

@@ -6,7 +6,7 @@ export type ClientOptions = {
 
 export type ContactPolicyRuleInput = {
     /**
-     * Exact mailbox or restricted mailbox glob. See operation description.
+     * Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description.
      */
     pattern: string;
     effect: 'allow' | 'silence';
@@ -14,7 +14,7 @@ export type ContactPolicyRuleInput = {
 
 export type ContactPolicyRule = {
     /**
-     * Exact mailbox or restricted mailbox glob. See operation description.
+     * Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description.
      */
     pattern: string;
     effect: 'allow' | 'silence';

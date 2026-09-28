@@ -9,7 +9,7 @@ import {
 } from "../../src/oclif/contact-interactions.js";
 import { inspectTargetedReply } from "../../src/oclif/targeted-replies.js";
 
-function fixture() {
+function fixture(now = Date.now()) {
   const from = "local@example.com",
     recipient = "peer@example.net",
     sentId = randomUUID(),
@@ -18,6 +18,7 @@ function fixture() {
     from,
     "Public research collaboration",
     600,
+    now,
   );
   const acceptance = prepareContactAcceptance(request);
   const bytes = Buffer.from(JSON.stringify(acceptance));
@@ -34,7 +35,7 @@ function fixture() {
     from_email: recipient,
     from_header: recipient,
     status: "completed",
-    received_at: new Date().toISOString(),
+    received_at: new Date(now + 1000).toISOString(),
     body_text: "Accepted",
     parsed: {
       status: "complete",
@@ -117,5 +118,23 @@ describe("typed exact contact acceptance waits", () => {
     expect(
       await inspectTargetedReply({ ...f.params, contactRequest: f.reference }),
     ).toMatchObject({ kind: "inspection" });
+  });
+  it("recovers a timely acceptance after expiry but rejects arrivals at or after expiry", async () => {
+    const f = fixture(Date.now() - 3600_000);
+    expect(Date.parse(f.reference.expiresAt)).toBeLessThan(Date.now());
+    expect(
+      await inspectTargetedReply({ ...f.params, contactRequest: f.reference }),
+    ).toMatchObject({ kind: "reply", email: { id: f.params.id } });
+    for (const delay of [0, 1]) {
+      f.detail.received_at = new Date(
+        Date.parse(f.reference.expiresAt) + delay,
+      ).toISOString();
+      expect(
+        await inspectTargetedReply({
+          ...f.params,
+          contactRequest: f.reference,
+        }),
+      ).toMatchObject({ kind: "inspection" });
+    }
   });
 });

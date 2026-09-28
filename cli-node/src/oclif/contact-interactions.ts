@@ -147,7 +147,14 @@ export async function readContactInteraction(
     !/^[a-f0-9]{64}$/i.test(part.sha256)
   )
     return null;
-  const bytes = await readPart(detail.id, part.part_index, signal);
+  let bytes: Uint8Array;
+  try {
+    bytes = await readPart(detail.id, part.part_index, signal);
+  } catch {
+    throw new NotificationRetryError(
+      "Contact interaction content is unavailable; retry this exact email.",
+    );
+  }
   if (
     bytes.byteLength !== part.size_bytes ||
     createHash("sha256").update(bytes).digest("hex") !==
