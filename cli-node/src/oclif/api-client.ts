@@ -18,6 +18,7 @@ import {
   validateCliHeaderName,
   validateCliHeaderValue,
 } from "./cli-config.js";
+import { AGENT_PROFILE_ENV } from "./connected-agent-profile.js";
 
 const API_HEADERS_ENV = "PRIMITIVE_API_HEADERS";
 const OAUTH_REFRESH_SKEW_MS = 60 * 1000;
@@ -99,6 +100,17 @@ export function resolveCliApiRequestConfig(params: {
   apiBaseUrl?: string;
   env?: Env;
 }): ResolvedCliApiRequestConfig {
+  if ((params.env ?? process.env)[AGENT_PROFILE_ENV]?.trim()) {
+    // A selected profile supplies its own trusted origin. Ambient environments
+    // and headers belong to the default login, including malformed settings.
+    const auth = resolveCliAuth(params);
+    return {
+      apiBaseUrl: auth.apiBaseUrl,
+      resolvedApiBaseUrl: auth.apiBaseUrl,
+      baseUrlOverridden: params.apiBaseUrl !== undefined,
+      environmentName: null,
+    };
+  }
   const cliConfig = loadCliConfig(params.configDir);
   const currentEnvironment = resolveConfigEnvironment(cliConfig);
   const configuredApiBaseUrl = currentEnvironment?.config.api_base_url;
@@ -316,6 +328,7 @@ export async function createAuthenticatedCliApiClient(params: {
     apiKey: params.apiKey,
     apiBaseUrl: requestConfig.apiBaseUrl,
     configDir: params.configDir,
+    env: params.env,
   });
   // PRIMITIVE_KEY rename trap: if the user set PRIMITIVE_KEY (an older
   // / common mistake) but no PRIMITIVE_API_KEY, the resolver returns no
@@ -348,7 +361,9 @@ export async function createAuthenticatedCliApiClient(params: {
     apiClient: new PrimitiveApiClient({
       apiKey: auth.apiKey,
       apiBaseUrl: auth.apiBaseUrl,
-      headers: requestConfig.headers,
+      // A connected profile is bound to its trusted claim origin; ambient
+      // request-header configuration is not part of that private profile.
+      headers: auth.connectedAgent ? undefined : requestConfig.headers,
     }),
     auth,
     baseUrlOverridden: requestConfig.baseUrlOverridden,

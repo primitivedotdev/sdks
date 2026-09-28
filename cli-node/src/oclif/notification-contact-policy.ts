@@ -1,0 +1,195 @@
+import {
+  type AgentContactPolicy,
+  evaluateContactPolicy,
+  type NotificationMembership,
+  parseAgentContactPolicy,
+} from "./contact-policy.js";
+import { ListenStateError } from "./listen-state.js";
+import { NotificationRetryError } from "./notify-session-content.js";
+import { mailAddress, mailId, mailTime } from "./shared-mail-files.js";
+
+export const CONTACT_POLICY_MAX_AGE_MS = 30_000;
+export type ContactPolicyPage = { data: unknown; cursor: unknown };
+export type ContactNotificationAdmission = {
+  sender: string;
+  receivedAt: string;
+  generation: string;
+  notifySince: string;
+  kind: "allowed" | "request";
+  effectiveVersion: string;
+};
+type Snapshot = {
+  startedAt: number;
+  senders: Map<string, NotificationMembership>;
+  policy: AgentContactPolicy;
+};
+
+const unavailable = () =>
+  new ListenStateError(
+    "Contact notification preferences are unavailable or invalid. No contact notification was submitted; restart after access is restored.",
+  );
+const changed = () =>
+  new NotificationRetryError(
+    "Contact notification permission changed or expired before dispatch.",
+  );
+
+/** Read one connected address's policy. Partial pages never authorize delivery. */
+export function createNotificationContactPolicy(options: {
+  recipient: string;
+  readPage(
+    cursor: string | undefined,
+    signal: AbortSignal,
+  ): Promise<ContactPolicyPage>;
+  readPolicy(signal: AbortSignal): Promise<unknown>;
+  contactRequests?: boolean;
+  now?: () => number;
+}) {
+  const recipient = mailAddress(options.recipient);
+  const now = options.now ?? (() => performance.now());
+  let snapshot: Snapshot | undefined;
+
+  function fresh(value: Snapshot | undefined): value is Snapshot {
+    if (!value) return false;
+    const elapsed = now() - value.startedAt;
+    return elapsed >= 0 && elapsed < CONTACT_POLICY_MAX_AGE_MS;
+  }
+  async function refresh(signal: AbortSignal): Promise<Snapshot> {
+    // Invalidate first: neither a failed page nor an overlapping dispatch can
+    // fall back to an older policy while a refresh is unresolved.
+    snapshot = undefined;
+    const startedAt = now();
+    const peers = new Set<string>();
+    let cursor: string | undefined;
+    try {
+      const next: Snapshot = {
+        startedAt,
+        senders: new Map(),
+        policy: parseAgentContactPolicy(
+          await options.readPolicy(signal),
+          recipient,
+        ),
+      };
+      do {
+        signal.throwIfAborted();
+        const page = await options.readPage(cursor, signal);
+        signal.throwIfAborted();
+        if (!fresh(next) || !Array.isArray(page.data) || page.data.length > 100)
+          throw unavailable();
+        let previous = cursor;
+        for (const value of page.data) {
+          if (!value || typeof value !== "object" || Array.isArray(value))
+            throw unavailable();
+          const row = value as Record<string, unknown>;
+          const peer = mailAddress(row.contact_address);
+          if (
+            row.agent_address !== recipient ||
+            row.contact_address !== peer ||
+            (previous !== undefined && peer <= previous) ||
+            peers.has(peer) ||
+            typeof row.notify !== "boolean"
+          )
+            throw unavailable();
+          mailId(row.version);
+          peers.add(peer);
+          previous = peer;
+          if (row.notify) {
+            next.senders.set(peer, {
+              notify: true,
+              generation: mailId(row.notification_generation),
+              notifySince: mailTime(row.notify_since),
+            });
+          } else if (
+            row.notification_generation !== null ||
+            row.notify_since !== null
+          )
+            throw unavailable();
+          else next.senders.set(peer, { notify: false });
+        }
+        if (page.cursor === null) cursor = undefined;
+        else {
+          const following = mailAddress(page.cursor);
+          if (!page.data.length || following !== previous) throw unavailable();
+          cursor = following;
+        }
+      } while (cursor !== undefined);
+      if (!fresh(next)) throw unavailable();
+      snapshot = next;
+      return next;
+    } catch {
+      snapshot = undefined;
+      signal.throwIfAborted();
+      throw unavailable();
+    }
+  }
+  function admission(
+    value: Snapshot,
+    sender: string,
+    receivedAt: string,
+  ): ContactNotificationAdmission | null {
+    const decision = evaluateContactPolicy({
+      policy: value.policy,
+      sender,
+      receivedAt,
+      membership: value.senders.get(sender),
+      contactRequests: options.contactRequests === true,
+    });
+    if (decision.kind === "silent") return null;
+    return {
+      sender,
+      receivedAt,
+      generation: decision.generation,
+      notifySince: decision.notifySince,
+      kind: decision.kind,
+      effectiveVersion: value.policy.effective_version,
+    };
+  }
+  function permits(value: Snapshot, prior: ContactNotificationAdmission) {
+    const current = admission(value, prior.sender, prior.receivedAt);
+    return (
+      current !== null &&
+      current.kind === prior.kind &&
+      current.generation === prior.generation &&
+      current.notifySince === prior.notifySince &&
+      current.effectiveVersion === prior.effectiveVersion
+    );
+  }
+  return {
+    refresh,
+    members() {
+      if (!fresh(snapshot)) throw unavailable();
+      return snapshot.senders.keys();
+    },
+    async admit(sender: string, receivedAt: string, signal: AbortSignal) {
+      signal.throwIfAborted();
+      let peer: string;
+      try {
+        peer = mailAddress(sender);
+      } catch {
+        return null;
+      }
+      const received = mailTime(receivedAt);
+      const cached = fresh(snapshot);
+      let current = cached && snapshot ? snapshot : await refresh(signal);
+      let allowed = admission(current, peer, received);
+      if (cached && !allowed) {
+        // Cached denials cannot permanently discard newly authorized mail.
+        current = await refresh(signal);
+        allowed = admission(current, peer, received);
+      }
+      return allowed;
+    },
+    async recheck(
+      admission: ContactNotificationAdmission,
+      signal: AbortSignal,
+    ) {
+      const current = await refresh(signal);
+      if (!permits(current, admission)) throw changed();
+      // The native adapter invokes this synchronously before its durable
+      // submitting receipt, after socket/session preflight has completed.
+      return () => {
+        signal.throwIfAborted();
+        if (!fresh(snapshot) || !permits(snapshot, admission)) throw changed();
+      };
+    },
+  };
+}

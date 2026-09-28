@@ -142,6 +142,8 @@ function successful(result, current, message) {
   assert.deepEqual(fixtureErrors, []);
   assert.equal(result.code, 0, `${result.stdout}\n${result.stderr}`);
   const data = JSON.parse(result.stdout);
+  assert.ok(["replied", "already_sent"].includes(data.outcome), `Unexpected outcome ${data.outcome}`);
+  assert.equal(data.exit_code, 0);
   const post = current.posts.find((entry) => entry.input.body_text === message);
   assert.ok(post, "Missing matching send");
   assert.equal(data.sent.id, post.sent.id);
@@ -203,7 +205,11 @@ try {
   rejected.rejectNext = true;
   const rejectedArgs = ["zeta@example.test", "Retry the rejected request"];
   const rejectedResult = await fresh(...rejectedArgs).result;
-  assert.notEqual(rejectedResult.code, 0);
+  assert.equal(rejectedResult.code, 1, "A definitive rejection must exit 1 (not_sent)");
+  const rejectedEnvelope = JSON.parse(rejectedResult.stdout);
+  assert.equal(rejectedEnvelope.outcome, "not_sent");
+  assert.equal(rejectedEnvelope.http_status, 401);
+  assert.equal(rejectedEnvelope.sent, null);
   assert.equal(rejected.posts.length, 0, "Authentication rejection must not send");
   successful(await fresh(...rejectedArgs).result, rejected, rejectedArgs[1]);
   assert.equal(rejected.posts.length, 1, "An explicit rejection must permit a corrected retry");
@@ -211,8 +217,17 @@ try {
   const timedOut = beginPhase(1, false, false);
   const timeoutArgs = ["gamma@example.test", "Resume after timeout"];
   const timeoutResult = await fresh(...timeoutArgs).result;
-  assert.notEqual(timeoutResult.code, 0, "A missing reply must time out");
+  assert.equal(timeoutResult.code, 3, "A sent message whose reply timed out must exit 3 (sent_awaiting_reply)");
   assert.equal(timedOut.posts.length, 1);
+  const timeoutEnvelope = JSON.parse(timeoutResult.stdout);
+  assert.equal(timeoutEnvelope.outcome, "sent_awaiting_reply");
+  assert.equal(timeoutEnvelope.exit_code, 3);
+  assert.equal(timeoutEnvelope.reply, null);
+  assert.equal(timeoutEnvelope.sent.id, timedOut.posts[0].sent.id);
+  assert.match(timeoutEnvelope.outcome_message, /^Message sent \(id [^)]+\)\. No reply yet after 3s\. Do NOT resend; wait with: primitive emails wait /);
+  for (const command of timeoutEnvelope.follow_up_commands) {
+    assert.ok(!["chat", "send", "reply"].includes(command.argv[1]), `Timeout follow-ups must never resend: ${command.command}`);
+  }
   await waitForAcknowledgedReceipt(timedOut.posts[0].sent.id);
   timedOut.repliesReady = true;
   successful(await fresh(...timeoutArgs).result, timedOut, timeoutArgs[1]);
@@ -221,7 +236,13 @@ try {
   const replayed = beginPhase(1, false, false);
   replayed.replayed = true;
   const replayArgs = ["replay@example.test", "Recover existing replay"];
-  assert.notEqual((await fresh(...replayArgs).result).code, 0);
+  const replayResult = await fresh(...replayArgs).result;
+  assert.equal(replayResult.code, 0, "An idempotent replay must exit 0 (already_sent)");
+  const replayEnvelope = JSON.parse(replayResult.stdout);
+  assert.equal(replayEnvelope.outcome, "already_sent");
+  assert.equal(replayEnvelope.reply, null);
+  assert.match(replayResult.stderr, /Already sent: this exact message went out earlier \(sent id [^,]+, status delivered\)\. Nothing new was sent\./);
+  assert.doesNotMatch(`${replayResult.stdout}\n${replayResult.stderr}`, /vary|fresh send|fresh copy/i);
   await waitForAcknowledgedReceipt(replayed.posts[0].sent.id);
   replayed.repliesReady = true;
   successful(await fresh(...replayArgs).result, replayed, replayArgs[1]);
@@ -242,7 +263,8 @@ try {
   const pendingReply = beginPhase(1, false, false);
   const pendingMessage = "Pending local follow-up";
   const pendingResult = await reply(first.local_chat_id, pendingMessage).result;
-  assert.notEqual(pendingResult.code, 0);
+  assert.equal(pendingResult.code, 3);
+  assert.equal(JSON.parse(pendingResult.stdout).outcome, "sent_awaiting_reply");
   assert.equal(pendingReply.posts.length, 1);
   await waitForAcknowledgedReceipt(pendingReply.posts[0].sent.id);
   const replacement = await reply(first.local_chat_id, "Different body must not send").result;
@@ -261,7 +283,8 @@ try {
   assert.notEqual((await uncertainChild.result).code, 0);
   unknown.release();
   const uncertainRetry = await fresh(...unknownArgs).result;
-  assert.notEqual(uncertainRetry.code, 0);
+  assert.equal(uncertainRetry.code, 4, "An unknown earlier outcome must exit 4 (uncertain)");
+  assert.equal(JSON.parse(uncertainRetry.stdout).outcome, "uncertain");
   assert.match(`${uncertainRetry.stdout}\n${uncertainRetry.stderr}`, /uncertain|unknown|acknowledg|reconcil/i);
   assert.equal(unknown.posts.length, 1, "Unknown send outcomes must never trigger a blind POST retry");
 

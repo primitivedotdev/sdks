@@ -135,6 +135,33 @@ primitive inbox next
 
 Run `primitive --help` for the full command list. Per-command help (`primitive functions deploy --help`) carries enough detail that an agent can compose any operation without leaving the terminal.
 
+## Waiting with connected credentials
+
+After sending, wait for the existing send's reply without sending again:
+
+```bash
+primitive emails wait --reply-to-sent-email-id <sent-id> --from peer@example.com
+```
+
+The CLI reads that sent record to derive your receiving address. Optional `--to`
+must match it. The peer stays explicit because sent records do not expose a
+complete recipient inventory. Connected waits include existing replies by
+default, so fast replies are not missed; use `--since <timestamp>` to narrow the
+window. They require an authenticated peer and the exact outbound parent.
+Interaction attachments remain pending with inspection guidance. JSONL includes
+matching email details, or use `--table` for compact output and `--number N` for
+multiple replies. Timeout exits 1; repeat the same wait to recover without
+resending. Connected waits share one local address event receiver and recover
+through exact-parent search, without scanning inbox history. Additional content
+filters on this command require organization credentials.
+
+Connected `primitive chat <peer> <message> --from <own-address>` registers its
+reply wait and authenticates the receiver before sending. It records an explicit
+idempotency key before the request. If the send response is lost, repeating the
+same command looks up that key without sending again. A timeout retains the exact
+parent claim for resume. A plain reply is an email response, not proof that a task
+is complete.
+
 ## Authentication
 
 Use `primitive signin` or `primitive login` for existing accounts. With no email, both use browser approval; `primitive signin browser` and `primitive login browser` are the explicit browser forms.
@@ -236,6 +263,35 @@ primitive deliveries replay --id <delivery-id>
 ```
 
 Generated API commands remain available for compatibility and full schema parity, for example `primitive emails:list-emails` and `primitive sending:reply-to-email`.
+
+## Send outcomes and exit codes
+
+`primitive chat`, `primitive chat reply`, `primitive send` and `primitive reply`
+report the same outcomes. Exit codes tell you whether a message left and whether
+sending again is safe. With `--json`, stdout is an envelope for every outcome
+(failures included) whose `outcome` field carries the name.
+
+| Outcome | Exit | Meaning |
+|---|---|---|
+| `replied` | 0 | Chat only: the message was sent and a reply arrived. |
+| `sent` | 0 | Accepted for delivery. `status: "queued"` is a success, not a pending failure. |
+| `already_sent` | 0 | The server recognised an identical earlier send, or refused with HTTP 410 `sent_email_deleted` because that earlier send was deleted. Nothing new went out. Do not resend. |
+| `not_sent` | 1 | The API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429), the command failed before sending, or the send record has status `agent_failed`, `gate_denied` or `canceled`. Nothing went out. |
+| (usage error) | 2 | Invalid flags or arguments. Nothing went out. |
+| `sent_awaiting_reply` | 3 | Chat only: the message was sent but no reply arrived before `--timeout`. Wait with the printed command; do not resend. |
+| `uncertain` | 4 | Transport error, conflict, server error, or a send record with status `unknown`. The message may or may not have gone out; check `primitive sent list` before retrying. |
+
+A chat that times out prints `Message sent (id X). No reply yet after Ns. Do NOT
+resend; wait with: <command>`, and its `--json` envelope has `"reply": null`, the
+`sent` record, and `follow_up_commands` that only wait on or inspect that send.
+
+Without `--json`, `send` and `reply` keep printing the send record on stdout exactly
+as before and add a one-line stderr summary such as `Reply sent (queued for
+delivery, id X). Do not resend.` Before sending, `primitive reply` (and
+`primitive chat --reply`) warns on stderr when the inbound email already has a reply
+that went out. The warning never blocks the send; if the lookup fails, the reply is
+still sent and stderr says the check was skipped. `--json` includes the replies as
+`prior_replies`.
 
 ## Remove mailbox history
 
@@ -404,6 +460,89 @@ timeout; Ctrl-C exits 130. Bare `primitive listen` prints one raw JSON event per
 line. Use `--transport poll` explicitly for HTTP polling. Accept or enqueue each
 event within 30 seconds. Closing preserves pending work, and retries can deliver
 an event more than once.
+
+### Native session email notifications
+
+With a connected-agent credential already configured, notify one exact loaded
+Codex session of authenticated mail from explicitly approved senders:
+
+```bash
+primitive listen --notify-session <session-uuid> --sender person@example.com
+primitive listen --notify-session <session-uuid> --sender first@example.com,second@example.com
+primitive listen --status --notify-session <session-uuid>
+primitive listen --status --notify-session <session-uuid> --limit 100 --cursor <nextCursor>
+```
+
+This first notification path uses the native local-session Unix socket in
+Codex 0.156.1. Live runtime behavior was verified on macOS; Linux uses the same
+Unix transport but has not been verified against a live runtime. The session must already be open in a terminal with
+native daemon support enabled. If its socket is unavailable, this is an
+unsupported runtime setup: the CLI reports the gap and exits before creating a
+subscription. It does not launch a daemon, start/resume a conversation, install a
+connector, or change model, approval, or sandbox settings. Windows and other
+harnesses are not supported by this path. `CODEX_HOME` selects the native runtime
+home when it differs from `~/.codex`.
+
+Notification mode registers an `email.received`-only subscription and refuses
+mixed existing filters before leasing events. Native notification mode requires
+WebSocket and the shared saved subscription; `--transport poll` and a custom
+`--subscription` are rejected. Generic stdout, exec, and forwarding listeners
+retain their separate transport and subscription options. The `local-mail-*`
+subscription namespace is reserved for shared receiving. An unexpected non-email
+event remains uncompleted. In notification mode, `--once` means one candidate
+processed during this invocation, including a policy or routine-status skip.
+Waiter-owned replies and existing accepted notification receipts do not count.
+It does not promise one session notification.
+
+The foreground listener receives only the connected credential's assigned
+address. `--sender` requires exact addresses with authenticated From-domain
+evidence. Domain authentication does not independently prove a person's identity.
+Notifications contain email/event IDs, the approved sender, and an inspection
+command. Email bodies, subjects, attachments, and terminal transcripts are not
+injected into the session. Verified routine ack/read/working/typing interactions
+are suppressed; mixed content and unsupported protocols remain external mail
+notifications. Inbound IDs are saved before the server delivery is acknowledged.
+When parsing or authentication is pending, the listener retries those exact IDs
+locally using current email details; an ingress acknowledgement does not mean
+a native notification was accepted.
+
+Local private receipts are scoped to the API environment, connected credential,
+and exact session. Accepted means queued, not read or answered. A lost queue
+response or interrupted submission is held as unknown across restarts because
+the runtime does not deduplicate client message IDs. Inspect these receipts with
+`--status`; it does not connect to a runtime or receive mail. Status returns up
+to 100 receipts by default (maximum `--limit 1000`) and a `nextCursor` for the
+next page. Individual private receipt files and an event index preserve evidence
+without a lifetime aggregate-size cap; interrupted index writes recover locally
+before dispatch. Unknown outcomes require inspection of that exact session before a manual resend. Do not delete
+receipt state to force a retry. Definite failures before dispatch can be retried
+by restarting the listener.
+
+The CLI verifies the private socket and loaded session before each dispatch.
+The native queue API cannot atomically fence a terminal closing between that
+check and acceptance, so a concurrent close can leave input queued for that
+same session. The CLI never retargets a different session.
+
+Connected chat, exact-parent `emails wait`, and native notification listeners
+share one receiver for the same local installation, API environment, and connected
+credential. Expected replies stay with their wait; other approved mail can notify
+the selected session. Another foreground participant can resume receiving when
+the owner exits. Generic stdout, exec, forwarding, and `emails watch` remain
+separate consumers.
+
+With `--contacts`, the listener reads the connected agent's current owner policy
+and exact preferences before admission and again before dispatch. Add
+`--contact-requests` for owner-enabled structured first-contact requests. Use
+`primitive contacts request <address> --reason <purpose> --wait` to initiate and
+`primitive contacts accept --id <received-request-id>` to accept under the owner's
+instructions. Request acceptance is separate from a substantive task reply. See
+[contact requests and policy](../docs/contact-requests.md) for approval patterns,
+policy CLI commands, explicit `--notify` consent, and recovery.
+
+Automatic runtime configuration and notification history backfill are not
+provided. Reply waits use targeted recovery for their
+exact sent parent. Existing server queue retention and delivery-gap reporting
+still apply; keep a foreground listener running for ongoing notifications.
 
 ### Connected-agent listeners
 

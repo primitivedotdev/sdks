@@ -17,6 +17,10 @@ type CheckDomainDnsRes interface {
 	checkDomainDnsRes()
 }
 
+type ClaimAgentConnectionRes interface {
+	claimAgentConnectionRes()
+}
+
 type CliLogoutRes interface {
 	cliLogoutRes()
 }
@@ -83,6 +87,14 @@ type DecideRegistryRequestRes interface {
 
 type DefineAgentRes interface {
 	defineAgentRes()
+}
+
+type DeleteAgentContactRes interface {
+	deleteAgentContactRes()
+}
+
+type DeleteContactRes interface {
+	deleteContactRes()
 }
 
 type DeleteDomainRes interface {
@@ -165,12 +177,24 @@ type GetAccountRes interface {
 	getAccountRes()
 }
 
+type GetAgentContactPolicyRes interface {
+	getAgentContactPolicyRes()
+}
+
 type GetAgentRes interface {
 	getAgentRes()
 }
 
 type GetChallengeRes interface {
 	getChallengeRes()
+}
+
+type GetContactPolicyRes interface {
+	getContactPolicyRes()
+}
+
+type GetContactRes interface {
+	getContactRes()
 }
 
 type GetConversationRes interface {
@@ -255,6 +279,14 @@ type GetWebhookSecretRes interface {
 
 type InstallTemplateRes interface {
 	installTemplateRes()
+}
+
+type ListAgentContactsRes interface {
+	listAgentContactsRes()
+}
+
+type ListContactsRes interface {
+	listContactsRes()
 }
 
 type ListDeclinedPaymentsRes interface {
@@ -347,6 +379,22 @@ type PublishAgentRes interface {
 
 type PullWebhookEventRes interface {
 	pullWebhookEventRes()
+}
+
+type PutAgentContactPolicyRes interface {
+	putAgentContactPolicyRes()
+}
+
+type PutAgentContactRes interface {
+	putAgentContactRes()
+}
+
+type PutContactPolicyRes interface {
+	putContactPolicyRes()
+}
+
+type PutContactRes interface {
+	putContactRes()
 }
 
 type RedeemCreditCodeRes interface {

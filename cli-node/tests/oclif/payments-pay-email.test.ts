@@ -440,9 +440,10 @@ describe("payments pay-email (one-shot sign + send)", () => {
     // interaction.json was not re-delivered for settlement. For a payment
     // one-shot that is a hard failure, not advisory: exit non-zero so
     // automation halts instead of continuing the payment flow on a no-op. The
-    // result is still printed (and a loud stderr banner explains the bypass).
+    // result is still printed (and a stderr notice says nothing new was sent).
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("idempotent replay");
+    expect(result.stderr).toContain("Already sent");
+    expect(result.stderr).toContain("Nothing new was sent.");
     expect(result.stdout).toContain('"id": "sent-pay-email-1"');
   });
 

@@ -87,6 +87,23 @@ func (UnimplementedHandler) CheckDomainDns(ctx context.Context, params CheckDoma
 	return r, ht.ErrNotImplemented
 }
 
+// ClaimAgentConnection implements claimAgentConnection operation.
+//
+// Address-bound external runtime pairing. Management operations require an organization owner or
+// admin session or OAuth token; members and organization API keys cannot manage connections. Claim
+// is authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow only address-scoped mail operations, organization note
+// reads and own-address note writes. The credential is returned once. If the claim response is lost
+// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
+// invitation.
+//
+// POST /agent-connections/claim
+func (UnimplementedHandler) ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (r ClaimAgentConnectionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CliLogout implements cliLogout operation.
 //
 // Revokes the OAuth grant used to authenticate the request. API-key
@@ -347,6 +364,48 @@ func (UnimplementedHandler) DefineAgent(ctx context.Context, req *DefineAgentInp
 	return r, ht.ErrNotImplemented
 }
 
+// DeleteAgentContact implements deleteAgentContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// DELETE /agent-contacts/{agent_address}/{contact_address}
+func (UnimplementedHandler) DeleteAgentContact(ctx context.Context, params DeleteAgentContactParams) (r DeleteAgentContactRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteContact implements deleteContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// DELETE /contacts/{address}
+func (UnimplementedHandler) DeleteContact(ctx context.Context, params DeleteContactParams) (r DeleteContactRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteDomain implements deleteDomain operation.
 //
 // Deletes a verified or unverified domain claim.
@@ -594,6 +653,54 @@ func (UnimplementedHandler) GetAgent(ctx context.Context, params GetAgentParams)
 	return r, ht.ErrNotImplemented
 }
 
+// GetAgentContactPolicy implements getAgentContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// GET /agent-contact-policy/{agent_address}
+func (UnimplementedHandler) GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (r GetAgentContactPolicyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetChallenge implements getChallenge operation.
 //
 // Fetch a challenge you created, to poll its `status` and settlement
@@ -601,6 +708,75 @@ func (UnimplementedHandler) GetAgent(ctx context.Context, params GetAgentParams)
 //
 // GET /x402/challenges/{id}
 func (UnimplementedHandler) GetChallenge(ctx context.Context, params GetChallengeParams) (r GetChallengeRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetContact implements getContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// GET /contacts/{address}
+func (UnimplementedHandler) GetContact(ctx context.Context, params GetContactParams) (r GetContactRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetContactPolicy implements getContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// GET /contact-policy
+func (UnimplementedHandler) GetContactPolicy(ctx context.Context) (r GetContactPolicyRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -930,6 +1106,48 @@ func (UnimplementedHandler) InstallTemplate(ctx context.Context, req *InstallTem
 	return r, ht.ErrNotImplemented
 }
 
+// ListAgentContacts implements listAgentContacts operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// GET /agent-contacts/{agent_address}
+func (UnimplementedHandler) ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (r ListAgentContactsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListContacts implements listContacts operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// GET /contacts
+func (UnimplementedHandler) ListContacts(ctx context.Context, params ListContactsParams) (r ListContactsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListDeclinedPayments implements listDeclinedPayments operation.
 //
 // The 50 most recent payments your org's spend policy declined, newest
@@ -1220,6 +1438,144 @@ func (UnimplementedHandler) PullWebhookEvent(ctx context.Context, req *PullWebho
 	return r, ht.ErrNotImplemented
 }
 
+// PutAgentContact implements putAgentContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// PUT /agent-contacts/{agent_address}/{contact_address}
+func (UnimplementedHandler) PutAgentContact(ctx context.Context, req PutAgentContactReq, params PutAgentContactParams) (r PutAgentContactRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// PutAgentContactPolicy implements putAgentContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// PUT /agent-contact-policy/{agent_address}
+func (UnimplementedHandler) PutAgentContactPolicy(ctx context.Context, req PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (r PutAgentContactPolicyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// PutContact implements putContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// PUT /contacts/{address}
+func (UnimplementedHandler) PutContact(ctx context.Context, req PutContactReq, params PutContactParams) (r PutContactRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// PutContactPolicy implements putContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// PUT /contact-policy
+func (UnimplementedHandler) PutContactPolicy(ctx context.Context, req PutContactPolicyRequest) (r PutContactPolicyRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // RedeemCreditCode implements redeemCreditCode operation.
 //
 // Redeem a credit code for the authenticated organization. The credit is
@@ -1407,6 +1763,13 @@ func (UnimplementedHandler) RunWakeSchedule(ctx context.Context, params RunWakeS
 // as the web inbox search. Structured filters such as `from`, `to`,
 // `domain_id`, status, attachment presence, and spam score bounds
 // are combined with the text query.
+// Connected-agent credentials search only mail received by their own
+// address. This applies to results, totals, facets, and every page;
+// search filters cannot widen the credential's scope. When
+// `reply_to_sent_email_id` is supplied, its parent send must belong
+// to the connected address in the same organization. An unavailable
+// parent returns 404. Sender filters are not authentication proof;
+// inspect the email detail's authentication evidence before trusting it.
 //
 // GET /emails/search
 func (UnimplementedHandler) SearchEmails(ctx context.Context, params SearchEmailsParams) (r SearchEmailsRes, _ error) {

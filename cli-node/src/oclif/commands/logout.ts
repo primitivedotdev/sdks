@@ -21,6 +21,7 @@ import {
   loadCliCredentials,
 } from "../auth.js";
 import { chatStatePath } from "../chat-state.js";
+import { requireDefaultLoginProfile } from "../connected-agent-profile.js";
 import { deletePendingAgentSignup, pendingSignupPath } from "./signup.js";
 
 function cliError(message: string): Errors.CLIError {
@@ -54,6 +55,7 @@ export async function runLogoutWithCredentialLock(params: {
   deps?: LogoutDeps;
   flags: LogoutFlags;
 }): Promise<void> {
+  requireDefaultLoginProfile();
   const deps = {
     cliLogout,
     createAuthenticatedCliApiClient,
@@ -134,6 +136,7 @@ export async function runLogoutWithCredentialLock(params: {
 }
 
 export function runForceLogout(params: { configDir: string }): void {
+  requireDefaultLoginProfile();
   const localCredentialsPath = credentialsPath(params.configDir);
   const pendingPath = pendingSignupPath(params.configDir);
   const lockPath = credentialsLockPath(params.configDir);

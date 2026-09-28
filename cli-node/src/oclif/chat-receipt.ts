@@ -1,6 +1,9 @@
 import { createHash, randomUUID, scryptSync } from "node:crypto";
 import {
+  closeSync,
+  fsyncSync,
   mkdirSync,
+  openSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -17,8 +20,26 @@ type ReceiptData = {
   sent_at: string;
   sent: SendMailResult | null;
   completed: boolean;
+  reply?: { emailId: string; requestId: string };
+  idempotency_key?: string;
+  send_attempted?: boolean;
 };
 export type ChatReceipt = { path: string; data: ReceiptData };
+
+/** A previous attempt may or may not have sent; the caller must not resend blindly. */
+export class UncertainChatSendError extends Error {
+  /** When the unresolved attempt started, if the receipt recorded it. */
+  readonly sentAtIso?: string;
+
+  constructor(
+    message: string,
+    options?: ErrorOptions & { sentAtIso?: string },
+  ) {
+    super(message, options);
+    this.name = "UncertainChatSendError";
+    this.sentAtIso = options?.sentAtIso;
+  }
+}
 
 /** Keep API credentials out of request fingerprints, including low-entropy local keys. */
 export function chatCredentialIdentity(
@@ -37,10 +58,28 @@ export function chatRequestHash(value: unknown): string {
 export function saveChatReceipt(receipt: ChatReceipt): void {
   const temporary = `${receipt.path}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    writeFileSync(temporary, `${JSON.stringify(receipt.data)}\n`, {
-      mode: 0o600,
-    });
+    const file = openSync(temporary, "wx", 0o600);
+    try {
+      writeFileSync(file, `${JSON.stringify(receipt.data)}\n`);
+      fsyncSync(file);
+    } finally {
+      closeSync(file);
+    }
     renameSync(temporary, receipt.path);
+    // Windows cannot open directories for fsync through this API.
+    if (process.platform !== "win32") {
+      for (const path of [
+        join(receipt.path, ".."),
+        join(receipt.path, "../.."),
+      ]) {
+        const directory = openSync(path, "r");
+        try {
+          fsyncSync(directory);
+        } finally {
+          closeSync(directory);
+        }
+      }
+    }
   } finally {
     rmSync(temporary, { force: true });
   }
@@ -55,6 +94,20 @@ function parseReceipt(raw: string): ReceiptData {
     typeof value.sent_at !== "string" ||
     !Number.isFinite(Date.parse(value.sent_at)) ||
     typeof value.completed !== "boolean" ||
+    (value.reply !== undefined &&
+      (!value.reply ||
+        typeof value.reply !== "object" ||
+        typeof value.reply.emailId !== "string" ||
+        !value.reply.emailId ||
+        typeof value.reply.requestId !== "string" ||
+        !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
+          value.reply.requestId,
+        ))) ||
+    (value.idempotency_key !== undefined &&
+      (typeof value.idempotency_key !== "string" ||
+        !/^[!-~]{1,255}$/.test(value.idempotency_key))) ||
+    (value.send_attempted !== undefined &&
+      typeof value.send_attempted !== "boolean") ||
     (value.sent !== null &&
       (!value.sent ||
         typeof value.sent.id !== "string" ||
@@ -71,6 +124,7 @@ export function beginChatReceipt(
   configDir: string,
   scope: string,
   requestHash: string,
+  options: { connected?: boolean } = {},
 ): ChatReceipt {
   const directory = join(configDir, "chat-receipts");
   mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -80,7 +134,7 @@ export function beginChatReceipt(
     previous = parseReceipt(readFileSync(path, "utf8"));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw new Error(
+      throw new UncertainChatSendError(
         `Cannot safely read chat receipt ${path}. Inspect it and sent history before retrying.`,
         { cause: error },
       );
@@ -88,8 +142,20 @@ export function beginChatReceipt(
   }
   if (previous && !previous.completed) {
     if (previous.sent === null) {
-      throw new Error(
+      if (
+        options.connected &&
+        previous.idempotency_key &&
+        previous.send_attempted !== undefined
+      ) {
+        if (previous.request_hash !== requestHash)
+          throw new UncertainChatSendError(
+            "This request has an unresolved send intent. Resume the same message before starting a different reply.",
+          );
+        return { path, data: previous };
+      }
+      throw new UncertainChatSendError(
         `A previous send has an uncertain outcome. Inspect sent history before sending again. Receipt: ${path}`,
+        { sentAtIso: previous.sent_at },
       );
     }
     if (previous.request_hash !== requestHash) {
@@ -107,6 +173,12 @@ export function beginChatReceipt(
       sent_at: new Date().toISOString(),
       sent: null,
       completed: false,
+      ...(options.connected
+        ? {
+            idempotency_key: `primitive-chat-${randomUUID()}`,
+            send_attempted: false,
+          }
+        : {}),
     },
   };
   saveChatReceipt(receipt);

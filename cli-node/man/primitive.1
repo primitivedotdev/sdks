@@ -27,6 +27,30 @@ receives existing webhook events without a public endpoint. It prints complete
 JSONL bodies on stdout and status on stderr. Use saved login credentials or
 PRIMITIVE_API_KEY. A private default destination is saved per API host and account.
 .PP
+.B primitive listen --notify-session UUID --sender person@example.com
+queues external email metadata into one exact loaded native Codex session.
+Requires an existing private native local-session Unix socket and a connected-agent
+credential. This mode requires WebSocket and the shared saved subscription;
+--transport poll and a custom --subscription are rejected. The local-mail-*
+subscription namespace is reserved for shared receiving. No runtime is launched. Repeat --sender or use comma-separated exact
+addresses. Routine authenticated status interactions do not notify the session.
+.PP
+.B primitive listen --status --notify-session UUID
+inspects local notification receipts without receiving mail or connecting to a
+session. Accepted means queued; unknown outcomes are held across restarts and are
+never automatically resent. Inspect the exact session before a manual resend.
+Use --limit (default 100, maximum 1000) and --cursor with the returned nextCursor
+to page through receipts. Notification subscriptions accept email.received only;
+--once counts a candidate processed during this invocation, including filtered
+or routine email, not a model wake. Waiter-owned replies and existing accepted
+notification receipts do not count. Inbound IDs are saved before server
+acknowledgement; pending authentication or parsing retries exact IDs locally.
+.PP
+Connected chat, exact-parent emails wait, and native notifications share one
+receiver per local installation, API environment, and credential. A remaining
+foreground participant can resume receiving after the owner exits. Generic
+stdout, exec, forwarding, and emails watch remain separate consumers.
+.PP
 .B primitive listen init --language python
 creates a Python starter in a new primitive-listener directory. Generation is
 offline and refuses to overwrite files. Change into that directory and run
@@ -189,6 +213,23 @@ Print the generated API operation manifest.
 .TP
 .B primitive describe COMMAND_OR_OPERATION
 Describe a generated API operation, including request and response schemas.
+
+.SS Waiting with connected credentials
+.B primitive emails wait --reply-to-sent-email-id <sent-id> --from peer@example.com
+waits on an existing send without resending it. The receiving address comes
+from the sent record; an optional --to must match. Existing replies are included
+by default, and --since narrows the window. Only authenticated, exactly threaded
+plain replies are returned; interaction attachments remain pending for inspection.
+JSONL contains matching email details; --table prints compact rows. Timeout exits
+1. Connected waits share one local address event receiver and use exact-parent
+search for recovery; they never scan inbox history. Organization credentials
+retain the existing search-based wait behavior.
+.PP
+Connected chat authenticates the reply receiver before sending and records a
+stable idempotency key. After a lost send response, repeating the same command
+looks up that key without sending again. Timed-out exact-parent waits retain
+their claim for resume. A plain reply does not prove task completion.
+
 .SH GLOBAL OPTIONS
 .TP
 .B --api-key KEY
@@ -199,6 +240,39 @@ Print command duration to standard error after completion.
 .TP
 .B --help
 Show command help.
+.SH EXIT STATUS
+.B primitive chat,
+.B primitive chat reply,
+.B primitive send
+and
+.B primitive reply
+share one outcome vocabulary. With
+.B --json
+the outcome is the
+.B outcome
+field of an envelope printed for every result.
+.TP
+.B 0
+.BR replied ,
+.B sent
+(accepted for delivery; queued counts) or
+.B already_sent
+(an identical earlier send, including HTTP 410 sent_email_deleted; nothing new went out).
+.TP
+.B 1
+.BR not_sent :
+the API rejected the request, the command failed before sending, or the send record has status agent_failed, gate_denied or canceled.
+.TP
+.B 2
+Invalid flags or arguments. Nothing was sent.
+.TP
+.B 3
+.BR sent_awaiting_reply :
+chat sent the message but no reply arrived before the timeout. Wait; do not resend.
+.TP
+.B 4
+.BR uncertain :
+transport error, conflict, server error, or a send record with status unknown. The message may have gone out; check sent history before retrying.
 .SH ENVIRONMENT
 .TP
 .B PRIMITIVE_API_KEY

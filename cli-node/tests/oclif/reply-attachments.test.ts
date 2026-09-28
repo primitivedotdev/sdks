@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
+  getEmail: vi.fn(),
   replyToEmail: vi.fn(),
 }));
 
@@ -14,6 +15,7 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
     await importOriginal<typeof import("@primitivedotdev/api-core")>();
   return {
     ...actual,
+    getEmail: mocks.getEmail,
     replyToEmail: mocks.replyToEmail,
   };
 });
@@ -81,6 +83,9 @@ describe("reply attachments", () => {
     });
     mocks.replyToEmail.mockResolvedValue({
       data: { data: sendResult() },
+    });
+    mocks.getEmail.mockResolvedValue({
+      data: { data: { id: "email-1", replies: [] } },
     });
   });
 

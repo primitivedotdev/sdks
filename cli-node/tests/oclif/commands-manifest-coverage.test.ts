@@ -43,6 +43,111 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("registers organization and per-agent contact commands", () => {
+    for (const action of [
+      "list",
+      "get",
+      "add",
+      "update",
+      "remove",
+      "request",
+      "accept",
+      "wait",
+    ])
+      expect(COMMANDS[`contacts:${action}`]).toBeDefined();
+    for (const action of ["list", "add", "update", "remove"])
+      expect(COMMANDS[`agent:contacts:${action}`]).toBeDefined();
+    expect(readCliPackageJson().oclif?.topics?.contacts).toBeDefined();
+    expect(
+      readCliPackageJson().oclif?.topics?.["agent:contacts"],
+    ).toBeDefined();
+  });
+  it("exposes the four owner policy operations with explicit JSON replacement bodies", () => {
+    for (const name of [
+      "get-contact-policy",
+      "put-contact-policy",
+      "get-agent-contact-policy",
+      "put-agent-contact-policy",
+    ]) {
+      expect(COMMANDS[`contacts:${name}`]).toBeDefined();
+    }
+    for (const name of ["put-contact-policy", "put-agent-contact-policy"]) {
+      const command = COMMANDS[`contacts:${name}`] as unknown as {
+        flags: Record<string, unknown>;
+      };
+      expect(command.flags["body-file"]).toBeDefined();
+      expect(command.flags["raw-body"]).toBeDefined();
+    }
+  });
+  it("exposes explicit contact request consent and durable acceptance recovery", () => {
+    const request = COMMANDS["contacts:request"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    for (const flag of ["reason", "notify", "wait", "expires-in", "timeout"])
+      expect(request.flags[flag]).toBeDefined();
+    const wait = COMMANDS["contacts:wait"] as unknown as {
+      flags: Record<string, { exclusive?: string[] }>;
+    };
+    expect(wait.flags["request-id"].exclusive).toContain("id");
+  });
+  it("routes both invitation claim names through private stdin setup", () => {
+    expect(COMMANDS["agent:connect"]).toBeDefined();
+    expect(COMMANDS["agent-connections:claim-agent-connection"]).toBe(
+      COMMANDS["agent:connect"],
+    );
+    const setup = COMMANDS["agent:connect"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(setup.flags.profile).toBeDefined();
+    expect(setup.flags.status).toBeDefined();
+    expect(setup.flags.token).toBeUndefined();
+    expect(setup.flags["raw-body"]).toBeUndefined();
+  });
+  it("exposes saved-contact notification preferences without mixing allowlists", () => {
+    const listener = COMMANDS.listen as unknown as {
+      flags: Record<string, { dependsOn?: string[]; exclusive?: string[] }>;
+    };
+    expect(listener.flags.contacts.dependsOn).toContain("notify-session");
+    expect(listener.flags.contacts.exclusive).toContain("sender");
+    expect(listener.flags.contacts.exclusive).toContain("status");
+    expect(listener.flags["contact-requests"].dependsOn).toEqual([
+      "contacts",
+      "notify-session",
+    ]);
+    expect(listener.flags["contact-requests"].exclusive).toContain("sender");
+  });
+  it("keeps connected waits on the existing emails wait command", () => {
+    const wait = COMMANDS["emails:wait"] as unknown as {
+      description: string;
+      flags: Record<string, unknown>;
+    };
+    expect(wait.description).toContain(
+      "Connected agents require --reply-to-sent-email-id",
+    );
+    expect(wait.description).toContain("exact-parent search");
+    expect(wait.description).toContain("never scan inbox history");
+    for (const flag of [
+      "from",
+      "to",
+      "reply-to-sent-email-id",
+      "since",
+      "include-existing",
+      "number",
+      "timeout",
+      "table",
+    ])
+      expect(wait.flags[flag]).toBeDefined();
+  });
+  it("keeps scoped chat discoverable under the existing command shapes", () => {
+    const chat = COMMANDS.chat as unknown as {
+      description: string;
+      flags: Record<string, unknown>;
+    };
+    expect(chat.description).toContain("Connected agents must supply --from");
+    expect(chat.description).toContain("share an address event receiver");
+    expect(chat.flags.from).toBeDefined();
+    expect(COMMANDS["chat:reply"]).toBeDefined();
+  });
   it("registers mailbox deletion operations and the sent alias", () => {
     expect(COMMANDS["sending:delete-sent-email"]).toBeDefined();
     expect(COMMANDS["agent-connections:remove-agent-connection"]).toBeDefined();
@@ -227,6 +332,12 @@ describe("COMMANDS / manifest coverage", () => {
       "transport",
       "once",
       "timeout",
+      "notify-session",
+      "sender",
+      "session-socket",
+      "status",
+      "limit",
+      "cursor",
     ]) {
       expect(listener.flags[flag]).toBeDefined();
     }
@@ -237,6 +348,17 @@ describe("COMMANDS / manifest coverage", () => {
     expect(starter.flags["out-dir"]).toBeDefined();
   });
 
+  it("documents the shared native notification transport", () => {
+    const listen = COMMANDS.listen as unknown as {
+      flags: Record<string, { description: string }>;
+    };
+    expect(listen.flags["notify-session"].description).toContain(
+      "shared WebSocket subscription",
+    );
+    expect(listen.flags.subscription.description).toContain(
+      "generic listeners",
+    );
+  });
   it("registers inbox status commands", () => {
     expect(COMMANDS["inbox:setup"]).toBeDefined();
     expect(COMMANDS["inbox:status"]).toBeDefined();

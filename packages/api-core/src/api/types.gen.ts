@@ -4,6 +4,81 @@ export type ClientOptions = {
     baseUrl: 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | 'https://api.primitive.dev/v1' | 'https://www.primitive.dev/api/v1' | (string & {});
 };
 
+export type ContactPolicyRuleInput = {
+    /**
+     * Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description.
+     */
+    pattern: string;
+    effect: 'allow' | 'silence';
+};
+
+export type ContactPolicyRule = {
+    /**
+     * Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description.
+     */
+    pattern: string;
+    effect: 'allow' | 'silence';
+    notify_since: string | null;
+    notification_generation: string | null;
+};
+
+export type ContactPolicy = {
+    rules: Array<ContactPolicyRule>;
+    contact_request_since: string | null;
+    contact_request_generation: string | null;
+    version: string | null;
+    updated_at: string | null;
+    allow_contact_requests: boolean;
+};
+
+export type AgentContactPolicyOverride = {
+    rules: Array<ContactPolicyRule>;
+    contact_request_since: string | null;
+    contact_request_generation: string | null;
+    version: string | null;
+    updated_at: string | null;
+    allow_contact_requests: boolean | null;
+};
+
+export type AgentContactPolicy = {
+    agent_address: string;
+    org_policy: ContactPolicy;
+    agent_policy: AgentContactPolicyOverride;
+    effective_version: string;
+    effective_since: string;
+    allow_contact_requests: boolean;
+    contact_request_since: string | null;
+    contact_request_generation: string | null;
+};
+
+export type PutContactPolicyRequest = PutContactPolicyCreate | PutContactPolicyReplace;
+
+export type PutAgentContactPolicyRequest = PutAgentContactPolicyCreate | PutAgentContactPolicyReplace;
+
+export type PutContactPolicyCreate = {
+    rules: Array<ContactPolicyRuleInput>;
+    allow_contact_requests: boolean;
+    if_absent: boolean;
+};
+
+export type PutContactPolicyReplace = {
+    rules: Array<ContactPolicyRuleInput>;
+    allow_contact_requests: boolean;
+    if_version: string;
+};
+
+export type PutAgentContactPolicyCreate = {
+    rules: Array<ContactPolicyRuleInput>;
+    allow_contact_requests: boolean | null;
+    if_absent: boolean;
+};
+
+export type PutAgentContactPolicyReplace = {
+    rules: Array<ContactPolicyRuleInput>;
+    allow_contact_requests: boolean | null;
+    if_version: string;
+};
+
 /**
  * Who may publish into a registry. owner_only: only the registry owner.
  * request: anyone may request and the owner approves. open: anyone may
@@ -502,7 +577,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -6126,6 +6201,10 @@ export type SearchEmailsErrors = {
      */
     401: ErrorResponse;
     /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
      * Search query timed out
      */
     504: ErrorResponse;
@@ -10812,3 +10891,788 @@ export type GetAgentResponses = {
 };
 
 export type GetAgentResponse = GetAgentResponses[keyof GetAgentResponses];
+
+export type ListContactsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        cursor?: string;
+        /**
+         * limit for contacts.
+         */
+        limit?: number;
+    };
+    url: '/contacts';
+};
+
+export type ListContactsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: write precondition did not match.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type ListContactsError = ListContactsErrors[keyof ListContactsErrors];
+
+export type ListContactsResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+    } & {
+        data?: Array<{
+            /**
+             * Bare email address; trim and lowercase, preserving dots and plus tags.
+             */
+            address: string;
+            display_name: string | null;
+            /**
+             * Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+             */
+            version: string;
+            created_at: string;
+            updated_at: string;
+        }>;
+        meta?: {
+            limit?: number;
+            cursor: string | null;
+        };
+    };
+};
+
+export type ListContactsResponse = ListContactsResponses[keyof ListContactsResponses];
+
+export type DeleteContactData = {
+    body?: never;
+    path: {
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        address: string;
+    };
+    query: {
+        /**
+         * Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+         */
+        if_version: string;
+    };
+    url: '/contacts/{address}';
+};
+
+export type DeleteContactErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: write precondition did not match.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type DeleteContactError = DeleteContactErrors[keyof DeleteContactErrors];
+
+export type DeleteContactResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+    } & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteContactResponse = DeleteContactResponses[keyof DeleteContactResponses];
+
+export type GetContactData = {
+    body?: never;
+    path: {
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/contacts/{address}';
+};
+
+export type GetContactErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: write precondition did not match.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetContactError = GetContactErrors[keyof GetContactErrors];
+
+export type GetContactResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+    } & {
+        data?: {
+            /**
+             * Bare email address; trim and lowercase, preserving dots and plus tags.
+             */
+            address: string;
+            display_name: string | null;
+            /**
+             * Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+             */
+            version: string;
+            created_at: string;
+            updated_at: string;
+        };
+    };
+};
+
+export type GetContactResponse = GetContactResponses[keyof GetContactResponses];
+
+export type PutContactData = {
+    body: {
+        display_name?: string | null;
+        if_absent: boolean;
+    } | {
+        display_name?: string | null;
+        /**
+         * Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+         */
+        if_version: string;
+    };
+    path: {
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/contacts/{address}';
+};
+
+export type PutContactErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: write precondition did not match.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type PutContactError = PutContactErrors[keyof PutContactErrors];
+
+export type PutContactResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+    } & {
+        data?: {
+            /**
+             * Bare email address; trim and lowercase, preserving dots and plus tags.
+             */
+            address: string;
+            display_name: string | null;
+            /**
+             * Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+             */
+            version: string;
+            created_at: string;
+            updated_at: string;
+        };
+    };
+};
+
+export type PutContactResponse = PutContactResponses[keyof PutContactResponses];
+
+export type ListAgentContactsData = {
+    body?: never;
+    path: {
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        agent_address: string;
+    };
+    query?: {
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        cursor?: string;
+        /**
+         * limit for contacts.
+         */
+        limit?: number;
+    };
+    url: '/agent-contacts/{agent_address}';
+};
+
+export type ListAgentContactsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: write precondition did not match.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type ListAgentContactsError = ListAgentContactsErrors[keyof ListAgentContactsErrors];
+
+export type ListAgentContactsResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+    } & {
+        data?: Array<{
+            /**
+             * Bare email address; trim and lowercase, preserving dots and plus tags.
+             */
+            agent_address: string;
+            /**
+             * Bare email address; trim and lowercase, preserving dots and plus tags.
+             */
+            contact_address: string;
+            purpose: string | null;
+            notify: boolean;
+            notify_since: string | null;
+            notification_generation: string | null;
+            /**
+             * Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+             */
+            version: string;
+            created_at: string;
+            updated_at: string;
+        }>;
+        meta?: {
+            limit?: number;
+            cursor: string | null;
+        };
+    };
+};
+
+export type ListAgentContactsResponse = ListAgentContactsResponses[keyof ListAgentContactsResponses];
+
+export type DeleteAgentContactData = {
+    body?: never;
+    path: {
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        agent_address: string;
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        contact_address: string;
+    };
+    query: {
+        /**
+         * Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+         */
+        if_version: string;
+    };
+    url: '/agent-contacts/{agent_address}/{contact_address}';
+};
+
+export type DeleteAgentContactErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: write precondition did not match.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type DeleteAgentContactError = DeleteAgentContactErrors[keyof DeleteAgentContactErrors];
+
+export type DeleteAgentContactResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+    } & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteAgentContactResponse = DeleteAgentContactResponses[keyof DeleteAgentContactResponses];
+
+export type PutAgentContactData = {
+    body: {
+        purpose?: string | null;
+        notify?: boolean;
+        if_absent: boolean;
+    } | {
+        purpose?: string | null;
+        notify?: boolean;
+        /**
+         * Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+         */
+        if_version: string;
+    };
+    path: {
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        agent_address: string;
+        /**
+         * Bare email address; trim and lowercase, preserving dots and plus tags.
+         */
+        contact_address: string;
+    };
+    query?: never;
+    url: '/agent-contacts/{agent_address}/{contact_address}';
+};
+
+export type PutAgentContactErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: write precondition did not match.
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type PutAgentContactError = PutAgentContactErrors[keyof PutAgentContactErrors];
+
+export type PutAgentContactResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+    } & {
+        data?: {
+            /**
+             * Bare email address; trim and lowercase, preserving dots and plus tags.
+             */
+            agent_address: string;
+            /**
+             * Bare email address; trim and lowercase, preserving dots and plus tags.
+             */
+            contact_address: string;
+            purpose: string | null;
+            notify: boolean;
+            notify_since: string | null;
+            notification_generation: string | null;
+            /**
+             * Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+             */
+            version: string;
+            created_at: string;
+            updated_at: string;
+        };
+    };
+};
+
+export type PutAgentContactResponse = PutAgentContactResponses[keyof PutAgentContactResponses];
+
+export type ClaimAgentConnectionData = {
+    body: {
+        token: string;
+    };
+    headers?: {
+        /**
+         * This header does not enable credential replay for this one-use claim. If the response is lost or the outcome is unknown, request a fresh owner invitation. Do not assume that retrying the same key or payload can recover the returned credential.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/agent-connections/claim';
+};
+
+export type ClaimAgentConnectionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type ClaimAgentConnectionError = ClaimAgentConnectionErrors[keyof ClaimAgentConnectionErrors];
+
+export type ClaimAgentConnectionResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: {
+            connection: {
+                address: string;
+                name: string;
+                owner_address: string;
+                status: 'pending' | 'claimed' | 'connected' | 'revoked';
+                created_at: string;
+                updated_at: string;
+                claimed_at: string | unknown;
+                verified_at: string | unknown;
+                last_seen_at: string | unknown;
+            };
+            org_id: string;
+            owner_address: string;
+            api_key: string;
+            api_base_url: string;
+        };
+    };
+};
+
+export type ClaimAgentConnectionResponse = ClaimAgentConnectionResponses[keyof ClaimAgentConnectionResponses];
+
+export type GetContactPolicyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/contact-policy';
+};
+
+export type GetContactPolicyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: policy precondition did not match
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetContactPolicyError = GetContactPolicyErrors[keyof GetContactPolicyErrors];
+
+export type GetContactPolicyResponses = {
+    /**
+     * Current policy
+     */
+    200: SuccessEnvelope & {
+        data: ContactPolicy;
+    };
+};
+
+export type GetContactPolicyResponse = GetContactPolicyResponses[keyof GetContactPolicyResponses];
+
+export type PutContactPolicyData = {
+    body: PutContactPolicyRequest;
+    path?: never;
+    query?: never;
+    url: '/contact-policy';
+};
+
+export type PutContactPolicyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: policy precondition did not match
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type PutContactPolicyError = PutContactPolicyErrors[keyof PutContactPolicyErrors];
+
+export type PutContactPolicyResponses = {
+    /**
+     * Current policy
+     */
+    200: SuccessEnvelope & {
+        data: ContactPolicy;
+    };
+};
+
+export type PutContactPolicyResponse = PutContactPolicyResponses[keyof PutContactPolicyResponses];
+
+export type GetAgentContactPolicyData = {
+    body?: never;
+    path: {
+        /**
+         * Canonical address of an agent connection in the current organization.
+         */
+        agent_address: string;
+    };
+    query?: never;
+    url: '/agent-contact-policy/{agent_address}';
+};
+
+export type GetAgentContactPolicyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: policy precondition did not match
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type GetAgentContactPolicyError = GetAgentContactPolicyErrors[keyof GetAgentContactPolicyErrors];
+
+export type GetAgentContactPolicyResponses = {
+    /**
+     * Current policy
+     */
+    200: SuccessEnvelope & {
+        data: AgentContactPolicy;
+    };
+};
+
+export type GetAgentContactPolicyResponse = GetAgentContactPolicyResponses[keyof GetAgentContactPolicyResponses];
+
+export type PutAgentContactPolicyData = {
+    body: PutAgentContactPolicyRequest;
+    path: {
+        /**
+         * Canonical address of an agent connection in the current organization.
+         */
+        agent_address: string;
+    };
+    query?: never;
+    url: '/agent-contact-policy/{agent_address}';
+};
+
+export type PutAgentContactPolicyErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * contact_conflict: policy precondition did not match
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type PutAgentContactPolicyError = PutAgentContactPolicyErrors[keyof PutAgentContactPolicyErrors];
+
+export type PutAgentContactPolicyResponses = {
+    /**
+     * Current policy
+     */
+    200: SuccessEnvelope & {
+        data: AgentContactPolicy;
+    };
+};
+
+export type PutAgentContactPolicyResponse = PutAgentContactPolicyResponses[keyof PutAgentContactPolicyResponses];

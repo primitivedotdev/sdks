@@ -24,6 +24,20 @@ func encodeAddDomainRequest(
 	return nil
 }
 
+func encodeClaimAgentConnectionRequest(
+	req *ClaimAgentConnectionReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCliLogoutRequest(
 	req OptCliLogoutInput,
 	r *http.Request,
@@ -328,6 +342,62 @@ func encodePublishAgentRequest(
 
 func encodePullWebhookEventRequest(
 	req *PullWebhookInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodePutAgentContactRequest(
+	req PutAgentContactReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodePutAgentContactPolicyRequest(
+	req PutAgentContactPolicyRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodePutContactRequest(
+	req PutContactReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodePutContactPolicyRequest(
+	req PutContactPolicyRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

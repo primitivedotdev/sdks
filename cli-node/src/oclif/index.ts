@@ -4,6 +4,11 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
+import AgentConnectCommand from "./commands/agent-connect.js";
+import AgentContactsAddCommand from "./commands/agent-contacts-add.js";
+import AgentContactsListCommand from "./commands/agent-contacts-list.js";
+import AgentContactsRemoveCommand from "./commands/agent-contacts-remove.js";
+import AgentContactsUpdateCommand from "./commands/agent-contacts-update.js";
 import AgentUpgradeCommand from "./commands/agent-upgrade.js";
 import ChatCommand, { ChatReplyCommand } from "./commands/chat.js";
 import {
@@ -13,6 +18,14 @@ import {
   ConfigSetCommand,
   ConfigUseCommand,
 } from "./commands/config.js";
+import ContactsAcceptCommand from "./commands/contacts-accept.js";
+import ContactsAddCommand from "./commands/contacts-add.js";
+import ContactsGetCommand from "./commands/contacts-get.js";
+import ContactsListCommand from "./commands/contacts-list.js";
+import ContactsRemoveCommand from "./commands/contacts-remove.js";
+import ContactsRequestCommand from "./commands/contacts-request.js";
+import ContactsUpdateCommand from "./commands/contacts-update.js";
+import ContactsWaitCommand from "./commands/contacts-wait.js";
 import {
   CreditsBalanceCommand,
   CreditsRedeemCommand,
@@ -437,6 +450,9 @@ function resolveOperationAlias(id: string): string {
 // COMMANDS below. The auto-generated wrapper is filtered out so the
 // hand-rolled command owns the id without a name collision.
 const OVERRIDDEN_OPERATION_IDS = new Set<string>([
+  // Invitation claims must consume stdin and persist the credential privately.
+  // Never expose a generated token flag or print a claim's raw API response.
+  "agent-connections:claim-agent-connection",
   // `domains:download-domain-zone-file` is hand-rolled so the CLI writes
   // text to stdout or --output instead of dumping a generated binary object.
   "domains:download-domain-zone-file",
@@ -492,6 +508,21 @@ export const COMMANDS: Record<string, typeof Command> = {
   // Interactive one-command upgrade (start claim -> prompt for code -> verify),
   // on top of the generated agent:claim / agent:claim-verify operations.
   "agent:upgrade": AgentUpgradeCommand,
+  "agent:connect": AgentConnectCommand,
+  "contacts:request": ContactsRequestCommand,
+  "contacts:accept": ContactsAcceptCommand,
+  "contacts:wait": ContactsWaitCommand,
+  "contacts:list": ContactsListCommand,
+  "contacts:get": ContactsGetCommand,
+  "contacts:add": ContactsAddCommand,
+  "contacts:update": ContactsUpdateCommand,
+  "contacts:remove": ContactsRemoveCommand,
+  "agent:contacts:list": AgentContactsListCommand,
+  "agent:contacts:add": AgentContactsAddCommand,
+  "agent:contacts:update": AgentContactsUpdateCommand,
+  "agent:contacts:remove": AgentContactsRemoveCommand,
+
+  "agent-connections:claim-agent-connection": AgentConnectCommand,
   "list-operations": ListOperationsCommand,
   config: ConfigCommand,
   "config:list": ConfigListCommand,
@@ -517,6 +548,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // semantic (send + wait for the threaded reply, then print the
   // body). Positioned as the canonical verb for the
   // agents-behind-email-addresses paradigm.
+  // Connected credentials use scoped inbox reads and require an explicit sender.
   chat: ChatCommand,
   "chat:reply": ChatReplyCommand,
   // `login` and `signin` are intentionally interchangeable public
@@ -568,9 +600,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
   "emails:latest": EmailsLatestCommand,
-  // `emails:watch` and `emails:wait` poll the search API for new matching
+  // `emails:watch` and unscoped `emails:wait` poll the search API for matching
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
+  // Connected waits inspect only the scoped inbox and exact sent parent.
   "emails:wait": EmailsWaitCommand,
   // `search` is the canonical top-level search verb. Defaults to
   // lexical full-text against inbound mail (positional query becomes
@@ -600,6 +633,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // `reply --id <id>`; reads server reply state, not a local cursor.
   "inbox:next": InboxNextCommand,
   // WebSocket receiving, with explicit poll transport and bounded one-shot waits.
+  // One listener route owns stdout, webhook, native notifications, and paginated receipt status.
   listen: ListenCommand,
   "listen:init": ListenInitCommand,
   "inbox:status": InboxStatusCommand,

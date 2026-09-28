@@ -23,11 +23,30 @@ const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
   fetchEmailSearchPage: vi.fn(),
   getEmail: vi.fn(),
+  listEmails: vi.fn(),
   pickDefaultFromAddress: vi.fn(),
   replyToEmail: vi.fn(),
   searchEmails: vi.fn(),
   sendEmail: vi.fn(),
   sleep: vi.fn(),
+  openConnectedReplyWait: vi.fn(),
+  reconcileChatSend: vi.fn(),
+  ready: vi.fn(),
+  bind: vi.fn(),
+  uncertain: vi.fn(),
+  cancelBeforeSend: vi.fn(),
+  cancelRejectedSend: vi.fn(),
+  next: vi.fn(),
+  observed: vi.fn(),
+  finish: vi.fn(),
+  close: vi.fn(),
+}));
+
+vi.mock("../../src/oclif/connected-reply-wait.js", () => ({
+  openConnectedReplyWait: mocks.openConnectedReplyWait,
+}));
+vi.mock("../../src/oclif/reconcile-chat-send.js", () => ({
+  reconcileChatSend: mocks.reconcileChatSend,
 }));
 
 vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
@@ -36,6 +55,7 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
   return {
     ...actual,
     getEmail: mocks.getEmail,
+    listEmails: mocks.listEmails,
     replyToEmail: mocks.replyToEmail,
     searchEmails: mocks.searchEmails,
     sendEmail: mocks.sendEmail,
@@ -84,6 +104,11 @@ import ChatCommand, {
   resolveChatResponseBody,
 } from "../../src/oclif/commands/chat.js";
 import { COMMANDS } from "../../src/oclif/index.js";
+
+import {
+  isPlainChatReply,
+  isScopedChatReply,
+} from "../../src/oclif/scoped-chat.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 let tempConfigHome: string;
@@ -212,7 +237,11 @@ async function runOclifCommand(
     });
 
   try {
-    await command.run(argv, { root: CLI_ROOT });
+    if (command === ChatCommand) {
+      await ChatCommand.run(argv, { root: CLI_ROOT });
+    } else {
+      await ChatReplyCommand.run(argv, { root: CLI_ROOT });
+    }
     return {
       exitCode: process.exitCode,
       stderr: stderrChunks.join(""),
@@ -272,6 +301,22 @@ describe("chat command", () => {
     });
     mocks.getEmail.mockResolvedValue({ data: { data: replyEmail() } });
     mocks.sleep.mockResolvedValue(undefined);
+    mocks.ready.mockResolvedValue({ ready: true });
+    mocks.next.mockResolvedValue(replyEmail());
+    mocks.reconcileChatSend.mockResolvedValue(null);
+    mocks.openConnectedReplyWait.mockResolvedValue({
+      requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      receiver: { signal: new AbortController().signal },
+      ready: mocks.ready,
+      bind: mocks.bind,
+      uncertain: mocks.uncertain,
+      cancelBeforeSend: mocks.cancelBeforeSend,
+      cancelRejectedSend: mocks.cancelRejectedSend,
+      next: mocks.next,
+      observed: mocks.observed,
+      finish: mocks.finish,
+      close: mocks.close,
+    });
   });
 
   afterEach(() => {
@@ -284,6 +329,298 @@ describe("chat command", () => {
     rmSync(tempConfigHome, { force: true, recursive: true });
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  function connectedAuth() {
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { client: {} },
+      auth: {
+        apiKey: ["pconn", "fixture"].join("_"),
+        apiBaseUrl: "https://api.example.test/v1",
+      },
+      baseUrlOverridden: false,
+    });
+  }
+
+  function trustedReply(overrides: Partial<EmailDetail> = {}) {
+    return replyEmail({
+      from_header: '"Helper" <help@agent.example>',
+      auth: { ...replyEmail().auth, dmarcFromDomain: "agent.example" },
+      ...overrides,
+    });
+  }
+
+  it("arms the receiver before sending and binds the sent ID before waiting", async () => {
+    connectedAuth();
+    const order: string[] = [];
+    mocks.ready.mockImplementation(async () => {
+      order.push("ready");
+      return { ready: true };
+    });
+    mocks.sendEmail.mockImplementation(async () => {
+      order.push("send");
+      return { data: { data: sentEmail() } };
+    });
+    mocks.bind.mockImplementation(async () => {
+      order.push("bind");
+    });
+    mocks.next.mockImplementation(async () => {
+      order.push("reply");
+      return trustedReply();
+    });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).reply.id).toBe("email-1");
+    expect(order).toEqual(["ready", "send", "bind", "reply"]);
+    expect(mocks.sendEmail.mock.calls[0][0].headers["Idempotency-Key"]).toMatch(
+      /^primitive-chat-/,
+    );
+    expect(mocks.observed).toHaveBeenCalledWith("email-1");
+    expect(mocks.finish).toHaveBeenCalledOnce();
+    expect(mocks.listEmails).not.toHaveBeenCalled();
+    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "observed",
+    "finish",
+  ] as const)("retains the exact reply for restart when shared %s fails", async (phase) => {
+    connectedAuth();
+    mocks[phase].mockRejectedValueOnce(
+      new Error("interrupted shared finalization"),
+    );
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    const first = await runChatCommand(args);
+    expect(JSON.parse(first.stdout).outcome).toBe("sent_awaiting_reply");
+    expect(first.exitCode).toBe(3);
+    const path = first.stderr.match(/Chat receipt: (.+)\n/)?.[1];
+    expect(path).toBeDefined();
+    const saved = JSON.parse(readFileSync(path ?? "", "utf8"));
+    expect(saved.completed).toBe(false);
+    expect(saved.reply).toEqual({
+      emailId: "email-1",
+      requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    });
+    const resumed = await runChatCommand(args);
+    expect(JSON.parse(resumed.stdout).outcome).toBe("replied");
+    expect(mocks.openConnectedReplyWait.mock.calls[1][0].resumeReply).toEqual(
+      saved.reply,
+    );
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
+    expect(JSON.parse(readFileSync(path ?? "", "utf8")).completed).toBe(true);
+  });
+  it("retains a timed-out send and resumes without another POST", async () => {
+    connectedAuth();
+    mocks.next
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(trustedReply());
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    const first = await runChatCommand(args);
+    expect(first.exitCode).toBe(3);
+    expect(JSON.parse(first.stdout).outcome).toBe("sent_awaiting_reply");
+    process.exitCode = undefined;
+    const second = await runChatCommand(args);
+    expect(JSON.parse(second.stdout).reply.id).toBe("email-1");
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("does not send before authenticated readiness", async () => {
+    connectedAuth();
+    mocks.ready.mockRejectedValueOnce(new Error("receiver failed"));
+    await expect(
+      runChatCommand([
+        "help@agent.example",
+        "hello",
+        "--from",
+        "agent@sender.example",
+        "--json",
+      ]),
+    ).rejects.toThrow("receiver failed");
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("reconciles an uncertain attempt by its saved key without resending", async () => {
+    connectedAuth();
+    mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    await expect(runChatCommand(args)).rejects.toThrow("lost response");
+    mocks.reconcileChatSend.mockResolvedValueOnce({
+      id: "sent-1",
+      from_address: "agent@sender.example",
+      status: "delivered",
+      request_id: "req-1",
+      content_hash: "hash",
+    });
+    const second = await runChatCommand(args);
+    expect(JSON.parse(second.stdout).reply.id).toBe("email-1");
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+    expect(mocks.reconcileChatSend).toHaveBeenCalledOnce();
+    expect(mocks.reconcileChatSend.mock.calls[0][0].idempotencyKey).toBe(
+      mocks.sendEmail.mock.calls[0][0].headers["Idempotency-Key"],
+    );
+  });
+
+  it("releases the peer hold after a definitive API refusal", async () => {
+    connectedAuth();
+    mocks.sendEmail.mockResolvedValueOnce({
+      error: { error: { code: "forbidden", message: "Refused" } },
+      response: new Response(null, { status: 403 }),
+    });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+    expect(mocks.cancelRejectedSend).toHaveBeenCalledOnce();
+    expect(mocks.bind).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "agent_failed",
+    "gate_denied",
+    "canceled",
+  ] as const)("releases the peer hold for a definitive %s send record", async (status) => {
+    connectedAuth();
+    mocks.sendEmail.mockResolvedValueOnce({
+      data: { data: sentEmail({ status }) },
+    });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+    expect(mocks.cancelRejectedSend).toHaveBeenCalledOnce();
+    expect(mocks.bind).not.toHaveBeenCalled();
+  });
+
+  it("keeps a server-error send hold uncertain", async () => {
+    connectedAuth();
+    mocks.sendEmail.mockResolvedValueOnce({
+      error: { error: { code: "server_error", message: "Unavailable" } },
+      response: new Response(null, { status: 503 }),
+    });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("uncertain");
+    expect(mocks.cancelRejectedSend).not.toHaveBeenCalled();
+  });
+
+  it("releases a reconciled rejected send before binding a parent", async () => {
+    connectedAuth();
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
+    await expect(runChatCommand(args)).rejects.toThrow("lost response");
+    mocks.reconcileChatSend.mockResolvedValueOnce({
+      id: "sent-1",
+      from_address: "agent@sender.example",
+      status: "gate_denied",
+      request_id: "req-1",
+      content_hash: "hash",
+    });
+    const resumed = await runChatCommand(args);
+    expect(JSON.parse(resumed.stdout).outcome).toBe("not_sent");
+    expect(mocks.cancelRejectedSend).toHaveBeenCalledOnce();
+    expect(mocks.bind).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a failed lookup of an unresolved saved send uncertain", async () => {
+    connectedAuth();
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    mocks.sendEmail.mockRejectedValueOnce(new Error("lost response"));
+    await expect(runChatCommand(args)).rejects.toThrow("lost response");
+    mocks.reconcileChatSend.mockRejectedValueOnce(
+      new Error("lookup unavailable"),
+    );
+    await expect(runChatCommand(args)).rejects.toMatchObject({
+      oclif: { exit: 4 },
+    });
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("preserves the known send outcome when a resumed receiver cannot start", async () => {
+    connectedAuth();
+    const args = [
+      "help@agent.example",
+      "hello",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    mocks.next.mockResolvedValueOnce(null);
+    await runChatCommand(args);
+    mocks.openConnectedReplyWait.mockRejectedValueOnce(
+      new Error("receiver unavailable"),
+    );
+    const resumed = await runChatCommand(args);
+    expect(JSON.parse(resumed.stdout).outcome).toBe("sent_awaiting_reply");
+    expect(resumed.exitCode).toBe(3);
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("uses targeted peer search for automatic continuation", async () => {
+    connectedAuth();
+    mocks.getEmail.mockResolvedValue({ data: { data: trustedReply() } });
+    const result = await runChatCommand([
+      "help@agent.example",
+      "--reply",
+      "thanks",
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).reply.id).toBe("email-1");
+    expect(mocks.searchEmails.mock.calls[0][0].query.from).toBe(
+      "help@agent.example",
+    );
+    expect(mocks.listEmails).not.toHaveBeenCalled();
   });
 
   it("registers the first-party chat command", () => {
@@ -1140,8 +1477,10 @@ describe("chat command", () => {
     ]);
 
     nowSpy.mockRestore();
-    expect(result.exitCode).toBe(1);
-    expect(result.stdout).toBe("");
+    expect(result.exitCode).toBe(3);
+    expect(result.stdout).toMatch(
+      /^Message sent \(id sent-1\)\. No reply yet after 1s\. Do NOT resend; wait with: primitive emails wait --reply-to-sent-email-id sent-1 --to agent@sender\.example --since \S+ --timeout 1\n$/,
+    );
     expect(result.stderr).toContain(
       "Timed out after 1s waiting for a reply from help@agent.example.",
     );
@@ -1279,5 +1618,60 @@ describe("resolveIdempotentReplayReply", () => {
       ],
     });
     expect(id).toBe("newest");
+  });
+});
+
+describe("scoped chat trust and content", () => {
+  const params = {
+    from: "agent@sender.example",
+    recipient: "help@agent.example",
+    sentId: "sent-1",
+  };
+  const detail = () =>
+    replyEmail({
+      from_header: "Helper <help@agent.example>",
+      auth: { ...replyEmail().auth, dmarcFromDomain: "agent.example" },
+    });
+  it("requires exact ancestry, recipient, raw From and authenticated domain", () => {
+    expect(isScopedChatReply(detail(), params)).toBe(true);
+    for (const mutation of [
+      { reply_to_sent_email_id: "other" },
+      { recipient: "other@sender.example" },
+      { to_email: "other@sender.example" },
+      { from_header: null },
+      { from_header: "other@agent.example" },
+      { from_header: "help@agent.example, other@agent.example" },
+      { auth: { ...detail().auth, dmarcFromDomain: "other.example" } },
+      { auth: { ...detail().auth, dmarc: "fail" } },
+    ])
+      expect(isScopedChatReply({ ...detail(), ...mutation }, params)).toBe(
+        false,
+      );
+  });
+  it("keeps unavailable parsing and all canonical interaction attachments pending", () => {
+    expect(isPlainChatReply(detail())).toBe(true);
+    expect(
+      isPlainChatReply({ ...detail(), parsed: { status: "failed" } }),
+    ).toBe(false);
+    expect(
+      isPlainChatReply({ ...detail(), parsed: { status: "complete" } }),
+    ).toBe(false);
+    for (const name of ["interaction.json", "INTERACTION.JSON"]) {
+      expect(
+        isPlainChatReply({
+          ...detail(),
+          parsed: {
+            status: "complete",
+            attachments: [
+              {
+                filename: name,
+                content_type: "application/json",
+                size_bytes: 1,
+              },
+            ],
+          },
+        }),
+      ).toBe(false);
+    }
   });
 });

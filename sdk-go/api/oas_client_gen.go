@@ -90,6 +90,20 @@ type Invoker interface {
 	//
 	// POST /domains/{id}/dns/check
 	CheckDomainDns(ctx context.Context, params CheckDomainDnsParams) (CheckDomainDnsRes, error)
+	// ClaimAgentConnection invokes claimAgentConnection operation.
+	//
+	// Address-bound external runtime pairing. Management operations require an organization owner or
+	// admin session or OAuth token; members and organization API keys cannot manage connections. Claim
+	// is authorized only by its one-use invitation. Connected means a real challenge was received and a
+	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+	// credentials. Runtime credentials allow only address-scoped mail operations, organization note
+	// reads and own-address note writes. The credential is returned once. If the claim response is lost
+	// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
+	// invitation.
+	//
+	// POST /agent-connections/claim
+	ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error)
 	// CliLogout invokes cliLogout operation.
 	//
 	// Revokes the OAuth grant used to authenticate the request. API-key
@@ -299,6 +313,42 @@ type Invoker interface {
 	//
 	// POST /agents
 	DefineAgent(ctx context.Context, request *DefineAgentInput) (DefineAgentRes, error)
+	// DeleteAgentContact invokes deleteAgentContact operation.
+	//
+	// Organization directory and agent preferences; no profiles, message history or runtime presence.
+	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// create address-only missing contacts using if_absent:true, and access only their own agent
+	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+	// not granted access. Memberships require an existing local agent connection (including revoked
+	// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+	// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+	// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+	// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+	// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+	// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+	// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+	// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+	//
+	// DELETE /agent-contacts/{agent_address}/{contact_address}
+	DeleteAgentContact(ctx context.Context, params DeleteAgentContactParams) (DeleteAgentContactRes, error)
+	// DeleteContact invokes deleteContact operation.
+	//
+	// Organization directory and agent preferences; no profiles, message history or runtime presence.
+	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// create address-only missing contacts using if_absent:true, and access only their own agent
+	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+	// not granted access. Memberships require an existing local agent connection (including revoked
+	// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+	// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+	// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+	// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+	// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+	// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+	// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+	// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+	//
+	// DELETE /contacts/{address}
+	DeleteContact(ctx context.Context, params DeleteContactParams) (DeleteContactRes, error)
 	// DeleteDomain invokes deleteDomain operation.
 	//
 	// Deletes a verified or unverified domain claim.
@@ -483,6 +533,45 @@ type Invoker interface {
 	//
 	// GET /agents/{address}
 	GetAgent(ctx context.Context, params GetAgentParams) (GetAgentRes, error)
+	// GetAgentContactPolicy invokes getAgentContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// GET /agent-contact-policy/{agent_address}
+	GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (GetAgentContactPolicyRes, error)
 	// GetChallenge invokes getChallenge operation.
 	//
 	// Fetch a challenge you created, to poll its `status` and settlement
@@ -490,6 +579,63 @@ type Invoker interface {
 	//
 	// GET /x402/challenges/{id}
 	GetChallenge(ctx context.Context, params GetChallengeParams) (GetChallengeRes, error)
+	// GetContact invokes getContact operation.
+	//
+	// Organization directory and agent preferences; no profiles, message history or runtime presence.
+	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// create address-only missing contacts using if_absent:true, and access only their own agent
+	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+	// not granted access. Memberships require an existing local agent connection (including revoked
+	// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+	// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+	// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+	// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+	// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+	// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+	// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+	// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+	//
+	// GET /contacts/{address}
+	GetContact(ctx context.Context, params GetContactParams) (GetContactRes, error)
+	// GetContactPolicy invokes getContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// GET /contact-policy
+	GetContactPolicy(ctx context.Context) (GetContactPolicyRes, error)
 	// GetConversation invokes getConversation operation.
 	//
 	// Returns the full conversation the given inbound email belongs
@@ -753,6 +899,42 @@ type Invoker interface {
 	//
 	// POST /templates/{id}/install
 	InstallTemplate(ctx context.Context, request *InstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error)
+	// ListAgentContacts invokes listAgentContacts operation.
+	//
+	// Organization directory and agent preferences; no profiles, message history or runtime presence.
+	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// create address-only missing contacts using if_absent:true, and access only their own agent
+	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+	// not granted access. Memberships require an existing local agent connection (including revoked
+	// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+	// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+	// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+	// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+	// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+	// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+	// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+	// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+	//
+	// GET /agent-contacts/{agent_address}
+	ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (ListAgentContactsRes, error)
+	// ListContacts invokes listContacts operation.
+	//
+	// Organization directory and agent preferences; no profiles, message history or runtime presence.
+	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// create address-only missing contacts using if_absent:true, and access only their own agent
+	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+	// not granted access. Memberships require an existing local agent connection (including revoked
+	// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+	// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+	// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+	// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+	// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+	// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+	// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+	// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+	//
+	// GET /contacts
+	ListContacts(ctx context.Context, params ListContactsParams) (ListContactsRes, error)
 	// ListDeclinedPayments invokes listDeclinedPayments operation.
 	//
 	// The 50 most recent payments your org's spend policy declined, newest
@@ -971,6 +1153,120 @@ type Invoker interface {
 	//
 	// POST /endpoints/{id}/pull
 	PullWebhookEvent(ctx context.Context, request *PullWebhookInput, params PullWebhookEventParams) (PullWebhookEventRes, error)
+	// PutAgentContact invokes putAgentContact operation.
+	//
+	// Organization directory and agent preferences; no profiles, message history or runtime presence.
+	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// create address-only missing contacts using if_absent:true, and access only their own agent
+	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+	// not granted access. Memberships require an existing local agent connection (including revoked
+	// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+	// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+	// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+	// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+	// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+	// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+	// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+	// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+	//
+	// PUT /agent-contacts/{agent_address}/{contact_address}
+	PutAgentContact(ctx context.Context, request PutAgentContactReq, params PutAgentContactParams) (PutAgentContactRes, error)
+	// PutAgentContactPolicy invokes putAgentContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// PUT /agent-contact-policy/{agent_address}
+	PutAgentContactPolicy(ctx context.Context, request PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (PutAgentContactPolicyRes, error)
+	// PutContact invokes putContact operation.
+	//
+	// Organization directory and agent preferences; no profiles, message history or runtime presence.
+	// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+	// create address-only missing contacts using if_absent:true, and access only their own agent
+	// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+	// not granted access. Memberships require an existing local agent connection (including revoked
+	// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+	// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+	// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+	// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+	// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+	// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+	// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+	// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+	//
+	// PUT /contacts/{address}
+	PutContact(ctx context.Context, request PutContactReq, params PutContactParams) (PutContactRes, error)
+	// PutContactPolicy invokes putContactPolicy operation.
+	//
+	// Receiver-side email notification admission preferences; never task, tool, code execution or
+	// account authority. Rules take effect only in receivers implementing this current contact-policy
+	// contract. Older receivers may continue their previous exact-contact notifications until updated.
+	// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+	// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+	// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+	// write either policy. Function and signed capability credentials are not granted access. Rules are
+	// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+	// matching organization rules; silence wins ties within that scope. If neither scope matches,
+	// existing exact membership notify:true allows using its own activation metadata; otherwise only
+	// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+	// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+	// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+	// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+	// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+	// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+	// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+	// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+	// reads as empty rules, null version/timestamps, false request intake for the organization and null
+	// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+	// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+	// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+	// writes preserve versions. Agent composite effective_version changes with either policy document,
+	// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+	//  connection creation or successful claim. Reclaiming a connection invalidates prior admission
+	// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+	// admissions require received_at >= both the selected activation time and effective_since.
+	// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+	// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+	// own notify_since and generation but must still recheck current policy denies and effective_version.
+	//  Before dispatch, receivers must recheck the current composite version and applicable activation
+	// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+	//  Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+	// dispatch notifications.
+	//
+	// PUT /contact-policy
+	PutContactPolicy(ctx context.Context, request PutContactPolicyRequest) (PutContactPolicyRes, error)
 	// RedeemCreditCode invokes redeemCreditCode operation.
 	//
 	// Redeem a credit code for the authenticated organization. The credit is
@@ -1119,6 +1415,13 @@ type Invoker interface {
 	// as the web inbox search. Structured filters such as `from`, `to`,
 	// `domain_id`, status, attachment presence, and spam score bounds
 	// are combined with the text query.
+	// Connected-agent credentials search only mail received by their own
+	// address. This applies to results, totals, facets, and every page;
+	// search filters cannot widen the credential's scope. When
+	// `reply_to_sent_email_id` is supplied, its parent send must belong
+	// to the connected address in the same organization. An unavailable
+	// parent returns 404. Sender filters are not authentication proof;
+	// inspect the email detail's authentication evidence before trusting it.
 	//
 	// GET /emails/search
 	SearchEmails(ctx context.Context, params SearchEmailsParams) (SearchEmailsRes, error)
@@ -2057,6 +2360,108 @@ func (c *Client) sendCheckDomainDns(ctx context.Context, params CheckDomainDnsPa
 
 	stage = "DecodeResponse"
 	result, err := decodeCheckDomainDnsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ClaimAgentConnection invokes claimAgentConnection operation.
+//
+// Address-bound external runtime pairing. Management operations require an organization owner or
+// admin session or OAuth token; members and organization API keys cannot manage connections. Claim
+// is authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow only address-scoped mail operations, organization note
+// reads and own-address note writes. The credential is returned once. If the claim response is lost
+// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
+// invitation.
+//
+// POST /agent-connections/claim
+func (c *Client) ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error) {
+	res, err := c.sendClaimAgentConnection(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (res ClaimAgentConnectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("claimAgentConnection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent-connections/claim"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ClaimAgentConnectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-connections/claim"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeClaimAgentConnectionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeClaimAgentConnectionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -4093,6 +4498,335 @@ func (c *Client) sendDefineAgent(ctx context.Context, request *DefineAgentInput)
 
 	stage = "DecodeResponse"
 	result, err := decodeDefineAgentResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteAgentContact invokes deleteAgentContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// DELETE /agent-contacts/{agent_address}/{contact_address}
+func (c *Client) DeleteAgentContact(ctx context.Context, params DeleteAgentContactParams) (DeleteAgentContactRes, error) {
+	res, err := c.sendDeleteAgentContact(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteAgentContact(ctx context.Context, params DeleteAgentContactParams) (res DeleteAgentContactRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteAgentContact"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/agent-contacts/{agent_address}/{contact_address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteAgentContactOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/agent-contacts/"
+	{
+		// Encode "agent_address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "agent_address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.AgentAddress))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/"
+	{
+		// Encode "contact_address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contact_address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContactAddress))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "if_version" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "if_version",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.UUIDToString(params.IfVersion))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteAgentContactOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteAgentContactResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteContact invokes deleteContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// DELETE /contacts/{address}
+func (c *Client) DeleteContact(ctx context.Context, params DeleteContactParams) (DeleteContactRes, error) {
+	res, err := c.sendDeleteContact(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteContact(ctx context.Context, params DeleteContactParams) (res DeleteContactRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteContact"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/contacts/{address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteContactOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/contacts/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "if_version" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "if_version",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.UUIDToString(params.IfVersion))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteContactOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteContactResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -6951,6 +7685,170 @@ func (c *Client) sendGetAgent(ctx context.Context, params GetAgentParams) (res G
 	return result, nil
 }
 
+// GetAgentContactPolicy invokes getAgentContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// GET /agent-contact-policy/{agent_address}
+func (c *Client) GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (GetAgentContactPolicyRes, error) {
+	res, err := c.sendGetAgentContactPolicy(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (res GetAgentContactPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getAgentContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-contact-policy/{agent_address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetAgentContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-contact-policy/"
+	{
+		// Encode "agent_address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "agent_address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.AgentAddress))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetAgentContactPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetAgentContactPolicyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetChallenge invokes getChallenge operation.
 //
 // Fetch a challenge you created, to poll its `status` and settlement
@@ -7070,6 +7968,289 @@ func (c *Client) sendGetChallenge(ctx context.Context, params GetChallengeParams
 
 	stage = "DecodeResponse"
 	result, err := decodeGetChallengeResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetContact invokes getContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// GET /contacts/{address}
+func (c *Client) GetContact(ctx context.Context, params GetContactParams) (GetContactRes, error) {
+	res, err := c.sendGetContact(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetContact(ctx context.Context, params GetContactParams) (res GetContactRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getContact"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/contacts/{address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetContactOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/contacts/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetContactOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetContactResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetContactPolicy invokes getContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// GET /contact-policy
+func (c *Client) GetContactPolicy(ctx context.Context) (GetContactPolicyRes, error) {
+	res, err := c.sendGetContactPolicy(ctx)
+	return res, err
+}
+
+func (c *Client) sendGetContactPolicy(ctx context.Context) (res GetContactPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/contact-policy"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/contact-policy"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetContactPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetContactPolicyResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -9699,6 +10880,338 @@ func (c *Client) sendInstallTemplate(ctx context.Context, request *InstallTempla
 
 	stage = "DecodeResponse"
 	result, err := decodeInstallTemplateResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListAgentContacts invokes listAgentContacts operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// GET /agent-contacts/{agent_address}
+func (c *Client) ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (ListAgentContactsRes, error) {
+	res, err := c.sendListAgentContacts(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListAgentContacts(ctx context.Context, params ListAgentContactsParams) (res ListAgentContactsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listAgentContacts"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-contacts/{agent_address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListAgentContactsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-contacts/"
+	{
+		// Encode "agent_address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "agent_address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.AgentAddress))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListAgentContactsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListAgentContactsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListContacts invokes listContacts operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// GET /contacts
+func (c *Client) ListContacts(ctx context.Context, params ListContactsParams) (ListContactsRes, error) {
+	res, err := c.sendListContacts(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListContacts(ctx context.Context, params ListContactsParams) (res ListContactsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listContacts"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/contacts"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListContactsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/contacts"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListContactsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListContactsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -13059,6 +14572,621 @@ func (c *Client) sendPullWebhookEvent(ctx context.Context, request *PullWebhookI
 	return result, nil
 }
 
+// PutAgentContact invokes putAgentContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// PUT /agent-contacts/{agent_address}/{contact_address}
+func (c *Client) PutAgentContact(ctx context.Context, request PutAgentContactReq, params PutAgentContactParams) (PutAgentContactRes, error) {
+	res, err := c.sendPutAgentContact(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendPutAgentContact(ctx context.Context, request PutAgentContactReq, params PutAgentContactParams) (res PutAgentContactRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("putAgentContact"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/agent-contacts/{agent_address}/{contact_address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PutAgentContactOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [4]string
+	pathParts[0] = "/agent-contacts/"
+	{
+		// Encode "agent_address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "agent_address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.AgentAddress))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/"
+	{
+		// Encode "contact_address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "contact_address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.ContactAddress))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[3] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePutAgentContactRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PutAgentContactOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePutAgentContactResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// PutAgentContactPolicy invokes putAgentContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// PUT /agent-contact-policy/{agent_address}
+func (c *Client) PutAgentContactPolicy(ctx context.Context, request PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (PutAgentContactPolicyRes, error) {
+	res, err := c.sendPutAgentContactPolicy(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendPutAgentContactPolicy(ctx context.Context, request PutAgentContactPolicyRequest, params PutAgentContactPolicyParams) (res PutAgentContactPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("putAgentContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/agent-contact-policy/{agent_address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PutAgentContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-contact-policy/"
+	{
+		// Encode "agent_address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "agent_address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.AgentAddress))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePutAgentContactPolicyRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PutAgentContactPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePutAgentContactPolicyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// PutContact invokes putContact operation.
+//
+// Organization directory and agent preferences; no profiles, message history or runtime presence.
+// Existing organization credentials use tenant permissions. Connected keys may read the directory,
+// create address-only missing contacts using if_absent:true, and access only their own agent
+// memberships; they cannot edit shared labels or delete directory entries. Function credentials are
+// not granted access. Memberships require an existing local agent connection (including revoked
+// connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an
+// existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on
+// generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them.
+// Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers
+// must recheck generation/preferences before dispatch and pause admission when their policy cache is
+// older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+// deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending
+// canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.
+//
+// PUT /contacts/{address}
+func (c *Client) PutContact(ctx context.Context, request PutContactReq, params PutContactParams) (PutContactRes, error) {
+	res, err := c.sendPutContact(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendPutContact(ctx context.Context, request PutContactReq, params PutContactParams) (res PutContactRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("putContact"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/contacts/{address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PutContactOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/contacts/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePutContactRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PutContactOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePutContactResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// PutContactPolicy invokes putContactPolicy operation.
+//
+// Receiver-side email notification admission preferences; never task, tool, code execution or
+// account authority. Rules take effect only in receivers implementing this current contact-policy
+// contract. Older receivers may continue their previous exact-contact notifications until updated.
+// Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+// preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+// read/write policies. Connected credentials may only GET their own agent composite; they cannot
+// write either policy. Function and signed capability credentials are not granted access. Rules are
+// unordered. Exact membership notify:false always silences. Next use matching agent rules, otherwise
+// matching organization rules; silence wins ties within that scope. If neither scope matches,
+// existing exact membership notify:true allows using its own activation metadata; otherwise only
+// enabled contact-request intake is allowed. Owner policy silence therefore cannot be bypassed by a
+// connected agent adding a notify:true membership. Patterns are canonical lowercase bare mailboxes,
+// *@example.com, research-*@example.com or *@*.example.com. Only a terminal local-part * and a
+// leading whole domain-label *. are supported; subdomain patterns exclude the apex and require a
+// literal multi-label suffix. No regular expressions, question marks, universal domains or wildcard
+// TLDs. Domain-only UI input must be converted to *@domain. PUT fully replaces up to 100 rules and
+// the request-intake option using exactly one CAS precondition. Duplicate pattern/effect pairs are
+// rejected. if_absent returns an identical existing document, otherwise 409. A missing document
+// reads as empty rules, null version/timestamps, false request intake for the organization and null
+// (inherit) for the agent. Reset overrides with empty rules and null request intake. Allow rules
+// preserve server activation metadata while retained unchanged; removing/recreating or changing a
+// rule to allow resets it. Request intake defaults off; agent null inherits the organization. No-op
+// writes preserve versions. Agent composite effective_version changes with either policy document,
+// connection identity, generation or successful claim; effective_since is the latest policy mutation,
+//
+//	connection creation or successful claim. Reclaiming a connection invalidates prior admission
+//
+// snapshots and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request
+// admissions require received_at >= both the selected activation time and effective_since.
+// Consequently even unrelated policy edits suppress queued older rule/request admissions, without
+// deleting email history or affecting explicit reply waits. Exact membership fallback retains its
+// own notify_since and generation but must still recheck current policy denies and effective_version.
+//
+//	Before dispatch, receivers must recheck the current composite version and applicable activation
+//
+// generation and membership; stop new admissions when policy is unavailable or older than 30 seconds.
+//
+//	Snapshot fields explain scope and matched rules locally; the API does not execute tasks or
+//
+// dispatch notifications.
+//
+// PUT /contact-policy
+func (c *Client) PutContactPolicy(ctx context.Context, request PutContactPolicyRequest) (PutContactPolicyRes, error) {
+	res, err := c.sendPutContactPolicy(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendPutContactPolicy(ctx context.Context, request PutContactPolicyRequest) (res PutContactPolicyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("putContactPolicy"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/contact-policy"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, PutContactPolicyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/contact-policy"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodePutContactPolicyRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PutContactPolicyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodePutContactPolicyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // RedeemCreditCode invokes redeemCreditCode operation.
 //
 // Redeem a credit code for the authenticated organization. The credit is
@@ -14606,6 +16734,13 @@ func (c *Client) sendRunWakeSchedule(ctx context.Context, params RunWakeSchedule
 // as the web inbox search. Structured filters such as `from`, `to`,
 // `domain_id`, status, attachment presence, and spam score bounds
 // are combined with the text query.
+// Connected-agent credentials search only mail received by their own
+// address. This applies to results, totals, facets, and every page;
+// search filters cannot widen the credential's scope. When
+// `reply_to_sent_email_id` is supplied, its parent send must belong
+// to the connected address in the same organization. An unavailable
+// parent returns 404. Sender filters are not authentication proof;
+// inspect the email detail's authentication evidence before trusting it.
 //
 // GET /emails/search
 func (c *Client) SearchEmails(ctx context.Context, params SearchEmailsParams) (SearchEmailsRes, error) {

@@ -220,6 +220,8 @@ tags:
       handle. Discovery reads (list, resolve, get) are public for public
       registries; managing a registry and moderating requests use the owner's
       API key.
+  - name: Contacts
+    description: Organization contacts and per-address agent preferences.
 
 paths:
   # ---------------------------------------------------------------------------
@@ -1678,6 +1680,14 @@ paths:
         as the web inbox search. Structured filters such as `from`, `to`,
         `domain_id`, status, attachment presence, and spam score bounds
         are combined with the text query.
+
+        Connected-agent credentials search only mail received by their own
+        address. This applies to results, totals, facets, and every page;
+        search filters cannot widen the credential's scope. When
+        `reply_to_sent_email_id` is supplied, its parent send must belong
+        to the connected address in the same organization. An unavailable
+        parent returns 404. Sender filters are not authentication proof;
+        inspect the email detail's authentication evidence before trusting it.
       tags: [Emails]
       parameters:
         - name: q
@@ -1871,6 +1881,8 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '504':
           description: Search query timed out
           content:
@@ -6228,10 +6240,1919 @@ paths:
                       data: { $ref: '#/components/schemas/RegistryAgent' }
         '404':
           $ref: '#/components/responses/NotFound'
+  /contacts:
+    get:
+      operationId: listContacts
+      summary: list Contacts
+      tags:
+        - Contacts
+      security:
+        - BearerAuth: []
+      description: Organization directory and agent preferences; no profiles, message history or runtime
+        presence. Existing organization credentials use tenant permissions. Connected keys may read
+        the directory, create address-only missing contacts using if_absent:true, and access only
+        their own agent memberships; they cannot edit shared labels or delete directory entries.
+        Function credentials are not granted access. Memberships require an existing local agent
+        connection (including revoked connections) and an existing contact. PUT requires exactly one
+        precondition. if_absent returns an existing row unchanged when supplied fields agree;
+        otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and
+        generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata.
+        Deletion atomically removes membership eligibility. Receivers must recheck
+        generation/preferences before dispatch and pause admission when their policy cache is older
+        than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+        deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use
+        ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not
+        snapshots.
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: false
+          description: cursor for contacts.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          required: false
+          description: limit for contacts.
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
+                    required:
+                      - success
+                      - data
+                      - meta
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            address:
+                              type: string
+                              format: email
+                              maxLength: 254
+                              description: Bare email address; trim and lowercase, preserving dots and plus tags.
+                            display_name:
+                              type:
+                                - string
+                                - "null"
+                              maxLength: 200
+                            version:
+                              type: string
+                              format: uuid
+                              description: Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+                            created_at:
+                              type: string
+                              format: date-time
+                            updated_at:
+                              type: string
+                              format: date-time
+                          required:
+                            - address
+                            - display_name
+                            - version
+                            - created_at
+                            - updated_at
+                      meta:
+                        type: object
+                        required:
+                          - cursor
+                        properties:
+                          limit:
+                            type: integer
+                          cursor:
+                            type:
+                              - string
+                              - "null"
+          headers:
+            ratelimit-limit:
+              description: Maximum number of requests allowed in the current window.
+              schema:
+                type: integer
+                minimum: 1
+                example: 120
+            ratelimit-remaining:
+              description: Remaining requests in the current window.
+              schema:
+                type: integer
+                minimum: 0
+                example: 118
+            ratelimit-reset:
+              description: Unix timestamp (seconds) when the current window resets.
+              schema:
+                type: integer
+                example: 1700000060
+            ratelimit-policy:
+              description: Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.
+              schema:
+                type: string
+                example: 120;w=60
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Always fresh policy metadata.
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "409":
+          description: "contact_conflict: write precondition did not match."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+  /contacts/{address}:
+    get:
+      operationId: getContact
+      summary: get Contact
+      tags:
+        - Contacts
+      security:
+        - BearerAuth: []
+      description: Organization directory and agent preferences; no profiles, message history or runtime
+        presence. Existing organization credentials use tenant permissions. Connected keys may read
+        the directory, create address-only missing contacts using if_absent:true, and access only
+        their own agent memberships; they cannot edit shared labels or delete directory entries.
+        Function credentials are not granted access. Memberships require an existing local agent
+        connection (including revoked connections) and an existing contact. PUT requires exactly one
+        precondition. if_absent returns an existing row unchanged when supplied fields agree;
+        otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and
+        generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata.
+        Deletion atomically removes membership eligibility. Receivers must recheck
+        generation/preferences before dispatch and pause admission when their policy cache is older
+        than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+        deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use
+        ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not
+        snapshots.
+      parameters:
+        - name: address
+          in: path
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: true
+          description: address for contacts.
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
+                    required:
+                      - success
+                      - data
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          address:
+                            type: string
+                            format: email
+                            maxLength: 254
+                            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+                          display_name:
+                            type:
+                              - string
+                              - "null"
+                            maxLength: 200
+                          version:
+                            type: string
+                            format: uuid
+                            description: Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+                          created_at:
+                            type: string
+                            format: date-time
+                          updated_at:
+                            type: string
+                            format: date-time
+                        required:
+                          - address
+                          - display_name
+                          - version
+                          - created_at
+                          - updated_at
+          headers:
+            ratelimit-limit:
+              description: Maximum number of requests allowed in the current window.
+              schema:
+                type: integer
+                minimum: 1
+                example: 120
+            ratelimit-remaining:
+              description: Remaining requests in the current window.
+              schema:
+                type: integer
+                minimum: 0
+                example: 118
+            ratelimit-reset:
+              description: Unix timestamp (seconds) when the current window resets.
+              schema:
+                type: integer
+                example: 1700000060
+            ratelimit-policy:
+              description: Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.
+              schema:
+                type: string
+                example: 120;w=60
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Always fresh policy metadata.
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "409":
+          description: "contact_conflict: write precondition did not match."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+    put:
+      operationId: putContact
+      summary: put Contact
+      tags:
+        - Contacts
+      security:
+        - BearerAuth: []
+      description: Organization directory and agent preferences; no profiles, message history or runtime
+        presence. Existing organization credentials use tenant permissions. Connected keys may read
+        the directory, create address-only missing contacts using if_absent:true, and access only
+        their own agent memberships; they cannot edit shared labels or delete directory entries.
+        Function credentials are not granted access. Memberships require an existing local agent
+        connection (including revoked connections) and an existing contact. PUT requires exactly one
+        precondition. if_absent returns an existing row unchanged when supplied fields agree;
+        otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and
+        generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata.
+        Deletion atomically removes membership eligibility. Receivers must recheck
+        generation/preferences before dispatch and pause admission when their policy cache is older
+        than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+        deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use
+        ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not
+        snapshots.
+      parameters:
+        - name: address
+          in: path
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: true
+          description: address for contacts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  additionalProperties: false
+                  properties:
+                    display_name: &a1
+                      type:
+                        - string
+                        - "null"
+                      maxLength: 200
+                    if_absent:
+                      type: boolean
+                      const: true
+                  required:
+                    - if_absent
+                - type: object
+                  additionalProperties: false
+                  properties:
+                    display_name: *a1
+                    if_version:
+                      type: string
+                      format: uuid
+                      description: Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+                  required:
+                    - if_version
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
+                    required:
+                      - success
+                      - data
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          address:
+                            type: string
+                            format: email
+                            maxLength: 254
+                            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+                          display_name:
+                            type:
+                              - string
+                              - "null"
+                            maxLength: 200
+                          version:
+                            type: string
+                            format: uuid
+                            description: Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+                          created_at:
+                            type: string
+                            format: date-time
+                          updated_at:
+                            type: string
+                            format: date-time
+                        required:
+                          - address
+                          - display_name
+                          - version
+                          - created_at
+                          - updated_at
+          headers:
+            ratelimit-limit:
+              description: Maximum number of requests allowed in the current window.
+              schema:
+                type: integer
+                minimum: 1
+                example: 120
+            ratelimit-remaining:
+              description: Remaining requests in the current window.
+              schema:
+                type: integer
+                minimum: 0
+                example: 118
+            ratelimit-reset:
+              description: Unix timestamp (seconds) when the current window resets.
+              schema:
+                type: integer
+                example: 1700000060
+            ratelimit-policy:
+              description: Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.
+              schema:
+                type: string
+                example: 120;w=60
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Always fresh policy metadata.
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "409":
+          description: "contact_conflict: write precondition did not match."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+    delete:
+      operationId: deleteContact
+      summary: delete Contact
+      tags:
+        - Contacts
+      security:
+        - BearerAuth: []
+      description: Organization directory and agent preferences; no profiles, message history or runtime
+        presence. Existing organization credentials use tenant permissions. Connected keys may read
+        the directory, create address-only missing contacts using if_absent:true, and access only
+        their own agent memberships; they cannot edit shared labels or delete directory entries.
+        Function credentials are not granted access. Memberships require an existing local agent
+        connection (including revoked connections) and an existing contact. PUT requires exactly one
+        precondition. if_absent returns an existing row unchanged when supplied fields agree;
+        otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and
+        generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata.
+        Deletion atomically removes membership eligibility. Receivers must recheck
+        generation/preferences before dispatch and pause admission when their policy cache is older
+        than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+        deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use
+        ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not
+        snapshots.
+      parameters:
+        - name: address
+          in: path
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: true
+          description: address for contacts.
+        - name: if_version
+          in: query
+          schema:
+            type: string
+            format: uuid
+            description: Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+          required: true
+          description: if_version for contacts.
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
+                    required:
+                      - success
+                      - data
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          deleted:
+                            type: boolean
+                        required:
+                          - deleted
+          headers:
+            ratelimit-limit:
+              description: Maximum number of requests allowed in the current window.
+              schema:
+                type: integer
+                minimum: 1
+                example: 120
+            ratelimit-remaining:
+              description: Remaining requests in the current window.
+              schema:
+                type: integer
+                minimum: 0
+                example: 118
+            ratelimit-reset:
+              description: Unix timestamp (seconds) when the current window resets.
+              schema:
+                type: integer
+                example: 1700000060
+            ratelimit-policy:
+              description: Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.
+              schema:
+                type: string
+                example: 120;w=60
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Always fresh policy metadata.
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "409":
+          description: "contact_conflict: write precondition did not match."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+  /agent-contacts/{agent_address}:
+    get:
+      operationId: listAgentContacts
+      summary: list Agent Contacts
+      tags:
+        - Contacts
+      security:
+        - BearerAuth: []
+      description: Organization directory and agent preferences; no profiles, message history or runtime
+        presence. Existing organization credentials use tenant permissions. Connected keys may read
+        the directory, create address-only missing contacts using if_absent:true, and access only
+        their own agent memberships; they cannot edit shared labels or delete directory entries.
+        Function credentials are not granted access. Memberships require an existing local agent
+        connection (including revoked connections) and an existing contact. PUT requires exactly one
+        precondition. if_absent returns an existing row unchanged when supplied fields agree;
+        otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and
+        generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata.
+        Deletion atomically removes membership eligibility. Receivers must recheck
+        generation/preferences before dispatch and pause admission when their policy cache is older
+        than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+        deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use
+        ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not
+        snapshots.
+      parameters:
+        - name: agent_address
+          in: path
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: true
+          description: agent_address for contacts.
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: false
+          description: cursor for contacts.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          required: false
+          description: limit for contacts.
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
+                    required:
+                      - success
+                      - data
+                      - meta
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          additionalProperties: false
+                          properties:
+                            agent_address:
+                              type: string
+                              format: email
+                              maxLength: 254
+                              description: Bare email address; trim and lowercase, preserving dots and plus tags.
+                            contact_address:
+                              type: string
+                              format: email
+                              maxLength: 254
+                              description: Bare email address; trim and lowercase, preserving dots and plus tags.
+                            purpose:
+                              type:
+                                - string
+                                - "null"
+                              maxLength: 2000
+                            notify:
+                              type: boolean
+                            notify_since:
+                              type:
+                                - string
+                                - "null"
+                              format: date-time
+                            notification_generation:
+                              type:
+                                - string
+                                - "null"
+                              format: uuid
+                            version:
+                              type: string
+                              format: uuid
+                              description: Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+                            created_at:
+                              type: string
+                              format: date-time
+                            updated_at:
+                              type: string
+                              format: date-time
+                          required:
+                            - agent_address
+                            - contact_address
+                            - purpose
+                            - notify
+                            - notify_since
+                            - notification_generation
+                            - version
+                            - created_at
+                            - updated_at
+                      meta:
+                        type: object
+                        required:
+                          - cursor
+                        properties:
+                          limit:
+                            type: integer
+                          cursor:
+                            type:
+                              - string
+                              - "null"
+          headers:
+            ratelimit-limit:
+              description: Maximum number of requests allowed in the current window.
+              schema:
+                type: integer
+                minimum: 1
+                example: 120
+            ratelimit-remaining:
+              description: Remaining requests in the current window.
+              schema:
+                type: integer
+                minimum: 0
+                example: 118
+            ratelimit-reset:
+              description: Unix timestamp (seconds) when the current window resets.
+              schema:
+                type: integer
+                example: 1700000060
+            ratelimit-policy:
+              description: Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.
+              schema:
+                type: string
+                example: 120;w=60
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Always fresh policy metadata.
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "409":
+          description: "contact_conflict: write precondition did not match."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+  /agent-contacts/{agent_address}/{contact_address}:
+    put:
+      operationId: putAgentContact
+      summary: put Agent Contact
+      tags:
+        - Contacts
+      security:
+        - BearerAuth: []
+      description: Organization directory and agent preferences; no profiles, message history or runtime
+        presence. Existing organization credentials use tenant permissions. Connected keys may read
+        the directory, create address-only missing contacts using if_absent:true, and access only
+        their own agent memberships; they cannot edit shared labels or delete directory entries.
+        Function credentials are not granted access. Memberships require an existing local agent
+        connection (including revoked connections) and an existing contact. PUT requires exactly one
+        precondition. if_absent returns an existing row unchanged when supplied fields agree;
+        otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and
+        generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata.
+        Deletion atomically removes membership eligibility. Receivers must recheck
+        generation/preferences before dispatch and pause admission when their policy cache is older
+        than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+        deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use
+        ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not
+        snapshots.
+      parameters:
+        - name: agent_address
+          in: path
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: true
+          description: agent_address for contacts.
+        - name: contact_address
+          in: path
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: true
+          description: contact_address for contacts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  additionalProperties: false
+                  properties:
+                    purpose: &a2
+                      type:
+                        - string
+                        - "null"
+                      maxLength: 2000
+                    notify: &a3
+                      type: boolean
+                    if_absent:
+                      type: boolean
+                      const: true
+                  required:
+                    - if_absent
+                - type: object
+                  additionalProperties: false
+                  properties:
+                    purpose: *a2
+                    notify: *a3
+                    if_version:
+                      type: string
+                      format: uuid
+                      description: Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+                  required:
+                    - if_version
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
+                    required:
+                      - success
+                      - data
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          agent_address:
+                            type: string
+                            format: email
+                            maxLength: 254
+                            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+                          contact_address:
+                            type: string
+                            format: email
+                            maxLength: 254
+                            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+                          purpose:
+                            type:
+                              - string
+                              - "null"
+                            maxLength: 2000
+                          notify:
+                            type: boolean
+                          notify_since:
+                            type:
+                              - string
+                              - "null"
+                            format: date-time
+                          notification_generation:
+                            type:
+                              - string
+                              - "null"
+                            format: uuid
+                          version:
+                            type: string
+                            format: uuid
+                            description: Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+                          created_at:
+                            type: string
+                            format: date-time
+                          updated_at:
+                            type: string
+                            format: date-time
+                        required:
+                          - agent_address
+                          - contact_address
+                          - purpose
+                          - notify
+                          - notify_since
+                          - notification_generation
+                          - version
+                          - created_at
+                          - updated_at
+          headers:
+            ratelimit-limit:
+              description: Maximum number of requests allowed in the current window.
+              schema:
+                type: integer
+                minimum: 1
+                example: 120
+            ratelimit-remaining:
+              description: Remaining requests in the current window.
+              schema:
+                type: integer
+                minimum: 0
+                example: 118
+            ratelimit-reset:
+              description: Unix timestamp (seconds) when the current window resets.
+              schema:
+                type: integer
+                example: 1700000060
+            ratelimit-policy:
+              description: Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.
+              schema:
+                type: string
+                example: 120;w=60
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Always fresh policy metadata.
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "409":
+          description: "contact_conflict: write precondition did not match."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+    delete:
+      operationId: deleteAgentContact
+      summary: delete Agent Contact
+      tags:
+        - Contacts
+      security:
+        - BearerAuth: []
+      description: Organization directory and agent preferences; no profiles, message history or runtime
+        presence. Existing organization credentials use tenant permissions. Connected keys may read
+        the directory, create address-only missing contacts using if_absent:true, and access only
+        their own agent memberships; they cannot edit shared labels or delete directory entries.
+        Function credentials are not granted access. Memberships require an existing local agent
+        connection (including revoked connections) and an existing contact. PUT requires exactly one
+        precondition. if_absent returns an existing row unchanged when supplied fields agree;
+        otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and
+        generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata.
+        Deletion atomically removes membership eligibility. Receivers must recheck
+        generation/preferences before dispatch and pause admission when their policy cache is older
+        than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns
+        deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use
+        ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not
+        snapshots.
+      parameters:
+        - name: agent_address
+          in: path
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: true
+          description: agent_address for contacts.
+        - name: contact_address
+          in: path
+          schema:
+            type: string
+            format: email
+            maxLength: 254
+            description: Bare email address; trim and lowercase, preserving dots and plus tags.
+          required: true
+          description: contact_address for contacts.
+        - name: if_version
+          in: query
+          schema:
+            type: string
+            format: uuid
+            description: Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+          required: true
+          description: if_version for contacts.
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
+                    required:
+                      - success
+                      - data
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          deleted:
+                            type: boolean
+                        required:
+                          - deleted
+          headers:
+            ratelimit-limit:
+              description: Maximum number of requests allowed in the current window.
+              schema:
+                type: integer
+                minimum: 1
+                example: 120
+            ratelimit-remaining:
+              description: Remaining requests in the current window.
+              schema:
+                type: integer
+                minimum: 0
+                example: 118
+            ratelimit-reset:
+              description: Unix timestamp (seconds) when the current window resets.
+              schema:
+                type: integer
+                example: 1700000060
+            ratelimit-policy:
+              description: Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.
+              schema:
+                type: string
+                example: 120;w=60
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+              description: Always fresh policy metadata.
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "409":
+          description: "contact_conflict: write precondition did not match."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+  /agent-connections/claim:
+    post:
+      operationId: claimAgentConnection
+      tags:
+        - Agent Connections
+      summary: claim Agent Connection
+      description: Address-bound external runtime pairing. Management operations require an organization
+        owner or admin session or OAuth token; members and organization API keys cannot manage
+        connections. Claim is authorized only by its one-use invitation. Connected means a real
+        challenge was received and a reply sent by the current bound credential was received back.
+        Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous
+        credentials. Status responses contain no credentials. Runtime credentials allow only
+        address-scoped mail operations, organization note reads and own-address note writes.
+        The credential is returned once. If the claim response is lost or the outcome is unknown,
+        request a fresh owner invitation instead of retrying the consumed invitation.
+      security: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: This header does not enable credential replay for this one-use claim. If the
+            response is lost or the outcome is unknown, request a fresh owner invitation. Do not
+            assume that retrying the same key or payload can recover the returned credential.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+      responses:
+        "200":
+          description: Success
+          headers:
+            Cache-Control:
+              description: Credentials and status must not be cached.
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - data
+                properties:
+                  success:
+                    const: true
+                    type: boolean
+                  data:
+                    $schema: https://json-schema.org/draft/2020-12/schema
+                    type: object
+                    properties:
+                      connection:
+                        type: object
+                        properties:
+                          address:
+                            type: string
+                            format: email
+                            pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 80
+                          owner_address:
+                            type: string
+                            format: email
+                            pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+                          status:
+                            type: string
+                            enum:
+                              - pending
+                              - claimed
+                              - connected
+                              - revoked
+                          created_at:
+                            type: string
+                            format: date-time
+                            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+                          updated_at:
+                            type: string
+                            format: date-time
+                            pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+                          claimed_at:
+                            anyOf:
+                              - type: string
+                                format: date-time
+                                pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+                              - type: "null"
+                          verified_at:
+                            anyOf:
+                              - type: string
+                                format: date-time
+                                pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+                              - type: "null"
+                          last_seen_at:
+                            anyOf:
+                              - type: string
+                                format: date-time
+                                pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+                              - type: "null"
+                        required:
+                          - address
+                          - name
+                          - owner_address
+                          - status
+                          - created_at
+                          - updated_at
+                          - claimed_at
+                          - verified_at
+                          - last_seen_at
+                        additionalProperties: false
+                      org_id:
+                        type: string
+                        pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+                      owner_address:
+                        type: string
+                        format: email
+                        pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+                      api_key:
+                        type: string
+                      api_base_url:
+                        type: string
+                        format: uri
+                    required:
+                      - connection
+                      - org_id
+                      - owner_address
+                      - api_key
+                      - api_base_url
+                    additionalProperties: false
+        "400":
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: validation_error
+                  message: Invalid domain format
+        "401":
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: unauthorized
+                  message: Invalid or missing API key
+        "403":
+          description: Authenticated caller lacks permission for the operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: forbidden
+                  message: Insufficient permissions
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: not_found
+                  message: Resource not found
+        "409":
+          description: The request conflicts with the current state of the resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: conflict
+                  message: settlement already in progress
+        "429":
+          description: Rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds to wait before retrying
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                success: false
+                error:
+                  code: rate_limit_exceeded
+                  message: Rate limit exceeded
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $schema: https://json-schema.org/draft/2020-12/schema
+              type: object
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 256
+              required:
+                - token
+              additionalProperties: false
+
 
 # =============================================================================
 # Components
 # =============================================================================
+  /contact-policy:
+    get:
+      operationId: getContactPolicy
+      summary: Read organization contact policy
+      tags:
+      - Contacts
+      security:
+      - BearerAuth: []
+      description: Receiver-side email notification admission preferences; never task, tool, code execution
+        or account authority. Rules take effect only in receivers implementing this current contact-policy
+        contract. Older receivers may continue their previous exact-contact notifications until updated.
+        Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+        preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+        read/write policies. Connected credentials may only GET their own agent composite; they cannot write
+        either policy. Function and signed capability credentials are not granted access. Rules are unordered.
+        Exact membership notify:false always silences. Next use matching agent rules, otherwise matching
+        organization rules; silence wins ties within that scope. If neither scope matches, existing exact
+        membership notify:true allows using its own activation metadata; otherwise only enabled contact-request
+        intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding
+        a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com
+        or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported;
+        subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions,
+        question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain.
+        PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+        Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise
+        409. A missing document reads as empty rules, null version/timestamps, false request intake for
+        the organization and null (inherit) for the agent. Reset overrides with empty rules and null request
+        intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating
+        or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization.
+        No-op writes preserve versions. Agent composite effective_version changes with either policy document,
+        connection identity, generation or successful claim; effective_since is the latest policy mutation,
+        connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots
+        and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require
+        received_at >= both the selected activation time and effective_since. Consequently even unrelated
+        policy edits suppress queued older rule/request admissions, without deleting email history or affecting
+        explicit reply waits. Exact membership fallback retains its own notify_since and generation but
+        must still recheck current policy denies and effective_version. Before dispatch, receivers must
+        recheck the current composite version and applicable activation generation and membership; stop
+        new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope
+        and matched rules locally; the API does not execute tasks or dispatch notifications.
+      parameters: []
+      responses:
+        '200':
+          description: Current policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/SuccessEnvelope'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ContactPolicy'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 'contact_conflict: policy precondition did not match'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      operationId: putContactPolicy
+      summary: Replace organization contact policy
+      tags:
+      - Contacts
+      security:
+      - BearerAuth: []
+      description: Receiver-side email notification admission preferences; never task, tool, code execution
+        or account authority. Rules take effect only in receivers implementing this current contact-policy
+        contract. Older receivers may continue their previous exact-contact notifications until updated.
+        Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+        preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+        read/write policies. Connected credentials may only GET their own agent composite; they cannot write
+        either policy. Function and signed capability credentials are not granted access. Rules are unordered.
+        Exact membership notify:false always silences. Next use matching agent rules, otherwise matching
+        organization rules; silence wins ties within that scope. If neither scope matches, existing exact
+        membership notify:true allows using its own activation metadata; otherwise only enabled contact-request
+        intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding
+        a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com
+        or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported;
+        subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions,
+        question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain.
+        PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+        Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise
+        409. A missing document reads as empty rules, null version/timestamps, false request intake for
+        the organization and null (inherit) for the agent. Reset overrides with empty rules and null request
+        intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating
+        or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization.
+        No-op writes preserve versions. Agent composite effective_version changes with either policy document,
+        connection identity, generation or successful claim; effective_since is the latest policy mutation,
+        connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots
+        and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require
+        received_at >= both the selected activation time and effective_since. Consequently even unrelated
+        policy edits suppress queued older rule/request admissions, without deleting email history or affecting
+        explicit reply waits. Exact membership fallback retains its own notify_since and generation but
+        must still recheck current policy denies and effective_version. Before dispatch, receivers must
+        recheck the current composite version and applicable activation generation and membership; stop
+        new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope
+        and matched rules locally; the API does not execute tasks or dispatch notifications.
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutContactPolicyRequest'
+      responses:
+        '200':
+          description: Current policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/SuccessEnvelope'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/ContactPolicy'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 'contact_conflict: policy precondition did not match'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /agent-contact-policy/{agent_address}:
+    get:
+      operationId: getAgentContactPolicy
+      summary: Read agent contact policy
+      tags:
+      - Contacts
+      security:
+      - BearerAuth: []
+      description: Receiver-side email notification admission preferences; never task, tool, code execution
+        or account authority. Rules take effect only in receivers implementing this current contact-policy
+        contract. Older receivers may continue their previous exact-contact notifications until updated.
+        Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+        preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+        read/write policies. Connected credentials may only GET their own agent composite; they cannot write
+        either policy. Function and signed capability credentials are not granted access. Rules are unordered.
+        Exact membership notify:false always silences. Next use matching agent rules, otherwise matching
+        organization rules; silence wins ties within that scope. If neither scope matches, existing exact
+        membership notify:true allows using its own activation metadata; otherwise only enabled contact-request
+        intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding
+        a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com
+        or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported;
+        subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions,
+        question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain.
+        PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+        Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise
+        409. A missing document reads as empty rules, null version/timestamps, false request intake for
+        the organization and null (inherit) for the agent. Reset overrides with empty rules and null request
+        intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating
+        or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization.
+        No-op writes preserve versions. Agent composite effective_version changes with either policy document,
+        connection identity, generation or successful claim; effective_since is the latest policy mutation,
+        connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots
+        and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require
+        received_at >= both the selected activation time and effective_since. Consequently even unrelated
+        policy edits suppress queued older rule/request admissions, without deleting email history or affecting
+        explicit reply waits. Exact membership fallback retains its own notify_since and generation but
+        must still recheck current policy denies and effective_version. Before dispatch, receivers must
+        recheck the current composite version and applicable activation generation and membership; stop
+        new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope
+        and matched rules locally; the API does not execute tasks or dispatch notifications.
+      parameters:
+      - name: agent_address
+        in: path
+        required: true
+        schema:
+          type: string
+          format: email
+          maxLength: 254
+        description: Canonical address of an agent connection in the current organization.
+      responses:
+        '200':
+          description: Current policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/SuccessEnvelope'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/AgentContactPolicy'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 'contact_conflict: policy precondition did not match'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    put:
+      operationId: putAgentContactPolicy
+      summary: Replace agent contact policy
+      tags:
+      - Contacts
+      security:
+      - BearerAuth: []
+      description: Receiver-side email notification admission preferences; never task, tool, code execution
+        or account authority. Rules take effect only in receivers implementing this current contact-policy
+        contract. Older receivers may continue their previous exact-contact notifications until updated.
+        Ordinary email delivery, storage, webhooks and explicit reply waits remain independent of these
+        preferences. Organization owners/admins using session, OAuth or signed dashboard credentials may
+        read/write policies. Connected credentials may only GET their own agent composite; they cannot write
+        either policy. Function and signed capability credentials are not granted access. Rules are unordered.
+        Exact membership notify:false always silences. Next use matching agent rules, otherwise matching
+        organization rules; silence wins ties within that scope. If neither scope matches, existing exact
+        membership notify:true allows using its own activation metadata; otherwise only enabled contact-request
+        intake is allowed. Owner policy silence therefore cannot be bypassed by a connected agent adding
+        a notify:true membership. Patterns are canonical lowercase bare mailboxes, *@example.com, research-*@example.com
+        or *@*.example.com. Only a terminal local-part * and a leading whole domain-label *. are supported;
+        subdomain patterns exclude the apex and require a literal multi-label suffix. No regular expressions,
+        question marks, universal domains or wildcard TLDs. Domain-only UI input must be converted to *@domain.
+        PUT fully replaces up to 100 rules and the request-intake option using exactly one CAS precondition.
+        Duplicate pattern/effect pairs are rejected. if_absent returns an identical existing document, otherwise
+        409. A missing document reads as empty rules, null version/timestamps, false request intake for
+        the organization and null (inherit) for the agent. Reset overrides with empty rules and null request
+        intake. Allow rules preserve server activation metadata while retained unchanged; removing/recreating
+        or changing a rule to allow resets it. Request intake defaults off; agent null inherits the organization.
+        No-op writes preserve versions. Agent composite effective_version changes with either policy document,
+        connection identity, generation or successful claim; effective_since is the latest policy mutation,
+        connection creation or successful claim. Reclaiming a connection invalidates prior admission snapshots
+        and starts a fresh rule/request cutoff; routine heartbeats do not. Rule/request admissions require
+        received_at >= both the selected activation time and effective_since. Consequently even unrelated
+        policy edits suppress queued older rule/request admissions, without deleting email history or affecting
+        explicit reply waits. Exact membership fallback retains its own notify_since and generation but
+        must still recheck current policy denies and effective_version. Before dispatch, receivers must
+        recheck the current composite version and applicable activation generation and membership; stop
+        new admissions when policy is unavailable or older than 30 seconds. Snapshot fields explain scope
+        and matched rules locally; the API does not execute tasks or dispatch notifications.
+      parameters:
+      - name: agent_address
+        in: path
+        required: true
+        schema:
+          type: string
+          format: email
+          maxLength: 254
+        description: Canonical address of an agent connection in the current organization.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutAgentContactPolicyRequest'
+      responses:
+        '200':
+          description: Current policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/SuccessEnvelope'
+                - type: object
+                  required:
+                  - data
+                  properties:
+                    data:
+                      $ref: '#/components/schemas/AgentContactPolicy'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 'contact_conflict: policy precondition did not match'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
 components:
   securitySchemes:
     BearerAuth:
@@ -6545,6 +8466,241 @@ components:
                     required: [deleted]
 
   schemas:
+    ContactPolicyRuleInput:
+      type: object
+      additionalProperties: false
+      properties:
+        pattern:
+          type: string
+          maxLength: 254
+          pattern: "^[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*$"
+          description: Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description.
+        effect:
+          type: string
+          enum:
+          - allow
+          - silence
+      required:
+      - pattern
+      - effect
+    ContactPolicyRule:
+      type: object
+      additionalProperties: false
+      properties:
+        pattern:
+          type: string
+          maxLength: 254
+          pattern: "^[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*$"
+          description: Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description.
+        effect:
+          type: string
+          enum:
+          - allow
+          - silence
+        notify_since:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        notification_generation:
+          type:
+          - string
+          - 'null'
+          format: uuid
+      required:
+      - pattern
+      - effect
+      - notify_since
+      - notification_generation
+    ContactPolicy:
+      type: object
+      additionalProperties: false
+      properties:
+        rules:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ContactPolicyRule'
+        contact_request_since:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        contact_request_generation:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        version:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        allow_contact_requests:
+          type: boolean
+      required:
+      - rules
+      - contact_request_since
+      - contact_request_generation
+      - version
+      - updated_at
+      - allow_contact_requests
+    AgentContactPolicyOverride:
+      type: object
+      additionalProperties: false
+      properties:
+        rules:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ContactPolicyRule'
+        contact_request_since:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        contact_request_generation:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        version:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        updated_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        allow_contact_requests:
+          type:
+          - boolean
+          - 'null'
+      required:
+      - rules
+      - contact_request_since
+      - contact_request_generation
+      - version
+      - updated_at
+      - allow_contact_requests
+    AgentContactPolicy:
+      type: object
+      additionalProperties: false
+      properties:
+        agent_address:
+          type: string
+          format: email
+          maxLength: 254
+        org_policy:
+          $ref: '#/components/schemas/ContactPolicy'
+        agent_policy:
+          $ref: '#/components/schemas/AgentContactPolicyOverride'
+        effective_version:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        effective_since:
+          type: string
+          format: date-time
+        allow_contact_requests:
+          type: boolean
+        contact_request_since:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        contact_request_generation:
+          type:
+          - string
+          - 'null'
+          pattern: ^[a-f0-9]{64}$
+      required:
+      - agent_address
+      - org_policy
+      - agent_policy
+      - effective_version
+      - effective_since
+      - allow_contact_requests
+      - contact_request_since
+      - contact_request_generation
+    PutContactPolicyRequest:
+      oneOf:
+      - $ref: '#/components/schemas/PutContactPolicyCreate'
+      - $ref: '#/components/schemas/PutContactPolicyReplace'
+    PutAgentContactPolicyRequest:
+      oneOf:
+      - $ref: '#/components/schemas/PutAgentContactPolicyCreate'
+      - $ref: '#/components/schemas/PutAgentContactPolicyReplace'
+    PutContactPolicyCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        rules: &id001
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ContactPolicyRuleInput'
+        allow_contact_requests: &id002
+          type: boolean
+        if_absent:
+          type: boolean
+          const: true
+      required:
+      - rules
+      - allow_contact_requests
+      - if_absent
+    PutContactPolicyReplace:
+      type: object
+      additionalProperties: false
+      properties:
+        rules: *id001
+        allow_contact_requests: *id002
+        if_version:
+          type: string
+          format: uuid
+      required:
+      - rules
+      - allow_contact_requests
+      - if_version
+    PutAgentContactPolicyCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        rules: &id003
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ContactPolicyRuleInput'
+        allow_contact_requests: &id004
+          type:
+          - boolean
+          - 'null'
+        if_absent:
+          type: boolean
+          const: true
+      required:
+      - rules
+      - allow_contact_requests
+      - if_absent
+    PutAgentContactPolicyReplace:
+      type: object
+      additionalProperties: false
+      properties:
+        rules: *id003
+        allow_contact_requests: *id004
+        if_version:
+          type: string
+          format: uuid
+      required:
+      - rules
+      - allow_contact_requests
+      - if_version
     PublishPolicy:
       type: string
       enum: [owner_only, request, open]
@@ -7259,6 +9415,14 @@ components:
                 - credit_code_balance_cap
                 - rate_limited
                 - service_unavailable
+                - connection_domain_unavailable
+                - connection_address_unavailable
+                - connection_owner_address_invalid
+                - connection_invitation_unavailable
+                - agent_connection_scope_forbidden
+                - address_note_conflict
+                - address_not_controlled
+                - contact_conflict
             message:
               type: string
             details:

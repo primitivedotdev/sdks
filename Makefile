@@ -62,11 +62,19 @@ cli-tarball-isolation:
 
 cli-smoke: cli-build cli-tarball-isolation
 	inbox_next_smoke_script="$$(pwd)/scripts/smoke-inbox-next.mjs" && \
+	contact_requests_smoke_script="$$(pwd)/scripts/smoke-contact-requests.mjs" && \
+	connected_agent_smoke_script="$$(pwd)/scripts/smoke-connected-agent-commands.mjs" && \
 	attachment_smoke_script="$$(pwd)/scripts/smoke-attachment-parts.mjs" && \
 	pull_smoke_script="$$(pwd)/scripts/smoke-pull-commands.mjs" && \
 	deletion_smoke_script="$$(pwd)/scripts/smoke-mail-deletion.mjs" && \
 	listen_smoke_script="$$(pwd)/scripts/smoke-listen.mjs" && \
+	notification_smoke_script="$$(pwd)/scripts/smoke-session-notifications.mjs" && \
+	listen_validation_smoke_script="$$(pwd)/scripts/smoke-listen-validation.mjs" && \
 	chat_smoke_script="$$(pwd)/scripts/smoke-concurrent-chats.mjs" && \
+	send_outcomes_smoke_script="$$(pwd)/scripts/smoke-send-outcomes.mjs" && \
+	scoped_chat_smoke_script="$$(pwd)/scripts/smoke-scoped-chat.mjs" && \
+	scoped_wait_smoke_script="$$(pwd)/scripts/smoke-scoped-email-wait.mjs" && \
+	pushed_replies_smoke_script="$$(pwd)/scripts/smoke-pushed-replies.mjs" && \
 	pack_dir=$$(mktemp -d) && \
 	smoke_dir=$$(mktemp -d) && \
 	tarball=$$(cd cli-node && npm pack --silent --pack-destination "$$pack_dir" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => { const matches = data.match(/[A-Za-z0-9._-]+\.tgz/g); if (!matches || matches.length === 0) { throw new Error('could not locate tarball name in npm pack output'); } process.stdout.write(matches[matches.length - 1]); });") && \
@@ -82,11 +90,21 @@ cli-smoke: cli-build cli-tarball-isolation
 	node "$$inbox_next_smoke_script" "$$bin" && \
 	"$$bin" inbox next --help | grep -q -- "NOT A WORK QUEUE" && \
 	"$$bin" emails latest --help | grep -q -- "--awaiting" && \
+	node "$$connected_agent_smoke_script" "$$bin" && \
+	node "$$contact_requests_smoke_script" "$$bin" && \
 	node "$$attachment_smoke_script" "$$bin" && \
 	node "$$pull_smoke_script" "$$bin" && \
 	node "$$deletion_smoke_script" "$$bin" && \
 	node "$$listen_smoke_script" "$$bin" && \
+	node "$$notification_smoke_script" "$$bin" && \
+	node "$$listen_validation_smoke_script" "$$bin" && \
 	node "$$chat_smoke_script" "$$bin" && \
+	node "$$send_outcomes_smoke_script" "$$bin" && \
+	node "$$scoped_chat_smoke_script" "$$bin" && \
+	node "$$scoped_wait_smoke_script" "$$bin" && \
+	node "$$pushed_replies_smoke_script" "$$bin" waits && \
+	node "$$pushed_replies_smoke_script" "$$bin" handoff && \
+	node "$$pushed_replies_smoke_script" "$$bin" notifications && \
 	"$$bin" list-operations >/dev/null && \
 	"$$bin" completion fish >/dev/null && \
 	"$$bin" completion bash >/dev/null && \
