@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { EventReceiverError } from "@primitivedotdev/sdk/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,7 +22,11 @@ vi.mock("@primitivedotdev/sdk/api", async (original) => ({
   },
 }));
 
-import { runSharedMailTransport } from "../../src/oclif/shared-mail-transport.js";
+import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
+import {
+  runSharedMailTransport,
+  type SharedMailTransportOptions,
+} from "../../src/oclif/shared-mail-transport.js";
 
 const recipient = "owner@sender.example";
 function fixture() {
@@ -83,7 +91,7 @@ function fixture() {
     controller.abort();
   });
   mocks.close.mockImplementation(() => events.push("close"));
-  const options = {
+  const options: SharedMailTransportOptions = {
     apiClient,
     subscription: "stable-subscription",
     recipient,
@@ -122,6 +130,93 @@ describe("shared inbound transport", () => {
       delivery_id: "delivery",
       lease_token: "lease",
     });
+  });
+  it("retains an observed reply when shutdown interrupts completion and acknowledges redelivery on restart", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "primitive-mail-redelivery-"));
+    try {
+      const first = fixture();
+      const identity = { configDir, scope: "redelivery", recipient };
+      const store = await openSharedMailStore(identity);
+      const requestId = randomUUID(),
+        sentEmailId = randomUUID(),
+        emailId = randomUUID(),
+        eventId = randomUUID(),
+        receivedAt = new Date().toISOString(),
+        peer = "peer@sender.example";
+      await store.registerWait({
+        requestId,
+        peer,
+        idempotencyKey: randomUUID(),
+        createdAt: new Date(Date.now() - 1000).toISOString(),
+      });
+      await store.bindWait(requestId, sentEmailId);
+      first.offer.delivery.event_id = eventId;
+      first.offer.delivery.body = JSON.stringify({
+        email: {
+          id: emailId,
+          received_at: receivedAt,
+          smtp: { rcpt_to: [recipient] },
+        },
+      });
+      const shutdown = new Error("Satisfied waiter closed its receiver");
+      first.options.ingest = async (event) => {
+        expect(event).toEqual({ emailId, eventId, receivedAt });
+        await store.ingest(event);
+        await store.hydrate(emailId, {
+          recipient,
+          peer,
+          replyToSentEmailId: sentEmailId,
+          receivedAt,
+          authorization: "trusted",
+        });
+        await store.claimForWait(emailId, requestId);
+        await store.markWaitObserved(emailId, requestId);
+        await store.finishWait(requestId);
+        first.controller.abort(shutdown);
+      };
+      await expect(runSharedMailTransport(first.options)).rejects.toBe(
+        shutdown,
+      );
+      expect(mocks.complete).not.toHaveBeenCalled();
+      expect(mocks.close).toHaveBeenCalledOnce();
+      const observed = await store.readEmail(emailId);
+      expect(observed?.route).toEqual({
+        kind: "wait",
+        requestId,
+        observed: true,
+      });
+
+      const restarted = await openSharedMailStore(identity);
+      const second = fixture();
+      second.offer.delivery = {
+        ...first.offer.delivery,
+        delivery_id: "redelivery",
+        lease_token: "new-lease",
+      };
+      second.options.ingest = async (event) => {
+        expect(event).toEqual({ emailId, eventId, receivedAt });
+        expect(await restarted.ingest(event)).toEqual(observed);
+      };
+      await runSharedMailTransport(second.options);
+      expect(mocks.complete).toHaveBeenCalledOnce();
+      expect(mocks.complete.mock.calls[0][0]).toMatchObject({
+        delivery_id: "redelivery",
+        lease_token: "new-lease",
+        mode: "sdk",
+        accepted: true,
+      });
+      expect((await restarted.listEmails()).emails).toEqual([observed]);
+      expect((await restarted.claimForWait(emailId, requestId)).status).toBe(
+        "already_observed",
+      );
+      expect(
+        (await restarted.claimForNotification(emailId, "runtime:session"))
+          .status,
+      ).toBe("held");
+      expect(await restarted.readEmail(emailId)).toEqual(observed);
+    } finally {
+      rmSync(configDir, { recursive: true, force: true });
+    }
   });
   it("never completes an event whose journal write failed", async () => {
     const { options } = fixture();
