@@ -61,6 +61,10 @@ const api=args=>run([...args,'--api-base-url',base,'--api-key',['fixture','key']
 try {
   for (const route of [['contacts'],['agent'],['agent','contacts'],['agent','connect'],['agent-connections','claim-agent-connection'],['listen'],...['list','get','add','update','remove','request','accept','wait'].map(x=>['contacts',x]),...['list','add','update','remove'].map(x=>['agent','contacts',x])]) await run([...route,'--help']);
   for (const route of [['contacts'],['agent'],['agent','contacts']]) { const result=await run(route);assert.match(result.stdout+result.stderr,/COMMANDS|USAGE/i); }
+  const setupHelp=await run(['agent','connect','--help']);
+  assert.match(setupHelp.stdout,/api\.primitive-staging-1\.com/);
+  assert.match(setupHelp.stdout,/piped stdin/);
+  assert.match((await run(['whoami','--help'])).stdout,/identity offline/);
   await api(['contacts','add',peer,'--name','Peer']);
   await api(['contacts','list']);
   assert.equal(JSON.parse((await api(['contacts','get',peer])).stdout).address,peer);
@@ -83,6 +87,17 @@ try {
   const deny=join(directory,'deny-network.mjs');
   await writeFile(deny,`globalThis.fetch=async()=>{throw new Error('Unexpected network');};`,{mode:0o600});
   const status=await run(['agent','connect','--profile','work','--status','--json'],{preload:deny});assert.equal(JSON.parse(status.stdout).status,'configured');
+  const identity=await run(['whoami','--json'],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work'}});
+  assert.equal(JSON.parse(identity.stdout).verification,'offline');
+  assert.equal(JSON.parse(identity.stdout).identity.agentAddress,agent);
+  assert.match(JSON.parse(identity.stdout).status_command,/agent connect --profile work --status --json/);
+  assert.ok(!identity.stdout.includes(credential));
+  const humanIdentity=await run(['whoami'],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work'}});
+  assert.match(humanIdentity.stdout,/not verified/);
+  const doctor=await run(['doctor'],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work'}});
+  assert.match(doctor.stdout,/offline/);assert.match(doctor.stdout,/whoami --json/);assert.ok(!doctor.stdout.includes('signin'));assert.ok(!doctor.stdout.includes(credential));
+  const rawIdentity=await run(['whoami'],{preload:deny,env:{PRIMITIVE_API_KEY:credential},exit:1});
+  assert.match(rawIdentity.stderr,/PRIMITIVE_AGENT_PROFILE/);
   await writeFile(join(config,'config.json'),JSON.stringify({version:1,current_environment:'staging',environments:{staging:{}}}));
   const notification=await run(['listen','--status','--notify-session',session],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work',PRIMITIVE_API_HEADERS:'invalid ambient JSON'}});assert.deepEqual(JSON.parse(notification.stdout).receipts,[]);assert.ok(!notification.stdout.includes(credential));
   const rejected=await run(['agent-connections','claim-agent-connection','--profile','other','--token',token],{preload:deny,exit:2});

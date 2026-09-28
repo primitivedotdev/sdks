@@ -46,7 +46,13 @@ const server = createServer(async (req,res) => {
     assert.equal(req.headers.authorization,`Bearer ${credential}`);
     if (url.pathname === '/v1/endpoints' && req.method === 'POST') return json(res,{ id:endpoint,name:body.name,kind:'pull',enabled:true,recipient:agent,rules:{event_types:['email.received']},receiver_capabilities:{completion_modes:['sdk'],stream_protocols:['primitive.events.v1']} });
     if (url.pathname === '/v1/send-mail' && req.method === 'POST') {
-      assert.ok(authenticated > 0,'subscribe before sending'); assert.equal(body.from,agent); assert.equal(body.to,peer); assert.match(req.headers['idempotency-key'],/^contact-/);
+      assert.ok(authenticated > 0,'subscribe before sending'); assert.equal(body.from,agent); assert.equal(body.to,peer);
+      if(!body.attachments?.length){
+        assert.match(req.headers['idempotency-key'],/^primitive-chat-/);posts++;const row=sent();
+        const answer=inbound(envelope('accept'),row.id);answer.parsed.attachments=[];answer.body_text='Ordinary reply';
+        return json(res,row);
+      }
+      assert.match(req.headers['idempotency-key'],/^contact-/);
       const control=JSON.parse(Buffer.from(body.attachments[0].content_base64,'base64').toString()); assert.equal(control.protocol,'primitive.contact'); assert.equal(control.step,'request');
       posts++; const row=sent(); row.control=control; row.client_idempotency_key=req.headers["idempotency-key"];
       if(automaticAcceptance) inbound(envelope('accept',control),row.id);
@@ -99,11 +105,11 @@ const preload=join(root,'local-boundaries.mjs');
 await writeFile(preload,`const realFetch=globalThis.fetch;const RealSocket=globalThis.WebSocket;const base=${JSON.stringify(base)};function local(value){const u=new URL(value);if(u.hostname!=='api.primitive.dev')throw new Error('External network forbidden');return base+u.pathname+u.search;}globalThis.fetch=async(input,init)=>{const r=new Request(input,init);return realFetch(local(r.url),{method:r.method,headers:r.headers,body:r.body,signal:r.signal,duplex:'half',redirect:'error'});};globalThis.WebSocket=class extends RealSocket{constructor(url,protocol){super(local(url).replace('http:','ws:'),protocol);}};`,{mode:0o600});
 const env={...process.env,PRIMITIVE_CONFIG_DIR:config,XDG_CONFIG_HOME:config,PRIMITIVE_SKIP_NEW_VERSION_CHECK:'1',NO_COLOR:'1'};
 for(const name of Object.keys(env))if((name.startsWith('PRIMITIVE_')&&!['PRIMITIVE_CONFIG_DIR','PRIMITIVE_SKIP_NEW_VERSION_CHECK'].includes(name))||/proxy/i.test(name))delete env[name];
-async function run(args,{code=0,stdin='',profile=true}={}){
+async function run(args,{code=0,stdin='',profile=true,errorPattern}={}){
   const child=spawn(process.execPath,['--import',pathToFileURL(preload).href,binary,...args],{cwd:root,env:{...env,...(profile?{PRIMITIVE_AGENT_PROFILE:'smoke'}:{})},stdio:['pipe','pipe','pipe']});
   let stdout='',stderr='';child.stdout.on('data',x=>stdout+=x);child.stderr.on('data',x=>stderr+=x);child.stdin.end(stdin);
   const timer=setTimeout(()=>child.kill('SIGKILL'),20000);const actual=await new Promise((res,rej)=>{child.once('error',rej);child.once('close',res);});clearTimeout(timer);
-  assert.equal(actual,code,`${args.slice(0,2).join(' ')} failed: ${stderr}`);assert.ok(!stdout.includes(credential)&&!stderr.includes(credential));if(failures.length)throw failures[0];return stdout.trim() ? JSON.parse(stdout) : null;
+  assert.equal(actual,code,`${args.slice(0,2).join(' ')} failed: ${stderr}`);assert.ok(!stdout.includes(credential)&&!stderr.includes(credential));if(failures.length)throw failures[0];if(errorPattern)assert.match(stderr.replace(/^[\t ]*›[\t ]*/gm,'').replace(/\s+/g,' '),errorPattern);return stdout.trim() ? JSON.parse(stdout) : null;
 }
 try{
   await run(['agent','connect','--profile','smoke','--json'],{profile:false,stdin:JSON.stringify({token:['inert','invite','x'.repeat(48)].join('_')})});
@@ -132,6 +138,16 @@ try{
   await run(['contacts','accept','--id',request.id]);assert.equal(replies,1,'repeated acceptance must not send twice');
   member={...member,notify:false,notify_since:null,notification_generation:null};
   await run(['contacts','accept','--id',inbound(envelope('request')).id],{code:1});assert.equal(replies,1,'explicit silence cannot be overwritten');
+  const unauthenticated=inbound(envelope('request'));unauthenticated.auth.dmarc='fail';
+  await run(['contacts','accept','--id',unauthenticated.id],{code:1,errorPattern:/reason:\s+auth-suspicious;\s+retryable: false/});
+  const transient=inbound(envelope('request'));transient.auth.dmarc='temperror';
+  await run(['contacts','accept','--id',transient.id],{code:1,errorPattern:/reason: dmarc-temperror; retryable: true/});
+  assert.equal(replies,1,'authentication failures cannot send acceptance');
+  const beforeChat=posts;
+  await run(['chat',peer,'hello','--from','another@sender.example','--json'],{code:1,errorPattern:/pinned address/});
+  assert.equal(posts,beforeChat,'pinned sender mismatch cannot send');
+  const chat=await run(['chat',peer,'hello','--json','--timeout','5']);
+  assert.equal(chat.outcome,'replied');assert.equal(chat.reply.body_text,'Ordinary reply');assert.equal(posts,beforeChat+1);
   assert.deepEqual(failures,[]);
   console.log('Built contact commands: structured request/wait, timeout and restart recovery, correlated acceptance, no duplicate sends, and explicit silence passed. Local fixtures only.');
 }finally{for(const socket of sockets.clients)socket.terminate();await new Promise(r=>sockets.close(r));server.closeAllConnections();await new Promise(r=>server.close(r));await rm(root,{recursive:true,force:true});}

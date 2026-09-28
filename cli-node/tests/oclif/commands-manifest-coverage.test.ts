@@ -43,6 +43,27 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("registers explicit signal and scoped doctor help", () => {
+    const signal = COMMANDS.signal as unknown as {
+      args: { kind: { options: string[] } };
+      flags: Record<string, unknown>;
+      description: string;
+    };
+    expect(signal.args.kind.options).toEqual([
+      "read",
+      "ack",
+      "working",
+      "typing",
+    ]);
+    for (const flag of ["id", "status", "expires-in", "json"])
+      expect(signal.flags[flag]).toBeDefined();
+    expect(signal.flags.from).toBeUndefined();
+    expect(signal.flags.to).toBeUndefined();
+    expect(signal.description).toContain("Unknown outcomes must reconcile");
+    expect(
+      (COMMANDS.doctor as unknown as { description: string }).description,
+    ).toContain("identity offline");
+  });
   it("registers organization and per-agent contact commands", () => {
     for (const action of [
       "list",
@@ -96,8 +117,13 @@ describe("COMMANDS / manifest coverage", () => {
       COMMANDS["agent:connect"],
     );
     const setup = COMMANDS["agent:connect"] as unknown as {
+      description: string;
       flags: Record<string, unknown>;
     };
+    expect(setup.description).toContain(
+      "https://api.primitive-staging-1.com/v1",
+    );
+    expect(setup.description).toContain("piped stdin");
     expect(setup.flags.profile).toBeDefined();
     expect(setup.flags.status).toBeDefined();
     expect(setup.flags.token).toBeUndefined();
@@ -143,7 +169,9 @@ describe("COMMANDS / manifest coverage", () => {
       description: string;
       flags: Record<string, unknown>;
     };
-    expect(chat.description).toContain("Connected agents must supply --from");
+    expect(chat.description).toContain(
+      "Raw connection credentials still require --from",
+    );
     expect(chat.description).toContain("share an address event receiver");
     expect(chat.flags.from).toBeDefined();
     expect(COMMANDS["chat:reply"]).toBeDefined();
@@ -297,9 +325,18 @@ describe("COMMANDS / manifest coverage", () => {
   it("keeps whoami registered with explicit JSON output", () => {
     expect(COMMANDS.whoami).toBeDefined();
     const whoamiCommand = COMMANDS.whoami as unknown as {
+      description: string;
       flags: Record<string, unknown>;
     };
     expect(whoamiCommand.flags.json).toBeDefined();
+    expect(whoamiCommand.description).toContain("identity offline");
+    expect(
+      (COMMANDS.chat as unknown as { description: string }).description,
+    ).toContain("pinned sender address");
+    expect(
+      (COMMANDS["contacts:accept"] as unknown as { description: string })
+        .description,
+    ).toContain("safe reason code");
   });
 
   it("registers domain zone-file commands", () => {

@@ -8,10 +8,12 @@ import { AgentConnectionSetupError } from "../connected-agent-profile.js";
 
 export default class AgentConnectCommand extends Command {
   static description =
-    "Claim an owner's private setup invitation from stdin and save a separate connected-agent profile. Claiming does not prove that a listener is ready or that the email setup challenge has been completed.";
+    "Claim an owner's private setup invitation from piped stdin and save a separate connected-agent profile. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations are supported; the invitation pins the API origin. Never pass an invitation as a command argument. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --status --json to inspect saved identity offline; use listen --status --notify-session <session-id> with the same profile to inspect the exact receiver. Claiming or reading saved identity does not prove that a listener is ready or that the email setup challenge has been completed.";
   static summary = "Save a private connected-agent profile from an invitation";
   static examples = [
     "<%= config.bin %> agent connect --profile work < private-invitation.txt",
+    "<%= config.bin %> agent connect --profile work --status --json",
+    "PRIMITIVE_AGENT_PROFILE=work <%= config.bin %> whoami --json",
   ];
   static flags = {
     profile: Flags.string({

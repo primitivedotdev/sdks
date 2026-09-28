@@ -4,6 +4,7 @@ import { createAuthenticatedCliApiClient } from "../api-client.js";
 export async function contactCommandContext(
   command: Command,
   flags: { "api-key"?: string; "api-base-url"?: string },
+  purpose = "Contact requests",
 ) {
   const { apiClient, auth } = await createAuthenticatedCliApiClient({
     configDir: command.config.configDir,
@@ -12,7 +13,7 @@ export async function contactCommandContext(
   });
   if (!auth.connectedAgent)
     throw new Error(
-      "Contact requests require a saved connected-agent profile. Select it with PRIMITIVE_AGENT_PROFILE.",
+      `${purpose} require a saved connected-agent profile. Select it with PRIMITIVE_AGENT_PROFILE.`,
     );
   return {
     apiClient,

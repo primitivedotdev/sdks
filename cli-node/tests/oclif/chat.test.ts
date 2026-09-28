@@ -326,16 +326,66 @@ describe("chat command", () => {
     vi.restoreAllMocks();
   });
 
-  function connectedAuth() {
+  function connectedAuth(profile = false) {
     mocks.createAuthenticatedCliApiClient.mockResolvedValue({
       apiClient: { client: {} },
       auth: {
         apiKey: ["pconn", "fixture"].join("_"),
         apiBaseUrl: "https://api.example.test/v1",
+        ...(profile
+          ? {
+              connectedAgent: {
+                profileName: "work",
+                agentAddress: "agent@sender.example",
+              },
+            }
+          : {}),
       },
       baseUrlOverridden: false,
     });
   }
+
+  it("uses the selected profile sender without a domain lookup or explicit --from", async () => {
+    connectedAuth(true);
+    mocks.next.mockResolvedValue(trustedReply());
+    const result = await runChatCommand([
+      "help@agent.example",
+      "hello",
+      "--json",
+    ]);
+    expect(JSON.parse(result.stdout).outcome).toBe("replied");
+    expect(mocks.sendEmail.mock.calls[0][0].body.from).toBe(
+      "agent@sender.example",
+    );
+    expect(mocks.openConnectedReplyWait.mock.calls[0][0].from).toBe(
+      "agent@sender.example",
+    );
+    expect(mocks.pickDefaultFromAddress).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "other@sender.example",
+    "",
+    "Agent <other@sender.example>",
+  ])("rejects a mismatched pinned sender before sending: %s", async (from) => {
+    connectedAuth(true);
+    await expect(
+      runChatCommand(["help@agent.example", "hello", "--from", from]),
+    ).rejects.toThrow("pinned address");
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(mocks.replyToEmail).not.toHaveBeenCalled();
+    expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+    expect(mocks.getEmail).not.toHaveBeenCalled();
+  });
+
+  it("still requires --from for raw connection credentials", async () => {
+    connectedAuth();
+    await expect(
+      runChatCommand(["help@agent.example", "hello"]),
+    ).rejects.toThrow("must pass --from");
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+  });
 
   function trustedReply(overrides: Partial<EmailDetail> = {}) {
     return replyEmail({

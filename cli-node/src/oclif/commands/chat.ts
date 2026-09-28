@@ -841,7 +841,10 @@ export function formatChatAwaitingReplyMessage(
     options.waitError === undefined
       ? `No reply yet after ${context.timeoutSeconds}s.`
       : `Waiting for the reply failed: ${options.waitError}`;
-  return `${chatNoun(context)} sent (id ${context.sent.id}). ${status} Do NOT resend; wait with: ${wait.command}`;
+  const nextStep = context.scopedInbox
+    ? `Do NOT resend. An active session listener can notify you later; continue independent work instead of immediately chaining another wait. To resume manually: ${wait.command}`
+    : `Do NOT resend; wait with: ${wait.command}`;
+  return `${chatNoun(context)} sent (id ${context.sent.id}). ${status} ${nextStep}`;
 }
 
 export function buildChatExistingReplyCommands(
@@ -1219,7 +1222,9 @@ async function findLatestInboundFromRecipient(params: {
 class ChatCommand extends Command {
   static description = `Send a message to an address and wait for the reply.
 
-  Connected agents must supply --from. They share an address event receiver and
+  A saved connected-agent profile supplies its pinned sender address; an explicit
+  --from must match it. Raw connection credentials still require --from.
+  Connected agents share an address event receiver and
   recover through targeted search for
   an authenticated, exactly threaded reply. Interaction attachments remain
   pending for inspection; a plain reply does not prove task completion.
@@ -1317,7 +1322,7 @@ class ChatCommand extends Command {
     }),
     from: Flags.string({
       description:
-        "Sender address. Defaults to agent@<your-first-verified-outbound-domain>.",
+        "Sender address. Defaults to the selected connected profile's pinned address, otherwise agent@<your-first-verified-outbound-domain>. A connected profile rejects another sender.",
     }),
     subject: Flags.string({
       description:
@@ -1565,7 +1570,22 @@ class ChatCommand extends Command {
             configDir: this.config.configDir,
           });
 
-        if (isConnectedChatCredential(auth.apiKey) && !flags.from?.trim()) {
+        let selectedFrom = flags.from;
+        if (auth.connectedAgent) {
+          if (selectedFrom !== undefined) {
+            const parsed = parseFromHeader(selectedFrom);
+            if (
+              !parsed.ok ||
+              parsed.value.address.toLowerCase() !==
+                auth.connectedAgent.agentAddress.toLowerCase()
+            )
+              throw cliError(
+                "--from must match the selected connected-agent profile's pinned address.",
+              );
+          }
+          selectedFrom ??= auth.connectedAgent.agentAddress;
+        }
+        if (isConnectedChatCredential(auth.apiKey) && !selectedFrom?.trim()) {
           throw cliError(
             "Connected agents must pass --from with their connected email address.",
           );
@@ -1604,13 +1624,13 @@ class ChatCommand extends Command {
                 replyContextFailureMessage = `Inbound email ${flags["reply-to-email-id"]} does not match recipient ${args.recipient}.`;
                 assertParentMatchesRecipient(exactParentReply, args.recipient);
                 return {
-                  from: flags.from ?? exactParentReply.to_email,
+                  from: selectedFrom ?? exactParentReply.to_email,
                   parentReply: exactParentReply,
                 };
               }
 
               const replyFrom =
-                flags.from ??
+                selectedFrom ??
                 (await pickDefaultFromAddress(apiClient, authFailureContext));
               progress?.start(
                 `Finding latest inbound email from ${args.recipient}`,
@@ -1641,7 +1661,7 @@ class ChatCommand extends Command {
           subject = derivedReplySubject(replyContext.parentReply);
         } else {
           from =
-            flags.from ??
+            selectedFrom ??
             (await pickDefaultFromAddress(apiClient, authFailureContext));
           subject = flags.subject ?? deriveSubject(message);
         }

@@ -61,6 +61,7 @@ cli-tarball-isolation:
 	node scripts/assert-tarball-isolation.mjs cli-node "@primitivedotdev/sdk"
 
 cli-smoke: cli-build cli-tarball-isolation
+	signal_smoke_script="$$(pwd)/scripts/smoke-signals.mjs" && \
 	contact_requests_smoke_script="$$(pwd)/scripts/smoke-contact-requests.mjs" && \
 	late_contact_smoke_script="$$(pwd)/scripts/smoke-late-contact-notices.mjs" && \
 	connected_agent_smoke_script="$$(pwd)/scripts/smoke-connected-agent-commands.mjs" && \
@@ -88,6 +89,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	export PRIMITIVE_SKIP_NEW_VERSION_CHECK=1 && \
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
 	node "$$connected_agent_smoke_script" "$$bin" && \
+	node "$$signal_smoke_script" "$$bin" && \
 	node "$$contact_requests_smoke_script" "$$bin" && \
 	node "$$late_contact_smoke_script" "$$bin" && \
 	node "$$attachment_smoke_script" "$$bin" && \

@@ -80,6 +80,7 @@ import RoutesUpdateCommand from "./commands/routes-update.js";
 import SearchCommand from "./commands/search.js";
 import SemanticSearchCommand from "./commands/semantic-search.js";
 import SendCommand from "./commands/send.js";
+import SignalCommand from "./commands/signal.js";
 import {
   LoginBrowserCommand,
   LoginCommand,
@@ -583,11 +584,12 @@ export const COMMANDS: Record<string, typeof Command> = {
   "signup:status": SignupStatusCommand,
   // `logout` revokes the saved OAuth grant and removes local credentials.
   logout: LogoutCommand,
-  // `whoami` is the credentials smoke test. Prints the account the
+  // `whoami` prints saved connected identity offline, or the account the
   // current OAuth session or explicit API key authenticates as. AGX
   // walkthroughs kept wanting this before risking a real call against
   // possibly-bad auth.
   whoami: WhoamiCommand,
+  signal: SignalCommand,
   // `doctor` is the environment health check. Node version, proxy
   // env, auth resolution, /account reachability, verified-domain
   // status; every check that whoami implicitly assumes is fine.

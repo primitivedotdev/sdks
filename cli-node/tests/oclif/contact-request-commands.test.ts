@@ -368,11 +368,14 @@ describe("contact request command lifecycle", () => {
       f.writes.filter((row) => row.path.includes("/agent-contacts/")).length,
     ).toBe(1);
   });
-  it("does not write preferences for an unauthenticated request", async () => {
+  it.each([
+    ["fail", "auth-suspicious", false],
+    ["temperror", "dmarc-temperror", true],
+  ])("reports a safe trust reason without writing preferences (%s)", async (dmarc, reason, retryable) => {
     const f = fixture();
-    f.state.auth = "fail";
+    f.state.auth = String(dmarc);
     await expect(acceptContact(f.context, f.emailId)).rejects.toThrow(
-      "authentication",
+      `authentication rejected (reason: ${reason}; retryable: ${retryable}). No acceptance or contact preference was written.`,
     );
     expect(f.writes).toEqual([]);
   });

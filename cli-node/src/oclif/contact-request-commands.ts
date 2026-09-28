@@ -218,7 +218,7 @@ export async function requestContact(
       request_id: wait.requestId,
       next_command: `primitive contacts wait --id ${sent.id}`,
       guidance:
-        "Request sent, not yet accepted. Resume this exact request; do not send it again.",
+        "Request sent, not yet accepted. An active session listener can notify you of a late acceptance. Continue independent work; use next_command when you need to resume this request. Do not send it again.",
     };
     if (!options.wait) return { exitCode: 0, data: pending };
     const accepted = await wait.next();
@@ -385,6 +385,8 @@ export async function waitForContact(
           sent_id: id,
           contact_accepted: false,
           next_command: `primitive contacts wait --id ${id}`,
+          guidance:
+            "Still awaiting acceptance. An active session listener can notify you later. Continue independent work instead of immediately chaining another wait; resume this same request when needed, without resending.",
         },
       };
     await wait.observed(accepted.id);
@@ -432,9 +434,10 @@ export async function acceptContact(
     kind: "address",
     value: detail.from_email,
   }).value;
-  if (!scopedChatSenderTrust(detail, peer).trusted)
+  const trust = scopedChatSenderTrust(detail, peer);
+  if (!trust.trusted)
     throw new Error(
-      "Contact request sender authentication is unavailable or invalid.",
+      `Contact request sender authentication rejected (reason: ${trust.reason}; retryable: ${trust.retryable}). No acceptance or contact preference was written.`,
     );
   const request = await readContactInteraction(
     detail,
