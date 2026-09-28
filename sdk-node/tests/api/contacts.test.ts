@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  PrimitiveClient,
-  listContacts,
-  getContact,
-  putContact,
-  deleteContact,
-  listAgentContacts,
-  putAgentContact,
-  deleteAgentContact,
   claimAgentConnection,
+  deleteAgentContact,
+  deleteContact,
+  getContact,
+  listAgentContacts,
+  listContacts,
+  PrimitiveClient,
+  putAgentContact,
+  putContact,
 } from "../../src/api/index.js";
 
 const address = "peer+research@example.com";
