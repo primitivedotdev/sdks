@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,6 +11,7 @@ import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
 
 const hooks = vi.hoisted(() => ({ ready: vi.fn(), changed: vi.fn() }));
 vi.mock("../../src/oclif/shared-mail-receiver.js", () => ({
+  sharedMailScope: () => "test-scope",
   openSharedMailReceiver: async (options: {
     configDir: string;
     recipient: string;
@@ -158,6 +160,72 @@ describe("connected pushed reply waits", () => {
     ).toBe("bound");
     await second.close();
   });
+  it("cleans up a new intent when binding a completed parent for another peer fails", async () => {
+    const f = fixture();
+    const first = await openConnectedReplyWait(f.options);
+    await first.next();
+    await first.observed(f.state.detail.id);
+    await first.finish();
+    await first.close();
+    const failedId = randomUUID(),
+      peer = "other@agent.example";
+    await expect(
+      openConnectedReplyWait({
+        ...f.options,
+        requestId: failedId,
+        recipient: peer,
+      }),
+    ).rejects.toThrow("inconsistent");
+    const store = first.receiver.store;
+    expect((await store.readWait(failedId))?.status).toBe("cancelled");
+    const emailId = randomUUID(),
+      receivedAt = new Date().toISOString();
+    await store.ingest({ emailId, eventId: randomUUID(), receivedAt });
+    await store.hydrate(emailId, {
+      recipient: target.from,
+      peer,
+      replyToSentEmailId: null,
+      receivedAt,
+      authorization: "trusted",
+    });
+    expect(
+      (await store.claimForNotification(emailId, "runtime:session")).status,
+    ).toBe("claimed");
+  });
+
+  it.each([
+    "unbound",
+    "uncertain",
+  ] as const)("preserves a preexisting %s intent when constructor binding fails", async (status) => {
+    const f = fixture();
+    const first = await openConnectedReplyWait(f.options);
+    await first.next();
+    await first.observed(f.state.detail.id);
+    await first.finish();
+    await first.close();
+    const store = first.receiver.store,
+      requestId = randomUUID(),
+      peer = "other@agent.example",
+      createdAt = new Date().toISOString();
+    await store.registerWait({
+      requestId,
+      peer,
+      idempotencyKey: "saved-key",
+      createdAt,
+    });
+    if (status === "uncertain") await store.markWaitUncertain(requestId);
+    await expect(
+      openConnectedReplyWait({
+        ...f.options,
+        requestId,
+        recipient: peer,
+        idempotencyKey: "saved-key",
+        createdAt,
+      }),
+    ).rejects.toThrow("inconsistent");
+    expect((await store.readWait(requestId))?.status).toBe(status);
+  });
+
   it("retains a claimed reply for resume before local output completes", async () => {
     const f = fixture();
     const first = await openConnectedReplyWait(f.options);

@@ -47,6 +47,7 @@ export async function openConnectedReplyWait(options: {
   const store = receiver.store;
   let requestId = options.requestId ?? randomUUID();
   let sentId = options.sentId;
+  let newlyRegisteredId: string | undefined;
   try {
     const prior = sentId ? await store.findWaitByParent(sentId) : null;
     if (prior?.status === "bound") {
@@ -57,6 +58,8 @@ export async function openConnectedReplyWait(options: {
       requestId = prior.requestId;
     } else {
       if (prior?.requestId === requestId) requestId = randomUUID();
+      const existing = await store.readWait(requestId);
+      if (!existing) newlyRegisteredId = requestId;
       await store.registerWait({
         requestId,
         peer: options.recipient,
@@ -67,7 +70,23 @@ export async function openConnectedReplyWait(options: {
         requestId = (await store.bindWait(requestId, sentId)).requestId;
     }
   } catch (error) {
-    await receiver.close();
+    try {
+      if (newlyRegisteredId) {
+        // Setup may fail after registration or after the receive signal expires.
+        // Never cancel an intent that existed before this construction attempt.
+        const cleanup = await openSharedMailStore({
+          configDir: options.configDir,
+          scope: sharedMailScope(options.apiKey, options.baseUrl),
+          recipient: options.from,
+          signal: AbortSignal.timeout(2000),
+        });
+        const registered = await cleanup.readWait(newlyRegisteredId);
+        if (registered?.status === "unbound")
+          await cleanup.cancelWaitBeforeSend(newlyRegisteredId);
+      }
+    } finally {
+      await receiver.close();
+    }
     throw error;
   }
   const settled = new Set<string>();
