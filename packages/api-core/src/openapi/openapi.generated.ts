@@ -119,6 +119,10 @@ export const openapiDocument: Record<string, unknown> = {
     {
       "name": "Registries",
       "description": "The Agent Registry: ownable directories of agents, addressable by a\nregistry-scoped handle. A registry's publish policy (owner_only, request,\nor open) decides whether a publish lists immediately or pends owner\napproval. An agent is defined once with a globally unique,\nreachability-verified address, then published into any registry under a\nhandle. Discovery reads (list, resolve, get) are public for public\nregistries; managing a registry and moderating requests use the owner's\nAPI key.\n"
+    },
+    {
+      "name": "Contacts",
+      "description": "Organization contacts and per-address agent preferences."
     }
   ],
   "paths": {

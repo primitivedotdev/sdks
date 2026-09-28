@@ -220,6 +220,8 @@ tags:
       handle. Discovery reads (list, resolve, get) are public for public
       registries; managing a registry and moderating requests use the owner's
       API key.
+  - name: Contacts
+    description: Organization contacts and per-address agent preferences.
 
 paths:
   # ---------------------------------------------------------------------------
