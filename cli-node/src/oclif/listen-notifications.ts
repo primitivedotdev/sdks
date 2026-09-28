@@ -317,6 +317,18 @@ export async function runSharedNotificationListen(
                   row.route.state === "skipped")) ||
               native.receipt(row.emailId, row.eventId)?.state === "accepted";
             if (await processMail(row)) {
+              if (!historical) {
+                // A previously selected request may expire or lose admission
+                // before reaching native preflight on the next run.
+                const current = await store.readEmail(row.emailId);
+                if (
+                  current?.route?.kind === "notification" &&
+                  current.route.sessionKey === sessionKey &&
+                  current.route.state === "selected" &&
+                  !native.receipt(row.emailId, row.eventId)
+                )
+                  await store.skipNotification(row.emailId, sessionKey);
+              }
               settled.add(row.emailId);
               if (!historical) processed++;
             }

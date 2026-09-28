@@ -11439,7 +11439,7 @@ export const openapiDocument: Record<string, unknown> = {
           "pattern": {
             "type": "string",
             "maxLength": 254,
-            "pattern": "^\\s*[\\x00-\\x7f]*\\s*$",
+            "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
             "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
           },
           "effect": {
@@ -11462,7 +11462,7 @@ export const openapiDocument: Record<string, unknown> = {
           "pattern": {
             "type": "string",
             "maxLength": 254,
-            "pattern": "^\\s*[\\x00-\\x7f]*\\s*$",
+            "pattern": "^[\\x09-\\x0d\\x20   -     　﻿]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20   -     　﻿]*$",
             "description": "Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description."
           },
           "effect": {

@@ -497,6 +497,28 @@ describe("first-contact intake", () => {
       state: "accepted",
     });
   });
+  it("settles a selected request that expires before the restarted listener reads it", async () => {
+    const f = setup();
+    f.requests();
+    f.handleDetail.mockRejectedValueOnce(
+      new Error("Native preflight unavailable"),
+    );
+    await expect(runListen(requestOptions(f))).rejects.toThrow("preflight");
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      state: "selected",
+    });
+    const now = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 601_000);
+    try {
+      expect(await runListen(requestOptions(f))).toBe(1);
+    } finally {
+      now.mockRestore();
+    }
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      state: "skipped",
+    });
+    expect(f.receipt()).toBeNull();
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
   it.each([
     "duplicate",
     "capacity",

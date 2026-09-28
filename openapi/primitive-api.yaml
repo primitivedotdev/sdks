@@ -8364,7 +8364,7 @@ components:
         pattern:
           type: string
           maxLength: 254
-          pattern: '^\s*[\x00-\x7f]*\s*$'
+          pattern: "^[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*$"
           description: Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description.
         effect:
           type: string
@@ -8381,7 +8381,7 @@ components:
         pattern:
           type: string
           maxLength: 254
-          pattern: '^\s*[\x00-\x7f]*\s*$'
+          pattern: "^[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*$"
           description: Trim outer whitespace, then require ASCII before lowercase normalization. Exact mailbox or restricted mailbox glob. See operation description.
         effect:
           type: string

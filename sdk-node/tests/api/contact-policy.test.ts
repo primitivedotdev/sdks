@@ -6,12 +6,37 @@ import {
   putAgentContactPolicy,
   putContactPolicy,
 } from "../../src/api/index.js";
+import { openapiDocument } from "../../src/openapi/index.js";
 
 const agent = "worker+research@example.com";
 const version = "11111111-1111-4111-8111-111111111111";
 const key = ["fixture", "credential"].join("-");
 
 describe("contact approval policy API", () => {
+  it("documents ASCII selectors while retaining outer trim whitespace", () => {
+    const components = openapiDocument.components as {
+      schemas: Record<
+        "ContactPolicyRule" | "ContactPolicyRuleInput",
+        { properties: { pattern: { pattern: string } } }
+      >;
+    };
+    for (const name of [
+      "ContactPolicyRule",
+      "ContactPolicyRuleInput",
+    ] as const) {
+      const rule = new RegExp(
+        components.schemas[name].properties.pattern.pattern,
+      );
+      expect(rule.test("*@example.com")).toBe(true);
+      expect(rule.test("\u00a0*@example.com\u00a0")).toBe(true);
+      for (const pattern of [
+        "K@example.com",
+        "*@K.example",
+        "a\u00a0b@example.com",
+      ])
+        expect(rule.test(pattern)).toBe(false);
+    }
+  });
   it("preserves organization versus exact-agent scope and conditional replacement", async () => {
     const requests: { method: string; path: string; body: unknown }[] = [];
     const fetcher = vi.fn<typeof fetch>(async (input) => {
