@@ -119,7 +119,7 @@ describe("public contact operations", () => {
       path: { agent_address: agent, contact_address: address },
       body: { if_version: version, notify: false },
     });
-    expect(result.response.status).toBe(409);
+    expect(result.response?.status).toBe(409);
     expect(result.error?.error.code).toBe("contact_conflict");
     expect(fetcher).toHaveBeenCalledOnce();
   });
@@ -141,7 +141,7 @@ describe("public contact operations", () => {
     });
     const client = new PrimitiveClient({ fetch: fetcher }).client;
     const result = await claimAgentConnection({ client, body: { token } });
-    expect(result.response.status).toBe(503);
+    expect(result.response?.status).toBe(503);
     expect(fetcher).toHaveBeenCalledOnce();
   });
 });
