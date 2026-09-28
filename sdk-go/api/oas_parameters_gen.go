@@ -355,9 +355,9 @@ func decodeCheckDomainDnsParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // ClaimAgentConnectionParams is parameters of claimAgentConnection operation.
 type ClaimAgentConnectionParams struct {
-	// Optional client-supplied idempotency key. Retrying a request with the same key returns the
-	// original result instead of performing the action a second time; if omitted the server derives one
-	// from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+	// This header does not enable credential replay for this one-use claim. If the response is lost or
+	// the outcome is unknown, request a fresh owner invitation. Do not assume that retrying the same key
+	// or payload can recover the returned credential.
 	IdempotencyKey OptString `json:",omitempty,omitzero"`
 }
 

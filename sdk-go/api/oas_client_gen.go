@@ -98,7 +98,9 @@ type Invoker interface {
 	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
 	// credentials. Runtime credentials allow only address-scoped mail operations, organization note
-	// reads and own-address note writes.
+	// reads and own-address note writes. The credential is returned once. If the claim response is lost
+	// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
+	// invitation.
 	//
 	// POST /agent-connections/claim
 	ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error)
@@ -2217,7 +2219,9 @@ func (c *Client) sendCheckDomainDns(ctx context.Context, params CheckDomainDnsPa
 // reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 // Reconnection preserves the address and revokes previous credentials. Status responses contain no
 // credentials. Runtime credentials allow only address-scoped mail operations, organization note
-// reads and own-address note writes.
+// reads and own-address note writes. The credential is returned once. If the claim response is lost
+// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
+// invitation.
 //
 // POST /agent-connections/claim
 func (c *Client) ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error) {

@@ -10333,14 +10333,14 @@
           "Agent Connections"
         ],
         "summary": "claim Agent Connection",
-        "description": "Address-bound external runtime pairing. Management operations require an organization owner or admin session or OAuth token; members and organization API keys cannot manage connections. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow only address-scoped mail operations, organization note reads and own-address note writes.",
+        "description": "Address-bound external runtime pairing. Management operations require an organization owner or admin session or OAuth token; members and organization API keys cannot manage connections. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow only address-scoped mail operations, organization note reads and own-address note writes. The credential is returned once. If the claim response is lost or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.",
         "security": [],
         "parameters": [
           {
             "name": "Idempotency-Key",
             "in": "header",
             "required": false,
-            "description": "Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.",
+            "description": "This header does not enable credential replay for this one-use claim. If the response is lost or the outcome is unknown, request a fresh owner invitation. Do not assume that retrying the same key or payload can recover the returned credential.",
             "schema": {
               "type": "string",
               "minLength": 1,

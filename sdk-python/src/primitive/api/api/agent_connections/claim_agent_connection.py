@@ -127,7 +127,8 @@ def sync_detailed(
     sent by the current bound credential was received back. Invitations expire after 15 minutes.
     Reconnection preserves the address and revokes previous credentials. Status responses contain no
     credentials. Runtime credentials allow only address-scoped mail operations, organization note reads
-    and own-address note writes.
+    and own-address note writes. The credential is returned once. If the claim response is lost or the
+    outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.
 
     Args:
         idempotency_key (str | Unset):
@@ -169,7 +170,8 @@ def sync(
     sent by the current bound credential was received back. Invitations expire after 15 minutes.
     Reconnection preserves the address and revokes previous credentials. Status responses contain no
     credentials. Runtime credentials allow only address-scoped mail operations, organization note reads
-    and own-address note writes.
+    and own-address note writes. The credential is returned once. If the claim response is lost or the
+    outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.
 
     Args:
         idempotency_key (str | Unset):
@@ -206,7 +208,8 @@ async def asyncio_detailed(
     sent by the current bound credential was received back. Invitations expire after 15 minutes.
     Reconnection preserves the address and revokes previous credentials. Status responses contain no
     credentials. Runtime credentials allow only address-scoped mail operations, organization note reads
-    and own-address note writes.
+    and own-address note writes. The credential is returned once. If the claim response is lost or the
+    outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.
 
     Args:
         idempotency_key (str | Unset):
@@ -248,7 +251,8 @@ async def asyncio(
     sent by the current bound credential was received back. Invitations expire after 15 minutes.
     Reconnection preserves the address and revokes previous credentials. Status responses contain no
     credentials. Runtime credentials allow only address-scoped mail operations, organization note reads
-    and own-address note writes.
+    and own-address note writes. The credential is returned once. If the claim response is lost or the
+    outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.
 
     Args:
         idempotency_key (str | Unset):
