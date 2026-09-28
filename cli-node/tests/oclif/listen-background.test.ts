@@ -387,6 +387,28 @@ describe("listener lifecycle state", () => {
     });
   });
 
+  it("retains a live legacy macOS worker and stops only its private generation", async () => {
+    vi.mocked(listenProcessIdentity).mockReturnValue(
+      "darwin:1700000000:123:Wed Sep 9 12:34:56 2026",
+    );
+    const f = running();
+    vi.mocked(listenProcessIdentity).mockReturnValue(
+      "darwin-boot:0385d3d5-2a65-41bd-9596-c3dd32c06ddd:Wed Sep 9 12:34:56 2026",
+    );
+    expect(backgroundListenStatus(target)).toMatchObject({
+      healthy: false,
+      reason: "unverifiable",
+    });
+    await expect(
+      startBackgroundListen({ ...target, argv: ["unused"] }),
+    ).rejects.toThrow("retained");
+    expect(await stopBackgroundListen(target, f.token)).toMatchObject({
+      phase: "stopped",
+      healthy: false,
+    });
+    await f.done;
+  });
+
   it("retries only caller-classified safe failures and publishes reconnecting before receiving", async () => {
     let attempt = 0;
     const transient = new Error("synthetic preflight failure");

@@ -70,6 +70,19 @@ const notify = (id: string) =>
   store.claimForNotification(id, "runtime:session");
 
 describe("active reply wait handoff", () => {
+  it("holds a live legacy macOS waiter after clock correction or identity upgrade", async () => {
+    lifecycle.identity.mockReturnValue(
+      "darwin:1700000000:123:Wed Sep 9 12:34:56 2026",
+    );
+    const wait = await bound(),
+      id = await receive(wait.parent);
+    lifecycle.identity.mockReturnValue(
+      "darwin-boot:0385d3d5-2a65-41bd-9596-c3dd32c06ddd:Wed Sep 9 12:34:56 2026",
+    );
+    expect((await notify(id)).status).toBe("held");
+    await store.releaseWaiter(wait.requestId, wait.owner.token);
+    expect((await notify(id)).status).toBe("claimed");
+  });
   it("keeps active waits first, then permits one durable external event after the final owner releases", async () => {
     const wait = await bound(),
       id = await receive(wait.parent);

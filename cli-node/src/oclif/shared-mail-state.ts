@@ -2,7 +2,10 @@ import { createHash, randomUUID } from "node:crypto";
 import { opendirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { ContactRequestReference } from "./contact-interactions.js";
-import { listenProcessIdentity } from "./listen-state.js";
+import {
+  compareListenProcessIdentity,
+  listenProcessIdentity,
+} from "./listen-state.js";
 import {
   invalidSharedMail,
   mailAddress,
@@ -62,8 +65,8 @@ function waiter(value: unknown): SharedMailWaiter {
 }
 function mayBeWaiting(owner: SharedMailWaiter): boolean {
   const identity = listenProcessIdentity(owner.pid);
-  if (identity !== null && owner.identity !== null)
-    return identity === owner.identity;
+  const matches = compareListenProcessIdentity(owner.identity, identity);
+  if (matches !== null) return matches;
   try {
     process.kill(owner.pid, 0);
   } catch (error) {

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import {
   acquireListenLock,
+  compareListenProcessIdentity,
   ListenStateError,
   listenProcessIdentity,
 } from "./listen-state.js";
@@ -237,7 +238,8 @@ function readState(path: string): State | null {
 
 function owner(state: State): "verified" | "gone" | "unknown" {
   const current = listenProcessIdentity(state.pid);
-  if (current !== null) return current === state.identity ? "verified" : "gone";
+  const matches = compareListenProcessIdentity(state.identity, current);
+  if (matches !== null) return matches ? "verified" : "gone";
   try {
     process.kill(state.pid, 0);
   } catch (error) {
@@ -311,7 +313,10 @@ export async function stopBackgroundListen(
     owner(state) === "gone"
   )
     return status(state);
-  if (owner(state) !== "verified")
+  // An old macOS record cannot prove liveness after clock correction or an
+  // upgrade. Its private generation token can still ask only that worker to
+  // stop. Never signal its PID or call the unconfirmed request a stopped worker.
+  if (owner(state) !== "verified" && !state.identity.startsWith("darwin:"))
     throw new ListenStateError(
       "Background listener ownership cannot be verified; no stop was requested.",
     );
