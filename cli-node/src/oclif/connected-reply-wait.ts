@@ -94,6 +94,7 @@ export async function openConnectedReplyWait(options: {
   const pending = new Set<string>();
   let recoveryNeeded = true;
   let cursor: string | undefined;
+  let localCursor: string | undefined;
   let cursors = new Set<string>();
   let generation: string | undefined;
   let gapCount: number | undefined;
@@ -192,31 +193,6 @@ export async function openConnectedReplyWait(options: {
             cursor = undefined;
             cursors = new Set();
           }
-          for (const id of pending) {
-            const reply = await inspect(id);
-            if (reply) return reply;
-          }
-          // Interleave pushed candidates with each history page so fresh replies
-          // can complete a wait even while targeted recovery has more pages.
-          let localCursor: string | undefined;
-          do {
-            const page = await store.listEmails({
-              limit: options.pageSize,
-              cursor: localCursor,
-            });
-            for (const row of page.emails) {
-              if (
-                row.details &&
-                row.details.authorization !== "pending" &&
-                (row.details.peer !== options.recipient ||
-                  row.details.replyToSentEmailId !== sentId)
-              )
-                continue;
-              const reply = await inspect(row.emailId);
-              if (reply) return reply;
-            }
-            localCursor = page.nextCursor ?? undefined;
-          } while (localCursor && !timedOut());
           if (recoveryNeeded) {
             const page = await readTargetedReplyPage({
               ...options,
@@ -235,10 +211,33 @@ export async function openConnectedReplyWait(options: {
                 );
               cursors.add(page.cursor);
               cursor = page.cursor;
-              continue;
+            } else {
+              recoveryNeeded = false;
             }
-            recoveryNeeded = false;
           }
+          for (const id of pending) {
+            const reply = await inspect(id);
+            if (reply) return reply;
+          }
+          // Search the exact parent before historical mail. Interleave at most
+          // one local page so retained history cannot delay the next search page.
+          const local = await store.listEmails({
+            limit: options.pageSize,
+            cursor: localCursor,
+          });
+          for (const row of local.emails) {
+            if (
+              row.details &&
+              row.details.authorization !== "pending" &&
+              (row.details.peer !== options.recipient ||
+                row.details.replyToSentEmailId !== sentId)
+            )
+              continue;
+            const reply = await inspect(row.emailId);
+            if (reply) return reply;
+          }
+          localCursor = local.nextCursor ?? undefined;
+          if (recoveryNeeded || localCursor) continue;
           await receiver.changed(options.deadline);
         }
         return null;

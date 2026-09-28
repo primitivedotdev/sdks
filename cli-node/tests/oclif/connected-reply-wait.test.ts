@@ -82,6 +82,7 @@ function fixture() {
   let searches = 0;
   const state = {
     detail,
+    pages: [] as unknown[],
     page: { data: [{ id: detail.id }], meta: { cursor: null } } as unknown,
   };
   const apiClient = new PrimitiveApiClient({
@@ -92,7 +93,7 @@ function fixture() {
       requests.push(url.pathname);
       if (url.pathname === "/v1/emails/search") {
         searches++;
-        return Response.json(state.page);
+        return Response.json(state.pages.shift() ?? state.page);
       }
       if (url.pathname === `/v1/emails/${detail.id}`)
         return Response.json({ data: state.detail });
@@ -130,6 +131,53 @@ describe("connected pushed reply waits", () => {
       "/v1/emails/search",
       `/v1/emails/${f.state.detail.id}`,
     ]);
+  });
+  it("recovers an available exact reply before reading unrelated retained history", async () => {
+    const f = fixture();
+    const waiter = await openConnectedReplyWait(f.options);
+    const store = waiter.receiver.store;
+    for (let index = 0; index < 12; index++) {
+      await store.ingest({
+        emailId: randomUUID(),
+        eventId: randomUUID(),
+        receivedAt: f.state.detail.received_at,
+      });
+    }
+    const localPages = vi.spyOn(store, "listEmails");
+    expect((await waiter.next())?.id).toBe(f.state.detail.id);
+    expect(localPages).not.toHaveBeenCalled();
+    expect(f.requests).toEqual([
+      "/v1/emails/search",
+      `/v1/emails/${f.state.detail.id}`,
+    ]);
+    await waiter.close();
+  });
+  it("interleaves only one retained page before continuing exact-parent recovery", async () => {
+    const f = fixture();
+    f.state.pages.push({ data: [], meta: { cursor: "next-target-page" } });
+    const waiter = await openConnectedReplyWait({ ...f.options, pageSize: 1 });
+    const store = waiter.receiver.store;
+    for (let index = 0; index < 3; index++) {
+      const emailId = randomUUID(),
+        receivedAt = f.state.detail.received_at;
+      await store.ingest({ emailId, eventId: randomUUID(), receivedAt });
+      await store.hydrate(emailId, {
+        recipient: target.from,
+        peer: "other@agent.example",
+        replyToSentEmailId: null,
+        receivedAt,
+        authorization: "trusted",
+      });
+    }
+    const localPages = vi.spyOn(store, "listEmails");
+    expect((await waiter.next())?.id).toBe(f.state.detail.id);
+    expect(localPages).toHaveBeenCalledOnce();
+    expect(f.requests).toEqual([
+      "/v1/emails/search",
+      "/v1/emails/search",
+      `/v1/emails/${f.state.detail.id}`,
+    ]);
+    await waiter.close();
   });
   it("retries a pending exact ID locally without repeating search", async () => {
     const f = fixture();
