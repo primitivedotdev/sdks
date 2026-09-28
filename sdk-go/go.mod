@@ -3,8 +3,8 @@ module github.com/primitivedotdev/sdks/sdk-go
 go 1.25.0
 
 require (
-	github.com/coder/websocket v1.8.14
-	github.com/ethereum/go-ethereum v1.17.5
+	github.com/coder/websocket v1.8.15
+	github.com/ethereum/go-ethereum v1.17.6
 	github.com/go-faster/errors v0.8.0
 	github.com/go-faster/jx v1.2.0
 	github.com/google/uuid v1.6.0
@@ -41,9 +41,9 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.28.0 // indirect
 	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090 // indirect
-	golang.org/x/net v0.57.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
