@@ -70,6 +70,8 @@ export async function inspectTargetedReply(
   // rereading unrelated pushed mail on every local state reconciliation.
   const trust = scopedChatSenderTrust(email, params.recipient);
   if (
+    ["accepted", "completed"].includes(email.status) &&
+    email.parsed?.status === "complete" &&
     [
       "dmarc-domain-mismatch",
       "from-domain-mismatch",

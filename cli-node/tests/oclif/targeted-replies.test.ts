@@ -161,6 +161,15 @@ describe("targeted reply recovery", () => {
     ).toBe("pending");
     state.detail = {
       ...original,
+      from_header: null,
+      parsed: { ...original.parsed, status: "failed" },
+    };
+    expect(
+      (await inspectTargetedReply({ apiClient, ...target, id: "reply-1" }))
+        ?.kind,
+    ).toBe("pending");
+    state.detail = {
+      ...original,
       auth: {
         ...original.auth,
         dmarc: "none",
