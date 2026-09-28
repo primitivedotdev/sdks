@@ -151,7 +151,10 @@ def _has_subdomain_identity(auth: EmailAuth, domain: str, dmarc_domain: str) -> 
     ):
         return False
     managed_inbox = (
-        re.fullmatch(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.primitive\.email", domain)
+        re.fullmatch(
+            r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.(?:primitive|primitive-staging)\.email",
+            domain,
+        )
         is not None
     )
     return any(
@@ -169,8 +172,8 @@ def _has_subdomain_identity(auth: EmailAuth, domain: str, dmarc_domain: str) -> 
             signature.domain.strip().lower() == domain
             or (
                 managed_inbox
-                and dmarc_domain == "primitive.email"
-                and signature.domain.strip().lower() == "primitive.email"
+                and dmarc_domain in ("primitive.email", "primitive-staging.email")
+                and signature.domain.strip().lower() == dmarc_domain
             )
         )
         for signature in auth.dkim_signatures
@@ -190,8 +193,9 @@ def is_trusted_sender(
     1. ``validate_email_auth(event.email.auth)`` returns a ``legit`` verdict.
     2. The reported DMARC domain equals ``domain``, or is its parent and
        passing, aligned DKIM uses the exact expected domain.
-       A direct child of primitive.email may instead use primitive.email
-       as its signer, trusting Primitive to authorize the sending identity.
+       A direct child of primitive.email or primitive-staging.email may
+       instead use that same managed root as its signer, trusting Primitive
+       to authorize the sending identity.
     3. The From header strict-parses to exactly one valid address whose
        domain equals ``domain``.
     4. When ``sender`` is given, the parsed From address equals it exactly

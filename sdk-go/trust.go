@@ -151,8 +151,9 @@ func parseFromHeaderStrict(value string) (string, TrustReason) {
 //  1. ValidateEmailAuth(event.Email.Auth) returns a legit verdict.
 //  2. The reported DMARC domain equals opts.Domain, or is its parent and
 //     passing, aligned DKIM uses the exact expected domain.
-//     A direct child of primitive.email may instead use primitive.email
-//     as its signer, trusting Primitive to authorize the sending identity.
+//     A direct child of primitive.email or primitive-staging.email may
+//     instead use that same managed root as its signer, trusting Primitive
+//     to authorize the sending identity.
 //  3. The From header strict-parses to exactly one valid address whose
 //     domain equals opts.Domain.
 //  4. When opts.Sender is non-empty, the parsed From address equals it
@@ -244,7 +245,7 @@ func IsTrustedSender(event EmailReceivedEvent, opts TrustedSenderOptions) (Trust
 	return TrustedSenderResult{Trusted: true, Retryable: false, Reason: TrustReasonTrusted, Auth: authResult}, nil
 }
 
-var managedInboxTrustDomain = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.primitive\.email$`)
+var managedInboxTrustDomain = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.(?:primitive|primitive-staging)\.email$`)
 
 func hasSubdomainIdentity(auth EmailAuth, domain, dmarcDomain string) bool {
 	// A shared organizational domain alone cannot distinguish sibling senders.
@@ -256,7 +257,8 @@ func hasSubdomainIdentity(auth EmailAuth, domain, dmarcDomain string) bool {
 		signer := strings.ToLower(strings.TrimSpace(signature.Domain))
 		// Ed25519 has fixed-strength keys; its 256 bits are not an RSA key size.
 		strongKey := signature.Algo != nil && (*signature.Algo == "ed25519-sha256" || (*signature.Algo == "rsa-sha256" && signature.KeyBits != nil && *signature.KeyBits >= 1024))
-		if signature.Result != DkimResultPass || !signature.Aligned || !strongKey || !(signer == domain || (managedInbox && dmarcDomain == "primitive.email" && signer == "primitive.email")) {
+		managedRoot := dmarcDomain == "primitive.email" || dmarcDomain == "primitive-staging.email"
+		if signature.Result != DkimResultPass || !signature.Aligned || !strongKey || !(signer == domain || (managedInbox && managedRoot && signer == dmarcDomain)) {
 			continue
 		}
 		return true
