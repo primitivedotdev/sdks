@@ -24,7 +24,7 @@ export type ContactNotificationAdmission = {
   receivedAt: string;
   generation: string;
   notifySince: string;
-  kind: "allowed" | "request";
+  kind: "allowed" | "request" | "response";
   effectiveVersion: string;
 };
 type Snapshot = {
@@ -145,6 +145,7 @@ export function createNotificationContactPolicy(options: {
     value: Snapshot,
     sender: string,
     receivedAt: string,
+    solicited = false,
   ): ContactNotificationAdmission | null {
     const decision = evaluateContactPolicy({
       policy: value.policy,
@@ -153,18 +154,33 @@ export function createNotificationContactPolicy(options: {
       membership: value.senders.get(sender),
       contactRequests: options.contactRequests === true,
     });
-    if (decision.kind === "silent") return null;
+    if (decision.kind === "silent") {
+      if (!solicited || decision.source !== "default") return null;
+      return {
+        sender,
+        receivedAt,
+        generation: value.policy.effective_version,
+        notifySince: value.policy.effective_since,
+        kind: "response",
+        effectiveVersion: value.policy.effective_version,
+      };
+    }
     return {
       sender,
       receivedAt,
       generation: decision.generation,
       notifySince: decision.notifySince,
-      kind: decision.kind,
+      kind: solicited ? "response" : decision.kind,
       effectiveVersion: value.policy.effective_version,
     };
   }
   function permits(value: Snapshot, prior: ContactNotificationAdmission) {
-    const current = admission(value, prior.sender, prior.receivedAt);
+    const current = admission(
+      value,
+      prior.sender,
+      prior.receivedAt,
+      prior.kind === "response",
+    );
     return (
       current !== null &&
       current.kind === prior.kind &&
@@ -211,6 +227,21 @@ export function createNotificationContactPolicy(options: {
         signal.throwIfAborted();
         if (!fresh(snapshot) || !permits(snapshot, admission)) throw changed();
       };
+    },
+    // The caller must first prove an exact, locally initiated reply. This is
+    // not permission for new mail or an unsolicited contact request.
+    async admitResponse(
+      sender: string,
+      receivedAt: string,
+      signal: AbortSignal,
+    ) {
+      const current = await refreshOnce(signal);
+      return admission(
+        current,
+        mailAddress(sender),
+        mailTime(receivedAt),
+        true,
+      );
     },
   };
 }

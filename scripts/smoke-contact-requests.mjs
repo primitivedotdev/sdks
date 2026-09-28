@@ -12,7 +12,7 @@ import { WebSocketServer } from 'ws';
 const binary = resolve(process.argv[2] ?? 'cli-node/bin/run.js');
 const root = await mkdtemp(join(tmpdir(), 'primitive-contact-controls-'));
 const config = join(root, 'config'); await mkdir(config, { mode: 0o700 });
-const agent = 'agent@sender.example', peer = 'research@peer.example';
+const agent = 'agent@sender.example', peer = 'agent@neutral.primitive-staging.email';
 const org = randomUUID(), endpoint = randomUUID(), version = randomUUID();
 const credential = ['pconn', 'x'.repeat(48)].join('_');
 const old = '2026-01-01T00:00:00.000Z';
@@ -29,7 +29,8 @@ function inbound(control, parent = null) {
   const detail = { id, from_email: peer, from_header: peer, recipient: agent, to_email: agent, status: 'completed', message_id: `<${id}@peer.example>`,
     received_at: new Date().toISOString(), body_text: 'Contact correspondence', body_html: null, reply_to_sent_email_id: parent,
     parsed: { status: 'complete', attachments: [{ filename: 'interaction.json', content_type: 'application/json', part_index: 0, size_bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }] },
-    auth: { spf: 'pass', dmarc: 'pass', dmarcFromDomain: 'peer.example', dmarcSpfAligned: true, dmarcDkimAligned: true, dkimSignatures: [] } };
+    auth: { spf: 'pass', dmarc: 'pass', dmarcFromDomain: 'primitive-staging.email', dmarcSpfAligned: true, dmarcDkimAligned: true,
+      dkimSignatures: [{ domain: 'primitive-staging.email', selector: 'default', result: 'pass', aligned: true, keyBits: 2048, algo: 'rsa-sha256' }] } };
   emails.set(id, detail); parts.set(id, bytes); return detail;
 }
 function sent() {

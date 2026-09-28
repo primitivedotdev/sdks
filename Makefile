@@ -62,6 +62,7 @@ cli-tarball-isolation:
 
 cli-smoke: cli-build cli-tarball-isolation
 	contact_requests_smoke_script="$$(pwd)/scripts/smoke-contact-requests.mjs" && \
+	late_contact_smoke_script="$$(pwd)/scripts/smoke-late-contact-notices.mjs" && \
 	connected_agent_smoke_script="$$(pwd)/scripts/smoke-connected-agent-commands.mjs" && \
 	attachment_smoke_script="$$(pwd)/scripts/smoke-attachment-parts.mjs" && \
 	pull_smoke_script="$$(pwd)/scripts/smoke-pull-commands.mjs" && \
@@ -88,6 +89,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
 	node "$$connected_agent_smoke_script" "$$bin" && \
 	node "$$contact_requests_smoke_script" "$$bin" && \
+	node "$$late_contact_smoke_script" "$$bin" && \
 	node "$$attachment_smoke_script" "$$bin" && \
 	node "$$pull_smoke_script" "$$bin" && \
 	node "$$deletion_smoke_script" "$$bin" && \

@@ -215,6 +215,12 @@ export async function openConnectedReplyWait(options: {
     }
     if (closed || released || timedOut()) return null;
     const claim = await store.claimForWait(id, requestId, waiter.token);
+    if (options.contactRequest && claim.email.route?.kind === "notification") {
+      if (["selected", "submitting"].includes(claim.email.route.state)) {
+        pending.add(id);
+        return null;
+      }
+    }
     settled.add(id);
     return claim.status === "claimed" ||
       (claim.status === "already_observed" &&
@@ -260,7 +266,18 @@ export async function openConnectedReplyWait(options: {
       });
       return cleanup.cancelRejectedSend(requestId);
     },
-    observed: (emailId: string) => store.markWaitObserved(emailId, requestId),
+    async observed(emailId: string) {
+      if (
+        options.contactRequest &&
+        (await store.observeNotifiedContactReply(
+          emailId,
+          requestId,
+          waiter.token,
+        ))
+      )
+        return;
+      await store.markWaitObserved(emailId, requestId);
+    },
     finish: () => store.finishWait(requestId),
     close() {
       closed = true;
@@ -315,7 +332,7 @@ export async function openConnectedReplyWait(options: {
               recoveryNeeded = false;
             }
           }
-          for (const id of pending) {
+          for (const id of [...pending]) {
             const reply = await inspect(id);
             if (reply) return reply;
           }

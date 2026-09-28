@@ -73,6 +73,51 @@ function requestFixture() {
 }
 
 describe("contact notification policy", () => {
+  it("admits a solicited response without unsolicited opt-in but rechecks explicit silence", async () => {
+    const f = fixture();
+    f.rows([]);
+    expect(await f.policy.admit(sender, received, signal)).toBeNull();
+    const admission = await f.policy.admitResponse(sender, received, signal);
+    expect(admission).toMatchObject({ kind: "response", sender });
+    if (!admission) throw new Error("Expected response admission");
+    const dispatch = await f.policy.recheck(admission, signal);
+    dispatch();
+    f.rows([
+      row({ notify: false, notify_since: null, notification_generation: null }),
+    ]);
+    await expect(f.policy.recheck(admission, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+    expect(dispatch).toThrow("changed or expired");
+    expect(await f.policy.admitResponse(sender, received, signal)).toBeNull();
+  });
+  it.each([
+    "agent",
+    "org",
+  ] as const)("does not bypass %s silence for solicited responses", async (source) => {
+    const f = fixture();
+    f.rows([]);
+    f.document[`${source}_policy`] = {
+      ...f.document[`${source}_policy`],
+      version: randomUUID(),
+      updated_at: activation,
+      rules: [
+        {
+          pattern: sender,
+          effect: "silence",
+          notify_since: null,
+          notification_generation: null,
+        },
+      ],
+    };
+    expect(await f.policy.admitResponse(sender, received, signal)).toBeNull();
+  });
+  it("does not backfill a solicited reply before the membership activation", async () => {
+    const f = fixture();
+    expect(
+      await f.policy.admitResponse(sender, "2026-09-01T09:59:59.999Z", signal),
+    ).toBeNull();
+  });
   it("keeps cached request-only mail pending through a paced transient refresh", async () => {
     const f = requestFixture();
     expect(await f.policy.admit(sender, received, signal)).toMatchObject({

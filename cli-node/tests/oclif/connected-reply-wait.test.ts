@@ -147,6 +147,98 @@ function fixture() {
   };
 }
 describe("connected pushed reply waits", () => {
+  it.each([
+    "selected",
+    "submitting",
+    "accepted",
+    "skipped",
+  ] as const)("recovers a validated contact acceptance after a %s native notice without changing its route", async (state) => {
+    const f = fixture();
+    const request = prepareContactRequest(
+      target.from,
+      "Public coordination",
+      600,
+      Date.parse(f.state.detail.received_at) - 1000,
+    );
+    const reference = contactReference(request);
+    const bytes = Buffer.from(
+      JSON.stringify(prepareContactAcceptance(request)),
+    );
+    f.state.partBytes = bytes;
+    f.state.detail.parsed = {
+      status: "complete",
+      attachments: [
+        {
+          filename: "interaction.json",
+          content_type: "application/json",
+          part_index: 0,
+          size_bytes: bytes.length,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        },
+      ],
+    };
+    const original = await openConnectedReplyWait({
+      ...f.options,
+      contactRequest: reference,
+    });
+    const store = original.receiver.store;
+    await original.close();
+    await store.ingest({
+      emailId: f.state.detail.id,
+      eventId: randomUUID(),
+      receivedAt: f.state.detail.received_at,
+    });
+    await store.hydrate(f.state.detail.id, {
+      recipient: target.from,
+      peer: target.recipient,
+      replyToSentEmailId: target.sentId,
+      receivedAt: f.state.detail.received_at,
+      authorization: "trusted",
+    });
+    expect(
+      (await store.claimForNotification(f.state.detail.id, "native-session"))
+        .status,
+    ).toBe("claimed");
+    if (state === "skipped")
+      await store.skipNotification(f.state.detail.id, "native-session");
+    else if (state !== "selected") {
+      await store.markNotification(f.state.detail.id, "submitting");
+      if (state === "accepted")
+        await store.markNotification(f.state.detail.id, "accepted");
+    }
+    const resumed = await openConnectedReplyWait({
+      ...f.options,
+      contactRequest: reference,
+      deadline: Date.now() + 5000,
+    });
+    hooks.changed.mockImplementationOnce(async () => {
+      if (state === "selected")
+        await store.markNotification(f.state.detail.id, "submitting");
+      await store.markNotification(f.state.detail.id, "accepted");
+    });
+    expect((await resumed.next())?.id).toBe(f.state.detail.id);
+    expect(hooks.changed).toHaveBeenCalledTimes(
+      ["selected", "submitting"].includes(state) ? 1 : 0,
+    );
+    const route = (await store.readEmail(f.state.detail.id))?.route;
+    expect(route).toMatchObject({
+      kind: "notification",
+      state: state === "skipped" ? "skipped" : "accepted",
+    });
+    await resumed.observed(f.state.detail.id);
+    await resumed.observed(f.state.detail.id);
+    await resumed.finish();
+    expect(await store.readWait(resumed.requestId)).toMatchObject({
+      status: "completed",
+      contactRequest: reference,
+    });
+    expect((await store.readEmail(f.state.detail.id))?.route).toEqual(route);
+    expect(
+      (await store.claimForNotification(f.state.detail.id, "native-session"))
+        .status,
+    ).toBe("already_observed");
+    await resumed.close();
+  });
   it("hands an unclaimed late reply to notifications after the receive deadline aborts", async () => {
     const f = fixture();
     const deadline = Date.now() + 5000;

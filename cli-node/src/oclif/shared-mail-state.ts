@@ -794,6 +794,17 @@ export async function openSharedMailStore(options: {
           )
         )
           return { status: "held", email: record };
+        if (
+          record.route?.kind === "notification" &&
+          ["accepted", "skipped"].includes(record.route.state) &&
+          w.contactRequest &&
+          w.waiters &&
+          w.status === "bound" &&
+          record.details?.authorization === "trusted" &&
+          record.details.peer === w.peer &&
+          record.details.replyToSentEmailId === w.sentEmailId
+        )
+          return { status: "claimed", email: record };
         if (record.route)
           return {
             status:
@@ -842,6 +853,41 @@ export async function openSharedMailStore(options: {
         const next = { ...record, route: { ...record.route, observed: true } };
         commit([{ path: pathFor("emails", emailId), value: next }]);
         return next;
+      });
+    },
+    observeNotifiedContactReply(
+      emailId: string,
+      requestId: string,
+      token: string,
+    ) {
+      return transaction(() => {
+        const record = requiredEmail(emailId),
+          w = requiredWait(requestId);
+        if (
+          record.route?.kind !== "notification" ||
+          !["accepted", "skipped"].includes(record.route.state)
+        )
+          return false;
+        if (
+          !w.contactRequest ||
+          !["bound", "completed"].includes(w.status) ||
+          !w.waiters?.some(
+            (owner) => owner.token === token && mayBeWaiting(owner),
+          ) ||
+          record.details?.authorization !== "trusted" ||
+          record.details.peer !== w.peer ||
+          record.details.replyToSentEmailId !== w.sentEmailId
+        )
+          throw invalidSharedMail();
+        // The contact waiter revalidated the complete acceptance. Preserve the
+        // native outcome and receipt so reconciliation and dedup remain stable.
+        commit([
+          {
+            path: pathFor("waits", requestId),
+            value: { ...w, status: "completed" },
+          },
+        ]);
+        return true;
       });
     },
     claimForNotification(

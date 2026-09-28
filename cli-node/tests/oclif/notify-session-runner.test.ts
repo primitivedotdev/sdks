@@ -7,7 +7,12 @@ import {
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prepareContactRequest } from "../../src/oclif/contact-interactions.js";
+import {
+  type ContactInteraction,
+  contactReference,
+  prepareContactAcceptance,
+  prepareContactRequest,
+} from "../../src/oclif/contact-interactions.js";
 import { openContactRequestNotices } from "../../src/oclif/contact-request-state.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
@@ -35,6 +40,7 @@ import { CONTACT_POLICY_RETRY_MIN_MS } from "../../src/oclif/notification-contac
 import type { DetailNotificationAuthorization } from "../../src/oclif/notify-session.js";
 import { sharedMailScope } from "../../src/oclif/shared-mail-receiver.js";
 import {
+  createSharedMailWaiter,
   openSharedMailStore,
   type SharedMailStore,
 } from "../../src/oclif/shared-mail-state.js";
@@ -66,7 +72,7 @@ function setup(
     from_email: "sender@example.com",
     status: "completed",
     received_at: receivedAt,
-    reply_to_sent_email_id: null,
+    reply_to_sent_email_id: null as string | null,
     parsed: { status: "complete", attachments: [] },
     auth: {
       dmarc: "pass",
@@ -106,6 +112,17 @@ function setup(
   );
   const policy = emptyContactPolicy(detail.recipient);
   let contactBytes: Buffer | undefined;
+  function interaction(value: ContactInteraction) {
+    contactBytes = Buffer.from(JSON.stringify(value));
+    detail.parsed.attachments.length = 0;
+    (detail.parsed.attachments as unknown[]).push({
+      filename: "interaction.json",
+      content_type: "application/json",
+      size_bytes: contactBytes.length,
+      part_index: 0,
+      sha256: createHash("sha256").update(contactBytes).digest("hex"),
+    });
+  }
   const identity = {
     profileName: "test",
     orgId: randomUUID(),
@@ -232,6 +249,7 @@ function setup(
     baseUrl,
     handleDetail,
     apiClient,
+    interaction,
     requests: (structured = true) => {
       contactRows = [];
       const since = new Date(Date.now() - 1000).toISOString();
@@ -521,6 +539,48 @@ describe("first-contact intake", () => {
     });
   });
   it.each([
+    "trusted",
+    "sender-mismatch",
+    "signer-mismatch",
+  ])("checks managed staging authentication before structured request admission: %s", async (evidence) => {
+    const f = setup();
+    f.detail.from_email = "agent@neutral.primitive-staging.email";
+    f.detail.from_header =
+      evidence === "sender-mismatch"
+        ? "other@neutral.primitive-staging.email"
+        : f.detail.from_email;
+    Object.assign(f.detail.auth, {
+      dmarcFromDomain: "primitive-staging.email",
+      dkimSignatures: [
+        {
+          domain:
+            evidence === "signer-mismatch"
+              ? "primitive.email"
+              : "primitive-staging.email",
+          selector: "default",
+          result: "pass",
+          aligned: true,
+          keyBits: 2048,
+          algo: "rsa-sha256",
+        },
+      ],
+    });
+    f.requests();
+    expect(await runListen(requestOptions(f))).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(
+      evidence === "trusted" ? 1 : 0,
+    );
+    if (evidence === "trusted") {
+      expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+        sender: f.detail.from_email,
+        contactRequest: true,
+      });
+      expect(f.receipt()).toMatchObject({ state: "accepted" });
+    } else {
+      expect(f.receipt()).toBeNull();
+    }
+  });
+  it.each([
     { offset: 4700, notified: true },
     { offset: -1, notified: false },
   ])("rechecks cached request-only policy for ordinary mail received $offset ms after acceptance", async ({
@@ -739,6 +799,137 @@ describe("first-contact intake", () => {
       },
     ]);
     expect(await runListen(requestOptions(f))).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+  });
+});
+
+describe("locally solicited notification replies", () => {
+  async function solicited(kind: "contact" | "plain", mismatch?: string) {
+    const f = setup();
+    f.contacts([]);
+    const createdAt = new Date(Date.now() - 2000).toISOString();
+    const request = prepareContactRequest(
+      f.detail.recipient,
+      "Public coordination",
+      600,
+      Date.parse(createdAt),
+    );
+    const parent = randomUUID();
+    f.detail.reply_to_sent_email_id = parent;
+    if (kind === "contact") {
+      const acceptance = prepareContactAcceptance(request);
+      if (mismatch === "interaction")
+        acceptance.interaction_id = `${randomUUID()}@example.com`;
+      if (mismatch === "step") acceptance.prev_step_id = randomUUID();
+      if (mismatch === "expiry")
+        acceptance.expires_at = new Date(
+          Date.parse(request.expires_at) + 1000,
+        ).toISOString();
+      if (mismatch === "expired-arrival")
+        f.detail.received_at = request.expires_at;
+      f.interaction(acceptance);
+    }
+    if (mismatch === "sender") f.detail.from_header = "different@example.com";
+    if (mismatch === "before-request")
+      f.detail.received_at = new Date(Date.parse(createdAt) - 1).toISOString();
+    const owner = createSharedMailWaiter();
+    const requestId = randomUUID();
+    const original = receive.getMockImplementation();
+    if (!original) throw new Error("Missing receiver fixture");
+    receive.mockImplementationOnce(async (...args: unknown[]) => {
+      const receiver = await original(...args);
+      await receiver.store.registerWait({
+        requestId,
+        peer: f.detail.from_email,
+        idempotencyKey: randomUUID(),
+        createdAt,
+        waiter: owner,
+        ...(kind === "contact"
+          ? { contactRequest: contactReference(request) }
+          : {}),
+      });
+      await receiver.store.bindWait(
+        requestId,
+        mismatch === "parent" ? randomUUID() : parent,
+      );
+      if (mismatch !== "active-wait")
+        await receiver.store.releaseWaiter(requestId, owner.token);
+      return receiver;
+    });
+    const options = {
+      ...f.options,
+      notifySession: {
+        ...f.options.notifySession,
+        senders: [],
+        contactPreferences: true,
+      },
+    };
+    return { ...f, options, parent, requestId, owner };
+  }
+  it.each([
+    "contact",
+    "plain",
+  ] as const)("notifies one exact late %s response with unsolicited requests disabled and no membership", async (kind) => {
+    const f = await solicited(kind);
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+      sender: f.detail.from_email,
+      contactRequest: false,
+    });
+    expect(await f.store()?.readWait(f.requestId)).toMatchObject({
+      status: "bound",
+      waiters: [],
+    });
+    const controller = new AbortController();
+    f.changed.mockImplementationOnce(async () => controller.abort());
+    expect(await runListen({ ...f.options, signal: controller.signal })).toBe(
+      0,
+    );
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
+  it.each([
+    "parent",
+    "sender",
+    "interaction",
+    "step",
+    "expiry",
+    "expired-arrival",
+    "before-request",
+  ])("does not admit a late contact response with mismatched %s", async (mismatch) => {
+    const f = await solicited("contact", mismatch);
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+  });
+  it.each([
+    "contact",
+    "plain",
+  ] as const)("retains an active %s waiter until it releases ownership", async (kind) => {
+    const f = await solicited(kind, "active-wait");
+    f.changed.mockImplementationOnce(async () => {
+      expect(f.handleDetail).not.toHaveBeenCalled();
+      await f.store()?.releaseWaiter(f.requestId, f.owner.token);
+    });
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.changed).toHaveBeenCalledOnce();
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
+  it.each([
+    "contact",
+    "plain",
+  ] as const)("keeps explicit silence authoritative for a solicited %s response", async (kind) => {
+    const f = await solicited(kind);
+    f.contacts([
+      {
+        agent_address: f.detail.recipient,
+        contact_address: f.detail.from_email,
+        notify: false,
+        notify_since: null,
+        notification_generation: null,
+        version: randomUUID(),
+      },
+    ]);
+    expect(await runListen(f.options)).toBe(1);
     expect(f.handleDetail).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,9 @@
 import { type EmailDetail, getEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
-import { readContactInteraction } from "./contact-interactions.js";
+import {
+  isContactAcceptance,
+  readContactInteraction,
+} from "./contact-interactions.js";
 import { apiContactPolicy } from "./contact-policy-client.js";
 import { openContactRequestNotices } from "./contact-request-state.js";
 import type { ListenOptions } from "./listen-runner.js";
@@ -17,7 +20,7 @@ import {
   NativeSessionError,
   NotificationOutcomeUnknownError,
 } from "./notify-session-errors.js";
-import { scopedChatSenderTrust } from "./scoped-chat.js";
+import { isPlainChatReply, scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   openSharedMailReceiver,
   sharedMailScope,
@@ -232,13 +235,52 @@ export async function runSharedNotificationListen(
         detail.parsed?.status !== "complete"
       )
         return false;
-      const admission = contactPolicy
+      let admission = contactPolicy
         ? await contactPolicy.admit(
             detail.from_email,
             detail.received_at,
             signal,
           )
         : undefined;
+      if (
+        contactPolicy &&
+        admission?.kind !== "allowed" &&
+        detail.reply_to_sent_email_id
+      ) {
+        const requested = await store.findWaitByParent(
+          detail.reply_to_sent_email_id,
+        );
+        if (
+          requested?.status === "bound" &&
+          requested.sentEmailId === detail.reply_to_sent_email_id &&
+          requested.peer === detail.from_email.trim().toLowerCase() &&
+          (requested.sessionKey === null ||
+            requested.sessionKey === sessionKey) &&
+          Date.parse(detail.received_at) >= Date.parse(requested.createdAt)
+        ) {
+          const trust = scopedChatSenderTrust(detail, requested.peer);
+          if (trust.retryable) return false;
+          if (trust.trusted) {
+            const response = requested.contactRequest
+              ? isContactAcceptance(
+                  await readContactInteraction(
+                    detail,
+                    notificationPartReader(async () => auth.apiClient.client),
+                    signal,
+                    Date.parse(detail.received_at),
+                  ),
+                  requested.contactRequest,
+                )
+              : isPlainChatReply(detail);
+            if (response)
+              admission = await contactPolicy.admitResponse(
+                requested.peer,
+                detail.received_at,
+                signal,
+              );
+          }
+        }
+      }
       if (contactPolicy && !admission) return true;
       const choices = (
         admission ? [admission.sender] : [...approvedSenders]
