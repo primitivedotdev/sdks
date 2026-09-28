@@ -516,6 +516,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // semantic (send + wait for the threaded reply, then print the
   // body). Positioned as the canonical verb for the
   // agents-behind-email-addresses paradigm.
+  // Connected credentials use scoped inbox reads and require an explicit sender.
   chat: ChatCommand,
   "chat:reply": ChatReplyCommand,
   // `login` and `signin` are intentionally interchangeable public
@@ -567,9 +568,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.
   "emails:latest": EmailsLatestCommand,
-  // `emails:watch` and `emails:wait` poll the search API for new matching
+  // `emails:watch` and unscoped `emails:wait` poll the search API for matching
   // inbound mail. `watch` defaults to a human table; `wait` defaults to JSONL.
   "emails:watch": EmailsWatchCommand,
+  // Connected waits inspect only the scoped inbox and exact sent parent.
   "emails:wait": EmailsWaitCommand,
   // `search` is the canonical top-level search verb. Defaults to
   // lexical full-text against inbound mail (positional query becomes
@@ -595,6 +597,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // the server-owned status API instead of making agents compose those lists.
   "inbox:setup": InboxSetupCommand,
   // WebSocket receiving, with explicit poll transport and bounded one-shot waits.
+  // One listener route owns stdout, webhook, native notifications, and paginated receipt status.
   listen: ListenCommand,
   "listen:init": ListenInitCommand,
   "inbox:status": InboxStatusCommand,

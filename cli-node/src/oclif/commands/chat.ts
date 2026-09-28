@@ -12,6 +12,7 @@ import {
   searchEmails,
   sendEmail,
 } from "@primitivedotdev/api-core";
+import { parseFromHeader } from "@primitivedotdev/sdk/parser/address";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
@@ -40,8 +41,18 @@ import {
   loadChatConversationByLocalId,
   saveActiveChatState,
 } from "../chat-state.js";
+import {
+  type ConnectedReplyWait,
+  openConnectedReplyWait,
+} from "../connected-reply-wait.js";
 import { formatAlreadySentNotice } from "../idempotent-replay-banner.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
+import { reconcileChatSend } from "../reconcile-chat-send.js";
+import {
+  isConnectedChatCredential,
+  isPlainChatReply,
+  isScopedChatReply,
+} from "../scoped-chat.js";
 import {
   apiResultHttpStatus,
   buildFollowUpCommand,
@@ -84,7 +95,12 @@ import {
 //     email; future transports (Primitive-native fast-path, etc.)
 //     can ride under the same verb without breaking callers.
 //
-// Reply-matching strategy. Two-phase, hybrid:
+// Connected credentials first arm the shared address event receiver. Replies
+// arrive through its durable local journal, with exact-parent search used for
+// startup and gap recovery. Authenticated sender, recipient and ancestry are
+// checked on each authoritative detail; no inbox scan or loose fallback runs.
+//
+// Organization-credential reply matching remains two-phase:
 //
 //   1. STRICT phase. Filter by reply_to_sent_email_id = <sent.id>.
 //      The server resolves this FK at inbound ingest by matching the
@@ -133,6 +149,7 @@ type ChatFollowUpCommandKind =
   | "continue_active_chat"
   | "continue_chat"
   | "continue_chat_explicit"
+  | "inspect_inbox"
   | "inspect_reply"
   | "inspect_sent_email"
   | "list_recent_sent_emails"
@@ -155,6 +172,7 @@ type ChatResponseBody = {
 };
 
 type ChatBaseContext = {
+  scopedInbox?: boolean;
   from: string;
   json: boolean;
   parentReply?: EmailDetail;
@@ -575,6 +593,10 @@ export function buildChatFollowUpCommands(
       context.reply.id,
     ]),
   );
+  if (context.scopedInbox) {
+    commands.push(scopedInboxCommand(context));
+    return commands;
+  }
   commands.push(
     buildCommand("wait_for_more", "Wait for future replies to this send", [
       "primitive",
@@ -593,9 +615,33 @@ export function buildChatFollowUpCommands(
   return commands;
 }
 
+function scopedInboxCommand(
+  context: ChatBaseContext,
+  _includeExisting = false,
+): ChatFollowUpCommand {
+  return buildCommand(
+    "wait_threaded_reply",
+    "Wait for the existing send without resending",
+    [
+      "primitive",
+      "emails",
+      "wait",
+      "--reply-to-sent-email-id",
+      context.sent.id,
+      "--from",
+      context.recipient,
+      "--to",
+      context.from,
+      "--timeout",
+      String(context.timeoutSeconds),
+    ],
+  );
+}
+
 export function buildChatRecoveryCommands(
   context: ChatBaseContext,
 ): ChatFollowUpCommand[] {
+  if (context.scopedInbox) return [scopedInboxCommand(context)];
   const commands: ChatFollowUpCommand[] = [
     buildCommand("wait_threaded_reply", "Wait for the threaded reply again", [
       "primitive",
@@ -783,7 +829,11 @@ export function formatChatAwaitingReplyMessage(
         ? "No reply to it yet."
         : `Loading its reply failed: ${options.waitError}.`;
     const action =
-      next.kind === "inspect_reply" ? "read the reply with" : "wait with";
+      next.kind === "inspect_reply"
+        ? "read the reply with"
+        : next.kind === "inspect_inbox"
+          ? "inspect the inbox with"
+          : "wait with";
     return `${formatAlreadySentNotice(context.sent)} ${status} Do NOT resend; ${action}: ${next.command}`;
   }
   const [wait] = buildChatRecoveryCommands(context);
@@ -812,6 +862,8 @@ export function buildChatExistingReplyCommands(
             existingReplyId,
           ]),
         ];
+  if (context.scopedInbox)
+    return [...inspectReply, scopedInboxCommand(context, true)];
   return [
     ...inspectReply,
     buildCommand(
@@ -1149,15 +1201,30 @@ async function findLatestInboundFromRecipient(params: {
     (email) => email.status === "accepted" || email.status === "completed",
   );
   if (!row) return null;
-  return loadInboundEmailDetail({
+  const detail = await loadInboundEmailDetail({
     apiClient: params.apiClient,
     authFailureContext: params.authFailureContext,
     id: row.id,
   });
+  if (
+    isConnectedChatCredential(params.authFailureContext.auth.apiKey) &&
+    (!isScopedChatReply(detail, params) || !isPlainChatReply(detail))
+  )
+    throw cliError(
+      "The latest peer message needs inspection. Use --reply-to-email-id after inspecting its sender and content.",
+    );
+  return detail;
 }
 
 class ChatCommand extends Command {
   static description = `Send a message to an address and wait for the reply.
+
+  Connected agents must supply --from. They share an address event receiver and
+  recover through targeted search for
+  an authenticated, exactly threaded reply. Interaction attachments remain
+  pending for inspection; a plain reply does not prove task completion.
+  Automatic continuation stops when its latest matching parent needs
+  inspection. Use --reply-to-email-id to choose that parent explicitly.
 
   This is the first-party verb for talking to agents that live behind
   email addresses. \`primitive send\` is transport (fire-and-forget);
@@ -1372,7 +1439,10 @@ class ChatCommand extends Command {
         // this as a failure is what made callers send twice.
         process.stderr.write(`${chatFailureText(`Error: ${detail}`)}\n`);
         this.reportAwaitingReply(baseContext, {
-          outcome: "sent_awaiting_reply",
+          outcome:
+            baseContext.scopedInbox && baseContext.sent.idempotent_replay
+              ? "already_sent"
+              : "sent_awaiting_reply",
           waitError: detail,
         });
         return;
@@ -1486,6 +1556,7 @@ class ChatCommand extends Command {
 
     await runWithTiming(flags.time, async () => {
       let releaseLock: (() => void) | undefined;
+      let connectedWait: ConnectedReplyWait | undefined;
       try {
         const { apiClient, auth, baseUrlOverridden } =
           await createAuthenticatedCliApiClient({
@@ -1493,6 +1564,12 @@ class ChatCommand extends Command {
             apiBaseUrl: flags["api-base-url"],
             configDir: this.config.configDir,
           });
+
+        if (isConnectedChatCredential(auth.apiKey) && !flags.from?.trim()) {
+          throw cliError(
+            "Connected agents must pass --from with their connected email address.",
+          );
+        }
 
         const authFailureContext: ChatAuthFailureContext = {
           auth,
@@ -1617,9 +1694,118 @@ class ChatCommand extends Command {
           this.config.configDir,
           scope,
           requestHash,
+          { connected: isConnectedChatCredential(auth.apiKey) },
         );
         const sentAtIso = receipt.data.sent_at;
+        const restoreReceiptProgress = () => {
+          this.chatProgress.sendStartedAtIso = sentAtIso;
+          if (receipt.data.sent) {
+            this.chatProgress.phase = "sent";
+            this.chatProgress.baseContext = {
+              scopedInbox: isConnectedChatCredential(auth.apiKey),
+              from: receipt.data.sent.from || from,
+              json: flags.json,
+              parentReply,
+              quiet: flags.quiet,
+              recipient: args.recipient,
+              sent: receipt.data.sent,
+              sentAtIso,
+              strictOnly:
+                flags["strict-only"] || isConnectedChatCredential(auth.apiKey),
+              strictPhaseSeconds: flags["strict-phase-seconds"],
+              subject,
+              timeoutSeconds: flags.timeout,
+            };
+          } else if (receipt.data.send_attempted) {
+            this.chatProgress.phase = "sending";
+          }
+        };
+        restoreReceiptProgress();
         process.stderr.write(`Chat receipt: ${receipt.path}\n`);
+        if (isConnectedChatCredential(auth.apiKey)) {
+          const parsedFrom = parseFromHeader(from);
+          if (!parsedFrom.ok)
+            throw cliError("--from must contain one valid email address.");
+          const deadline =
+            flags.timeout === 0 ? null : Date.now() + flags.timeout * 1000;
+          const key = receipt.data.idempotency_key;
+          connectedWait = await openConnectedReplyWait({
+            apiClient,
+            apiKey: auth.apiKey,
+            baseUrl: auth.apiBaseUrl,
+            configDir: this.config.configDir,
+            from: parsedFrom.value.address,
+            recipient: args.recipient,
+            sentId:
+              receipt.data.sent &&
+              successfulSendOutcome(receipt.data.sent) !== "not_sent"
+                ? receipt.data.sent.id
+                : undefined,
+            ...(key
+              ? {
+                  requestId: key.replace(/^primitive-chat-/, ""),
+                  idempotencyKey: key,
+                }
+              : {}),
+            resumeReply: receipt.data.reply,
+            createdAt: sentAtIso,
+            deadline,
+            pageSize: flags["page-size"],
+            notice: (message) => process.stderr.write(`${message}\n`),
+          });
+          try {
+            if (!(await connectedWait.ready()))
+              throw cliError(
+                "Timed out before the reply receiver was ready; no new send was attempted.",
+              );
+          } catch (error) {
+            if (!receipt.data.sent && !receipt.data.send_attempted) {
+              await connectedWait.cancelBeforeSend();
+              receipt.data.completed = true;
+              saveChatReceipt(receipt);
+            }
+            throw error;
+          }
+          if (!receipt.data.sent && receipt.data.send_attempted && key) {
+            await connectedWait.uncertain();
+            const recovered = await reconcileChatSend({
+              apiClient,
+              idempotencyKey: key,
+              from: parsedFrom.value.address,
+              recipient: args.recipient,
+              deadline,
+            });
+            if (!recovered)
+              throw new UncertainChatSendError(
+                "The saved send has not been reconciled. No message was resent; retry this command to look up the same idempotency key.",
+                { sentAtIso },
+              );
+            if (!recovered.request_id)
+              throw new UncertainChatSendError(
+                "Saved send lookup omitted its request identity; inspect the send before retrying.",
+                { sentAtIso },
+              );
+            receipt.data.sent = {
+              id: recovered.id,
+              status: recovered.status,
+              from: recovered.from_address,
+              queue_id: recovered.queue_id ?? null,
+              accepted: [],
+              rejected: [],
+              client_idempotency_key: key,
+              request_id: recovered.request_id,
+              content_hash: recovered.content_hash,
+              idempotent_replay: true,
+            };
+            saveChatReceipt(receipt);
+            restoreReceiptProgress();
+          }
+          if (
+            receipt.data.sent &&
+            successfulSendOutcome(receipt.data.sent) !== "not_sent"
+          )
+            await connectedWait.bind(receipt.data.sent.id);
+        }
         const resumed = receipt.data.sent !== null;
         this.chatProgress.sendStartedAtIso = sentAtIso;
 
@@ -1652,7 +1838,14 @@ class ChatCommand extends Command {
           progress?.start(`Sending message to ${args.recipient}`);
         }
 
-        if (!resumed) this.chatProgress.phase = "sending";
+        if (!resumed) {
+          this.chatProgress.phase = "sending";
+          if (connectedWait) {
+            receipt.data.send_attempted = true;
+            saveChatReceipt(receipt);
+            await connectedWait.uncertain();
+          }
+        }
         const sendResult =
           receipt.data.sent !== null
             ? { data: { data: receipt.data.sent }, error: undefined }
@@ -1664,6 +1857,10 @@ class ChatCommand extends Command {
                     ...(attachments !== undefined ? { attachments } : {}),
                   },
                   client: apiClient.client,
+                  signal: connectedWait?.receiver.signal,
+                  headers: receipt.data.idempotency_key
+                    ? { "Idempotency-Key": receipt.data.idempotency_key }
+                    : undefined,
                   path: { id: parentReply.id },
                   responseStyle: "fields",
                 })
@@ -1679,10 +1876,21 @@ class ChatCommand extends Command {
                     ...(attachments !== undefined ? { attachments } : {}),
                   },
                   client: apiClient.client,
+                  signal: connectedWait?.receiver.signal,
+                  headers: receipt.data.idempotency_key
+                    ? { "Idempotency-Key": receipt.data.idempotency_key }
+                    : undefined,
                   responseStyle: "fields",
                 });
 
         if (sendResult.error) {
+          if (
+            classifySendError(
+              apiResultHttpStatus(sendResult),
+              extractErrorPayload(sendResult.error),
+            ) === "not_sent"
+          )
+            await connectedWait?.cancelRejectedSend();
           this.reportSendFailure({
             authFailureContext,
             json: flags.json,
@@ -1712,6 +1920,8 @@ class ChatCommand extends Command {
         // report sent_awaiting_reply and tell the caller not to resend.
         const recordOutcome = successfulSendOutcome(sent);
         if (recordOutcome === "not_sent" || recordOutcome === "uncertain") {
+          if (recordOutcome === "not_sent")
+            await connectedWait?.cancelRejectedSend();
           receipt.data.sent = sent;
           // An indeterminate record stays pending so a retry resumes
           // it instead of sending again.
@@ -1747,6 +1957,7 @@ class ChatCommand extends Command {
 
         const replyAddress = sent.from || from;
         const baseContext: ChatBaseContext = {
+          scopedInbox: isConnectedChatCredential(auth.apiKey),
           from: replyAddress,
           json: flags.json,
           parentReply,
@@ -1755,7 +1966,8 @@ class ChatCommand extends Command {
           recipient: args.recipient,
           sent,
           sentAtIso,
-          strictOnly: flags["strict-only"],
+          strictOnly:
+            flags["strict-only"] || isConnectedChatCredential(auth.apiKey),
           strictPhaseSeconds: flags["strict-phase-seconds"],
           subject,
           timeoutSeconds: flags.timeout,
@@ -1765,6 +1977,7 @@ class ChatCommand extends Command {
 
         receipt.data.sent = sent;
         saveChatReceipt(receipt);
+        await connectedWait?.bind(sent.id);
 
         // Server-side idempotency dedup: when the same content
         // (from + to + subject + body) is sent within the dedup
@@ -1780,7 +1993,7 @@ class ChatCommand extends Command {
         // and report `already_sent` otherwise. The message went out
         // earlier, so the answer is to wait for that send's reply,
         // never to vary the content and send again.
-        if (sent.idempotent_replay) {
+        if (sent.idempotent_replay && !connectedWait) {
           progress?.update(
             "Server returned idempotent_replay: looking up the existing reply",
           );
@@ -1789,8 +2002,6 @@ class ChatCommand extends Command {
             cursor: null,
             filters: { replyToSentEmailId: sent.id },
             pageSize: flags["page-size"],
-            // Intentionally NO `since`: the reply (if any) predates
-            // this attempt.
           });
           if (!existing.ok) {
             // The earlier send exists; only finding its reply failed.
@@ -1886,26 +2097,33 @@ class ChatCommand extends Command {
 
         let replyResult: ChatReplyResult | null;
         try {
-          replyResult = await waitForReply({
-            apiClient,
-            authFailureContext,
-            from: replyAddress,
-            interval: flags.interval,
-            notice: (message) => {
-              if (progress) {
-                progress.notice(message);
-                return;
-              }
-              process.stderr.write(`${message}\n`);
-            },
-            pageSize: flags["page-size"],
-            recipient: args.recipient,
-            sentAtIso,
-            sentId: sent.id,
-            strictOnly: flags["strict-only"],
-            strictPhaseSeconds: flags["strict-phase-seconds"],
-            timeoutSeconds: flags.timeout,
-          });
+          const connectedReply = connectedWait
+            ? await connectedWait.next()
+            : null;
+          replyResult = connectedWait
+            ? connectedReply
+              ? { reply: connectedReply, matchStrategy: "strict" }
+              : null
+            : await waitForReply({
+                apiClient,
+                authFailureContext,
+                from: replyAddress,
+                interval: flags.interval,
+                notice: (message) => {
+                  if (progress) {
+                    progress.notice(message);
+                    return;
+                  }
+                  process.stderr.write(`${message}\n`);
+                },
+                pageSize: flags["page-size"],
+                recipient: args.recipient,
+                sentAtIso,
+                sentId: sent.id,
+                strictOnly: flags["strict-only"],
+                strictPhaseSeconds: flags["strict-phase-seconds"],
+                timeoutSeconds: flags.timeout,
+              });
         } catch (error) {
           progress?.fail("Reply polling failed.");
           throw error;
@@ -1920,6 +2138,17 @@ class ChatCommand extends Command {
             outcome: "sent_awaiting_reply",
           });
           return;
+        }
+
+        if (connectedWait) {
+          // Keep the exact reply recoverable across either shared-state write.
+          receipt.data.reply = {
+            emailId: replyResult.reply.id,
+            requestId: connectedWait.requestId,
+          };
+          saveChatReceipt(receipt);
+          await connectedWait.observed(replyResult.reply.id);
+          await connectedWait.finish();
         }
 
         progress?.succeed(
@@ -1954,7 +2183,11 @@ class ChatCommand extends Command {
         saveChatReceipt(receipt);
         this.reportReplied(outputContext, "replied");
       } finally {
-        releaseLock?.();
+        try {
+          await connectedWait?.close();
+        } finally {
+          releaseLock?.();
+        }
       }
     });
   }

@@ -1,10 +1,14 @@
 import { Command, Errors, Flags } from "@oclif/core";
+import type { EmailSummary } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   extractErrorPayload,
   surfaceUnauthorizedHint,
   writeErrorWithHints,
 } from "../api-command.js";
+import { openConnectedReplyWait } from "../connected-reply-wait.js";
+import { isConnectedChatCredential } from "../scoped-chat.js";
+import { resolveScopedEmailWait } from "../scoped-email-wait.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
 import {
   collectNewAcceptedEmails,
@@ -26,11 +30,25 @@ function cliError(message: string): Errors.CLIError {
 
 class EmailsWaitCommand extends Command {
   static description =
-    "Poll until matching inbound emails arrive, printing each match as it is found.";
+    `Wait until matching inbound emails arrive, printing each match as it is found.
+
+  Connected agents require --reply-to-sent-email-id and an exact peer --from.
+  The receiving address is derived from the existing sent email; optional --to
+  must match it. Existing replies are included by default unless --since narrows
+  the window. Matching requires the exact sent ID, receiving address, and an
+  authenticated peer. Interaction attachments and incomplete replies remain
+  pending for inspection. JSONL contains each matching email detail; --table
+  prints compact rows. A plain reply does not prove task completion.
+
+  Connected waits share an address event subscription and recover replies with
+  exact-parent search. They never scan inbox history. Additional content
+  filters. The command never sends mail. On timeout it exits 1; run the same
+  wait again to recover a reply to the existing send without resending it.`;
 
   static summary = "Wait for matching inbound emails";
 
   static examples = [
+    "<%= config.bin %> emails wait --reply-to-sent-email-id <sent-id> --from peer@example.com",
     "<%= config.bin %> emails wait --to test@example.com",
     "<%= config.bin %> emails wait --subject verify --number 5 --timeout 120",
     "<%= config.bin %> emails wait --q 'domain:example.com' --table",
@@ -58,14 +76,15 @@ class EmailsWaitCommand extends Command {
       description: "Filter by domain UUID",
     }),
     from: Flags.string({
-      description: "Filter by sender address or domain",
+      description:
+        "Sender address or domain; connected agents require an exact peer address",
     }),
     "has-attachment": Flags.boolean({
       description: "Only match emails with one or more attachments",
     }),
     "include-existing": Flags.boolean({
       description:
-        "Start from existing matching emails instead of only new arrivals",
+        "Start from existing matching emails; this is the default for connected exact-parent waits",
     }),
     interval: Flags.integer({
       default: DEFAULT_EMAIL_POLL_INTERVAL_SECONDS,
@@ -113,7 +132,8 @@ class EmailsWaitCommand extends Command {
       min: 0,
     }),
     to: Flags.string({
-      description: "Filter by recipient address or domain",
+      description:
+        "Recipient address or domain; connected waits derive it from the referenced send",
     }),
   };
 
@@ -126,9 +146,12 @@ class EmailsWaitCommand extends Command {
         configDir: this.config.configDir,
       });
 
+    const connected = isConnectedChatCredential(auth.apiKey);
     let since: string | undefined;
     try {
-      since = sinceFromFlags(flags);
+      since = sinceFromFlags(
+        connected ? { ...flags, "include-existing": true } : flags,
+      );
     } catch (error) {
       throw cliError(error instanceof Error ? error.message : String(error));
     }
@@ -136,13 +159,60 @@ class EmailsWaitCommand extends Command {
     const filters = filtersFromFlags(flags);
     const deadline =
       flags.timeout === 0 ? null : Date.now() + flags.timeout * 1000;
+    const scoped = connected
+      ? await resolveScopedEmailWait({ apiClient, filters, deadline })
+      : null;
     const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
     const seenIds = new Set<string>();
     let cursor: string | null = null;
     let matched = 0;
     let headerPrinted = false;
 
-    while (deadline === null || Date.now() < deadline) {
+    const printEmail = (email: EmailSummary) => {
+      if (flags.table) {
+        if (!headerPrinted) {
+          process.stderr.write(`${formatHeader(idWidth)}\n`);
+          headerPrinted = true;
+        }
+        this.log(formatRow(email, idWidth));
+      } else this.log(JSON.stringify(email));
+      matched += 1;
+    };
+
+    if (scoped) {
+      let waiter:
+        | Awaited<ReturnType<typeof openConnectedReplyWait>>
+        | undefined;
+      try {
+        waiter = await openConnectedReplyWait({
+          apiClient,
+          apiKey: auth.apiKey,
+          baseUrl: auth.apiBaseUrl,
+          configDir: this.config.configDir,
+          ...scoped,
+          since,
+          pageSize: flags["page-size"],
+          deadline,
+          notice: (message) => process.stderr.write(`${message}\n`),
+        });
+        while (matched < flags.number) {
+          const email = await waiter.next();
+          if (!email) break;
+          printEmail(email);
+          await waiter.observed(email.id);
+        }
+        if (matched >= flags.number) {
+          await waiter.finish();
+          return;
+        }
+      } catch (error) {
+        if (deadline === null || Date.now() < deadline) throw error;
+      } finally {
+        await waiter?.close();
+      }
+    }
+
+    while (!connected && (deadline === null || Date.now() < deadline)) {
       const page = await fetchEmailSearchPage({
         apiClient,
         cursor,
@@ -169,16 +239,7 @@ class EmailsWaitCommand extends Command {
       if (nextCursor) cursor = nextCursor;
 
       for (const email of collectNewAcceptedEmails(page.rows, seenIds)) {
-        if (flags.table) {
-          if (!headerPrinted) {
-            process.stderr.write(`${formatHeader(idWidth)}\n`);
-            headerPrinted = true;
-          }
-          this.log(formatRow(email, idWidth));
-        } else {
-          this.log(JSON.stringify(email));
-        }
-        matched += 1;
+        printEmail(email);
         if (matched >= flags.number) return;
       }
 

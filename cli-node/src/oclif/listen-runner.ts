@@ -8,12 +8,15 @@ import {
 } from "@primitivedotdev/api-core";
 import { EventConnection, EventReceiverError } from "@primitivedotdev/sdk/api";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
+import { runSharedNotificationListen } from "./listen-notifications.js";
 import {
+  ListenStateError,
   listenIdentity,
   normalizeListenOrigin,
   resolveListenSubscription,
 } from "./listen-state.js";
 import type { ListenDelivery, ListenHandler } from "./listen-types.js";
+import type { NotifySessionOptions } from "./notify-session.js";
 
 export class ListenError extends Error {}
 class RequestFailure extends ListenError {
@@ -44,7 +47,8 @@ export interface ListenOptions {
   events?: string[];
   number?: number;
   handler: ListenHandler;
-  mode?: "exec" | "http" | "stdout";
+  mode?: "exec" | "http" | "stdout" | "sdk";
+  notifySession?: NotifySessionOptions;
   signal: AbortSignal;
   stderr?: { write(value: string): unknown };
   now?: () => number;
@@ -120,11 +124,22 @@ function validDelivery(value: unknown): value is ListenDelivery {
 }
 
 export async function runListen(options: ListenOptions): Promise<number> {
+  if (options.notifySession) return runSharedNotificationListen(options);
+  if (options.subscription?.startsWith("local-mail-"))
+    throw new ListenStateError(
+      "This subscription name is reserved for shared mail receiving. Use a different --subscription for stdout, exec, or HTTP delivery.",
+    );
+  return runStandaloneListen(options);
+}
+
+async function runStandaloneListen(options: ListenOptions): Promise<number> {
   const now = options.now ?? Date.now;
   const random = options.random ?? Math.random;
   const sleep = options.sleep ?? listenSleep;
   const stderr = options.stderr ?? process.stderr;
   const signal = options.signal;
+  const mode = options.mode ?? "stdout";
+  const events = options.events;
   if (
     options.number !== undefined &&
     (!Number.isSafeInteger(options.number) || options.number < 1)
@@ -265,9 +280,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
         body: {
           kind: "pull",
           name: subscription.name,
-          ...(options.events === undefined
-            ? {}
-            : { rules: { event_types: options.events } }),
+          ...(events === undefined ? {} : { rules: { event_types: events } }),
         },
       });
       if (result.response?.ok) resumed = result.response.status !== 201;
@@ -294,11 +307,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
         throw new ListenError(
           "This API does not support WebSocket events. Use --transport poll explicitly for an older API.",
         );
-      if (
-        !endpoint.receiver_capabilities.completion_modes.includes(
-          options.mode ?? "stdout",
-        )
-      )
+      if (!endpoint.receiver_capabilities.completion_modes.includes(mode))
         throw new ListenError(
           "This API does not support the selected listener handler mode.",
         );
@@ -315,7 +324,7 @@ export async function runListen(options: ListenOptions): Promise<number> {
           ? `inbound email for ${JSON.stringify(endpoint.recipient)}`
           : "all events";
     stderr.write(
-      `Listening on subscription ${subscription.name} (${endpoint.id}); ${resumed ? "resumed" : "created"}, mode ${options.mode ?? "stdout"}, selection: ${selection}. Retention: 24 hours; handler limit: 30 seconds. Pending count follows the first poll. Ctrl-C disconnects; delete with primitive endpoints delete --id ${endpoint.id}.\n`,
+      `Listening on subscription ${subscription.name} (${endpoint.id}); ${resumed ? "resumed" : "created"}, mode ${mode}, selection: ${selection}. Retention: 24 hours; handler limit: 30 seconds. Pending count follows the first poll. Ctrl-C disconnects; delete with primitive endpoints delete --id ${endpoint.id}.\n`,
     );
     let lastGap = -1;
     let lastBacklog = -1;
@@ -395,8 +404,9 @@ export async function runListen(options: ListenOptions): Promise<number> {
       let handled: Awaited<ReturnType<ListenHandler>>;
       try {
         handled = await options.handler(delivery, signal);
-      } catch {
+      } catch (error) {
         if (signal.aborted) throw signal.reason;
+        if (error instanceof ListenStateError) throw error;
         throw new ListenError(
           "The event handler did not finish. Its delivery remains uncompleted.",
         );

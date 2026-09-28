@@ -43,6 +43,38 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("keeps connected waits on the existing emails wait command", () => {
+    const wait = COMMANDS["emails:wait"] as unknown as {
+      description: string;
+      flags: Record<string, unknown>;
+    };
+    expect(wait.description).toContain(
+      "Connected agents require --reply-to-sent-email-id",
+    );
+    expect(wait.description).toContain("exact-parent search");
+    expect(wait.description).toContain("never scan inbox history");
+    for (const flag of [
+      "from",
+      "to",
+      "reply-to-sent-email-id",
+      "since",
+      "include-existing",
+      "number",
+      "timeout",
+      "table",
+    ])
+      expect(wait.flags[flag]).toBeDefined();
+  });
+  it("keeps scoped chat discoverable under the existing command shapes", () => {
+    const chat = COMMANDS.chat as unknown as {
+      description: string;
+      flags: Record<string, unknown>;
+    };
+    expect(chat.description).toContain("Connected agents must supply --from");
+    expect(chat.description).toContain("share an address event receiver");
+    expect(chat.flags.from).toBeDefined();
+    expect(COMMANDS["chat:reply"]).toBeDefined();
+  });
   it("registers mailbox deletion operations and the sent alias", () => {
     expect(COMMANDS["sending:delete-sent-email"]).toBeDefined();
     expect(COMMANDS["agent-connections:remove-agent-connection"]).toBeDefined();
@@ -227,6 +259,12 @@ describe("COMMANDS / manifest coverage", () => {
       "transport",
       "once",
       "timeout",
+      "notify-session",
+      "sender",
+      "session-socket",
+      "status",
+      "limit",
+      "cursor",
     ]) {
       expect(listener.flags[flag]).toBeDefined();
     }
@@ -237,6 +275,17 @@ describe("COMMANDS / manifest coverage", () => {
     expect(starter.flags["out-dir"]).toBeDefined();
   });
 
+  it("documents the shared native notification transport", () => {
+    const listen = COMMANDS.listen as unknown as {
+      flags: Record<string, { description: string }>;
+    };
+    expect(listen.flags["notify-session"].description).toContain(
+      "shared WebSocket subscription",
+    );
+    expect(listen.flags.subscription.description).toContain(
+      "generic listeners",
+    );
+  });
   it("registers inbox status commands", () => {
     expect(COMMANDS["inbox:setup"]).toBeDefined();
     expect(COMMANDS["inbox:status"]).toBeDefined();
