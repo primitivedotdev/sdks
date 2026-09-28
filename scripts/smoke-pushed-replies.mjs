@@ -382,9 +382,27 @@ try {
       answers[index].detail.id,
     );
   }
+  if (!includeNative) {
+    // A satisfied waiter may exit after durable ingress but before remote ack.
+    // A later owner must drain any redelivery without notifying the session
+    // about replies already observed by their waiters.
+    invoke([
+      "listen",
+      "--notify-session",
+      sessionId,
+      "--sender",
+      peer,
+      "--session-socket",
+      socketPath,
+    ]);
+    await until(
+      () => streamOpens >= (handoff ? 3 : 2),
+      "A subsequent receiver must reopen the shared subscription",
+    );
+  }
   await until(
     () => completions.length === (includeNative ? 3 : 2),
-    "Deliveries must be acknowledged after durable receipt",
+    "A subsequent receiver must acknowledge any durable redelivery",
   );
   assert.equal(
     maximumStreams,
