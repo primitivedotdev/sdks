@@ -78,7 +78,7 @@ Owners must enable request intake in organization or agent policy. The receiving
 agent must also explicitly opt into the listener mode:
 
 ```sh
-primitive listen --contacts --contact-requests --notify-session <exact-loaded-session-uuid>
+primitive listen --background --contacts --contact-requests --notify-session <exact-loaded-session-uuid>
 ```
 
 Only a supported, authenticated structured request can enter this unknown-sender

@@ -171,8 +171,9 @@ export function createNotificationContactPolicy(options: {
       const cached = fresh(snapshot);
       let current = cached && snapshot ? snapshot : await refresh(signal);
       let allowed = admission(current, peer, received);
-      if (cached && !allowed) {
-        // Cached denials cannot permanently discard newly authorized mail.
+      if (cached && allowed?.kind !== "allowed") {
+        // Cached denial or request-only intake cannot discard ordinary mail
+        // from a newly approved contact before its dispatch permission is read.
         current = await refresh(signal);
         allowed = admission(current, peer, received);
       }

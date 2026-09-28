@@ -400,19 +400,44 @@ Codex session of authenticated mail from explicitly approved senders:
 ```bash
 primitive listen --notify-session <session-uuid> --sender person@example.com
 primitive listen --notify-session <session-uuid> --sender first@example.com,second@example.com
+primitive listen --background --notify-session <session-uuid> --contacts --contact-requests
 primitive listen --status --notify-session <session-uuid>
 primitive listen --status --notify-session <session-uuid> --limit 100 --cursor <nextCursor>
+primitive listen --stop --notify-session <session-uuid>
 ```
 
-This first notification path uses the native local-session Unix socket in
-Codex 0.156.1. Live runtime behavior was verified on macOS; Linux uses the same
+This notification path uses the native local-session Unix socket in
+Codex. Live runtime behavior was verified on macOS; Linux uses the same
 Unix transport but has not been verified against a live runtime. The session must already be open in a terminal with
-native daemon support enabled. If its socket is unavailable, this is an
-unsupported runtime setup: the CLI reports the gap and exits before creating a
-subscription. It does not launch a daemon, start/resume a conversation, install a
+native daemon support enabled, with compatible client and server versions.
+The foreground command exits if its socket is unavailable; a background receiver
+reports `reconnecting` and waits for a temporarily unavailable native socket.
+Neither creates a subscription before native preflight succeeds. The CLI does
+not launch a coding daemon, start/resume a conversation, install a
 connector, or change model, approval, or sandbox settings. Windows and other
 harnesses are not supported by this path. `CODEX_HOME` selects the native runtime
 home when it differs from `~/.codex`.
+
+`--background` starts one detached CLI process for this connection and exact
+session. It survives exit of the process that started it. Repeating the command
+reuses a live background receiver with the same CLI version and receiving options.
+Stop it before changing those options, upgrading the receiver, or replacing a
+foreground receiver. `--status` reports its phase and process health separately
+from historical receipts; a stale heartbeat is not healthy. `--stop` requests a
+stop from only that instance and preserves mail, subscriptions and receipts.
+Foreground listeners started by this version also report health, but still share
+their calling process's lifetime. Receivers from older versions are untracked.
+Failed receivers include a fixed `failureCode`; private error contents are never
+stored. Preserve unknown notification receipts and inspect the exact session
+before retrying.
+
+Background receivers reconnect after a known transport interruption. A previously
+verified session may temporarily be unloaded while its terminal reconnects; the
+receiver waits for that same session without loading it. Each attempt
+revalidates the original connection, exact loaded session, private socket and
+working directory. Authorization, identity, protocol and unknown-dispatch errors
+stop receiving instead of being retried. Reconnection never starts a missing
+session or grants tool authority. A healthy receiver is not proof of a model reply.
 
 Notification mode registers an `email.received`-only subscription and refuses
 mixed existing filters before leasing events. Native notification mode requires

@@ -5,11 +5,18 @@ import { apiContactPolicy } from "./contact-policy-client.js";
 import { openContactRequestNotices } from "./contact-request-state.js";
 import type { ListenOptions } from "./listen-runner.js";
 import { ListenStateError } from "./listen-state.js";
-import { openSessionNotifications } from "./notify-session.js";
+import {
+  notificationScope,
+  openSessionNotifications,
+} from "./notify-session.js";
 import {
   NotificationRetryError,
   notificationPartReader,
 } from "./notify-session-content.js";
+import {
+  NativeSessionError,
+  NotificationOutcomeUnknownError,
+} from "./notify-session-errors.js";
 import { scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   openSharedMailReceiver,
@@ -65,6 +72,14 @@ export async function runSharedNotificationListen(
     apiKey: options.apiKey,
     apiBaseUrl: options.apiBaseUrl,
   });
+  if (
+    options.expectedNotificationScope !== undefined &&
+    notificationScope(auth.auth.apiBaseUrl, auth.auth.apiKey) !==
+      options.expectedNotificationScope
+  )
+    throw new ListenStateError(
+      "The selected connection changed. Stop this listener and start it again with the intended profile.",
+    );
   const scope = sharedMailScope(auth.auth.apiKey, auth.auth.apiBaseUrl),
     signal = options.signal;
   const native = await openSessionNotifications({
@@ -76,6 +91,7 @@ export async function runSharedNotificationListen(
   });
   let receiver: Awaited<ReturnType<typeof openSharedMailReceiver>> | undefined;
   let processed = 0;
+  let failure: unknown;
   const settled = new Set<string>();
   const deferredUntil = new Map<string, number>();
   const sessionKey = `codex:${notify.threadId.toLowerCase()}`;
@@ -134,24 +150,33 @@ export async function runSharedNotificationListen(
     async function reconcile(row: SharedMailEmail) {
       const receipt = native.receipt(row.emailId, row.eventId);
       if (!receipt) return;
-      const current = await store.readEmail(row.emailId);
-      if (
-        current?.route?.kind !== "notification" ||
-        current.route.sessionKey !== sessionKey
-      )
-        throw new ListenStateError(
-          "Native notification receipt conflicts with shared mail ownership.",
+      const unknown =
+        receipt.state !== "accepted"
+          ? new NotificationOutcomeUnknownError(
+              `Notification for email ${row.emailId} has an unknown outcome. Inspect the exact session; it will not be resent automatically.`,
+            )
+          : undefined;
+      try {
+        const current = await store.readEmail(row.emailId);
+        if (
+          current?.route?.kind !== "notification" ||
+          current.route.sessionKey !== sessionKey
+        )
+          throw new ListenStateError(
+            "Native notification receipt conflicts with shared mail ownership.",
+          );
+        if (current.route.state === "selected")
+          await store.markNotification(row.emailId, "submitting");
+        await store.markNotification(
+          row.emailId,
+          receipt.state === "accepted" ? "accepted" : "unknown",
         );
-      if (current.route.state === "selected")
-        await store.markNotification(row.emailId, "submitting");
-      await store.markNotification(
-        row.emailId,
-        receipt.state === "accepted" ? "accepted" : "unknown",
-      );
-      if (receipt.state !== "accepted")
-        throw new ListenStateError(
-          `Notification for email ${row.emailId} has an unknown outcome. Inspect the exact session; it will not be resent automatically.`,
-        );
+      } catch (error) {
+        // Cancellation may prevent shared journal reconciliation. The native
+        // durable receipt still forbids replay and must remain the outcome.
+        throw unknown ?? error;
+      }
+      if (unknown) throw unknown;
     }
     async function processMail(row: SharedMailEmail): Promise<boolean> {
       if (row.route?.kind === "wait") return true;
@@ -163,7 +188,7 @@ export async function runSharedNotificationListen(
           return true;
         }
         if (row.route.state !== "selected")
-          throw new ListenStateError(
+          throw new NotificationOutcomeUnknownError(
             `Notification for email ${row.emailId} is held with ${row.route.state} outcome.`,
           );
       }
@@ -244,6 +269,8 @@ export async function runSharedNotificationListen(
       const claim = await store.claimForNotification(row.emailId, sessionKey);
       if (claim.status === "held") return false;
       if (claim.status === "already_observed") return true;
+      let dispatchFailure: unknown;
+      let completed = true;
       try {
         const outcome =
           contactPolicy && admission
@@ -297,24 +324,35 @@ export async function runSharedNotificationListen(
           // Local journal changes must not create a hot retry loop. Retry only
           // this known ID, with fresh policy, after a bounded cooldown.
           deferredUntil.set(row.emailId, performance.now() + 30_000);
-          return false;
+          completed = false;
         }
         // Suppression is a terminal non-dispatch decision, not an unknown send.
         // Persist it separately from native receipts so restarts cannot reclaim it.
         if (outcome.disposition === "skipped")
           await store.skipNotification(row.emailId, sessionKey);
-      } finally {
-        // Only the native write-before-dispatch journal establishes submission.
-        // Socket/thread preflight errors leave the shared reservation selected.
-        await reconcile(row);
+      } catch (error) {
+        dispatchFailure = error;
       }
-      return true;
+      // Only the native write-before-dispatch journal establishes submission.
+      // Preserve its outcome even when abort prevents shared reconciliation.
+      try {
+        await reconcile(row);
+      } catch (error) {
+        if (!(dispatchFailure instanceof NotificationOutcomeUnknownError)) {
+          if (error instanceof NotificationOutcomeUnknownError)
+            dispatchFailure = error;
+          else dispatchFailure ??= error;
+        }
+      }
+      if (dispatchFailure !== undefined) throw dispatchFailure;
+      return completed;
     }
     await receiver.ready();
+    options.onReady?.();
     (options.stderr ?? process.stderr).write(
       `Listening for session notifications on shared subscription ${store.subscriptionName}. Reply waits retain priority; Ctrl-C disconnects.\n`,
     );
-    while (
+    receiving: while (
       !signal.aborted &&
       (options.number === undefined || processed < options.number)
     ) {
@@ -354,21 +392,35 @@ export async function runSharedNotificationListen(
             if (!(error instanceof NotificationRetryError)) throw error;
           }
           if (options.number !== undefined && processed >= options.number)
-            return processed;
+            break receiving;
         }
         cursor = page.nextCursor ?? undefined;
       } while (cursor && !signal.aborted);
       await receiver.changed();
     }
   } catch (error) {
-    if (!signal.aborted) throw error;
-  } finally {
-    try {
-      await receiver?.close();
-    } finally {
-      native.close();
-    }
+    // Only deliberate cancellation is a clean stop. A native disconnect or
+    // unknown submission can abort this same signal and must reach supervision.
+    const cancelled =
+      signal.aborted &&
+      !(signal.reason instanceof NativeSessionError) &&
+      !(error instanceof NativeSessionError) &&
+      (error === signal.reason ||
+        (error instanceof Error && error.name === "AbortError"));
+    if (!cancelled) failure = error;
   }
+  if (signal.reason instanceof NativeSessionError) failure ??= signal.reason;
+  try {
+    await receiver?.close();
+  } catch (error) {
+    failure ??= error;
+  }
+  try {
+    native.close();
+  } catch (error) {
+    failure ??= error;
+  }
+  if (failure !== undefined) throw failure;
   return processed;
 }
 

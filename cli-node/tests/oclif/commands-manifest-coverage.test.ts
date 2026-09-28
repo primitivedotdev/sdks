@@ -336,6 +336,8 @@ describe("COMMANDS / manifest coverage", () => {
       "sender",
       "session-socket",
       "status",
+      "background",
+      "stop",
       "limit",
       "cursor",
     ]) {

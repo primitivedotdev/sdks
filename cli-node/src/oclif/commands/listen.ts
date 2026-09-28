@@ -1,18 +1,38 @@
+import { createHash, randomUUID } from "node:crypto";
 import { Command, Errors, Flags } from "@oclif/core";
 import { resolveCliApiRequestConfig } from "../api-client.js";
 import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
+import {
+  backgroundListenStatus,
+  backgroundListenToken,
+  runBackgroundListen,
+  startBackgroundListen,
+  stopBackgroundListen,
+  verifyBackgroundListenTarget,
+} from "../listen-background.js";
 import { createListenHandler } from "../listen-handlers.js";
-import { ListenError, runListen } from "../listen-runner.js";
+import {
+  ListenError,
+  type ListenOptions,
+  runListen,
+} from "../listen-runner.js";
 import { ListenStateError } from "../listen-state.js";
 import { notificationScope, notificationSenders } from "../notify-session.js";
-import { SESSION_UUID } from "../notify-session-native.js";
+import { NotificationOutcomeUnknownError } from "../notify-session-errors.js";
+import {
+  defaultSessionSocket,
+  NativeSessionDisconnectedError,
+  NativeSessionError,
+  NativeSessionNotLoadedError,
+  SESSION_UUID,
+} from "../notify-session-native.js";
 import { notificationReceiptPage } from "../notify-session-state.js";
 
 export default class ListenCommand extends Command {
   static summary = "Receive webhook events locally without a public endpoint";
   static description =
-    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use --notify-session with an exact loaded session UUID and --contacts for saved contact preferences, or approved --sender addresses, for native session notifications, a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Notifications require an existing native local-session socket; the CLI never launches or resumes a session.";
+    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use --notify-session with an exact loaded session UUID and --contacts for saved contact preferences, or approved --sender addresses, for native session notifications, a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Add --background to keep native receiving independent of the calling terminal process; --status reports receiver health and receipts, and --stop stops that receiver. Notifications require an existing native local-session socket; the CLI never launches or resumes a session.";
   static examples = [
     "<%= config.bin %> listen",
     '<%= config.bin %> listen --subscription my-agent --exec "python3 accept.py"',
@@ -20,7 +40,9 @@ export default class ListenCommand extends Command {
     "<%= config.bin %> listen --once --timeout 60",
     "<%= config.bin %> listen --notify-session 11111111-1111-4111-8111-111111111111 --sender person@example.com",
     "<%= config.bin %> listen --notify-session 11111111-1111-4111-8111-111111111111 --contacts",
+    "<%= config.bin %> listen --background --notify-session 11111111-1111-4111-8111-111111111111 --contacts --contact-requests",
     "<%= config.bin %> listen --status --notify-session 11111111-1111-4111-8111-111111111111",
+    "<%= config.bin %> listen --stop --notify-session 11111111-1111-4111-8111-111111111111",
   ];
   static flags = {
     transport: Flags.string({
@@ -62,13 +84,13 @@ export default class ListenCommand extends Command {
       description:
         "Use this agent address's saved contact notification preferences; disabled contacts never notify.",
       dependsOn: ["notify-session"],
-      exclusive: ["sender", "status"],
+      exclusive: ["sender", "status", "stop"],
     }),
     "contact-requests": Flags.boolean({
       description:
         "Also consider one authenticated structured first-contact request per unknown sender when owner policy enables requests. No ordinary unknown mail or task authority is admitted.",
       dependsOn: ["contacts", "notify-session"],
-      exclusive: ["sender", "status"],
+      exclusive: ["sender", "status", "stop"],
     }),
     sender: Flags.string({
       description:
@@ -84,12 +106,40 @@ export default class ListenCommand extends Command {
     }),
     status: Flags.boolean({
       description:
-        "Inspect saved notification receipts without connecting to a session or receiving events.",
+        "Inspect local receiver health and saved notification receipts without connecting to a session or receiving events.",
       dependsOn: ["notify-session"],
       exclusive: [
         "exec",
         "forward-to",
         "sender",
+        "session-socket",
+        "once",
+        "number",
+        "events",
+        "subscription",
+        "timeout",
+        "background",
+        "stop",
+      ],
+    }),
+    background: Flags.boolean({
+      description:
+        "Run one native notification receiver independently of the calling process; reconnect safely to the same session after transport loss.",
+      dependsOn: ["notify-session"],
+      exclusive: ["status", "stop", "once", "number", "timeout"],
+    }),
+    stop: Flags.boolean({
+      description:
+        "Stop this profile and session's tracked receiver, preserving subscriptions and notification receipts.",
+      dependsOn: ["notify-session"],
+      exclusive: [
+        "background",
+        "status",
+        "contacts",
+        "contact-requests",
+        "sender",
+        "exec",
+        "forward-to",
         "session-socket",
         "once",
         "number",
@@ -150,33 +200,62 @@ export default class ListenCommand extends Command {
       throw new Errors.CLIError(
         "Subscription names beginning local-mail- are reserved for shared mail receiving.",
       );
-    if (flags.status && flags["notify-session"]) {
-      const requestConfig = resolveCliApiRequestConfig({
-        configDir: this.config.configDir,
-        apiBaseUrl: flags["api-base-url"],
-      });
-      const auth = resolveCliAuth({
-        configDir: this.config.configDir,
-        apiBaseUrl: requestConfig.apiBaseUrl,
-        apiKey: flags["api-key"],
-      });
-      const page = notificationReceiptPage(
-        this.config.configDir,
-        notificationScope(auth.apiBaseUrl, auth.apiKey),
-        flags["notify-session"],
-        { limit: flags.limit, cursor: flags.cursor },
-      );
+    const senders =
+      flags["notify-session"] && !flags.contacts && !flags.status && !flags.stop
+        ? notificationSenders(flags.sender ?? [])
+        : undefined;
+    const requestConfig = flags["notify-session"]
+      ? resolveCliApiRequestConfig({
+          configDir: this.config.configDir,
+          apiBaseUrl: flags["api-base-url"],
+        })
+      : undefined;
+    const connectionAuth = requestConfig
+      ? resolveCliAuth({
+          configDir: this.config.configDir,
+          apiBaseUrl: requestConfig.apiBaseUrl,
+          apiKey: flags["api-key"],
+        })
+      : undefined;
+    const target =
+      connectionAuth && flags["notify-session"]
+        ? {
+            configDir: this.config.configDir,
+            scope: notificationScope(
+              connectionAuth.apiBaseUrl,
+              connectionAuth.apiKey,
+            ),
+            threadId: flags["notify-session"],
+          }
+        : undefined;
+    const socketPath =
+      target && !flags.status && !flags.stop
+        ? (flags["session-socket"] ?? defaultSessionSocket())
+        : undefined;
+    const configuration = target
+      ? createHash("sha256")
+          .update(
+            JSON.stringify({
+              version: this.config.version,
+              contacts: Boolean(flags.contacts),
+              contactRequests: Boolean(flags["contact-requests"]),
+              senders: [...(senders ?? [])].sort(),
+              socketPath,
+              events: flags.events
+                ?.split(",")
+                .map((event) => event.trim())
+                .sort(),
+            }),
+          )
+          .digest("hex")
+      : undefined;
+    if (target) verifyBackgroundListenTarget({ ...target, configuration });
+    if (flags.stop && target) {
       this.log(
         JSON.stringify(
           {
-            sessionId: flags["notify-session"],
-            receipts: page.receipts.map((receipt) => ({
-              ...receipt,
-              state: receipt.state === "submitting" ? "unknown" : receipt.state,
-            })),
-            nextCursor: page.nextCursor,
-            guidance:
-              "Accepted means queued, not read or answered. Unknown receipts are held and are never resent automatically; inspect the exact session before any manual resend.",
+            sessionId: target.threadId,
+            listener: await stopBackgroundListen(target),
           },
           null,
           2,
@@ -184,10 +263,32 @@ export default class ListenCommand extends Command {
       );
       return;
     }
-    const senders =
-      flags["notify-session"] && !flags.contacts
-        ? notificationSenders(flags.sender ?? [])
-        : undefined;
+    if (flags.status && target) {
+      const page = notificationReceiptPage(
+        this.config.configDir,
+        target.scope,
+        target.threadId,
+        { limit: flags.limit, cursor: flags.cursor },
+      );
+      this.log(
+        JSON.stringify(
+          {
+            sessionId: target.threadId,
+            listener: backgroundListenStatus(target),
+            receipts: page.receipts.map((receipt) => ({
+              ...receipt,
+              state: receipt.state === "submitting" ? "unknown" : receipt.state,
+            })),
+            nextCursor: page.nextCursor,
+            guidance:
+              "Listener health describes the tracked local receiver, not proof a message was read. Older untracked listeners have no health record. Accepted means queued, not read or answered. Unknown receipts are held and are never resent automatically; inspect the exact session before any manual resend.",
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
     const events = flags.events?.split(",").map((event) => event.trim());
     if (events?.some((event) => !/^[a-zA-Z0-9_.-]+$/.test(event)))
       throw new Errors.CLIError(
@@ -210,9 +311,26 @@ export default class ListenCommand extends Command {
     process.on("SIGINT", cancel);
     process.on("SIGTERM", cancel);
     try {
-      await runListen({
+      const childToken = backgroundListenToken();
+      if (flags.background && target && !childToken) {
+        const entry = process.argv[1];
+        if (!entry)
+          throw new ListenStateError("The CLI entrypoint is unavailable.");
+        const result = await startBackgroundListen({
+          ...target,
+          configuration,
+          argv: [entry, "listen", ...this.argv],
+          signal: controller.signal,
+        });
+        this.log(
+          JSON.stringify({ sessionId: target.threadId, ...result }, null, 2),
+        );
+        return;
+      }
+      const options: ListenOptions = {
         transport: flags.transport === "poll" ? "poll" : "websocket",
         configDir: this.config.configDir,
+        expectedNotificationScope: target?.scope,
         apiKey: flags["api-key"],
         apiBaseUrl: flags["api-base-url"],
         subscription: flags.subscription,
@@ -231,12 +349,79 @@ export default class ListenCommand extends Command {
               senders: senders ?? [],
               contactPreferences: flags.contacts,
               contactRequests: flags["contact-requests"],
-              socketPath: flags["session-socket"],
+              socketPath,
             }
           : undefined,
         handler,
         signal: controller.signal,
-      });
+      };
+      if (!target || !options.notifySession || !requestConfig) {
+        await runListen(options);
+      } else {
+        const notify = options.notifySession;
+        let expectedCwd: string | undefined;
+        let connectionChanged = false;
+        await runBackgroundListen({
+          ...target,
+          configuration,
+          token: childToken ?? randomUUID(),
+          detached: childToken !== null,
+          signal: controller.signal,
+          failureCode: (error) =>
+            error instanceof NotificationOutcomeUnknownError
+              ? "notification-outcome-unknown"
+              : connectionChanged
+                ? "connection-changed"
+                : error instanceof NativeSessionError
+                  ? "native-session-unavailable"
+                  : "receiving-failed",
+          retryable: (error) =>
+            childToken !== null &&
+            (error instanceof NativeSessionDisconnectedError ||
+              (expectedCwd !== undefined &&
+                error instanceof NativeSessionNotLoadedError)),
+          run: async (signal, onReady) => {
+            // A retry must never adopt a replaced profile, credential or origin.
+            const current = resolveCliAuth({
+              configDir: this.config.configDir,
+              apiBaseUrl: requestConfig.apiBaseUrl,
+              apiKey: flags["api-key"],
+            });
+            if (
+              notificationScope(current.apiBaseUrl, current.apiKey) !==
+                target.scope ||
+              current.connectedAgent?.agentAddress !==
+                connectionAuth?.connectedAgent?.agentAddress
+            ) {
+              connectionChanged = true;
+              throw new ListenStateError(
+                "The selected connection changed. Stop this listener and start it again with the intended profile.",
+              );
+            }
+            const attempt = new AbortController();
+            let disconnected: NativeSessionError | undefined;
+            await runListen({
+              ...options,
+              signal: AbortSignal.any([signal, attempt.signal]),
+              onReady,
+              notifySession: {
+                ...notify,
+                expectedCwd,
+                onVerifiedCwd: (cwd) => {
+                  expectedCwd ??= cwd;
+                },
+                onDisconnect: (error) => {
+                  disconnected = error;
+                  attempt.abort(error);
+                },
+              },
+            });
+            // Wait for dispatch reconciliation before choosing to reconnect.
+            // A terminal unknown submission thrown by runListen takes priority.
+            if (disconnected && !signal.aborted) throw disconnected;
+          },
+        });
+      }
     } catch (error) {
       throw new Errors.CLIError(
         error instanceof ListenError || error instanceof ListenStateError

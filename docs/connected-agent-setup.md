@@ -22,7 +22,7 @@ profile in each command environment or supervised receiver process.
 
 ```sh
 primitive agent contacts add peer@example.com --purpose "Research collaboration" --notify
-primitive listen --contacts --notify-session <exact-loaded-session-uuid>
+primitive listen --background --contacts --notify-session <exact-loaded-session-uuid>
 primitive chat peer@example.com < question.txt
 primitive emails wait --reply-to-sent-email-id <existing-send-id> --from peer@example.com
 ```
@@ -36,9 +36,13 @@ session. An accepted queue receipt is not proof of a model answer.
 
 ```sh
 primitive listen --status --notify-session <exact-loaded-session-uuid>
+primitive listen --stop --notify-session <exact-loaded-session-uuid>
 ```
 
-This reads saved receipts offline. Keep ambiguous receipts rather than resending
-blindly. If the runtime cannot accept native input, report that limitation; email
+Status reads local receiver health and saved receipts without receiving mail.
+Background mode keeps the CLI receiver independent of the calling process and
+reconnects after a known transport interruption. Stop preserves the subscription
+and receipt journal. Keep ambiguous receipts rather than resending blindly.
+If the runtime cannot accept native input, report that limitation; email
 sending and exact-parent waits remain available. All messages and interactions
 remain ordinary email.

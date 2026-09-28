@@ -66,27 +66,39 @@ streams.on("connection", (socket) => {
   });
 });
 await new Promise((resolve) => api.listen(0, "127.0.0.1", resolve));
-const nativeHttp = createServer();
-const native = new WebSocketServer({ server: nativeHttp });
+let nativeHttp, native;
 const socketPath = join(directory, "native.sock");
-await new Promise((resolve) => nativeHttp.listen(socketPath, resolve));
-await chmod(socketPath, 0o600);
+let nativeLoaded = true;
+let absentLoads = 0;
 let dropQueue = false;
 const queued = [];
 const methods = [];
-native.on("connection", (socket) => socket.on("message", (bytes) => {
-  const message = JSON.parse(bytes.toString()); methods.push(message.method);
-  if (message.id === undefined) return;
-  let result;
-  if (message.method === "initialize") result = {};
-  else if (message.method === "thread/loaded/list") result = { data: [sessionId], nextCursor: null };
-  else if (message.method === "thread/read") result = { thread: { id: sessionId, cwd: directory, canAcceptDirectInput: true } };
-  else if (message.method === "thread/queue/add") { queued.push(message.params); if (dropQueue) return; result = { queuedSubmission: { id: randomUUID(), clientUserMessageId: message.params.clientUserMessageId } }; }
-  else assert.fail(`Unexpected native method ${message.method}`);
-  socket.send(JSON.stringify({ id: message.id, result }));
-}));
+async function startNativeServer() {
+  nativeHttp = createServer();
+  native = new WebSocketServer({ server: nativeHttp });
+  native.on("connection", (socket) => socket.on("message", (bytes) => {
+    const message = JSON.parse(bytes.toString()); methods.push(message.method);
+    if (message.id === undefined) return;
+    let result;
+    if (message.method === "initialize") result = {};
+    else if (message.method === "thread/loaded/list") {
+      if (!nativeLoaded) absentLoads++;
+      result = { data: nativeLoaded ? [sessionId] : [], nextCursor: null };
+    }
+    else if (message.method === "thread/read") result = { thread: { id: sessionId, cwd: directory, canAcceptDirectInput: true } };
+    else if (message.method === "thread/queue/add") { queued.push(message.params); if (dropQueue) return; result = { queuedSubmission: { id: randomUUID(), clientUserMessageId: message.params.clientUserMessageId } }; }
+    else assert.fail(`Unexpected native method ${message.method}`);
+    socket.send(JSON.stringify({ id: message.id, result }));
+  }));
+  await new Promise((resolve) => nativeHttp.listen(socketPath, resolve));
+  await chmod(socketPath, 0o600);
+}
+await startNativeServer();
 const env = { ...process.env, PRIMITIVE_CONFIG_DIR: join(directory, "config"), PRIMITIVE_API_KEY: `pconn_${"a".repeat(64)}`, PRIMITIVE_API_BASE_URL: `http://127.0.0.1:${api.address().port}/v1`, PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1" };
 delete env.PRIMITIVE_API_HEADERS;
+delete env.PRIMITIVE_AGENT_PROFILE;
+delete env.PRIMITIVE_LISTEN_BACKGROUND_TOKEN;
+delete env.PRIMITIVE_LISTEN_BACKGROUND_TARGET;
 function invoke(args) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [binary, ...args], { env, stdio: ["ignore", "pipe", "pipe"] });
@@ -98,6 +110,16 @@ function invoke(args) {
   });
 }
 const notify = ["listen", "--notify-session", sessionId, "--sender", "sender@example.com", "--session-socket", socketPath, "--once"];
+const statusArgs = ["listen", "--status", "--notify-session", sessionId];
+const stopArgs = ["listen", "--stop", "--notify-session", sessionId];
+async function waitFor(check) {
+  const deadline = Date.now() + 12000;
+  while (Date.now() < deadline) {
+    if (await check()) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.fail("Background receiver did not reach the expected state");
+}
 try {
   const help = await invoke(["listen", "--help"]); assert.equal(help.code, 0); assert.match(help.stdout, /--notify-session/); assert.match(help.stdout, /--status/);
   const missing = await invoke(["listen", "--notify-session", sessionId]); assert.notEqual(missing.code, 0); assert.match(missing.stderr, /--sender/);
@@ -114,18 +136,52 @@ try {
   const first = await invoke(notify); assert.equal(first.code, 0, first.stderr); assert.equal(queued.length, 1); assert.equal(completions.at(-1).mode, "sdk"); assert.equal(completions.at(-1).accepted, true);
   const repeated = await invoke([...notify, "--timeout", "1"]); assert.equal(repeated.code, 2, repeated.stderr); assert.equal(queued.length, 1);
   assert.equal(queued[0].threadId, sessionId); assert.match(queued[0].input[0].text, /External email notification/); assert.ok(!queued[0].input[0].text.includes(event.email.headers.subject));
+
+  const backgroundArgs = [...notify.filter((value) => value !== "--once"), "--background"];
+  const started = await invoke(backgroundArgs); assert.equal(started.code, 0, started.stderr);
+  const startedState = JSON.parse(started.stdout);
+  assert.equal(startedState.started, true); assert.equal(startedState.status.detached, true);
+  const runningPid = startedState.status.pid;
+  const reused = await invoke(backgroundArgs); assert.equal(reused.code, 0, reused.stderr);
+  assert.equal(JSON.parse(reused.stdout).started, false); assert.equal(JSON.parse(reused.stdout).status.pid, runningPid);
+  const initializations = methods.filter((method) => method === "initialize").length;
+  nativeLoaded = false;
+  for (const socket of native.clients) socket.terminate();
+  await new Promise((resolve) => native.close(resolve));
+  await new Promise((resolve) => nativeHttp.close(resolve));
+  await startNativeServer();
+  await waitFor(() => absentLoads > 0);
+  const reconnecting = JSON.parse((await invoke(statusArgs)).stdout).listener;
+  assert.equal(reconnecting.phase, "reconnecting"); assert.equal(reconnecting.pid, runningPid);
+  assert.equal(queued.length, 1, "An unloaded session cannot receive or replay input");
+  nativeLoaded = true;
+  await waitFor(() => methods.filter((method) => method === "initialize").length > initializations);
+  await waitFor(async () => {
+    const health = JSON.parse((await invoke(statusArgs)).stdout).listener;
+    return health.healthy && health.phase === "receiving" && health.pid === runningPid;
+  });
+  assert.equal(queued.length, 1, "Native reconnect must not replay accepted input");
+  event.email.id = randomUUID(); eventId = randomUUID();
+  for (const socket of streams.clients) socket.terminate();
+  await waitFor(() => queued.length === 2);
+  await waitFor(async () => JSON.parse((await invoke(statusArgs)).stdout).receipts.filter((receipt) => receipt.state === "accepted").length === 2);
+  const stopped = await invoke(stopArgs); assert.equal(stopped.code, 0, stopped.stderr);
+  assert.equal(JSON.parse(stopped.stdout).listener.phase, "stopped");
+  assert.equal(JSON.parse(stopped.stdout).listener.healthy, false);
+
   event.email.id = randomUUID(); eventId = randomUUID(); dropQueue = true;
-  const unknown = await invoke(notify); assert.notEqual(unknown.code, 0); assert.match(unknown.stderr, /unknown outcome/); assert.equal(queued.length, 2);
-  const held = await invoke(notify); assert.notEqual(held.code, 0); assert.match(held.stderr, /unknown outcome/); assert.equal(queued.length, 2);
+  const unknown = await invoke(notify); assert.notEqual(unknown.code, 0); assert.match(unknown.stderr, /unknown outcome/); assert.equal(queued.length, 3);
+  const held = await invoke(notify); assert.notEqual(held.code, 0); assert.match(held.stderr, /unknown outcome/); assert.equal(queued.length, 3);
   const count = apiCalls.length;
   const status = await invoke(["listen", "--status", "--notify-session", sessionId]); assert.equal(status.code, 0); assert.equal(JSON.parse(status.stdout).receipts.filter((receipt) => receipt.state === "unknown").length, 1); assert.equal(apiCalls.length, count);
   const pageOne = await invoke(["listen", "--status", "--notify-session", sessionId, "--limit", "1"]); assert.equal(pageOne.code, 0, pageOne.stderr); const firstPage = JSON.parse(pageOne.stdout); assert.equal(firstPage.receipts.length, 1); assert.ok(firstPage.nextCursor);
-  const pageTwo = await invoke(["listen", "--status", "--notify-session", sessionId, "--limit", "1", "--cursor", firstPage.nextCursor]); assert.equal(pageTwo.code, 0, pageTwo.stderr); const secondPage = JSON.parse(pageTwo.stdout); assert.equal(secondPage.receipts.length, 1); assert.equal(secondPage.nextCursor, null); assert.notEqual(secondPage.receipts[0].emailId, firstPage.receipts[0].emailId);
+  const pageTwo = await invoke(["listen", "--status", "--notify-session", sessionId, "--limit", "2", "--cursor", firstPage.nextCursor]); assert.equal(pageTwo.code, 0, pageTwo.stderr); const secondPage = JSON.parse(pageTwo.stdout); assert.equal(secondPage.receipts.length, 2); assert.equal(secondPage.nextCursor, null); assert.ok(secondPage.receipts.every((receipt) => receipt.emailId !== firstPage.receipts[0].emailId));
   const badFilter = await invoke([...notify, "--events", "email.received,payment.settled"]); assert.notEqual(badFilter.code, 0); assert.match(badFilter.stderr, /email.received only/);
   const bare = await invoke(["listen", "--transport", "poll", "--once"]); assert.equal(bare.code, 0, bare.stderr); assert.equal(JSON.parse(bare.stdout).event, "email.received");
   assert.ok(methods.every((method) => ["initialize", "initialized", "thread/loaded/list", "thread/read", "thread/queue/add"].includes(method)));
   console.log("Native session notification CLI smoke passed.");
 } finally {
+  await invoke(stopArgs).catch(() => {});
   for (const socket of streams.clients) socket.terminate();
   for (const socket of native.clients) socket.terminate();
   await new Promise((resolve) => streams.close(resolve));

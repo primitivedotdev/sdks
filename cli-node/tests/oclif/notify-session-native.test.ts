@@ -1,10 +1,23 @@
 import { randomUUID } from "node:crypto";
-import { chmod, mkdir, mkdtemp, rename, rm, symlink } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  realpath,
+  rename,
+  rm,
+  symlink,
+} from "node:fs/promises";
 import { createServer } from "node:http";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer } from "ws";
-import { connectNativeSession } from "../../src/oclif/notify-session-native.js";
+import {
+  connectNativeSession,
+  NativeSessionDisconnectedError,
+  NativeSessionError,
+  NativeSessionNotLoadedError,
+} from "../../src/oclif/notify-session-native.js";
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -30,6 +43,7 @@ async function fixture() {
   const threadId = randomUUID();
   const state = {
     loaded: [threadId],
+    loadedComplete: true,
     cwd: directory,
     direct: true,
     dropQueue: false,
@@ -49,7 +63,12 @@ async function fixture() {
         call.method === "initialize"
           ? {}
           : call.method === "thread/loaded/list"
-            ? { data: state.loaded, nextCursor: null }
+            ? {
+                data: state.loaded,
+                nextCursor: state.loadedComplete
+                  ? null
+                  : `page-${calls.length}`,
+              }
             : call.method === "thread/read"
               ? {
                   thread: {
@@ -67,12 +86,21 @@ async function fixture() {
       socket.send(JSON.stringify({ id: call.id, result }));
     }),
   );
-  const connect = async () => {
+  const connect = async (
+    onDisconnect?: (error: NativeSessionError) => void,
+    signal = new AbortController().signal,
+    extra: Pick<
+      Parameters<typeof connectNativeSession>[0],
+      "expectedCwd" | "onVerifiedCwd"
+    > = {},
+  ) => {
     const native = await connectNativeSession({
       threadId,
       socketPath,
-      signal: new AbortController().signal,
+      signal,
       timeoutMs: 100,
+      onDisconnect,
+      ...extra,
     });
     cleanups.push(async () => native.close());
     return native;
@@ -137,6 +165,58 @@ describe.skipIf(process.platform === "win32")(
       ).rejects.toMatchObject({ submitted: false });
       expect(persisted).toBe(false);
     });
+    it("identifies a completely listed but unloaded session without submitting input", async () => {
+      const f = await fixture();
+      f.state.loaded = [];
+      const initialError = await f.connect().catch((error: unknown) => error);
+      expect(initialError).toBeInstanceOf(NativeSessionNotLoadedError);
+      expect(initialError).toMatchObject({
+        message:
+          "Open this exact session in the native terminal before listening.",
+        submitted: false,
+      });
+      expect(f.calls.some((call) => call.method === "thread/read")).toBe(false);
+
+      f.state.loaded = [f.threadId];
+      const verified = vi.fn();
+      const native = await f.connect(undefined, undefined, {
+        onVerifiedCwd: verified,
+      });
+      const cwd = await realpath(f.state.cwd);
+      expect(verified).toHaveBeenCalledWith(cwd);
+      native.close();
+      f.state.loaded = [];
+      await expect(
+        f.connect(undefined, undefined, { expectedCwd: cwd }),
+      ).rejects.toBeInstanceOf(NativeSessionNotLoadedError);
+      f.state.loaded = [f.threadId];
+      await f.connect(undefined, undefined, { expectedCwd: cwd });
+      expect(
+        f.calls.every((call) =>
+          [
+            "initialize",
+            "initialized",
+            "thread/loaded/list",
+            "thread/read",
+          ].includes(call.method),
+        ),
+      ).toBe(true);
+    });
+    it("keeps incomplete loaded-session pagination fatal even when the session was found", async () => {
+      const f = await fixture();
+      f.state.loadedComplete = false;
+      const error = await f.connect().catch((error: unknown) => error);
+      expect(error).toBeInstanceOf(NativeSessionError);
+      expect(error).not.toBeInstanceOf(NativeSessionNotLoadedError);
+      expect(error).not.toBeInstanceOf(NativeSessionDisconnectedError);
+      expect(
+        f.calls.filter((call) => call.method === "thread/loaded/list"),
+      ).toHaveLength(100);
+      expect(f.calls.some((call) => call.method === "thread/read")).toBe(false);
+      expect(f.calls.some((call) => call.method === "thread/queue/add")).toBe(
+        false,
+      );
+    });
     it("rejects socket permission and symlink identity changes", async () => {
       const f = await fixture();
       const native = await f.connect();
@@ -170,6 +250,100 @@ describe.skipIf(process.platform === "win32")(
         native.queue("Event", randomUUID(), () => {}),
       ).rejects.toMatchObject({ submitted: true });
       expect(f.calls.some((call) => call.id === 900)).toBe(false);
+    });
+    it("reports an idle socket loss once without submitting any input", async () => {
+      const f = await fixture();
+      const disconnected = vi.fn();
+      const native = await f.connect(disconnected);
+      for (const socket of f.sockets.clients) socket.terminate();
+      await vi.waitFor(() => expect(disconnected).toHaveBeenCalledTimes(1));
+      native.close();
+      expect(disconnected).toHaveBeenCalledTimes(1);
+      expect(disconnected.mock.calls[0]?.[0]).toBeInstanceOf(
+        NativeSessionDisconnectedError,
+      );
+      expect(f.calls.some((call) => call.method === "thread/queue/add")).toBe(
+        false,
+      );
+    });
+    it("does not report deliberate close or cancellation as a lost connection", async () => {
+      const f = await fixture();
+      const disconnected = vi.fn();
+      const first = await f.connect(disconnected);
+      first.close();
+      const controller = new AbortController();
+      await f.connect(disconnected, controller.signal);
+      controller.abort();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(disconnected).not.toHaveBeenCalled();
+    });
+    it("retains an unknown dispatch outcome when disconnect aborts the receiver", async () => {
+      const f = await fixture();
+      const controller = new AbortController();
+      const native = await f.connect(
+        () => controller.abort(),
+        controller.signal,
+      );
+      f.state.dropQueue = true;
+      const outcome = expect(
+        native.queue("Event", randomUUID(), () => {}),
+      ).rejects.toMatchObject({ submitted: true });
+      await vi.waitFor(() =>
+        expect(f.calls.some((call) => call.method === "thread/queue/add")).toBe(
+          true,
+        ),
+      );
+      for (const socket of f.sockets.clients) socket.terminate();
+      await outcome;
+      expect(controller.signal.aborted).toBe(true);
+      expect(
+        f.calls.filter((call) => call.method === "thread/queue/add"),
+      ).toHaveLength(1);
+    });
+    it("retries a missing socket but refuses unsafe socket permissions", async () => {
+      const f = await fixture();
+      await rename(f.socketPath, `${f.socketPath}.old`);
+      await expect(f.connect()).rejects.toBeInstanceOf(
+        NativeSessionDisconnectedError,
+      );
+      await rename(`${f.socketPath}.old`, f.socketPath);
+      await chmod(f.target, 0o660);
+      const error = await f.connect().catch((error: unknown) => error);
+      expect(error).toBeInstanceOf(NativeSessionError);
+      expect(error).not.toBeInstanceOf(NativeSessionDisconnectedError);
+    });
+    it("reports malformed idle protocol as fatal instead of leaving an idle listener", async () => {
+      const f = await fixture();
+      const disconnected = vi.fn();
+      await f.connect(disconnected);
+      for (const socket of f.sockets.clients) socket.send("invalid json");
+      await vi.waitFor(() => expect(disconnected).toHaveBeenCalledOnce());
+      expect(disconnected.mock.calls[0]?.[0]).toBeInstanceOf(
+        NativeSessionError,
+      );
+      expect(disconnected.mock.calls[0]?.[0]).not.toBeInstanceOf(
+        NativeSessionDisconnectedError,
+      );
+    });
+    it("pins the canonical session cwd across reconnections", async () => {
+      const f = await fixture();
+      const verified = vi.fn();
+      const native = await f.connect(undefined, undefined, {
+        onVerifiedCwd: verified,
+      });
+      const cwd = await realpath(f.state.cwd);
+      expect(verified).toHaveBeenCalledWith(cwd);
+      native.close();
+      await f.connect(undefined, undefined, { expectedCwd: cwd });
+      f.state.cwd = "/tmp";
+      const error = await f
+        .connect(undefined, undefined, { expectedCwd: cwd })
+        .catch((error: unknown) => error);
+      expect(error).toBeInstanceOf(NativeSessionError);
+      expect(error).not.toBeInstanceOf(NativeSessionDisconnectedError);
+      expect(f.calls.some((call) => call.method === "thread/queue/add")).toBe(
+        false,
+      );
     });
   },
 );

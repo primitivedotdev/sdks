@@ -23,7 +23,7 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     ...overrides,
   };
 }
-function fixture(initial = row()) {
+function fixture(initial = row(), contactRequests = false) {
   let clock = 0;
   let rows = [initial];
   const readPage = vi.fn(
@@ -34,6 +34,7 @@ function fixture(initial = row()) {
   const policy = createNotificationContactPolicy({
     readPolicy,
     recipient,
+    contactRequests,
     readPage,
     now: () => clock,
   });
@@ -49,6 +50,23 @@ function fixture(initial = row()) {
       clock += ms;
     },
   };
+}
+
+function requestFixture() {
+  const f = fixture(row(), true);
+  f.rows([]);
+  f.document.agent_policy = {
+    rules: [],
+    allow_contact_requests: true,
+    contact_request_since: activation,
+    contact_request_generation: randomUUID(),
+    version: randomUUID(),
+    updated_at: activation,
+  };
+  f.document.allow_contact_requests = true;
+  f.document.contact_request_since = activation;
+  f.document.contact_request_generation = "b".repeat(64);
+  return f;
 }
 
 describe("contact notification policy", () => {
@@ -82,6 +100,49 @@ describe("contact notification policy", () => {
     expect(await f.policy.admit(sender, received, signal)).toMatchObject({
       sender,
     });
+  });
+
+  it.each([
+    { receivedAt: "2026-09-01T10:01:04.700Z", allowed: true },
+    { receivedAt: "2026-09-01T10:00:59.999Z", allowed: false },
+  ])("refreshes request-only admission after acceptance without backfilling $receivedAt", async ({
+    receivedAt,
+    allowed,
+  }) => {
+    const f = requestFixture();
+    expect(await f.policy.admit(sender, received, signal)).toMatchObject({
+      kind: "request",
+    });
+    const membership = row({ notify_since: received });
+    f.rows([membership]);
+    f.advance(4700);
+
+    const admission = await f.policy.admit(sender, receivedAt, signal);
+    if (allowed)
+      expect(admission).toMatchObject({
+        kind: "allowed",
+        generation: membership.notification_generation,
+        notifySince: received,
+      });
+    else expect(admission).toBeNull();
+    expect(f.readPage).toHaveBeenCalledTimes(2);
+    expect(f.readPolicy).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes request-only decisions once and still rechecks permission before dispatch", async () => {
+    const f = requestFixture();
+    await f.policy.admit(sender, received, signal);
+    const admission = await f.policy.admit(sender, received, signal);
+    expect(admission?.kind).toBe("request");
+    expect(f.readPage).toHaveBeenCalledTimes(2);
+    if (!admission) throw new Error("Expected request admission");
+    f.rows([
+      row({ notify: false, notify_since: null, notification_generation: null }),
+    ]);
+    await expect(f.policy.recheck(admission, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+    expect(f.readPage).toHaveBeenCalledTimes(3);
   });
 
   it("refreshes before dispatch and refuses disable, deletion, or a new generation", async () => {

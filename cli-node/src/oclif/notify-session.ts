@@ -14,6 +14,7 @@ import {
   type ReadNotificationPart,
   type RefreshNotificationEvent,
 } from "./notify-session-content.js";
+import { NotificationOutcomeUnknownError } from "./notify-session-errors.js";
 import {
   connectNativeSession,
   NativeSessionError,
@@ -30,6 +31,9 @@ export type NotifySessionOptions = {
   contactPreferences?: boolean;
   contactRequests?: boolean;
   socketPath?: string;
+  onDisconnect?: (error: NativeSessionError) => void;
+  expectedCwd?: string;
+  onVerifiedCwd?: (cwd: string) => void;
 };
 export type DetailNotificationAuthorization = {
   sender: string;
@@ -218,7 +222,7 @@ export async function openSessionNotifications(
         );
       if (previous.state === "accepted")
         return { disposition: "notified" as const };
-      throw new ListenStateError(
+      throw new NotificationOutcomeUnknownError(
         `Notification ${previous.clientId} for email ${previous.emailId} has an unknown outcome. Inspect the exact session before any manual resend; restarting will not resend it.`,
       );
     }
@@ -260,7 +264,7 @@ export async function openSessionNotifications(
         return { disposition: "deferred" as const };
       if (error instanceof NativeSessionError && error.submitted) {
         store.save({ ...receipt, state: "unknown" });
-        throw new ListenStateError(
+        throw new NotificationOutcomeUnknownError(
           `Notification ${receipt.clientId} for email ${receipt.emailId} has an unknown outcome. It is held and will not be resent automatically.`,
         );
       }

@@ -482,6 +482,58 @@ describe("first-contact intake", () => {
       contactRequest: true,
     });
   });
+  it.each([
+    { offset: 4700, notified: true },
+    { offset: -1, notified: false },
+  ])("rechecks cached request-only policy for ordinary mail received $offset ms after acceptance", async ({
+    offset,
+    notified,
+  }) => {
+    const f = setup();
+    f.requests(false);
+    const acceptedAt = Date.now();
+    const original = receive.getMockImplementation();
+    if (!original) throw new Error("Missing shared receiver fixture");
+    receive.mockImplementationOnce(async (...args: unknown[]) => {
+      // Startup has cached request-only admission. Acceptance changes exact
+      // membership before ordinary mail is read, still within the 30s cache.
+      f.contacts([
+        {
+          agent_address: f.detail.recipient,
+          contact_address: f.detail.from_email,
+          version: randomUUID(),
+          notify: true,
+          notification_generation: randomUUID(),
+          notify_since: new Date(acceptedAt).toISOString(),
+        },
+      ]);
+      f.detail.received_at = new Date(acceptedAt + offset).toISOString();
+      return original(...args);
+    });
+
+    expect(await runListen(requestOptions(f))).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
+    expect(
+      f.order.filter((path) => path.startsWith("/v1/agent-contacts/")),
+    ).toHaveLength(notified ? 3 : 2);
+    if (notified) {
+      expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+        sender: f.detail.from_email,
+        contactRequest: false,
+      });
+      expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+        state: "accepted",
+      });
+      const controller = new AbortController();
+      f.changed.mockImplementationOnce(async () => controller.abort());
+      expect(
+        await runListen({ ...requestOptions(f), signal: controller.signal }),
+      ).toBe(0);
+      expect(f.handleDetail).toHaveBeenCalledOnce();
+    } else {
+      expect((await f.store()?.readEmail(f.detail.id))?.route).toBeNull();
+    }
+  });
   it("keeps a request eligible after a crash between ingest and native dispatch", async () => {
     const f = setup();
     f.requests();
