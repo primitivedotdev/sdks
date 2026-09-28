@@ -1,5 +1,5 @@
 {
-  "description": "Cases for the automated-mail rule set, shared by the Primitive API (which decides `automated` and `automated_reasons` when an email arrives) and the CLI's automated-mail module. Both run every case; keep the two copies identical. `email` uses the API's field names. own_address means a sender address that is exactly one of the addresses the mail was delivered to; sharing a domain with the recipient is not enough.",
+  "description": "Cases for the automated-mail rule set, shared by the Primitive API (which decides `automated` and `automated_reasons` when an email arrives) and the CLI's automated-mail module. Both run every case; keep the two copies identical. `email` uses the API's field names. own_address means a sender address that is exactly one of the addresses the mail was delivered to; sharing a domain with the recipient is not enough. `email_kind` is the stored inbound classification; absent means regular. Every case is also run through control-plane-core's classifyAutomatedMail, the check every automatic responder makes, and anything it flags must be automated here.",
   "cases": [
     {
       "name": "ordinary mail from a person",
@@ -79,7 +79,7 @@
       }
     },
     {
-      "name": "empty smtp_mail_from falls back to sender",
+      "name": "empty smtp_mail_from is the null sender even when sender has an address",
       "email": {
         "sender": "alex@example.com",
         "smtp_mail_from": "",
@@ -90,8 +90,10 @@
         "automation_headers": null
       },
       "expected": {
-        "automated": false,
-        "reasons": []
+        "automated": true,
+        "reasons": [
+          "null_envelope_sender"
+        ]
       }
     },
     {
@@ -413,8 +415,10 @@
         }
       },
       "expected": {
-        "automated": false,
-        "reasons": []
+        "automated": true,
+        "reasons": [
+          "auto_submitted"
+        ]
       }
     },
     {
@@ -540,6 +544,347 @@
       }
     },
     {
+      "name": "null smtp_mail_from falls back to sender",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null
+      },
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "Auto-Submitted empty value",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "auto_submitted": ""
+        }
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "auto_submitted"
+        ]
+      }
+    },
+    {
+      "name": "Auto-Submitted no with a comment is a person",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "auto_submitted": "no (typed by a person)"
+        }
+      },
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "Auto-Submitted quoted no is a person",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "auto_submitted": "\"no\""
+        }
+      },
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "Auto-Submitted semicolon inside a comment does not split",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "auto_submitted": "(x; y) auto-replied"
+        }
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "auto_submitted"
+        ]
+      }
+    },
+    {
+      "name": "Precedence with a comment",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "precedence": "bulk (newsletter)"
+        }
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "precedence"
+        ]
+      }
+    },
+    {
+      "name": "Precedence word inside a longer value",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "precedence": "list-mail"
+        }
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "precedence"
+        ]
+      }
+    },
+    {
+      "name": "Precedence word only as part of another word is a person",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "precedence": "bulky"
+        }
+      },
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "X-Auto-Response-Suppress All",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "x_auto_response_suppress": "All"
+        }
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "auto_response_suppress"
+        ]
+      }
+    },
+    {
+      "name": "X-Auto-Response-Suppress OOF among others",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "x_auto_response_suppress": "DR, OOF, AutoReply"
+        }
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "auto_response_suppress"
+        ]
+      }
+    },
+    {
+      "name": "X-Auto-Response-Suppress without a reply value is a person",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "x_auto_response_suppress": "DR, RN, NRN"
+        }
+      },
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "X-Failed-Recipients present, even empty",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "x_failed_recipients": ""
+        }
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "failed_recipients"
+        ]
+      }
+    },
+    {
+      "name": "delivery report by Content-Type",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "content_type": "multipart/report; report-type=delivery-status"
+        }
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "report"
+        ]
+      }
+    },
+    {
+      "name": "disposition notification by Content-Type",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "content_type": "Message/Disposition-Notification"
+        }
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "report"
+        ]
+      }
+    },
+    {
+      "name": "other message/* Content-Type is a person",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": {
+          "content_type": "message/rfc822"
+        }
+      },
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
+      "name": "filed by the inbound classifier as an auto-reply",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null,
+        "email_kind": "auto_reply"
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "report"
+        ]
+      }
+    },
+    {
+      "name": "filed by the inbound classifier as a DSN",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null,
+        "email_kind": "dsn"
+      },
+      "expected": {
+        "automated": true,
+        "reasons": [
+          "report"
+        ]
+      }
+    },
+    {
+      "name": "filed as regular mail is a person",
+      "email": {
+        "sender": "alex@example.com",
+        "smtp_mail_from": null,
+        "from_header": "alex@example.com",
+        "recipient": "agent@acme.test",
+        "smtp_rcpt_to": null,
+        "to_addresses": null,
+        "automation_headers": null,
+        "email_kind": "regular"
+      },
+      "expected": {
+        "automated": false,
+        "reasons": []
+      }
+    },
+    {
       "name": "every rule and every declared header together, in rule order",
       "email": {
         "sender": "",
@@ -552,8 +897,12 @@
           "list_id": "<l>",
           "list_unsubscribe": "<u>",
           "precedence": "list",
-          "auto_submitted": "auto-generated"
-        }
+          "auto_submitted": "auto-generated",
+          "x_auto_response_suppress": "All",
+          "x_failed_recipients": "agent@acme.test",
+          "content_type": "multipart/report; report-type=delivery-status"
+        },
+        "email_kind": "dsn"
       },
       "expected": {
         "automated": true,
@@ -564,7 +913,10 @@
           "auto_submitted",
           "precedence",
           "list_unsubscribe",
-          "list_id"
+          "list_id",
+          "auto_response_suppress",
+          "failed_recipients",
+          "report"
         ]
       }
     }

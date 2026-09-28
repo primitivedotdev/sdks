@@ -1663,17 +1663,23 @@ export type EmailSummary = {
     /**
      * Whether the message was sent by a machine rather than a person.
      * An inbound email is `automated` when any of these holds, decided once
-     * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+     * when it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);
      * `no_identifiable_sender` (no address in the envelope or From);
      * `own_address` (a sender address is exactly one of the addresses the
      * mail was delivered to; sharing a domain with the recipient is not
      * enough, so a colleague or another agent in the organization is not
      * automated);
      * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
-     * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+     * `auto_submitted` (Auto-Submitted with any keyword but `no`, an
+     * empty one included);
      * `precedence` (Precedence bulk, list, junk or auto_reply);
      * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
-     * present). The header rules only see headers captured at ingest, so
+     * present); `auto_response_suppress` (X-Auto-Response-Suppress asks
+     * for no automatic reply: All, OOF or AutoReply);
+     * `failed_recipients` (X-Failed-Recipients present, a bounce);
+     * `report` (a delivery, feedback or disposition report). Mail
+     * Primitive's own automatic responders decline to answer is always
+     * `automated`. The header rules only see headers captured at ingest, so
      * older mail may lack them. This is loop and noise protection, not
      * sender authentication.
      *
@@ -1683,7 +1689,8 @@ export type EmailSummary = {
      * Why `automated` is true, in rule order; empty when it is false.
      * Current values: `null_envelope_sender`, `no_identifiable_sender`,
      * `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
-     * `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+     * `list_unsubscribe`, `list_id`, `auto_response_suppress`,
+     * `failed_recipients`, `report`. Treat an unfamiliar value as a
      * reason added after your client was built.
      *
      */
@@ -1958,17 +1965,23 @@ export type EmailDetail = {
     /**
      * Whether the message was sent by a machine rather than a person.
      * An inbound email is `automated` when any of these holds, decided once
-     * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+     * when it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);
      * `no_identifiable_sender` (no address in the envelope or From);
      * `own_address` (a sender address is exactly one of the addresses the
      * mail was delivered to; sharing a domain with the recipient is not
      * enough, so a colleague or another agent in the organization is not
      * automated);
      * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
-     * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+     * `auto_submitted` (Auto-Submitted with any keyword but `no`, an
+     * empty one included);
      * `precedence` (Precedence bulk, list, junk or auto_reply);
      * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
-     * present). The header rules only see headers captured at ingest, so
+     * present); `auto_response_suppress` (X-Auto-Response-Suppress asks
+     * for no automatic reply: All, OOF or AutoReply);
+     * `failed_recipients` (X-Failed-Recipients present, a bounce);
+     * `report` (a delivery, feedback or disposition report). Mail
+     * Primitive's own automatic responders decline to answer is always
+     * `automated`. The header rules only see headers captured at ingest, so
      * older mail may lack them. This is loop and noise protection, not
      * sender authentication.
      *
@@ -1978,7 +1991,8 @@ export type EmailDetail = {
      * Why `automated` is true, in rule order; empty when it is false.
      * Current values: `null_envelope_sender`, `no_identifiable_sender`,
      * `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
-     * `list_unsubscribe`, `list_id`. Treat an unfamiliar value as a
+     * `list_unsubscribe`, `list_id`, `auto_response_suppress`,
+     * `failed_recipients`, `report`. Treat an unfamiliar value as a
      * reason added after your client was built.
      *
      */
@@ -6007,17 +6021,23 @@ export type ListEmailsData = {
          * `awaiting=you&automated=false` lists mail from people that is
          * waiting on your reply. Combines with every other filter and with
          * both `cursor` and `since`. An inbound email is `automated` when any of these holds, decided once
-         * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+         * when it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);
          * `no_identifiable_sender` (no address in the envelope or From);
          * `own_address` (a sender address is exactly one of the addresses the
          * mail was delivered to; sharing a domain with the recipient is not
          * enough, so a colleague or another agent in the organization is not
          * automated);
          * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
-         * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+         * `auto_submitted` (Auto-Submitted with any keyword but `no`, an
+         * empty one included);
          * `precedence` (Precedence bulk, list, junk or auto_reply);
          * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
-         * present). The header rules only see headers captured at ingest, so
+         * present); `auto_response_suppress` (X-Auto-Response-Suppress asks
+         * for no automatic reply: All, OOF or AutoReply);
+         * `failed_recipients` (X-Failed-Recipients present, a bounce);
+         * `report` (a delivery, feedback or disposition report). Mail
+         * Primitive's own automatic responders decline to answer is always
+         * `automated`. The header rules only see headers captured at ingest, so
          * older mail may lack them. This is loop and noise protection, not
          * sender authentication.
          *
@@ -6149,17 +6169,23 @@ export type SearchEmailsData = {
         /**
          * Only return emails whose `automated` has this value. Also
          * available in `q` as `automated:true` or `automated:false`. An inbound email is `automated` when any of these holds, decided once
-         * when it arrives: `null_envelope_sender` (MAIL FROM:<>, a bounce);
+         * when it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);
          * `no_identifiable_sender` (no address in the envelope or From);
          * `own_address` (a sender address is exactly one of the addresses the
          * mail was delivered to; sharing a domain with the recipient is not
          * enough, so a colleague or another agent in the organization is not
          * automated);
          * `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
-         * `auto_submitted` (Auto-Submitted with any keyword but `no`);
+         * `auto_submitted` (Auto-Submitted with any keyword but `no`, an
+         * empty one included);
          * `precedence` (Precedence bulk, list, junk or auto_reply);
          * `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
-         * present). The header rules only see headers captured at ingest, so
+         * present); `auto_response_suppress` (X-Auto-Response-Suppress asks
+         * for no automatic reply: All, OOF or AutoReply);
+         * `failed_recipients` (X-Failed-Recipients present, a bounce);
+         * `report` (a delivery, feedback or disposition report). Mail
+         * Primitive's own automatic responders decline to answer is always
+         * `automated`. The header rules only see headers captured at ingest, so
          * older mail may lack them. This is loop and noise protection, not
          * sender authentication.
          *

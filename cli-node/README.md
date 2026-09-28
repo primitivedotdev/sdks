@@ -206,8 +206,11 @@ primitive inbox next --json               # the next one
 
 - Automated mail is skipped unless you pass `--include-automated`: null envelope
   sender (bounces), mailer-daemon and postmaster, mail sent from the very address
-  it was delivered to, and mail that declares itself automated (Auto-Submitted,
-  Precedence bulk/list/junk, List-Unsubscribe, List-Id). The API decides this
+  it was delivered to, delivery, feedback and disposition reports, and mail that
+  declares itself automated (Auto-Submitted, Precedence bulk/list/junk,
+  List-Unsubscribe, List-Id, X-Auto-Response-Suppress, X-Failed-Recipients).
+  This is the same set Primitive's own automatic responders decline to answer.
+  The API decides this
   when the mail arrives (`automated`, `automated_reasons` on every email) and
   `inbox next` filters on it server-side (`awaiting=you&automated=false`), so a
   call costs the same however much unanswered automated mail has piled up. On

@@ -62,6 +62,14 @@ describe("classifyAutomatedMail", () => {
     }
   });
 
+  it("reads the null sender and the sender addresses separately", () => {
+    expect(
+      classifyAutomatedMail(
+        input({ envelopeSender: "", envelopeAddress: "alice@example.com" }),
+      ).reasons,
+    ).toEqual(["null_envelope_sender"]);
+  });
+
   it("flags mail with no sender address anywhere", () => {
     expect(
       classifyAutomatedMail(
@@ -148,20 +156,79 @@ describe("declaredAutomationReasons", () => {
     expect(declaredAutomationReasons({ auto_submitted: "No" })).toEqual([]);
   });
 
-  it("ignores normal precedence and empty values", () => {
+  it("ignores normal precedence and empty list headers", () => {
     expect(
       declaredAutomationReasons({
         precedence: "first-class",
         list_unsubscribe: "  ",
-        auto_submitted: "",
+        list_id: "",
       }),
     ).toEqual([]);
   });
 
-  it("accepts every automated precedence value", () => {
-    for (const precedence of ["bulk", "list", "junk", "auto_reply"]) {
+  it("treats an empty Auto-Submitted keyword as automated", () => {
+    for (const auto_submitted of ["", "  ", "; x=y", "(comment)"]) {
+      expect(declaredAutomationReasons({ auto_submitted })).toEqual([
+        "auto_submitted",
+      ]);
+    }
+  });
+
+  it("reads Auto-Submitted through comments and quotes", () => {
+    for (const auto_submitted of [
+      '"no"',
+      "no (typed by a person)",
+      "(a; b) no",
+    ]) {
+      expect(declaredAutomationReasons({ auto_submitted })).toEqual([]);
+    }
+    expect(
+      declaredAutomationReasons({ auto_submitted: "(x; y) auto-replied" }),
+    ).toEqual(["auto_submitted"]);
+  });
+
+  it("accepts every automated precedence value, as a word", () => {
+    for (const precedence of [
+      "bulk",
+      "list",
+      "junk",
+      "auto_reply",
+      "bulk (newsletter)",
+      "list-mail",
+      " JUNK ",
+    ]) {
       expect(declaredAutomationReasons({ precedence })).toEqual(["precedence"]);
     }
+    for (const precedence of ["bulky", "listing", "(bulk)", "auto_replying"]) {
+      expect(declaredAutomationReasons({ precedence })).toEqual([]);
+    }
+  });
+
+  it("reads X-Auto-Response-Suppress, X-Failed-Recipients and reports", () => {
+    expect(
+      declaredAutomationReasons({ x_auto_response_suppress: "DR, OOF" }),
+    ).toEqual(["auto_response_suppress"]);
+    expect(
+      declaredAutomationReasons({ x_auto_response_suppress: "DR, RN, NRN" }),
+    ).toEqual([]);
+    expect(declaredAutomationReasons({ x_failed_recipients: "" })).toEqual([
+      "failed_recipients",
+    ]);
+    expect(
+      declaredAutomationReasons({
+        content_type: "Multipart/Report (dsn); report-type=delivery-status",
+      }),
+    ).toEqual(["report"]);
+    expect(
+      declaredAutomationReasons({ content_type: "message/rfc822" }),
+    ).toEqual([]);
+  });
+
+  it("reads a non-regular email_kind as a report", () => {
+    expect(declaredAutomationReasons(null, "dsn")).toEqual(["report"]);
+    expect(declaredAutomationReasons(null, " Regular ")).toEqual([]);
+    expect(declaredAutomationReasons(null, "")).toEqual([]);
+    expect(declaredAutomationReasons(null, null)).toEqual([]);
   });
 
   it("handles missing or malformed header objects", () => {
