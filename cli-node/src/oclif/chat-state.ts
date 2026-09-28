@@ -6,7 +6,11 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import {
+  AGENT_PROFILE_ENV,
+  agentProfileDirectory,
+} from "./connected-agent-profile.js";
 
 const CHAT_STATE_FILE = "chat-state.json";
 const CHAT_STATE_VERSION = 2;
@@ -69,12 +73,19 @@ function parseLocalId(value: unknown): number | null {
     : null;
 }
 
-export function chatStatePath(configDir: string): string {
-  return join(configDir, CHAT_STATE_FILE);
+export function chatStatePath(
+  configDir: string,
+  profileName: string | null = process.env[AGENT_PROFILE_ENV]?.trim() || null,
+): string {
+  return join(
+    profileName ? agentProfileDirectory(configDir, profileName) : configDir,
+    CHAT_STATE_FILE,
+  );
 }
 
+// OAuth lifecycle cleanup must never remove a selected agent's conversation state.
 export function deleteChatState(configDir: string): void {
-  rmSync(chatStatePath(configDir), { force: true });
+  rmSync(chatStatePath(configDir, null), { force: true });
 }
 
 export function chatConversationState(params: {
@@ -224,10 +235,11 @@ export function loadChatConversationByLocalId(
 }
 
 function saveChatState(configDir: string, state: ChatState): void {
-  mkdirSync(configDir, { mode: 0o700, recursive: true });
   const path = chatStatePath(configDir);
+  const directory = dirname(path);
+  mkdirSync(directory, { mode: 0o700, recursive: true });
   const tempPath = join(
-    configDir,
+    directory,
     `${CHAT_STATE_FILE}.${process.pid}.${randomUUID()}.tmp`,
   );
   try {

@@ -1,7 +1,12 @@
-import { type EmailDetail, getEmail } from "@primitivedotdev/api-core";
+import {
+  type EmailDetail,
+  getEmail,
+  listAgentContacts,
+} from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
 import type { ListenOptions } from "./listen-runner.js";
 import { ListenStateError } from "./listen-state.js";
+import { createNotificationContactPolicy } from "./notification-contact-policy.js";
 import { openSessionNotifications } from "./notify-session.js";
 import {
   NotificationRetryError,
@@ -26,6 +31,10 @@ export async function runSharedNotificationListen(
   if (!options.notifySession)
     throw new ListenStateError("A native notification target is required.");
   const notify = options.notifySession;
+  if (notify.contactPreferences && notify.senders.length)
+    throw new ListenStateError(
+      "Contact preferences and explicit notification senders cannot be combined.",
+    );
   const approvedSenders = new Set(
     notify.senders
       .flatMap((sender) => sender.split(","))
@@ -84,6 +93,33 @@ export async function runSharedNotificationListen(
           signal,
         })
       ).recipient;
+    if (
+      auth.auth.connectedAgent &&
+      auth.auth.connectedAgent.agentAddress !== recipient
+    )
+      throw new ListenStateError(
+        "The receiving address does not match the selected connected-agent profile.",
+      );
+    const contactPolicy = notify.contactPreferences
+      ? createNotificationContactPolicy({
+          recipient,
+          async readPage(cursor, nextSignal) {
+            const result = await listAgentContacts({
+              client: auth.apiClient.client,
+              path: { agent_address: recipient },
+              query: { limit: 100, ...(cursor ? { cursor } : {}) },
+              signal: AbortSignal.any([nextSignal, AbortSignal.timeout(5000)]),
+              responseStyle: "fields",
+            });
+            if (result.error || !result.data)
+              throw new ListenStateError(
+                "Contact notification preferences could not be read.",
+              );
+            return { data: result.data.data, cursor: result.data.meta?.cursor };
+          },
+        })
+      : undefined;
+    if (contactPolicy) await contactPolicy.refresh(signal);
     receiver = await openSharedMailReceiver({
       configDir: options.configDir,
       apiClient: auth.apiClient,
@@ -129,7 +165,7 @@ export async function runSharedNotificationListen(
             `Notification for email ${row.emailId} is held with ${row.route.state} outcome.`,
           );
       }
-      if (row.details?.authorization === "trusted") {
+      if (!contactPolicy && row.details?.authorization === "trusted") {
         if (!approvedSenders.has(row.details.peer)) return true;
         const existing = await store.claimForNotification(
           row.emailId,
@@ -169,7 +205,17 @@ export async function runSharedNotificationListen(
         detail.parsed?.status !== "complete"
       )
         return false;
-      const choices = [...approvedSenders].map((peer) => ({
+      const admission = contactPolicy
+        ? await contactPolicy.admit(
+            detail.from_email,
+            detail.received_at,
+            signal,
+          )
+        : undefined;
+      if (contactPolicy && !admission) return true;
+      const choices = (
+        admission ? [admission.sender] : [...approvedSenders]
+      ).map((peer) => ({
         peer,
         trust: scopedChatSenderTrust(detail, peer),
       }));
@@ -180,7 +226,13 @@ export async function runSharedNotificationListen(
       if (claim.status === "held") return false;
       if (claim.status === "already_observed") return true;
       try {
-        await native.handleDetail(detail, row.eventId, signal);
+        if (contactPolicy && admission)
+          await native.handleDetail(detail, row.eventId, signal, {
+            sender: admission.sender,
+            recheck: (nextSignal) =>
+              contactPolicy.recheck(admission, nextSignal),
+          });
+        else await native.handleDetail(detail, row.eventId, signal);
       } finally {
         // Only the native write-before-dispatch journal establishes submission.
         // Socket/thread preflight errors leave the shared reservation selected.

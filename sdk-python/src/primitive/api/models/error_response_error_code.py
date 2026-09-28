@@ -2,7 +2,10 @@ from enum import Enum
 
 class ErrorResponseErrorCode(str, Enum):
     ACCESS_DENIED = "access_denied"
+    ADDRESS_NOTE_CONFLICT = "address_note_conflict"
+    ADDRESS_NOT_CONTROLLED = "address_not_controlled"
     ADDRESS_TAKEN = "address_taken"
+    AGENT_CONNECTION_SCOPE_FORBIDDEN = "agent_connection_scope_forbidden"
     ATTACHMENT_CHANGED = "attachment_changed"
     ATTACHMENT_INTEGRITY_FAILED = "attachment_integrity_failed"
     ATTACHMENT_LIMIT_EXCEEDED = "attachment_limit_exceeded"
@@ -13,7 +16,12 @@ class ErrorResponseErrorCode(str, Enum):
     CHALLENGE_EXPIRED = "challenge_expired"
     CLERK_SIGNUP_FAILED = "clerk_signup_failed"
     CONFLICT = "conflict"
+    CONNECTION_ADDRESS_UNAVAILABLE = "connection_address_unavailable"
+    CONNECTION_DOMAIN_UNAVAILABLE = "connection_domain_unavailable"
+    CONNECTION_INVITATION_UNAVAILABLE = "connection_invitation_unavailable"
     CONNECTION_NOT_REVOKED = "connection_not_revoked"
+    CONNECTION_OWNER_ADDRESS_INVALID = "connection_owner_address_invalid"
+    CONTACT_CONFLICT = "contact_conflict"
     CONTENT_DISCARDED = "content_discarded"
     CREDIT_CODE_ALREADY_REDEEMED = "credit_code_already_redeemed"
     CREDIT_CODE_BALANCE_CAP = "credit_code_balance_cap"

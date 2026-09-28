@@ -4,6 +4,11 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
+import AgentConnectCommand from "./commands/agent-connect.js";
+import AgentContactsAddCommand from "./commands/agent-contacts-add.js";
+import AgentContactsListCommand from "./commands/agent-contacts-list.js";
+import AgentContactsRemoveCommand from "./commands/agent-contacts-remove.js";
+import AgentContactsUpdateCommand from "./commands/agent-contacts-update.js";
 import AgentUpgradeCommand from "./commands/agent-upgrade.js";
 import ChatCommand, { ChatReplyCommand } from "./commands/chat.js";
 import {
@@ -13,6 +18,11 @@ import {
   ConfigSetCommand,
   ConfigUseCommand,
 } from "./commands/config.js";
+import ContactsAddCommand from "./commands/contacts-add.js";
+import ContactsGetCommand from "./commands/contacts-get.js";
+import ContactsListCommand from "./commands/contacts-list.js";
+import ContactsRemoveCommand from "./commands/contacts-remove.js";
+import ContactsUpdateCommand from "./commands/contacts-update.js";
 import {
   CreditsBalanceCommand,
   CreditsRedeemCommand,
@@ -436,6 +446,9 @@ function resolveOperationAlias(id: string): string {
 // COMMANDS below. The auto-generated wrapper is filtered out so the
 // hand-rolled command owns the id without a name collision.
 const OVERRIDDEN_OPERATION_IDS = new Set<string>([
+  // Invitation claims must consume stdin and persist the credential privately.
+  // Never expose a generated token flag or print a claim's raw API response.
+  "agent-connections:claim-agent-connection",
   // `domains:download-domain-zone-file` is hand-rolled so the CLI writes
   // text to stdout or --output instead of dumping a generated binary object.
   "domains:download-domain-zone-file",
@@ -491,6 +504,18 @@ export const COMMANDS: Record<string, typeof Command> = {
   // Interactive one-command upgrade (start claim -> prompt for code -> verify),
   // on top of the generated agent:claim / agent:claim-verify operations.
   "agent:upgrade": AgentUpgradeCommand,
+  "agent:connect": AgentConnectCommand,
+  "contacts:list": ContactsListCommand,
+  "contacts:get": ContactsGetCommand,
+  "contacts:add": ContactsAddCommand,
+  "contacts:update": ContactsUpdateCommand,
+  "contacts:remove": ContactsRemoveCommand,
+  "agent:contacts:list": AgentContactsListCommand,
+  "agent:contacts:add": AgentContactsAddCommand,
+  "agent:contacts:update": AgentContactsUpdateCommand,
+  "agent:contacts:remove": AgentContactsRemoveCommand,
+
+  "agent-connections:claim-agent-connection": AgentConnectCommand,
   "list-operations": ListOperationsCommand,
   config: ConfigCommand,
   "config:list": ConfigListCommand,

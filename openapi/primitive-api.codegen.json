@@ -112,6 +112,10 @@
     {
       "name": "Registries",
       "description": "The Agent Registry: ownable directories of agents, addressable by a\nregistry-scoped handle. A registry's publish policy (owner_only, request,\nor open) decides whether a publish lists immediately or pends owner\napproval. An agent is defined once with a globally unique,\nreachability-verified address, then published into any registry under a\nhandle. Discovery reads (list, resolve, get) are public for public\nregistries; managing a registry and moderating requests use the owner's\nAPI key.\n"
+    },
+    {
+      "name": "Contacts",
+      "description": "Organization contacts and per-address agent preferences."
     }
   ],
   "paths": {
@@ -8444,6 +8448,2195 @@
           }
         }
       }
+    },
+    "/contacts": {
+      "get": {
+        "operationId": "listContacts",
+        "summary": "list Contacts",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": false,
+            "description": "cursor for contacts."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "description": "limit for contacts."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "success",
+                        "data",
+                        "meta"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "address": {
+                                "type": "string",
+                                "format": "email",
+                                "maxLength": 254,
+                                "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+                              },
+                              "display_name": {
+                                "type": "string",
+                                "maxLength": 200,
+                                "nullable": true
+                              },
+                              "version": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "address",
+                              "display_name",
+                              "version",
+                              "created_at",
+                              "updated_at"
+                            ]
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "required": [
+                            "cursor"
+                          ],
+                          "properties": {
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "cursor": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 118
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Always fresh policy metadata."
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "contact_conflict: write precondition did not match.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contacts/{address}": {
+      "get": {
+        "operationId": "getContact",
+        "summary": "get Contact",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": true,
+            "description": "address for contacts."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "success",
+                        "data"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "address": {
+                              "type": "string",
+                              "format": "email",
+                              "maxLength": 254,
+                              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+                            },
+                            "display_name": {
+                              "type": "string",
+                              "maxLength": 200,
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "address",
+                            "display_name",
+                            "version",
+                            "created_at",
+                            "updated_at"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 118
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Always fresh policy metadata."
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "contact_conflict: write precondition did not match.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putContact",
+        "summary": "put Contact",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": true,
+            "description": "address for contacts."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "display_name": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "nullable": true
+                      },
+                      "if_absent": {
+                        "type": "boolean",
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "if_absent"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "display_name": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "nullable": true
+                      },
+                      "if_version": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+                      }
+                    },
+                    "required": [
+                      "if_version"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "success",
+                        "data"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "address": {
+                              "type": "string",
+                              "format": "email",
+                              "maxLength": 254,
+                              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+                            },
+                            "display_name": {
+                              "type": "string",
+                              "maxLength": 200,
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "address",
+                            "display_name",
+                            "version",
+                            "created_at",
+                            "updated_at"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 118
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Always fresh policy metadata."
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "contact_conflict: write precondition did not match.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteContact",
+        "summary": "delete Contact",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": true,
+            "description": "address for contacts."
+          },
+          {
+            "name": "if_version",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+            },
+            "required": true,
+            "description": "if_version for contacts."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "success",
+                        "data"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "deleted": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "deleted"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 118
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Always fresh policy metadata."
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "contact_conflict: write precondition did not match.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-contacts/{agent_address}": {
+      "get": {
+        "operationId": "listAgentContacts",
+        "summary": "list Agent Contacts",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+        "parameters": [
+          {
+            "name": "agent_address",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": true,
+            "description": "agent_address for contacts."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": false,
+            "description": "cursor for contacts."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "description": "limit for contacts."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "success",
+                        "data",
+                        "meta"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "agent_address": {
+                                "type": "string",
+                                "format": "email",
+                                "maxLength": 254,
+                                "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+                              },
+                              "contact_address": {
+                                "type": "string",
+                                "format": "email",
+                                "maxLength": 254,
+                                "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+                              },
+                              "purpose": {
+                                "type": "string",
+                                "maxLength": 2000,
+                                "nullable": true
+                              },
+                              "notify": {
+                                "type": "boolean"
+                              },
+                              "notify_since": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                              },
+                              "notification_generation": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
+                              "version": {
+                                "type": "string",
+                                "format": "uuid",
+                                "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "agent_address",
+                              "contact_address",
+                              "purpose",
+                              "notify",
+                              "notify_since",
+                              "notification_generation",
+                              "version",
+                              "created_at",
+                              "updated_at"
+                            ]
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "required": [
+                            "cursor"
+                          ],
+                          "properties": {
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "cursor": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 118
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Always fresh policy metadata."
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "contact_conflict: write precondition did not match.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-contacts/{agent_address}/{contact_address}": {
+      "put": {
+        "operationId": "putAgentContact",
+        "summary": "put Agent Contact",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+        "parameters": [
+          {
+            "name": "agent_address",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": true,
+            "description": "agent_address for contacts."
+          },
+          {
+            "name": "contact_address",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": true,
+            "description": "contact_address for contacts."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "purpose": {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "nullable": true
+                      },
+                      "notify": {
+                        "type": "boolean"
+                      },
+                      "if_absent": {
+                        "type": "boolean",
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "if_absent"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "purpose": {
+                        "type": "string",
+                        "maxLength": 2000,
+                        "nullable": true
+                      },
+                      "notify": {
+                        "type": "boolean"
+                      },
+                      "if_version": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+                      }
+                    },
+                    "required": [
+                      "if_version"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "success",
+                        "data"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "agent_address": {
+                              "type": "string",
+                              "format": "email",
+                              "maxLength": 254,
+                              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+                            },
+                            "contact_address": {
+                              "type": "string",
+                              "format": "email",
+                              "maxLength": 254,
+                              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+                            },
+                            "purpose": {
+                              "type": "string",
+                              "maxLength": 2000,
+                              "nullable": true
+                            },
+                            "notify": {
+                              "type": "boolean"
+                            },
+                            "notify_since": {
+                              "type": "string",
+                              "format": "date-time",
+                              "nullable": true
+                            },
+                            "notification_generation": {
+                              "type": "string",
+                              "format": "uuid",
+                              "nullable": true
+                            },
+                            "version": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "agent_address",
+                            "contact_address",
+                            "purpose",
+                            "notify",
+                            "notify_since",
+                            "notification_generation",
+                            "version",
+                            "created_at",
+                            "updated_at"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 118
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Always fresh policy metadata."
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "contact_conflict: write precondition did not match.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAgentContact",
+        "summary": "delete Agent Contact",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+        "parameters": [
+          {
+            "name": "agent_address",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": true,
+            "description": "agent_address for contacts."
+          },
+          {
+            "name": "contact_address",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 254,
+              "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+            },
+            "required": true,
+            "description": "contact_address for contacts."
+          },
+          {
+            "name": "if_version",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+            },
+            "required": true,
+            "description": "if_version for contacts."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "success",
+                        "data"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "deleted": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "deleted"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 118
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format, e.g. `120;w=60`.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Always fresh policy metadata."
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "contact_conflict: write precondition did not match.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-connections/claim": {
+      "post": {
+        "operationId": "claimAgentConnection",
+        "tags": [
+          "Agent Connections"
+        ],
+        "summary": "claim Agent Connection",
+        "description": "Address-bound external runtime pairing. Management operations require an organization owner or admin session or OAuth token; members and organization API keys cannot manage connections. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow only address-scoped mail operations, organization note reads and own-address note writes. The credential is returned once. If the claim response is lost or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "This header does not enable credential replay for this one-use claim. If the response is lost or the outcome is unknown, request a fresh owner invitation. Do not assume that retrying the same key or payload can recover the returned credential.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true,
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object",
+                      "properties": {
+                        "connection": {
+                          "type": "object",
+                          "properties": {
+                            "address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "owner_address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "pending",
+                                "claimed",
+                                "connected",
+                                "revoked"
+                              ]
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "claimed_at": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "verified_at": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "last_seen_at": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "address",
+                            "name",
+                            "owner_address",
+                            "status",
+                            "created_at",
+                            "updated_at",
+                            "claimed_at",
+                            "verified_at",
+                            "last_seen_at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "org_id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        },
+                        "owner_address": {
+                          "type": "string",
+                          "format": "email",
+                          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                        },
+                        "api_key": {
+                          "type": "string"
+                        },
+                        "api_base_url": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "connection",
+                        "org_id",
+                        "owner_address",
+                        "api_key",
+                        "api_base_url"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 32,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9942,7 +12135,15 @@
                   "credit_code_not_eligible",
                   "credit_code_balance_cap",
                   "rate_limited",
-                  "service_unavailable"
+                  "service_unavailable",
+                  "connection_domain_unavailable",
+                  "connection_address_unavailable",
+                  "connection_owner_address_invalid",
+                  "connection_invitation_unavailable",
+                  "agent_connection_scope_forbidden",
+                  "address_note_conflict",
+                  "address_not_controlled",
+                  "contact_conflict"
                 ]
               },
               "message": {

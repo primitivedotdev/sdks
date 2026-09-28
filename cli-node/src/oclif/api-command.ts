@@ -13,6 +13,7 @@ import {
   resolveCliAuth,
   saveSignupCredentials,
 } from "./auth.js";
+import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
@@ -1003,6 +1004,15 @@ export function createOperationCommand(
     async run(): Promise<void> {
       const { flags } = await this.parse(OperationCommand as never);
       const parsedFlags = flags as Record<string, unknown>;
+      if (
+        [
+          "startAgentSignup",
+          "verifyAgentSignup",
+          "resendAgentSignupVerification",
+        ].includes(operation.operationId)
+      ) {
+        requireDefaultLoginProfile();
+      }
       await runWithTiming(parsedFlags.time === true, async () => {
         const { apiClient, auth, baseUrlOverridden } =
           await createAuthenticatedCliApiClient({

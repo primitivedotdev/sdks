@@ -50,10 +50,10 @@
         "description": "Manage your account settings, storage, and webhook secret"
       },
       "agent-connections": {
-        "description": "Remove revoked agent connections with an organization owner or admin login. This preserves mail and does not stop the external runtime."
+        "description": "Claim a private invitation from stdin or remove a revoked connection with an owner/admin login."
       },
       "agent": {
-        "description": "Agent signup and authentication API operations"
+        "description": "Connect an existing agent privately, manage its contacts, or use agent signup operations."
       },
       "credits": {
         "description": "Redeem credit codes and check the organization credit balance"
@@ -130,6 +130,12 @@
       },
       "listen": {
         "description": "Receive events locally as JSONL, use --exec or --forward-to, or notify an exact loaded native session with --notify-session and approved --sender addresses. Use --status --notify-session to inspect durable notification receipts."
+      },
+      "contacts": {
+        "description": "Shared organization contacts. Use list, get, add, update, or remove; edits use conditional versions."
+      },
+      "agent:contacts": {
+        "description": "Contacts and notification preferences for one agent address. Connected profiles default to their own address."
       }
     },
     "topicSeparator": " "

@@ -43,6 +43,37 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("registers organization and per-agent contact commands", () => {
+    for (const action of ["list", "get", "add", "update", "remove"])
+      expect(COMMANDS[`contacts:${action}`]).toBeDefined();
+    for (const action of ["list", "add", "update", "remove"])
+      expect(COMMANDS[`agent:contacts:${action}`]).toBeDefined();
+    expect(readCliPackageJson().oclif?.topics?.contacts).toBeDefined();
+    expect(
+      readCliPackageJson().oclif?.topics?.["agent:contacts"],
+    ).toBeDefined();
+  });
+  it("routes both invitation claim names through private stdin setup", () => {
+    expect(COMMANDS["agent:connect"]).toBeDefined();
+    expect(COMMANDS["agent-connections:claim-agent-connection"]).toBe(
+      COMMANDS["agent:connect"],
+    );
+    const setup = COMMANDS["agent:connect"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(setup.flags.profile).toBeDefined();
+    expect(setup.flags.status).toBeDefined();
+    expect(setup.flags.token).toBeUndefined();
+    expect(setup.flags["raw-body"]).toBeUndefined();
+  });
+  it("exposes saved-contact notification preferences without mixing allowlists", () => {
+    const listener = COMMANDS.listen as unknown as {
+      flags: Record<string, { dependsOn?: string[]; exclusive?: string[] }>;
+    };
+    expect(listener.flags.contacts.dependsOn).toContain("notify-session");
+    expect(listener.flags.contacts.exclusive).toContain("sender");
+    expect(listener.flags.contacts.exclusive).toContain("status");
+  });
   it("keeps connected waits on the existing emails wait command", () => {
     const wait = COMMANDS["emails:wait"] as unknown as {
       description: string;

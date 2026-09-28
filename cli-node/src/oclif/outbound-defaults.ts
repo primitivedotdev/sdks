@@ -67,6 +67,9 @@ export async function pickDefaultFromAddress(
   apiClient: PrimitiveApiClient,
   authFailureContext: AuthFailureContext,
 ): Promise<string> {
+  if (authFailureContext.auth.connectedAgent) {
+    return authFailureContext.auth.connectedAgent.agentAddress;
+  }
   if (isConnectedChatCredential(authFailureContext.auth.apiKey)) {
     throw new Errors.CLIError(
       "Connected agents must pass --from with their connected email address.",

@@ -1294,6 +1294,308 @@ type CheckDomainDnsUnauthorized ErrorResponse
 
 func (*CheckDomainDnsUnauthorized) checkDomainDnsRes() {}
 
+type ClaimAgentConnectionBadRequest ErrorResponse
+
+func (*ClaimAgentConnectionBadRequest) claimAgentConnectionRes() {}
+
+type ClaimAgentConnectionConflict ErrorResponse
+
+func (*ClaimAgentConnectionConflict) claimAgentConnectionRes() {}
+
+type ClaimAgentConnectionForbidden ErrorResponse
+
+func (*ClaimAgentConnectionForbidden) claimAgentConnectionRes() {}
+
+type ClaimAgentConnectionNotFound ErrorResponse
+
+func (*ClaimAgentConnectionNotFound) claimAgentConnectionRes() {}
+
+type ClaimAgentConnectionOK struct {
+	Success bool                       `json:"success"`
+	Data    ClaimAgentConnectionOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ClaimAgentConnectionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ClaimAgentConnectionOK) GetData() ClaimAgentConnectionOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ClaimAgentConnectionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ClaimAgentConnectionOK) SetData(val ClaimAgentConnectionOKData) {
+	s.Data = val
+}
+
+type ClaimAgentConnectionOKData struct {
+	Connection   ClaimAgentConnectionOKDataConnection `json:"connection"`
+	OrgID        string                               `json:"org_id"`
+	OwnerAddress string                               `json:"owner_address"`
+	APIKey       string                               `json:"api_key"`
+	APIBaseURL   url.URL                              `json:"api_base_url"`
+}
+
+// GetConnection returns the value of Connection.
+func (s *ClaimAgentConnectionOKData) GetConnection() ClaimAgentConnectionOKDataConnection {
+	return s.Connection
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *ClaimAgentConnectionOKData) GetOrgID() string {
+	return s.OrgID
+}
+
+// GetOwnerAddress returns the value of OwnerAddress.
+func (s *ClaimAgentConnectionOKData) GetOwnerAddress() string {
+	return s.OwnerAddress
+}
+
+// GetAPIKey returns the value of APIKey.
+func (s *ClaimAgentConnectionOKData) GetAPIKey() string {
+	return s.APIKey
+}
+
+// GetAPIBaseURL returns the value of APIBaseURL.
+func (s *ClaimAgentConnectionOKData) GetAPIBaseURL() url.URL {
+	return s.APIBaseURL
+}
+
+// SetConnection sets the value of Connection.
+func (s *ClaimAgentConnectionOKData) SetConnection(val ClaimAgentConnectionOKDataConnection) {
+	s.Connection = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *ClaimAgentConnectionOKData) SetOrgID(val string) {
+	s.OrgID = val
+}
+
+// SetOwnerAddress sets the value of OwnerAddress.
+func (s *ClaimAgentConnectionOKData) SetOwnerAddress(val string) {
+	s.OwnerAddress = val
+}
+
+// SetAPIKey sets the value of APIKey.
+func (s *ClaimAgentConnectionOKData) SetAPIKey(val string) {
+	s.APIKey = val
+}
+
+// SetAPIBaseURL sets the value of APIBaseURL.
+func (s *ClaimAgentConnectionOKData) SetAPIBaseURL(val url.URL) {
+	s.APIBaseURL = val
+}
+
+type ClaimAgentConnectionOKDataConnection struct {
+	Address      string                                     `json:"address"`
+	Name         string                                     `json:"name"`
+	OwnerAddress string                                     `json:"owner_address"`
+	Status       ClaimAgentConnectionOKDataConnectionStatus `json:"status"`
+	CreatedAt    time.Time                                  `json:"created_at"`
+	UpdatedAt    time.Time                                  `json:"updated_at"`
+	ClaimedAt    NilDateTime                                `json:"claimed_at"`
+	VerifiedAt   NilDateTime                                `json:"verified_at"`
+	LastSeenAt   NilDateTime                                `json:"last_seen_at"`
+}
+
+// GetAddress returns the value of Address.
+func (s *ClaimAgentConnectionOKDataConnection) GetAddress() string {
+	return s.Address
+}
+
+// GetName returns the value of Name.
+func (s *ClaimAgentConnectionOKDataConnection) GetName() string {
+	return s.Name
+}
+
+// GetOwnerAddress returns the value of OwnerAddress.
+func (s *ClaimAgentConnectionOKDataConnection) GetOwnerAddress() string {
+	return s.OwnerAddress
+}
+
+// GetStatus returns the value of Status.
+func (s *ClaimAgentConnectionOKDataConnection) GetStatus() ClaimAgentConnectionOKDataConnectionStatus {
+	return s.Status
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *ClaimAgentConnectionOKDataConnection) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *ClaimAgentConnectionOKDataConnection) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetClaimedAt returns the value of ClaimedAt.
+func (s *ClaimAgentConnectionOKDataConnection) GetClaimedAt() NilDateTime {
+	return s.ClaimedAt
+}
+
+// GetVerifiedAt returns the value of VerifiedAt.
+func (s *ClaimAgentConnectionOKDataConnection) GetVerifiedAt() NilDateTime {
+	return s.VerifiedAt
+}
+
+// GetLastSeenAt returns the value of LastSeenAt.
+func (s *ClaimAgentConnectionOKDataConnection) GetLastSeenAt() NilDateTime {
+	return s.LastSeenAt
+}
+
+// SetAddress sets the value of Address.
+func (s *ClaimAgentConnectionOKDataConnection) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetName sets the value of Name.
+func (s *ClaimAgentConnectionOKDataConnection) SetName(val string) {
+	s.Name = val
+}
+
+// SetOwnerAddress sets the value of OwnerAddress.
+func (s *ClaimAgentConnectionOKDataConnection) SetOwnerAddress(val string) {
+	s.OwnerAddress = val
+}
+
+// SetStatus sets the value of Status.
+func (s *ClaimAgentConnectionOKDataConnection) SetStatus(val ClaimAgentConnectionOKDataConnectionStatus) {
+	s.Status = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *ClaimAgentConnectionOKDataConnection) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *ClaimAgentConnectionOKDataConnection) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetClaimedAt sets the value of ClaimedAt.
+func (s *ClaimAgentConnectionOKDataConnection) SetClaimedAt(val NilDateTime) {
+	s.ClaimedAt = val
+}
+
+// SetVerifiedAt sets the value of VerifiedAt.
+func (s *ClaimAgentConnectionOKDataConnection) SetVerifiedAt(val NilDateTime) {
+	s.VerifiedAt = val
+}
+
+// SetLastSeenAt sets the value of LastSeenAt.
+func (s *ClaimAgentConnectionOKDataConnection) SetLastSeenAt(val NilDateTime) {
+	s.LastSeenAt = val
+}
+
+type ClaimAgentConnectionOKDataConnectionStatus string
+
+const (
+	ClaimAgentConnectionOKDataConnectionStatusPending   ClaimAgentConnectionOKDataConnectionStatus = "pending"
+	ClaimAgentConnectionOKDataConnectionStatusClaimed   ClaimAgentConnectionOKDataConnectionStatus = "claimed"
+	ClaimAgentConnectionOKDataConnectionStatusConnected ClaimAgentConnectionOKDataConnectionStatus = "connected"
+	ClaimAgentConnectionOKDataConnectionStatusRevoked   ClaimAgentConnectionOKDataConnectionStatus = "revoked"
+)
+
+// AllValues returns all ClaimAgentConnectionOKDataConnectionStatus values.
+func (ClaimAgentConnectionOKDataConnectionStatus) AllValues() []ClaimAgentConnectionOKDataConnectionStatus {
+	return []ClaimAgentConnectionOKDataConnectionStatus{
+		ClaimAgentConnectionOKDataConnectionStatusPending,
+		ClaimAgentConnectionOKDataConnectionStatusClaimed,
+		ClaimAgentConnectionOKDataConnectionStatusConnected,
+		ClaimAgentConnectionOKDataConnectionStatusRevoked,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ClaimAgentConnectionOKDataConnectionStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case ClaimAgentConnectionOKDataConnectionStatusPending:
+		return []byte(s), nil
+	case ClaimAgentConnectionOKDataConnectionStatusClaimed:
+		return []byte(s), nil
+	case ClaimAgentConnectionOKDataConnectionStatusConnected:
+		return []byte(s), nil
+	case ClaimAgentConnectionOKDataConnectionStatusRevoked:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ClaimAgentConnectionOKDataConnectionStatus) UnmarshalText(data []byte) error {
+	switch ClaimAgentConnectionOKDataConnectionStatus(data) {
+	case ClaimAgentConnectionOKDataConnectionStatusPending:
+		*s = ClaimAgentConnectionOKDataConnectionStatusPending
+		return nil
+	case ClaimAgentConnectionOKDataConnectionStatusClaimed:
+		*s = ClaimAgentConnectionOKDataConnectionStatusClaimed
+		return nil
+	case ClaimAgentConnectionOKDataConnectionStatusConnected:
+		*s = ClaimAgentConnectionOKDataConnectionStatusConnected
+		return nil
+	case ClaimAgentConnectionOKDataConnectionStatusRevoked:
+		*s = ClaimAgentConnectionOKDataConnectionStatusRevoked
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// ClaimAgentConnectionOKHeaders wraps ClaimAgentConnectionOK with response headers.
+type ClaimAgentConnectionOKHeaders struct {
+	CacheControl OptString
+	Response     ClaimAgentConnectionOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *ClaimAgentConnectionOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetResponse returns the value of Response.
+func (s *ClaimAgentConnectionOKHeaders) GetResponse() ClaimAgentConnectionOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *ClaimAgentConnectionOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ClaimAgentConnectionOKHeaders) SetResponse(val ClaimAgentConnectionOK) {
+	s.Response = val
+}
+
+func (*ClaimAgentConnectionOKHeaders) claimAgentConnectionRes() {}
+
+type ClaimAgentConnectionReq struct {
+	Token string `json:"token"`
+}
+
+// GetToken returns the value of Token.
+func (s *ClaimAgentConnectionReq) GetToken() string {
+	return s.Token
+}
+
+// SetToken sets the value of Token.
+func (s *ClaimAgentConnectionReq) SetToken(val string) {
+	s.Token = val
+}
+
+type ClaimAgentConnectionUnauthorized ErrorResponse
+
+func (*ClaimAgentConnectionUnauthorized) claimAgentConnectionRes() {}
+
 // Ref: #/components/schemas/CliLoginPollResult
 type CliLoginPollResult struct {
 	// Legacy alias for access_token. New CLI builds should persist access_token and refresh_token.
@@ -5685,6 +5987,270 @@ type DefineAgentUnprocessableEntity ErrorResponse
 
 func (*DefineAgentUnprocessableEntity) defineAgentRes() {}
 
+type DeleteAgentContactBadRequest ErrorResponse
+
+func (*DeleteAgentContactBadRequest) deleteAgentContactRes() {}
+
+type DeleteAgentContactConflict ErrorResponse
+
+func (*DeleteAgentContactConflict) deleteAgentContactRes() {}
+
+type DeleteAgentContactForbidden ErrorResponse
+
+func (*DeleteAgentContactForbidden) deleteAgentContactRes() {}
+
+type DeleteAgentContactNotFound ErrorResponse
+
+func (*DeleteAgentContactNotFound) deleteAgentContactRes() {}
+
+// Merged schema.
+type DeleteAgentContactOK struct {
+	Success bool                     `json:"success"`
+	Data    DeleteAgentContactOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *DeleteAgentContactOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *DeleteAgentContactOK) GetData() DeleteAgentContactOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *DeleteAgentContactOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *DeleteAgentContactOK) SetData(val DeleteAgentContactOKData) {
+	s.Data = val
+}
+
+type DeleteAgentContactOKData struct {
+	Deleted bool `json:"deleted"`
+}
+
+// GetDeleted returns the value of Deleted.
+func (s *DeleteAgentContactOKData) GetDeleted() bool {
+	return s.Deleted
+}
+
+// SetDeleted sets the value of Deleted.
+func (s *DeleteAgentContactOKData) SetDeleted(val bool) {
+	s.Deleted = val
+}
+
+// DeleteAgentContactOKHeaders wraps DeleteAgentContactOK with response headers.
+type DeleteAgentContactOKHeaders struct {
+	CacheControl       OptString
+	RatelimitLimit     OptInt
+	RatelimitPolicy    OptString
+	RatelimitRemaining OptInt
+	RatelimitReset     OptInt
+	Response           DeleteAgentContactOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *DeleteAgentContactOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetRatelimitLimit returns the value of RatelimitLimit.
+func (s *DeleteAgentContactOKHeaders) GetRatelimitLimit() OptInt {
+	return s.RatelimitLimit
+}
+
+// GetRatelimitPolicy returns the value of RatelimitPolicy.
+func (s *DeleteAgentContactOKHeaders) GetRatelimitPolicy() OptString {
+	return s.RatelimitPolicy
+}
+
+// GetRatelimitRemaining returns the value of RatelimitRemaining.
+func (s *DeleteAgentContactOKHeaders) GetRatelimitRemaining() OptInt {
+	return s.RatelimitRemaining
+}
+
+// GetRatelimitReset returns the value of RatelimitReset.
+func (s *DeleteAgentContactOKHeaders) GetRatelimitReset() OptInt {
+	return s.RatelimitReset
+}
+
+// GetResponse returns the value of Response.
+func (s *DeleteAgentContactOKHeaders) GetResponse() DeleteAgentContactOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *DeleteAgentContactOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetRatelimitLimit sets the value of RatelimitLimit.
+func (s *DeleteAgentContactOKHeaders) SetRatelimitLimit(val OptInt) {
+	s.RatelimitLimit = val
+}
+
+// SetRatelimitPolicy sets the value of RatelimitPolicy.
+func (s *DeleteAgentContactOKHeaders) SetRatelimitPolicy(val OptString) {
+	s.RatelimitPolicy = val
+}
+
+// SetRatelimitRemaining sets the value of RatelimitRemaining.
+func (s *DeleteAgentContactOKHeaders) SetRatelimitRemaining(val OptInt) {
+	s.RatelimitRemaining = val
+}
+
+// SetRatelimitReset sets the value of RatelimitReset.
+func (s *DeleteAgentContactOKHeaders) SetRatelimitReset(val OptInt) {
+	s.RatelimitReset = val
+}
+
+// SetResponse sets the value of Response.
+func (s *DeleteAgentContactOKHeaders) SetResponse(val DeleteAgentContactOK) {
+	s.Response = val
+}
+
+func (*DeleteAgentContactOKHeaders) deleteAgentContactRes() {}
+
+type DeleteAgentContactUnauthorized ErrorResponse
+
+func (*DeleteAgentContactUnauthorized) deleteAgentContactRes() {}
+
+type DeleteContactBadRequest ErrorResponse
+
+func (*DeleteContactBadRequest) deleteContactRes() {}
+
+type DeleteContactConflict ErrorResponse
+
+func (*DeleteContactConflict) deleteContactRes() {}
+
+type DeleteContactForbidden ErrorResponse
+
+func (*DeleteContactForbidden) deleteContactRes() {}
+
+type DeleteContactNotFound ErrorResponse
+
+func (*DeleteContactNotFound) deleteContactRes() {}
+
+// Merged schema.
+type DeleteContactOK struct {
+	Success bool                `json:"success"`
+	Data    DeleteContactOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *DeleteContactOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *DeleteContactOK) GetData() DeleteContactOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *DeleteContactOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *DeleteContactOK) SetData(val DeleteContactOKData) {
+	s.Data = val
+}
+
+type DeleteContactOKData struct {
+	Deleted bool `json:"deleted"`
+}
+
+// GetDeleted returns the value of Deleted.
+func (s *DeleteContactOKData) GetDeleted() bool {
+	return s.Deleted
+}
+
+// SetDeleted sets the value of Deleted.
+func (s *DeleteContactOKData) SetDeleted(val bool) {
+	s.Deleted = val
+}
+
+// DeleteContactOKHeaders wraps DeleteContactOK with response headers.
+type DeleteContactOKHeaders struct {
+	CacheControl       OptString
+	RatelimitLimit     OptInt
+	RatelimitPolicy    OptString
+	RatelimitRemaining OptInt
+	RatelimitReset     OptInt
+	Response           DeleteContactOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *DeleteContactOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetRatelimitLimit returns the value of RatelimitLimit.
+func (s *DeleteContactOKHeaders) GetRatelimitLimit() OptInt {
+	return s.RatelimitLimit
+}
+
+// GetRatelimitPolicy returns the value of RatelimitPolicy.
+func (s *DeleteContactOKHeaders) GetRatelimitPolicy() OptString {
+	return s.RatelimitPolicy
+}
+
+// GetRatelimitRemaining returns the value of RatelimitRemaining.
+func (s *DeleteContactOKHeaders) GetRatelimitRemaining() OptInt {
+	return s.RatelimitRemaining
+}
+
+// GetRatelimitReset returns the value of RatelimitReset.
+func (s *DeleteContactOKHeaders) GetRatelimitReset() OptInt {
+	return s.RatelimitReset
+}
+
+// GetResponse returns the value of Response.
+func (s *DeleteContactOKHeaders) GetResponse() DeleteContactOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *DeleteContactOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetRatelimitLimit sets the value of RatelimitLimit.
+func (s *DeleteContactOKHeaders) SetRatelimitLimit(val OptInt) {
+	s.RatelimitLimit = val
+}
+
+// SetRatelimitPolicy sets the value of RatelimitPolicy.
+func (s *DeleteContactOKHeaders) SetRatelimitPolicy(val OptString) {
+	s.RatelimitPolicy = val
+}
+
+// SetRatelimitRemaining sets the value of RatelimitRemaining.
+func (s *DeleteContactOKHeaders) SetRatelimitRemaining(val OptInt) {
+	s.RatelimitRemaining = val
+}
+
+// SetRatelimitReset sets the value of RatelimitReset.
+func (s *DeleteContactOKHeaders) SetRatelimitReset(val OptInt) {
+	s.RatelimitReset = val
+}
+
+// SetResponse sets the value of Response.
+func (s *DeleteContactOKHeaders) SetResponse(val DeleteContactOK) {
+	s.Response = val
+}
+
+func (*DeleteContactOKHeaders) deleteContactRes() {}
+
+type DeleteContactUnauthorized ErrorResponse
+
+func (*DeleteContactUnauthorized) deleteContactRes() {}
+
 type DeleteDomainBadRequest ErrorResponse
 
 func (*DeleteDomainBadRequest) deleteDomainRes() {}
@@ -9872,86 +10438,94 @@ func (s *ErrorResponseError) SetRequestID(val OptString) {
 type ErrorResponseErrorCode string
 
 const (
-	ErrorResponseErrorCodeUnauthorized                  ErrorResponseErrorCode = "unauthorized"
-	ErrorResponseErrorCodeForbidden                     ErrorResponseErrorCode = "forbidden"
-	ErrorResponseErrorCodeNotFound                      ErrorResponseErrorCode = "not_found"
-	ErrorResponseErrorCodeValidationError               ErrorResponseErrorCode = "validation_error"
-	ErrorResponseErrorCodeRateLimitExceeded             ErrorResponseErrorCode = "rate_limit_exceeded"
-	ErrorResponseErrorCodeInternalError                 ErrorResponseErrorCode = "internal_error"
-	ErrorResponseErrorCodeConflict                      ErrorResponseErrorCode = "conflict"
-	ErrorResponseErrorCodeMxConflict                    ErrorResponseErrorCode = "mx_conflict"
-	ErrorResponseErrorCodeNotScheduled                  ErrorResponseErrorCode = "not_scheduled"
-	ErrorResponseErrorCodeSentEmailDeleted              ErrorResponseErrorCode = "sent_email_deleted"
-	ErrorResponseErrorCodeSentEmailNotSettled           ErrorResponseErrorCode = "sent_email_not_settled"
-	ErrorResponseErrorCodeSentEmailChanged              ErrorResponseErrorCode = "sent_email_changed"
-	ErrorResponseErrorCodeSentEmailCleanupFailed        ErrorResponseErrorCode = "sent_email_cleanup_failed"
-	ErrorResponseErrorCodeConnectionNotRevoked          ErrorResponseErrorCode = "connection_not_revoked"
-	ErrorResponseErrorCodeAttachmentChanged             ErrorResponseErrorCode = "attachment_changed"
-	ErrorResponseErrorCodeContentDiscarded              ErrorResponseErrorCode = "content_discarded"
-	ErrorResponseErrorCodeAttachmentLimitExceeded       ErrorResponseErrorCode = "attachment_limit_exceeded"
-	ErrorResponseErrorCodeAttachmentIntegrityFailed     ErrorResponseErrorCode = "attachment_integrity_failed"
-	ErrorResponseErrorCodeAttachmentNotReady            ErrorResponseErrorCode = "attachment_not_ready"
-	ErrorResponseErrorCodeAttachmentStorageUnavailable  ErrorResponseErrorCode = "attachment_storage_unavailable"
-	ErrorResponseErrorCodeOutboundDisabled              ErrorResponseErrorCode = "outbound_disabled"
-	ErrorResponseErrorCodeCannotSendFromDomain          ErrorResponseErrorCode = "cannot_send_from_domain"
-	ErrorResponseErrorCodeRecipientNotAllowed           ErrorResponseErrorCode = "recipient_not_allowed"
-	ErrorResponseErrorCodeOutboundKeyMissing            ErrorResponseErrorCode = "outbound_key_missing"
-	ErrorResponseErrorCodeOutboundUnreachable           ErrorResponseErrorCode = "outbound_unreachable"
-	ErrorResponseErrorCodeOutboundKeyInvalid            ErrorResponseErrorCode = "outbound_key_invalid"
-	ErrorResponseErrorCodeOutboundCapacityExhausted     ErrorResponseErrorCode = "outbound_capacity_exhausted"
-	ErrorResponseErrorCodeOutboundResponseMalformed     ErrorResponseErrorCode = "outbound_response_malformed"
-	ErrorResponseErrorCodeOutboundRelayFailed           ErrorResponseErrorCode = "outbound_relay_failed"
-	ErrorResponseErrorCodeDiscardNotEnabled             ErrorResponseErrorCode = "discard_not_enabled"
-	ErrorResponseErrorCodeInboundNotRepliable           ErrorResponseErrorCode = "inbound_not_repliable"
-	ErrorResponseErrorCodeSearchTimeout                 ErrorResponseErrorCode = "search_timeout"
-	ErrorResponseErrorCodeAuthorizationPending          ErrorResponseErrorCode = "authorization_pending"
-	ErrorResponseErrorCodeSlowDown                      ErrorResponseErrorCode = "slow_down"
-	ErrorResponseErrorCodeAccessDenied                  ErrorResponseErrorCode = "access_denied"
-	ErrorResponseErrorCodeExpiredToken                  ErrorResponseErrorCode = "expired_token"
-	ErrorResponseErrorCodeInvalidDeviceCode             ErrorResponseErrorCode = "invalid_device_code"
-	ErrorResponseErrorCodeInvalidSignupCode             ErrorResponseErrorCode = "invalid_signup_code"
-	ErrorResponseErrorCodeInvalidSignupToken            ErrorResponseErrorCode = "invalid_signup_token"
-	ErrorResponseErrorCodeInvalidVerificationCode       ErrorResponseErrorCode = "invalid_verification_code"
-	ErrorResponseErrorCodeEmailDeliveryFailed           ErrorResponseErrorCode = "email_delivery_failed"
-	ErrorResponseErrorCodeClerkSignupFailed             ErrorResponseErrorCode = "clerk_signup_failed"
-	ErrorResponseErrorCodeNoOrgsForUser                 ErrorResponseErrorCode = "no_orgs_for_user"
-	ErrorResponseErrorCodeOrgNotAccessible              ErrorResponseErrorCode = "org_not_accessible"
-	ErrorResponseErrorCodeFeatureDisabled               ErrorResponseErrorCode = "feature_disabled"
-	ErrorResponseErrorCodeMemoryConflict                ErrorResponseErrorCode = "memory_conflict"
-	ErrorResponseErrorCodeTemplateNotInstallable        ErrorResponseErrorCode = "template_not_installable"
-	ErrorResponseErrorCodeScaffoldOnly                  ErrorResponseErrorCode = "scaffold_only"
-	ErrorResponseErrorCodeInvalidVariables              ErrorResponseErrorCode = "invalid_variables"
-	ErrorResponseErrorCodeUnknownSecrets                ErrorResponseErrorCode = "unknown_secrets"
-	ErrorResponseErrorCodeMissingSecrets                ErrorResponseErrorCode = "missing_secrets"
-	ErrorResponseErrorCodeNoInboundDomain               ErrorResponseErrorCode = "no_inbound_domain"
-	ErrorResponseErrorCodeDomainCannotSend              ErrorResponseErrorCode = "domain_cannot_send"
-	ErrorResponseErrorCodeAddressTaken                  ErrorResponseErrorCode = "address_taken"
-	ErrorResponseErrorCodeRouteCapReached               ErrorResponseErrorCode = "route_cap_reached"
-	ErrorResponseErrorCodeNameExhausted                 ErrorResponseErrorCode = "name_exhausted"
-	ErrorResponseErrorCodeDeveloperUsageCreditExhausted ErrorResponseErrorCode = "developer_usage_credit_exhausted"
-	ErrorResponseErrorCodeNoPayoutAddress               ErrorResponseErrorCode = "no_payout_address"
-	ErrorResponseErrorCodeOwnershipProofFailed          ErrorResponseErrorCode = "ownership_proof_failed"
-	ErrorResponseErrorCodePaymentVerificationFailed     ErrorResponseErrorCode = "payment_verification_failed"
-	ErrorResponseErrorCodePaymentDeclined               ErrorResponseErrorCode = "payment_declined"
-	ErrorResponseErrorCodeChallengeExpired              ErrorResponseErrorCode = "challenge_expired"
-	ErrorResponseErrorCodeSettlementFailed              ErrorResponseErrorCode = "settlement_failed"
-	ErrorResponseErrorCodePullUnavailable               ErrorResponseErrorCode = "pull_unavailable"
-	ErrorResponseErrorCodeSubscriptionConflict          ErrorResponseErrorCode = "subscription_conflict"
-	ErrorResponseErrorCodeSubscriptionLimit             ErrorResponseErrorCode = "subscription_limit"
-	ErrorResponseErrorCodeSubscriptionDisabled          ErrorResponseErrorCode = "subscription_disabled"
-	ErrorResponseErrorCodeRequestAborted                ErrorResponseErrorCode = "request_aborted"
-	ErrorResponseErrorCodeEventContentUnavailable       ErrorResponseErrorCode = "event_content_unavailable"
-	ErrorResponseErrorCodeEventPreparationFailed        ErrorResponseErrorCode = "event_preparation_failed"
-	ErrorResponseErrorCodeSubscriptionUnavailable       ErrorResponseErrorCode = "subscription_unavailable"
-	ErrorResponseErrorCodeStaleDelivery                 ErrorResponseErrorCode = "stale_delivery"
-	ErrorResponseErrorCodeIdempotencyKeyRequired        ErrorResponseErrorCode = "idempotency_key_required"
-	ErrorResponseErrorCodeIdempotencyKeyReused          ErrorResponseErrorCode = "idempotency_key_reused"
-	ErrorResponseErrorCodeCreditCodeInvalid             ErrorResponseErrorCode = "credit_code_invalid"
-	ErrorResponseErrorCodeCreditCodeAlreadyRedeemed     ErrorResponseErrorCode = "credit_code_already_redeemed"
-	ErrorResponseErrorCodeCreditCodeNotEligible         ErrorResponseErrorCode = "credit_code_not_eligible"
-	ErrorResponseErrorCodeCreditCodeBalanceCap          ErrorResponseErrorCode = "credit_code_balance_cap"
-	ErrorResponseErrorCodeRateLimited                   ErrorResponseErrorCode = "rate_limited"
-	ErrorResponseErrorCodeServiceUnavailable            ErrorResponseErrorCode = "service_unavailable"
+	ErrorResponseErrorCodeUnauthorized                    ErrorResponseErrorCode = "unauthorized"
+	ErrorResponseErrorCodeForbidden                       ErrorResponseErrorCode = "forbidden"
+	ErrorResponseErrorCodeNotFound                        ErrorResponseErrorCode = "not_found"
+	ErrorResponseErrorCodeValidationError                 ErrorResponseErrorCode = "validation_error"
+	ErrorResponseErrorCodeRateLimitExceeded               ErrorResponseErrorCode = "rate_limit_exceeded"
+	ErrorResponseErrorCodeInternalError                   ErrorResponseErrorCode = "internal_error"
+	ErrorResponseErrorCodeConflict                        ErrorResponseErrorCode = "conflict"
+	ErrorResponseErrorCodeMxConflict                      ErrorResponseErrorCode = "mx_conflict"
+	ErrorResponseErrorCodeNotScheduled                    ErrorResponseErrorCode = "not_scheduled"
+	ErrorResponseErrorCodeSentEmailDeleted                ErrorResponseErrorCode = "sent_email_deleted"
+	ErrorResponseErrorCodeSentEmailNotSettled             ErrorResponseErrorCode = "sent_email_not_settled"
+	ErrorResponseErrorCodeSentEmailChanged                ErrorResponseErrorCode = "sent_email_changed"
+	ErrorResponseErrorCodeSentEmailCleanupFailed          ErrorResponseErrorCode = "sent_email_cleanup_failed"
+	ErrorResponseErrorCodeConnectionNotRevoked            ErrorResponseErrorCode = "connection_not_revoked"
+	ErrorResponseErrorCodeAttachmentChanged               ErrorResponseErrorCode = "attachment_changed"
+	ErrorResponseErrorCodeContentDiscarded                ErrorResponseErrorCode = "content_discarded"
+	ErrorResponseErrorCodeAttachmentLimitExceeded         ErrorResponseErrorCode = "attachment_limit_exceeded"
+	ErrorResponseErrorCodeAttachmentIntegrityFailed       ErrorResponseErrorCode = "attachment_integrity_failed"
+	ErrorResponseErrorCodeAttachmentNotReady              ErrorResponseErrorCode = "attachment_not_ready"
+	ErrorResponseErrorCodeAttachmentStorageUnavailable    ErrorResponseErrorCode = "attachment_storage_unavailable"
+	ErrorResponseErrorCodeOutboundDisabled                ErrorResponseErrorCode = "outbound_disabled"
+	ErrorResponseErrorCodeCannotSendFromDomain            ErrorResponseErrorCode = "cannot_send_from_domain"
+	ErrorResponseErrorCodeRecipientNotAllowed             ErrorResponseErrorCode = "recipient_not_allowed"
+	ErrorResponseErrorCodeOutboundKeyMissing              ErrorResponseErrorCode = "outbound_key_missing"
+	ErrorResponseErrorCodeOutboundUnreachable             ErrorResponseErrorCode = "outbound_unreachable"
+	ErrorResponseErrorCodeOutboundKeyInvalid              ErrorResponseErrorCode = "outbound_key_invalid"
+	ErrorResponseErrorCodeOutboundCapacityExhausted       ErrorResponseErrorCode = "outbound_capacity_exhausted"
+	ErrorResponseErrorCodeOutboundResponseMalformed       ErrorResponseErrorCode = "outbound_response_malformed"
+	ErrorResponseErrorCodeOutboundRelayFailed             ErrorResponseErrorCode = "outbound_relay_failed"
+	ErrorResponseErrorCodeDiscardNotEnabled               ErrorResponseErrorCode = "discard_not_enabled"
+	ErrorResponseErrorCodeInboundNotRepliable             ErrorResponseErrorCode = "inbound_not_repliable"
+	ErrorResponseErrorCodeSearchTimeout                   ErrorResponseErrorCode = "search_timeout"
+	ErrorResponseErrorCodeAuthorizationPending            ErrorResponseErrorCode = "authorization_pending"
+	ErrorResponseErrorCodeSlowDown                        ErrorResponseErrorCode = "slow_down"
+	ErrorResponseErrorCodeAccessDenied                    ErrorResponseErrorCode = "access_denied"
+	ErrorResponseErrorCodeExpiredToken                    ErrorResponseErrorCode = "expired_token"
+	ErrorResponseErrorCodeInvalidDeviceCode               ErrorResponseErrorCode = "invalid_device_code"
+	ErrorResponseErrorCodeInvalidSignupCode               ErrorResponseErrorCode = "invalid_signup_code"
+	ErrorResponseErrorCodeInvalidSignupToken              ErrorResponseErrorCode = "invalid_signup_token"
+	ErrorResponseErrorCodeInvalidVerificationCode         ErrorResponseErrorCode = "invalid_verification_code"
+	ErrorResponseErrorCodeEmailDeliveryFailed             ErrorResponseErrorCode = "email_delivery_failed"
+	ErrorResponseErrorCodeClerkSignupFailed               ErrorResponseErrorCode = "clerk_signup_failed"
+	ErrorResponseErrorCodeNoOrgsForUser                   ErrorResponseErrorCode = "no_orgs_for_user"
+	ErrorResponseErrorCodeOrgNotAccessible                ErrorResponseErrorCode = "org_not_accessible"
+	ErrorResponseErrorCodeFeatureDisabled                 ErrorResponseErrorCode = "feature_disabled"
+	ErrorResponseErrorCodeMemoryConflict                  ErrorResponseErrorCode = "memory_conflict"
+	ErrorResponseErrorCodeTemplateNotInstallable          ErrorResponseErrorCode = "template_not_installable"
+	ErrorResponseErrorCodeScaffoldOnly                    ErrorResponseErrorCode = "scaffold_only"
+	ErrorResponseErrorCodeInvalidVariables                ErrorResponseErrorCode = "invalid_variables"
+	ErrorResponseErrorCodeUnknownSecrets                  ErrorResponseErrorCode = "unknown_secrets"
+	ErrorResponseErrorCodeMissingSecrets                  ErrorResponseErrorCode = "missing_secrets"
+	ErrorResponseErrorCodeNoInboundDomain                 ErrorResponseErrorCode = "no_inbound_domain"
+	ErrorResponseErrorCodeDomainCannotSend                ErrorResponseErrorCode = "domain_cannot_send"
+	ErrorResponseErrorCodeAddressTaken                    ErrorResponseErrorCode = "address_taken"
+	ErrorResponseErrorCodeRouteCapReached                 ErrorResponseErrorCode = "route_cap_reached"
+	ErrorResponseErrorCodeNameExhausted                   ErrorResponseErrorCode = "name_exhausted"
+	ErrorResponseErrorCodeDeveloperUsageCreditExhausted   ErrorResponseErrorCode = "developer_usage_credit_exhausted"
+	ErrorResponseErrorCodeNoPayoutAddress                 ErrorResponseErrorCode = "no_payout_address"
+	ErrorResponseErrorCodeOwnershipProofFailed            ErrorResponseErrorCode = "ownership_proof_failed"
+	ErrorResponseErrorCodePaymentVerificationFailed       ErrorResponseErrorCode = "payment_verification_failed"
+	ErrorResponseErrorCodePaymentDeclined                 ErrorResponseErrorCode = "payment_declined"
+	ErrorResponseErrorCodeChallengeExpired                ErrorResponseErrorCode = "challenge_expired"
+	ErrorResponseErrorCodeSettlementFailed                ErrorResponseErrorCode = "settlement_failed"
+	ErrorResponseErrorCodePullUnavailable                 ErrorResponseErrorCode = "pull_unavailable"
+	ErrorResponseErrorCodeSubscriptionConflict            ErrorResponseErrorCode = "subscription_conflict"
+	ErrorResponseErrorCodeSubscriptionLimit               ErrorResponseErrorCode = "subscription_limit"
+	ErrorResponseErrorCodeSubscriptionDisabled            ErrorResponseErrorCode = "subscription_disabled"
+	ErrorResponseErrorCodeRequestAborted                  ErrorResponseErrorCode = "request_aborted"
+	ErrorResponseErrorCodeEventContentUnavailable         ErrorResponseErrorCode = "event_content_unavailable"
+	ErrorResponseErrorCodeEventPreparationFailed          ErrorResponseErrorCode = "event_preparation_failed"
+	ErrorResponseErrorCodeSubscriptionUnavailable         ErrorResponseErrorCode = "subscription_unavailable"
+	ErrorResponseErrorCodeStaleDelivery                   ErrorResponseErrorCode = "stale_delivery"
+	ErrorResponseErrorCodeIdempotencyKeyRequired          ErrorResponseErrorCode = "idempotency_key_required"
+	ErrorResponseErrorCodeIdempotencyKeyReused            ErrorResponseErrorCode = "idempotency_key_reused"
+	ErrorResponseErrorCodeCreditCodeInvalid               ErrorResponseErrorCode = "credit_code_invalid"
+	ErrorResponseErrorCodeCreditCodeAlreadyRedeemed       ErrorResponseErrorCode = "credit_code_already_redeemed"
+	ErrorResponseErrorCodeCreditCodeNotEligible           ErrorResponseErrorCode = "credit_code_not_eligible"
+	ErrorResponseErrorCodeCreditCodeBalanceCap            ErrorResponseErrorCode = "credit_code_balance_cap"
+	ErrorResponseErrorCodeRateLimited                     ErrorResponseErrorCode = "rate_limited"
+	ErrorResponseErrorCodeServiceUnavailable              ErrorResponseErrorCode = "service_unavailable"
+	ErrorResponseErrorCodeConnectionDomainUnavailable     ErrorResponseErrorCode = "connection_domain_unavailable"
+	ErrorResponseErrorCodeConnectionAddressUnavailable    ErrorResponseErrorCode = "connection_address_unavailable"
+	ErrorResponseErrorCodeConnectionOwnerAddressInvalid   ErrorResponseErrorCode = "connection_owner_address_invalid"
+	ErrorResponseErrorCodeConnectionInvitationUnavailable ErrorResponseErrorCode = "connection_invitation_unavailable"
+	ErrorResponseErrorCodeAgentConnectionScopeForbidden   ErrorResponseErrorCode = "agent_connection_scope_forbidden"
+	ErrorResponseErrorCodeAddressNoteConflict             ErrorResponseErrorCode = "address_note_conflict"
+	ErrorResponseErrorCodeAddressNotControlled            ErrorResponseErrorCode = "address_not_controlled"
+	ErrorResponseErrorCodeContactConflict                 ErrorResponseErrorCode = "contact_conflict"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -10037,6 +10611,14 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeCreditCodeBalanceCap,
 		ErrorResponseErrorCodeRateLimited,
 		ErrorResponseErrorCodeServiceUnavailable,
+		ErrorResponseErrorCodeConnectionDomainUnavailable,
+		ErrorResponseErrorCodeConnectionAddressUnavailable,
+		ErrorResponseErrorCodeConnectionOwnerAddressInvalid,
+		ErrorResponseErrorCodeConnectionInvitationUnavailable,
+		ErrorResponseErrorCodeAgentConnectionScopeForbidden,
+		ErrorResponseErrorCodeAddressNoteConflict,
+		ErrorResponseErrorCodeAddressNotControlled,
+		ErrorResponseErrorCodeContactConflict,
 	}
 }
 
@@ -10202,6 +10784,22 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeRateLimited:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeServiceUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeConnectionDomainUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeConnectionAddressUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeConnectionOwnerAddressInvalid:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeConnectionInvitationUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAgentConnectionScopeForbidden:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAddressNoteConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAddressNotControlled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeContactConflict:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -10451,6 +11049,30 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeServiceUnavailable:
 		*s = ErrorResponseErrorCodeServiceUnavailable
 		return nil
+	case ErrorResponseErrorCodeConnectionDomainUnavailable:
+		*s = ErrorResponseErrorCodeConnectionDomainUnavailable
+		return nil
+	case ErrorResponseErrorCodeConnectionAddressUnavailable:
+		*s = ErrorResponseErrorCodeConnectionAddressUnavailable
+		return nil
+	case ErrorResponseErrorCodeConnectionOwnerAddressInvalid:
+		*s = ErrorResponseErrorCodeConnectionOwnerAddressInvalid
+		return nil
+	case ErrorResponseErrorCodeConnectionInvitationUnavailable:
+		*s = ErrorResponseErrorCodeConnectionInvitationUnavailable
+		return nil
+	case ErrorResponseErrorCodeAgentConnectionScopeForbidden:
+		*s = ErrorResponseErrorCodeAgentConnectionScopeForbidden
+		return nil
+	case ErrorResponseErrorCodeAddressNoteConflict:
+		*s = ErrorResponseErrorCodeAddressNoteConflict
+		return nil
+	case ErrorResponseErrorCodeAddressNotControlled:
+		*s = ErrorResponseErrorCodeAddressNotControlled
+		return nil
+	case ErrorResponseErrorCodeContactConflict:
+		*s = ErrorResponseErrorCodeContactConflict
+		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
@@ -10598,9 +11220,17 @@ func (s *ErrorResponseHeaders) SetResponse(val ErrorResponse) {
 	s.Response = val
 }
 
+func (*ErrorResponseHeaders) claimAgentConnectionRes()          {}
+func (*ErrorResponseHeaders) deleteAgentContactRes()            {}
+func (*ErrorResponseHeaders) deleteContactRes()                 {}
 func (*ErrorResponseHeaders) downloadEmailAttachmentPartRes()   {}
 func (*ErrorResponseHeaders) downloadSentAttachmentPartRes()    {}
+func (*ErrorResponseHeaders) getContactRes()                    {}
+func (*ErrorResponseHeaders) listAgentContactsRes()             {}
+func (*ErrorResponseHeaders) listContactsRes()                  {}
 func (*ErrorResponseHeaders) pollCliLoginRes()                  {}
+func (*ErrorResponseHeaders) putAgentContactRes()               {}
+func (*ErrorResponseHeaders) putContactRes()                    {}
 func (*ErrorResponseHeaders) redeemCreditCodeRes()              {}
 func (*ErrorResponseHeaders) resendAgentSignupVerificationRes() {}
 func (*ErrorResponseHeaders) resendCliSignupVerificationRes()   {}
@@ -13040,6 +13670,184 @@ type GetChallengeUnauthorized ErrorResponse
 
 func (*GetChallengeUnauthorized) getChallengeRes() {}
 
+type GetContactBadRequest ErrorResponse
+
+func (*GetContactBadRequest) getContactRes() {}
+
+type GetContactConflict ErrorResponse
+
+func (*GetContactConflict) getContactRes() {}
+
+type GetContactForbidden ErrorResponse
+
+func (*GetContactForbidden) getContactRes() {}
+
+type GetContactNotFound ErrorResponse
+
+func (*GetContactNotFound) getContactRes() {}
+
+// Merged schema.
+type GetContactOK struct {
+	Success bool             `json:"success"`
+	Data    GetContactOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetContactOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetContactOK) GetData() GetContactOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetContactOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetContactOK) SetData(val GetContactOKData) {
+	s.Data = val
+}
+
+type GetContactOKData struct {
+	// Bare email address; trim and lowercase, preserving dots and plus tags.
+	Address     string    `json:"address"`
+	DisplayName NilString `json:"display_name"`
+	// Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+	Version   uuid.UUID `json:"version"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// GetAddress returns the value of Address.
+func (s *GetContactOKData) GetAddress() string {
+	return s.Address
+}
+
+// GetDisplayName returns the value of DisplayName.
+func (s *GetContactOKData) GetDisplayName() NilString {
+	return s.DisplayName
+}
+
+// GetVersion returns the value of Version.
+func (s *GetContactOKData) GetVersion() uuid.UUID {
+	return s.Version
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *GetContactOKData) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *GetContactOKData) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetAddress sets the value of Address.
+func (s *GetContactOKData) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetDisplayName sets the value of DisplayName.
+func (s *GetContactOKData) SetDisplayName(val NilString) {
+	s.DisplayName = val
+}
+
+// SetVersion sets the value of Version.
+func (s *GetContactOKData) SetVersion(val uuid.UUID) {
+	s.Version = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *GetContactOKData) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *GetContactOKData) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// GetContactOKHeaders wraps GetContactOK with response headers.
+type GetContactOKHeaders struct {
+	CacheControl       OptString
+	RatelimitLimit     OptInt
+	RatelimitPolicy    OptString
+	RatelimitRemaining OptInt
+	RatelimitReset     OptInt
+	Response           GetContactOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *GetContactOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetRatelimitLimit returns the value of RatelimitLimit.
+func (s *GetContactOKHeaders) GetRatelimitLimit() OptInt {
+	return s.RatelimitLimit
+}
+
+// GetRatelimitPolicy returns the value of RatelimitPolicy.
+func (s *GetContactOKHeaders) GetRatelimitPolicy() OptString {
+	return s.RatelimitPolicy
+}
+
+// GetRatelimitRemaining returns the value of RatelimitRemaining.
+func (s *GetContactOKHeaders) GetRatelimitRemaining() OptInt {
+	return s.RatelimitRemaining
+}
+
+// GetRatelimitReset returns the value of RatelimitReset.
+func (s *GetContactOKHeaders) GetRatelimitReset() OptInt {
+	return s.RatelimitReset
+}
+
+// GetResponse returns the value of Response.
+func (s *GetContactOKHeaders) GetResponse() GetContactOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *GetContactOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetRatelimitLimit sets the value of RatelimitLimit.
+func (s *GetContactOKHeaders) SetRatelimitLimit(val OptInt) {
+	s.RatelimitLimit = val
+}
+
+// SetRatelimitPolicy sets the value of RatelimitPolicy.
+func (s *GetContactOKHeaders) SetRatelimitPolicy(val OptString) {
+	s.RatelimitPolicy = val
+}
+
+// SetRatelimitRemaining sets the value of RatelimitRemaining.
+func (s *GetContactOKHeaders) SetRatelimitRemaining(val OptInt) {
+	s.RatelimitRemaining = val
+}
+
+// SetRatelimitReset sets the value of RatelimitReset.
+func (s *GetContactOKHeaders) SetRatelimitReset(val OptInt) {
+	s.RatelimitReset = val
+}
+
+// SetResponse sets the value of Response.
+func (s *GetContactOKHeaders) SetResponse(val GetContactOK) {
+	s.Response = val
+}
+
+func (*GetContactOKHeaders) getContactRes() {}
+
+type GetContactUnauthorized ErrorResponse
+
+func (*GetContactUnauthorized) getContactRes() {}
+
 type GetConversationBadRequest ErrorResponse
 
 func (*GetConversationBadRequest) getConversationRes() {}
@@ -14487,6 +15295,479 @@ func (*InstallTemplateUnauthorized) installTemplateRes() {}
 type InstallTemplateUnprocessableEntity ErrorResponse
 
 func (*InstallTemplateUnprocessableEntity) installTemplateRes() {}
+
+type ListAgentContactsBadRequest ErrorResponse
+
+func (*ListAgentContactsBadRequest) listAgentContactsRes() {}
+
+type ListAgentContactsConflict ErrorResponse
+
+func (*ListAgentContactsConflict) listAgentContactsRes() {}
+
+type ListAgentContactsForbidden ErrorResponse
+
+func (*ListAgentContactsForbidden) listAgentContactsRes() {}
+
+type ListAgentContactsNotFound ErrorResponse
+
+func (*ListAgentContactsNotFound) listAgentContactsRes() {}
+
+// Merged schema.
+type ListAgentContactsOK struct {
+	Success bool                          `json:"success"`
+	Data    []ListAgentContactsOKDataItem `json:"data"`
+	Meta    ListAgentContactsOKMeta       `json:"meta"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListAgentContactsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListAgentContactsOK) GetData() []ListAgentContactsOKDataItem {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListAgentContactsOK) GetMeta() ListAgentContactsOKMeta {
+	return s.Meta
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListAgentContactsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListAgentContactsOK) SetData(val []ListAgentContactsOKDataItem) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListAgentContactsOK) SetMeta(val ListAgentContactsOKMeta) {
+	s.Meta = val
+}
+
+type ListAgentContactsOKDataItem struct {
+	// Bare email address; trim and lowercase, preserving dots and plus tags.
+	AgentAddress string `json:"agent_address"`
+	// Bare email address; trim and lowercase, preserving dots and plus tags.
+	ContactAddress         string      `json:"contact_address"`
+	Purpose                NilString   `json:"purpose"`
+	Notify                 bool        `json:"notify"`
+	NotifySince            NilDateTime `json:"notify_since"`
+	NotificationGeneration NilUUID     `json:"notification_generation"`
+	// Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+	Version   uuid.UUID `json:"version"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// GetAgentAddress returns the value of AgentAddress.
+func (s *ListAgentContactsOKDataItem) GetAgentAddress() string {
+	return s.AgentAddress
+}
+
+// GetContactAddress returns the value of ContactAddress.
+func (s *ListAgentContactsOKDataItem) GetContactAddress() string {
+	return s.ContactAddress
+}
+
+// GetPurpose returns the value of Purpose.
+func (s *ListAgentContactsOKDataItem) GetPurpose() NilString {
+	return s.Purpose
+}
+
+// GetNotify returns the value of Notify.
+func (s *ListAgentContactsOKDataItem) GetNotify() bool {
+	return s.Notify
+}
+
+// GetNotifySince returns the value of NotifySince.
+func (s *ListAgentContactsOKDataItem) GetNotifySince() NilDateTime {
+	return s.NotifySince
+}
+
+// GetNotificationGeneration returns the value of NotificationGeneration.
+func (s *ListAgentContactsOKDataItem) GetNotificationGeneration() NilUUID {
+	return s.NotificationGeneration
+}
+
+// GetVersion returns the value of Version.
+func (s *ListAgentContactsOKDataItem) GetVersion() uuid.UUID {
+	return s.Version
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *ListAgentContactsOKDataItem) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *ListAgentContactsOKDataItem) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetAgentAddress sets the value of AgentAddress.
+func (s *ListAgentContactsOKDataItem) SetAgentAddress(val string) {
+	s.AgentAddress = val
+}
+
+// SetContactAddress sets the value of ContactAddress.
+func (s *ListAgentContactsOKDataItem) SetContactAddress(val string) {
+	s.ContactAddress = val
+}
+
+// SetPurpose sets the value of Purpose.
+func (s *ListAgentContactsOKDataItem) SetPurpose(val NilString) {
+	s.Purpose = val
+}
+
+// SetNotify sets the value of Notify.
+func (s *ListAgentContactsOKDataItem) SetNotify(val bool) {
+	s.Notify = val
+}
+
+// SetNotifySince sets the value of NotifySince.
+func (s *ListAgentContactsOKDataItem) SetNotifySince(val NilDateTime) {
+	s.NotifySince = val
+}
+
+// SetNotificationGeneration sets the value of NotificationGeneration.
+func (s *ListAgentContactsOKDataItem) SetNotificationGeneration(val NilUUID) {
+	s.NotificationGeneration = val
+}
+
+// SetVersion sets the value of Version.
+func (s *ListAgentContactsOKDataItem) SetVersion(val uuid.UUID) {
+	s.Version = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *ListAgentContactsOKDataItem) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *ListAgentContactsOKDataItem) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// ListAgentContactsOKHeaders wraps ListAgentContactsOK with response headers.
+type ListAgentContactsOKHeaders struct {
+	CacheControl       OptString
+	RatelimitLimit     OptInt
+	RatelimitPolicy    OptString
+	RatelimitRemaining OptInt
+	RatelimitReset     OptInt
+	Response           ListAgentContactsOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *ListAgentContactsOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetRatelimitLimit returns the value of RatelimitLimit.
+func (s *ListAgentContactsOKHeaders) GetRatelimitLimit() OptInt {
+	return s.RatelimitLimit
+}
+
+// GetRatelimitPolicy returns the value of RatelimitPolicy.
+func (s *ListAgentContactsOKHeaders) GetRatelimitPolicy() OptString {
+	return s.RatelimitPolicy
+}
+
+// GetRatelimitRemaining returns the value of RatelimitRemaining.
+func (s *ListAgentContactsOKHeaders) GetRatelimitRemaining() OptInt {
+	return s.RatelimitRemaining
+}
+
+// GetRatelimitReset returns the value of RatelimitReset.
+func (s *ListAgentContactsOKHeaders) GetRatelimitReset() OptInt {
+	return s.RatelimitReset
+}
+
+// GetResponse returns the value of Response.
+func (s *ListAgentContactsOKHeaders) GetResponse() ListAgentContactsOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *ListAgentContactsOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetRatelimitLimit sets the value of RatelimitLimit.
+func (s *ListAgentContactsOKHeaders) SetRatelimitLimit(val OptInt) {
+	s.RatelimitLimit = val
+}
+
+// SetRatelimitPolicy sets the value of RatelimitPolicy.
+func (s *ListAgentContactsOKHeaders) SetRatelimitPolicy(val OptString) {
+	s.RatelimitPolicy = val
+}
+
+// SetRatelimitRemaining sets the value of RatelimitRemaining.
+func (s *ListAgentContactsOKHeaders) SetRatelimitRemaining(val OptInt) {
+	s.RatelimitRemaining = val
+}
+
+// SetRatelimitReset sets the value of RatelimitReset.
+func (s *ListAgentContactsOKHeaders) SetRatelimitReset(val OptInt) {
+	s.RatelimitReset = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ListAgentContactsOKHeaders) SetResponse(val ListAgentContactsOK) {
+	s.Response = val
+}
+
+func (*ListAgentContactsOKHeaders) listAgentContactsRes() {}
+
+type ListAgentContactsOKMeta struct {
+	Limit  OptInt    `json:"limit"`
+	Cursor NilString `json:"cursor"`
+}
+
+// GetLimit returns the value of Limit.
+func (s *ListAgentContactsOKMeta) GetLimit() OptInt {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *ListAgentContactsOKMeta) GetCursor() NilString {
+	return s.Cursor
+}
+
+// SetLimit sets the value of Limit.
+func (s *ListAgentContactsOKMeta) SetLimit(val OptInt) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *ListAgentContactsOKMeta) SetCursor(val NilString) {
+	s.Cursor = val
+}
+
+type ListAgentContactsUnauthorized ErrorResponse
+
+func (*ListAgentContactsUnauthorized) listAgentContactsRes() {}
+
+type ListContactsBadRequest ErrorResponse
+
+func (*ListContactsBadRequest) listContactsRes() {}
+
+type ListContactsConflict ErrorResponse
+
+func (*ListContactsConflict) listContactsRes() {}
+
+type ListContactsForbidden ErrorResponse
+
+func (*ListContactsForbidden) listContactsRes() {}
+
+type ListContactsNotFound ErrorResponse
+
+func (*ListContactsNotFound) listContactsRes() {}
+
+// Merged schema.
+type ListContactsOK struct {
+	Success bool                     `json:"success"`
+	Data    []ListContactsOKDataItem `json:"data"`
+	Meta    ListContactsOKMeta       `json:"meta"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListContactsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListContactsOK) GetData() []ListContactsOKDataItem {
+	return s.Data
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListContactsOK) GetMeta() ListContactsOKMeta {
+	return s.Meta
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListContactsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListContactsOK) SetData(val []ListContactsOKDataItem) {
+	s.Data = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListContactsOK) SetMeta(val ListContactsOKMeta) {
+	s.Meta = val
+}
+
+type ListContactsOKDataItem struct {
+	// Bare email address; trim and lowercase, preserving dots and plus tags.
+	Address     string    `json:"address"`
+	DisplayName NilString `json:"display_name"`
+	// Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+	Version   uuid.UUID `json:"version"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// GetAddress returns the value of Address.
+func (s *ListContactsOKDataItem) GetAddress() string {
+	return s.Address
+}
+
+// GetDisplayName returns the value of DisplayName.
+func (s *ListContactsOKDataItem) GetDisplayName() NilString {
+	return s.DisplayName
+}
+
+// GetVersion returns the value of Version.
+func (s *ListContactsOKDataItem) GetVersion() uuid.UUID {
+	return s.Version
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *ListContactsOKDataItem) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *ListContactsOKDataItem) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetAddress sets the value of Address.
+func (s *ListContactsOKDataItem) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetDisplayName sets the value of DisplayName.
+func (s *ListContactsOKDataItem) SetDisplayName(val NilString) {
+	s.DisplayName = val
+}
+
+// SetVersion sets the value of Version.
+func (s *ListContactsOKDataItem) SetVersion(val uuid.UUID) {
+	s.Version = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *ListContactsOKDataItem) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *ListContactsOKDataItem) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// ListContactsOKHeaders wraps ListContactsOK with response headers.
+type ListContactsOKHeaders struct {
+	CacheControl       OptString
+	RatelimitLimit     OptInt
+	RatelimitPolicy    OptString
+	RatelimitRemaining OptInt
+	RatelimitReset     OptInt
+	Response           ListContactsOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *ListContactsOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetRatelimitLimit returns the value of RatelimitLimit.
+func (s *ListContactsOKHeaders) GetRatelimitLimit() OptInt {
+	return s.RatelimitLimit
+}
+
+// GetRatelimitPolicy returns the value of RatelimitPolicy.
+func (s *ListContactsOKHeaders) GetRatelimitPolicy() OptString {
+	return s.RatelimitPolicy
+}
+
+// GetRatelimitRemaining returns the value of RatelimitRemaining.
+func (s *ListContactsOKHeaders) GetRatelimitRemaining() OptInt {
+	return s.RatelimitRemaining
+}
+
+// GetRatelimitReset returns the value of RatelimitReset.
+func (s *ListContactsOKHeaders) GetRatelimitReset() OptInt {
+	return s.RatelimitReset
+}
+
+// GetResponse returns the value of Response.
+func (s *ListContactsOKHeaders) GetResponse() ListContactsOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *ListContactsOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetRatelimitLimit sets the value of RatelimitLimit.
+func (s *ListContactsOKHeaders) SetRatelimitLimit(val OptInt) {
+	s.RatelimitLimit = val
+}
+
+// SetRatelimitPolicy sets the value of RatelimitPolicy.
+func (s *ListContactsOKHeaders) SetRatelimitPolicy(val OptString) {
+	s.RatelimitPolicy = val
+}
+
+// SetRatelimitRemaining sets the value of RatelimitRemaining.
+func (s *ListContactsOKHeaders) SetRatelimitRemaining(val OptInt) {
+	s.RatelimitRemaining = val
+}
+
+// SetRatelimitReset sets the value of RatelimitReset.
+func (s *ListContactsOKHeaders) SetRatelimitReset(val OptInt) {
+	s.RatelimitReset = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ListContactsOKHeaders) SetResponse(val ListContactsOK) {
+	s.Response = val
+}
+
+func (*ListContactsOKHeaders) listContactsRes() {}
+
+type ListContactsOKMeta struct {
+	Limit  OptInt    `json:"limit"`
+	Cursor NilString `json:"cursor"`
+}
+
+// GetLimit returns the value of Limit.
+func (s *ListContactsOKMeta) GetLimit() OptInt {
+	return s.Limit
+}
+
+// GetCursor returns the value of Cursor.
+func (s *ListContactsOKMeta) GetCursor() NilString {
+	return s.Cursor
+}
+
+// SetLimit sets the value of Limit.
+func (s *ListContactsOKMeta) SetLimit(val OptInt) {
+	s.Limit = val
+}
+
+// SetCursor sets the value of Cursor.
+func (s *ListContactsOKMeta) SetCursor(val NilString) {
+	s.Cursor = val
+}
+
+type ListContactsUnauthorized ErrorResponse
+
+func (*ListContactsUnauthorized) listContactsRes() {}
 
 type ListDeclinedPaymentsForbidden ErrorResponse
 
@@ -22256,6 +23537,663 @@ func (PullWebhookResponseSuccess) AllValues() []PullWebhookResponseSuccess {
 		PullWebhookResponseSuccessTrue,
 	}
 }
+
+type PutAgentContactBadRequest ErrorResponse
+
+func (*PutAgentContactBadRequest) putAgentContactRes() {}
+
+type PutAgentContactConflict ErrorResponse
+
+func (*PutAgentContactConflict) putAgentContactRes() {}
+
+type PutAgentContactForbidden ErrorResponse
+
+func (*PutAgentContactForbidden) putAgentContactRes() {}
+
+type PutAgentContactNotFound ErrorResponse
+
+func (*PutAgentContactNotFound) putAgentContactRes() {}
+
+// Merged schema.
+type PutAgentContactOK struct {
+	Success bool                  `json:"success"`
+	Data    PutAgentContactOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *PutAgentContactOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *PutAgentContactOK) GetData() PutAgentContactOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *PutAgentContactOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *PutAgentContactOK) SetData(val PutAgentContactOKData) {
+	s.Data = val
+}
+
+type PutAgentContactOKData struct {
+	// Bare email address; trim and lowercase, preserving dots and plus tags.
+	AgentAddress string `json:"agent_address"`
+	// Bare email address; trim and lowercase, preserving dots and plus tags.
+	ContactAddress         string      `json:"contact_address"`
+	Purpose                NilString   `json:"purpose"`
+	Notify                 bool        `json:"notify"`
+	NotifySince            NilDateTime `json:"notify_since"`
+	NotificationGeneration NilUUID     `json:"notification_generation"`
+	// Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+	Version   uuid.UUID `json:"version"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// GetAgentAddress returns the value of AgentAddress.
+func (s *PutAgentContactOKData) GetAgentAddress() string {
+	return s.AgentAddress
+}
+
+// GetContactAddress returns the value of ContactAddress.
+func (s *PutAgentContactOKData) GetContactAddress() string {
+	return s.ContactAddress
+}
+
+// GetPurpose returns the value of Purpose.
+func (s *PutAgentContactOKData) GetPurpose() NilString {
+	return s.Purpose
+}
+
+// GetNotify returns the value of Notify.
+func (s *PutAgentContactOKData) GetNotify() bool {
+	return s.Notify
+}
+
+// GetNotifySince returns the value of NotifySince.
+func (s *PutAgentContactOKData) GetNotifySince() NilDateTime {
+	return s.NotifySince
+}
+
+// GetNotificationGeneration returns the value of NotificationGeneration.
+func (s *PutAgentContactOKData) GetNotificationGeneration() NilUUID {
+	return s.NotificationGeneration
+}
+
+// GetVersion returns the value of Version.
+func (s *PutAgentContactOKData) GetVersion() uuid.UUID {
+	return s.Version
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *PutAgentContactOKData) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *PutAgentContactOKData) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetAgentAddress sets the value of AgentAddress.
+func (s *PutAgentContactOKData) SetAgentAddress(val string) {
+	s.AgentAddress = val
+}
+
+// SetContactAddress sets the value of ContactAddress.
+func (s *PutAgentContactOKData) SetContactAddress(val string) {
+	s.ContactAddress = val
+}
+
+// SetPurpose sets the value of Purpose.
+func (s *PutAgentContactOKData) SetPurpose(val NilString) {
+	s.Purpose = val
+}
+
+// SetNotify sets the value of Notify.
+func (s *PutAgentContactOKData) SetNotify(val bool) {
+	s.Notify = val
+}
+
+// SetNotifySince sets the value of NotifySince.
+func (s *PutAgentContactOKData) SetNotifySince(val NilDateTime) {
+	s.NotifySince = val
+}
+
+// SetNotificationGeneration sets the value of NotificationGeneration.
+func (s *PutAgentContactOKData) SetNotificationGeneration(val NilUUID) {
+	s.NotificationGeneration = val
+}
+
+// SetVersion sets the value of Version.
+func (s *PutAgentContactOKData) SetVersion(val uuid.UUID) {
+	s.Version = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *PutAgentContactOKData) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *PutAgentContactOKData) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// PutAgentContactOKHeaders wraps PutAgentContactOK with response headers.
+type PutAgentContactOKHeaders struct {
+	CacheControl       OptString
+	RatelimitLimit     OptInt
+	RatelimitPolicy    OptString
+	RatelimitRemaining OptInt
+	RatelimitReset     OptInt
+	Response           PutAgentContactOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *PutAgentContactOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetRatelimitLimit returns the value of RatelimitLimit.
+func (s *PutAgentContactOKHeaders) GetRatelimitLimit() OptInt {
+	return s.RatelimitLimit
+}
+
+// GetRatelimitPolicy returns the value of RatelimitPolicy.
+func (s *PutAgentContactOKHeaders) GetRatelimitPolicy() OptString {
+	return s.RatelimitPolicy
+}
+
+// GetRatelimitRemaining returns the value of RatelimitRemaining.
+func (s *PutAgentContactOKHeaders) GetRatelimitRemaining() OptInt {
+	return s.RatelimitRemaining
+}
+
+// GetRatelimitReset returns the value of RatelimitReset.
+func (s *PutAgentContactOKHeaders) GetRatelimitReset() OptInt {
+	return s.RatelimitReset
+}
+
+// GetResponse returns the value of Response.
+func (s *PutAgentContactOKHeaders) GetResponse() PutAgentContactOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *PutAgentContactOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetRatelimitLimit sets the value of RatelimitLimit.
+func (s *PutAgentContactOKHeaders) SetRatelimitLimit(val OptInt) {
+	s.RatelimitLimit = val
+}
+
+// SetRatelimitPolicy sets the value of RatelimitPolicy.
+func (s *PutAgentContactOKHeaders) SetRatelimitPolicy(val OptString) {
+	s.RatelimitPolicy = val
+}
+
+// SetRatelimitRemaining sets the value of RatelimitRemaining.
+func (s *PutAgentContactOKHeaders) SetRatelimitRemaining(val OptInt) {
+	s.RatelimitRemaining = val
+}
+
+// SetRatelimitReset sets the value of RatelimitReset.
+func (s *PutAgentContactOKHeaders) SetRatelimitReset(val OptInt) {
+	s.RatelimitReset = val
+}
+
+// SetResponse sets the value of Response.
+func (s *PutAgentContactOKHeaders) SetResponse(val PutAgentContactOK) {
+	s.Response = val
+}
+
+func (*PutAgentContactOKHeaders) putAgentContactRes() {}
+
+// PutAgentContactReq represents sum type.
+type PutAgentContactReq struct {
+	Type                PutAgentContactReqType // switch on this field
+	PutAgentContactReq0 PutAgentContactReq0
+	PutAgentContactReq1 PutAgentContactReq1
+}
+
+// PutAgentContactReqType is oneOf type of PutAgentContactReq.
+type PutAgentContactReqType string
+
+// Possible values for PutAgentContactReqType.
+const (
+	PutAgentContactReq0PutAgentContactReq PutAgentContactReqType = "PutAgentContactReq0"
+	PutAgentContactReq1PutAgentContactReq PutAgentContactReqType = "PutAgentContactReq1"
+)
+
+// IsPutAgentContactReq0 reports whether PutAgentContactReq is PutAgentContactReq0.
+func (s PutAgentContactReq) IsPutAgentContactReq0() bool {
+	return s.Type == PutAgentContactReq0PutAgentContactReq
+}
+
+// IsPutAgentContactReq1 reports whether PutAgentContactReq is PutAgentContactReq1.
+func (s PutAgentContactReq) IsPutAgentContactReq1() bool {
+	return s.Type == PutAgentContactReq1PutAgentContactReq
+}
+
+// SetPutAgentContactReq0 sets PutAgentContactReq to PutAgentContactReq0.
+func (s *PutAgentContactReq) SetPutAgentContactReq0(v PutAgentContactReq0) {
+	s.Type = PutAgentContactReq0PutAgentContactReq
+	s.PutAgentContactReq0 = v
+}
+
+// GetPutAgentContactReq0 returns PutAgentContactReq0 and true boolean if PutAgentContactReq is PutAgentContactReq0.
+func (s PutAgentContactReq) GetPutAgentContactReq0() (v PutAgentContactReq0, ok bool) {
+	if !s.IsPutAgentContactReq0() {
+		return v, false
+	}
+	return s.PutAgentContactReq0, true
+}
+
+// NewPutAgentContactReq0PutAgentContactReq returns new PutAgentContactReq from PutAgentContactReq0.
+func NewPutAgentContactReq0PutAgentContactReq(v PutAgentContactReq0) PutAgentContactReq {
+	var s PutAgentContactReq
+	s.SetPutAgentContactReq0(v)
+	return s
+}
+
+// SetPutAgentContactReq1 sets PutAgentContactReq to PutAgentContactReq1.
+func (s *PutAgentContactReq) SetPutAgentContactReq1(v PutAgentContactReq1) {
+	s.Type = PutAgentContactReq1PutAgentContactReq
+	s.PutAgentContactReq1 = v
+}
+
+// GetPutAgentContactReq1 returns PutAgentContactReq1 and true boolean if PutAgentContactReq is PutAgentContactReq1.
+func (s PutAgentContactReq) GetPutAgentContactReq1() (v PutAgentContactReq1, ok bool) {
+	if !s.IsPutAgentContactReq1() {
+		return v, false
+	}
+	return s.PutAgentContactReq1, true
+}
+
+// NewPutAgentContactReq1PutAgentContactReq returns new PutAgentContactReq from PutAgentContactReq1.
+func NewPutAgentContactReq1PutAgentContactReq(v PutAgentContactReq1) PutAgentContactReq {
+	var s PutAgentContactReq
+	s.SetPutAgentContactReq1(v)
+	return s
+}
+
+type PutAgentContactReq0 struct {
+	Purpose  OptNilString `json:"purpose"`
+	Notify   OptBool      `json:"notify"`
+	IfAbsent bool         `json:"if_absent"`
+}
+
+// GetPurpose returns the value of Purpose.
+func (s *PutAgentContactReq0) GetPurpose() OptNilString {
+	return s.Purpose
+}
+
+// GetNotify returns the value of Notify.
+func (s *PutAgentContactReq0) GetNotify() OptBool {
+	return s.Notify
+}
+
+// GetIfAbsent returns the value of IfAbsent.
+func (s *PutAgentContactReq0) GetIfAbsent() bool {
+	return s.IfAbsent
+}
+
+// SetPurpose sets the value of Purpose.
+func (s *PutAgentContactReq0) SetPurpose(val OptNilString) {
+	s.Purpose = val
+}
+
+// SetNotify sets the value of Notify.
+func (s *PutAgentContactReq0) SetNotify(val OptBool) {
+	s.Notify = val
+}
+
+// SetIfAbsent sets the value of IfAbsent.
+func (s *PutAgentContactReq0) SetIfAbsent(val bool) {
+	s.IfAbsent = val
+}
+
+type PutAgentContactReq1 struct {
+	Purpose OptNilString `json:"purpose"`
+	Notify  OptBool      `json:"notify"`
+	// Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+	IfVersion uuid.UUID `json:"if_version"`
+}
+
+// GetPurpose returns the value of Purpose.
+func (s *PutAgentContactReq1) GetPurpose() OptNilString {
+	return s.Purpose
+}
+
+// GetNotify returns the value of Notify.
+func (s *PutAgentContactReq1) GetNotify() OptBool {
+	return s.Notify
+}
+
+// GetIfVersion returns the value of IfVersion.
+func (s *PutAgentContactReq1) GetIfVersion() uuid.UUID {
+	return s.IfVersion
+}
+
+// SetPurpose sets the value of Purpose.
+func (s *PutAgentContactReq1) SetPurpose(val OptNilString) {
+	s.Purpose = val
+}
+
+// SetNotify sets the value of Notify.
+func (s *PutAgentContactReq1) SetNotify(val OptBool) {
+	s.Notify = val
+}
+
+// SetIfVersion sets the value of IfVersion.
+func (s *PutAgentContactReq1) SetIfVersion(val uuid.UUID) {
+	s.IfVersion = val
+}
+
+type PutAgentContactUnauthorized ErrorResponse
+
+func (*PutAgentContactUnauthorized) putAgentContactRes() {}
+
+type PutContactBadRequest ErrorResponse
+
+func (*PutContactBadRequest) putContactRes() {}
+
+type PutContactConflict ErrorResponse
+
+func (*PutContactConflict) putContactRes() {}
+
+type PutContactForbidden ErrorResponse
+
+func (*PutContactForbidden) putContactRes() {}
+
+type PutContactNotFound ErrorResponse
+
+func (*PutContactNotFound) putContactRes() {}
+
+// Merged schema.
+type PutContactOK struct {
+	Success bool             `json:"success"`
+	Data    PutContactOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *PutContactOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *PutContactOK) GetData() PutContactOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *PutContactOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *PutContactOK) SetData(val PutContactOKData) {
+	s.Data = val
+}
+
+type PutContactOKData struct {
+	// Bare email address; trim and lowercase, preserving dots and plus tags.
+	Address     string    `json:"address"`
+	DisplayName NilString `json:"display_name"`
+	// Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+	Version   uuid.UUID `json:"version"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// GetAddress returns the value of Address.
+func (s *PutContactOKData) GetAddress() string {
+	return s.Address
+}
+
+// GetDisplayName returns the value of DisplayName.
+func (s *PutContactOKData) GetDisplayName() NilString {
+	return s.DisplayName
+}
+
+// GetVersion returns the value of Version.
+func (s *PutContactOKData) GetVersion() uuid.UUID {
+	return s.Version
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *PutContactOKData) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *PutContactOKData) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetAddress sets the value of Address.
+func (s *PutContactOKData) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetDisplayName sets the value of DisplayName.
+func (s *PutContactOKData) SetDisplayName(val NilString) {
+	s.DisplayName = val
+}
+
+// SetVersion sets the value of Version.
+func (s *PutContactOKData) SetVersion(val uuid.UUID) {
+	s.Version = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *PutContactOKData) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *PutContactOKData) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// PutContactOKHeaders wraps PutContactOK with response headers.
+type PutContactOKHeaders struct {
+	CacheControl       OptString
+	RatelimitLimit     OptInt
+	RatelimitPolicy    OptString
+	RatelimitRemaining OptInt
+	RatelimitReset     OptInt
+	Response           PutContactOK
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *PutContactOKHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetRatelimitLimit returns the value of RatelimitLimit.
+func (s *PutContactOKHeaders) GetRatelimitLimit() OptInt {
+	return s.RatelimitLimit
+}
+
+// GetRatelimitPolicy returns the value of RatelimitPolicy.
+func (s *PutContactOKHeaders) GetRatelimitPolicy() OptString {
+	return s.RatelimitPolicy
+}
+
+// GetRatelimitRemaining returns the value of RatelimitRemaining.
+func (s *PutContactOKHeaders) GetRatelimitRemaining() OptInt {
+	return s.RatelimitRemaining
+}
+
+// GetRatelimitReset returns the value of RatelimitReset.
+func (s *PutContactOKHeaders) GetRatelimitReset() OptInt {
+	return s.RatelimitReset
+}
+
+// GetResponse returns the value of Response.
+func (s *PutContactOKHeaders) GetResponse() PutContactOK {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *PutContactOKHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetRatelimitLimit sets the value of RatelimitLimit.
+func (s *PutContactOKHeaders) SetRatelimitLimit(val OptInt) {
+	s.RatelimitLimit = val
+}
+
+// SetRatelimitPolicy sets the value of RatelimitPolicy.
+func (s *PutContactOKHeaders) SetRatelimitPolicy(val OptString) {
+	s.RatelimitPolicy = val
+}
+
+// SetRatelimitRemaining sets the value of RatelimitRemaining.
+func (s *PutContactOKHeaders) SetRatelimitRemaining(val OptInt) {
+	s.RatelimitRemaining = val
+}
+
+// SetRatelimitReset sets the value of RatelimitReset.
+func (s *PutContactOKHeaders) SetRatelimitReset(val OptInt) {
+	s.RatelimitReset = val
+}
+
+// SetResponse sets the value of Response.
+func (s *PutContactOKHeaders) SetResponse(val PutContactOK) {
+	s.Response = val
+}
+
+func (*PutContactOKHeaders) putContactRes() {}
+
+// PutContactReq represents sum type.
+type PutContactReq struct {
+	Type           PutContactReqType // switch on this field
+	PutContactReq0 PutContactReq0
+	PutContactReq1 PutContactReq1
+}
+
+// PutContactReqType is oneOf type of PutContactReq.
+type PutContactReqType string
+
+// Possible values for PutContactReqType.
+const (
+	PutContactReq0PutContactReq PutContactReqType = "PutContactReq0"
+	PutContactReq1PutContactReq PutContactReqType = "PutContactReq1"
+)
+
+// IsPutContactReq0 reports whether PutContactReq is PutContactReq0.
+func (s PutContactReq) IsPutContactReq0() bool { return s.Type == PutContactReq0PutContactReq }
+
+// IsPutContactReq1 reports whether PutContactReq is PutContactReq1.
+func (s PutContactReq) IsPutContactReq1() bool { return s.Type == PutContactReq1PutContactReq }
+
+// SetPutContactReq0 sets PutContactReq to PutContactReq0.
+func (s *PutContactReq) SetPutContactReq0(v PutContactReq0) {
+	s.Type = PutContactReq0PutContactReq
+	s.PutContactReq0 = v
+}
+
+// GetPutContactReq0 returns PutContactReq0 and true boolean if PutContactReq is PutContactReq0.
+func (s PutContactReq) GetPutContactReq0() (v PutContactReq0, ok bool) {
+	if !s.IsPutContactReq0() {
+		return v, false
+	}
+	return s.PutContactReq0, true
+}
+
+// NewPutContactReq0PutContactReq returns new PutContactReq from PutContactReq0.
+func NewPutContactReq0PutContactReq(v PutContactReq0) PutContactReq {
+	var s PutContactReq
+	s.SetPutContactReq0(v)
+	return s
+}
+
+// SetPutContactReq1 sets PutContactReq to PutContactReq1.
+func (s *PutContactReq) SetPutContactReq1(v PutContactReq1) {
+	s.Type = PutContactReq1PutContactReq
+	s.PutContactReq1 = v
+}
+
+// GetPutContactReq1 returns PutContactReq1 and true boolean if PutContactReq is PutContactReq1.
+func (s PutContactReq) GetPutContactReq1() (v PutContactReq1, ok bool) {
+	if !s.IsPutContactReq1() {
+		return v, false
+	}
+	return s.PutContactReq1, true
+}
+
+// NewPutContactReq1PutContactReq returns new PutContactReq from PutContactReq1.
+func NewPutContactReq1PutContactReq(v PutContactReq1) PutContactReq {
+	var s PutContactReq
+	s.SetPutContactReq1(v)
+	return s
+}
+
+type PutContactReq0 struct {
+	DisplayName OptNilString `json:"display_name"`
+	IfAbsent    bool         `json:"if_absent"`
+}
+
+// GetDisplayName returns the value of DisplayName.
+func (s *PutContactReq0) GetDisplayName() OptNilString {
+	return s.DisplayName
+}
+
+// GetIfAbsent returns the value of IfAbsent.
+func (s *PutContactReq0) GetIfAbsent() bool {
+	return s.IfAbsent
+}
+
+// SetDisplayName sets the value of DisplayName.
+func (s *PutContactReq0) SetDisplayName(val OptNilString) {
+	s.DisplayName = val
+}
+
+// SetIfAbsent sets the value of IfAbsent.
+func (s *PutContactReq0) SetIfAbsent(val bool) {
+	s.IfAbsent = val
+}
+
+type PutContactReq1 struct {
+	DisplayName OptNilString `json:"display_name"`
+	// Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation.
+	IfVersion uuid.UUID `json:"if_version"`
+}
+
+// GetDisplayName returns the value of DisplayName.
+func (s *PutContactReq1) GetDisplayName() OptNilString {
+	return s.DisplayName
+}
+
+// GetIfVersion returns the value of IfVersion.
+func (s *PutContactReq1) GetIfVersion() uuid.UUID {
+	return s.IfVersion
+}
+
+// SetDisplayName sets the value of DisplayName.
+func (s *PutContactReq1) SetDisplayName(val OptNilString) {
+	s.DisplayName = val
+}
+
+// SetIfVersion sets the value of IfVersion.
+func (s *PutContactReq1) SetIfVersion(val uuid.UUID) {
+	s.IfVersion = val
+}
+
+type PutContactUnauthorized ErrorResponse
+
+func (*PutContactUnauthorized) putContactRes() {}
 
 // RateLimitedHeaders wraps ErrorResponse with response headers.
 type RateLimitedHeaders struct {
