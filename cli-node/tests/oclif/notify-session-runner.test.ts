@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PrimitiveApiClient } from "@primitivedotdev/api-core";
+import {
+  type EmailDetail,
+  PrimitiveApiClient,
+} from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const { authenticate, prepare, receive } = vi.hoisted(() => ({
@@ -25,6 +28,7 @@ vi.mock("../../src/oclif/shared-mail-receiver.js", async (original) => ({
 
 import { runListen } from "../../src/oclif/listen-runner.js";
 import { ListenStateError } from "../../src/oclif/listen-state.js";
+import type { DetailNotificationAuthorization } from "../../src/oclif/notify-session.js";
 import { sharedMailScope } from "../../src/oclif/shared-mail-receiver.js";
 import {
   openSharedMailStore,
@@ -55,6 +59,7 @@ function setup(
     recipient: "device@example.com",
     to_email: "device@example.com",
     from_header: "sender@example.com",
+    from_email: "sender@example.com",
     status: "completed",
     received_at: receivedAt,
     reply_to_sent_email_id: null,
@@ -74,10 +79,29 @@ function setup(
     clientId: string;
     state: string;
   } | null = null;
-  const handleDetail = vi.fn(async () => {
-    receipt = { emailId, eventId, clientId: randomUUID(), state: "accepted" };
-    return { disposition: "notified" };
-  });
+  const handleDetail = vi.fn(
+    async (
+      _detail: EmailDetail,
+      _eventId: string,
+      signal: AbortSignal,
+      authorization?: DetailNotificationAuthorization,
+    ) => {
+      if (authorization) (await authorization.recheck(signal))();
+      receipt = { emailId, eventId, clientId: randomUUID(), state: "accepted" };
+      return { disposition: "notified" };
+    },
+  );
+  let contactStatus = 200;
+  let contactRows: unknown[] = [
+    {
+      agent_address: detail.recipient,
+      contact_address: detail.from_email,
+      version: randomUUID(),
+      notify: true,
+      notification_generation: randomUUID(),
+      notify_since: new Date(Date.now() - 60_000).toISOString(),
+    },
+  ];
   const close = vi.fn(),
     closeReceiver = vi.fn();
   prepare.mockReset().mockImplementation(async () => {
@@ -94,7 +118,7 @@ function setup(
     apiBaseUrl: baseUrl,
     fetch: async (input, init) => {
       const request = new Request(input, init),
-        path = new URL(request.url).pathname;
+        path = decodeURIComponent(new URL(request.url).pathname);
       order.push(path);
       if (path === "/v1/endpoints") {
         endpointNames.push((await request.json()).name);
@@ -115,6 +139,16 @@ function setup(
       }
       if (path === `/v1/emails/${emailId}`)
         return Response.json({ success: true, data: detail });
+      if (path === `/v1/agent-contacts/${detail.recipient}`)
+        return Response.json(
+          contactStatus === 200
+            ? { success: true, data: contactRows, meta: { cursor: null } }
+            : {
+                success: false,
+                error: { code: "forbidden", message: "Unavailable" },
+              },
+          { status: contactStatus },
+        );
       throw new Error(`Unexpected remote request ${path}`);
     },
   });
@@ -163,6 +197,11 @@ function setup(
     apiKey,
     baseUrl,
     handleDetail,
+    apiClient,
+    contacts: (rows: unknown[], status = 200) => {
+      contactRows = rows;
+      contactStatus = status;
+    },
     close,
     closeReceiver,
     store: () => opened,
@@ -172,6 +211,91 @@ function setup(
   };
 }
 describe("shared notification listener integration", () => {
+  it("loads its own contact preferences and rechecks them at native dispatch", async () => {
+    const f = setup();
+    expect(
+      await runListen({
+        ...f.options,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(
+      f.order.filter((path) => path.startsWith("/v1/agent-contacts/")),
+    ).toEqual([
+      "/v1/agent-contacts/device@example.com",
+      "/v1/agent-contacts/device@example.com",
+    ]);
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      state: "accepted",
+    });
+  });
+  it("leaves unapproved hydrated mail unreserved in contact mode", async () => {
+    const f = setup(["sdk"], ["email.received"], true);
+    f.contacts([]);
+    expect(
+      await runListen({
+        ...f.options,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toBeNull();
+  });
+  it("fails closed on revoked contact access before receiving or dispatching", async () => {
+    const f = setup();
+    f.contacts([], 403);
+    await expect(
+      runListen({
+        ...f.options,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).rejects.toThrow("unavailable or invalid");
+    expect(receive).not.toHaveBeenCalled();
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(f.close).toHaveBeenCalledOnce();
+  });
+  it("rejects a receiving address that differs from the selected connection profile", async () => {
+    const f = setup();
+    authenticate.mockResolvedValue({
+      apiClient: f.apiClient,
+      auth: {
+        apiKey: f.apiKey,
+        apiBaseUrl: f.baseUrl,
+        connectedAgent: {
+          orgId: randomUUID(),
+          agentAddress: "other@example.com",
+          ownerAddress: "owner@example.com",
+          apiBaseUrl: f.baseUrl,
+          profileName: "test-profile",
+        },
+      },
+    });
+    await expect(
+      runListen({
+        ...f.options,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).rejects.toThrow("selected connected-agent profile");
+    expect(receive).not.toHaveBeenCalled();
+    expect(f.handleDetail).not.toHaveBeenCalled();
+  });
   it("rejects competing subscription modes before authentication", async () => {
     const f = setup();
     for (const extra of [

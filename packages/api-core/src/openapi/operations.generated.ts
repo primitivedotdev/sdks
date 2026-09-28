@@ -986,6 +986,167 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "claim-agent-connection",
+    "description": "Address-bound external runtime pairing. Management operations require an organization owner or admin session or OAuth token; members and organization API keys cannot manage connections. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow only address-scoped mail operations, organization note reads and own-address note writes.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "claimAgentConnection",
+    "path": "/agent-connections/claim",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "token"
+      ],
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "const": true,
+          "type": "boolean"
+        },
+        "data": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "connection": {
+              "type": "object",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "owner_address": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "claimed",
+                    "connected",
+                    "revoked"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "claimed_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "verified_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "last_seen_at": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "name",
+                "owner_address",
+                "status",
+                "created_at",
+                "updated_at",
+                "claimed_at",
+                "verified_at",
+                "last_seen_at"
+              ],
+              "additionalProperties": false
+            },
+            "org_id": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "owner_address": {
+              "type": "string",
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            },
+            "api_key": {
+              "type": "string"
+            },
+            "api_base_url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "connection",
+            "org_id",
+            "owner_address",
+            "api_key",
+            "api_base_url"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "sdkName": "claimAgentConnection",
+    "summary": "claim Agent Connection",
+    "tag": "Agent Connections",
+    "tagCommand": "agent-connections"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "remove-agent-connection",
     "description": "Permanently removes a revoked connection record. Requires an organization\nowner or admin session or OAuth token; organization API keys are denied.\nDisconnect first using DELETE /agent-connections/{address}. An active\nconnection returns 409 connection_not_revoked. Missing or already removed\nrecords return 404. Mail, address notes, domains and external runtimes are\npreserved. The same address can be paired again with a new invitation;\nold credentials and invitations remain invalid.\n",
@@ -1509,6 +1670,612 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "summary": "Verify CLI signup and create OAuth session",
     "tag": "CLI",
     "tagCommand": "cli"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-agent-contact",
+    "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteAgentContact",
+    "path": "/agent-contacts/{agent_address}/{contact_address}",
+    "pathParams": [
+      {
+        "description": "agent_address for contacts.",
+        "enum": null,
+        "name": "agent_address",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "contact_address for contacts.",
+        "enum": null,
+        "name": "contact_address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "if_version for contacts.",
+        "enum": null,
+        "name": "if_version",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deleted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deleted"
+      ]
+    },
+    "sdkName": "deleteAgentContact",
+    "summary": "delete Agent Contact",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "delete-contact",
+    "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "deleteContact",
+    "path": "/contacts/{address}",
+    "pathParams": [
+      {
+        "description": "address for contacts.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "if_version for contacts.",
+        "enum": null,
+        "name": "if_version",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deleted": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "deleted"
+      ]
+    },
+    "sdkName": "deleteContact",
+    "summary": "delete Contact",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-contact",
+    "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getContact",
+    "path": "/contacts/{address}",
+    "pathParams": [
+      {
+        "description": "address for contacts.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+        },
+        "display_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "version": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "address",
+        "display_name",
+        "version",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "sdkName": "getContact",
+    "summary": "get Contact",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-agent-contacts",
+    "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listAgentContacts",
+    "path": "/agent-contacts/{agent_address}",
+    "pathParams": [
+      {
+        "description": "agent_address for contacts.",
+        "enum": null,
+        "name": "agent_address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [
+      {
+        "description": "cursor for contacts.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": 50,
+        "description": "limit for contacts.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "agent_address": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+          },
+          "contact_address": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+          },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "notify": {
+            "type": "boolean"
+          },
+          "notify_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "notification_generation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "agent_address",
+          "contact_address",
+          "purpose",
+          "notify",
+          "notify_since",
+          "notification_generation",
+          "version",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    },
+    "sdkName": "listAgentContacts",
+    "summary": "list Agent Contacts",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-contacts",
+    "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listContacts",
+    "path": "/contacts",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "cursor for contacts.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": 50,
+        "description": "limit for contacts.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+          },
+          "display_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          },
+          "version": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "address",
+          "display_name",
+          "version",
+          "created_at",
+          "updated_at"
+        ]
+      }
+    },
+    "sdkName": "listContacts",
+    "summary": "list Contacts",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "put-agent-contact",
+    "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+    "hasJsonBody": true,
+    "method": "PUT",
+    "operationId": "putAgentContact",
+    "path": "/agent-contacts/{agent_address}/{contact_address}",
+    "pathParams": [
+      {
+        "description": "agent_address for contacts.",
+        "enum": null,
+        "name": "agent_address",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "description": "contact_address for contacts.",
+        "enum": null,
+        "name": "contact_address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "purpose": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 2000
+            },
+            "notify": {
+              "type": "boolean"
+            },
+            "if_absent": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "if_absent"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "purpose": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 2000
+            },
+            "notify": {
+              "type": "boolean"
+            },
+            "if_version": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+            }
+          },
+          "required": [
+            "if_version"
+          ]
+        }
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "agent_address": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+        },
+        "contact_address": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+        },
+        "purpose": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "notify": {
+          "type": "boolean"
+        },
+        "notify_since": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "notification_generation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "version": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "agent_address",
+        "contact_address",
+        "purpose",
+        "notify",
+        "notify_since",
+        "notification_generation",
+        "version",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "sdkName": "putAgentContact",
+    "summary": "put Agent Contact",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "put-contact",
+    "description": "Organization directory and agent preferences; no profiles, message history or runtime presence. Existing organization credentials use tenant permissions. Connected keys may read the directory, create address-only missing contacts using if_absent:true, and access only their own agent memberships; they cannot edit shared labels or delete directory entries. Function credentials are not granted access. Memberships require an existing local agent connection (including revoked connections) and an existing contact. PUT requires exactly one precondition. if_absent returns an existing row unchanged when supplied fields agree; otherwise 409. notify defaults false. Off-to-on generates a new server timestamp and generation; on-to-on and purpose-only edits preserve them. Disable clears activation metadata. Deletion atomically removes membership eligibility. Receivers must recheck generation/preferences before dispatch and pause admission when their policy cache is older than 30 seconds; explicit reply waits are independent. DELETE requires if_version, returns deleted:false for an absent row, and rejects stale versions of recreated rows. Pages use ascending canonical address, with meta.cursor null on the last page. Lists are live pages, not snapshots.",
+    "hasJsonBody": true,
+    "method": "PUT",
+    "operationId": "putContact",
+    "path": "/contacts/{address}",
+    "pathParams": [
+      {
+        "description": "address for contacts.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "display_name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 200
+            },
+            "if_absent": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "if_absent"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "display_name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 200
+            },
+            "if_version": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+            }
+          },
+          "required": [
+            "if_version"
+          ]
+        }
+      ]
+    },
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 254,
+          "description": "Bare email address; trim and lowercase, preserving dots and plus tags."
+        },
+        "display_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "version": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opaque CAS token. Changes on mutations and cannot be reused after deletion/recreation."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "address",
+        "display_name",
+        "version",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "sdkName": "putContact",
+    "summary": "put Contact",
+    "tag": "Contacts",
+    "tagCommand": "contacts"
   },
   {
     "binaryResponse": false,

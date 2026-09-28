@@ -1,6 +1,7 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import { resolveCliApiRequestConfig } from "../api-client.js";
 import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
+import { resolveCliAuth } from "../auth.js";
 import { createListenHandler } from "../listen-handlers.js";
 import { ListenError, runListen } from "../listen-runner.js";
 import { ListenStateError } from "../listen-state.js";
@@ -11,13 +12,14 @@ import { notificationReceiptPage } from "../notify-session-state.js";
 export default class ListenCommand extends Command {
   static summary = "Receive webhook events locally without a public endpoint";
   static description =
-    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use --notify-session with an exact loaded session UUID and approved --sender addresses for native session notifications, a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Notifications require an existing native local-session socket; the CLI never launches or resumes a session.";
+    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use --notify-session with an exact loaded session UUID and --contacts for saved contact preferences, or approved --sender addresses, for native session notifications, a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Notifications require an existing native local-session socket; the CLI never launches or resumes a session.";
   static examples = [
     "<%= config.bin %> listen",
     '<%= config.bin %> listen --subscription my-agent --exec "python3 accept.py"',
     "<%= config.bin %> listen --forward-to localhost:3000",
     "<%= config.bin %> listen --once --timeout 60",
     "<%= config.bin %> listen --notify-session 11111111-1111-4111-8111-111111111111 --sender person@example.com",
+    "<%= config.bin %> listen --notify-session 11111111-1111-4111-8111-111111111111 --contacts",
     "<%= config.bin %> listen --status --notify-session 11111111-1111-4111-8111-111111111111",
   ];
   static flags = {
@@ -56,10 +58,17 @@ export default class ListenCommand extends Command {
         "Notify this exact loaded native session UUID using the shared WebSocket subscription and approved senders.",
       exclusive: ["exec", "forward-to"],
     }),
+    contacts: Flags.boolean({
+      description:
+        "Use this agent address's saved contact notification preferences; disabled contacts never notify.",
+      dependsOn: ["notify-session"],
+      exclusive: ["sender", "status"],
+    }),
     sender: Flags.string({
       description:
         "Approved exact sender address for session notifications; repeat or separate with commas.",
       multiple: true,
+      exclusive: ["contacts"],
       dependsOn: ["notify-session"],
     }),
     "session-socket": Flags.string({
@@ -140,12 +149,14 @@ export default class ListenCommand extends Command {
         configDir: this.config.configDir,
         apiBaseUrl: flags["api-base-url"],
       });
+      const auth = resolveCliAuth({
+        configDir: this.config.configDir,
+        apiBaseUrl: requestConfig.apiBaseUrl,
+        apiKey: flags["api-key"],
+      });
       const page = notificationReceiptPage(
         this.config.configDir,
-        notificationScope(
-          requestConfig.resolvedApiBaseUrl,
-          flags["api-key"]?.trim(),
-        ),
+        notificationScope(auth.apiBaseUrl, auth.apiKey),
         flags["notify-session"],
         { limit: flags.limit, cursor: flags.cursor },
       );
@@ -167,9 +178,10 @@ export default class ListenCommand extends Command {
       );
       return;
     }
-    const senders = flags["notify-session"]
-      ? notificationSenders(flags.sender ?? [])
-      : undefined;
+    const senders =
+      flags["notify-session"] && !flags.contacts
+        ? notificationSenders(flags.sender ?? [])
+        : undefined;
     const events = flags.events?.split(",").map((event) => event.trim());
     if (events?.some((event) => !/^[a-zA-Z0-9_.-]+$/.test(event)))
       throw new Errors.CLIError(
@@ -211,6 +223,7 @@ export default class ListenCommand extends Command {
           ? {
               threadId: flags["notify-session"],
               senders: senders ?? [],
+              contactPreferences: flags.contacts,
               socketPath: flags["session-socket"],
             }
           : undefined,

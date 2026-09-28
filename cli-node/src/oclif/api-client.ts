@@ -316,6 +316,7 @@ export async function createAuthenticatedCliApiClient(params: {
     apiKey: params.apiKey,
     apiBaseUrl: requestConfig.apiBaseUrl,
     configDir: params.configDir,
+    env: params.env,
   });
   // PRIMITIVE_KEY rename trap: if the user set PRIMITIVE_KEY (an older
   // / common mistake) but no PRIMITIVE_API_KEY, the resolver returns no
@@ -348,7 +349,9 @@ export async function createAuthenticatedCliApiClient(params: {
     apiClient: new PrimitiveApiClient({
       apiKey: auth.apiKey,
       apiBaseUrl: auth.apiBaseUrl,
-      headers: requestConfig.headers,
+      // A connected profile is bound to its trusted claim origin; ambient
+      // request-header configuration is not part of that private profile.
+      headers: auth.connectedAgent ? undefined : requestConfig.headers,
     }),
     auth,
     baseUrlOverridden: requestConfig.baseUrlOverridden,

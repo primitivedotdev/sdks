@@ -22,6 +22,11 @@ from .await_reply_response_200 import AwaitReplyResponse200
 from .await_reply_result import AwaitReplyResult
 from .cancel_sent_email_response_200 import CancelSentEmailResponse200
 from .check_domain_dns_response_200 import CheckDomainDnsResponse200
+from .claim_agent_connection_body import ClaimAgentConnectionBody
+from .claim_agent_connection_response_200 import ClaimAgentConnectionResponse200
+from .claim_agent_connection_response_200_data import ClaimAgentConnectionResponse200Data
+from .claim_agent_connection_response_200_data_connection import ClaimAgentConnectionResponse200DataConnection
+from .claim_agent_connection_response_200_data_connection_status import ClaimAgentConnectionResponse200DataConnectionStatus
 from .cli_login_poll_result import CliLoginPollResult
 from .cli_login_poll_result_auth_method import CliLoginPollResultAuthMethod
 from .cli_login_poll_result_token_type import CliLoginPollResultTokenType
@@ -106,6 +111,10 @@ from .decide_registry_request_response_200_data_status import DecideRegistryRequ
 from .define_agent_input import DefineAgentInput
 from .define_agent_response_201 import DefineAgentResponse201
 from .define_agent_response_201_data import DefineAgentResponse201Data
+from .delete_agent_contact_response_200 import DeleteAgentContactResponse200
+from .delete_agent_contact_response_200_data import DeleteAgentContactResponse200Data
+from .delete_contact_response_200 import DeleteContactResponse200
+from .delete_contact_response_200_data import DeleteContactResponse200Data
 from .delete_domain_response_200 import DeleteDomainResponse200
 from .delete_domain_response_200_data import DeleteDomainResponse200Data
 from .delete_email_response_200 import DeleteEmailResponse200
@@ -214,6 +223,8 @@ from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
 from .get_agent_response_200 import GetAgentResponse200
 from .get_challenge_response_200 import GetChallengeResponse200
+from .get_contact_response_200 import GetContactResponse200
+from .get_contact_response_200_data import GetContactResponse200Data
 from .get_conversation_response_200 import GetConversationResponse200
 from .get_credit_balance_response_200 import GetCreditBalanceResponse200
 from .get_email_response_200 import GetEmailResponse200
@@ -247,6 +258,12 @@ from .install_template_body import InstallTemplateBody
 from .install_template_body_secrets import InstallTemplateBodySecrets
 from .install_template_body_variables import InstallTemplateBodyVariables
 from .install_template_response_201 import InstallTemplateResponse201
+from .list_agent_contacts_response_200 import ListAgentContactsResponse200
+from .list_agent_contacts_response_200_data_item import ListAgentContactsResponse200DataItem
+from .list_agent_contacts_response_200_meta import ListAgentContactsResponse200Meta
+from .list_contacts_response_200 import ListContactsResponse200
+from .list_contacts_response_200_data_item import ListContactsResponse200DataItem
+from .list_contacts_response_200_meta import ListContactsResponse200Meta
 from .list_declined_payments_response_200 import ListDeclinedPaymentsResponse200
 from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
@@ -310,6 +327,14 @@ from .pull_webhook_response_data_delivery_type_0_headers import PullWebhookRespo
 from .pull_webhook_response_data_handler_timeout_seconds import PullWebhookResponseDataHandlerTimeoutSeconds
 from .pull_webhook_response_data_retention_seconds import PullWebhookResponseDataRetentionSeconds
 from .pull_webhook_response_meta import PullWebhookResponseMeta
+from .put_agent_contact_body_type_0 import PutAgentContactBodyType0
+from .put_agent_contact_body_type_1 import PutAgentContactBodyType1
+from .put_agent_contact_response_200 import PutAgentContactResponse200
+from .put_agent_contact_response_200_data import PutAgentContactResponse200Data
+from .put_contact_body_type_0 import PutContactBodyType0
+from .put_contact_body_type_1 import PutContactBodyType1
+from .put_contact_response_200 import PutContactResponse200
+from .put_contact_response_200_data import PutContactResponse200Data
 from .recipient_route import RecipientRoute
 from .recipient_route_match_type import RecipientRouteMatchType
 from .redeem_credit_code_input import RedeemCreditCodeInput
@@ -538,6 +563,11 @@ __all__ = (
     "AwaitReplyResult",
     "CancelSentEmailResponse200",
     "CheckDomainDnsResponse200",
+    "ClaimAgentConnectionBody",
+    "ClaimAgentConnectionResponse200",
+    "ClaimAgentConnectionResponse200Data",
+    "ClaimAgentConnectionResponse200DataConnection",
+    "ClaimAgentConnectionResponse200DataConnectionStatus",
     "CliLoginPollResult",
     "CliLoginPollResultAuthMethod",
     "CliLoginPollResultTokenType",
@@ -622,6 +652,10 @@ __all__ = (
     "DefineAgentInput",
     "DefineAgentResponse201",
     "DefineAgentResponse201Data",
+    "DeleteAgentContactResponse200",
+    "DeleteAgentContactResponse200Data",
+    "DeleteContactResponse200",
+    "DeleteContactResponse200Data",
     "DeleteDomainResponse200",
     "DeleteDomainResponse200Data",
     "DeleteEmailResponse200",
@@ -730,6 +764,8 @@ __all__ = (
     "GetAccountResponse200",
     "GetAgentResponse200",
     "GetChallengeResponse200",
+    "GetContactResponse200",
+    "GetContactResponse200Data",
     "GetConversationResponse200",
     "GetCreditBalanceResponse200",
     "GetEmailResponse200",
@@ -763,6 +799,12 @@ __all__ = (
     "InstallTemplateBodySecrets",
     "InstallTemplateBodyVariables",
     "InstallTemplateResponse201",
+    "ListAgentContactsResponse200",
+    "ListAgentContactsResponse200DataItem",
+    "ListAgentContactsResponse200Meta",
+    "ListContactsResponse200",
+    "ListContactsResponse200DataItem",
+    "ListContactsResponse200Meta",
     "ListDeclinedPaymentsResponse200",
     "ListDeliveriesResponse200",
     "ListDeliveriesStatus",
@@ -826,6 +868,14 @@ __all__ = (
     "PullWebhookResponseDataHandlerTimeoutSeconds",
     "PullWebhookResponseDataRetentionSeconds",
     "PullWebhookResponseMeta",
+    "PutAgentContactBodyType0",
+    "PutAgentContactBodyType1",
+    "PutAgentContactResponse200",
+    "PutAgentContactResponse200Data",
+    "PutContactBodyType0",
+    "PutContactBodyType1",
+    "PutContactResponse200",
+    "PutContactResponse200Data",
     "RecipientRoute",
     "RecipientRouteMatchType",
     "RedeemCreditCodeInput",

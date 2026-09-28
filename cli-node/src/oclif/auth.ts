@@ -12,6 +12,14 @@ import { join } from "node:path";
 import type { AgentSignupVerifyResult } from "@primitivedotdev/api-core";
 import { DEFAULT_API_BASE_URL } from "@primitivedotdev/api-core";
 import { deleteChatState } from "./chat-state.js";
+import {
+  AGENT_PROFILE_ENV,
+  AgentConnectionSetupError,
+  type ConnectedAgentIdentity,
+  connectedAgentIdentity,
+  loadConnectedAgentProfile,
+  requireDefaultLoginProfile,
+} from "./connected-agent-profile.js";
 
 const CREDENTIALS_FILE = "credentials.json";
 const CREDENTIALS_LOCK_DIR = "credentials.lock";
@@ -43,8 +51,9 @@ export type StoredCliCredentials = {
 export type ResolvedCliAuth = {
   apiKey: string | undefined;
   apiBaseUrl: string;
-  source: "flag-or-env" | "stored" | "none";
+  source: "flag-or-env" | "stored" | "connected-profile" | "none";
   credentials: StoredCliCredentials | null;
+  connectedAgent?: ConnectedAgentIdentity;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -238,6 +247,7 @@ export function saveCliCredentials(
   configDir: string,
   credentials: StoredCliCredentials,
 ): void {
+  requireDefaultLoginProfile();
   mkdirSync(configDir, { mode: 0o700, recursive: true });
   const path = credentialsPath(configDir);
   const tempPath = join(
@@ -258,6 +268,7 @@ export function saveCliCredentials(
 }
 
 export function deleteCliCredentials(configDir: string): void {
+  requireDefaultLoginProfile();
   rmSync(credentialsPath(configDir), { force: true });
   deleteChatState(configDir);
 }
@@ -273,6 +284,7 @@ export function saveSignupCredentials(params: {
   configDir: string;
   signup: AgentSignupVerifyResult;
 }): void {
+  requireDefaultLoginProfile();
   deleteChatState(params.configDir);
   saveCliCredentials(params.configDir, {
     access_token: params.signup.access_token,
@@ -417,6 +429,7 @@ export function acquireCliCredentialsLock(
     staleMs?: number;
   } = {},
 ): () => void {
+  requireDefaultLoginProfile();
   mkdirSync(configDir, { mode: 0o700, recursive: true });
   const lockPath = credentialsLockPath(configDir);
   const installSignalHandlers = options.installSignalHandlers ?? true;
@@ -514,9 +527,34 @@ export function resolveCliAuth(params: {
   configDir: string;
   apiKey?: string;
   apiBaseUrl?: string;
+  env?: Record<string, string | undefined>;
 }): ResolvedCliAuth {
   const apiKey = params.apiKey?.trim();
   const apiBaseUrl = normalizeApiBaseUrl(params.apiBaseUrl);
+  const profileName =
+    (params.env ?? process.env)[AGENT_PROFILE_ENV]?.trim() || undefined;
+  if (profileName !== undefined) {
+    const profile = loadConnectedAgentProfile(params.configDir, profileName);
+    if (!profile)
+      throw new AgentConnectionSetupError(
+        "Selected agent profile is not configured. No fallback login will be used.",
+      );
+    if (
+      (apiKey && apiKey !== profile.api_key) ||
+      (params.apiBaseUrl !== undefined && apiBaseUrl !== profile.api_base_url)
+    ) {
+      throw new AgentConnectionSetupError(
+        "Explicit credentials or API origin conflict with the selected agent profile.",
+      );
+    }
+    return {
+      apiKey: profile.api_key,
+      apiBaseUrl: profile.api_base_url,
+      credentials: null,
+      connectedAgent: connectedAgentIdentity(profileName, profile),
+      source: "connected-profile",
+    };
+  }
 
   if (apiKey) {
     return {
