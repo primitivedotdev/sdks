@@ -34,7 +34,7 @@ export type NotifySessionOptions = {
 export type DetailNotificationAuthorization = {
   sender: string;
   contactRequest?: boolean;
-  reserve?: (receipt: NotificationReceipt) => boolean;
+  reserve?: (receipt: NotificationReceipt) => boolean | "deferred";
   recheck(signal: AbortSignal): Promise<() => void>;
 };
 export function notificationScope(
@@ -248,16 +248,16 @@ export async function openSessionNotifications(
       await native.queue(text, receipt.clientId, () => {
         signal.throwIfAborted();
         authorizeDispatch?.();
-        if (
-          input.authorization?.reserve &&
-          !input.authorization.reserve(receipt)
-        )
-          throw new ContactNoticeSuppressed();
+        const reservation = input.authorization?.reserve?.(receipt);
+        if (reservation === "deferred") throw new ContactNoticeDeferred();
+        if (reservation === false) throw new ContactNoticeSuppressed();
         store.save(receipt);
       });
     } catch (error) {
       if (error instanceof ContactNoticeSuppressed)
         return { disposition: "skipped" as const };
+      if (error instanceof ContactNoticeDeferred)
+        return { disposition: "deferred" as const };
       if (error instanceof NativeSessionError && error.submitted) {
         store.save({ ...receipt, state: "unknown" });
         throw new ListenStateError(
@@ -331,3 +331,5 @@ export async function openSessionNotifications(
 }
 
 class ContactNoticeSuppressed extends Error {}
+
+class ContactNoticeDeferred extends Error {}

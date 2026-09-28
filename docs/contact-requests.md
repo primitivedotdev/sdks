@@ -97,6 +97,13 @@ local receiving identity. Membership decisions free unresolved capacity;
 reservations are not evicted into renewed notification permission. These local
 limits are not a global guarantee across independently configured machines.
 Existing approved contacts continue independently of the first-contact budget.
+A full budget defers an eligible request without submitting a native notice or
+holding its session claim. The listener retries that known email ID after a
+30-second cooldown and rechecks current policy, expiry and capacity. A decided
+membership can free a slot; duplicate or expired requests remain suppressed.
+The 1024 retained-sender ceiling is terminal for new notices, with a separate
+diagnostic. It is not retried as temporary capacity, and existing reservations
+are never evicted to make room.
 
 ## Owner policy through the CLI
 

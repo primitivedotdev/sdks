@@ -787,6 +787,21 @@ export async function openSharedMailStore(options: {
         return { status: "claimed", email: next };
       });
     },
+    releaseNotification(emailId: string, sessionKey: string) {
+      return transaction(() => {
+        const record = requiredEmail(emailId),
+          route = record.route;
+        if (
+          route?.kind !== "notification" ||
+          route.sessionKey !== mailString(sessionKey) ||
+          route.state !== "selected"
+        )
+          throw invalidSharedMail();
+        const next: SharedMailEmail = { ...record, route: null };
+        commit([{ path: pathFor("emails", emailId), value: next }]);
+        return next;
+      });
+    },
     skipNotification(emailId: string, sessionKey: string) {
       return transaction(() => {
         const record = requiredEmail(emailId),

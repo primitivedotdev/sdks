@@ -96,8 +96,9 @@ function setup(
         clientId: randomUUID(),
         state: "submitting" as const,
       };
-      if (authorization?.reserve && !authorization.reserve(next))
-        return { disposition: "skipped" };
+      const reservation = authorization?.reserve?.(next);
+      if (reservation === "deferred") return { disposition: "deferred" };
+      if (reservation === false) return { disposition: "skipped" };
       receipt = { ...next, state: "accepted" };
       return { disposition: "notified" };
     },
@@ -521,13 +522,12 @@ describe("first-contact intake", () => {
   });
   it.each([
     "duplicate",
-    "capacity",
     "expired",
   ])("durably settles a %s request without a native receipt or retry after restart", async (reason) => {
     const f = setup();
     f.requests();
     if (reason !== "expired") {
-      for (let index = 0; index < (reason === "capacity" ? 32 : 1); index++) {
+      for (let index = 0; index < 1; index++) {
         expect(
           f.notices().reserve(
             reason === "duplicate"
@@ -583,6 +583,57 @@ describe("first-contact intake", () => {
       ).toBe("already_observed");
     }
     expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
+  it("retries a capacity-deferred request when a membership frees a slot, without hot polling", async () => {
+    const f = setup();
+    f.requests();
+    for (let i = 0; i < 32; i++)
+      expect(
+        f.notices().reserve(
+          `peer${i}@example.com`,
+          f.options.notifySession.threadId,
+          {
+            emailId: randomUUID(),
+            eventId: randomUUID(),
+            clientId: randomUUID(),
+            state: "submitting",
+          },
+          [],
+        ),
+      ).toBe("reserved");
+    let readsAfterDeferral = 0;
+    const clock = vi.spyOn(performance, "now");
+    f.changed
+      .mockImplementationOnce(async () => {
+        expect((await f.store()?.readEmail(f.detail.id))?.route).toBeNull();
+        expect(f.receipt()).toBeNull();
+        readsAfterDeferral = f.order.length;
+      })
+      .mockImplementationOnce(async () => {
+        expect(f.order.length).toBe(readsAfterDeferral);
+        f.contacts([
+          {
+            agent_address: f.detail.recipient,
+            contact_address: "peer0@example.com",
+            version: randomUUID(),
+            notify: false,
+            notify_since: null,
+            notification_generation: null,
+          },
+        ]);
+        clock.mockReturnValue(performance.now() + 31_000);
+      });
+    try {
+      expect(await runListen(requestOptions(f))).toBe(1);
+    } finally {
+      clock.mockRestore();
+    }
+    expect(f.handleDetail).toHaveBeenCalledTimes(2);
+    expect(f.changed).toHaveBeenCalledTimes(2);
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      state: "accepted",
+    });
+    expect(f.receipt()).toMatchObject({ state: "accepted" });
   });
   it("never interprets an explicit disabled membership as an unknown request sender", async () => {
     const f = setup();

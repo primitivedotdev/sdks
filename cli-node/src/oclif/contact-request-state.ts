@@ -107,7 +107,7 @@ export function openContactRequestNotices(
       threadId: string,
       receipt: NotificationReceipt,
       decidedSenders: Iterable<string>,
-    ): "reserved" | "duplicate" | "full" {
+    ): "reserved" | "duplicate" | "full" | "exhausted" {
       const release = acquireListenLock(directory, "contact-request-notices");
       try {
         const state = read();
@@ -117,10 +117,11 @@ export function openContactRequestNotices(
         const decided = new Set([...decidedSenders].map(hash));
         for (const notice of state.notices)
           if (decided.has(notice.senderHash)) notice.pending = false;
+        if (state.notices.length >= MAX_CONTACT_REQUEST_SENDERS)
+          return "exhausted";
         if (
-          state.notices.length >= MAX_CONTACT_REQUEST_SENDERS ||
           state.notices.filter((notice) => notice.pending).length >=
-            MAX_PENDING_CONTACT_REQUESTS
+          MAX_PENDING_CONTACT_REQUESTS
         )
           return "full";
         state.notices.push({

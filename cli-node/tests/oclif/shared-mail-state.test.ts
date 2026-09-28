@@ -363,6 +363,22 @@ describe("shared mail ingress and claims", () => {
         store.markNotification(e.emailId, "submitting"),
       ).rejects.toThrow("inconsistent");
   });
+  it("releases only an unsubmitted claim so another session can recover deferred work", async () => {
+    const e = await received();
+    await store.claimForNotification(e.emailId, "runtime:owner");
+    await expect(
+      store.releaseNotification(e.emailId, "runtime:other"),
+    ).rejects.toThrow("inconsistent");
+    await store.releaseNotification(e.emailId, "runtime:owner");
+    store = await openSharedMailStore({
+      configDir,
+      scope: "fixture",
+      recipient,
+    });
+    expect(
+      (await store.claimForNotification(e.emailId, "runtime:other")).status,
+    ).toBe("claimed");
+  });
   it("persists skipped notifications across restart without leaving another session held", async () => {
     const e = await received();
     await store.claimForNotification(e.emailId, "runtime:owner");
@@ -397,6 +413,9 @@ describe("shared mail ingress and claims", () => {
     if (state !== "submitting") await store.markNotification(e.emailId, state);
     await expect(
       store.skipNotification(e.emailId, "runtime:owner"),
+    ).rejects.toThrow("inconsistent");
+    await expect(
+      store.releaseNotification(e.emailId, "runtime:owner"),
     ).rejects.toThrow("inconsistent");
     expect((await store.readEmail(e.emailId))?.route).toMatchObject({ state });
   });

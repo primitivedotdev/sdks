@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   mkdtempSync,
   readdirSync,
@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ConnectedAgentIdentity } from "../../src/oclif/connected-agent-profile.js";
 import {
+  MAX_CONTACT_REQUEST_SENDERS,
   MAX_PENDING_CONTACT_REQUESTS,
   openContactRequestNotices,
 } from "../../src/oclif/contact-request-state.js";
@@ -127,6 +128,34 @@ describe("durable first-contact notices", () => {
     ).toBe("full");
   });
 
+  it("distinguishes permanently exhausted sender retention from recoverable pending capacity", () => {
+    const { root, ledger } = setup();
+    ledger.activate();
+    const notices = Array.from(
+      { length: MAX_CONTACT_REQUEST_SENDERS },
+      (_, i) => ({
+        senderHash: createHash("sha256")
+          .update(`peer${i}@example.test`)
+          .digest("hex"),
+        emailId: randomUUID(),
+        eventId: randomUUID(),
+        clientId: randomUUID(),
+        threadId: randomUUID(),
+        pending: false,
+      }),
+    );
+    writeFileSync(
+      stateFile(root),
+      JSON.stringify({ activatedAt: new Date().toISOString(), notices }),
+      { mode: 0o600 },
+    );
+    expect(
+      ledger.reserve("new@example.test", randomUUID(), receipt(), []),
+    ).toBe("exhausted");
+    expect(
+      ledger.reserve("peer0@example.test", randomUUID(), receipt(), []),
+    ).toBe("duplicate");
+  });
   it("stores only hashed sender identity with private permissions and refuses corrupt durable state", () => {
     const { root, identity, ledger } = setup();
     ledger.activate();

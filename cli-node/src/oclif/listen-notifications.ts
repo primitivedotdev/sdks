@@ -77,6 +77,7 @@ export async function runSharedNotificationListen(
   let receiver: Awaited<ReturnType<typeof openSharedMailReceiver>> | undefined;
   let processed = 0;
   const settled = new Set<string>();
+  const deferredUntil = new Map<string, number>();
   const sessionKey = `codex:${notify.threadId.toLowerCase()}`;
   try {
     const reserved = await reserveSharedMailSubscription({
@@ -272,18 +273,32 @@ export async function runSharedNotificationListen(
                           receipt,
                           contactPolicy.members(),
                         );
-                        if (result === "full" && !budgetWarned) {
+                        if (
+                          (result === "full" || result === "exhausted") &&
+                          !budgetWarned
+                        ) {
                           budgetWarned = true;
                           (options.stderr ?? process.stderr).write(
-                            "First-contact notice capacity reached. Known contacts continue; review existing requests before admitting more.\n",
+                            result === "exhausted"
+                              ? "First-contact sender retention limit reached. Known contacts continue; inspect new requests manually.\n"
+                              : "First-contact notice capacity reached. Known contacts continue; review existing requests before admitting more.\n",
                           );
                         }
-                        return result === "reserved";
+                        return result === "full"
+                          ? "deferred"
+                          : result === "reserved";
                       },
                     }
                   : {}),
               })
             : await native.handleDetail(detail, row.eventId, signal);
+        if (outcome.disposition === "deferred") {
+          await store.releaseNotification(row.emailId, sessionKey);
+          // Local journal changes must not create a hot retry loop. Retry only
+          // this known ID, with fresh policy, after a bounded cooldown.
+          deferredUntil.set(row.emailId, performance.now() + 30_000);
+          return false;
+        }
         // Suppression is a terminal non-dispatch decision, not an unknown send.
         // Persist it separately from native receipts so restarts cannot reclaim it.
         if (outcome.disposition === "skipped")
@@ -309,6 +324,9 @@ export async function runSharedNotificationListen(
         const page = await store.listEmails({ cursor, limit: 100 });
         for (const row of page.emails) {
           if (settled.has(row.emailId)) continue;
+          if ((deferredUntil.get(row.emailId) ?? 0) > performance.now())
+            continue;
+          deferredUntil.delete(row.emailId);
           try {
             const historical =
               row.route?.kind === "wait" ||

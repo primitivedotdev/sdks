@@ -192,3 +192,17 @@ it("queues only IDs and sender for a request, with no request body or private-co
   );
   expect(text).not.toContain(f.detail.body_text);
 });
+
+it("defers capacity-limited requests without creating a native receipt or dispatching", async () => {
+  const f = await setup();
+  expect(
+    await f.notifications.handleDetail(f.detail, f.eventId, f.signal, {
+      sender: "sender@example.com",
+      contactRequest: true,
+      recheck: async () => () => {},
+      reserve: () => "deferred",
+    }),
+  ).toEqual({ disposition: "deferred" });
+  expect(f.dispatch).not.toHaveBeenCalled();
+  expect(f.receipts()).toEqual([]);
+});
