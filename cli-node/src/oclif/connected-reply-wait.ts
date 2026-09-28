@@ -8,7 +8,10 @@ import {
   openSharedMailReceiver,
   sharedMailScope,
 } from "./shared-mail-receiver.js";
-import { openSharedMailStore } from "./shared-mail-state.js";
+import {
+  createSharedMailWaiter,
+  openSharedMailStore,
+} from "./shared-mail-state.js";
 import {
   inspectTargetedReply,
   readTargetedReplyPage,
@@ -43,6 +46,7 @@ export async function openConnectedReplyWait(options: {
     from: options.from.trim().toLowerCase(),
     recipient: options.recipient.trim().toLowerCase(),
   };
+  const waiter = createSharedMailWaiter();
   const receiver = await openSharedMailReceiver({
     ...options,
     recipient: options.from,
@@ -51,6 +55,7 @@ export async function openConnectedReplyWait(options: {
   let requestId = options.requestId ?? randomUUID();
   let sentId = options.sentId;
   let newlyRegisteredId: string | undefined;
+  let ownershipAttempted = false;
   try {
     if (options.resumeReply) {
       const saved = await store.readWait(options.resumeReply.requestId);
@@ -70,6 +75,8 @@ export async function openConnectedReplyWait(options: {
           "The saved reply does not match its durable wait claim.",
         );
       requestId = saved.requestId;
+      ownershipAttempted = true;
+      await store.joinWait(requestId, waiter);
     } else {
       const prior = sentId ? await store.findWaitByParent(sentId) : null;
       if (
@@ -93,10 +100,13 @@ export async function openConnectedReplyWait(options: {
           throw new Error(
             "The existing wait has a different reply type. Resume it with the matching contact or task command.",
           );
+        ownershipAttempted = true;
+        await store.joinWait(requestId, waiter);
       } else {
         if (prior?.requestId === requestId) requestId = randomUUID();
         const existing = await store.readWait(requestId);
         if (!existing) newlyRegisteredId = requestId;
+        ownershipAttempted = true;
         await store.registerWait({
           ...(options.contactRequest
             ? { contactRequest: options.contactRequest }
@@ -105,6 +115,7 @@ export async function openConnectedReplyWait(options: {
           peer: options.recipient,
           idempotencyKey: options.idempotencyKey ?? `wait-${requestId}`,
           createdAt: options.createdAt ?? new Date().toISOString(),
+          waiter,
         });
         if (sentId)
           requestId = (await store.bindWait(requestId, sentId)).requestId;
@@ -112,7 +123,7 @@ export async function openConnectedReplyWait(options: {
     }
   } catch (error) {
     try {
-      if (newlyRegisteredId) {
+      if (ownershipAttempted) {
         // Setup may fail after registration or after the receive signal expires.
         // Never cancel an intent that existed before this construction attempt.
         const cleanup = await openSharedMailStore({
@@ -121,9 +132,13 @@ export async function openConnectedReplyWait(options: {
           recipient: options.from,
           signal: AbortSignal.timeout(2000),
         });
-        const registered = await cleanup.readWait(newlyRegisteredId);
-        if (registered?.status === "unbound")
-          await cleanup.cancelWaitBeforeSend(newlyRegisteredId);
+        if (await cleanup.readWait(requestId))
+          await cleanup.releaseWaiter(requestId, waiter.token);
+        if (newlyRegisteredId) {
+          const registered = await cleanup.readWait(newlyRegisteredId);
+          if (registered?.status === "unbound")
+            await cleanup.cancelWaitBeforeSend(newlyRegisteredId);
+        }
       }
     } finally {
       await receiver.close();
@@ -139,9 +154,25 @@ export async function openConnectedReplyWait(options: {
   let cursors = new Set<string>();
   let generation: string | undefined;
   let gapCount: number | undefined;
+  let released = false;
+  let closed = false;
+  let closing: Promise<void> | undefined;
   const timedOut = () =>
     options.deadline != null && Date.now() >= options.deadline;
+  async function release() {
+    if (released) return;
+    // The receiver's signal has already expired on the normal timeout path.
+    const cleanup = await openSharedMailStore({
+      configDir: options.configDir,
+      scope: sharedMailScope(options.apiKey, options.baseUrl),
+      recipient: options.from,
+      signal: AbortSignal.timeout(2000),
+    });
+    await cleanup.releaseWaiter(requestId, waiter.token);
+    released = true;
+  }
   async function inspect(id: string): Promise<EmailDetail | null> {
+    if (closed || released || timedOut()) return null;
     if (settled.has(id)) return null;
     if (!sentId)
       throw new Error("Bind the sent email before waiting for a reply.");
@@ -182,7 +213,8 @@ export async function openConnectedReplyWait(options: {
       settled.add(id);
       return null;
     }
-    const claim = await store.claimForWait(id, requestId);
+    if (closed || released || timedOut()) return null;
+    const claim = await store.claimForWait(id, requestId, waiter.token);
     settled.add(id);
     return claim.status === "claimed" ||
       (claim.status === "already_observed" &&
@@ -230,12 +262,22 @@ export async function openConnectedReplyWait(options: {
     },
     observed: (emailId: string) => store.markWaitObserved(emailId, requestId),
     finish: () => store.finishWait(requestId),
-    close: () => receiver.close(),
+    close() {
+      closed = true;
+      closing ??= (async () => {
+        try {
+          await release();
+        } finally {
+          await receiver.close();
+        }
+      })();
+      return closing;
+    },
     async next(): Promise<EmailDetail | null> {
       try {
         if (!sentId)
           throw new Error("Bind the sent email before waiting for a reply.");
-        while (!timedOut()) {
+        while (!closed && !released && !timedOut()) {
           const owner = await receiver.ready(options.deadline);
           if (!owner) return null;
           if (options.resumeReply) {
@@ -300,8 +342,10 @@ export async function openConnectedReplyWait(options: {
         }
         return null;
       } catch (error) {
-        if (timedOut()) return null;
+        if (closed || released || timedOut()) return null;
         throw error;
+      } finally {
+        if (timedOut()) await release();
       }
     },
   };

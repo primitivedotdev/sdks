@@ -38,6 +38,7 @@ const emails = new Map(),
 const failures = [],
   children = [],
   queued = [];
+const sentRequests = [];
 let streamOpens = 0,
   activeStreams = 0,
   maximumStreams = 0;
@@ -74,7 +75,12 @@ function inbound(parent, body, id = randomUUID()) {
     reply_to_sent_email_id: parent,
     body_text: body,
     body_html: null,
-    parsed: { status: "complete", attachments: [] },
+    parsed: {
+      status: "complete",
+      body_text: body,
+      body_html: null,
+      attachments: [],
+    },
     replies: [],
     auth,
   };
@@ -138,6 +144,30 @@ const api = createServer(async (request, response) => {
           completion_modes: ["sdk"],
           stream_protocols: ["primitive.events.v1"],
         },
+      });
+    } else if (
+      request.method === "POST" &&
+      url.pathname === "/v1/send-mail"
+    ) {
+      const input = JSON.parse(raw);
+      assert.equal(input.from, owner);
+      assert.equal(input.to, peer);
+      const id = randomUUID();
+      parents.push(id);
+      sentRequests.push({ id, input });
+      envelope(response, {
+        id,
+        from: owner,
+        to: peer,
+        status: "delivered",
+        delivery_status: "delivered",
+        idempotent_replay: false,
+        accepted: [peer],
+        rejected: [],
+        request_id: randomUUID(),
+        queue_id: randomUUID(),
+        content_hash: "fixture-content",
+        message_id: `<${id}@example.com>`,
       });
     } else if (
       request.method === "GET" &&
@@ -308,17 +338,20 @@ async function until(check, label) {
     await new Promise((done) => setTimeout(done, 20));
   }
 }
+const startNotification = () =>
+  invoke([
+    "listen",
+    "--notify-session",
+    sessionId,
+    "--sender",
+    peer,
+    "--session-socket",
+    socketPath,
+  ]);
+let notification;
 try {
   if (includeNative) {
-    invoke([
-      "listen",
-      "--notify-session",
-      sessionId,
-      "--sender",
-      peer,
-      "--session-socket",
-      socketPath,
-    ]);
+    notification = startNotification();
     await until(
       () => streamOpens > 0,
       "Notification receiver did not open WebSocket",
@@ -388,15 +421,7 @@ try {
     // A satisfied waiter may exit after durable ingress but before remote ack.
     // A later owner must drain any redelivery without notifying the session
     // about replies already observed by their waiters.
-    invoke([
-      "listen",
-      "--notify-session",
-      sessionId,
-      "--sender",
-      peer,
-      "--session-socket",
-      socketPath,
-    ]);
+    notification = startNotification();
     await until(
       () => streamOpens >= (handoff ? 3 : 2),
       "A subsequent receiver must reopen the shared subscription",
@@ -426,9 +451,84 @@ try {
   assert.ok(queued[0].toolOutput.output.includes(unsolicited.detail.id));
   for (const answer of answers)
     assert.ok(!queued[0].toolOutput.output.includes(answer.detail.id));
+
+  if (includeNative) {
+    const chat = invoke([
+      "chat",
+      peer,
+      "A reply may arrive after this wait ends",
+      "--from",
+      owner,
+      "--json",
+      "--strict-only",
+      "--timeout",
+      "1",
+    ]);
+    await until(() => chat.result, "The chat must finish its bounded wait");
+    assert.equal(chat.result.code, 3, `${chat.stdout}\n${chat.stderr}`);
+    const timedOut = JSON.parse(chat.stdout.trim());
+    assert.equal(timedOut.outcome, "sent_awaiting_reply");
+    assert.equal(timedOut.reply, null);
+    assert.equal(sentRequests.length, 1, "The chat must send exactly once");
+    assert.equal(timedOut.sent.id, sentRequests[0].id);
+
+    const body = `Exact late reply ${randomUUID()}`;
+    const late = inbound(timedOut.sent.id, body);
+    pending.push(late);
+    dispatch();
+    await until(
+      () => queued.some((item) => item.toolOutput.output.includes(late.detail.id)),
+      "The existing listener must notify the exact reply after chat timeout",
+    );
+    const lateEvents = () => queued.filter(
+      (item) => item.toolOutput.output.includes(late.detail.id),
+    );
+    assert.equal(lateEvents().length, 1);
+    const event = lateEvents()[0];
+    assert.deepEqual(event.input, []);
+    assert.equal(event.threadId, sessionId);
+    assert.deepEqual(Object.keys(event).sort(), ["input", "threadId", "toolOutput"]);
+    assert.equal(event.toolOutput.name, "mail_received");
+    assert.equal(event.toolOutput.namespace, "primitive");
+    assert.ok(event.toolOutput.output.includes(body));
+    await until(() => completions.length === 4, "The late reply must be acknowledged");
+
+    notification.child.kill("SIGTERM");
+    await until(() => notification.result, "The listener must stop before restart");
+    assert.equal(notification.result.code, 0, notification.stderr);
+    await until(() => activeStreams === 0, "The stopped receiver must release its socket");
+    const previousStreams = streamOpens;
+    notification = startNotification();
+    await until(() => streamOpens > previousStreams, "The listener must restart on the same subscription");
+    pending.push({
+      ...late,
+      delivery: {
+        ...late.delivery,
+        event_id: randomUUID(),
+        delivery_id: randomUUID(),
+        lease_token: randomUUID(),
+      },
+    });
+    dispatch();
+    await until(() => completions.length === 5, "The duplicate reply must be acknowledged without another notification");
+
+    // A later journal entry proves the restarted receiver reconciled the reply.
+    const sentinel = inbound(null, "Receiving after restart", "ffffffff-ffff-4fff-bfff-ffffffffffff");
+    pending.push(sentinel);
+    dispatch();
+    await until(
+      () => queued.some((item) => item.toolOutput.output.includes(sentinel.detail.id)),
+      "The restarted receiver must still deliver independent mail",
+    );
+    await until(() => completions.length === 6, "The restart sentinel must be acknowledged");
+    assert.equal(lateEvents().length, 1, "Restart and redelivery must not replay the late reply");
+    assert.equal(queued.length, 3, "Only the late reply and independent updates may notify");
+    assert.equal(sentRequests.length, 1, "Timeout and late delivery must not resend the chat");
+    assert.equal(maximumStreams, 1, "Restart must preserve one shared subscription owner");
+  }
   assert.deepEqual(failures, []);
   console.log(
-    `Pushed reply CLI smoke passed: two exact waits, one native notification, ${handoff ? "subscription ownership handoff, " : ""}one concurrent WebSocket, no inbox scans.`,
+    `Pushed reply CLI smoke passed: two exact waits, ${includeNative ? "late chat reply exactly once across restart, " : ""}${handoff ? "subscription ownership handoff, " : ""}one concurrent WebSocket, no inbox scans.`,
   );
 } finally {
   for (const run of children)

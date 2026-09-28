@@ -21,6 +21,7 @@ vi.mock("../../src/oclif/commands/emails-poll.js", async (original) => ({
 import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
 
 vi.mock("../../src/oclif/shared-mail-receiver.js", () => ({
+  sharedMailScope: () => "scoped-wait-test",
   openSharedMailReceiver: async (options: {
     configDir: string;
     recipient: string;
