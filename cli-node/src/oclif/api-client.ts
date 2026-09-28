@@ -18,6 +18,7 @@ import {
   validateCliHeaderName,
   validateCliHeaderValue,
 } from "./cli-config.js";
+import { AGENT_PROFILE_ENV } from "./connected-agent-profile.js";
 
 const API_HEADERS_ENV = "PRIMITIVE_API_HEADERS";
 const OAUTH_REFRESH_SKEW_MS = 60 * 1000;
@@ -99,6 +100,17 @@ export function resolveCliApiRequestConfig(params: {
   apiBaseUrl?: string;
   env?: Env;
 }): ResolvedCliApiRequestConfig {
+  if ((params.env ?? process.env)[AGENT_PROFILE_ENV]?.trim()) {
+    // A selected profile supplies its own trusted origin. Ambient environments
+    // and headers belong to the default login, including malformed settings.
+    const auth = resolveCliAuth(params);
+    return {
+      apiBaseUrl: auth.apiBaseUrl,
+      resolvedApiBaseUrl: auth.apiBaseUrl,
+      baseUrlOverridden: params.apiBaseUrl !== undefined,
+      environmentName: null,
+    };
+  }
   const cliConfig = loadCliConfig(params.configDir);
   const currentEnvironment = resolveConfigEnvironment(cliConfig);
   const configuredApiBaseUrl = currentEnvironment?.config.api_base_url;

@@ -83,7 +83,8 @@ try {
   const deny=join(directory,'deny-network.mjs');
   await writeFile(deny,`globalThis.fetch=async()=>{throw new Error('Unexpected network');};`,{mode:0o600});
   const status=await run(['agent','connect','--profile','work','--status','--json'],{preload:deny});assert.equal(JSON.parse(status.stdout).status,'configured');
-  const notification=await run(['listen','--status','--notify-session',session],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work'}});assert.deepEqual(JSON.parse(notification.stdout).receipts,[]);assert.ok(!notification.stdout.includes(credential));
+  await writeFile(join(config,'config.json'),JSON.stringify({version:1,current_environment:'staging',environments:{staging:{}}}));
+  const notification=await run(['listen','--status','--notify-session',session],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work',PRIMITIVE_API_HEADERS:'invalid ambient JSON'}});assert.deepEqual(JSON.parse(notification.stdout).receipts,[]);assert.ok(!notification.stdout.includes(credential));
   const rejected=await run(['agent-connections','claim-agent-connection','--profile','other','--token',token],{preload:deny,exit:2});
   assert.ok(!(rejected.stdout+rejected.stderr).includes(token)&&!(rejected.stdout+rejected.stderr).includes(credential));
   assert.equal(hits,before);

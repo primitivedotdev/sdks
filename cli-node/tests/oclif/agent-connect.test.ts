@@ -18,7 +18,10 @@ import {
   parseAgentInvitation,
   readAgentInvitation,
 } from "../../src/oclif/agent-connect.js";
-import { createAuthenticatedCliApiClient } from "../../src/oclif/api-client.js";
+import {
+  createAuthenticatedCliApiClient,
+  resolveCliApiRequestConfig,
+} from "../../src/oclif/api-client.js";
 import { resolveCliAuth } from "../../src/oclif/auth.js";
 import {
   agentProfileDirectory,
@@ -332,6 +335,56 @@ describe("connected-agent setup", () => {
     expect(
       resolveCliAuth({ ...selected, apiKey: credential, apiBaseUrl }),
     ).toMatchObject({ source: "connected-profile" });
+  });
+
+  it.each([
+    undefined,
+    "https://ambient.example/v1",
+  ])("ignores ambient environment origin %s and invalid headers for a selected profile", async (ambientOrigin) => {
+    await connectAgent(params(successfulFetch()));
+    writeFileSync(
+      join(configDir, "config.json"),
+      JSON.stringify({
+        version: 1,
+        current_environment: "staging",
+        environments: { staging: { api_base_url: ambientOrigin } },
+      }),
+    );
+    const selected = {
+      configDir,
+      env: {
+        PRIMITIVE_AGENT_PROFILE: "work",
+        PRIMITIVE_API_HEADERS: "invalid ambient JSON",
+      },
+    };
+    const expected = {
+      apiBaseUrl,
+      resolvedApiBaseUrl: apiBaseUrl,
+      baseUrlOverridden: false,
+      environmentName: null,
+    };
+    expect(resolveCliApiRequestConfig(selected)).toEqual(expected);
+    const request = vi.fn<typeof fetch>();
+    const result = await createAuthenticatedCliApiClient({
+      ...selected,
+      fetch: request,
+    });
+    expect(result.requestConfig).toEqual(expected);
+    expect(result.auth).toMatchObject({
+      source: "connected-profile",
+      apiKey: credential,
+      apiBaseUrl,
+    });
+    expect(request).not.toHaveBeenCalled();
+    await expect(
+      createAuthenticatedCliApiClient({ ...selected, apiKey: "different" }),
+    ).rejects.toThrow(/conflict/);
+    await expect(
+      createAuthenticatedCliApiClient({
+        ...selected,
+        apiBaseUrl: "https://different.example/v1",
+      }),
+    ).rejects.toThrow(/conflict/);
   });
 });
 
