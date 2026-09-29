@@ -24,6 +24,7 @@ export type ContactRequest = {
   clearPurpose?: boolean;
   notify?: boolean;
   ifVersion?: string;
+  signal?: AbortSignal;
 };
 
 export class ContactsApiError extends Error {
@@ -95,15 +96,18 @@ async function membershipVersion(
   client: Client,
   agent: string,
   address: string,
+  signal?: AbortSignal,
 ): Promise<string> {
   let cursor: string | undefined;
   const seen = new Set<string>();
   for (let page = 0; page < 1000; page++) {
+    signal?.throwIfAborted();
     const result = await response(
       listAgentContacts({
         client,
         path: { agent_address: agent },
         query: { limit: 100, cursor },
+        signal,
         responseStyle: "fields",
       }),
     );
@@ -137,7 +141,8 @@ export async function runContactRequest(
   client: Client,
   request: ContactRequest,
 ): Promise<unknown> {
-  const { action, target } = request;
+  const { action, target, signal } = request;
+  signal?.throwIfAborted();
   const address =
     action === "list" ? undefined : contactAddress(request.address ?? "");
   const agent =
@@ -171,6 +176,7 @@ export async function runContactRequest(
         ? await response(
             listContacts({
               client,
+              signal,
               query: { cursor, limit },
               responseStyle: "fields",
             }),
@@ -178,6 +184,7 @@ export async function runContactRequest(
         : await response(
             listAgentContacts({
               client,
+              signal,
               path: { agent_address: agent ?? "" },
               query: { cursor, limit },
               responseStyle: "fields",
@@ -198,18 +205,25 @@ export async function runContactRequest(
       ((action === "update" || action === "remove") && !expected)
     ) {
       const result = await response(
-        getContact({ client, path: { address }, responseStyle: "fields" }),
+        getContact({
+          client,
+          signal,
+          path: { address },
+          responseStyle: "fields",
+        }),
       );
       if (result.data.address !== address)
         throw new Error("The contacts API returned a different contact.");
       if (action === "get") return result.data;
       request = { ...request, ifVersion: version(result.data.version) };
     }
+    signal?.throwIfAborted();
     if (action === "remove")
       return (
         await response(
           deleteContact({
             client,
+            signal,
             path: { address },
             query: { if_version: version(request.ifVersion ?? "") },
             responseStyle: "fields",
@@ -219,6 +233,7 @@ export async function runContactRequest(
     const result = await response(
       putContact({
         client,
+        signal,
         path: { address },
         body: {
           ...(action === "add"
@@ -250,6 +265,7 @@ export async function runContactRequest(
     const directory = await response(
       putContact({
         client,
+        signal,
         path: { address },
         body: { if_absent: true },
         responseStyle: "fields",
@@ -261,22 +277,27 @@ export async function runContactRequest(
   const ifVersion =
     action === "add"
       ? undefined
-      : (expected ?? (await membershipVersion(client, agent, address)));
-  if (action === "remove")
+      : (expected ?? (await membershipVersion(client, agent, address, signal)));
+  if (action === "remove") {
+    signal?.throwIfAborted();
     return (
       await response(
         deleteAgentContact({
           client,
+          signal,
           path,
           query: { if_version: version(ifVersion ?? "") },
           responseStyle: "fields",
         }),
       )
     ).data;
+  }
   try {
+    signal?.throwIfAborted();
     const result = await response(
       putAgentContact({
         client,
+        signal,
         path,
         body: {
           ...(action === "add"

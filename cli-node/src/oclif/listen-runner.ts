@@ -49,7 +49,9 @@ export interface ListenOptions {
   handler: ListenHandler;
   mode?: "exec" | "http" | "stdout" | "sdk";
   notifySession?: NotifySessionOptions;
+  expectedNotificationScope?: string;
   signal: AbortSignal;
+  onReady?: () => void;
   stderr?: { write(value: string): unknown };
   now?: () => number;
   random?: () => number;

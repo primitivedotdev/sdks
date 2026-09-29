@@ -7,8 +7,14 @@ import {
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prepareContactRequest } from "../../src/oclif/contact-interactions.js";
+import {
+  contactReference,
+  prepareContactAcceptance,
+  prepareContactRequest,
+} from "../../src/oclif/contact-interactions.js";
 import { openContactRequestNotices } from "../../src/oclif/contact-request-state.js";
+import { followEmailConversation } from "../../src/oclif/conversation-follow.js";
+import type { ConversationStatus } from "../../src/oclif/conversation-status.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 const { authenticate, prepare, receive } = vi.hoisted(() => ({
@@ -31,9 +37,11 @@ vi.mock("../../src/oclif/shared-mail-receiver.js", async (original) => ({
 
 import { runListen } from "../../src/oclif/listen-runner.js";
 import { ListenStateError } from "../../src/oclif/listen-state.js";
+import { CONTACT_POLICY_RETRY_MIN_MS } from "../../src/oclif/notification-contact-policy.js";
 import type { DetailNotificationAuthorization } from "../../src/oclif/notify-session.js";
 import { sharedMailScope } from "../../src/oclif/shared-mail-receiver.js";
 import {
+  createSharedMailWaiter,
   openSharedMailStore,
   type SharedMailStore,
 } from "../../src/oclif/shared-mail-state.js";
@@ -54,9 +62,11 @@ function setup(
     endpointNames: string[] = [];
   const apiKey = `pconn_${"a".repeat(64)}`,
     baseUrl = "https://example.test/v1";
-  const emailId = randomUUID(),
-    eventId = randomUUID(),
-    receivedAt = new Date().toISOString();
+  let emailId = randomUUID(),
+    eventId = randomUUID();
+  let boundSentId: string | null = null;
+  let boundSentMessageId = "<parent@example.test>";
+  const receivedAt = new Date().toISOString();
   const detail = {
     id: emailId,
     recipient: "device@example.com",
@@ -65,8 +75,17 @@ function setup(
     from_email: "sender@example.com",
     status: "completed",
     received_at: receivedAt,
-    reply_to_sent_email_id: null,
-    parsed: { status: "complete", attachments: [] },
+    reply_to_sent_email_id: null as string | null,
+    thread_id: null as string | null,
+    body_text: null as string | null,
+    body_html: null as string | null,
+    parsed: {
+      status: "complete",
+      attachments: [],
+      in_reply_to: null as string[] | null,
+      body_text: null as string | null,
+      body_html: null as string | null,
+    },
     auth: {
       dmarc: "pass",
       dmarcFromDomain: "example.com",
@@ -76,18 +95,21 @@ function setup(
       dkimSignatures: [],
     },
   };
-  let receipt: {
+  type TestReceipt = {
     emailId: string;
     eventId: string;
     clientId: string;
     state: string;
-  } | null = null;
+  };
+  let receipt: TestReceipt | null = null;
+  const receipts = new Map<string, TestReceipt>();
   const handleDetail = vi.fn(
     async (
       _detail: EmailDetail,
       _eventId: string,
       signal: AbortSignal,
       authorization?: DetailNotificationAuthorization,
+      _status?: ConversationStatus,
     ) => {
       if (authorization) (await authorization.recheck(signal))();
       const next = {
@@ -100,11 +122,23 @@ function setup(
       if (reservation === "deferred") return { disposition: "deferred" };
       if (reservation === false) return { disposition: "skipped" };
       receipt = { ...next, state: "accepted" };
+      receipts.set(`${emailId}:${eventId}`, receipt);
       return { disposition: "notified" };
     },
   );
   const policy = emptyContactPolicy(detail.recipient);
   let contactBytes: Buffer | undefined;
+  function interaction(value: unknown) {
+    contactBytes = Buffer.from(JSON.stringify(value));
+    detail.parsed.attachments.length = 0;
+    (detail.parsed.attachments as unknown[]).push({
+      filename: "interaction.json",
+      content_type: "application/json",
+      size_bytes: contactBytes.length,
+      part_index: 0,
+      sha256: createHash("sha256").update(contactBytes).digest("hex"),
+    });
+  }
   const identity = {
     profileName: "test",
     orgId: randomUUID(),
@@ -129,7 +163,8 @@ function setup(
     order.push("native-ready");
     return {
       handleDetail,
-      receipt: () => receipt,
+      receipt: (id: string, event: string) =>
+        receipts.get(`${id}:${event}`) ?? null,
       close,
       bindRecipient: vi.fn(),
     };
@@ -160,6 +195,11 @@ function setup(
       }
       if (path === `/v1/emails/${emailId}`)
         return Response.json({ success: true, data: detail });
+      if (path === `/v1/sent-emails/${boundSentId}`)
+        return Response.json({
+          success: true,
+          data: { id: boundSentId, message_id: boundSentMessageId },
+        });
       if (path === `/v1/agent-contact-policy/${detail.recipient}`)
         return Response.json({
           success: true,
@@ -231,6 +271,44 @@ function setup(
     baseUrl,
     handleDetail,
     apiClient,
+    interaction,
+    nextEmail(sender = "sender@example.com") {
+      emailId = randomUUID();
+      eventId = randomUUID();
+      detail.id = emailId;
+      detail.from_header = detail.from_email = sender;
+      detail.received_at = new Date().toISOString();
+      detail.reply_to_sent_email_id = null;
+      detail.body_text = detail.parsed.body_text = null;
+      detail.parsed.attachments.length = 0;
+      detail.parsed.in_reply_to = null;
+      contactBytes = undefined;
+    },
+    async bindStatusWait(sentEmailId: string) {
+      boundSentId = sentEmailId;
+      const store = await openSharedMailStore({
+        configDir,
+        scope: sharedMailScope(apiKey, baseUrl),
+        recipient: detail.recipient,
+      });
+      const requestId = randomUUID();
+      const waiter = createSharedMailWaiter();
+      await store.registerWait({
+        requestId,
+        peer: detail.from_email,
+        sessionKey: `codex:${options.notifySession.threadId}`,
+        idempotencyKey: `status-test-${requestId}`,
+        createdAt: new Date(Date.now() - 1000).toISOString(),
+        waiter,
+      });
+      await store.bindWait(requestId, sentEmailId);
+      await store.releaseWaiter(requestId, waiter.token);
+      detail.reply_to_sent_email_id = sentEmailId;
+      detail.parsed.in_reply_to = ["<parent@example.test>"];
+    },
+    setBoundSentMessageId(value: string) {
+      boundSentMessageId = value;
+    },
     requests: (structured = true) => {
       contactRows = [];
       const since = new Date(Date.now() - 1000).toISOString();
@@ -276,10 +354,107 @@ function setup(
     store: () => opened,
     unknown: () => {
       receipt = { emailId, eventId, clientId: randomUUID(), state: "unknown" };
+      receipts.set(`${emailId}:${eventId}`, receipt);
     },
   };
 }
 describe("shared notification listener integration", () => {
+  it("delivers only canonical activity for an exact bound send to the native session", async () => {
+    const f = setup();
+    const sentEmailId = randomUUID();
+    await f.bindStatusWait(sentEmailId);
+    f.detail.body_text = "I am composing a reply to your message.";
+    f.detail.parsed.body_text = f.detail.body_text;
+    f.interaction({
+      interaction_version: 1,
+      interaction_id: `${randomUUID()}@example.com`,
+      protocol: "typing",
+      protocol_version: 1,
+      step: "typing",
+      step_id: randomUUID(),
+      prev_step_id: null,
+      expires_at: new Date(Date.now() + 30_000).toISOString(),
+      payload: { subject_message_id: "<parent@example.test>" },
+    });
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.handleDetail.mock.calls[0]?.[4]).toEqual({
+      emailId: f.detail.id,
+      sentEmailId,
+      kind: "typing",
+      peer: "sender@example.com",
+    });
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      kind: "notification",
+      state: "accepted",
+    });
+  });
+  it("retries exact conversation activity after a proven pre-dispatch native failure", async () => {
+    const f = setup();
+    const sentEmailId = randomUUID();
+    await f.bindStatusWait(sentEmailId);
+    f.detail.body_text = "I am working on your message.";
+    f.detail.parsed.body_text = f.detail.body_text;
+    f.interaction({
+      interaction_version: 1,
+      interaction_id: `${randomUUID()}@example.com`,
+      protocol: "working",
+      protocol_version: 1,
+      step: "working",
+      step_id: randomUUID(),
+      prev_step_id: null,
+      expires_at: new Date(Date.now() + 30_000).toISOString(),
+      payload: { subject_message_id: "<parent@example.test>" },
+    });
+    f.handleDetail.mockRejectedValueOnce(
+      new ListenStateError("session offline"),
+    );
+    await expect(runListen(f.options)).rejects.toThrow("session offline");
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      kind: "notification",
+      state: "selected",
+    });
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(2);
+    expect(f.handleDetail.mock.calls[1]?.[4]).toMatchObject({
+      emailId: f.detail.id,
+      sentEmailId,
+      kind: "working",
+    });
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      kind: "notification",
+      state: "accepted",
+    });
+  });
+  it("holds exact conversation activity after an ambiguous native submission", async () => {
+    const f = setup();
+    const sentEmailId = randomUUID();
+    await f.bindStatusWait(sentEmailId);
+    f.detail.body_text = "I am working on your message.";
+    f.detail.parsed.body_text = f.detail.body_text;
+    f.interaction({
+      interaction_version: 1,
+      interaction_id: `${randomUUID()}@example.com`,
+      protocol: "working",
+      protocol_version: 1,
+      step: "working",
+      step_id: randomUUID(),
+      prev_step_id: null,
+      expires_at: new Date(Date.now() + 30_000).toISOString(),
+      payload: { subject_message_id: "<parent@example.test>" },
+    });
+    f.handleDetail.mockImplementationOnce(async () => {
+      f.unknown();
+      throw new ListenStateError("unknown outcome");
+    });
+    await expect(runListen(f.options)).rejects.toThrow("unknown outcome");
+    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+      kind: "notification",
+      state: "unknown",
+    });
+    await expect(runListen(f.options)).rejects.toThrow("unknown outcome");
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
   it("loads its own contact preferences and rechecks them at native dispatch", async () => {
     const f = setup();
     expect(
@@ -469,6 +644,43 @@ describe("first-contact intake", () => {
       contactRequests: true,
     },
   });
+  it("keeps ordinary mail uncompleted through a transient request-only policy refresh", async () => {
+    const f = setup();
+    f.requests(false);
+    const original = receive.getMockImplementation();
+    if (!original) throw new Error("Missing shared receiver fixture");
+    receive.mockImplementationOnce(async (...args: unknown[]) => {
+      // Startup has a valid request-only snapshot. Its admission refresh fails.
+      f.contacts([], 503);
+      return original(...args);
+    });
+    const clock = vi.spyOn(performance, "now");
+    f.changed.mockImplementationOnce(async () => {
+      expect(f.handleDetail).not.toHaveBeenCalled();
+      expect((await f.store()?.readEmail(f.detail.id))?.route).toBeNull();
+      f.contacts([
+        {
+          agent_address: f.detail.recipient,
+          contact_address: f.detail.from_email,
+          version: randomUUID(),
+          notify: true,
+          notification_generation: randomUUID(),
+          notify_since: new Date(Date.now() - 60_000).toISOString(),
+        },
+      ]);
+      clock.mockReturnValue(performance.now() + CONTACT_POLICY_RETRY_MIN_MS);
+    });
+    try {
+      expect(await runListen(requestOptions(f))).toBe(1);
+      expect(f.changed).toHaveBeenCalledOnce();
+      expect(f.handleDetail).toHaveBeenCalledOnce();
+      expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+        state: "accepted",
+      });
+    } finally {
+      clock.mockRestore();
+    }
+  });
   it("notifies one authenticated structured request but does not widen to ordinary unknown mail", async () => {
     const plain = setup();
     plain.requests(false);
@@ -481,6 +693,100 @@ describe("first-contact intake", () => {
     expect(request.handleDetail.mock.calls[0][3]).toMatchObject({
       contactRequest: true,
     });
+  });
+  it.each([
+    "trusted",
+    "sender-mismatch",
+    "signer-mismatch",
+  ])("checks managed staging authentication before structured request admission: %s", async (evidence) => {
+    const f = setup();
+    f.detail.from_email = "agent@neutral.primitive-staging.email";
+    f.detail.from_header =
+      evidence === "sender-mismatch"
+        ? "other@neutral.primitive-staging.email"
+        : f.detail.from_email;
+    Object.assign(f.detail.auth, {
+      dmarcFromDomain: "primitive-staging.email",
+      dkimSignatures: [
+        {
+          domain:
+            evidence === "signer-mismatch"
+              ? "primitive.email"
+              : "primitive-staging.email",
+          selector: "default",
+          result: "pass",
+          aligned: true,
+          keyBits: 2048,
+          algo: "rsa-sha256",
+        },
+      ],
+    });
+    f.requests();
+    expect(await runListen(requestOptions(f))).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(
+      evidence === "trusted" ? 1 : 0,
+    );
+    if (evidence === "trusted") {
+      expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+        sender: f.detail.from_email,
+        contactRequest: true,
+      });
+      expect(f.receipt()).toMatchObject({ state: "accepted" });
+    } else {
+      expect(f.receipt()).toBeNull();
+    }
+  });
+  it.each([
+    { offset: 4700, notified: true },
+    { offset: -1, notified: false },
+  ])("rechecks cached request-only policy for ordinary mail received $offset ms after acceptance", async ({
+    offset,
+    notified,
+  }) => {
+    const f = setup();
+    f.requests(false);
+    const acceptedAt = Date.now();
+    const original = receive.getMockImplementation();
+    if (!original) throw new Error("Missing shared receiver fixture");
+    receive.mockImplementationOnce(async (...args: unknown[]) => {
+      // Startup has cached request-only admission. Acceptance changes exact
+      // membership before ordinary mail is read, still within the 30s cache.
+      f.contacts([
+        {
+          agent_address: f.detail.recipient,
+          contact_address: f.detail.from_email,
+          version: randomUUID(),
+          notify: true,
+          notification_generation: randomUUID(),
+          notify_since: new Date(acceptedAt).toISOString(),
+        },
+      ]);
+      f.detail.received_at = new Date(acceptedAt + offset).toISOString();
+      return original(...args);
+    });
+
+    expect(await runListen(requestOptions(f))).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
+    expect(
+      f.order.filter((path) => path.startsWith("/v1/agent-contacts/")),
+    ).toHaveLength(notified ? 3 : 2);
+    if (notified) {
+      expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+        sender: f.detail.from_email,
+        contactRequest: false,
+      });
+      expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+        state: "accepted",
+      });
+      const controller = new AbortController();
+      f.changed.mockImplementationOnce(async () => controller.abort());
+      expect(
+        await runListen({ ...requestOptions(f), signal: controller.signal }),
+      ).toBe(0);
+      expect(f.handleDetail).toHaveBeenCalledOnce();
+    } else {
+      expect((await f.store()?.readEmail(f.detail.id))?.route).toBeNull();
+    }
   });
   it("keeps a request eligible after a crash between ingest and native dispatch", async () => {
     const f = setup();
@@ -649,6 +955,348 @@ describe("first-contact intake", () => {
       },
     ]);
     expect(await runListen(requestOptions(f))).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+  });
+});
+
+describe("locally solicited notification replies", () => {
+  it("follows a fresh async reply through a changed parent without admitting unrelated senders", async () => {
+    const f = setup();
+    f.contacts([]);
+    const parent = randomUUID();
+    await f.bindStatusWait(parent);
+    f.detail.thread_id = randomUUID();
+    const options = {
+      ...f.options,
+      notifySession: {
+        ...f.options.notifySession,
+        senders: [],
+        contactPreferences: true,
+      },
+    };
+    expect(await runListen(options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    f.nextEmail();
+    expect(await runListen(options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(2);
+    f.nextEmail("unrelated@example.com");
+    expect(await runListen(options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(2);
+    f.nextEmail();
+    expect(
+      await runListen({
+        ...options,
+        notifySession: { ...options.notifySession, threadId: randomUUID() },
+      }),
+    ).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(2);
+  });
+  async function followedThread() {
+    const f = setup();
+    f.contacts([]);
+    f.detail.thread_id = randomUUID();
+    f.detail.reply_to_sent_email_id = randomUUID();
+    const original = {
+      ...f.detail,
+      id: randomUUID(),
+      reply_to_sent_email_id: randomUUID(),
+      received_at: new Date(Date.now() - 1000).toISOString(),
+      sender: f.detail.from_email,
+      domain: "example.com",
+      created_at: new Date().toISOString(),
+      replies: [],
+      webhook_attempt_count: 0,
+    } as EmailDetail;
+    await followEmailConversation(
+      {
+        configDir: f.options.configDir,
+        scope: sharedMailScope(f.apiKey, f.baseUrl),
+        recipient: f.detail.recipient,
+        peer: f.detail.from_email,
+        sessionKey: `codex:${f.options.notifySession.threadId}`,
+        since: original.received_at,
+      },
+      original,
+    );
+    return {
+      ...f,
+      options: {
+        ...f.options,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      },
+    };
+  }
+  it("delivers a response to a changed parent in the followed server thread without mailbox scans", async () => {
+    const f = await followedThread();
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(
+      f.order.some((path) => path.includes("/search") || path === "/v1/emails"),
+    ).toBe(false);
+    const controller = new AbortController();
+    f.changed.mockImplementationOnce(async () => controller.abort());
+    expect(await runListen({ ...f.options, signal: controller.signal })).toBe(
+      0,
+    );
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
+  it.each([
+    "sender",
+    "thread",
+    "before-follow",
+    "auth",
+    "mute",
+    "session",
+    "contact",
+  ])("does not widen followed conversation admission for %s", async (mismatch) => {
+    const f = await followedThread();
+    if (mismatch === "sender")
+      f.detail.from_header = f.detail.from_email = "other@example.com";
+    if (mismatch === "thread") f.detail.thread_id = randomUUID();
+    if (mismatch === "before-follow")
+      f.detail.received_at = new Date(Date.now() - 5000).toISOString();
+    if (mismatch === "auth") f.detail.auth.dmarc = "fail";
+    if (mismatch === "mute")
+      f.contacts([
+        {
+          agent_address: f.detail.recipient,
+          contact_address: f.detail.from_email,
+          notify: false,
+          notify_since: null,
+          notification_generation: null,
+          version: randomUUID(),
+        },
+      ]);
+    if (mismatch === "session") f.options.notifySession.threadId = randomUUID();
+    if (mismatch === "contact")
+      f.interaction(
+        prepareContactRequest(
+          f.detail.from_email,
+          "New unrelated request",
+          600,
+        ),
+      );
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+  });
+
+  async function solicited(kind: "contact" | "plain", mismatch?: string) {
+    const f = setup();
+    f.contacts([]);
+    const createdAt = new Date(Date.now() - 2000).toISOString();
+    const request = prepareContactRequest(
+      f.detail.recipient,
+      "Public coordination",
+      600,
+      Date.parse(createdAt),
+    );
+    const parent = randomUUID();
+    f.detail.reply_to_sent_email_id = parent;
+    if (kind === "contact") {
+      const acceptance = prepareContactAcceptance(request);
+      if (mismatch === "interaction")
+        acceptance.interaction_id = `${randomUUID()}@example.com`;
+      if (mismatch === "step") acceptance.prev_step_id = randomUUID();
+      if (mismatch === "expiry")
+        acceptance.expires_at = new Date(
+          Date.parse(request.expires_at) + 1000,
+        ).toISOString();
+      if (mismatch === "expired-arrival")
+        f.detail.received_at = request.expires_at;
+      f.interaction(acceptance);
+    }
+    if (mismatch === "sender") f.detail.from_header = "different@example.com";
+    if (mismatch === "before-request")
+      f.detail.received_at = new Date(Date.parse(createdAt) - 1).toISOString();
+    const owner = createSharedMailWaiter();
+    const requestId = randomUUID();
+    const original = receive.getMockImplementation();
+    if (!original) throw new Error("Missing receiver fixture");
+    receive.mockImplementationOnce(async (...args: unknown[]) => {
+      const receiver = await original(...args);
+      await receiver.store.registerWait({
+        requestId,
+        sessionKey:
+          mismatch === "other-session"
+            ? `codex:${randomUUID()}`
+            : mismatch === "unbound"
+              ? null
+              : `codex:${f.options.notifySession.threadId.toLowerCase()}`,
+        peer: f.detail.from_email,
+        idempotencyKey: randomUUID(),
+        createdAt,
+        waiter: owner,
+        ...(kind === "contact"
+          ? { contactRequest: contactReference(request) }
+          : {}),
+      });
+      await receiver.store.bindWait(
+        requestId,
+        mismatch === "parent" ? randomUUID() : parent,
+      );
+      if (mismatch === "completed") {
+        const interim = randomUUID();
+        await receiver.store.ingest({
+          eventId: randomUUID(),
+          emailId: interim,
+          receivedAt: f.detail.received_at,
+        });
+        await receiver.store.hydrate(interim, {
+          recipient: f.detail.recipient,
+          peer: f.detail.from_email,
+          replyToSentEmailId: parent,
+          receivedAt: f.detail.received_at,
+          authorization: "trusted",
+        });
+        await receiver.store.claimForWait(interim, requestId, owner.token);
+        await receiver.store.markWaitObserved(interim, requestId);
+        await receiver.store.finishWait(requestId);
+      }
+      if (mismatch !== "active-wait")
+        await receiver.store.releaseWaiter(requestId, owner.token);
+      return receiver;
+    });
+    const options = {
+      ...f.options,
+      notifySession: {
+        ...f.options.notifySession,
+        senders: [],
+        contactPreferences: true,
+      },
+    };
+    return { ...f, options, parent, requestId, owner };
+  }
+  it.each([
+    "contact",
+    "plain",
+  ] as const)("notifies one exact late %s response with unsolicited requests disabled and no membership", async (kind) => {
+    const f = await solicited(kind);
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+      sender: f.detail.from_email,
+      contactRequest: false,
+    });
+    expect(await f.store()?.readWait(f.requestId)).toMatchObject({
+      status: "bound",
+      waiters: [],
+    });
+    const controller = new AbortController();
+    f.changed.mockImplementationOnce(async () => controller.abort());
+    expect(await runListen({ ...f.options, signal: controller.signal })).toBe(
+      0,
+    );
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
+  it("keeps following after an interim reply completes the synchronous wait, including an attached result and restart", async () => {
+    const f = await solicited("plain", "completed");
+    (f.detail.parsed.attachments as unknown[]).push({
+      filename: "result.tar.gz",
+      content_type: "application/gzip",
+      part_index: 0,
+    });
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(await f.store()?.readWait(f.requestId)).toMatchObject({
+      status: "completed",
+    });
+    const controller = new AbortController();
+    f.changed.mockImplementationOnce(async () => controller.abort());
+    expect(await runListen({ ...f.options, signal: controller.signal })).toBe(
+      0,
+    );
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
+  it("does not treat repeated acceptance as an ongoing conversation", async () => {
+    const f = await solicited("contact", "completed");
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+  });
+  it("does not auto-notify a native session of a bare profile's contact acceptance", async () => {
+    const f = await solicited("contact", "unbound");
+    f.contacts([
+      {
+        agent_address: f.detail.recipient,
+        contact_address: f.detail.from_email,
+        notify: true,
+        notify_since: new Date(Date.now() - 5000).toISOString(),
+        notification_generation: randomUUID(),
+        version: randomUUID(),
+      },
+    ]);
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(await f.store()?.readWait(f.requestId)).toMatchObject({
+      status: "bound",
+      sessionKey: null,
+    });
+  });
+  it("cannot route a solicited conversation to a different native session", async () => {
+    const f = await solicited("plain", "other-session");
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+  });
+  it("keeps explicit mute authoritative after an interim reply", async () => {
+    const f = await solicited("plain", "completed");
+    f.contacts([
+      {
+        agent_address: f.detail.recipient,
+        contact_address: f.detail.from_email,
+        notify: false,
+        notify_since: null,
+        notification_generation: null,
+        version: randomUUID(),
+      },
+    ]);
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+  });
+  it.each([
+    "parent",
+    "sender",
+    "interaction",
+    "step",
+    "expiry",
+    "expired-arrival",
+    "before-request",
+  ])("does not admit a late contact response with mismatched %s", async (mismatch) => {
+    const f = await solicited("contact", mismatch);
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+  });
+  it.each([
+    "contact",
+    "plain",
+  ] as const)("retains an active %s waiter until it releases ownership", async (kind) => {
+    const f = await solicited(kind, "active-wait");
+    f.changed.mockImplementationOnce(async () => {
+      expect(f.handleDetail).not.toHaveBeenCalled();
+      await f.store()?.releaseWaiter(f.requestId, f.owner.token);
+    });
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.changed).toHaveBeenCalledOnce();
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+  });
+  it.each([
+    "contact",
+    "plain",
+  ] as const)("keeps explicit silence authoritative for a solicited %s response", async (kind) => {
+    const f = await solicited(kind);
+    f.contacts([
+      {
+        agent_address: f.detail.recipient,
+        contact_address: f.detail.from_email,
+        notify: false,
+        notify_since: null,
+        notification_generation: null,
+        version: randomUUID(),
+      },
+    ]);
+    expect(await runListen(f.options)).toBe(1);
     expect(f.handleDetail).not.toHaveBeenCalled();
   });
 });

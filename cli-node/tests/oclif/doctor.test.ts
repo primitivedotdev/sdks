@@ -103,10 +103,34 @@ describe("checkProxy", () => {
       () => checkProxy(),
     );
     expect(outcome.status).toBe("ok");
-    expect(outcome.message).toContain("NODE_USE_ENV_PROXY=1");
-    expect(outcome.message).toContain("HTTPS_PROXY=http://corp-proxy:8080");
+    expect(outcome.message).toContain("NODE_USE_ENV_PROXY=set");
+    expect(outcome.message).toContain("HTTPS_PROXY=set");
   });
 
+  it("never reports proxy credentials, hosts, queries, or bypass lists", () => {
+    const proxy = new URL("http://proxy.example.test");
+    proxy.username = ["private", "user"].join("-");
+    proxy.password = ["private", "password"].join("-");
+    proxy.search = "token=private-query";
+    const outcome = withProxyEnv(
+      {
+        HTTPS_PROXY: proxy.href,
+        NO_PROXY: "private-bypass.example",
+        NODE_USE_ENV_PROXY: "1",
+      },
+      () => checkProxy(),
+    );
+    expect(outcome.status).toBe("ok");
+    expect(outcome.message).toContain("HTTPS_PROXY=set");
+    for (const value of [
+      proxy.hostname,
+      proxy.username,
+      proxy.password,
+      "private-query",
+      "private-bypass",
+    ])
+      expect(JSON.stringify(outcome)).not.toContain(value);
+  });
   it("warns when HTTPS_PROXY is set but NODE_USE_ENV_PROXY is not", () => {
     // Node 22+ ignores HTTP(S)_PROXY by default. The classic AGX
     // failure mode: agent's container has HTTPS_PROXY exported but

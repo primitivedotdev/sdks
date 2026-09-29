@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { watch } from "node:fs";
 import { join } from "node:path";
-import { acquireListenLock, listenProcessIdentity } from "./listen-state.js";
+import {
+  acquireListenLock,
+  compareListenProcessIdentity,
+  listenProcessIdentity,
+} from "./listen-state.js";
 import {
   invalidSharedMail,
   mailId,
@@ -60,7 +64,11 @@ export function readSharedMailOwner(
   const owner = ownerRecord(raw);
   return {
     ...owner,
-    alive: listenProcessIdentity(owner.pid) === owner.identity,
+    alive:
+      compareListenProcessIdentity(
+        owner.identity,
+        listenProcessIdentity(owner.pid),
+      ) === true,
   };
 }
 

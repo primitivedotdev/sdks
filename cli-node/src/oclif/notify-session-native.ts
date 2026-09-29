@@ -3,22 +3,40 @@ import { homedir } from "node:os";
 import { dirname, isAbsolute, join, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import WebSocket from "ws";
-import { ListenStateError } from "./listen-state.js";
+import {
+  NativeSessionDisconnectedError,
+  NativeSessionError,
+  NativeSessionNotLoadedError,
+  NotificationOutcomeUnknownError,
+} from "./notify-session-errors.js";
+
+export {
+  NativeSessionDisconnectedError,
+  NativeSessionError,
+  NativeSessionNotLoadedError,
+} from "./notify-session-errors.js";
 
 export const SESSION_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export class NativeSessionError extends ListenStateError {
-  constructor(
-    message: string,
-    readonly submitted = false,
-  ) {
-    super(message);
-  }
-}
 const failure = () =>
   new NativeSessionError(
     "The native session socket is unavailable or not private. Open the exact session in a terminal with native local-session support enabled, then restart this listener.",
   );
+function connectionFailure(error: unknown): NativeSessionError {
+  if (error instanceof NativeSessionError) return error;
+  if (
+    [
+      "ENOENT",
+      "ECONNREFUSED",
+      "ECONNRESET",
+      "EPIPE",
+      "ENOTCONN",
+      "ETIMEDOUT",
+    ].includes((error as NodeJS.ErrnoException | null)?.code ?? "")
+  )
+    return new NativeSessionDisconnectedError();
+  return failure();
+}
 const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -90,6 +108,9 @@ export async function connectNativeSession(options: {
   socketPath?: string;
   signal: AbortSignal;
   timeoutMs?: number;
+  onDisconnect?: (error: NativeSessionError) => void;
+  expectedCwd?: string;
+  onVerifiedCwd?: (cwd: string) => void;
 }) {
   if (!SESSION_UUID.test(options.threadId))
     throw new NativeSessionError(
@@ -102,8 +123,8 @@ export async function connectNativeSession(options: {
   let identity: Awaited<ReturnType<typeof inspectSessionSocket>>;
   try {
     identity = await inspectSessionSocket(socketPath);
-  } catch {
-    throw failure();
+  } catch (error) {
+    throw connectionFailure(error);
   }
   options.signal.throwIfAborted();
   const socket = new WebSocket(`ws+unix://${identity.targetPath}:/`, {
@@ -115,27 +136,31 @@ export async function connectNativeSession(options: {
     number,
     {
       resolve: (result: unknown) => void;
-      reject: (error: Error) => void;
+      reject: (error: unknown) => void;
       timer: ReturnType<typeof setTimeout>;
     }
   >();
   let closed = false;
+  let closeReason: NativeSessionError | undefined;
   let sequence = 0;
   let cwd: string | undefined;
-  const close = () => {
+  const close = (reason?: NativeSessionError) => {
     if (closed) return;
     closed = true;
-    options.signal.removeEventListener("abort", close);
+    closeReason = reason;
+    options.signal.removeEventListener("abort", abort);
     for (const entry of pending.values()) {
       clearTimeout(entry.timer);
-      entry.reject(failure());
+      entry.reject(reason ?? options.signal.reason ?? failure());
     }
     pending.clear();
     socket.terminate();
+    if (reason && !options.signal.aborted) options.onDisconnect?.(reason);
   };
-  options.signal.addEventListener("abort", close, { once: true });
-  socket.on("error", close);
-  socket.on("close", close);
+  const abort = () => close();
+  options.signal.addEventListener("abort", abort, { once: true });
+  socket.on("error", (error) => close(connectionFailure(error)));
+  socket.on("close", () => close(new NativeSessionDisconnectedError()));
   socket.on("message", (bytes, binary) => {
     try {
       if (binary) throw failure();
@@ -151,7 +176,7 @@ export async function connectNativeSession(options: {
         entry.resolve(message.result);
       else entry.reject(failure());
     } catch {
-      close();
+      close(failure());
     }
   });
   function request(method: string, params: unknown): Promise<unknown> {
@@ -160,7 +185,11 @@ export async function connectNativeSession(options: {
       options.signal.aborted ||
       socket.readyState !== WebSocket.OPEN
     )
-      return Promise.reject(failure());
+      return Promise.reject(
+        closeReason ??
+          options.signal.reason ??
+          new NativeSessionDisconnectedError(),
+      );
     return new Promise((resolve, reject) => {
       const id = ++sequence;
       const timer = setTimeout(() => {
@@ -170,10 +199,10 @@ export async function connectNativeSession(options: {
       pending.set(id, { resolve, reject, timer });
       try {
         socket.send(JSON.stringify({ id, method, params }), (error) => {
-          if (error) close();
+          if (error) close(connectionFailure(error));
         });
-      } catch {
-        close();
+      } catch (error) {
+        close(connectionFailure(error));
       }
     });
   }
@@ -215,10 +244,8 @@ export async function connectNativeSession(options: {
       cursor = result.nextCursor;
       cursors.add(cursor);
     }
-    if (!complete || !found)
-      throw new NativeSessionError(
-        "Open this exact session in the native terminal before listening.",
-      );
+    if (!complete) throw failure();
+    if (!found) throw new NativeSessionNotLoadedError();
     const thread = record(
       record(
         await request("thread/read", {
@@ -231,22 +258,44 @@ export async function connectNativeSession(options: {
       thread.id !== options.threadId ||
       thread.canAcceptDirectInput !== true ||
       typeof thread.cwd !== "string" ||
-      !isAbsolute(thread.cwd) ||
-      (cwd !== undefined && cwd !== thread.cwd)
+      !isAbsolute(thread.cwd)
     )
       throw new NativeSessionError(
         "The exact session cannot accept input or its working directory changed.",
       );
-    cwd = thread.cwd;
+    let verifiedCwd: string;
+    try {
+      verifiedCwd = await realpath(thread.cwd);
+    } catch {
+      throw failure();
+    }
+    if (
+      (cwd !== undefined && cwd !== verifiedCwd) ||
+      (options.expectedCwd !== undefined && options.expectedCwd !== verifiedCwd)
+    )
+      throw new NativeSessionError(
+        "The exact session working directory changed. Restart the listener explicitly.",
+      );
     if (!isDeepStrictEqual(await inspectSessionSocket(socketPath), identity))
       throw failure();
-    if (closed || options.signal.aborted) throw failure();
+    if (closed || options.signal.aborted)
+      throw (
+        closeReason ??
+        options.signal.reason ??
+        new NativeSessionDisconnectedError()
+      );
+    cwd = verifiedCwd;
+    options.onVerifiedCwd?.(verifiedCwd);
   }
   try {
     await new Promise<void>((resolve, reject) => {
       socket.once("open", resolve);
-      socket.once("error", () => reject(failure()));
-      socket.once("close", () => reject(failure()));
+      socket.once("error", (error) =>
+        reject(closeReason ?? connectionFailure(error)),
+      );
+      socket.once("close", () =>
+        reject(closeReason ?? new NativeSessionDisconnectedError()),
+      );
     });
     await request("initialize", {
       clientInfo: { name: "primitive_cli", version: "1" },
@@ -256,45 +305,48 @@ export async function connectNativeSession(options: {
     await verify();
   } catch (error) {
     close();
-    throw error instanceof NativeSessionError ? error : failure();
+    if (error === options.signal.reason) throw error;
+    throw connectionFailure(error);
   }
   return {
-    close,
-    async queue(
-      text: string,
-      clientUserMessageId: string,
-      beforeDispatch: () => void,
-    ) {
-      if (
-        !SESSION_UUID.test(clientUserMessageId) ||
-        Buffer.byteLength(text) > 16_384
-      )
+    close: () => close(),
+    async queue(text: string, receiptId: string, beforeDispatch: () => void) {
+      if (!SESSION_UUID.test(receiptId) || Buffer.byteLength(text) > 16_384)
         throw failure();
       try {
         await verify();
       } catch (error) {
-        throw error instanceof NativeSessionError ? error : failure();
+        if (error === options.signal.reason) throw error;
+        throw connectionFailure(error);
       }
       // Synchronous durable receipt write belongs immediately before dispatch.
       beforeDispatch();
       try {
         const result = record(
-          await request("thread/queue/add", {
+          await request("turn/start", {
             threadId: options.threadId,
-            clientUserMessageId,
-            input: [{ type: "text", text, text_elements: [] }],
+            input: [],
+            toolOutput: {
+              name: "mail_received",
+              namespace: "primitive",
+              output: text,
+            },
           }),
         );
-        const queued = record(result.queuedSubmission);
+        const turn = record(result.turn);
         if (
-          typeof queued.id !== "string" ||
-          queued.clientUserMessageId !== clientUserMessageId
+          typeof turn.id !== "string" ||
+          turn.id.length === 0 ||
+          !Array.isArray(turn.items) ||
+          typeof turn.status !== "string" ||
+          !["completed", "interrupted", "failed", "inProgress"].includes(
+            turn.status,
+          )
         )
           throw failure();
       } catch {
-        throw new NativeSessionError(
+        throw new NotificationOutcomeUnknownError(
           "Native notification outcome is unknown; it will not be sent again automatically.",
-          true,
         );
       }
     },

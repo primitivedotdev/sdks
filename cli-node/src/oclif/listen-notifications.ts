@@ -1,16 +1,37 @@
 import { type EmailDetail, getEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
-import { readContactInteraction } from "./contact-interactions.js";
+import {
+  isContactAcceptance,
+  readContactInteraction,
+} from "./contact-interactions.js";
 import { apiContactPolicy } from "./contact-policy-client.js";
 import { openContactRequestNotices } from "./contact-request-state.js";
+import {
+  followEmailConversation,
+  readConversationFollow,
+} from "./conversation-follow.js";
+import {
+  boundConversationStatus,
+  conversationStatusDue,
+  readBoundSentMessageId,
+  reserveConversationStatus,
+} from "./conversation-status.js";
 import type { ListenOptions } from "./listen-runner.js";
 import { ListenStateError } from "./listen-state.js";
-import { openSessionNotifications } from "./notify-session.js";
+import {
+  notificationScope,
+  openSessionNotifications,
+} from "./notify-session.js";
 import {
   NotificationRetryError,
   notificationPartReader,
+  readConversationStatusContent,
 } from "./notify-session-content.js";
-import { scopedChatSenderTrust } from "./scoped-chat.js";
+import {
+  NativeSessionError,
+  NotificationOutcomeUnknownError,
+} from "./notify-session-errors.js";
+import { isPlainChatReply, scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   openSharedMailReceiver,
   sharedMailScope,
@@ -65,17 +86,27 @@ export async function runSharedNotificationListen(
     apiKey: options.apiKey,
     apiBaseUrl: options.apiBaseUrl,
   });
+  if (
+    options.expectedNotificationScope !== undefined &&
+    notificationScope(auth.auth.apiBaseUrl, auth.auth.apiKey) !==
+      options.expectedNotificationScope
+  )
+    throw new ListenStateError(
+      "The selected connection changed. Stop this listener and start it again with the intended profile.",
+    );
   const scope = sharedMailScope(auth.auth.apiKey, auth.auth.apiBaseUrl),
     signal = options.signal;
+  const readPart = notificationPartReader(async () => auth.apiClient.client);
   const native = await openSessionNotifications({
     ...notify,
     configDir: options.configDir,
     scope,
     signal,
-    readPart: notificationPartReader(async () => auth.apiClient.client),
+    readPart,
   });
   let receiver: Awaited<ReturnType<typeof openSharedMailReceiver>> | undefined;
   let processed = 0;
+  let failure: unknown;
   const settled = new Set<string>();
   const deferredUntil = new Map<string, number>();
   const sessionKey = `codex:${notify.threadId.toLowerCase()}`;
@@ -134,24 +165,33 @@ export async function runSharedNotificationListen(
     async function reconcile(row: SharedMailEmail) {
       const receipt = native.receipt(row.emailId, row.eventId);
       if (!receipt) return;
-      const current = await store.readEmail(row.emailId);
-      if (
-        current?.route?.kind !== "notification" ||
-        current.route.sessionKey !== sessionKey
-      )
-        throw new ListenStateError(
-          "Native notification receipt conflicts with shared mail ownership.",
+      const unknown =
+        receipt.state !== "accepted"
+          ? new NotificationOutcomeUnknownError(
+              `Notification for email ${row.emailId} has an unknown outcome. Inspect the exact session; it will not be resent automatically.`,
+            )
+          : undefined;
+      try {
+        const current = await store.readEmail(row.emailId);
+        if (
+          current?.route?.kind !== "notification" ||
+          current.route.sessionKey !== sessionKey
+        )
+          throw new ListenStateError(
+            "Native notification receipt conflicts with shared mail ownership.",
+          );
+        if (current.route.state === "selected")
+          await store.markNotification(row.emailId, "submitting");
+        await store.markNotification(
+          row.emailId,
+          receipt.state === "accepted" ? "accepted" : "unknown",
         );
-      if (current.route.state === "selected")
-        await store.markNotification(row.emailId, "submitting");
-      await store.markNotification(
-        row.emailId,
-        receipt.state === "accepted" ? "accepted" : "unknown",
-      );
-      if (receipt.state !== "accepted")
-        throw new ListenStateError(
-          `Notification for email ${row.emailId} has an unknown outcome. Inspect the exact session; it will not be resent automatically.`,
-        );
+      } catch (error) {
+        // Cancellation may prevent shared journal reconciliation. The native
+        // durable receipt still forbids replay and must remain the outcome.
+        throw unknown ?? error;
+      }
+      if (unknown) throw unknown;
     }
     async function processMail(row: SharedMailEmail): Promise<boolean> {
       if (row.route?.kind === "wait") return true;
@@ -163,18 +203,12 @@ export async function runSharedNotificationListen(
           return true;
         }
         if (row.route.state !== "selected")
-          throw new ListenStateError(
+          throw new NotificationOutcomeUnknownError(
             `Notification for email ${row.emailId} is held with ${row.route.state} outcome.`,
           );
       }
       if (!contactPolicy && row.details?.authorization === "trusted") {
         if (!approvedSenders.has(row.details.peer)) return true;
-        const existing = await store.claimForNotification(
-          row.emailId,
-          sessionKey,
-        );
-        if (existing.status === "held") return false;
-        if (existing.status === "already_observed") return true;
       }
       const result = await getEmail({
         client: auth.apiClient.client,
@@ -207,13 +241,152 @@ export async function runSharedNotificationListen(
         detail.parsed?.status !== "complete"
       )
         return false;
-      const admission = contactPolicy
+      const requested = detail.reply_to_sent_email_id
+        ? await store.findWaitByParent(detail.reply_to_sent_email_id)
+        : null;
+      if (requested?.sessionKey && requested.sessionKey !== sessionKey)
+        return true;
+      const followed = detail.thread_id
+        ? readConversationFollow(
+            { configDir: options.configDir, scope, recipient },
+            detail.thread_id,
+          )
+        : null;
+      if (followed && followed.sessionKey !== sessionKey) return true;
+      const sender = detail.from_email.trim().toLowerCase();
+      // Manual-only contact waits have no coding session to notify, even if
+      // this sender is otherwise approved for unsolicited mail.
+      if (
+        requested?.contactRequest &&
+        requested.sessionKey === null &&
+        requested.sentEmailId === detail.reply_to_sent_email_id &&
+        requested.peer === sender &&
+        Date.parse(detail.received_at) >= Date.parse(requested.createdAt)
+      ) {
+        const trust = scopedChatSenderTrust(detail, sender);
+        if (trust.retryable) return false;
+        if (
+          trust.trusted &&
+          isContactAcceptance(
+            await readContactInteraction(
+              detail,
+              readPart,
+              signal,
+              Date.parse(detail.received_at),
+            ),
+            requested.contactRequest,
+          )
+        )
+          return true;
+      }
+      let status = null;
+      if (
+        requested &&
+        requested.status === "bound" &&
+        requested.peer === sender &&
+        requested.sessionKey === sessionKey &&
+        requested.sentEmailId === detail.reply_to_sent_email_id
+      ) {
+        const statusTrust = scopedChatSenderTrust(detail, sender);
+        if (statusTrust.retryable) return false;
+        if (statusTrust.trusted) {
+          const content = await readConversationStatusContent(
+            detail,
+            readPart,
+            signal,
+          );
+          if (content) {
+            const sentMessageId = await readBoundSentMessageId(
+              auth.apiClient,
+              requested,
+              signal,
+            );
+            if (!sentMessageId) return false;
+            status = boundConversationStatus(
+              detail,
+              content,
+              requested,
+              sentMessageId,
+              sessionKey,
+            );
+          }
+        }
+      }
+      let admission = contactPolicy
         ? await contactPolicy.admit(
             detail.from_email,
             detail.received_at,
             signal,
           )
         : undefined;
+      if (
+        status &&
+        contactPolicy &&
+        (!admission || admission.kind === "request")
+      )
+        admission = await contactPolicy.admitResponse(
+          sender,
+          detail.received_at,
+          signal,
+        );
+      if (status && admission?.kind === "request") return true;
+      if (
+        contactPolicy &&
+        admission?.kind !== "allowed" &&
+        detail.reply_to_sent_email_id
+      ) {
+        if (
+          requested &&
+          (requested.status === "bound" ||
+            (requested.status === "completed" &&
+              !requested.contactRequest &&
+              requested.sessionKey === sessionKey)) &&
+          requested.sentEmailId === detail.reply_to_sent_email_id &&
+          requested.peer === detail.from_email.trim().toLowerCase() &&
+          (requested.sessionKey === null ||
+            requested.sessionKey === sessionKey) &&
+          Date.parse(detail.received_at) >= Date.parse(requested.createdAt)
+        ) {
+          const trust = scopedChatSenderTrust(detail, requested.peer);
+          if (trust.retryable) return false;
+          if (trust.trusted) {
+            const response = requested.contactRequest
+              ? isContactAcceptance(
+                  await readContactInteraction(
+                    detail,
+                    notificationPartReader(async () => auth.apiClient.client),
+                    signal,
+                    Date.parse(detail.received_at),
+                  ),
+                  requested.contactRequest,
+                )
+              : isPlainChatReply(detail);
+            if (response)
+              admission = await contactPolicy.admitResponse(
+                requested.peer,
+                detail.received_at,
+                signal,
+              );
+          }
+        }
+      }
+      if (
+        contactPolicy &&
+        admission?.kind !== "allowed" &&
+        followed &&
+        followed.peer === detail.from_email.trim().toLowerCase() &&
+        Date.parse(detail.received_at) >= Date.parse(followed.since) &&
+        isPlainChatReply(detail)
+      ) {
+        const trust = scopedChatSenderTrust(detail, followed.peer);
+        if (trust.retryable) return false;
+        if (trust.trusted)
+          admission = await contactPolicy.admitResponse(
+            followed.peer,
+            detail.received_at,
+            signal,
+          );
+      }
       if (contactPolicy && !admission) return true;
       const choices = (
         admission ? [admission.sender] : [...approvedSenders]
@@ -244,77 +417,156 @@ export async function runSharedNotificationListen(
       const claim = await store.claimForNotification(row.emailId, sessionKey);
       if (claim.status === "held") return false;
       if (claim.status === "already_observed") return true;
+      if (
+        status &&
+        !(await conversationStatusDue(
+          {
+            configDir: options.configDir,
+            scope,
+            recipient,
+            sessionKey,
+          },
+          status,
+        ))
+      ) {
+        await store.skipNotification(row.emailId, sessionKey);
+        return true;
+      }
+      if (
+        requested &&
+        !requested.contactRequest &&
+        ["bound", "completed"].includes(requested.status) &&
+        requested.sessionKey === sessionKey &&
+        requested.sentEmailId === detail.reply_to_sent_email_id &&
+        requested.peer === trusted.peer &&
+        Date.parse(detail.received_at) >= Date.parse(requested.createdAt) &&
+        isPlainChatReply(detail)
+      ) {
+        // The first authenticated reply establishes interest in its exact server
+        // thread even when an async chat has no waiter left to observe it.
+        const check =
+          contactPolicy && admission
+            ? await contactPolicy.recheck(admission, signal)
+            : undefined;
+        check?.();
+        await followEmailConversation(
+          {
+            configDir: options.configDir,
+            scope,
+            recipient,
+            peer: trusted.peer,
+            sessionKey,
+            since: requested.createdAt,
+          },
+          detail,
+        );
+      }
+      let dispatchFailure: unknown;
+      let completed = true;
       try {
         const outcome =
           contactPolicy && admission
-            ? await native.handleDetail(detail, row.eventId, signal, {
-                sender: admission.sender,
-                contactRequest: admission.kind === "request",
-                recheck: async (nextSignal) => {
-                  const allowed = await contactPolicy.recheck(
-                    admission,
-                    nextSignal,
-                  );
-                  return () => {
-                    allowed();
-                  };
-                },
-                ...(admission.kind === "request" && requestNotices
-                  ? {
-                      reserve: (receipt) => {
-                        if (
-                          requestExpiry === undefined ||
-                          Date.now() >= requestExpiry
-                        )
-                          return false;
-                        const result = requestNotices.reserve(
-                          admission.sender,
-                          notify.threadId,
-                          receipt,
-                          contactPolicy.members(),
-                        );
-                        if (
-                          (result === "full" || result === "exhausted") &&
-                          !budgetWarned
-                        ) {
-                          budgetWarned = true;
-                          (options.stderr ?? process.stderr).write(
-                            result === "exhausted"
-                              ? "First-contact sender retention limit reached. Known contacts continue; inspect new requests manually.\n"
-                              : "First-contact notice capacity reached. Known contacts continue; review existing requests before admitting more.\n",
+            ? await native.handleDetail(
+                detail,
+                row.eventId,
+                signal,
+                {
+                  sender: admission.sender,
+                  contactRequest: admission.kind === "request",
+                  recheck: async (nextSignal) => {
+                    const allowed = await contactPolicy.recheck(
+                      admission,
+                      nextSignal,
+                    );
+                    return () => {
+                      allowed();
+                    };
+                  },
+                  ...(admission.kind === "request" && requestNotices
+                    ? {
+                        reserve: (receipt) => {
+                          if (
+                            requestExpiry === undefined ||
+                            Date.now() >= requestExpiry
+                          )
+                            return false;
+                          const result = requestNotices.reserve(
+                            admission.sender,
+                            notify.threadId,
+                            receipt,
+                            contactPolicy.members(),
                           );
-                        }
-                        return result === "full"
-                          ? "deferred"
-                          : result === "reserved";
-                      },
-                    }
-                  : {}),
-              })
-            : await native.handleDetail(detail, row.eventId, signal);
+                          if (
+                            (result === "full" || result === "exhausted") &&
+                            !budgetWarned
+                          ) {
+                            budgetWarned = true;
+                            (options.stderr ?? process.stderr).write(
+                              result === "exhausted"
+                                ? "First-contact sender retention limit reached. Known contacts continue; inspect new requests manually.\n"
+                                : "First-contact notice capacity reached. Known contacts continue; review existing requests before admitting more.\n",
+                            );
+                          }
+                          return result === "full"
+                            ? "deferred"
+                            : result === "reserved";
+                        },
+                      }
+                    : {}),
+                },
+                status ?? undefined,
+              )
+            : await native.handleDetail(
+                detail,
+                row.eventId,
+                signal,
+                undefined,
+                status ?? undefined,
+              );
         if (outcome.disposition === "deferred") {
           await store.releaseNotification(row.emailId, sessionKey);
           // Local journal changes must not create a hot retry loop. Retry only
           // this known ID, with fresh policy, after a bounded cooldown.
           deferredUntil.set(row.emailId, performance.now() + 30_000);
-          return false;
+          completed = false;
         }
         // Suppression is a terminal non-dispatch decision, not an unknown send.
         // Persist it separately from native receipts so restarts cannot reclaim it.
         if (outcome.disposition === "skipped")
           await store.skipNotification(row.emailId, sessionKey);
-      } finally {
-        // Only the native write-before-dispatch journal establishes submission.
-        // Socket/thread preflight errors leave the shared reservation selected.
-        await reconcile(row);
+        if (outcome.disposition === "notified" && status)
+          await reserveConversationStatus(
+            {
+              configDir: options.configDir,
+              scope,
+              recipient,
+              sessionKey,
+            },
+            status,
+          );
+      } catch (error) {
+        dispatchFailure = error;
       }
-      return true;
+      // Only the native write-before-dispatch journal establishes submission.
+      // Preserve its outcome even when abort prevents shared reconciliation.
+      try {
+        await reconcile(row);
+      } catch (error) {
+        if (!(dispatchFailure instanceof NotificationOutcomeUnknownError)) {
+          if (error instanceof NotificationOutcomeUnknownError)
+            dispatchFailure = error;
+          else dispatchFailure ??= error;
+        }
+      }
+      if (dispatchFailure !== undefined) throw dispatchFailure;
+      return completed;
     }
     await receiver.ready();
+    options.onReady?.();
     (options.stderr ?? process.stderr).write(
       `Listening for session notifications on shared subscription ${store.subscriptionName}. Reply waits retain priority; Ctrl-C disconnects.\n`,
     );
-    while (
+    receiving: while (
       !signal.aborted &&
       (options.number === undefined || processed < options.number)
     ) {
@@ -354,21 +606,35 @@ export async function runSharedNotificationListen(
             if (!(error instanceof NotificationRetryError)) throw error;
           }
           if (options.number !== undefined && processed >= options.number)
-            return processed;
+            break receiving;
         }
         cursor = page.nextCursor ?? undefined;
       } while (cursor && !signal.aborted);
       await receiver.changed();
     }
   } catch (error) {
-    if (!signal.aborted) throw error;
-  } finally {
-    try {
-      await receiver?.close();
-    } finally {
-      native.close();
-    }
+    // Only deliberate cancellation is a clean stop. A native disconnect or
+    // unknown submission can abort this same signal and must reach supervision.
+    const cancelled =
+      signal.aborted &&
+      !(signal.reason instanceof NativeSessionError) &&
+      !(error instanceof NativeSessionError) &&
+      (error === signal.reason ||
+        (error instanceof Error && error.name === "AbortError"));
+    if (!cancelled) failure = error;
   }
+  if (signal.reason instanceof NativeSessionError) failure ??= signal.reason;
+  try {
+    await receiver?.close();
+  } catch (error) {
+    failure ??= error;
+  }
+  try {
+    native.close();
+  } catch (error) {
+    failure ??= error;
+  }
+  if (failure !== undefined) throw failure;
   return processed;
 }
 
@@ -381,6 +647,7 @@ async function hydrateNotification(
     recipient: store.recipient,
     peer,
     replyToSentEmailId: detail.reply_to_sent_email_id ?? null,
+    ...(detail.thread_id ? { threadId: detail.thread_id } : {}),
     receivedAt: detail.received_at,
     authorization: "trusted",
   });

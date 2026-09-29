@@ -12,6 +12,7 @@ import {
   AutomatedFilterUnsupportedError,
 } from "../automated-filter.js";
 import { openConnectedReplyWait } from "../connected-reply-wait.js";
+import { currentMailSessionKey } from "../mail-session.js";
 import {
   AWAITING_FLAG_DESCRIPTION,
   AWAITING_VALUES,
@@ -205,6 +206,7 @@ class EmailsWaitCommand extends Command {
         | undefined;
       try {
         waiter = await openConnectedReplyWait({
+          sessionKey: currentMailSessionKey(),
           apiClient,
           apiKey: auth.apiKey,
           baseUrl: auth.apiBaseUrl,

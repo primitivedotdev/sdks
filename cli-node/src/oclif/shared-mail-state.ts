@@ -2,6 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { opendirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { ContactRequestReference } from "./contact-interactions.js";
+import { readConversationFollow } from "./conversation-follow.js";
+import {
+  compareListenProcessIdentity,
+  listenProcessIdentity,
+} from "./listen-state.js";
 import {
   invalidSharedMail,
   mailAddress,
@@ -22,10 +27,13 @@ export type SharedMailDetails = {
   recipient: string;
   peer: string;
   replyToSentEmailId: string | null;
+  threadId?: string;
   receivedAt: string;
   authorization: "pending" | "trusted" | "rejected";
 };
 export type SharedMailWait = {
+  // Missing means an older CLI owns this wait. Do not guess whether it exited.
+  waiters?: SharedMailWaiter[];
   contactRequest?: ContactRequestReference;
   requestId: string;
   peer: string;
@@ -35,6 +43,56 @@ export type SharedMailWait = {
   status: "unbound" | "uncertain" | "bound" | "completed" | "cancelled";
   sentEmailId: string | null;
 };
+export type SharedMailWaiter = {
+  token: string;
+  pid: number;
+  identity: string | null;
+};
+export function createSharedMailWaiter(): SharedMailWaiter {
+  return {
+    token: randomUUID(),
+    pid: process.pid,
+    identity: listenProcessIdentity(process.pid),
+  };
+}
+function waiter(value: unknown): SharedMailWaiter {
+  const owner = mailObject(value, ["token", "pid", "identity"]);
+  if (!Number.isSafeInteger(owner.pid) || Number(owner.pid) < 1)
+    throw invalidSharedMail();
+  return {
+    token: mailId(owner.token),
+    pid: Number(owner.pid),
+    identity: owner.identity === null ? null : mailString(owner.identity),
+  };
+}
+function mayBeWaiting(owner: SharedMailWaiter): boolean {
+  const identity = listenProcessIdentity(owner.pid);
+  const matches = compareListenProcessIdentity(owner.identity, identity);
+  if (matches !== null) return matches;
+  try {
+    process.kill(owner.pid, 0);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ESRCH") return false;
+  }
+  // Unavailable process metadata or permissions cannot authorize a handoff.
+  return true;
+}
+function addWaiters(
+  previous: SharedMailWait,
+  owners: SharedMailWaiter[],
+): SharedMailWait {
+  if (!previous.waiters) return previous;
+  const merged = new Map(
+    previous.waiters.filter(mayBeWaiting).map((owner) => [owner.token, owner]),
+  );
+  for (const input of owners) {
+    const owner = waiter(input),
+      existing = merged.get(owner.token);
+    if (existing && !same(existing, owner)) throw invalidSharedMail();
+    merged.set(owner.token, owner);
+  }
+  return { ...previous, waiters: [...merged.values()] };
+}
 export type SharedMailRoute =
   | { kind: "wait"; requestId: string; observed: boolean }
   | {
@@ -65,7 +123,11 @@ const hash = (value: string) =>
 const same = (left: unknown, right: unknown) =>
   JSON.stringify(left) === JSON.stringify(right);
 function details(value: unknown): SharedMailDetails {
+  const hasThread = Boolean(
+    value && typeof value === "object" && Object.hasOwn(value, "threadId"),
+  );
   const d = mailObject(value, [
+    ...(hasThread ? ["threadId"] : []),
     "recipient",
     "peer",
     "replyToSentEmailId",
@@ -79,6 +141,7 @@ function details(value: unknown): SharedMailDetails {
   )
     throw invalidSharedMail();
   return {
+    ...(hasThread ? { threadId: mailId(d.threadId) } : {}),
     recipient: mailAddress(d.recipient),
     peer: mailAddress(d.peer),
     replyToSentEmailId:
@@ -88,12 +151,16 @@ function details(value: unknown): SharedMailDetails {
   };
 }
 function wait(value: unknown): SharedMailWait {
+  const hasWaiters = Boolean(
+    value && typeof value === "object" && Object.hasOwn(value, "waiters"),
+  );
   const hasControl = Boolean(
     value &&
       typeof value === "object" &&
       Object.hasOwn(value, "contactRequest"),
   );
   const w = mailObject(value, [
+    ...(hasWaiters ? ["waiters"] : []),
     ...(hasControl ? ["contactRequest"] : []),
     "requestId",
     "peer",
@@ -117,7 +184,16 @@ function wait(value: unknown): SharedMailWait {
       (w.sentEmailId !== null)
   )
     throw invalidSharedMail();
+  let owners: SharedMailWaiter[] | undefined;
+  if (hasWaiters) {
+    if (!Array.isArray(w.waiters) || w.waiters.length > 32)
+      throw invalidSharedMail();
+    owners = w.waiters.map(waiter);
+    if (new Set(owners.map((owner) => owner.token)).size !== owners.length)
+      throw invalidSharedMail();
+  }
   return {
+    ...(owners ? { waiters: owners } : {}),
     ...(hasControl
       ? { contactRequest: contactRequestReference(w.contactRequest) }
       : {}),
@@ -460,18 +536,23 @@ export async function openSharedMailStore(options: {
       return transaction(() => {
         const record = requiredEmail(emailId),
           verified = details(input);
+        if (verified.threadId === undefined && record.details?.threadId)
+          verified.threadId = record.details.threadId;
         if (verified.recipient !== recipient) throw invalidSharedMail();
         if (
           record.details &&
           record.details.authorization !== "pending" &&
           !same(
-            record.details.replyToSentEmailId === null
-              ? {
-                  ...record.details,
-                  replyToSentEmailId: verified.replyToSentEmailId,
-                }
-              : record.details,
-            verified,
+            details({
+              ...record.details,
+              ...(record.details.replyToSentEmailId === null
+                ? { replyToSentEmailId: verified.replyToSentEmailId }
+                : {}),
+              ...(record.details.threadId === undefined && verified.threadId
+                ? { threadId: verified.threadId }
+                : {}),
+            }),
+            details(verified),
           )
         )
           throw invalidSharedMail();
@@ -485,6 +566,7 @@ export async function openSharedMailStore(options: {
       });
     },
     registerWait(input: {
+      waiter?: SharedMailWaiter;
       contactRequest?: ContactRequestReference;
       requestId: string;
       peer: string;
@@ -493,8 +575,10 @@ export async function openSharedMailStore(options: {
       createdAt: string;
     }) {
       return transaction(() => {
+        const { waiter: owner, ...registration } = input;
         const requested = wait({
-            ...input,
+            ...registration,
+            ...(owner ? { waiters: [owner] } : {}),
             sessionKey: input.sessionKey ?? null,
             status: "unbound",
             sentEmailId: null,
@@ -503,12 +587,19 @@ export async function openSharedMailStore(options: {
         if (previous) {
           if (
             !same(
-              { ...previous, status: "unbound", sentEmailId: null },
-              requested,
+              {
+                ...previous,
+                waiters: undefined,
+                status: "unbound",
+                sentEmailId: null,
+              },
+              { ...requested, waiters: undefined },
             )
           )
             throw invalidSharedMail();
-          return previous;
+          const next = addWaiters(previous, owner ? [owner] : []);
+          commit([{ path: pathFor("waits", next.requestId), value: next }]);
+          return next;
         }
         commit([
           { path: pathFor("waits", requested.requestId), value: requested },
@@ -520,12 +611,62 @@ export async function openSharedMailStore(options: {
         return requested;
       });
     },
+    joinWait(requestId: string, owner: SharedMailWaiter) {
+      return transaction(() => {
+        const previous = requiredWait(requestId);
+        if (previous.status !== "bound" && previous.status !== "completed")
+          throw invalidSharedMail();
+        const next = addWaiters(previous, [owner]);
+        commit([{ path: pathFor("waits", requestId), value: next }]);
+        return next;
+      });
+    },
+    releaseWaiter(requestId: string, token: string) {
+      return transaction(() => {
+        const previous = requiredWait(requestId),
+          owner = mailId(token);
+        const records = [previous];
+        if (previous.status === "cancelled" && previous.sentEmailId) {
+          const parent = read(pathFor("parents", previous.sentEmailId)) as {
+            requestId: string;
+          } | null;
+          if (parent && parent.requestId !== previous.requestId)
+            records.push(requiredWait(parent.requestId));
+        }
+        const changes = records
+          .filter((record) => record.waiters)
+          .map((record) => ({
+            path: pathFor("waits", record.requestId),
+            value: {
+              ...record,
+              waiters: record.waiters?.filter((entry) => entry.token !== owner),
+            },
+          }));
+        commit(changes);
+        return requiredWait(requestId);
+      });
+    },
     findWaitByParent(sentEmailId: string) {
       return transaction(() => {
         const parent = read(pathFor("parents", sentEmailId)) as {
           requestId: string;
         } | null;
         return parent === null ? null : requiredWait(parent.requestId);
+      });
+    },
+    wakeDisposition(emailId: string, sentEmailId: string) {
+      return transaction(() => {
+        const email = readEmail(mailId(emailId));
+        if (email?.route?.kind === "wait" && email.route.observed)
+          return "observed" as const;
+        const parent = read(pathFor("parents", mailId(sentEmailId))) as {
+          requestId: string;
+        } | null;
+        if (!parent) return "available" as const;
+        const w = requiredWait(parent.requestId);
+        if (w.status === "bound" && w.waiters?.some(mayBeWaiting))
+          return "waiting" as const;
+        return "available" as const;
       });
     },
     bindWait(requestId: string, sentEmailId: string) {
@@ -541,6 +682,9 @@ export async function openSharedMailStore(options: {
           if (
             canonical.sentEmailId !== parent ||
             canonical.peer !== previous.peer ||
+            (canonical.sessionKey !== null &&
+              previous.sessionKey !== null &&
+              canonical.sessionKey !== previous.sessionKey) ||
             !same(
               canonical.contactRequest ?? null,
               previous.contactRequest ?? null,
@@ -554,20 +698,29 @@ export async function openSharedMailStore(options: {
               previous.status !== "cancelled"
             )
               throw invalidSharedMail();
+            const joined = previous.waiters
+              ? addWaiters(canonical, previous.waiters)
+              : { ...canonical, waiters: undefined };
+            // A legacy waiter cannot be tracked. Retain its conservative hold.
+            if (joined.waiters === undefined) delete joined.waiters;
             commit([
+              { path: pathFor("waits", canonical.requestId), value: joined },
               {
                 path: pathFor("waits", requestId),
                 value: {
                   ...previous,
+                  ...(previous.waiters ? { waiters: [] } : {}),
                   status: "cancelled",
                   sentEmailId: parent,
                 },
               },
               { path: unboundPath(previous), value: null },
             ]);
-            return canonical;
+            return joined;
           }
           if (canonical.status !== "completed") throw invalidSharedMail();
+          // A manual resume must not erase the session that follows this conversation.
+          previous.sessionKey ??= canonical.sessionKey;
         }
         if (previous.status === "cancelled" || previous.status === "completed")
           throw invalidSharedMail();
@@ -661,10 +814,32 @@ export async function openSharedMailStore(options: {
         return next;
       });
     },
-    claimForWait(emailId: string, requestId: string): Promise<SharedMailClaim> {
+    claimForWait(
+      emailId: string,
+      requestId: string,
+      token?: string,
+    ): Promise<SharedMailClaim> {
       return transaction(() => {
         const record = requiredEmail(emailId),
           w = requiredWait(requestId);
+        if (
+          w.waiters &&
+          !w.waiters.some(
+            (owner) => owner.token === token && mayBeWaiting(owner),
+          )
+        )
+          return { status: "held", email: record };
+        if (
+          record.route?.kind === "notification" &&
+          ["accepted", "skipped"].includes(record.route.state) &&
+          w.contactRequest &&
+          w.waiters &&
+          w.status === "bound" &&
+          record.details?.authorization === "trusted" &&
+          record.details.peer === w.peer &&
+          record.details.replyToSentEmailId === w.sentEmailId
+        )
+          return { status: "claimed", email: record };
         if (record.route)
           return {
             status:
@@ -715,6 +890,41 @@ export async function openSharedMailStore(options: {
         return next;
       });
     },
+    observeNotifiedContactReply(
+      emailId: string,
+      requestId: string,
+      token: string,
+    ) {
+      return transaction(() => {
+        const record = requiredEmail(emailId),
+          w = requiredWait(requestId);
+        if (
+          record.route?.kind !== "notification" ||
+          !["accepted", "skipped"].includes(record.route.state)
+        )
+          return false;
+        if (
+          !w.contactRequest ||
+          !["bound", "completed"].includes(w.status) ||
+          !w.waiters?.some(
+            (owner) => owner.token === token && mayBeWaiting(owner),
+          ) ||
+          record.details?.authorization !== "trusted" ||
+          record.details.peer !== w.peer ||
+          record.details.replyToSentEmailId !== w.sentEmailId
+        )
+          throw invalidSharedMail();
+        // The contact waiter revalidated the complete acceptance. Preserve the
+        // native outcome and receipt so reconciliation and dedup remain stable.
+        commit([
+          {
+            path: pathFor("waits", requestId),
+            value: { ...w, status: "completed" },
+          },
+        ]);
+        return true;
+      });
+    },
     claimForNotification(
       emailId: string,
       sessionKey: string,
@@ -743,6 +953,14 @@ export async function openSharedMailStore(options: {
           return { status: "held", email: record };
         if (d.authorization !== "trusted")
           return { status: "unmatched", email: record };
+        if (d.threadId) {
+          const followed = readConversationFollow(
+            { configDir: options.configDir, scope: options.scope, recipient },
+            d.threadId,
+          );
+          if (followed && followed.sessionKey !== session)
+            return { status: "held", email: record };
+        }
         if (d.replyToSentEmailId) {
           const parent = read(pathFor("parents", d.replyToSentEmailId)) as {
             requestId: string;
@@ -751,7 +969,15 @@ export async function openSharedMailStore(options: {
             const w = requiredWait(parent.requestId);
             if (w.sentEmailId !== d.replyToSentEmailId)
               throw invalidSharedMail();
-            if (w.status === "bound" && w.peer === d.peer)
+            // Every listener path, including an explicit --sender consumer,
+            // must preserve the native session that owns this conversation.
+            if (w.sessionKey !== null && w.sessionKey !== session)
+              return { status: "held", email: record };
+            if (
+              w.status === "bound" &&
+              w.peer === d.peer &&
+              (!w.waiters || w.waiters.some(mayBeWaiting))
+            )
               return { status: "held", email: record };
           }
         }

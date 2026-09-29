@@ -213,11 +213,11 @@ export function formatPriorRepliesWarning(
 ): string | null {
   const latest = prior.at(-1);
   if (!latest) return null;
-  const when =
-    prior.length === 1
-      ? `at ${latest.created_at}`
-      : `${prior.length} times, most recently at ${latest.created_at}`;
-  return `You already replied to this email ${when} (sent id ${latest.id}). Sending another reply.`;
+  // The reply summary has no interaction metadata. Do not label activity
+  // emails as completed answers or fetch each message just for this notice.
+  const count =
+    prior.length === 1 ? "1 outgoing email" : `${prior.length} outgoing emails`;
+  return `This email already has ${count}, most recently at ${latest.created_at} (sent id ${latest.id}). These may include activity updates and do not prove a completed answer. Sending this reply.`;
 }
 
 export function formatPriorRepliesCheckSkipped(
@@ -228,7 +228,7 @@ export function formatPriorRepliesCheckSkipped(
 }
 
 export type PriorRepliesCheck =
-  | { status: "checked"; prior: EmailDetailReply[] }
+  | { status: "checked"; prior: EmailDetailReply[]; detail?: EmailDetail }
   | { status: "skipped"; reason: string };
 
 type EmailFetchClient = Parameters<typeof getEmail>[0]["client"];
@@ -275,6 +275,7 @@ export async function checkPriorReplies(params: {
     return {
       status: "checked",
       prior: priorRepliesThatWentOut(detail.replies),
+      detail,
     };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);

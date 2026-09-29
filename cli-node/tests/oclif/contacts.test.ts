@@ -176,6 +176,82 @@ describe("contacts public API commands", () => {
       `/v1/agent-contacts/${agent}/${address}`,
     );
   });
+  it("does not dispatch a membership write when aborted after directory creation", async () => {
+    const controller = new AbortController();
+    const f = fixture(ok(contact), ok(member));
+    const fetch = f.fetch.getMockImplementation();
+    if (!fetch) throw new Error("Missing fixture transport");
+    f.fetch.mockImplementation(async (input, init) => {
+      const result = await fetch(input, init);
+      controller.abort();
+      return result;
+    });
+    await expect(
+      runContactRequest(f.client, {
+        target: "agent",
+        action: "add",
+        agent,
+        address,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ directoryAvailable: true });
+    expect(f.calls.map((call) => call.method)).toEqual(["PUT"]);
+  });
+  it.each([
+    "directory",
+    "membership",
+  ])("aborts a stalled %s write without retry or subsequent mutation", async (stage) => {
+    const controller = new AbortController();
+    let resolveStarted!: (signal: AbortSignal) => void;
+    const started = new Promise<AbortSignal>((resolve) => {
+      resolveStarted = resolve;
+    });
+    const f = fixture();
+    const methods: string[] = [];
+    f.fetch.mockImplementation(async (input, init) => {
+      const request = new Request(input, init);
+      methods.push(request.method);
+      if (stage === "membership" && methods.length === 1)
+        return Response.json(ok(contact).body);
+      resolveStarted(request.signal);
+      return new Promise<Response>((_resolve, reject) => {
+        if (request.signal.aborted) reject(request.signal.reason);
+        else
+          request.signal.addEventListener(
+            "abort",
+            () => reject(request.signal.reason),
+            { once: true },
+          );
+      });
+    });
+    const result = runContactRequest(f.client, {
+      target: "agent",
+      action: "add",
+      agent,
+      address,
+      signal: controller.signal,
+    });
+    const rejected = expect(result).rejects.toThrow();
+    const signal = await started;
+    expect(signal.aborted).toBe(false);
+    controller.abort();
+    await rejected;
+    expect(signal.aborted).toBe(true);
+    expect(methods).toEqual(stage === "directory" ? ["PUT"] : ["PUT", "PUT"]);
+  });
+  it("never dispatches an already aborted contact request", async () => {
+    const f = fixture();
+    await expect(
+      runContactRequest(f.client, {
+        target: "agent",
+        action: "add",
+        agent,
+        address,
+        signal: AbortSignal.abort(),
+      }),
+    ).rejects.toThrow();
+    expect(f.fetch).not.toHaveBeenCalled();
+  });
   it("reports directory success plus membership failure without rollback or fabricated membership", async () => {
     const f = fixture(ok(contact), conflict);
     await expect(

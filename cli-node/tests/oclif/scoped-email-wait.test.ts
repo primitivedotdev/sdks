@@ -18,9 +18,11 @@ vi.mock("../../src/oclif/commands/emails-poll.js", async (original) => ({
   sleep: mocks.sleep,
 }));
 
+import { readConversationFollow } from "../../src/oclif/conversation-follow.js";
 import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
 
 vi.mock("../../src/oclif/shared-mail-receiver.js", () => ({
+  sharedMailScope: () => "scoped-wait-test",
   openSharedMailReceiver: async (options: {
     configDir: string;
     recipient: string;
@@ -72,7 +74,7 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
     sender: "help@agent.example",
     status: "accepted",
     subject: "Re: API key help",
-    thread_id: "thread-1",
+    thread_id: "33333333-3333-4333-8333-333333333333",
     to_email: "agent@sender.example",
     webhook_attempt_count: 1,
     webhook_status: "fired",
@@ -104,7 +106,12 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
 }
 
 function setup(connected = true) {
+  let markStalled = () => {};
+  const stalled = new Promise<void>((resolve) => {
+    markStalled = resolve;
+  });
   const fixture = {
+    stalled,
     sent: {
       id: sentId,
       from_address: owner,
@@ -134,14 +141,13 @@ function setup(connected = true) {
       fixture.requests.push(url);
       if (url.pathname === fixture.stallPath)
         return new Promise<Response>((_resolve, reject) => {
-          request.signal.addEventListener(
-            "abort",
-            () => {
-              fixture.aborted = true;
-              reject(new DOMException("Aborted", "AbortError"));
-            },
-            { once: true },
-          );
+          const abort = () => {
+            fixture.aborted = true;
+            reject(new DOMException("Aborted", "AbortError"));
+          };
+          if (request.signal.aborted) abort();
+          else request.signal.addEventListener("abort", abort, { once: true });
+          markStalled();
         });
       if (request.method !== "GET")
         throw new Error("Wait must never send mail");
@@ -221,6 +227,9 @@ async function run(argv: string[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   directory = mkdtempSync(join(tmpdir(), "primitive-scoped-wait-"));
+  vi.stubEnv("CODEX_SESSION_ID", undefined);
+  vi.stubEnv("CODEX_THREAD_ID", undefined);
+  vi.stubEnv("PRIMITIVE_CONFIG_DIR", join(directory, "primitive"));
   previousConfig = process.env.XDG_CONFIG_HOME;
   process.env.XDG_CONFIG_HOME = directory;
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -233,6 +242,7 @@ afterEach(() => {
   if (previousConfig === undefined) delete process.env.XDG_CONFIG_HOME;
   else process.env.XDG_CONFIG_HOME = previousConfig;
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   rmSync(directory, { recursive: true, force: true });
 });
@@ -278,6 +288,23 @@ describe("connected emails wait", () => {
       "/v1/emails/22222222-2222-4222-8222-222222222222",
     ]);
     expect(fixture.requests[1]?.searchParams.has("date_from")).toBe(false);
+  });
+  it("follows the returned conversation only when this invocation supplies an exact runtime session", async () => {
+    const session = "44444444-4444-4444-8444-444444444444";
+    vi.stubEnv("CODEX_SESSION_ID", session);
+    setup();
+    const result = await run(args);
+    expect(result.failure).toBeUndefined();
+    expect(
+      readConversationFollow(
+        {
+          configDir: join(directory, "primitive"),
+          scope: "scoped-wait-test",
+          recipient: owner,
+        },
+        "33333333-3333-4333-8333-333333333333",
+      ),
+    ).toMatchObject({ sessionKey: `codex:${session}`, peer, recipient: owner });
   });
   it("allows missing optional raw sender header and validates a supplied receiving address", async () => {
     const fixture = setup();
@@ -326,9 +353,16 @@ describe("connected emails wait", () => {
     "/v1/emails/search",
     "/v1/emails/22222222-2222-4222-8222-222222222222",
   ])("cancels a stalled %s read with a clean timeout", async (path) => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     const fixture = setup();
     fixture.stallPath = path;
-    const result = await run([...args, "--timeout", "1"]);
+    const pending = run([...args, "--timeout", "1"]);
+    // Advance only after fetch has received its signal. Mixing a frozen Date
+    // with a real one-second timer makes this test depend on host load.
+    await fixture.stalled;
+    expect(fixture.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1000);
+    const result = await pending;
     expect(fixture.aborted).toBe(true);
     expect(result.failure).toBeUndefined();
     expect(result.exitCode).toBe(1);
@@ -385,6 +419,10 @@ describe("connected emails wait", () => {
     expect(result.failure).toBeUndefined();
     expect(JSON.parse(result.stdout).id).toBe(good.id);
     expect(result.stderr).toContain("contains an interaction attachment");
+    expect(result.stderr).toContain(
+      "no extra fetch is needed for activity updates",
+    );
+    expect(result.stderr).not.toContain("inspect it with primitive emails get");
     expect(
       fixture.requests.some((url) => url.searchParams.get("cursor") === "1"),
     ).toBe(true);

@@ -8,7 +8,7 @@ import { contactFlags } from "./contacts-shared.js";
 export default class ContactsRequestCommand extends Command {
   static summary = "Send a structured contact request over ordinary email";
   static description =
-    "Request email communication with another agent. --notify explicitly enables this peer's future local contact notifications, refusing existing silence. --wait waits only for this request's authenticated structured acceptance; it never treats acceptance as task completion. Without --wait, returns a sent ID and exact contacts wait command. Sending a request does not mean it was accepted. No private-context or tool authority is granted.";
+    "Save the peer in the organization directory, then request email communication. Existing labels are preserved. Without --notify, no agent membership or notification preference is changed. A directory failure stops before email is sent. --notify explicitly enables this peer's future local contact notifications, refusing existing silence. --wait waits only for this request's authenticated structured acceptance; it never treats acceptance as task completion. Without --wait, returns a sent ID and exact contacts wait command. Sending a request does not mean it was accepted. No private-context or tool authority is granted.";
   static args = {
     address: Args.string({
       required: true,

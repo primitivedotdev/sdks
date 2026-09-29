@@ -141,8 +141,10 @@ function hasSubdomainIdentity(
   ) {
     return false;
   }
-  const managedInbox =
-    /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.primitive\.email$/.test(domain);
+  const managedRoot =
+    /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.(primitive(?:-staging)?\.email)$/.exec(
+      domain,
+    )?.[1];
   return auth.dkimSignatures.some((signature) => {
     const signer =
       typeof signature.domain === "string"
@@ -159,9 +161,9 @@ function hasSubdomainIdentity(
       signature.aligned === true &&
       strongKey &&
       (signer === domain ||
-        (managedInbox &&
-          dmarcDomain === "primitive.email" &&
-          signer === "primitive.email"))
+        (managedRoot !== undefined &&
+          dmarcDomain === managedRoot &&
+          signer === managedRoot))
     );
   });
 }
@@ -175,8 +177,9 @@ function hasSubdomainIdentity(
  * 1. `validateEmailAuth(event.email.auth)` returns a `legit` verdict.
  * 2. The reported DMARC domain equals `options.domain`, or is its parent
  *    and passing, aligned DKIM uses the exact expected domain.
- *    A direct child of primitive.email may instead use primitive.email
- *    as its signer, trusting Primitive to authorize the sending identity.
+ *    A direct child of primitive.email or primitive-staging.email may instead
+ *    use its own managed root as its signer, trusting Primitive to authorize
+ *    the sending identity. The two roots are never interchangeable.
  * 3. The From header strict-parses to exactly one valid address whose
  *    domain equals `options.domain`.
  * 4. When `options.sender` is given, the parsed From address equals it

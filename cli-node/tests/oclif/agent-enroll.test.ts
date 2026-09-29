@@ -1,0 +1,660 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, it as test } from "vitest";
+import { enrollAgent } from "../../src/oclif/agent-enroll.js";
+import type { setupAgent } from "../../src/oclif/agent-setup.js";
+import {
+  loadCliCredentials,
+  saveCliCredentials,
+} from "../../src/oclif/auth.js";
+import {
+  agentProfileDirectory,
+  saveConnectedAgentProfile,
+} from "../../src/oclif/connected-agent-profile.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
+
+const session = "11111111-1111-4111-8111-111111111111";
+const orgId = "22222222-2222-4222-8222-222222222222";
+const stage = "https://api.primitive-staging-1.com/v1";
+const clock = Date.parse("2026-09-28T12:00:00.000Z");
+const directories: string[] = [];
+afterEach(() => {
+  for (const directory of directories.splice(0))
+    rmSync(directory, { recursive: true, force: true });
+});
+
+function owner(): string {
+  const directory = mkdtempSync(join(tmpdir(), "primitive-enroll-"));
+  directories.push(directory);
+  saveCliCredentials(directory, {
+    auth_method: "oauth",
+    access_token: ["prim", "oat", "test"].join("_"),
+    refresh_token: ["prim", "ort", "test"].join("_"),
+    token_type: "Bearer",
+    expires_at: new Date(clock + 60 * 60_000).toISOString(),
+    oauth_grant_id: "grant-test",
+    oauth_client_id: "client-test",
+    org_id: orgId,
+    org_name: "Test",
+    api_base_url: stage,
+    created_at: new Date(clock).toISOString(),
+  });
+  return directory;
+}
+
+function server(
+  options: {
+    failFirstCreate?: boolean;
+    wrongOrigin?: boolean;
+    policy?: {
+      version: string | null;
+      allow_contact_requests: boolean | null;
+      rules: Array<{
+        pattern: string;
+        effect: "allow" | "silence";
+        notify_since: string | null;
+        notification_generation: string | null;
+      }>;
+    };
+    policyConflict?: boolean;
+    policyReadbackDisabled?: boolean;
+  } = {},
+) {
+  const creates: Array<{
+    address: string;
+    auth: string;
+    url: string;
+  }> = [];
+  let first = true;
+  let policyReads = 0;
+  let policy = options.policy ?? {
+    version: null,
+    allow_contact_requests: null,
+    rules: [],
+  };
+  const policyWrites: Array<Record<string, unknown>> = [];
+  const invitation = `${options.wrongOrigin ? "https://api.primitive.dev/v1" : stage}/agent-connections/setup#token=${["invite", "a".repeat(48)].join("_")}`;
+  function policyResponse(address: string) {
+    const enabled = policy.allow_contact_requests === true;
+    const activeAt = new Date(clock).toISOString();
+    return {
+      success: true,
+      data: {
+        agent_address: address,
+        org_policy: {
+          version: null,
+          updated_at: null,
+          rules: [],
+          allow_contact_requests: false,
+          contact_request_since: null,
+          contact_request_generation: null,
+        },
+        agent_policy: {
+          ...policy,
+          updated_at: policy.version === null ? null : activeAt,
+          contact_request_since: enabled ? activeAt : null,
+          contact_request_generation: enabled
+            ? "55555555-5555-4555-8555-555555555555"
+            : null,
+        },
+        effective_version: "a".repeat(64),
+        effective_since: activeAt,
+        allow_contact_requests: enabled,
+        contact_request_since: enabled ? activeAt : null,
+        contact_request_generation: enabled ? "b".repeat(64) : null,
+      },
+    };
+  }
+  const fetcher = (async (input: URL | RequestInfo, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const method =
+      init?.method ?? (input instanceof Request ? input.method : "GET");
+    if (url.startsWith(`${stage}/agent-contact-policy/`)) {
+      const address = decodeURIComponent(
+        url.slice(`${stage}/agent-contact-policy/`.length),
+      );
+      if (method === "GET") {
+        policyReads++;
+        if (options.policyReadbackDisabled && policyWrites.length)
+          return Response.json(
+            { success: false, error: { code: "service_unavailable" } },
+            { status: 503 },
+          );
+        return Response.json(policyResponse(address));
+      }
+      if (method === "PUT") {
+        const body = JSON.parse(
+          String(
+            init?.body ?? (input instanceof Request ? await input.text() : ""),
+          ),
+        ) as Record<string, unknown>;
+        policyWrites.push(body);
+        if (
+          options.policyConflict ||
+          (body.if_absent === true && policy.version !== null) ||
+          (typeof body.if_version === "string" &&
+            body.if_version !== policy.version)
+        )
+          return Response.json(
+            { success: false, error: { code: "contact_conflict" } },
+            { status: 409 },
+          );
+        const rules = body.rules as typeof policy.rules;
+        policy = {
+          version: "44444444-4444-4444-8444-444444444444",
+          allow_contact_requests: body.allow_contact_requests as boolean,
+          rules: rules.map(({ pattern, effect }) => ({
+            pattern,
+            effect,
+            notify_since:
+              effect === "allow" ? new Date(clock).toISOString() : null,
+            notification_generation:
+              effect === "allow"
+                ? "66666666-6666-4666-8666-666666666666"
+                : null,
+          })),
+        };
+        return Response.json(policyResponse(address));
+      }
+    }
+    if (url === `${stage}/domains`) {
+      return Response.json({
+        success: true,
+        data: [
+          { domain: "custom.example.test", verified: true, is_active: true },
+          {
+            domain: "lucky-eagle.primitive-staging.email",
+            verified: true,
+            is_active: true,
+          },
+        ],
+      });
+    }
+    if (url === `${stage}/agent-connections` && method === "POST") {
+      const body = JSON.parse(
+        String(
+          init?.body ?? (input instanceof Request ? await input.text() : ""),
+        ),
+      ) as { name: string; address: string };
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined),
+      );
+      creates.push({
+        address: body.address,
+        auth: headers.get("authorization") ?? "",
+        url,
+      });
+      assert.equal(body.name, "Research");
+      if (options.failFirstCreate && first) {
+        first = false;
+        throw new Error("unavailable");
+      }
+      return Response.json({
+        success: true,
+        data: {
+          connection: {
+            address: body.address,
+            name: body.name,
+            owner_address: "owner@example.test",
+            status: "pending",
+          },
+          invitation: {
+            claim_url: invitation,
+            expires_at: new Date(clock + 10 * 60_000).toISOString(),
+          },
+        },
+      });
+    }
+    assert.fail(`Unexpected request: ${url}`);
+  }) as typeof fetch;
+  return {
+    fetcher,
+    creates,
+    invitation,
+    policyWrites,
+    policyReads: () => policyReads,
+  };
+}
+
+const result = {
+  identity: {
+    profileName: `session-${session}`,
+    orgId,
+    agentAddress: `research-${session.replaceAll("-", "")}@lucky-eagle.primitive-staging.email`,
+    ownerAddress: "owner@example.test",
+    apiBaseUrl: stage,
+  },
+  verification: { state: "reply_submitted" as const },
+  receiving: { state: "external_setup_required" },
+  sessionId: session,
+  resumeCommand: `primitive agent connect --profile session-${session} --session ${session} --receiver external --resume --json`,
+  guidance: "Receiving needs the external hook.",
+};
+
+test("owner OAuth creates one deterministic address and keeps the invitation out of state", async () => {
+  const configDir = owner();
+  const { fetcher, creates, invitation, policyWrites } = server();
+  let setupCalls = 0;
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    contactRequests: true,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async (params) => {
+      setupCalls++;
+      assert.equal(params.invitation, invitation);
+      assert.equal(params.session, session);
+      assert.equal(params.profileName, `session-${session}`);
+      assert.equal(params.contactRequests, true);
+      return result;
+    }) as typeof setupAgent,
+  });
+  assert.deepEqual(value, { ...result, contactRequestPolicy: "enabled" });
+  assert.equal(setupCalls, 1);
+  assert.equal(creates.length, 1);
+  assert.equal(creates[0]?.address, result.identity.agentAddress);
+  assert.equal(creates[0]?.auth, `Bearer ${["prim", "oat", "test"].join("_")}`);
+  assert.deepEqual(policyWrites, [
+    {
+      rules: [],
+      allow_contact_requests: true,
+      if_absent: true,
+    },
+  ]);
+  const journal = readFileSync(
+    join(
+      agentProfileDirectory(configDir, `session-${session}`),
+      "enrollment",
+      "state.json",
+    ),
+    "utf8",
+  );
+  assert.equal(journal.includes(invitation), false);
+  assert.equal(journal.includes("invite_"), false);
+  assert.equal(journal.includes("prim_oat"), false);
+  assert.equal(JSON.parse(journal).phase, "setup_attempted");
+});
+
+test("enabling contact requests preserves existing agent rules with a version precondition", async () => {
+  const configDir = owner();
+  const version = "77777777-7777-4777-8777-777777777777";
+  const { fetcher, policyWrites } = server({
+    policy: {
+      version,
+      allow_contact_requests: null,
+      rules: [
+        {
+          pattern: "*@trusted.test",
+          effect: "allow",
+          notify_since: new Date(clock).toISOString(),
+          notification_generation: "88888888-8888-4888-8888-888888888888",
+        },
+      ],
+    },
+  });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    contactRequests: true,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.contactRequestPolicy, "enabled");
+  assert.deepEqual(policyWrites, [
+    {
+      rules: [{ pattern: "*@trusted.test", effect: "allow" }],
+      allow_contact_requests: true,
+      if_version: version,
+    },
+  ]);
+});
+
+test("an explicit agent policy disable is never overwritten by enrollment", async () => {
+  const configDir = owner();
+  const { fetcher, policyWrites } = server({
+    policy: {
+      version: "77777777-7777-4777-8777-777777777777",
+      allow_contact_requests: false,
+      rules: [],
+    },
+  });
+  await assert.rejects(
+    enrollAgent({
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external",
+      contactRequests: true,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+      setup: (async () => result) as typeof setupAgent,
+    }),
+    /explicitly disabled/,
+  );
+  assert.equal(policyWrites.length, 0);
+});
+
+test("an already-enabled exact agent policy needs no write", async () => {
+  const configDir = owner();
+  const { fetcher, policyWrites, policyReads } = server({
+    policy: {
+      version: "77777777-7777-4777-8777-777777777777",
+      allow_contact_requests: true,
+      rules: [],
+    },
+  });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    contactRequests: true,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.contactRequestPolicy, "enabled");
+  assert.equal(policyWrites.length, 0);
+  assert.equal(policyReads(), 2);
+});
+
+test("contact policy stays pending until verification is submitted", async () => {
+  const configDir = owner();
+  const { fetcher, policyWrites, policyReads } = server();
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    contactRequests: true,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => ({
+      ...result,
+      verification: { state: "challenge_pending" },
+    })) as typeof setupAgent,
+  });
+  assert.equal(value.contactRequestPolicy, "pending_verification");
+  assert.equal(policyWrites.length, 0);
+  assert.equal(policyReads(), 0);
+});
+
+test("a changed owner login after claim cannot update another organization's policy", async () => {
+  const configDir = owner();
+  const { fetcher, policyWrites, policyReads } = server();
+  const original = loadCliCredentials(configDir);
+  assert.ok(original);
+  await assert.rejects(
+    enrollAgent({
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external",
+      contactRequests: true,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+      setup: (async () => {
+        saveCliCredentials(configDir, {
+          ...original,
+          org_id: "33333333-3333-4333-8333-333333333333",
+          oauth_grant_id: "another-grant",
+          access_token: "another-token",
+        });
+        return result;
+      }) as typeof setupAgent,
+    }),
+    /saved owner login changed/,
+  );
+  assert.equal(policyWrites.length, 0);
+  assert.equal(policyReads(), 0);
+});
+
+test.each([
+  ["conflict", { policyConflict: true }, /not confirmed or conflicted/],
+  ["readback", { policyReadbackDisabled: true }, /could not be verified/],
+] as const)("does not claim contact intake after a %s", async (_name, policyOptions, expected) => {
+  const configDir = owner();
+  const { fetcher, policyWrites } = server(policyOptions);
+  await assert.rejects(
+    enrollAgent({
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external",
+      contactRequests: true,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+      setup: (async () => result) as typeof setupAgent,
+    }),
+    expected,
+  );
+  assert.equal(policyWrites.length, 1);
+});
+
+test("a lost create response is held for owner recovery without a second create", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ failFirstCreate: true });
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  };
+  await assert.rejects(enrollAgent(options), /unknown outcome/);
+  await assert.rejects(enrollAgent(options), /may already have happened/);
+  assert.equal(creates.length, 1);
+});
+
+test("a saved uncertain create remains held after time passes", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ failFirstCreate: true });
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  };
+  await assert.rejects(enrollAgent(options), /unknown outcome/);
+  const path = join(
+    agentProfileDirectory(configDir, `session-${session}`),
+    "enrollment",
+    "state.json",
+  );
+  const state = JSON.parse(readFileSync(path, "utf8")) as Record<
+    string,
+    unknown
+  >;
+  writeMailJson(path, {
+    ...state,
+    startedAt: new Date(clock - 11 * 60_000).toISOString(),
+  });
+  await assert.rejects(enrollAgent(options), /may already have happened/);
+  assert.equal(creates.length, 1);
+});
+
+test("a concurrent owner login change cannot create an agent in another organization", async () => {
+  const configDir = owner();
+  const original = loadCliCredentials(configDir);
+  assert.ok(original);
+  saveCliCredentials(configDir, {
+    ...original,
+    expires_at: new Date(clock + 1_000).toISOString(),
+  });
+  await assert.rejects(
+    enrollAgent({
+      configDir,
+      session,
+      receiverMode: "external",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      now: () => clock,
+      preflight: async () => {
+        saveCliCredentials(configDir, {
+          ...original,
+          org_id: "33333333-3333-4333-8333-333333333333",
+          oauth_grant_id: "another-grant",
+          access_token: "another-token",
+        });
+      },
+      fetch: (async () => {
+        assert.fail("No organization API call should occur");
+      }) as typeof fetch,
+    }),
+    /saved owner login changed/,
+  );
+});
+
+test("an uncertain claim cannot be replayed without a saved connected profile", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server();
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => {
+      throw new Error("lost claim response");
+    }) as typeof setupAgent,
+  };
+  await assert.rejects(enrollAgent(options), /lost claim response/);
+  await assert.rejects(enrollAgent(options), /claim may have been consumed/);
+  assert.equal(creates.length, 1);
+});
+
+test("a saved claim resumes setup without creating another connection", async () => {
+  const configDir = owner();
+  const { fetcher, creates, invitation } = server();
+  let calls = 0;
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async (params) => {
+      calls++;
+      if (calls === 1) {
+        saveConnectedAgentProfile(configDir, `session-${session}`, {
+          version: 1,
+          auth_method: "agent_connection",
+          api_key: ["pconn", "test"].join("_"),
+          api_base_url: stage,
+          org_id: orgId,
+          agent_address: result.identity.agentAddress,
+          owner_address: "owner@example.test",
+          invitation_hash: createHash("sha256")
+            .update(stage)
+            .update("\0")
+            .update(
+              new URLSearchParams(new URL(invitation).hash.slice(1)).get(
+                "token",
+              ) ?? "",
+            )
+            .digest("hex"),
+          created_at: new Date(clock).toISOString(),
+        });
+        throw new Error("interrupted after durable claim");
+      }
+      assert.equal(params.resume, true);
+      assert.equal(params.invitation, undefined);
+      return result;
+    }) as typeof setupAgent,
+  };
+  await assert.rejects(enrollAgent(options), /interrupted after durable claim/);
+  await enrollAgent(options);
+  assert.equal(calls, 2);
+  assert.equal(creates.length, 1);
+});
+
+test("a different invitation cannot be adopted even at the same address", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server();
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => {
+      saveConnectedAgentProfile(configDir, `session-${session}`, {
+        version: 1,
+        auth_method: "agent_connection",
+        api_key: ["pconn", "test"].join("_"),
+        api_base_url: stage,
+        org_id: orgId,
+        agent_address: result.identity.agentAddress,
+        owner_address: "owner@example.test",
+        invitation_hash: "b".repeat(64),
+        created_at: new Date(clock).toISOString(),
+      });
+      throw new Error("interrupted");
+    }) as typeof setupAgent,
+  };
+  await assert.rejects(enrollAgent(options), /interrupted/);
+  await assert.rejects(enrollAgent(options), /another connection/);
+  assert.equal(creates.length, 1);
+});
+
+test("wrong session, ambient API key, and invitation origin fail before claim", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ wrongOrigin: true });
+  const base = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => assert.fail("No claim expected")) as typeof setupAgent,
+  };
+  await assert.rejects(
+    enrollAgent({
+      ...base,
+      env: { CLAUDE_CODE_SESSION_ID: "22222222-2222-4222-8222-222222222222" },
+    }),
+    /exact Claude session/,
+  );
+  await assert.rejects(
+    enrollAgent({
+      ...base,
+      env: { CLAUDE_CODE_SESSION_ID: session, PRIMITIVE_API_KEY: "ambient" },
+    }),
+    /saved owner OAuth/,
+  );
+  assert.equal(creates.length, 0);
+  await assert.rejects(
+    enrollAgent({ ...base, env: { CLAUDE_CODE_SESSION_ID: session } }),
+    /invitation origin differs/,
+  );
+  assert.equal(creates.length, 1);
+});

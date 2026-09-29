@@ -18,6 +18,7 @@ import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acquireListenLock,
+  compareListenProcessIdentity,
   listenIdentity,
   listenProcessIdentity,
   normalizeListenOrigin,
@@ -241,8 +242,7 @@ describe("process generation ownership", () => {
     vi.stubEnv("SystemRoot", "C:\\Windows");
     let generation = 1;
     vi.mocked(execFileSync).mockImplementation((file) => {
-      if (file === "/usr/sbin/sysctl")
-        return "{ sec = 1700000000, usec = 123 }\n";
+      if (file === "/usr/sbin/sysctl") return `${BOOT_ID}\n`;
       return target === "darwin"
         ? `Wed Sep 9 12:34:0${generation} 2026\n`
         : `63893018096000000${generation}\r\n`;
@@ -351,16 +351,16 @@ describe("native process identity readers", () => {
     platform("darwin");
     vi.mocked(execFileSync).mockImplementation((file) =>
       file === "/usr/sbin/sysctl"
-        ? "{ sec = 1700000000, usec = 123 } arbitrary local date\n"
+        ? `${BOOT_ID.toUpperCase()}\n`
         : "Wed Sep  9 12:34:56 2026\n",
     );
     expect(listenProcessIdentity(123)).toBe(
-      "darwin:1700000000:123:Wed Sep 9 12:34:56 2026",
+      `darwin-boot:${BOOT_ID}:Wed Sep 9 12:34:56 2026`,
     );
     expect(execFileSync).toHaveBeenNthCalledWith(
       1,
       "/usr/sbin/sysctl",
-      ["-n", "kern.boottime"],
+      ["-n", "kern.bootsessionuuid"],
       expect.objectContaining({
         timeout: 1000,
         maxBuffer: 4096,
@@ -373,6 +373,51 @@ describe("native process identity readers", () => {
       ["-p", "123", "-o", "lstart="],
       expect.objectContaining({ stdio: ["ignore", "pipe", "ignore"] }),
     );
+  });
+
+  it("retains a live macOS lock written with the old changing boot timestamp", () => {
+    platform("darwin");
+    vi.mocked(execFileSync).mockImplementation((file) =>
+      file === "/usr/sbin/sysctl"
+        ? `${BOOT_ID}\n`
+        : "Wed Sep 9 12:34:56 2026\n",
+    );
+    const release = acquireListenLock(directory, "legacy");
+    const held = lockOwner();
+    writeFileSync(
+      held.file,
+      JSON.stringify({
+        version: 1,
+        identity: "darwin:1700000000:123:Wed Sep 9 12:34:56 2026",
+      }),
+    );
+    expect(() => acquireListenLock(directory, "legacy")).toThrow(
+      "Another listener",
+    );
+    expect(existsSync(held.file)).toBe(true);
+    release();
+  });
+
+  it("does not confuse a legacy clock adjustment with process death", () => {
+    const legacy = "darwin:1700000000:123:Wed Sep 9 12:34:56 2026";
+    expect(
+      compareListenProcessIdentity(
+        legacy,
+        "darwin:1700000000:456:Wed Sep 9 12:34:56 2026",
+      ),
+    ).toBeNull();
+    expect(
+      compareListenProcessIdentity(
+        legacy,
+        `darwin-boot:${BOOT_ID}:Wed Sep 9 12:34:56 2026`,
+      ),
+    ).toBeNull();
+    expect(
+      compareListenProcessIdentity(
+        `darwin-boot:${BOOT_ID}:Wed Sep 9 12:34:56 2026`,
+        `darwin-boot:${BOOT_ID}:Wed Sep 9 12:34:57 2026`,
+      ),
+    ).toBe(false);
   });
 
   it("uses shell-free Windows PowerShell with an absolute Windows path and invariant UTC start ticks", () => {

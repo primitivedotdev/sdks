@@ -8,7 +8,8 @@ import {
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
-import { detectPrimitiveKeyEnvMisname } from "../auth.js";
+import { detectPrimitiveKeyEnvMisname, resolveCliAuth } from "../auth.js";
+import { AGENT_PROFILE_ENV } from "../connected-agent-profile.js";
 
 // `primitive doctor` is a one-command health check the AGX walkthrough
 // kept asking for. Before this command, a user with a misconfigured
@@ -82,7 +83,7 @@ function checkProxy(): CheckOutcome {
   const present = vars
     .map((name) => {
       const value = process.env[name];
-      return value && value.length > 0 ? `${name}=${value}` : null;
+      return value && value.length > 0 ? `${name}=set` : null;
     })
     .filter((entry): entry is string => entry !== null);
 
@@ -311,7 +312,7 @@ async function checkDomains(client: PrimitiveApiClient): Promise<CheckOutcome> {
 
 class DoctorCommand extends Command {
   static description =
-    `Run a one-shot environment health check: Node version, proxy env, CLI auth resolution, /account reachability, and verified-domain status. Fails fast on anything that would block other commands and prints actionable hints for each warning or failure.`;
+    `Run a one-shot environment health check: Node version, proxy env, CLI auth resolution, /account reachability, and verified-domain status. With PRIMITIVE_AGENT_PROFILE selected, reports saved identity offline and points to whoami and exact listener status instead of account-only checks. Prints actionable hints for each warning or failure.`;
 
   static summary =
     "Check the local environment and live API for common problems";
@@ -343,16 +344,29 @@ class DoctorCommand extends Command {
     rows.push({ label: "Node version", outcome: checkNode() });
     rows.push({ label: "Proxy env", outcome: checkProxy() });
 
-    const apiKeyCheck = checkApiKey({
-      apiKey: flags["api-key"],
-      configDir: this.config.configDir,
-    });
+    const connected = process.env[AGENT_PROFILE_ENV]?.trim()
+      ? resolveCliAuth({
+          apiKey: flags["api-key"],
+          apiBaseUrl: flags["api-base-url"],
+          configDir: this.config.configDir,
+        }).connectedAgent
+      : undefined;
+    const apiKeyCheck: CheckOutcome = connected
+      ? {
+          status: "warn",
+          message: `Saved connected profile ${connected.profileName} for ${connected.agentAddress} (offline; live authentication and receiving not verified)`,
+          hint: "Use primitive whoami --json for saved identity and primitive listen --status --notify-session <session-id> for the exact receiver under the same PRIMITIVE_AGENT_PROFILE.",
+        }
+      : checkApiKey({
+          apiKey: flags["api-key"],
+          configDir: this.config.configDir,
+        });
     rows.push({ label: "Auth", outcome: apiKeyCheck });
 
     // Only run the live checks if we have a key to authenticate with.
     // Reporting the network-failure case without a key would just
     // confuse the user; the missing-key row above already covers it.
-    if (apiKeyCheck.status !== "fail") {
+    if (!connected && apiKeyCheck.status !== "fail") {
       const { apiClient, auth } = await createAuthenticatedCliApiClient({
         apiKey: flags["api-key"],
         apiBaseUrl: flags["api-base-url"],

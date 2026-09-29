@@ -12,18 +12,26 @@ import {
   prepareContactAcceptance,
   prepareContactRequest,
 } from "../../src/oclif/contact-interactions.js";
+import { readConversationFollow } from "../../src/oclif/conversation-follow.js";
 import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
 
-const hooks = vi.hoisted(() => ({ ready: vi.fn(), changed: vi.fn() }));
+const hooks = vi.hoisted(() => ({
+  ready: vi.fn(),
+  changed: vi.fn(),
+  stop: undefined as (() => void) | undefined,
+}));
 vi.mock("../../src/oclif/shared-mail-receiver.js", () => ({
   sharedMailScope: () => "test-scope",
   openSharedMailReceiver: async (options: {
     configDir: string;
     recipient: string;
   }) => {
+    const controller = new AbortController();
+    hooks.stop = () => controller.abort();
     const store = await openSharedMailStore({
       ...options,
       scope: "test-scope",
+      signal: controller.signal,
     });
     return {
       store,
@@ -33,7 +41,7 @@ vi.mock("../../src/oclif/shared-mail-receiver.js", () => ({
       },
       changed: async () => hooks.changed(store),
       close: async () => {},
-      signal: new AbortController().signal,
+      signal: controller.signal,
     };
   },
 }));
@@ -50,6 +58,8 @@ afterEach(() => {
   for (const dir of directories) rmSync(dir, { recursive: true, force: true });
   hooks.ready.mockReset();
   hooks.changed.mockReset();
+  hooks.stop = undefined;
+  vi.restoreAllMocks();
 });
 function fixture() {
   const detail: EmailDetail = {
@@ -94,6 +104,7 @@ function fixture() {
     detail,
     partBytes: new Uint8Array(),
     partFailure: null as "http" | "stream" | null,
+    beforeDetail: undefined as (() => Promise<void>) | undefined,
     pages: [] as unknown[],
     page: { data: [{ id: detail.id }], meta: { cursor: null } } as unknown,
   };
@@ -107,8 +118,10 @@ function fixture() {
         searches++;
         return Response.json(state.pages.shift() ?? state.page);
       }
-      if (url.pathname === `/v1/emails/${detail.id}`)
+      if (url.pathname === `/v1/emails/${detail.id}`) {
+        await state.beforeDetail?.();
         return Response.json({ data: state.detail });
+      }
       if (url.pathname === `/v1/emails/${detail.id}/attachments/0`) {
         if (state.partFailure === "http")
           return Response.json({ error: "unavailable" }, { status: 503 });
@@ -140,6 +153,210 @@ function fixture() {
   };
 }
 describe("connected pushed reply waits", () => {
+  it.each([
+    "selected",
+    "submitting",
+    "accepted",
+    "skipped",
+  ] as const)("recovers a validated contact acceptance after a %s native notice without changing its route", async (state) => {
+    const f = fixture();
+    const request = prepareContactRequest(
+      target.from,
+      "Public coordination",
+      600,
+      Date.parse(f.state.detail.received_at) - 1000,
+    );
+    const reference = contactReference(request);
+    const bytes = Buffer.from(
+      JSON.stringify(prepareContactAcceptance(request)),
+    );
+    f.state.partBytes = bytes;
+    f.state.detail.parsed = {
+      status: "complete",
+      attachments: [
+        {
+          filename: "interaction.json",
+          content_type: "application/json",
+          part_index: 0,
+          size_bytes: bytes.length,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        },
+      ],
+    };
+    const original = await openConnectedReplyWait({
+      ...f.options,
+      contactRequest: reference,
+    });
+    const store = original.receiver.store;
+    await original.close();
+    await store.ingest({
+      emailId: f.state.detail.id,
+      eventId: randomUUID(),
+      receivedAt: f.state.detail.received_at,
+    });
+    await store.hydrate(f.state.detail.id, {
+      recipient: target.from,
+      peer: target.recipient,
+      replyToSentEmailId: target.sentId,
+      receivedAt: f.state.detail.received_at,
+      authorization: "trusted",
+    });
+    expect(
+      (await store.claimForNotification(f.state.detail.id, "native-session"))
+        .status,
+    ).toBe("claimed");
+    if (state === "skipped")
+      await store.skipNotification(f.state.detail.id, "native-session");
+    else if (state !== "selected") {
+      await store.markNotification(f.state.detail.id, "submitting");
+      if (state === "accepted")
+        await store.markNotification(f.state.detail.id, "accepted");
+    }
+    const resumed = await openConnectedReplyWait({
+      ...f.options,
+      contactRequest: reference,
+      deadline: Date.now() + 5000,
+    });
+    hooks.changed.mockImplementationOnce(async () => {
+      if (state === "selected")
+        await store.markNotification(f.state.detail.id, "submitting");
+      await store.markNotification(f.state.detail.id, "accepted");
+    });
+    expect((await resumed.next())?.id).toBe(f.state.detail.id);
+    expect(hooks.changed).toHaveBeenCalledTimes(
+      ["selected", "submitting"].includes(state) ? 1 : 0,
+    );
+    const route = (await store.readEmail(f.state.detail.id))?.route;
+    expect(route).toMatchObject({
+      kind: "notification",
+      state: state === "skipped" ? "skipped" : "accepted",
+    });
+    await resumed.observed(f.state.detail.id);
+    await resumed.observed(f.state.detail.id);
+    await resumed.finish();
+    expect(await store.readWait(resumed.requestId)).toMatchObject({
+      status: "completed",
+      contactRequest: reference,
+    });
+    expect((await store.readEmail(f.state.detail.id))?.route).toEqual(route);
+    expect(
+      (await store.claimForNotification(f.state.detail.id, "native-session"))
+        .status,
+    ).toBe("already_observed");
+    await resumed.close();
+  });
+  it("hands an unclaimed late reply to notifications after the receive deadline aborts", async () => {
+    const f = fixture();
+    const deadline = Date.now() + 5000;
+    f.state.page = { data: [], meta: { cursor: null } };
+    const waiter = await openConnectedReplyWait({ ...f.options, deadline });
+    hooks.changed.mockImplementation(async () => {
+      vi.spyOn(Date, "now").mockReturnValue(deadline);
+      hooks.stop?.();
+      throw new DOMException("Mail wait timed out", "TimeoutError");
+    });
+    expect(await waiter.next()).toBeNull();
+    const store = await openSharedMailStore({
+      configDir: f.options.configDir,
+      scope: "test-scope",
+      recipient: target.from,
+    });
+    expect(await store.readWait(waiter.requestId)).toMatchObject({
+      status: "bound",
+      sentEmailId: target.sentId,
+      waiters: [],
+    });
+    await store.ingest({
+      emailId: f.state.detail.id,
+      eventId: randomUUID(),
+      receivedAt: f.state.detail.received_at,
+    });
+    await store.hydrate(f.state.detail.id, {
+      recipient: target.from,
+      peer: target.recipient,
+      replyToSentEmailId: target.sentId,
+      receivedAt: f.state.detail.received_at,
+      authorization: "trusted",
+    });
+    expect(
+      (await store.claimForNotification(f.state.detail.id, "runtime:session"))
+        .status,
+    ).toBe("claimed");
+    await waiter.close();
+    await waiter.close();
+  });
+
+  it("releases only the closing waiter while another joined wait remains active", async () => {
+    const f = fixture();
+    const first = await openConnectedReplyWait(f.options);
+    const second = await openConnectedReplyWait(f.options);
+    expect(second.requestId).toBe(first.requestId);
+    await first.close();
+    const store = second.receiver.store;
+    expect((await store.readWait(second.requestId))?.waiters).toHaveLength(1);
+    await store.ingest({
+      emailId: f.state.detail.id,
+      eventId: randomUUID(),
+      receivedAt: f.state.detail.received_at,
+    });
+    await store.hydrate(f.state.detail.id, {
+      recipient: target.from,
+      peer: target.recipient,
+      replyToSentEmailId: target.sentId,
+      receivedAt: f.state.detail.received_at,
+      authorization: "trusted",
+    });
+    expect(
+      (await store.claimForNotification(f.state.detail.id, "runtime:session"))
+        .status,
+    ).toBe("held");
+    expect((await second.next())?.id).toBe(f.state.detail.id);
+    await second.close();
+    expect(
+      (await store.claimForNotification(f.state.detail.id, "runtime:session"))
+        .status,
+    ).toBe("held");
+  });
+
+  it.each([
+    "deadline",
+    "close",
+  ] as const)("does not claim a reply when %s occurs during its detail read", async (reason) => {
+    const f = fixture();
+    const deadline = Date.now() + 5000;
+    const waiter = await openConnectedReplyWait({ ...f.options, deadline });
+    await waiter.receiver.store.ingest({
+      emailId: f.state.detail.id,
+      eventId: randomUUID(),
+      receivedAt: f.state.detail.received_at,
+    });
+    await waiter.receiver.store.hydrate(f.state.detail.id, {
+      recipient: target.from,
+      peer: target.recipient,
+      replyToSentEmailId: target.sentId,
+      receivedAt: f.state.detail.received_at,
+      authorization: "trusted",
+    });
+    f.state.beforeDetail = async () => {
+      if (reason === "deadline")
+        vi.spyOn(Date, "now").mockReturnValue(deadline);
+      else await waiter.close();
+    };
+    expect(await waiter.next()).toBeNull();
+    expect(
+      (await waiter.receiver.store.readEmail(f.state.detail.id))?.route,
+    ).toBeNull();
+    expect(
+      (
+        await waiter.receiver.store.claimForNotification(
+          f.state.detail.id,
+          "runtime:session",
+        )
+      ).status,
+    ).toBe("claimed");
+    await waiter.close();
+  });
+
   it("registers before readiness and recovers the exact parent without inbox reads", async () => {
     const f = fixture();
     const waiter = await openConnectedReplyWait(f.options);
@@ -284,6 +501,28 @@ describe("connected pushed reply waits", () => {
       (await second.receiver.store.readWait(second.requestId))?.status,
     ).toBe("bound");
     await second.close();
+  });
+  it("learns a verified server thread before finishing the first plain reply wait", async () => {
+    const f = fixture();
+    const threadId = randomUUID(),
+      sessionKey = `codex:${randomUUID()}`;
+    f.state.detail.thread_id = threadId;
+    const waiter = await openConnectedReplyWait({ ...f.options, sessionKey });
+    const email = await waiter.next();
+    expect(email?.id).toBe(f.state.detail.id);
+    expect(
+      readConversationFollow(
+        {
+          configDir: f.options.configDir,
+          scope: "test-scope",
+          recipient: target.from,
+        },
+        threadId,
+      ),
+    ).toMatchObject({ peer: target.recipient, sessionKey });
+    await waiter.observed(f.state.detail.id);
+    await waiter.finish();
+    await waiter.close();
   });
   it("cleans up a new intent when binding a completed parent for another peer fails", async () => {
     const f = fixture();
