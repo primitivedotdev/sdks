@@ -28,10 +28,10 @@ class CreateFunctionResult:
             id (UUID):
             name (str):
             deploy_status (FunctionDeployStatus): Lifecycle state of the latest deploy attempt:
-                  * `pending` — deploy in flight; the runtime has not yet
+                  * `pending` - deploy in flight; the runtime has not yet
                     confirmed the new bundle is live.
-                  * `deployed` — the running edge handler is the latest code.
-                  * `failed` — the most recent deploy attempt failed; the
+                  * `deployed` - the running edge handler is the latest code.
+                  * `failed` - the most recent deploy attempt failed; the
                     previously-live code (if any) is still running. The
                     `deploy_error` field carries the error message.
      """

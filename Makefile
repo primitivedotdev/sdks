@@ -61,10 +61,12 @@ cli-tarball-isolation:
 	node scripts/assert-tarball-isolation.mjs cli-node "@primitivedotdev/sdk"
 
 cli-smoke: cli-build cli-tarball-isolation
+	cli_version=$$(node -p "require('./cli-node/package.json').version") && \
 	inbox_next_smoke_script="$$(pwd)/scripts/smoke-inbox-next.mjs" && \
 	signal_smoke_script="$$(pwd)/scripts/smoke-signals.mjs" && \
 	agent_enroll_smoke_script="$$(pwd)/scripts/smoke-agent-enroll.mjs" && \
 	claude_wake_smoke_script="$$(pwd)/scripts/smoke-claude-wake.mjs" && \
+	presence_controls_smoke_script="$$(pwd)/scripts/smoke-presence-controls.mjs" && \
 	agent_notes_smoke_script="$$(pwd)/scripts/smoke-agent-notes.mjs" && \
 	agent_network_smoke_script="$$(pwd)/scripts/smoke-agent-network.mjs" && \
 	agent_disconnect_smoke_script="$$(pwd)/scripts/smoke-agent-disconnect.mjs" && \
@@ -94,12 +96,14 @@ cli-smoke: cli-build cli-tarball-isolation
 	node -e 'const pkg = require(process.argv[1]); const oclif = pkg.oclif || {}; const warning = oclif["warn-if-update-available"] || {}; if (!Array.isArray(oclif.plugins) || !oclif.plugins.includes("@oclif/plugin-warn-if-update-available")) throw new Error("missing update warning plugin"); if (warning.timeoutInDays !== 1 || warning.frequency !== 1 || warning.frequencyUnit !== "days") throw new Error("update warning is not daily"); if (!String(warning.message || "").includes("npm install -g primitive@latest")) throw new Error("missing npm update command");' "$$smoke_dir/node_modules/primitive/package.json" && \
 	export PRIMITIVE_SKIP_NEW_VERSION_CHECK=1 && \
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
+	"$$bin" --version | grep -qF -- "primitive/$$cli_version " && \
 	node "$$inbox_next_smoke_script" "$$bin" && \
 	"$$bin" inbox next --help | grep -q -- "NOT A WORK QUEUE" && \
 	"$$bin" emails latest --help | grep -q -- "--awaiting" && \
 	node "$$connected_agent_smoke_script" "$$bin" && \
 	node "$$agent_enroll_smoke_script" "$$bin" && \
 	node "$$claude_wake_smoke_script" "$$bin" && \
+	node "$$presence_controls_smoke_script" "$$bin" && \
 	node "$$agent_notes_smoke_script" "$$bin" && \
 	node "$$agent_network_smoke_script" "$$bin" && \
 	node "$$agent_disconnect_smoke_script" "$$bin" && \

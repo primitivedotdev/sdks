@@ -411,6 +411,131 @@ func (s *Server) handleAddDomainRequest(args [0]string, argsEscaped bool, w http
 	}
 }
 
+// handleAgentConnectionSetupRequest handles agentConnectionSetup operation.
+//
+// Instructions for pairing an external runtime. GET never consumes an invitation. The invitation
+// token stays in the URL fragment and is submitted only in the claim POST body.
+//
+// GET /agent-connections/setup
+func (s *Server) handleAgentConnectionSetupRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("agentConnectionSetup"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/agent-connections/setup"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), AgentConnectionSetupOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err error
+	)
+
+	var rawBody []byte
+
+	var response AgentConnectionSetupRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    AgentConnectionSetupOperation,
+			OperationSummary: "agent Connection Setup",
+			OperationID:      "agentConnectionSetup",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = struct{}
+			Response = AgentConnectionSetupRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.AgentConnectionSetup(ctx)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.AgentConnectionSetup(ctx)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeAgentConnectionSetupResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleAwaitReplyRequest handles awaitReply operation.
 //
 // Returns the first threaded inbound reply to a send, keyed by
@@ -1213,15 +1338,18 @@ func (s *Server) handleCheckDomainDnsRequest(args [1]string, argsEscaped bool, w
 
 // handleClaimAgentConnectionRequest handles claimAgentConnection operation.
 //
-// Address-bound external runtime pairing. Management operations require an organization owner or
-// admin session or OAuth token; members and organization API keys cannot manage connections. Claim
-// is authorized only by its one-use invitation. Connected means a real challenge was received and a
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
 // reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 // Reconnection preserves the address and revokes previous credentials. Status responses contain no
-// credentials. Runtime credentials allow only address-scoped mail operations, organization note
-// reads and own-address note writes. The credential is returned once. If the claim response is lost
-// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
-// invitation.
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
 //
 // POST /agent-connections/claim
 func (s *Server) handleClaimAgentConnectionRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -2106,6 +2234,219 @@ func (s *Server) handleCreateAgentClaimLinkRequest(args [0]string, argsEscaped b
 	}
 
 	if err := encodeCreateAgentClaimLinkResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleCreateAgentConnectionRequest handles createAgentConnection operation.
+//
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
+//
+// POST /agent-connections
+func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createAgentConnection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/agent-connections"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), CreateAgentConnectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: CreateAgentConnectionOperation,
+			ID:   "createAgentConnection",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, CreateAgentConnectionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeCreateAgentConnectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeCreateAgentConnectionRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response CreateAgentConnectionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    CreateAgentConnectionOperation,
+			OperationSummary: "create Agent Connection",
+			OperationID:      "createAgentConnection",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *CreateAgentConnectionReq
+			Params   = CreateAgentConnectionParams
+			Response = CreateAgentConnectionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackCreateAgentConnectionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.CreateAgentConnection(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.CreateAgentConnection(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeCreateAgentConnectionResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -13994,6 +14335,425 @@ func (s *Server) handleInstallTemplateRequest(args [1]string, argsEscaped bool, 
 	}
 }
 
+// handleInviteAgentConnectionRequest handles inviteAgentConnection operation.
+//
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
+//
+// POST /agent-connections/{address}/invitation
+func (s *Server) handleInviteAgentConnectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("inviteAgentConnection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/agent-connections/{address}/invitation"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), InviteAgentConnectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: InviteAgentConnectionOperation,
+			ID:   "inviteAgentConnection",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, InviteAgentConnectionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeInviteAgentConnectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeInviteAgentConnectionRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response InviteAgentConnectionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    InviteAgentConnectionOperation,
+			OperationSummary: "invite Agent Connection",
+			OperationID:      "inviteAgentConnection",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "address",
+					In:   "path",
+				}: params.Address,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *InviteAgentConnectionReq
+			Params   = InviteAgentConnectionParams
+			Response = InviteAgentConnectionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackInviteAgentConnectionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.InviteAgentConnection(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.InviteAgentConnection(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeInviteAgentConnectionResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleListAgentConnectionsRequest handles listAgentConnections operation.
+//
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
+//
+// GET /agent-connections
+func (s *Server) handleListAgentConnectionsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listAgentConnections"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/agent-connections"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ListAgentConnectionsOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListAgentConnectionsOperation,
+			ID:   "listAgentConnections",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ListAgentConnectionsOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeListAgentConnectionsParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response ListAgentConnectionsRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListAgentConnectionsOperation,
+			OperationSummary: "list Agent Connections",
+			OperationID:      "listAgentConnections",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "limit",
+					In:   "query",
+				}: params.Limit,
+				{
+					Name: "cursor",
+					In:   "query",
+				}: params.Cursor,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListAgentConnectionsParams
+			Response = ListAgentConnectionsRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListAgentConnectionsParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListAgentConnections(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListAgentConnections(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeListAgentConnectionsResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleListAgentContactsRequest handles listAgentContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -14204,7 +14964,8 @@ func (s *Server) handleListAgentContactsRequest(args [1]string, argsEscaped bool
 // handleListAgentNetworksRequest handles listAgentNetworks operation.
 //
 // An organization member login or an active connected agent allowed to see the network can read
-// networks. The default organization network is always present.
+// networks. The default organization network is always present. can_manage_all is true only for a
+// current owner or admin; a connected credential receives false.
 //
 // GET /agent-networks
 func (s *Server) handleListAgentNetworksRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -14904,6 +15665,10 @@ func (s *Server) handleListDefaultNetworkAgentsRequest(args [0]string, argsEscap
 					Name: "cursor",
 					In:   "query",
 				}: params.Cursor,
+				{
+					Name: "owner",
+					In:   "query",
+				}: params.Owner,
 			},
 			Raw: r,
 		}
@@ -14946,7 +15711,10 @@ func (s *Server) handleListDefaultNetworkAgentsRequest(args [0]string, argsEscap
 
 // handleListDefaultNetworkMembersRequest handles listDefaultNetworkMembers operation.
 //
-// Owner or admin login required. Includes hidden and excluded members.
+// An owner or admin sees all connected addresses, including hidden and excluded members. Other human
+// members see only personal addresses owned by their current membership. Filtering happens before
+// pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
+// requester can manage it.
 //
 // GET /agent-networks/default/members
 func (s *Server) handleListDefaultNetworkMembersRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -15082,7 +15850,7 @@ func (s *Server) handleListDefaultNetworkMembersRequest(args [0]string, argsEsca
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    ListDefaultNetworkMembersOperation,
-			OperationSummary: "List the default network's owner roster",
+			OperationSummary: "List default network memberships available to your login",
 			OperationID:      "listDefaultNetworkMembers",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -15095,6 +15863,10 @@ func (s *Server) handleListDefaultNetworkMembersRequest(args [0]string, argsEsca
 					Name: "cursor",
 					In:   "query",
 				}: params.Cursor,
+				{
+					Name: "owner",
+					In:   "query",
+				}: params.Owner,
 			},
 			Raw: r,
 		}
@@ -20718,13 +21490,12 @@ func (s *Server) handleRegisterPayoutAddressRequest(args [0]string, argsEscaped 
 
 // handleRemoveAgentConnectionRequest handles removeAgentConnection operation.
 //
-// Permanently removes a revoked connection record. Requires an organization
-// owner or admin session or OAuth token; organization API keys are denied.
-// Disconnect first using DELETE /agent-connections/{address}. An active
-// connection returns 409 connection_not_revoked. Missing or already removed
-// records return 404. Mail, address notes, domains and external runtimes are
-// preserved. The same address can be paired again with a new invitation;
-// old credentials and invitations remain invalid.
+// Permanently remove a revoked connection record. A current personal owner may permanently remove
+// their own record; organization owners and admins may remove any record. Disconnect first using
+// revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
+// removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
+// same address can be paired again with a new invitation; old credentials and invitations remain
+// invalid.
 //
 // POST /agent-connections/{address}/remove
 func (s *Server) handleRemoveAgentConnectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -20860,7 +21631,7 @@ func (s *Server) handleRemoveAgentConnectionRequest(args [1]string, argsEscaped 
 		mreq := middleware.Request{
 			Context:          ctx,
 			OperationName:    RemoveAgentConnectionOperation,
-			OperationSummary: "Remove a revoked agent connection",
+			OperationSummary: "remove Agent Connection",
 			OperationID:      "removeAgentConnection",
 			Body:             nil,
 			RawBody:          rawBody,
@@ -20869,6 +21640,10 @@ func (s *Server) handleRemoveAgentConnectionRequest(args [1]string, argsEscaped 
 					Name: "address",
 					In:   "path",
 				}: params.Address,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}
@@ -22516,6 +23291,197 @@ func (s *Server) handleResolveRegistryHandleRequest(args [2]string, argsEscaped 
 	}
 
 	if err := encodeResolveRegistryHandleResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleRevokeAgentConnectionRequest handles revokeAgentConnection operation.
+//
+// Disconnect an agent and invalidate its bound credential. A current personal owner may disconnect
+// their own agent; organization owners and admins may disconnect any connection. A connected agent
+// may disconnect only its own exact address using its current bound credential. This preserves the
+// connection record, mail, notes and domain. A current personal owner may permanently remove their
+// own revoked record.
+//
+// DELETE /agent-connections/{address}
+func (s *Server) handleRevokeAgentConnectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("revokeAgentConnection"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.HTTPRouteKey.String("/agent-connections/{address}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), RevokeAgentConnectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: RevokeAgentConnectionOperation,
+			ID:   "revokeAgentConnection",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, RevokeAgentConnectionOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeRevokeAgentConnectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response RevokeAgentConnectionRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    RevokeAgentConnectionOperation,
+			OperationSummary: "revoke Agent Connection",
+			OperationID:      "revokeAgentConnection",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "address",
+					In:   "path",
+				}: params.Address,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = RevokeAgentConnectionParams
+			Response = RevokeAgentConnectionRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackRevokeAgentConnectionParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.RevokeAgentConnection(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.RevokeAgentConnection(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeRevokeAgentConnectionResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -26653,7 +27619,9 @@ func (s *Server) handleUpdateAccountRequest(args [0]string, argsEscaped bool, w 
 
 // handleUpdateDefaultNetworkMemberRequest handles updateDefaultNetworkMember operation.
 //
-// Owner or admin login required. Omitted settings keep their current value.
+// An owner or admin may update any active address. Other human members may update only their own
+// current, non-excluded personal address. Connected-agent credentials cannot update visibility.
+// Omitted settings keep their current value.
 //
 // PATCH /agent-networks/default/members/{address}
 func (s *Server) handleUpdateDefaultNetworkMemberRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

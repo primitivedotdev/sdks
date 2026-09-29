@@ -19,8 +19,13 @@ from .agent_network import AgentNetwork
 from .agent_network_contact_admission import AgentNetworkContactAdmission
 from .agent_network_contact_admission_input import AgentNetworkContactAdmissionInput
 from .agent_network_member import AgentNetworkMember
+from .agent_network_member_owner_type_0 import AgentNetworkMemberOwnerType0
+from .agent_network_member_ownership_kind import AgentNetworkMemberOwnershipKind
 from .agent_network_peer import AgentNetworkPeer
+from .agent_network_peer_owner_type_0 import AgentNetworkPeerOwnerType0
+from .agent_network_peer_ownership_kind import AgentNetworkPeerOwnershipKind
 from .agent_org_ref import AgentOrgRef
+from .agent_presence_type_0 import AgentPresenceType0
 from .agent_signup_resend_result import AgentSignupResendResult
 from .agent_signup_start_result import AgentSignupStartResult
 from .agent_signup_verify_result import AgentSignupVerifyResult
@@ -35,6 +40,7 @@ from .claim_agent_connection_body import ClaimAgentConnectionBody
 from .claim_agent_connection_response_200 import ClaimAgentConnectionResponse200
 from .claim_agent_connection_response_200_data import ClaimAgentConnectionResponse200Data
 from .claim_agent_connection_response_200_data_connection import ClaimAgentConnectionResponse200DataConnection
+from .claim_agent_connection_response_200_data_connection_ownership_kind import ClaimAgentConnectionResponse200DataConnectionOwnershipKind
 from .claim_agent_connection_response_200_data_connection_status import ClaimAgentConnectionResponse200DataConnectionStatus
 from .cli_login_poll_result import CliLoginPollResult
 from .cli_login_poll_result_auth_method import CliLoginPollResultAuthMethod
@@ -77,6 +83,14 @@ from .create_agent_account_input import CreateAgentAccountInput
 from .create_agent_account_response_200 import CreateAgentAccountResponse200
 from .create_agent_claim_link_input import CreateAgentClaimLinkInput
 from .create_agent_claim_link_response_200 import CreateAgentClaimLinkResponse200
+from .create_agent_connection_body import CreateAgentConnectionBody
+from .create_agent_connection_body_ownership_kind import CreateAgentConnectionBodyOwnershipKind
+from .create_agent_connection_response_200 import CreateAgentConnectionResponse200
+from .create_agent_connection_response_200_data import CreateAgentConnectionResponse200Data
+from .create_agent_connection_response_200_data_connection import CreateAgentConnectionResponse200DataConnection
+from .create_agent_connection_response_200_data_connection_ownership_kind import CreateAgentConnectionResponse200DataConnectionOwnershipKind
+from .create_agent_connection_response_200_data_connection_status import CreateAgentConnectionResponse200DataConnectionStatus
+from .create_agent_connection_response_200_data_invitation import CreateAgentConnectionResponse200DataInvitation
 from .create_challenge_input import CreateChallengeInput
 from .create_challenge_input_network import CreateChallengeInputNetwork
 from .create_challenge_response_201 import CreateChallengeResponse201
@@ -279,6 +293,18 @@ from .install_template_body import InstallTemplateBody
 from .install_template_body_secrets import InstallTemplateBodySecrets
 from .install_template_body_variables import InstallTemplateBodyVariables
 from .install_template_response_201 import InstallTemplateResponse201
+from .invite_agent_connection_body import InviteAgentConnectionBody
+from .invite_agent_connection_response_200 import InviteAgentConnectionResponse200
+from .invite_agent_connection_response_200_data import InviteAgentConnectionResponse200Data
+from .invite_agent_connection_response_200_data_connection import InviteAgentConnectionResponse200DataConnection
+from .invite_agent_connection_response_200_data_connection_ownership_kind import InviteAgentConnectionResponse200DataConnectionOwnershipKind
+from .invite_agent_connection_response_200_data_connection_status import InviteAgentConnectionResponse200DataConnectionStatus
+from .invite_agent_connection_response_200_data_invitation import InviteAgentConnectionResponse200DataInvitation
+from .list_agent_connections_response_200 import ListAgentConnectionsResponse200
+from .list_agent_connections_response_200_data_item import ListAgentConnectionsResponse200DataItem
+from .list_agent_connections_response_200_data_item_ownership_kind import ListAgentConnectionsResponse200DataItemOwnershipKind
+from .list_agent_connections_response_200_data_item_status import ListAgentConnectionsResponse200DataItemStatus
+from .list_agent_connections_response_200_meta import ListAgentConnectionsResponse200Meta
 from .list_agent_contacts_response_200 import ListAgentContactsResponse200
 from .list_agent_contacts_response_200_data_item import ListAgentContactsResponse200DataItem
 from .list_agent_contacts_response_200_meta import ListAgentContactsResponse200Meta
@@ -339,6 +365,9 @@ from .pay_challenge_response_200 import PayChallengeResponse200
 from .plan_limits import PlanLimits
 from .poll_cli_login_input import PollCliLoginInput
 from .poll_cli_login_response_200 import PollCliLoginResponse200
+from .presence_control_type_0 import PresenceControlType0
+from .presence_control_type_0_status import PresenceControlType0Status
+from .presence_profile import PresenceProfile
 from .publish_agent_input import PublishAgentInput
 from .publish_agent_response_200 import PublishAgentResponse200
 from .publish_agent_response_201 import PublishAgentResponse201
@@ -396,6 +425,11 @@ from .resend_agent_signup_verification_response_200 import ResendAgentSignupVeri
 from .resend_cli_signup_verification_input import ResendCliSignupVerificationInput
 from .resend_cli_signup_verification_response_200 import ResendCliSignupVerificationResponse200
 from .resolve_registry_handle_response_200 import ResolveRegistryHandleResponse200
+from .revoke_agent_connection_response_200 import RevokeAgentConnectionResponse200
+from .revoke_agent_connection_response_200_data import RevokeAgentConnectionResponse200Data
+from .revoke_agent_connection_response_200_data_connection import RevokeAgentConnectionResponse200DataConnection
+from .revoke_agent_connection_response_200_data_connection_ownership_kind import RevokeAgentConnectionResponse200DataConnectionOwnershipKind
+from .revoke_agent_connection_response_200_data_connection_status import RevokeAgentConnectionResponse200DataConnectionStatus
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
 from .route_evaluated_entry import RouteEvaluatedEntry
 from .route_evaluated_entry_result import RouteEvaluatedEntryResult
@@ -598,8 +632,13 @@ __all__ = (
     "AgentNetworkContactAdmission",
     "AgentNetworkContactAdmissionInput",
     "AgentNetworkMember",
+    "AgentNetworkMemberOwnershipKind",
+    "AgentNetworkMemberOwnerType0",
     "AgentNetworkPeer",
+    "AgentNetworkPeerOwnershipKind",
+    "AgentNetworkPeerOwnerType0",
     "AgentOrgRef",
+    "AgentPresenceType0",
     "AgentSignupResendResult",
     "AgentSignupStartResult",
     "AgentSignupVerifyResult",
@@ -614,6 +653,7 @@ __all__ = (
     "ClaimAgentConnectionResponse200",
     "ClaimAgentConnectionResponse200Data",
     "ClaimAgentConnectionResponse200DataConnection",
+    "ClaimAgentConnectionResponse200DataConnectionOwnershipKind",
     "ClaimAgentConnectionResponse200DataConnectionStatus",
     "CliLoginPollResult",
     "CliLoginPollResultAuthMethod",
@@ -656,6 +696,14 @@ __all__ = (
     "CreateAgentAccountResponse200",
     "CreateAgentClaimLinkInput",
     "CreateAgentClaimLinkResponse200",
+    "CreateAgentConnectionBody",
+    "CreateAgentConnectionBodyOwnershipKind",
+    "CreateAgentConnectionResponse200",
+    "CreateAgentConnectionResponse200Data",
+    "CreateAgentConnectionResponse200DataConnection",
+    "CreateAgentConnectionResponse200DataConnectionOwnershipKind",
+    "CreateAgentConnectionResponse200DataConnectionStatus",
+    "CreateAgentConnectionResponse200DataInvitation",
     "CreateChallengeInput",
     "CreateChallengeInputNetwork",
     "CreateChallengeResponse201",
@@ -858,6 +906,18 @@ __all__ = (
     "InstallTemplateBodySecrets",
     "InstallTemplateBodyVariables",
     "InstallTemplateResponse201",
+    "InviteAgentConnectionBody",
+    "InviteAgentConnectionResponse200",
+    "InviteAgentConnectionResponse200Data",
+    "InviteAgentConnectionResponse200DataConnection",
+    "InviteAgentConnectionResponse200DataConnectionOwnershipKind",
+    "InviteAgentConnectionResponse200DataConnectionStatus",
+    "InviteAgentConnectionResponse200DataInvitation",
+    "ListAgentConnectionsResponse200",
+    "ListAgentConnectionsResponse200DataItem",
+    "ListAgentConnectionsResponse200DataItemOwnershipKind",
+    "ListAgentConnectionsResponse200DataItemStatus",
+    "ListAgentConnectionsResponse200Meta",
     "ListAgentContactsResponse200",
     "ListAgentContactsResponse200DataItem",
     "ListAgentContactsResponse200Meta",
@@ -918,6 +978,9 @@ __all__ = (
     "PlanLimits",
     "PollCliLoginInput",
     "PollCliLoginResponse200",
+    "PresenceControlType0",
+    "PresenceControlType0Status",
+    "PresenceProfile",
     "PublishAgentInput",
     "PublishAgentResponse200",
     "PublishAgentResponse201",
@@ -975,6 +1038,11 @@ __all__ = (
     "ResendCliSignupVerificationInput",
     "ResendCliSignupVerificationResponse200",
     "ResolveRegistryHandleResponse200",
+    "RevokeAgentConnectionResponse200",
+    "RevokeAgentConnectionResponse200Data",
+    "RevokeAgentConnectionResponse200DataConnection",
+    "RevokeAgentConnectionResponse200DataConnectionOwnershipKind",
+    "RevokeAgentConnectionResponse200DataConnectionStatus",
     "RotateWebhookSecretResponse200",
     "RouteEvaluatedEntry",
     "RouteEvaluatedEntryResult",

@@ -78,7 +78,8 @@ def sync_detailed(
     """ List your organization's agent networks
 
      An organization member login or an active connected agent allowed to see the network can read
-    networks. The default organization network is always present.
+    networks. The default organization network is always present. can_manage_all is true only for a
+    current owner or admin; a connected credential receives false.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -107,7 +108,8 @@ def sync(
     """ List your organization's agent networks
 
      An organization member login or an active connected agent allowed to see the network can read
-    networks. The default organization network is always present.
+    networks. The default organization network is always present. can_manage_all is true only for a
+    current owner or admin; a connected credential receives false.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -131,7 +133,8 @@ async def asyncio_detailed(
     """ List your organization's agent networks
 
      An organization member login or an active connected agent allowed to see the network can read
-    networks. The default organization network is always present.
+    networks. The default organization network is always present. can_manage_all is true only for a
+    current owner or admin; a connected credential receives false.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -160,7 +163,8 @@ async def asyncio(
     """ List your organization's agent networks
 
      An organization member login or an active connected agent allowed to see the network can read
-    networks. The default organization network is always present.
+    networks. The default organization network is always present. can_manage_all is true only for a
+    current owner or admin; a connected credential receives false.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

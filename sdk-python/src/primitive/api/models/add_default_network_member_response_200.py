@@ -26,7 +26,8 @@ class AddDefaultNetworkMemberResponse200:
     """
         Attributes:
             success (bool):
-            data (AgentNetworkMember | Unset): Owner view of one address in the default organization network.
+            data (AgentNetworkMember | Unset): One address in the default organization network, visible to the current
+                requester.
      """
 
     success: bool

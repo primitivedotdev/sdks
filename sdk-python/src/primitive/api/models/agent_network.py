@@ -29,12 +29,14 @@ class AgentNetwork:
             kind (Literal['organization']):
             is_default (bool):
             name (str):
+            can_manage_all (bool): Whether the current requester may manage every membership in this network.
      """
 
     id: UUID
     kind: Literal['organization']
     is_default: bool
     name: str
+    can_manage_all: bool
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -50,6 +52,8 @@ class AgentNetwork:
 
         name = self.name
 
+        can_manage_all = self.can_manage_all
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -58,6 +62,7 @@ class AgentNetwork:
             "kind": kind,
             "is_default": is_default,
             "name": name,
+            "can_manage_all": can_manage_all,
         })
 
         return field_dict
@@ -80,11 +85,14 @@ class AgentNetwork:
 
         name = d.pop("name")
 
+        can_manage_all = d.pop("can_manage_all")
+
         agent_network = cls(
             id=id,
             kind=kind,
             is_default=is_default,
             name=name,
+            can_manage_all=can_manage_all,
         )
 
 

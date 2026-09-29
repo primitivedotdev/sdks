@@ -69,6 +69,9 @@ export function apiContactPolicy(
             responseStyle: "fields",
             throwOnError: false,
           });
+          signal.throwIfAborted();
+          if ([403, 404, 422].includes(result.response?.status ?? 0))
+            return { allowed: false, allowed_since: null, pending: false };
           if (
             result.error ||
             result.data?.success !== true ||

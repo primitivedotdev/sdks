@@ -19,6 +19,7 @@ import {
 import type { ListenOptions } from "./listen-runner.js";
 import { ListenStateError } from "./listen-state.js";
 import {
+  type ContactNotificationAdmission,
   NETWORK_ADMISSION_PENDING_RETRY_MS,
   NetworkAdmissionPendingError,
 } from "./notification-contact-policy.js";
@@ -353,14 +354,23 @@ export async function runSharedNotificationListen(
           }
         }
       }
-      let admission = contactPolicy
-        ? await contactPolicy.admit(
+      let admission: ContactNotificationAdmission | null | undefined;
+      let admissionRetry: NotificationRetryError | undefined;
+      if (contactPolicy) {
+        try {
+          admission = await contactPolicy.admit(
             detail.from_email,
             detail.received_at,
             signal,
             detail.id,
-          )
-        : undefined;
+          );
+        } catch (error) {
+          signal.throwIfAborted();
+          if (!(error instanceof NotificationRetryError)) throw error;
+          // Exact local replies have separate permission from network wake.
+          admissionRetry = error;
+        }
+      }
       if (
         status &&
         contactPolicy &&
@@ -429,6 +439,8 @@ export async function runSharedNotificationListen(
             signal,
           );
       }
+      if (admissionRetry && admission?.kind !== "response")
+        throw admissionRetry;
       if (contactPolicy && !admission) return true;
       const choices = (
         admission ? [admission.sender] : [...approvedSenders]

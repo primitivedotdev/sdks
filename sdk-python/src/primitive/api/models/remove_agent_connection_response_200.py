@@ -23,7 +23,7 @@ T = TypeVar("T", bound="RemoveAgentConnectionResponse200")
 
 @_attrs_define
 class RemoveAgentConnectionResponse200:
-    """ 
+    """
         Attributes:
             success (bool):
             data (RemoveAgentConnectionResponse200Data):

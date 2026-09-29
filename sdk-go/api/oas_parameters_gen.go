@@ -441,9 +441,9 @@ func decodeCheckDomainDnsParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // ClaimAgentConnectionParams is parameters of claimAgentConnection operation.
 type ClaimAgentConnectionParams struct {
-	// This header does not enable credential replay for this one-use claim. If the response is lost or
-	// the outcome is unknown, request a fresh owner invitation. Do not assume that retrying the same key
-	// or payload can recover the returned credential.
+	// Optional client-supplied idempotency key. Retrying a request with the same key returns the
+	// original result instead of performing the action a second time; if omitted the server derives one
+	// from the canonical payload hash. Safe to retry network failures without duplicating side effects.
 	IdempotencyKey OptString `json:",omitempty,omitzero"`
 }
 
@@ -591,6 +591,98 @@ func decodeCompleteWebhookEventParams(args [1]string, argsEscaped bool, r *http.
 		return params, &ogenerrors.DecodeParamError{
 			Name: "id",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// CreateAgentConnectionParams is parameters of createAgentConnection operation.
+type CreateAgentConnectionParams struct {
+	// Optional client-supplied idempotency key. Retrying a request with the same key returns the
+	// original result instead of performing the action a second time; if omitted the server derives one
+	// from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackCreateAgentConnectionParams(packed middleware.Parameters) (params CreateAgentConnectionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeCreateAgentConnectionParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateAgentConnectionParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
 			Err:  err,
 		}
 	}
@@ -4653,6 +4745,346 @@ func decodeInstallTemplateParams(args [1]string, argsEscaped bool, r *http.Reque
 	return params, nil
 }
 
+// InviteAgentConnectionParams is parameters of inviteAgentConnection operation.
+type InviteAgentConnectionParams struct {
+	// Address for agent connections.
+	Address string
+	// Optional client-supplied idempotency key. Retrying a request with the same key returns the
+	// original result instead of performing the action a second time; if omitted the server derives one
+	// from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
+}
+
+func unpackInviteAgentConnectionParams(packed middleware.Parameters) (params InviteAgentConnectionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "address",
+			In:   "path",
+		}
+		params.Address = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeInviteAgentConnectionParams(args [1]string, argsEscaped bool, r *http.Request) (params InviteAgentConnectionParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode path: address.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "address",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Address = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     254,
+					MaxLengthSet:  true,
+					Email:         true,
+					Hostname:      false,
+					Regex:         regexMap["^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"],
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.Address)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "address",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ListAgentConnectionsParams is parameters of listAgentConnections operation.
+type ListAgentConnectionsParams struct {
+	// Limit for agent connections.
+	Limit OptInt `json:",omitempty,omitzero"`
+	// Cursor for agent connections.
+	Cursor OptString `json:",omitempty,omitzero"`
+}
+
+func unpackListAgentConnectionsParams(packed middleware.Parameters) (params ListAgentConnectionsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "limit",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Limit = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "cursor",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Cursor = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeListAgentConnectionsParams(args [0]string, argsEscaped bool, r *http.Request) (params ListAgentConnectionsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Set default value for query: limit.
+	{
+		val := int(50)
+		params.Limit.SetTo(val)
+	}
+	// Decode query: limit.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLimitVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLimitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Limit.SetTo(paramsDotLimitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Limit.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "limit",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: cursor.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotCursorVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotCursorVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Cursor.SetTo(paramsDotCursorVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Cursor.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         regexMap["^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "cursor",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // ListAgentContactsParams is parameters of listAgentContacts operation.
 type ListAgentContactsParams struct {
 	// Agent_address for contacts.
@@ -5081,6 +5513,9 @@ type ListDefaultNetworkAgentsParams struct {
 	Limit OptInt `json:",omitempty,omitzero"`
 	// Continue after this address from the previous page.
 	Cursor OptString `json:",omitempty,omitzero"`
+	// Filter by exact owner user ID or case-insensitive owner name substring. The manager roster also
+	// matches owner email; peer discovery does not expose or match email.
+	Owner OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListDefaultNetworkAgentsParams(packed middleware.Parameters) (params ListDefaultNetworkAgentsParams) {
@@ -5100,6 +5535,15 @@ func unpackListDefaultNetworkAgentsParams(packed middleware.Parameters) (params 
 		}
 		if v, ok := packed[key]; ok {
 			params.Cursor = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "owner",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Owner = v.(OptString)
 		}
 	}
 	return params
@@ -5246,6 +5690,74 @@ func decodeListDefaultNetworkAgentsParams(args [0]string, argsEscaped bool, r *h
 			Err:  err,
 		}
 	}
+	// Decode query: owner.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "owner",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotOwnerVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotOwnerVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Owner.SetTo(paramsDotOwnerVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Owner.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     100,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "owner",
+			In:   "query",
+			Err:  err,
+		}
+	}
 	return params, nil
 }
 
@@ -5255,6 +5767,9 @@ type ListDefaultNetworkMembersParams struct {
 	Limit OptInt `json:",omitempty,omitzero"`
 	// Continue after this address from the previous page.
 	Cursor OptString `json:",omitempty,omitzero"`
+	// Filter by exact owner user ID or case-insensitive owner name substring. The manager roster also
+	// matches owner email; peer discovery does not expose or match email.
+	Owner OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListDefaultNetworkMembersParams(packed middleware.Parameters) (params ListDefaultNetworkMembersParams) {
@@ -5274,6 +5789,15 @@ func unpackListDefaultNetworkMembersParams(packed middleware.Parameters) (params
 		}
 		if v, ok := packed[key]; ok {
 			params.Cursor = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "owner",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Owner = v.(OptString)
 		}
 	}
 	return params
@@ -5416,6 +5940,74 @@ func decodeListDefaultNetworkMembersParams(args [0]string, argsEscaped bool, r *
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "cursor",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: owner.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "owner",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotOwnerVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotOwnerVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Owner.SetTo(paramsDotOwnerVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Owner.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     100,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "owner",
 			In:   "query",
 			Err:  err,
 		}
@@ -8912,8 +9504,12 @@ func decodeRedeemCreditCodeParams(args [0]string, argsEscaped bool, r *http.Requ
 
 // RemoveAgentConnectionParams is parameters of removeAgentConnection operation.
 type RemoveAgentConnectionParams struct {
-	// The email address identifying the revoked connection.
+	// Address for agent connections.
 	Address string
+	// Optional client-supplied idempotency key. Retrying a request with the same key returns the
+	// original result instead of performing the action a second time; if omitted the server derives one
+	// from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+	IdempotencyKey OptString `json:",omitempty,omitzero"`
 }
 
 func unpackRemoveAgentConnectionParams(packed middleware.Parameters) (params RemoveAgentConnectionParams) {
@@ -8924,10 +9520,20 @@ func unpackRemoveAgentConnectionParams(packed middleware.Parameters) (params Rem
 		}
 		params.Address = packed[key].(string)
 	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Idempotency-Key",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IdempotencyKey = v.(OptString)
+		}
+	}
 	return params
 }
 
 func decodeRemoveAgentConnectionParams(args [1]string, argsEscaped bool, r *http.Request) (params RemoveAgentConnectionParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
 	// Decode path: address.
 	if err := func() error {
 		param := args[0]
@@ -8970,7 +9576,7 @@ func decodeRemoveAgentConnectionParams(args [1]string, argsEscaped bool, r *http
 					MaxLengthSet:  true,
 					Email:         true,
 					Hostname:      false,
-					Regex:         nil,
+					Regex:         regexMap["^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"],
 					MinNumeric:    0,
 					MinNumericSet: false,
 					MaxNumeric:    0,
@@ -8990,6 +9596,72 @@ func decodeRemoveAgentConnectionParams(args [1]string, argsEscaped bool, r *http
 		return params, &ogenerrors.DecodeParamError{
 			Name: "address",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode header: Idempotency-Key.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIdempotencyKeyVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIdempotencyKeyVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IdempotencyKey.SetTo(paramsDotIdempotencyKeyVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.IdempotencyKey.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     255,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Idempotency-Key",
+			In:   "header",
 			Err:  err,
 		}
 	}
@@ -9479,6 +10151,92 @@ func decodeResolveRegistryHandleParams(args [2]string, argsEscaped bool, r *http
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "handle",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// RevokeAgentConnectionParams is parameters of revokeAgentConnection operation.
+type RevokeAgentConnectionParams struct {
+	// Address for agent connections.
+	Address string
+}
+
+func unpackRevokeAgentConnectionParams(packed middleware.Parameters) (params RevokeAgentConnectionParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "address",
+			In:   "path",
+		}
+		params.Address = packed[key].(string)
+	}
+	return params
+}
+
+func decodeRevokeAgentConnectionParams(args [1]string, argsEscaped bool, r *http.Request) (params RevokeAgentConnectionParams, _ error) {
+	// Decode path: address.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "address",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Address = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     0,
+					MinLengthSet:  false,
+					MaxLength:     254,
+					MaxLengthSet:  true,
+					Email:         true,
+					Hostname:      false,
+					Regex:         regexMap["^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"],
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(params.Address)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "address",
 			In:   "path",
 			Err:  err,
 		}

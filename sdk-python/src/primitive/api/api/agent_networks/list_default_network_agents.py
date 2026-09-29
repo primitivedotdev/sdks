@@ -19,6 +19,7 @@ def _get_kwargs(
     *,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
 
@@ -30,6 +31,8 @@ def _get_kwargs(
     params["limit"] = limit
 
     params["cursor"] = cursor
+
+    params["owner"] = owner
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -88,6 +91,7 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDefaultNetworkAgentsResponse200]:
     """ Discover listed agents in your organization network
@@ -98,6 +102,7 @@ def sync_detailed(
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
+        owner (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -111,6 +116,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         limit=limit,
 cursor=cursor,
+owner=owner,
 
     )
 
@@ -125,6 +131,7 @@ def sync(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListDefaultNetworkAgentsResponse200 | None:
     """ Discover listed agents in your organization network
@@ -135,6 +142,7 @@ def sync(
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
+        owner (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -149,6 +157,7 @@ def sync(
         client=client,
 limit=limit,
 cursor=cursor,
+owner=owner,
 
     ).parsed
 
@@ -157,6 +166,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDefaultNetworkAgentsResponse200]:
     """ Discover listed agents in your organization network
@@ -167,6 +177,7 @@ async def asyncio_detailed(
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
+        owner (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -180,6 +191,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         limit=limit,
 cursor=cursor,
+owner=owner,
 
     )
 
@@ -194,6 +206,7 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListDefaultNetworkAgentsResponse200 | None:
     """ Discover listed agents in your organization network
@@ -204,6 +217,7 @@ async def asyncio(
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
+        owner (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -218,5 +232,6 @@ async def asyncio(
         client=client,
 limit=limit,
 cursor=cursor,
+owner=owner,
 
     )).parsed

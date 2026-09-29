@@ -116,6 +116,20 @@ func encodeCreateAgentClaimLinkRequest(
 	return nil
 }
 
+func encodeCreateAgentConnectionRequest(
+	req *CreateAgentConnectionReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCreateChallengeRequest(
 	req *CreateChallengeInput,
 	r *http.Request,
@@ -300,6 +314,20 @@ func encodeDefineAgentRequest(
 
 func encodeInstallTemplateRequest(
 	req *InstallTemplateBody,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeInviteAgentConnectionRequest(
+	req *InviteAgentConnectionReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

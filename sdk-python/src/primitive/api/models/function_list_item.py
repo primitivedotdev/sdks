@@ -31,10 +31,10 @@ class FunctionListItem:
             id (UUID): Function id, also the script name in the edge runtime.
             name (str): Slug-style name set on creation. Stable; cannot be changed.
             deploy_status (FunctionDeployStatus): Lifecycle state of the latest deploy attempt:
-                  * `pending` — deploy in flight; the runtime has not yet
+                  * `pending` - deploy in flight; the runtime has not yet
                     confirmed the new bundle is live.
-                  * `deployed` — the running edge handler is the latest code.
-                  * `failed` — the most recent deploy attempt failed; the
+                  * `deployed` - the running edge handler is the latest code.
+                  * `failed` - the most recent deploy attempt failed; the
                     previously-live code (if any) is still running. The
                     `deploy_error` field carries the error message.
             created_at (datetime.datetime):

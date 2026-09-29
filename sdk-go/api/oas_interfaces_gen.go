@@ -9,6 +9,10 @@ type AddDomainRes interface {
 	addDomainRes()
 }
 
+type AgentConnectionSetupRes interface {
+	agentConnectionSetupRes()
+}
+
 type AwaitReplyRes interface {
 	awaitReplyRes()
 }
@@ -43,6 +47,10 @@ type CreateAgentAccountRes interface {
 
 type CreateAgentClaimLinkRes interface {
 	createAgentClaimLinkRes()
+}
+
+type CreateAgentConnectionRes interface {
+	createAgentConnectionRes()
 }
 
 type CreateChallengeRes interface {
@@ -293,6 +301,14 @@ type InstallTemplateRes interface {
 	installTemplateRes()
 }
 
+type InviteAgentConnectionRes interface {
+	inviteAgentConnectionRes()
+}
+
+type ListAgentConnectionsRes interface {
+	listAgentConnectionsRes()
+}
+
 type ListAgentContactsRes interface {
 	listAgentContactsRes()
 }
@@ -467,6 +483,10 @@ type ResendCliSignupVerificationRes interface {
 
 type ResolveRegistryHandleRes interface {
 	resolveRegistryHandleRes()
+}
+
+type RevokeAgentConnectionRes interface {
+	revokeAgentConnectionRes()
 }
 
 type RotateWebhookSecretRes interface {

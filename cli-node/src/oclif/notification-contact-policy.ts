@@ -197,13 +197,10 @@ export function createNotificationContactPolicy(options: {
     receivedAt: string,
     signal: AbortSignal,
     emailId?: string,
+    networkReader = options.readNetworkAdmission,
   ): Promise<ContactNotificationAdmission | null> {
     const contact = admission(value, sender, receivedAt);
-    if (
-      contact?.kind === "allowed" ||
-      !options.readNetworkAdmission ||
-      !emailId
-    )
+    if (contact?.kind === "allowed" || !networkReader || !emailId)
       return contact;
     const decision = evaluateContactPolicy({
       policy: value.policy,
@@ -219,11 +216,25 @@ export function createNotificationContactPolicy(options: {
       !(decision.kind === "silent" && decision.source === "default")
     )
       return contact;
-    const network = await options.readNetworkAdmission(emailId, sender, signal);
+    let network: Awaited<ReturnType<NonNullable<typeof networkReader>>>;
+    try {
+      network = await networkReader(emailId, sender, signal);
+    } catch (error) {
+      signal.throwIfAborted();
+      // Contact-request intake has independent owner permission. A network
+      // lookup failure cannot suppress it or grant ordinary-message admission.
+      if (contact?.kind === "request") return contact;
+      throw error;
+    }
     if (network.pending) throw new NetworkAdmissionPendingError();
     if (!network.allowed) return contact;
-    const since = network.allowed_since && mailTime(network.allowed_since);
-    if (!since) throw unavailable();
+    const networkSince =
+      network.allowed_since && mailTime(network.allowed_since);
+    if (!networkSince) throw unavailable();
+    const since =
+      Date.parse(value.policy.effective_since) > Date.parse(networkSince)
+        ? value.policy.effective_since
+        : networkSince;
     if (Date.parse(receivedAt) < Date.parse(since)) return contact;
     return {
       sender,
@@ -271,6 +282,13 @@ export function createNotificationContactPolicy(options: {
       }
       const received = mailTime(receivedAt);
       const inboundId = emailId === undefined ? undefined : mailId(emailId);
+      const reader = options.readNetworkAdmission;
+      let networkResult: ReturnType<NonNullable<typeof reader>> | undefined;
+      // Reuse one exact-email lookup across a cached denial and policy refresh.
+      // Dispatch recheck still makes its own fresh authorization request.
+      const networkReader: typeof reader = reader
+        ? (id, address, abort) => (networkResult ??= reader(id, address, abort))
+        : undefined;
       const cached = fresh(snapshot);
       let current = cached && snapshot ? snapshot : await refreshOnce(signal);
       let allowed = await admissionWithNetwork(
@@ -279,6 +297,7 @@ export function createNotificationContactPolicy(options: {
         received,
         signal,
         inboundId,
+        networkReader,
       );
       if (cached && allowed?.kind !== "allowed") {
         // Cached denial or request-only intake cannot discard ordinary mail
@@ -290,6 +309,7 @@ export function createNotificationContactPolicy(options: {
           received,
           signal,
           inboundId,
+          networkReader,
         );
       }
       return allowed;

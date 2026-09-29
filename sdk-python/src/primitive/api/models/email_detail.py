@@ -23,6 +23,7 @@ if TYPE_CHECKING:
   from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
   from ..models.email_detail_reply import EmailDetailReply
   from ..models.parsed_email_data import ParsedEmailData
+  from ..models.presence_control_type_0 import PresenceControlType0
 
 
 
@@ -92,6 +93,14 @@ class EmailDetail:
                 or `sender`/`smtp_mail_from` when you need the SMTP
                 envelope value (e.g. to follow a bounce).
             to_email (str): Parsed to address (same as recipient)
+            sender_connected_agent_verified (bool): True only when this inbound message matches a send made with the
+                current key bound to its sender address as a connected agent.
+                Requires exact sent-message and recipient evidence: a verified
+                internal delivery, or authenticated SMTP delivery matching the
+                sent record. Sender headers, organization keys, and network
+                visibility alone cannot make it true. It becomes false if the
+                connection is revoked or its bound key is deleted; it is not a
+                permanent historical authorship claim.
             replies (list[EmailDetailReply]): Sent emails recorded as replies to this inbound, in send
                 order (ascending). Populated when a customer's send-mail
                 request carries an `in_reply_to` Message-ID that matches
@@ -233,6 +242,7 @@ class EmailDetail:
                 `thread_id`; fetch `/threads/{thread_id}` for the full
                 ordered thread. Assigned at ingest. NULL on messages
                 received before threading was enabled (until backfilled).
+            presence_control (None | PresenceControlType0 | Unset):
             automation_headers (EmailDetailAutomationHeadersType0 | None | Unset): What the message declared about being
                 automated, verbatim:
                 `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
@@ -252,6 +262,7 @@ class EmailDetail:
     webhook_attempt_count: int
     from_email: str
     to_email: str
+    sender_connected_agent_verified: bool
     replies: list[EmailDetailReply]
     parsed: ParsedEmailData
     auth: EmailAuth
@@ -284,6 +295,7 @@ class EmailDetail:
     from_known_address: bool | Unset = UNSET
     reply_to_sent_email_id: None | Unset | UUID = UNSET
     thread_id: None | Unset | UUID = UNSET
+    presence_control: None | PresenceControlType0 | Unset = UNSET
     automation_headers: EmailDetailAutomationHeadersType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -296,6 +308,7 @@ class EmailDetail:
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
         from ..models.email_detail_reply import EmailDetailReply
         from ..models.parsed_email_data import ParsedEmailData
+        from ..models.presence_control_type_0 import PresenceControlType0
         id = str(self.id)
 
         sender = self.sender
@@ -315,6 +328,8 @@ class EmailDetail:
         from_email = self.from_email
 
         to_email = self.to_email
+
+        sender_connected_agent_verified = self.sender_connected_agent_verified
 
         replies = []
         for replies_item_data in self.replies:
@@ -507,6 +522,14 @@ class EmailDetail:
         else:
             thread_id = self.thread_id
 
+        presence_control: dict[str, Any] | None | Unset
+        if isinstance(self.presence_control, Unset):
+            presence_control = UNSET
+        elif isinstance(self.presence_control, PresenceControlType0):
+            presence_control = self.presence_control.to_dict()
+        else:
+            presence_control = self.presence_control
+
         automation_headers: dict[str, Any] | None | Unset
         if isinstance(self.automation_headers, Unset):
             automation_headers = UNSET
@@ -529,6 +552,7 @@ class EmailDetail:
             "webhook_attempt_count": webhook_attempt_count,
             "from_email": from_email,
             "to_email": to_email,
+            "sender_connected_agent_verified": sender_connected_agent_verified,
             "replies": replies,
             "parsed": parsed,
             "auth": auth,
@@ -586,6 +610,8 @@ class EmailDetail:
             field_dict["reply_to_sent_email_id"] = reply_to_sent_email_id
         if thread_id is not UNSET:
             field_dict["thread_id"] = thread_id
+        if presence_control is not UNSET:
+            field_dict["presence_control"] = presence_control
         if automation_headers is not UNSET:
             field_dict["automation_headers"] = automation_headers
 
@@ -599,6 +625,7 @@ class EmailDetail:
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
         from ..models.email_detail_reply import EmailDetailReply
         from ..models.parsed_email_data import ParsedEmailData
+        from ..models.presence_control_type_0 import PresenceControlType0
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -631,6 +658,8 @@ class EmailDetail:
         from_email = d.pop("from_email")
 
         to_email = d.pop("to_email")
+
+        sender_connected_agent_verified = d.pop("sender_connected_agent_verified")
 
         replies = []
         _replies = d.pop("replies")
@@ -1022,6 +1051,26 @@ class EmailDetail:
         thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
 
 
+        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+
+
+
+                return componentsschemas_presence_control_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | PresenceControlType0 | Unset, data)
+
+        presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
+
+
         def _parse_automation_headers(data: object) -> EmailDetailAutomationHeadersType0 | None | Unset:
             if data is None:
                 return data
@@ -1053,6 +1102,7 @@ class EmailDetail:
             webhook_attempt_count=webhook_attempt_count,
             from_email=from_email,
             to_email=to_email,
+            sender_connected_agent_verified=sender_connected_agent_verified,
             replies=replies,
             parsed=parsed,
             auth=auth,
@@ -1085,6 +1135,7 @@ class EmailDetail:
             from_known_address=from_known_address,
             reply_to_sent_email_id=reply_to_sent_email_id,
             thread_id=thread_id,
+            presence_control=presence_control,
             automation_headers=automation_headers,
         )
 

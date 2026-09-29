@@ -151,6 +151,7 @@ function setup(
     apiBaseUrl: baseUrl,
   };
   let contactStatus = 200;
+  let networkStatus = 200;
   let networkDecision = {
     allowed: false,
     allowed_since: null as string | null,
@@ -230,7 +231,12 @@ function setup(
           email_id: detail.id,
           sender_address: detail.from_email,
         });
-        return Response.json({ success: true, data: networkDecision });
+        return Response.json(
+          networkStatus === 200
+            ? { success: true, data: networkDecision }
+            : { success: false, error: "Network admission unavailable" },
+          { status: networkStatus },
+        );
       }
       if (path === `/v1/emails/${emailId}/attachments/0` && contactBytes)
         return new Response(new Uint8Array(contactBytes));
@@ -370,8 +376,10 @@ function setup(
       allowed: boolean,
       allowedSince: string | null,
       pending = false,
+      status = 200,
     ) => {
       networkDecision = { allowed, allowed_since: allowedSince, pending };
+      networkStatus = status;
     },
     close,
     closeReceiver,
@@ -1142,6 +1150,46 @@ describe("first-contact intake", () => {
 });
 
 describe("locally solicited notification replies", () => {
+  it.each([
+    503,
+    "pending",
+  ] as const)("delivers an exact solicited reply independently of network %s", async (failure) => {
+    const f = await solicited("plain");
+    f.network(false, null, failure === "pending", failure === 503 ? 503 : 200);
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+      sender: f.detail.from_email,
+      contactRequest: false,
+    });
+  });
+
+  it.each([
+    503,
+    "pending",
+  ] as const)("keeps unrelated mail pending during network %s", async (failure) => {
+    const f = setup();
+    f.contacts([]);
+    f.network(false, null, failure === "pending", failure === 503 ? 503 : 200);
+    const controller = new AbortController();
+    f.changed.mockImplementationOnce(async () => controller.abort());
+    expect(
+      await runListen({
+        ...f.options,
+        signal: controller.signal,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).toBe(0);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+      route: null,
+    });
+  });
+
   it("follows a fresh async reply through a changed parent without admitting unrelated senders", async () => {
     const f = setup();
     f.contacts([]);

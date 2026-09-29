@@ -108,6 +108,7 @@ def normalize_agent_whitespace(directory: Path) -> None:
         *list((directory / "api" / "agent_connections").rglob("*.py")),
         *list((directory / "models").glob("*network*.py")),
         *list((directory / "models").glob("*agent_connection*.py")),
+        *list((directory / "models").glob("*presence*.py")),
     ]
     for py_file in files:
         text = py_file.read_text()

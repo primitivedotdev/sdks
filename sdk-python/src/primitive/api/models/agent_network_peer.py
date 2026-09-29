@@ -8,10 +8,14 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.agent_network_peer_ownership_kind import AgentNetworkPeerOwnershipKind
 from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.agent_network_peer_owner_type_0 import AgentNetworkPeerOwnerType0
+  from ..models.agent_presence_type_0 import AgentPresenceType0
 
 
 
@@ -29,11 +33,17 @@ class AgentNetworkPeer:
             address (str):
             name (str):
             last_seen_at (datetime.datetime | None): Last recorded API activity, not a presence or receiving guarantee.
+            ownership_kind (AgentNetworkPeerOwnershipKind):
+            owner (AgentNetworkPeerOwnerType0 | None):
+            presence (AgentPresenceType0 | None | Unset):
      """
 
     address: str
     name: str
     last_seen_at: datetime.datetime | None
+    ownership_kind: AgentNetworkPeerOwnershipKind
+    owner: AgentNetworkPeerOwnerType0 | None
+    presence: AgentPresenceType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -41,6 +51,8 @@ class AgentNetworkPeer:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.agent_network_peer_owner_type_0 import AgentNetworkPeerOwnerType0
+        from ..models.agent_presence_type_0 import AgentPresenceType0
         address = self.address
 
         name = self.name
@@ -51,6 +63,22 @@ class AgentNetworkPeer:
         else:
             last_seen_at = self.last_seen_at
 
+        ownership_kind = self.ownership_kind.value
+
+        owner: dict[str, Any] | None
+        if isinstance(self.owner, AgentNetworkPeerOwnerType0):
+            owner = self.owner.to_dict()
+        else:
+            owner = self.owner
+
+        presence: dict[str, Any] | None | Unset
+        if isinstance(self.presence, Unset):
+            presence = UNSET
+        elif isinstance(self.presence, AgentPresenceType0):
+            presence = self.presence.to_dict()
+        else:
+            presence = self.presence
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -58,7 +86,11 @@ class AgentNetworkPeer:
             "address": address,
             "name": name,
             "last_seen_at": last_seen_at,
+            "ownership_kind": ownership_kind,
+            "owner": owner,
         })
+        if presence is not UNSET:
+            field_dict["presence"] = presence
 
         return field_dict
 
@@ -66,6 +98,8 @@ class AgentNetworkPeer:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.agent_network_peer_owner_type_0 import AgentNetworkPeerOwnerType0
+        from ..models.agent_presence_type_0 import AgentPresenceType0
         d = dict(src_dict)
         address = d.pop("address")
 
@@ -89,10 +123,56 @@ class AgentNetworkPeer:
         last_seen_at = _parse_last_seen_at(d.pop("last_seen_at"))
 
 
+        ownership_kind = AgentNetworkPeerOwnershipKind(d.pop("ownership_kind"))
+
+
+
+
+        def _parse_owner(data: object) -> AgentNetworkPeerOwnerType0 | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                owner_type_0 = AgentNetworkPeerOwnerType0.from_dict(data)
+
+
+
+                return owner_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(AgentNetworkPeerOwnerType0 | None, data)
+
+        owner = _parse_owner(d.pop("owner"))
+
+
+        def _parse_presence(data: object) -> AgentPresenceType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_agent_presence_type_0 = AgentPresenceType0.from_dict(data)
+
+
+
+                return componentsschemas_agent_presence_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(AgentPresenceType0 | None | Unset, data)
+
+        presence = _parse_presence(d.pop("presence", UNSET))
+
+
         agent_network_peer = cls(
             address=address,
             name=name,
             last_seen_at=last_seen_at,
+            ownership_kind=ownership_kind,
+            owner=owner,
+            presence=presence,
         )
 
 

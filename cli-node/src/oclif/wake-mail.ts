@@ -23,7 +23,10 @@ import {
 } from "./conversation-status.js";
 import { ListenStateError } from "./listen-state.js";
 import type { ListenHandler } from "./listen-types.js";
-import { ContactPolicyReadRetryError } from "./notification-contact-policy.js";
+import {
+  type ContactNotificationAdmission,
+  ContactPolicyReadRetryError,
+} from "./notification-contact-policy.js";
 import {
   isRoutineNotificationContent,
   NotificationRetryError,
@@ -225,12 +228,6 @@ export async function createWakeMail(options: {
       const trust = scopedChatSenderTrust(detail, sender);
       if (trust.retryable) return outcome(false);
       if (!trust.trusted) return outcome(true);
-      let admission = await policy.admit(
-        sender,
-        detail.received_at,
-        signal,
-        detail.id,
-      );
       const requested = detail.reply_to_sent_email_id
         ? await store.findWaitByParent(detail.reply_to_sent_email_id)
         : null;
@@ -281,6 +278,21 @@ export async function createWakeMail(options: {
             options.sessionKey,
           )
         : null;
+      let admission: ContactNotificationAdmission | null | undefined;
+      let admissionRetry: NotificationRetryError | undefined;
+      try {
+        admission = await policy.admit(
+          sender,
+          detail.received_at,
+          signal,
+          detail.id,
+        );
+      } catch (error) {
+        signal.throwIfAborted();
+        if (!(error instanceof NotificationRetryError)) throw error;
+        // Exact local replies have separate permission from network wake.
+        admissionRetry = error;
+      }
       if (status) {
         if (!admission || admission.kind === "request")
           admission = await policy.admitResponse(
@@ -288,6 +300,8 @@ export async function createWakeMail(options: {
             detail.received_at,
             signal,
           );
+        if (admissionRetry && admission?.kind !== "response")
+          throw admissionRetry;
         if (!admission || admission.kind === "request") return outcome(true);
         const check = await policy.recheck(admission, signal);
         check();
@@ -358,6 +372,8 @@ export async function createWakeMail(options: {
           detail.received_at,
           signal,
         );
+      if (admissionRetry && admission?.kind !== "response")
+        throw admissionRetry;
       if (!admission) return outcome(true);
       if (admission.kind === "request") {
         if (

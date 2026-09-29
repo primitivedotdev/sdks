@@ -24,6 +24,13 @@ type Handler interface {
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, req *AddDomainInput) (AddDomainRes, error)
+	// AgentConnectionSetup implements agentConnectionSetup operation.
+	//
+	// Instructions for pairing an external runtime. GET never consumes an invitation. The invitation
+	// token stays in the URL fragment and is submitted only in the claim POST body.
+	//
+	// GET /agent-connections/setup
+	AgentConnectionSetup(ctx context.Context) (AgentConnectionSetupRes, error)
 	// AwaitReply implements awaitReply operation.
 	//
 	// Returns the first threaded inbound reply to a send, keyed by
@@ -94,15 +101,17 @@ type Handler interface {
 	CheckDomainDns(ctx context.Context, params CheckDomainDnsParams) (CheckDomainDnsRes, error)
 	// ClaimAgentConnection implements claimAgentConnection operation.
 	//
-	// Address-bound external runtime pairing. Management operations require an organization owner or
-	// admin session or OAuth token; members and organization API keys cannot manage connections. Claim
-	// is authorized only by its one-use invitation. Connected means a real challenge was received and a
+	// Address-bound external runtime pairing. Any current human organization member may create and
+	// manage their personal agent connections. Organization owners and admins may manage all connections
+	// and explicitly create shared ones. An owner removed from the organization loses personal agent
+	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+	// connections. A current connected credential may disconnect only its own exact address. Claim is
+	// authorized only by its one-use invitation. Connected means a real challenge was received and a
 	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
-	// credentials. Runtime credentials allow only address-scoped mail operations, organization note
-	// reads and own-address note writes. The credential is returned once. If the claim response is lost
-	// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
-	// invitation.
+	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+	//  and recipient-bound network contact admission.
 	//
 	// POST /agent-connections/claim
 	ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error)
@@ -148,6 +157,22 @@ type Handler interface {
 	//
 	// POST /agent/claim/link
 	CreateAgentClaimLink(ctx context.Context, req *CreateAgentClaimLinkInput) (CreateAgentClaimLinkRes, error)
+	// CreateAgentConnection implements createAgentConnection operation.
+	//
+	// Address-bound external runtime pairing. Any current human organization member may create and
+	// manage their personal agent connections. Organization owners and admins may manage all connections
+	// and explicitly create shared ones. An owner removed from the organization loses personal agent
+	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+	// connections. A current connected credential may disconnect only its own exact address. Claim is
+	// authorized only by its one-use invitation. Connected means a real challenge was received and a
+	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+	//  and recipient-bound network contact admission.
+	//
+	// POST /agent-connections
+	CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
 	// CreateChallenge implements createChallenge operation.
 	//
 	// Create an x402 payment challenge (the payee side of a payment). The
@@ -908,6 +933,38 @@ type Handler interface {
 	//
 	// POST /templates/{id}/install
 	InstallTemplate(ctx context.Context, req *InstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error)
+	// InviteAgentConnection implements inviteAgentConnection operation.
+	//
+	// Address-bound external runtime pairing. Any current human organization member may create and
+	// manage their personal agent connections. Organization owners and admins may manage all connections
+	// and explicitly create shared ones. An owner removed from the organization loses personal agent
+	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+	// connections. A current connected credential may disconnect only its own exact address. Claim is
+	// authorized only by its one-use invitation. Connected means a real challenge was received and a
+	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+	//  and recipient-bound network contact admission.
+	//
+	// POST /agent-connections/{address}/invitation
+	InviteAgentConnection(ctx context.Context, req *InviteAgentConnectionReq, params InviteAgentConnectionParams) (InviteAgentConnectionRes, error)
+	// ListAgentConnections implements listAgentConnections operation.
+	//
+	// Address-bound external runtime pairing. Any current human organization member may create and
+	// manage their personal agent connections. Organization owners and admins may manage all connections
+	// and explicitly create shared ones. An owner removed from the organization loses personal agent
+	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+	// connections. A current connected credential may disconnect only its own exact address. Claim is
+	// authorized only by its one-use invitation. Connected means a real challenge was received and a
+	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+	//  and recipient-bound network contact admission.
+	//
+	// GET /agent-connections
+	ListAgentConnections(ctx context.Context, params ListAgentConnectionsParams) (ListAgentConnectionsRes, error)
 	// ListAgentContacts implements listAgentContacts operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -929,7 +986,8 @@ type Handler interface {
 	// ListAgentNetworks implements listAgentNetworks operation.
 	//
 	// An organization member login or an active connected agent allowed to see the network can read
-	// networks. The default organization network is always present.
+	// networks. The default organization network is always present. can_manage_all is true only for a
+	// current owner or admin; a connected credential receives false.
 	//
 	// GET /agent-networks
 	ListAgentNetworks(ctx context.Context) (ListAgentNetworksRes, error)
@@ -969,7 +1027,10 @@ type Handler interface {
 	ListDefaultNetworkAgents(ctx context.Context, params ListDefaultNetworkAgentsParams) (ListDefaultNetworkAgentsRes, error)
 	// ListDefaultNetworkMembers implements listDefaultNetworkMembers operation.
 	//
-	// Owner or admin login required. Includes hidden and excluded members.
+	// An owner or admin sees all connected addresses, including hidden and excluded members. Other human
+	// members see only personal addresses owned by their current membership. Filtering happens before
+	// pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
+	// requester can manage it.
 	//
 	// GET /agent-networks/default/members
 	ListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (ListDefaultNetworkMembersRes, error)
@@ -1329,13 +1390,12 @@ type Handler interface {
 	RegisterPayoutAddress(ctx context.Context, req *RegisterPayoutAddressInput) (RegisterPayoutAddressRes, error)
 	// RemoveAgentConnection implements removeAgentConnection operation.
 	//
-	// Permanently removes a revoked connection record. Requires an organization
-	// owner or admin session or OAuth token; organization API keys are denied.
-	// Disconnect first using DELETE /agent-connections/{address}. An active
-	// connection returns 409 connection_not_revoked. Missing or already removed
-	// records return 404. Mail, address notes, domains and external runtimes are
-	// preserved. The same address can be paired again with a new invitation;
-	// old credentials and invitations remain invalid.
+	// Permanently remove a revoked connection record. A current personal owner may permanently remove
+	// their own record; organization owners and admins may remove any record. Disconnect first using
+	// revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
+	// removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
+	// same address can be paired again with a new invitation; old credentials and invitations remain
+	// invalid.
 	//
 	// POST /agent-connections/{address}/remove
 	RemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (RemoveAgentConnectionRes, error)
@@ -1423,6 +1483,16 @@ type Handler interface {
 	//
 	// GET /registries/{slug}/agents/{handle}
 	ResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (ResolveRegistryHandleRes, error)
+	// RevokeAgentConnection implements revokeAgentConnection operation.
+	//
+	// Disconnect an agent and invalidate its bound credential. A current personal owner may disconnect
+	// their own agent; organization owners and admins may disconnect any connection. A connected agent
+	// may disconnect only its own exact address using its current bound credential. This preserves the
+	// connection record, mail, notes and domain. A current personal owner may permanently remove their
+	// own revoked record.
+	//
+	// DELETE /agent-connections/{address}
+	RevokeAgentConnection(ctx context.Context, params RevokeAgentConnectionParams) (RevokeAgentConnectionRes, error)
 	// RotateWebhookSecret implements rotateWebhookSecret operation.
 	//
 	// Generates a new webhook signing secret, replacing the current one.
@@ -1677,7 +1747,9 @@ type Handler interface {
 	UpdateAccount(ctx context.Context, req *UpdateAccountInput) (UpdateAccountRes, error)
 	// UpdateDefaultNetworkMember implements updateDefaultNetworkMember operation.
 	//
-	// Owner or admin login required. Omitted settings keep their current value.
+	// An owner or admin may update any active address. Other human members may update only their own
+	// current, non-excluded personal address. Connected-agent credentials cannot update visibility.
+	// Omitted settings keep their current value.
 	//
 	// PATCH /agent-networks/default/members/{address}
 	UpdateDefaultNetworkMember(ctx context.Context, req *UpdateAgentNetworkMemberInput, params UpdateDefaultNetworkMemberParams) (UpdateDefaultNetworkMemberRes, error)

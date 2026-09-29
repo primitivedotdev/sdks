@@ -19,6 +19,7 @@ def _get_kwargs(
     *,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
 
@@ -30,6 +31,8 @@ def _get_kwargs(
     params["limit"] = limit
 
     params["cursor"] = cursor
+
+    params["owner"] = owner
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -88,15 +91,20 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDefaultNetworkMembersResponse200]:
-    """ List the default network's owner roster
+    """ List default network memberships available to your login
 
-     Owner or admin login required. Includes hidden and excluded members.
+     An owner or admin sees all connected addresses, including hidden and excluded members. Other human
+    members see only personal addresses owned by their current membership. Filtering happens before
+    pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
+    requester can manage it.
 
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
+        owner (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -110,6 +118,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         limit=limit,
 cursor=cursor,
+owner=owner,
 
     )
 
@@ -124,15 +133,20 @@ def sync(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListDefaultNetworkMembersResponse200 | None:
-    """ List the default network's owner roster
+    """ List default network memberships available to your login
 
-     Owner or admin login required. Includes hidden and excluded members.
+     An owner or admin sees all connected addresses, including hidden and excluded members. Other human
+    members see only personal addresses owned by their current membership. Filtering happens before
+    pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
+    requester can manage it.
 
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
+        owner (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -147,6 +161,7 @@ def sync(
         client=client,
 limit=limit,
 cursor=cursor,
+owner=owner,
 
     ).parsed
 
@@ -155,15 +170,20 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListDefaultNetworkMembersResponse200]:
-    """ List the default network's owner roster
+    """ List default network memberships available to your login
 
-     Owner or admin login required. Includes hidden and excluded members.
+     An owner or admin sees all connected addresses, including hidden and excluded members. Other human
+    members see only personal addresses owned by their current membership. Filtering happens before
+    pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
+    requester can manage it.
 
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
+        owner (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -177,6 +197,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         limit=limit,
 cursor=cursor,
+owner=owner,
 
     )
 
@@ -191,15 +212,20 @@ async def asyncio(
     client: AuthenticatedClient | Client,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
+    owner: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListDefaultNetworkMembersResponse200 | None:
-    """ List the default network's owner roster
+    """ List default network memberships available to your login
 
-     Owner or admin login required. Includes hidden and excluded members.
+     An owner or admin sees all connected addresses, including hidden and excluded members. Other human
+    members see only personal addresses owned by their current membership. Filtering happens before
+    pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
+    requester can manage it.
 
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
+        owner (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -214,5 +240,6 @@ async def asyncio(
         client=client,
 limit=limit,
 cursor=cursor,
+owner=owner,
 
     )).parsed

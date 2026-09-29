@@ -103,7 +103,9 @@ def sync_detailed(
 ) -> Response[ErrorResponse | UpdateDefaultNetworkMemberResponse200]:
     """ Change whether an agent can see or be seen in the network
 
-     Owner or admin login required. Omitted settings keep their current value.
+     An owner or admin may update any active address. Other human members may update only their own
+    current, non-excluded personal address. Connected-agent credentials cannot update visibility.
+    Omitted settings keep their current value.
 
     Args:
         address (str):
@@ -139,7 +141,9 @@ def sync(
 ) -> ErrorResponse | UpdateDefaultNetworkMemberResponse200 | None:
     """ Change whether an agent can see or be seen in the network
 
-     Owner or admin login required. Omitted settings keep their current value.
+     An owner or admin may update any active address. Other human members may update only their own
+    current, non-excluded personal address. Connected-agent credentials cannot update visibility.
+    Omitted settings keep their current value.
 
     Args:
         address (str):
@@ -170,7 +174,9 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | UpdateDefaultNetworkMemberResponse200]:
     """ Change whether an agent can see or be seen in the network
 
-     Owner or admin login required. Omitted settings keep their current value.
+     An owner or admin may update any active address. Other human members may update only their own
+    current, non-excluded personal address. Connected-agent credentials cannot update visibility.
+    Omitted settings keep their current value.
 
     Args:
         address (str):
@@ -206,7 +212,9 @@ async def asyncio(
 ) -> ErrorResponse | UpdateDefaultNetworkMemberResponse200 | None:
     """ Change whether an agent can see or be seen in the network
 
-     Owner or admin login required. Omitted settings keep their current value.
+     An owner or admin may update any active address. Other human members may update only their own
+    current, non-excluded personal address. Connected-agent credentials cannot update visibility.
+    Omitted settings keep their current value.
 
     Args:
         address (str):
