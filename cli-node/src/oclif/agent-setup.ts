@@ -556,6 +556,7 @@ export async function setupAgent(params: {
         profileName,
         invitation: params.invitation ?? "",
         fetch: params.fetch,
+        presence: true,
       });
     }
     const profile = loadConnectedAgentProfile(params.configDir, profileName);

@@ -185,6 +185,52 @@ function fixture(
 }
 
 describe("Claude mail wake", () => {
+  it.each([
+    "verified",
+    "pending",
+  ])("keeps %s controls out of model routing while ordinary mail still wakes", async (status) => {
+    const f = fixture(true, true, "chat");
+    const ordinary = await mocks.getEmail();
+    mocks.getEmail
+      .mockResolvedValueOnce({
+        ...ordinary,
+        data: {
+          ...ordinary.data,
+          data: {
+            ...ordinary.data.data,
+            presence_control: { status, valid_for_ms: 0 },
+          },
+        },
+      })
+      .mockResolvedValue(ordinary);
+    const wake = await createWakeMail({
+      configDir: "/tmp/test",
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: true,
+    });
+    try {
+      const handled = await wake.handler(
+        f.delivery as never,
+        new AbortController().signal,
+      );
+      wake.completed();
+      expect(handled).toMatchObject({
+        succeeded: true,
+        countTowardLimit: false,
+      });
+      expect(wake.wakeId()).toBeUndefined();
+      expect(wake.status()).toBeUndefined();
+      expect(mocks.policy.mock.results[0]?.value.admit).not.toHaveBeenCalled();
+      expect(mocks.routine).not.toHaveBeenCalled();
+      expect(mocks.statusContent).not.toHaveBeenCalled();
+      await wake.handler(f.delivery as never, new AbortController().signal);
+      wake.completed();
+      expect(wake.wakeId()).toBe(f.emailId);
+    } finally {
+      await wake.close();
+    }
+  });
   it("wakes for an exact solicited contact acceptance even when intake classifies unknown mail as a request", async () => {
     const f = fixture(true, true);
     const signal = new AbortController().signal;

@@ -1,17 +1,25 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:http";
-import { resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 const runFile = promisify(execFile);
 const binary = resolve(process.argv[2] ?? "cli-node/bin/run.js");
+const configDir = await mkdtemp(join(tmpdir(), "primitive-network-smoke-"));
 const agent = "peer+network@example.test";
+const otherAgent = "other+network@example.test";
 const inboundId = "11111111-1111-4111-8111-111111111111";
 const path = `/v1/agent-networks/default/members/${encodeURIComponent(agent)}`;
 const peerPath = `/v1/agent-networks/default/agents/${encodeURIComponent(agent)}`;
 const calls = [];
-let member = { address: agent, name: "Peer", can_view: true, is_listed: true, excluded: false, connected: true, last_seen_at: null };
+const owner = { user_id: "22222222-2222-4222-8222-222222222222", name: "Ben" };
+const presence = { last_checked_at: "2026-09-28T12:00:00.000Z", expires_at: "2026-09-28T12:10:00.000Z", valid_for_ms: 12345 };
+const peer = { address: agent, name: "Peer", last_seen_at: null, ownership_kind: "personal", owner, presence };
+let member = { ...peer, owner: { ...owner, email: "ben@example.test" }, can_view: true, is_listed: true, excluded: false, connected: true, can_manage: true };
+const otherMember = { ...member, address: otherAgent, owner: { user_id: "33333333-3333-4333-8333-333333333333", name: "Other", email: "other@example.test" } };
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", "http://localhost");
@@ -21,18 +29,20 @@ const server = createServer(async (request, response) => {
   calls.push({ method: request.method, path: url.pathname, query: url.searchParams, body });
   response.setHeader("content-type", "application/json");
   const reply = (data, meta) => response.end(JSON.stringify({ success: true, data, ...(meta ? { meta } : {}) }));
-  if (request.headers.authorization !== `Bearer ${["local", "network", "fixture"].join("-")}`) {
+  const memberLogin = request.headers.authorization === `Bearer ${["local", "network", "member"].join("-")}`;
+  const managerLogin = request.headers.authorization === `Bearer ${["local", "network", "fixture"].join("-")}`;
+  if (!memberLogin && !managerLogin) {
     response.statusCode = 401;
     return response.end(JSON.stringify({ success: false, error: { code: "unauthorized", message: "Unauthorized" } }));
   }
   if (url.pathname === "/v1/agent-networks" && request.method === "GET")
-    return reply([{ id: "default", kind: "organization", is_default: true, name: "Organization" }]);
+    return reply([{ id: "default", kind: "organization", is_default: true, name: "Organization", can_manage_all: managerLogin }]);
   if (url.pathname === "/v1/agent-networks/default/members" && request.method === "GET")
-    return reply([member], { cursor: null });
+    return reply(memberLogin ? [member] : [member, otherMember], { cursor: null });
   if (url.pathname === "/v1/agent-networks/default/agents" && request.method === "GET")
-    return reply([{ address: agent, name: "Peer", last_seen_at: null }], { cursor: null });
+    return reply([peer], { cursor: null });
   if (url.pathname === peerPath && request.method === "GET")
-    return reply({ address: agent, name: "Peer", last_seen_at: "2026-09-28T12:00:00Z" });
+    return reply({ ...peer, last_seen_at: "2026-09-28T12:00:00Z" });
   if (url.pathname === "/v1/agent-networks/default/contact-admission" && request.method === "POST") {
     assert.deepEqual(body, { email_id: inboundId, sender_address: agent });
     return reply({ allowed: false, allowed_since: null, pending: false });
@@ -41,11 +51,23 @@ const server = createServer(async (request, response) => {
     member = { ...member, ...(body.can_view === undefined ? {} : { can_view: body.can_view }), ...(body.is_listed === undefined ? {} : { is_listed: body.is_listed }) };
     return reply(member);
   }
+  if (url.pathname === `/v1/agent-networks/default/members/${encodeURIComponent(otherAgent)}` && request.method === "PATCH" && memberLogin) {
+    response.statusCode = 404;
+    return response.end(JSON.stringify({ success: false, error: { code: "not_found", message: "Not found" } }));
+  }
   if (url.pathname === path && request.method === "DELETE") {
+    if (memberLogin) {
+      response.statusCode = 403;
+      return response.end(JSON.stringify({ success: false, error: { code: "forbidden", message: "Forbidden" } }));
+    }
     member = { ...member, excluded: true };
     return reply({ excluded: true });
   }
   if (url.pathname === path && request.method === "POST") {
+    if (memberLogin) {
+      response.statusCode = 403;
+      return response.end(JSON.stringify({ success: false, error: { code: "forbidden", message: "Forbidden" } }));
+    }
     member = { ...member, excluded: false };
     return reply(member);
   }
@@ -58,11 +80,12 @@ try {
   const binding = server.address();
   assert.ok(binding && typeof binding !== "string");
   const base = `http://127.0.0.1:${binding.port}/v1`;
-  const env = { ...process.env, PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1" };
+  const env = { ...process.env, PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1", PRIMITIVE_CONFIG_DIR: configDir };
   delete env.PRIMITIVE_AGENT_PROFILE;
   delete env.PRIMITIVE_API_HEADERS;
   const invoke = async (args) => (await runFile(process.execPath, [binary, ...args], { env, timeout: 15000 })).stdout;
   const api = async (args) => invoke([...args, "--api-key", ["local", "network", "fixture"].join("-"), "--api-base-url", base]);
+  const memberApi = async (args) => invoke([...args, "--api-key", ["local", "network", "member"].join("-"), "--api-base-url", base]);
 
   const overview = await invoke(["network"]);
   for (const action of ["list", "members", "peers", "get", "set", "add", "remove"])
@@ -73,6 +96,8 @@ try {
   const setHelp = (await invoke(["network", "set", "--help"])).replace(/\s+/g, " ");
   assert.match(setHelp, /initiating network-driven mail wake/);
   assert.match(setHelp, /network-driven wake from viewing senders/);
+  assert.match(setHelp, /currently owned personal agents/);
+  assert.match((await invoke(["network", "members", "--help"])).replace(/\s+/g, " "), /currently owned personal agents/);
   assert.match(await invoke(["agent-networks"]), /check-default-network-contact-admission/);
   assert.match(await invoke(["agent-networks", "check-default-network-contact-admission", "--help"]), /--email-id/);
   assert.match(await invoke(["network", "--help"]), /agent network/i);
@@ -84,9 +109,13 @@ try {
   const peerPage = JSON.parse(await api(["network", "peers", "--limit", "10"]));
   assert.equal(peerPage.data[0].address, agent);
   assert.equal(peerPage.data[0].last_seen_at, null);
-  const peer = JSON.parse(await api(["network", "get", agent]));
-  assert.equal(peer.address, agent);
-  assert.equal(peer.last_seen_at, "2026-09-28T12:00:00Z");
+  assert.deepEqual(peerPage.data[0].presence, presence, "Default JSON must preserve the server presence timestamps and TTL unchanged");
+  const ownedPeers = JSON.parse(await api(["network", "peers", "--owner", "Ben", "--json"]));
+  assert.deepEqual(ownedPeers.data, [peer]);
+  const selectedPeer = JSON.parse(await api(["network", "get", agent]));
+  assert.equal(selectedPeer.address, agent);
+  assert.deepEqual(selectedPeer.presence, presence, "Single-peer discovery must preserve all three server presence fields");
+  assert.equal(selectedPeer.last_seen_at, "2026-09-28T12:00:00Z");
   assert.equal(JSON.parse(await api(["network", "set", agent, "--see", "off", "--be-seen", "off"])).can_view, false);
   assert.equal(member.is_listed, false);
   assert.deepEqual(JSON.parse(await api(["network", "remove", agent])), { excluded: true });
@@ -95,11 +124,24 @@ try {
     JSON.parse(await api(["agent-networks", "check-default-network-contact-admission", "--email-id", inboundId, "--sender-address", agent])),
     { allowed: false, allowed_since: null, pending: false },
   );
-  assert.deepEqual(calls.map(({ method }) => method), ["GET", "GET", "GET", "GET", "PATCH", "DELETE", "POST", "POST"]);
-  assert.deepEqual(calls[4].body, { can_view: false, is_listed: false });
+  assert.deepEqual(calls.map(({ method }) => method), ["GET", "GET", "GET", "GET", "GET", "PATCH", "DELETE", "POST", "POST"]);
+  assert.deepEqual(calls[5].body, { can_view: false, is_listed: false });
   assert.equal(calls[1].query.get("limit"), "10");
   assert.equal(calls[2].query.get("limit"), "10");
-  process.stdout.write("Built network parent, help, manifest, and list/members/peers/get/set/remove/add passed.\n");
+  assert.equal(calls[3].path, "/v1/agent-networks/default/agents");
+  assert.deepEqual(Object.fromEntries(calls[3].query), { limit: "50", owner: "Ben" });
+  assert.equal(JSON.parse(await memberApi(["network", "list"]))[0].can_manage_all, false);
+  const ownRows = JSON.parse(await memberApi(["network", "members", "--limit", "10"]));
+  assert.deepEqual(ownRows.data.map(({ address }) => address), [agent]);
+  assert.equal(ownRows.data[0].can_manage, true);
+  const updatedOwn = JSON.parse(await memberApi(["network", "set", agent, "--see", "on", "--be-seen", "on"]));
+  assert.equal(updatedOwn.can_view, true);
+  assert.equal(updatedOwn.is_listed, true);
+  await assert.rejects(memberApi(["network", "set", otherAgent, "--see", "off"]));
+  await assert.rejects(memberApi(["network", "remove", agent]));
+  await assert.rejects(memberApi(["network", "add", agent]));
+  process.stdout.write("Built network parent, help, manifest, manager roster, member-own roster/set, and manager-only removal/restoration passed.\n");
 } finally {
   server.close();
+  await rm(configDir, { recursive: true, force: true });
 }

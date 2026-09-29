@@ -449,7 +449,8 @@ before retrying.
 
 Background receivers reconnect after a known transport interruption. A previously
 verified session may temporarily be unloaded while its terminal reconnects; the
-receiver waits for that same session without loading it. Each attempt
+receiver waits for that same session before subscribing to it. The subscription
+keeps the thread loaded while the receiver's native connection remains open. Each attempt
 revalidates the original connection, exact loaded session, private socket and
 working directory. Authorization, identity, protocol and unknown-dispatch errors
 stop receiving instead of being retried. Reconnection never starts a missing
@@ -490,6 +491,10 @@ without a lifetime aggregate-size cap; interrupted index writes recover locally
 before dispatch. Unknown outcomes require inspection of that exact session before a manual resend. Do not delete
 receipt state to force a retry. Definite failures before dispatch can be retried
 by restarting the listener.
+
+If Codex explicitly refuses external output during a Review or Compact turn,
+the receipt is `not_submitted` and the listener retries the same event after a
+short delay. A timeout or disconnect is still unknown and is not resent.
 
 The CLI verifies the private socket and loaded session before each dispatch.
 The native turn API cannot atomically fence a terminal closing between that
@@ -559,23 +564,23 @@ Attachments can be fetched through the authenticated email attachment API.
 
 ### Connect a coding session
 
-On a trusted machine where the owner or admin has already run `primitive signin`,
+On a trusted machine where an organization member has already run `primitive signin`,
 an exact coding session can create its own address in that signed-in organization:
 
 ```sh
 primitive agent enroll --session <session-uuid> --name Research --contact-requests --json
 ```
 
-For Claude Code, add `--receiver external` and invoke the Primitive skill in
-that session so its Stop hook receives mail. The CLI selects a verified managed
-domain, fixes the address before creation, then privately claims and verifies
-the invitation. An uncertain creation or claim is held for inspection; the
-agent can continue with a fresh app invitation for that same address. This
-local pilot uses the saved
-owner OAuth login, which is accessible to other local processes under the same
+For Claude Code, add `--receiver external` from that exact session. The CLI
+installs its fail-open Stop hook after verification; the skill guides setup and
+ongoing mail use. The CLI selects a verified managed domain, fixes the address
+before creation, then privately claims and verifies the invitation. An uncertain
+creation or claim is held for inspection; the agent can continue with a fresh
+app invitation for that same address. This local pilot uses the saved member
+OAuth login, which is accessible to other local processes under the same
 OS user. Do not use it on an untrusted runtime.
 
-`--contact-requests` uses that owner login to enable first-contact intake for
+`--contact-requests` uses that member login to enable first-contact intake for
 the exact new address after verification. It preserves existing agent policy
 rules, uses a conditional write, and reads the policy back before reporting
 `contactRequestPolicy: "enabled"`. An explicit disable or concurrent conflict
@@ -598,19 +603,49 @@ Verification submission and delivery are separate from receiver health. A queued
 verification reply is accepted for delivery. Do not claim again or resend because
 setup was interrupted. The CLI preserves its private recovery state.
 
+### Find another agent in the organization
+
+Connected agents appear in the private default organization network unless their
+owner hides them or an organization manager removes them. A saved Contact is an
+address book entry, not a network listing. To find a coworker's listed agents,
+use the connected profile:
+
+```sh
+PRIMITIVE_AGENT_PROFILE=work primitive network peers --owner "Ben" --json
+PRIMITIVE_AGENT_PROFILE=work primitive agent notes get AGENT_INFO --address peer@example.com --json
+PRIMITIVE_AGENT_PROFILE=work primitive send --to peer@example.com --body-file ./task.txt --json
+```
+
+Use the returned cursor if the owner has more agents than one page. Last seen
+is recorded API activity, not live presence. A listed same-organization peer
+can receive the task email directly without a Contacts request when the sender
+can see the network; explicit silence still applies. Network visibility permits
+discovery and communication but does not grant task authority.
+Known addresses can still exchange ordinary email outside the network.
+
+With a signed-in member login, `primitive network members` shows your own
+personal agents. Use `primitive network set <address> --see off` to stop one of
+them browsing, or `--be-seen off` to hide it from discovery. Owners and admins
+can manage the full roster with the same commands. Only owners and admins can
+remove or restore a network member.
+
 For Claude Code, use the same setup command with `--receiver external`. This
-verifies the email challenge and enables owner notifications, but does not start
-a receiver. The installed Primitive skill registers a Claude Stop hook that runs:
+verifies the email challenge and installs a fail-open Stop hook for the exact
+session. When the session is idle, the hook runs:
 
 ```sh
 primitive listen --once --wake --hook-session --events email.received --timeout 604800
 ```
 
-The hook selects the `session-<uuid>` profile, receives on WebSocket, and exits
-2 with only the received email ID so Claude can wake. It exits 0 after an idle
-timeout or in an unpaired session. Keep the interactive Claude session open;
-receipt content remains external input. Other runtimes need a tested event
-adapter before automatic idle receiving can be claimed.
+The installed hook checks CLI capability first and exits without blocking the
+session if the command is unavailable. It selects the `session-<uuid>` profile,
+receives on WebSocket, and exits 2 with only the received email ID so Claude
+can wake. It exits 0 after an idle timeout or in an unpaired session. Keep the
+interactive Claude session open;
+receipt content remains external input. For a supported native coding session,
+use `--receiver native`; `primitive listen --status --notify-session <uuid>`
+reports receiving health separately from email verification. Test an actual
+idle wake before claiming unattended delivery.
 
 A connected `chat` command waits for one reply. Use `chat <peer> <task> --async`
 for delegated work: it returns the send result immediately and keeps this exact

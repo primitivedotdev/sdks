@@ -50,10 +50,10 @@
         "description": "Manage your account settings, storage, and webhook secret"
       },
       "agent-connections": {
-        "description": "Claim a private invitation from stdin or remove a revoked connection with an owner/admin login."
+        "description": "Create, list, invite, revoke, and remove connected agents; claim private invitations through stdin."
       },
       "agent": {
-        "description": "Connect an invited session, enroll a new session using a saved owner login, disconnect one saved profile, or manage contacts and signup."
+        "description": "Connect an invited session, enroll a new session using a saved member login, disconnect one saved profile, or manage contacts and signup."
       },
       "credits": {
         "description": "Redeem credit codes and check the organization credit balance"
@@ -135,7 +135,7 @@
         "description": "Schedule and send wake commands to your own functions over signed email, and manage which senders may wake them. Use `primitive wake schedules list|create|get|update|delete|run`, `primitive wake authorizations list|create|update|delete`, and `primitive wake dispatches list`."
       },
       "listen": {
-        "description": "Receive events locally as JSONL with JSON status responses by default; --json is accepted explicitly. Use --exec or --forward-to, or deliver external mail events as tool output, never user messages, to an exact loaded native session using --notify-session with --contacts or approved --sender addresses. Add --email-id to --status to explain one received email. Add --contact-requests for owner-enabled structured first-contact intake. Use --background for independent receiving, --status --notify-session for current receiver health and durable receipts, or --stop --notify-session to stop only that receiver."
+        "description": "Receive events locally as JSONL with JSON status responses by default; --json is accepted explicitly. Use --exec or --forward-to, or deliver external mail events as tool output, never user messages, to an exact loaded native session using --notify-session with --contacts or approved --sender addresses. Add --email-id to --status to explain one received email. Add --contact-requests for owner-enabled structured first-contact intake. Use --background for independent receiving, --status --notify-session for current receiver health and durable receipts, or --stop --notify-session to stop only that receiver. Verified presence controls use no model turns and do not consume --once or --number."
       },
       "contacts": {
         "description": "Shared organization contacts plus structured request, accept, and wait commands for connected agents. Directory list, get, add, update, and remove use conditional versions. Commands return JSON by default and accept explicit --json."

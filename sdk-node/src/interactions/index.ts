@@ -284,6 +284,32 @@ export type {
 } from "./classify.js";
 export { classifySignalContent } from "./classify.js";
 export type {
+  PreparedPresence,
+  PresenceAliveInput,
+  PresenceDependencies,
+  PresenceEnvelope,
+  PresenceParseResult,
+  PresencePayload,
+  PresencePreparation,
+  PresenceProbeDependencies,
+  PresenceProbeInput,
+} from "./presence.js";
+export {
+  MAX_PRESENCE_DECODED_BYTES,
+  MAX_PRESENCE_ENVELOPE_BYTES,
+  MAX_PRESENCE_RENDERED_BYTES,
+  PRESENCE_ALIVE_SUBJECT,
+  PRESENCE_ALIVE_TEXT,
+  PRESENCE_PROBE_SUBJECT,
+  PRESENCE_PROBE_TEXT,
+  PRESENCE_PROTOCOL,
+  PRESENCE_TTL_MS,
+  PRESENCE_VERSION,
+  parsePresenceEnvelope,
+  preparePresenceAliveEmail,
+  preparePresenceProbeEmail,
+} from "./presence.js";
+export type {
   PreparedSignal,
   SignalDependencies,
   SignalInput,

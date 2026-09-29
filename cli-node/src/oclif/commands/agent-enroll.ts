@@ -1,12 +1,12 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import { enrollAgent } from "../agent-enroll.js";
+import { installClaudeWakeHook } from "../claude-wake-install.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
 
 export default class AgentEnrollCommand extends Command {
-  static summary =
-    "Give this coding session an address in the signed-in owner's organization";
+  static summary = "Give this coding session an address in your organization";
   static description =
-    "On this trusted machine, use only the saved owner/admin OAuth login to create one address for the exact loaded session, claim its one-use invitation privately, answer the email challenge, and start receiving. With --contact-requests, the owner login conditionally enables first-contact intake for this exact address after verification, preserving existing policy rules and refusing an explicit disable or conflict. The address is fixed before creation. An uncertain creation or claim is held for owner recovery, never repeated automatically. Requires a verified Primitive-managed domain. This command does not accept API keys, a connection profile, or an invitation argument.";
+    "On this trusted machine, use the saved member OAuth login to create one address for the exact loaded session, claim its one-use invitation privately, answer the email challenge, and poll the owner's connection list for confirmed pairing. Native receiving starts when supported. With --receiver external in the exact Claude session, install a fail-open Stop hook and resume SessionStart hook in that runtime's settings after the verification reply; idle wake remains unverified until tested with real mail. With --contact-requests, the login conditionally enables first-contact intake for this exact address after verification, preserving existing policy rules. An explicit disable or uncertain policy update is reported separately without losing pairing or receiver setup. Only an explicit pre-create domain-unavailable rejection tries the next verified managed domain. An uncertain creation or claim is held for owner recovery, never repeated automatically. Requires a verified Primitive-managed domain. This command does not accept API keys, a connection profile, or an invitation argument.";
   static examples = [
     "<%= config.bin %> agent enroll --session 11111111-1111-4111-8111-111111111111 --name Research --contact-requests --json",
     "<%= config.bin %> agent enroll --session 11111111-1111-4111-8111-111111111111 --receiver external --name Research --json",
@@ -26,7 +26,7 @@ export default class AgentEnrollCommand extends Command {
     }),
     "contact-requests": Flags.boolean({
       description:
-        "Enable this agent's first-contact policy with the saved owner login, then receive relevant requests",
+        "Enable this agent's first-contact policy with the saved member login, then receive relevant requests",
     }),
     json: Flags.boolean({
       description: "Print status without credentials or invitation",
@@ -43,23 +43,59 @@ export default class AgentEnrollCommand extends Command {
         receiverMode: flags.receiver as "native" | "external" | undefined,
         contactRequests: flags["contact-requests"],
       });
-      if (flags.json) this.log(JSON.stringify(result));
+      const externalHook =
+        flags.receiver === "external" &&
+        result.verification.state === "reply_submitted" &&
+        result.connection.status !== "owner_inactive"
+          ? installClaudeWakeHook({
+              cliPath: process.argv[1] ?? "",
+              configDir: this.config.configDir,
+              profileName: result.identity.profileName,
+              agentAddress: result.identity.agentAddress,
+              sessionId: flags.session,
+            })
+          : null;
+      const output = { ...result, externalHook };
+      if (flags.json) this.log(JSON.stringify(output));
       else {
         this.log(
-          `Agent ${result.identity.agentAddress}: verification ${result.verification.state}; receiving ${result.receiving.state}.`,
+          `Agent ${result.identity.agentAddress}: pairing ${result.connection.status}; verification ${result.verification.state}; receiving ${result.receiving.state}.`,
         );
         this.log(
           `Select it with PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}.`,
         );
         if (flags["contact-requests"])
           this.log(`Contact requests: ${result.contactRequestPolicy}.`);
-        if (result.receiving.state !== "healthy")
+        if (result.contactRequestPolicy === "owner_disabled")
           this.log(
-            "Rerun this command with the same options to resume the saved session.",
+            "The owner disabled contact requests for this address. Review the policy in the app if you want them enabled.",
+          );
+        if (result.contactRequestPolicy === "unavailable")
+          this.log(
+            "Contact-request policy could not be confirmed. Receiving can still be configured; rerun this exact enrollment after policy access is restored.",
+          );
+        if (externalHook === "installed_unverified")
+          this.log(
+            "External receive hook installed for this runtime. Idle wake still needs a live mail check.",
+          );
+        else if (externalHook === "unavailable")
+          this.log(
+            "Could not install the external receive hook. Pairing is confirmed, but later mail will not wake this session automatically.",
+          );
+        if (result.connection.status !== "connected")
+          this.log(
+            "Pairing is not yet confirmed. Rerun this command with the same options to resume the saved session; do not create another address.",
+          );
+        else if (result.receiving.state !== "healthy")
+          this.log(
+            "Pairing is confirmed; receiving needs separate setup or recovery.",
           );
       }
       if (
-        result.verification.state !== "reply_submitted" ||
+        externalHook === "unavailable" ||
+        (flags["contact-requests"] &&
+          result.contactRequestPolicy !== "enabled") ||
+        result.connection.status !== "connected" ||
         (flags.receiver !== "external" && result.receiving.state !== "healthy")
       )
         process.exitCode = 2;

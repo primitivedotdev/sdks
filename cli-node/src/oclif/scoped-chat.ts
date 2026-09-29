@@ -1,6 +1,7 @@
 import type { EmailDetail } from "@primitivedotdev/api-core";
 import { classifySignalContent } from "@primitivedotdev/sdk/interactions";
 import { isTrustedSender } from "@primitivedotdev/sdk/webhook";
+import { presenceDisposition } from "./presence-provenance.js";
 
 export function isConnectedChatCredential(apiKey: string | undefined): boolean {
   return apiKey?.startsWith("pconn_") ?? false;
@@ -45,6 +46,7 @@ export function isScopedChatReply(
   detail: EmailDetail,
   params: { from: string; recipient: string; sentId?: string },
 ): boolean {
+  if (presenceDisposition(detail) !== "ordinary") return false;
   if (
     !["accepted", "completed"].includes(detail.status) ||
     (params.sentId !== undefined &&
@@ -70,6 +72,7 @@ export function scopedChatSenderTrust(detail: EmailDetail, peer: string) {
 }
 
 export function isPlainChatReply(detail: EmailDetail): boolean {
+  if (presenceDisposition(detail) !== "ordinary") return false;
   if (
     detail.parsed?.status !== "complete" ||
     !Array.isArray(detail.parsed.attachments)

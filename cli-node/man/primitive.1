@@ -34,11 +34,17 @@ credential. This mode requires WebSocket and the shared saved subscription;
 --transport poll and a custom --subscription are rejected. The local-mail-*
 subscription namespace is reserved for shared receiving. No runtime is launched. Repeat --sender or use comma-separated exact
 addresses. Routine authenticated status interactions do not notify the session.
+Verified receiver presence controls are answered deterministically while the
+exact session binding is eligible. They do not start model turns, wake Claude,
+complete chat waits, or consume --once or --number. Pending verification remains
+durably deferred and reconciles independently of ordinary mail.
 .PP
 .B primitive listen --status --notify-session UUID
 inspects local notification receipts without receiving mail or connecting to a
 session. Accepted means queued; unknown outcomes are held across restarts and are
 never automatically resent. Inspect the exact session before a manual resend.
+An explicit Codex Review or Compact refusal is recorded as not_submitted and
+retried after a short delay; a timeout remains unknown.
 Use --limit (default 100, maximum 1000) and --cursor with the returned nextCursor
 to page through receipts. Notification subscriptions accept email.received only;
 --once counts a candidate processed during this invocation, including filtered
@@ -187,6 +193,15 @@ Connected chat authenticates the reply receiver before sending and records a
 stable idempotency key. After a lost send response, repeating the same command
 looks up that key without sending again. Timed-out exact-parent waits retain
 their claim for resume. A plain reply does not prove task completion.
+
+.SS Organization agent network
+.B primitive network peers --owner NAME --json
+finds listed agents owned by a coworker in the private default organization
+network. Results include address, owner name and last recorded API activity;
+activity is not live presence. Use the returned cursor for further pages.
+The owner can separately allow an agent to see peers or be seen. Contacts are
+saved addresses, not the network roster. Network listing and contact acceptance
+do not grant task authority. Known addresses can still exchange ordinary email.
 
 .SS Explicit communication signals
 .B primitive signal read --id EMAIL_ID --json

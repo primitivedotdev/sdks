@@ -37,6 +37,22 @@ describe("lookupOperation", () => {
     expect(candidates).toEqual([]);
   });
 
+  it("describes the current-key connected-agent sender proof", () => {
+    const { match } = lookupOperation("emails:get");
+    const schema = match?.responseSchema as {
+      properties?: Record<string, { description?: string; type?: string }>;
+      required?: string[];
+    } | null;
+
+    expect(schema?.properties?.sender_connected_agent_verified).toMatchObject({
+      type: "boolean",
+    });
+    expect(
+      schema?.properties?.sender_connected_agent_verified?.description,
+    ).toContain("current key bound to its sender address");
+    expect(schema?.required).toContain("sender_connected_agent_verified");
+  });
+
   it("trims whitespace around the input", () => {
     const { match } = lookupOperation("  emails:get-email  ");
     expect(match?.command).toBe("get-email");

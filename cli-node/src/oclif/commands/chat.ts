@@ -1225,8 +1225,10 @@ class ChatCommand extends Command {
   static description = `Send a message to an address and wait for the reply.
 
   With --async, a connected agent sends and returns immediately. The exact
-  current session must already be receiving external mail events; later status
-  signals and replies belong to that session. Use this for delegated work that
+  current session must already be receiving external mail events. A verified
+  external Claude setup can identify its session when Bash omits the runtime
+  session ID. Later status signals and replies belong to that session. Use this
+  for delegated work that
   should continue while the owner does something else.
 
   A saved connected-agent profile supplies its pinned sender address; an explicit
@@ -1585,14 +1587,14 @@ class ChatCommand extends Command {
         if (flags.async) {
           if (auth.connectedAgent) {
             try {
-              const runtimeSessionKey = currentMailSessionKey();
               const verifiedSessionKey = contactRequestSessionKey({
                 apiKey: auth.apiKey,
                 configDir: this.config.configDir,
                 identity: auth.connectedAgent,
               });
-              if (runtimeSessionKey && runtimeSessionKey === verifiedSessionKey)
-                asyncSessionKey = runtimeSessionKey;
+              // The verifier rejects mixed or mismatched runtime IDs. Its
+              // external Claude fallback is safe when Bash omits the ID.
+              if (verifiedSessionKey) asyncSessionKey = verifiedSessionKey;
             } catch {
               // Never send when this session cannot prove ownership of the
               // selected profile's verified setup.

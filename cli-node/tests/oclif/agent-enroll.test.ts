@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, it as test } from "vitest";
-import { enrollAgent } from "../../src/oclif/agent-enroll.js";
+import {
+  assertNativeSessionIdentity,
+  enrollAgent,
+} from "../../src/oclif/agent-enroll.js";
 import type { setupAgent } from "../../src/oclif/agent-setup.js";
 import {
   loadCliCredentials,
@@ -21,6 +24,29 @@ const orgId = "22222222-2222-4222-8222-222222222222";
 const stage = "https://api.primitive-staging-1.com/v1";
 const clock = Date.parse("2026-09-28T12:00:00.000Z");
 const directories: string[] = [];
+test("Codex enrollment uses the loaded thread when process and thread IDs differ", () => {
+  assert.doesNotThrow(() =>
+    assertNativeSessionIdentity(session, {
+      CODEX_SESSION_ID: orgId,
+      CODEX_THREAD_ID: session,
+    }),
+  );
+  assert.throws(
+    () =>
+      assertNativeSessionIdentity(orgId, {
+        CODEX_SESSION_ID: orgId,
+        CODEX_THREAD_ID: session,
+      }),
+    /differs from this Codex thread/,
+  );
+  assert.throws(
+    () =>
+      assertNativeSessionIdentity(orgId, {
+        CODEX_SESSION_ID: session,
+      }),
+    /differs from this Codex session/,
+  );
+});
 afterEach(() => {
   for (const directory of directories.splice(0))
     rmSync(directory, { recursive: true, force: true });
@@ -48,6 +74,10 @@ function owner(): string {
 function server(
   options: {
     failFirstCreate?: boolean;
+    firstCreateStatus?: 400 | 401 | 403 | 409;
+    domains?: string[];
+    createDenials?: Array<{ status: number; code: string } | null>;
+    onCreate?: (address: string, attempt: number) => void;
     wrongOrigin?: boolean;
     policy?: {
       version: string | null;
@@ -61,6 +91,10 @@ function server(
     };
     policyConflict?: boolean;
     policyReadbackDisabled?: boolean;
+    connectionStatuses?: Array<"pending" | "claimed" | "connected" | "revoked">;
+    connectionListUnavailable?: boolean;
+    connectionPagesBeforeTarget?: number;
+    ownerActive?: boolean;
   } = {},
 ) {
   const creates: Array<{
@@ -70,6 +104,7 @@ function server(
   }> = [];
   let first = true;
   let policyReads = 0;
+  let connectionListReads = 0;
   let policy = options.policy ?? {
     version: null,
     allow_contact_requests: null,
@@ -163,14 +198,12 @@ function server(
     if (url === `${stage}/domains`) {
       return Response.json({
         success: true,
-        data: [
-          { domain: "custom.example.test", verified: true, is_active: true },
-          {
-            domain: "lucky-eagle.primitive-staging.email",
-            verified: true,
-            is_active: true,
-          },
-        ],
+        data: (
+          options.domains ?? [
+            "custom.example.test",
+            "lucky-eagle.primitive-staging.email",
+          ]
+        ).map((domain) => ({ domain, verified: true, is_active: true })),
       });
     }
     if (url === `${stage}/agent-connections` && method === "POST") {
@@ -187,11 +220,25 @@ function server(
         auth: headers.get("authorization") ?? "",
         url,
       });
+      options.onCreate?.(body.address, creates.length);
       assert.equal(body.name, "Research");
       if (options.failFirstCreate && first) {
         first = false;
         throw new Error("unavailable");
       }
+      if (options.firstCreateStatus && first) {
+        first = false;
+        return Response.json(
+          { success: false, error: { code: "forbidden" } },
+          { status: options.firstCreateStatus },
+        );
+      }
+      const denial = options.createDenials?.[creates.length - 1];
+      if (denial)
+        return Response.json(
+          { success: false, error: { code: denial.code } },
+          { status: denial.status },
+        );
       return Response.json({
         success: true,
         data: {
@@ -208,6 +255,47 @@ function server(
         },
       });
     }
+    if (url.startsWith(`${stage}/agent-connections?`) && method === "GET") {
+      connectionListReads++;
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined),
+      );
+      assert.equal(
+        headers.get("authorization"),
+        `Bearer ${["prim", "oat", "test"].join("_")}`,
+      );
+      if (options.connectionListUnavailable)
+        return Response.json({ success: false }, { status: 503 });
+      if (connectionListReads <= (options.connectionPagesBeforeTarget ?? 0))
+        return Response.json({
+          success: true,
+          data: [{ address: `other-${connectionListReads}@example.test` }],
+          meta: {
+            limit: 50,
+            cursor: `00000000-0000-4000-8000-${connectionListReads.toString(16).padStart(12, "0")}`,
+          },
+        });
+      const address = creates.at(-1)?.address;
+      assert.ok(address);
+      const statuses = options.connectionStatuses ?? ["connected"];
+      const status =
+        statuses[Math.min(connectionListReads - 1, statuses.length - 1)];
+      return Response.json({
+        success: true,
+        data: [
+          {
+            address,
+            name: "Research",
+            owner_address: "owner@example.test",
+            owner_active: options.ownerActive ?? true,
+            status,
+            verified_at:
+              status === "connected" ? new Date(clock).toISOString() : null,
+          },
+        ],
+        meta: { limit: 50, cursor: null },
+      });
+    }
     assert.fail(`Unexpected request: ${url}`);
   }) as typeof fetch;
   return {
@@ -216,6 +304,7 @@ function server(
     invitation,
     policyWrites,
     policyReads: () => policyReads,
+    connectionListReads: () => connectionListReads,
   };
 }
 
@@ -236,7 +325,8 @@ const result = {
 
 test("owner OAuth creates one deterministic address and keeps the invitation out of state", async () => {
   const configDir = owner();
-  const { fetcher, creates, invitation, policyWrites } = server();
+  const { fetcher, creates, invitation, policyWrites, connectionListReads } =
+    server();
   let setupCalls = 0;
   const value = await enrollAgent({
     configDir,
@@ -256,7 +346,14 @@ test("owner OAuth creates one deterministic address and keeps the invitation out
       return result;
     }) as typeof setupAgent,
   });
-  assert.deepEqual(value, { ...result, contactRequestPolicy: "enabled" });
+  assert.deepEqual(value, {
+    ...result,
+    guidance:
+      "The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected.",
+    contactRequestPolicy: "enabled",
+    connection: { status: "connected" },
+  });
+  assert.equal(connectionListReads(), 1);
   assert.equal(setupCalls, 1);
   assert.equal(creates.length, 1);
   assert.equal(creates[0]?.address, result.identity.agentAddress);
@@ -280,6 +377,172 @@ test("owner OAuth creates one deterministic address and keeps the invitation out
   assert.equal(journal.includes("invite_"), false);
   assert.equal(journal.includes("prim_oat"), false);
   assert.equal(JSON.parse(journal).phase, "setup_attempted");
+});
+
+test("one enrollment command confirms pairing through the owner list without an app read", async () => {
+  const configDir = owner();
+  const { fetcher, creates, connectionListReads } = server({
+    connectionStatuses: ["claimed", "connected"],
+  });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
+  assert.equal(connectionListReads(), 2);
+  assert.equal(creates.length, 1);
+});
+
+test("one enrollment survives a delayed reconciliation without recreating or reverifying", async () => {
+  const configDir = owner();
+  const { fetcher, creates, connectionListReads } = server({
+    connectionStatuses: [
+      ...Array.from({ length: 25 }, () => "claimed" as const),
+      "connected",
+    ],
+  });
+  let setupCalls = 0;
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async () => {
+      setupCalls++;
+      return result;
+    }) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
+  assert.equal(connectionListReads(), 26);
+  assert.equal(creates.length, 1);
+  assert.equal(setupCalls, 1);
+});
+
+test("an inactive human owner is never reported as receiving", async () => {
+  const configDir = owner();
+  const { fetcher } = server({ ownerActive: false });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "owner_inactive");
+  assert.equal(value.receiving.state, "not_ready");
+});
+
+test("owner confirmation reaches the target on its final bounded page", async () => {
+  const configDir = owner();
+  const { fetcher, connectionListReads } = server({
+    connectionPagesBeforeTarget: 19,
+  });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
+  assert.equal(connectionListReads(), 20);
+});
+
+test("unconfirmed pairing resumes the same address and never repeats creation or reply", async () => {
+  const configDir = owner();
+  const {
+    fetcher,
+    creates,
+    connectionListReads,
+    invitation: serverInvitation,
+  } = server({
+    connectionStatuses: [
+      ...Array.from({ length: 40 }, () => "claimed" as const),
+      "connected",
+    ],
+  });
+  let setupCalls = 0;
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async (params) => {
+      setupCalls++;
+      if (setupCalls === 1)
+        saveConnectedAgentProfile(configDir, `session-${session}`, {
+          version: 1,
+          auth_method: "agent_connection",
+          api_key: ["pconn", "test"].join("_"),
+          api_base_url: stage,
+          org_id: orgId,
+          agent_address: result.identity.agentAddress,
+          owner_address: "owner@example.test",
+          invitation_hash: createHash("sha256")
+            .update(stage)
+            .update("\0")
+            .update(
+              new URLSearchParams(new URL(serverInvitation).hash.slice(1)).get(
+                "token",
+              ) ?? "",
+            )
+            .digest("hex"),
+          created_at: new Date(clock).toISOString(),
+        });
+      else assert.equal(params.resume, true);
+      return result;
+    }) as typeof setupAgent,
+  };
+  const first = await enrollAgent(options);
+  assert.equal(first.connection.status, "pending");
+  const second = await enrollAgent(options);
+  assert.equal(second.connection.status, "connected");
+  assert.equal(connectionListReads(), 41);
+  assert.equal(creates.length, 1);
+  assert.equal(setupCalls, 2);
+});
+
+test("owner list outage leaves a saved enrollment unconfirmed", async () => {
+  const configDir = owner();
+  const { fetcher, creates, connectionListReads } = server({
+    connectionListUnavailable: true,
+  });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "unavailable");
+  assert.equal(connectionListReads(), 40);
+  assert.equal(creates.length, 1);
 });
 
 test("enabling contact requests preserves existing agent rules with a version precondition", async () => {
@@ -329,20 +592,19 @@ test("an explicit agent policy disable is never overwritten by enrollment", asyn
       rules: [],
     },
   });
-  await assert.rejects(
-    enrollAgent({
-      configDir,
-      session,
-      name: "Research",
-      receiverMode: "external",
-      contactRequests: true,
-      env: { CLAUDE_CODE_SESSION_ID: session },
-      fetch: fetcher,
-      now: () => clock,
-      setup: (async () => result) as typeof setupAgent,
-    }),
-    /explicitly disabled/,
-  );
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    contactRequests: true,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
+  assert.equal(value.contactRequestPolicy, "owner_disabled");
   assert.equal(policyWrites.length, 0);
 });
 
@@ -418,38 +680,228 @@ test("a changed owner login after claim cannot update another organization's pol
         return result;
       }) as typeof setupAgent,
     }),
-    /saved owner login changed/,
+    /saved member login changed/,
   );
   assert.equal(policyWrites.length, 0);
   assert.equal(policyReads(), 0);
 });
 
 test.each([
-  ["conflict", { policyConflict: true }, /not confirmed or conflicted/],
-  ["readback", { policyReadbackDisabled: true }, /could not be verified/],
-] as const)("does not claim contact intake after a %s", async (_name, policyOptions, expected) => {
+  ["conflict", { policyConflict: true }],
+  ["readback", { policyReadbackDisabled: true }],
+] as const)("does not claim contact intake after a %s", async (_name, policyOptions) => {
   const configDir = owner();
   const { fetcher, policyWrites } = server(policyOptions);
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    contactRequests: true,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
+  assert.equal(value.contactRequestPolicy, "unavailable");
+  assert.equal(policyWrites.length, 1);
+});
+
+test("a lost create response is held for owner recovery without a second create", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({
+    failFirstCreate: true,
+    domains: ["alpha.primitive-staging.email", "bravo.primitive-staging.email"],
+  });
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  };
+  await assert.rejects(enrollAgent(options), /unknown outcome/);
+  await assert.rejects(enrollAgent(options), /may already have happened/);
+  assert.equal(creates.length, 1);
+});
+
+test("a confirmed unsendable domain advances to the next candidate before claiming", async () => {
+  const configDir = owner();
+  const profile = `session-${session}`;
+  const path = join(
+    agentProfileDirectory(configDir, profile),
+    "enrollment",
+    "state.json",
+  );
+  const journalAddresses: string[] = [];
+  const { fetcher, creates, invitation } = server({
+    domains: ["alpha.primitive-staging.email", "bravo.primitive-staging.email"],
+    createDenials: [{ status: 400, code: "connection_domain_unavailable" }],
+    onCreate: (address) => {
+      const journal = JSON.parse(readFileSync(path, "utf8")) as {
+        address: string;
+        phase: string;
+      };
+      assert.equal(journal.phase, "create_attempted");
+      assert.equal(journal.address, address);
+      journalAddresses.push(journal.address);
+    },
+  });
+  let setupCalls = 0;
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async (params) => {
+      setupCalls++;
+      assert.equal(params.invitation, invitation);
+      assert.equal(creates.length, 2);
+      const second = creates[1];
+      assert.ok(second);
+      return {
+        ...result,
+        identity: { ...result.identity, agentAddress: second.address },
+      };
+    }) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
+  assert.equal(setupCalls, 1);
+  assert.equal(creates.length, 2);
+  const first = creates[0];
+  const second = creates[1];
+  assert.ok(first);
+  assert.ok(second);
+  assert.notEqual(first.address, second.address);
+  assert.deepEqual(
+    journalAddresses,
+    creates.map((create) => create.address),
+  );
+  const journal = readFileSync(path, "utf8");
+  assert.equal(JSON.parse(journal).address, second.address);
+  assert.equal(JSON.parse(journal).phase, "setup_attempted");
+  assert.equal(journal.includes(invitation), false);
+  assert.equal(journal.includes("prim_oat"), false);
+});
+
+test("all explicitly unavailable domains clear the pre-create journal", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({
+    domains: ["alpha.primitive-staging.email", "bravo.primitive-staging.email"],
+    createDenials: [
+      { status: 400, code: "connection_domain_unavailable" },
+      { status: 400, code: "connection_domain_unavailable" },
+    ],
+  });
   await assert.rejects(
     enrollAgent({
       configDir,
       session,
       name: "Research",
       receiverMode: "external",
-      contactRequests: true,
       env: { CLAUDE_CODE_SESSION_ID: session },
       fetch: fetcher,
       now: () => clock,
-      setup: (async () => result) as typeof setupAgent,
     }),
-    expected,
+    /No verified managed domain is currently sendable/,
   );
-  assert.equal(policyWrites.length, 1);
+  assert.equal(creates.length, 2);
+  assert.equal(
+    existsSync(
+      join(
+        agentProfileDirectory(configDir, `session-${session}`),
+        "enrollment",
+        "state.json",
+      ),
+    ),
+    false,
+  );
 });
 
-test("a lost create response is held for owner recovery without a second create", async () => {
+test.each([
+  {
+    label: "another 400 code",
+    denial: { status: 400, code: "validation_error" },
+    held: false,
+  },
+  {
+    label: "a 503 with the domain code",
+    denial: { status: 503, code: "connection_domain_unavailable" },
+    held: true,
+  },
+])("does not switch domains after $label", async ({ denial, held }) => {
   const configDir = owner();
-  const { fetcher, creates } = server({ failFirstCreate: true });
+  const { fetcher, creates } = server({
+    domains: ["alpha.primitive-staging.email", "bravo.primitive-staging.email"],
+    createDenials: [denial],
+  });
+  await assert.rejects(
+    enrollAgent({
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+    }),
+    held ? /unknown outcome/ : /rejected before an address was created/,
+  );
+  assert.equal(creates.length, 1);
+  const path = join(
+    agentProfileDirectory(configDir, `session-${session}`),
+    "enrollment",
+    "state.json",
+  );
+  assert.equal(existsSync(path), held);
+  if (held)
+    assert.equal(
+      JSON.parse(readFileSync(path, "utf8")).address,
+      creates[0]?.address,
+    );
+});
+
+test.each([
+  400, 401, 403,
+] as const)("a proven pre-create %i denial clears the journal for the same-session retry", async (status) => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ firstCreateStatus: status });
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  };
+  await assert.rejects(
+    enrollAgent(options),
+    /rejected before an address was created/,
+  );
+  const path = join(
+    agentProfileDirectory(configDir, `session-${session}`),
+    "enrollment",
+    "state.json",
+  );
+  assert.equal(existsSync(path), false);
+  const second = await enrollAgent(options);
+  assert.equal(second.connection.status, "connected");
+  assert.equal(creates.length, 2);
+  assert.equal(creates[0]?.address, creates[1]?.address);
+});
+
+test("a 409 create response stays uncertain and is not automatically retried", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ firstCreateStatus: 409 });
   const options = {
     configDir,
     session,
@@ -523,7 +975,7 @@ test("a concurrent owner login change cannot create an agent in another organiza
         assert.fail("No organization API call should occur");
       }) as typeof fetch,
     }),
-    /saved owner login changed/,
+    /saved member login changed/,
   );
 });
 
@@ -649,7 +1101,7 @@ test("wrong session, ambient API key, and invitation origin fail before claim", 
       ...base,
       env: { CLAUDE_CODE_SESSION_ID: session, PRIMITIVE_API_KEY: "ambient" },
     }),
-    /saved owner OAuth/,
+    /saved member OAuth/,
   );
   assert.equal(creates.length, 0);
   await assert.rejects(

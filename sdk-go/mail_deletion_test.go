@@ -31,6 +31,9 @@ func TestMailboxDeletionRoutesAndErrors(t *testing.T) {
 						t.Errorf("Unexpected request %s %s", r.Method, r.URL.Path)
 					}
 					w.Header().Set("Content-Type", "application/json")
+					if kind == "connection" && status == 200 {
+						w.Header().Set("Cache-Control", "no-store")
+					}
 					w.WriteHeader(status)
 					if status == 200 {
 						_, _ = w.Write([]byte(`{"success":true,"data":{"deleted":true}}`))
@@ -66,8 +69,12 @@ func TestMailboxDeletionRoutesAndErrors(t *testing.T) {
 							t.Fatalf("Unexpected response %T", result)
 						}
 					} else {
-						if v, ok := result.(*api.RemoveAgentConnectionOK); !ok || !v.Data.Deleted {
+						v, ok := result.(*api.RemoveAgentConnectionOKHeaders)
+						if !ok || !v.Response.Data.Deleted {
 							t.Fatalf("Unexpected response %T", result)
+						}
+						if value, present := v.CacheControl.Get(); !present || value != "no-store" {
+							t.Fatalf("Lost cache-control response header: %q, present=%v", value, present)
 						}
 					}
 				case 409:

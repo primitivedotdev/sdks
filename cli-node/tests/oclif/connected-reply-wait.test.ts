@@ -66,6 +66,7 @@ function fixture() {
     id: "22222222-2222-4222-8222-222222222222",
     sender: target.recipient,
     from_email: target.recipient,
+    sender_connected_agent_verified: false,
     from_header: `Peer <${target.recipient}>`,
     recipient: target.from,
     to_email: target.from,

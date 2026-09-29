@@ -171,6 +171,9 @@ function profileFromClaim(
     owner_address: data.owner_address,
     invitation_hash: invitationHash,
     created_at: new Date(now()).toISOString(),
+    ...(data.presence_profile === undefined
+      ? {}
+      : { presence_profile: data.presence_profile }),
   });
 }
 
@@ -181,6 +184,7 @@ export async function connectAgent(params: {
   invitation: string;
   fetch?: typeof fetch;
   now?: () => number;
+  presence?: boolean;
 }): Promise<AgentConnectResult> {
   const profileName = agentProfileName(params.profileName);
   const invitation = parseAgentInvitation(params.invitation);
@@ -237,7 +241,12 @@ export async function connectAgent(params: {
             "content-type": "application/json",
             accept: "application/json",
           },
-          body: JSON.stringify({ token: invitation.token }),
+          body: JSON.stringify({
+            token: invitation.token,
+            ...(params.presence
+              ? { capabilities: ["primitive.presence/1"] }
+              : {}),
+          }),
         },
       );
       if (response.status !== 200) {

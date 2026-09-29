@@ -14,10 +14,43 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import {
   connectNativeSession,
+  isNativeTurnNotSteerableResponse,
   NativeSessionDisconnectedError,
   NativeSessionError,
   NativeSessionNotLoadedError,
+  NativeTurnNotSubmittedError,
 } from "../../src/oclif/notify-session-native.js";
+
+describe("native turn refusal classification", () => {
+  it.each([
+    "Review",
+    "Compact",
+  ])("accepts only explicit %s pre-dispatch refusal", (kind) => {
+    expect(
+      isNativeTurnNotSteerableResponse({
+        code: -32603,
+        message: `failed to submit turn input: ActiveTurnNotSteerable { turn_kind: ${kind} }`,
+      }),
+    ).toBe(true);
+  });
+  it.each([
+    null,
+    { code: -32603, message: "failed to submit turn input: Other" },
+    {
+      code: -32603,
+      message:
+        "failed to submit turn input: ActiveTurnNotSteerable { turn_kind: Regular }",
+    },
+    {
+      code: -32000,
+      message:
+        "failed to submit turn input: ActiveTurnNotSteerable { turn_kind: Review }",
+    },
+    { code: -32603, message: "ActiveTurnNotSteerable { turn_kind: Review }" },
+  ])("holds ambiguous RPC errors: %j", (error) => {
+    expect(isNativeTurnNotSteerableResponse(error)).toBe(false);
+  });
+});
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -44,9 +77,16 @@ async function fixture() {
   const state = {
     loaded: [threadId],
     loadedComplete: true,
+    omitFinalCursor: false,
     cwd: directory,
     direct: true,
+    resumeThreadId: threadId,
+    unloadAfterResume: false,
+    changeCwdAfterResume: false,
+    disableDirectAfterResume: false,
+    resumeError: null as { code: number; message: string } | null,
     dropOutput: false,
+    turnError: null as { code: number; message: string } | null,
     turn: { id: randomUUID(), items: [], status: "inProgress" } as unknown,
   };
   const calls: Array<{
@@ -60,15 +100,27 @@ async function fixture() {
       calls.push(call);
       if (call.id === undefined) return;
       if (call.method === "turn/start" && state.dropOutput) return;
+      if (call.method === "turn/start" && state.turnError) {
+        socket.send(JSON.stringify({ id: call.id, error: state.turnError }));
+        return;
+      }
+      if (call.method === "thread/resume" && state.resumeError) {
+        socket.send(JSON.stringify({ id: call.id, error: state.resumeError }));
+        return;
+      }
       const result =
         call.method === "initialize"
           ? {}
           : call.method === "thread/loaded/list"
             ? {
                 data: state.loaded,
-                nextCursor: state.loadedComplete
-                  ? null
-                  : `page-${calls.length}`,
+                ...(state.loadedComplete && state.omitFinalCursor
+                  ? {}
+                  : {
+                      nextCursor: state.loadedComplete
+                        ? null
+                        : `page-${calls.length}`,
+                    }),
               }
             : call.method === "thread/read"
               ? {
@@ -78,10 +130,21 @@ async function fixture() {
                     cwd: state.cwd,
                   },
                 }
-              : {
-                  turn: state.turn,
-                };
+              : call.method === "thread/resume"
+                ? {
+                    thread: {
+                      id: state.resumeThreadId,
+                    },
+                  }
+                : {
+                    turn: state.turn,
+                  };
       socket.send(JSON.stringify({ id: call.id, result }));
+      if (call.method === "thread/resume") {
+        if (state.unloadAfterResume) state.loaded = [];
+        if (state.changeCwdAfterResume) state.cwd = "/different";
+        if (state.disableDirectAfterResume) state.direct = false;
+      }
     }),
   );
   const connect = async (
@@ -109,9 +172,23 @@ async function fixture() {
 describe.skipIf(process.platform === "win32")(
   "native session transport",
   () => {
-    it("uses only read-only attachment and external tool output without user input", async () => {
+    it("subscribes only to the verified exact thread and sends external tool output without user input", async () => {
       const f = await fixture();
+      f.state.loaded.unshift(randomUUID());
+      f.state.omitFinalCursor = true;
       const native = await f.connect();
+      expect(f.calls.map((call) => call.method)).toEqual([
+        "initialize",
+        "initialized",
+        "thread/loaded/list",
+        "thread/read",
+        "thread/resume",
+        "thread/loaded/list",
+        "thread/read",
+      ]);
+      expect(
+        f.calls.find((call) => call.method === "thread/resume")?.params,
+      ).toEqual({ threadId: f.threadId });
       let persisted = false;
       const id = randomUUID();
       await native.queue("External event metadata", id, () => {
@@ -136,6 +213,7 @@ describe.skipIf(process.platform === "win32")(
             "initialized",
             "thread/loaded/list",
             "thread/read",
+            "thread/resume",
             "turn/start",
           ].includes(call.method),
         ),
@@ -215,6 +293,9 @@ describe.skipIf(process.platform === "win32")(
         submitted: false,
       });
       expect(f.calls.some((call) => call.method === "thread/read")).toBe(false);
+      expect(f.calls.some((call) => call.method === "thread/resume")).toBe(
+        false,
+      );
 
       f.state.loaded = [f.threadId];
       const verified = vi.fn();
@@ -237,9 +318,33 @@ describe.skipIf(process.platform === "win32")(
             "initialized",
             "thread/loaded/list",
             "thread/read",
+            "thread/resume",
           ].includes(call.method),
         ),
       ).toBe(true);
+    });
+    it.each([
+      "wrong-thread",
+      "resume-error",
+      "unloaded-after-resume",
+      "cwd-changed-after-resume",
+      "direct-input-disabled-after-resume",
+    ])("rejects %s before dispatch and closes the native connection", async (reason) => {
+      const f = await fixture();
+      if (reason === "wrong-thread") f.state.resumeThreadId = randomUUID();
+      if (reason === "resume-error")
+        f.state.resumeError = { code: -32603, message: "resume refused" };
+      if (reason === "unloaded-after-resume") f.state.unloadAfterResume = true;
+      if (reason === "cwd-changed-after-resume")
+        f.state.changeCwdAfterResume = true;
+      if (reason === "direct-input-disabled-after-resume")
+        f.state.disableDirectAfterResume = true;
+      await expect(f.connect()).rejects.toMatchObject({ submitted: false });
+      expect(
+        f.calls.filter((call) => call.method === "thread/resume"),
+      ).toHaveLength(1);
+      expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
+      await vi.waitFor(() => expect(f.sockets.clients.size).toBe(0));
     });
     it("keeps incomplete loaded-session pagination fatal even when the session was found", async () => {
       const f = await fixture();
@@ -286,6 +391,52 @@ describe.skipIf(process.platform === "win32")(
       ).rejects.toMatchObject({ submitted: true });
       expect(f.calls.some((call) => call.id === 900)).toBe(false);
     });
+    it.each([
+      "Review",
+      "Compact",
+    ])("retries only Codex's explicit %s pre-dispatch refusal", async (kind) => {
+      const f = await fixture();
+      const native = await f.connect();
+      f.state.turnError = {
+        code: -32603,
+        message: `failed to submit turn input: ActiveTurnNotSteerable { turn_kind: ${kind} }`,
+      };
+      const dispatch = vi.fn();
+      await expect(
+        native.queue("Event", randomUUID(), dispatch),
+      ).rejects.toBeInstanceOf(NativeTurnNotSubmittedError);
+      expect(dispatch).toHaveBeenCalledOnce();
+      expect(
+        f.calls.filter((call) => call.method === "turn/start"),
+      ).toHaveLength(1);
+      f.state.turnError = null;
+      await native.queue("Event", randomUUID(), dispatch);
+      expect(
+        f.calls.filter((call) => call.method === "turn/start"),
+      ).toHaveLength(2);
+    });
+    it.each([
+      { code: -32603, message: "failed to submit turn input: Other" },
+      {
+        code: -32603,
+        message:
+          "failed to submit turn input: ActiveTurnNotSteerable { turn_kind: Regular }",
+      },
+      {
+        code: -32000,
+        message:
+          "failed to submit turn input: ActiveTurnNotSteerable { turn_kind: Review }",
+      },
+    ])("holds every other RPC error as unknown: %j", async (turnError) => {
+      const f = await fixture();
+      const native = await f.connect();
+      f.state.turnError = turnError;
+      await expect(
+        native.queue("Event", randomUUID(), () => {}),
+      ).rejects.toMatchObject({
+        submitted: true,
+      });
+    });
     it("reports an idle socket loss once without submitting any input", async () => {
       const f = await fixture();
       const disconnected = vi.fn();
@@ -296,6 +447,44 @@ describe.skipIf(process.platform === "win32")(
       expect(disconnected).toHaveBeenCalledTimes(1);
       expect(disconnected.mock.calls[0]?.[0]).toBeInstanceOf(
         NativeSessionDisconnectedError,
+      );
+      expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
+    });
+    it.each([
+      "thread/closed",
+      "thread/status/changed",
+    ])("marks an exact %s unload as disconnected while ignoring other threads", async (method) => {
+      const f = await fixture();
+      const disconnected = vi.fn();
+      await f.connect(disconnected);
+      for (const socket of f.sockets.clients) {
+        socket.send(
+          JSON.stringify({
+            method,
+            params: {
+              threadId: randomUUID(),
+              status: { type: "notLoaded" },
+            },
+          }),
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(disconnected).not.toHaveBeenCalled();
+      for (const socket of f.sockets.clients) {
+        socket.send(
+          JSON.stringify({
+            method,
+            params: {
+              threadId: f.threadId,
+              status: { type: "notLoaded" },
+            },
+          }),
+        );
+      }
+      await vi.waitFor(() =>
+        expect(disconnected).toHaveBeenCalledWith(
+          expect.any(NativeSessionNotLoadedError),
+        ),
       );
       expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
     });

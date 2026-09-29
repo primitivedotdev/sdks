@@ -97,6 +97,8 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
       dkimSignatures: [],
     },
     ...overrides,
+    sender_connected_agent_verified:
+      overrides.sender_connected_agent_verified ?? false,
   };
 }
 

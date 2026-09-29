@@ -20,7 +20,7 @@ describe("current mail session", () => {
         CODEX_SESSION_ID: id,
         CODEX_THREAD_ID: "22222222-2222-4222-8222-222222222222",
       }),
-    ).toBeNull();
+    ).toBe("codex:22222222-2222-4222-8222-222222222222");
     expect(
       currentMailSessionKey({ CLAUDE_CODE_SESSION_ID: "not-a-session" }),
     ).toBeNull();

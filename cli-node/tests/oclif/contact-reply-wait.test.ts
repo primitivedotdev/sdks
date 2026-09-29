@@ -33,6 +33,7 @@ function fixture(now = Date.now()) {
     recipient: from,
     to_email: from,
     from_email: recipient,
+    sender_connected_agent_verified: false,
     from_header: recipient,
     status: "completed",
     received_at: new Date(now + 1000).toISOString(),

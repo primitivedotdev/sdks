@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { getEmail } from "@primitivedotdev/api-core";
+import { type EmailDetail, getEmail } from "@primitivedotdev/api-core";
 import {
   isEmailReceivedEvent,
   parseWebhookEvent,
@@ -31,6 +31,7 @@ import {
   readConversationStatusContent,
 } from "./notify-session-content.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import { openPresenceControls } from "./presence-control.js";
 import { isPlainChatReply, scopedChatSenderTrust } from "./scoped-chat.js";
 import { sharedMailScope } from "./shared-mail-receiver.js";
 import { openSharedMailStore } from "./shared-mail-state.js";
@@ -43,6 +44,8 @@ export async function createWakeMail(options: {
   sessionKey: string | null;
   sessionId?: string;
   contactRequests: boolean;
+  signal?: AbortSignal;
+  onWake?: () => void;
 }) {
   const { apiClient, auth } = await createAuthenticatedCliApiClient({
     configDir: options.configDir,
@@ -86,6 +89,53 @@ export async function createWakeMail(options: {
     succeeded: accepted,
     outcome: { mode: "sdk" as const, accepted, duration_ms: 0 },
   });
+  const parentPid = process.ppid;
+  let receiving = false;
+  const presence = openPresenceControls({
+    configDir: options.configDir,
+    apiClient,
+    apiKey: auth.apiKey,
+    baseUrl: auth.apiBaseUrl,
+    identity,
+    sessionKey: options.sessionKey,
+    signal: options.signal ?? new AbortController().signal,
+    eligible: async () =>
+      Boolean(
+        options.sessionId &&
+          options.sessionKey === `claude:${options.sessionId}` &&
+          parentPid > 1 &&
+          process.ppid === parentPid &&
+          receiving,
+      ),
+    onOrdinary: async (detail, eventId) => {
+      const result = await processDetail(
+        detail,
+        eventId,
+        options.signal ?? new AbortController().signal,
+      );
+      if (!result.succeeded) return false;
+      completePending();
+      if (wakeId || statusEvent) options.onWake?.();
+      return true;
+    },
+  });
+  function completePending() {
+    if (!pendingRequest || !notices || !options.sessionId || !policy) return;
+    const request = pendingRequest;
+    pendingRequest = undefined;
+    const reserve = notices.reserve(
+      request.sender,
+      options.sessionId,
+      {
+        emailId: request.emailId,
+        eventId: request.eventId,
+        clientId: randomUUID(),
+        state: "accepted",
+      },
+      request.decidedSenders,
+    );
+    if (reserve === "reserved") wakeId = request.emailId;
+  }
   const handler: ListenHandler = async (delivery, signal) => {
     try {
       signal.throwIfAborted();
@@ -112,6 +162,7 @@ export async function createWakeMail(options: {
         throw new ListenStateError(
           "Wake email recipient does not match the profile.",
         );
+      const observedAt = performance.now();
       const response = await getEmail({
         client: apiClient.client,
         path: { id: event.email.id },
@@ -120,7 +171,11 @@ export async function createWakeMail(options: {
       });
       const detail = response.data?.data;
       if (response.error || !detail) {
-        if (response.response?.status === 404) return outcome(true);
+        if (response.response?.status === 404)
+          return {
+            ...outcome(true),
+            countTowardLimit: !presence.knownControl(event.email.id),
+          };
         return outcome(false);
       }
       if (
@@ -129,6 +184,37 @@ export async function createWakeMail(options: {
         detail.to_email?.toLowerCase() !== recipient
       )
         throw new ListenStateError("Wake email detail has another recipient.");
+      const control = await presence.handle(
+        detail,
+        delivery.event_id,
+        observedAt,
+      );
+      if (control !== "ordinary")
+        return { ...outcome(true), countTowardLimit: false };
+      return await processDetail(detail, delivery.event_id, signal);
+    } catch (error) {
+      if (
+        error instanceof NotificationRetryError ||
+        error instanceof ContactPolicyReadRetryError
+      )
+        return outcome(false);
+      throw error;
+    }
+  };
+  async function processDetail(
+    detail: EmailDetail,
+    eventId: string,
+    signal: AbortSignal,
+  ) {
+    if (!recipient || !policy || !scope || !store || !options.sessionKey)
+      throw new ListenStateError("Wake requires a verified session profile.");
+    if (
+      detail.recipient?.toLowerCase() !== recipient ||
+      detail.to_email?.toLowerCase() !== recipient
+    )
+      throw new ListenStateError("Wake email detail has another recipient.");
+    signal.throwIfAborted();
+    try {
       if (detail.status === "rejected") return outcome(true);
       if (
         !["accepted", "completed"].includes(detail.status) ||
@@ -328,7 +414,7 @@ export async function createWakeMail(options: {
         pendingRequest = {
           sender,
           emailId: detail.id,
-          eventId: delivery.event_id,
+          eventId: eventId,
           decidedSenders: [...policy.members()],
         };
       else wakeId = detail.id;
@@ -341,27 +427,15 @@ export async function createWakeMail(options: {
         return outcome(false);
       throw error;
     }
-  };
+  }
   return {
     handler,
     wakeId: () => wakeId,
     status: () => statusEvent,
-    completed() {
-      if (!pendingRequest || !notices || !options.sessionId || !policy) return;
-      const request = pendingRequest;
-      pendingRequest = undefined;
-      const reserve = notices.reserve(
-        request.sender,
-        options.sessionId,
-        {
-          emailId: request.emailId,
-          eventId: request.eventId,
-          clientId: randomUUID(),
-          state: "accepted",
-        },
-        request.decidedSenders,
-      );
-      if (reserve === "reserved") wakeId = request.emailId;
+    completed: completePending,
+    receiving: (ready: boolean) => {
+      receiving = ready;
     },
+    close: () => presence.close(),
   };
 }

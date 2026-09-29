@@ -76,6 +76,7 @@ function setup(
     to_email: "device@example.com",
     from_header: "sender@example.com",
     from_email: "sender@example.com",
+    sender_connected_agent_verified: false,
     status: "completed",
     received_at: receivedAt,
     reply_to_sent_email_id: null as string | null,
@@ -382,6 +383,27 @@ function setup(
   };
 }
 describe("shared notification listener integration", () => {
+  it.each([
+    "verified",
+    "pending",
+  ])("does not count %s controls or notify the model before simultaneous ordinary mail", async (status) => {
+    const f = setup();
+    Object.assign(f.detail, { presence_control: { status, valid_for_ms: 0 } });
+    f.changed.mockImplementationOnce(async () => {
+      f.nextEmail();
+      Reflect.deleteProperty(f.detail, "presence_control");
+      await f.store()?.ingest({
+        emailId: f.detail.id,
+        eventId: randomUUID(),
+        receivedAt: f.detail.received_at,
+      });
+    });
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.changed).toHaveBeenCalledOnce();
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.close).toHaveBeenCalledOnce();
+    expect(f.closeReceiver).toHaveBeenCalledOnce();
+  });
   it.each([
     { resolved: true, notified: true },
     { resolved: false, notified: false },

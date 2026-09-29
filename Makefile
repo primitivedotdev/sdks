@@ -63,6 +63,7 @@ cli-tarball-isolation:
 cli-smoke: cli-build cli-tarball-isolation
 	signal_smoke_script="$$(pwd)/scripts/smoke-signals.mjs" && \
 	agent_enroll_smoke_script="$$(pwd)/scripts/smoke-agent-enroll.mjs" && \
+	claude_wake_smoke_script="$$(pwd)/scripts/smoke-claude-wake.mjs" && \
 	agent_notes_smoke_script="$$(pwd)/scripts/smoke-agent-notes.mjs" && \
 	agent_network_smoke_script="$$(pwd)/scripts/smoke-agent-network.mjs" && \
 	agent_disconnect_smoke_script="$$(pwd)/scripts/smoke-agent-disconnect.mjs" && \
@@ -94,6 +95,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	bin="$$smoke_dir/node_modules/.bin/primitive" && \
 	node "$$connected_agent_smoke_script" "$$bin" && \
 	node "$$agent_enroll_smoke_script" "$$bin" && \
+	node "$$claude_wake_smoke_script" "$$bin" && \
 	node "$$agent_notes_smoke_script" "$$bin" && \
 	node "$$agent_network_smoke_script" "$$bin" && \
 	node "$$agent_disconnect_smoke_script" "$$bin" && \
@@ -326,9 +328,9 @@ go-coverage:
 	cd sdk-go && raw_coverage_file=$$(mktemp) && filtered_coverage_file=$$(mktemp) && go test ./... -coverprofile="$$raw_coverage_file" && { IFS= read -r header && printf '%s\n' "$$header" > "$$filtered_coverage_file" && while IFS= read -r line; do case "$$line" in *"/schema_generated.go:"*|*"/doc.go:"*) ;; *) printf '%s\n' "$$line" >> "$$filtered_coverage_file" ;; esac; done; } < "$$raw_coverage_file" && go tool cover -func="$$filtered_coverage_file" && rm -f "$$raw_coverage_file" "$$filtered_coverage_file"
 
 shared-check:
-	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/api/events.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts tests/interactions/classify.test.ts
-	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_event_receiver.py tests/test_interactions.py tests/test_signals.py tests/test_signal_content.py
-	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails|TestSharedSignalContent|TestEvents' ./...
+	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/api/events.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts tests/interactions/classify.test.ts tests/interactions/presence.test.ts
+	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_event_receiver.py tests/test_interactions.py tests/test_signals.py tests/test_signal_content.py tests/test_presence.py
+	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails|TestSharedSignalContent|TestSharedPresenceEmails|TestPresenceSourceCopy|TestEvents' ./...
 
 check: node-check cli-check python-check go-check shared-check
 

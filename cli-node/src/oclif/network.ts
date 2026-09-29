@@ -12,7 +12,12 @@ import { contactAddress } from "./contacts.js";
 
 export type NetworkRequest =
   | { action: "list" }
-  | { action: "members" | "peers"; cursor?: string; limit?: number }
+  | {
+      action: "members" | "peers";
+      cursor?: string;
+      limit?: number;
+      owner?: string;
+    }
   | { action: "get" | "add" | "remove"; address: string }
   | {
       action: "set";
@@ -57,7 +62,10 @@ export async function runNetworkRequest(
     const limit = request.limit ?? 50;
     if (!Number.isInteger(limit) || limit < 1 || limit > 200)
       throw new Error("--limit must be between 1 and 200.");
-    const query = { cursor, limit };
+    const owner = request.owner?.trim();
+    if (request.owner !== undefined && (!owner || owner.length > 100))
+      throw new Error("--owner must be a name or user ID of 1-100 characters.");
+    const query = { cursor, limit, ...(owner ? { owner } : {}) };
     const result = await response(
       request.action === "members"
         ? listDefaultNetworkMembers({ client, query, responseStyle: "fields" })
@@ -68,6 +76,24 @@ export async function runNetworkRequest(
       (result.meta?.cursor !== null && typeof result.meta?.cursor !== "string")
     )
       throw new Error("The network API returned an invalid page.");
+    // Older servers silently ignore unknown query fields. Never present an
+    // unfiltered roster as a match for a named person during staged upgrades.
+    if (request.action === "peers" && owner) {
+      const needle = owner.toLowerCase();
+      const matches = result.data.every((row) => {
+        if (row === null || typeof row !== "object") return false;
+        const peer = row as { owner?: unknown };
+        if (peer.owner === null || typeof peer.owner !== "object") return false;
+        const human = peer.owner as { user_id?: unknown; name?: unknown };
+        return (
+          human.user_id === owner ||
+          (typeof human.name === "string" &&
+            human.name.toLowerCase().includes(needle))
+        );
+      });
+      if (!matches)
+        throw new Error("The network API did not honor the owner filter.");
+    }
     return result;
   }
   if (!("address" in request))

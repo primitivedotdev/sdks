@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -7,6 +8,11 @@ import type {
   SendMailResult,
 } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  agentProfileDirectory,
+  saveConnectedAgentProfile,
+} from "../../src/oclif/connected-agent-profile.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
@@ -18,6 +24,11 @@ const mocks = vi.hoisted(() => ({
   saveChatReceiptFailure: { error: null as Error | null },
   sendEmail: vi.fn(),
   sleep: vi.fn(),
+  openConnectedReplyWait: vi.fn(),
+}));
+
+vi.mock("../../src/oclif/connected-reply-wait.js", () => ({
+  openConnectedReplyWait: mocks.openConnectedReplyWait,
 }));
 
 vi.mock("../../src/oclif/chat-receipt.js", async (importOriginal) => {
@@ -153,6 +164,8 @@ function inboundEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
       dkimSignatures: [],
     },
     ...overrides,
+    sender_connected_agent_verified:
+      overrides.sender_connected_agent_verified ?? false,
   };
 }
 
@@ -232,6 +245,65 @@ function freshChatArgs(...extra: string[]): string[] {
   ];
 }
 
+function connectedExternalChatFixture() {
+  const configDir = join(tempConfigHome, "primitive");
+  const apiKey = ["pconn", "chat-test"].join("_");
+  const sessionId = randomUUID();
+  const invitationHash = "a".repeat(64);
+  const identity = {
+    profileName: "work",
+    orgId: randomUUID(),
+    agentAddress: "agent@sender.example",
+    ownerAddress: "owner@sender.example",
+    apiBaseUrl: "https://api.primitive.dev/v1",
+  };
+  saveConnectedAgentProfile(configDir, identity.profileName, {
+    version: 1,
+    auth_method: "agent_connection",
+    api_key: apiKey,
+    api_base_url: identity.apiBaseUrl,
+    org_id: identity.orgId,
+    agent_address: identity.agentAddress,
+    owner_address: identity.ownerAddress,
+    invitation_hash: invitationHash,
+    created_at: new Date().toISOString(),
+  });
+  const setupPath = join(
+    agentProfileDirectory(configDir, identity.profileName),
+    "setup.json",
+  );
+  writeMailJson(setupPath, {
+    version: 1,
+    session: sessionId,
+    receiverMode: "external",
+    invitationHash,
+    phase: "sent",
+    receipt: { id: randomUUID(), status: "delivered" },
+  });
+  mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+    apiClient: { client: {} },
+    auth: {
+      apiKey,
+      apiBaseUrl: identity.apiBaseUrl,
+      source: "connected-profile",
+      credentials: null,
+      connectedAgent: identity,
+    },
+    baseUrlOverridden: false,
+  });
+  mocks.openConnectedReplyWait.mockResolvedValue({
+    receiver: { signal: new AbortController().signal },
+    ready: vi.fn(async () => true),
+    bind: vi.fn(async () => undefined),
+    uncertain: vi.fn(async () => undefined),
+    cancelBeforeSend: vi.fn(async () => undefined),
+    cancelRejectedSend: vi.fn(async () => undefined),
+    finish: vi.fn(async () => undefined),
+    close: vi.fn(async () => undefined),
+  });
+  return { sessionId, setupPath };
+}
+
 function allFollowUpArgv(envelope: {
   follow_up_commands: Array<{ argv: string[] }>;
 }): string[][] {
@@ -294,7 +366,54 @@ describe("chat send outcomes", () => {
       process.env.XDG_CONFIG_HOME = previousXdgConfigHome;
     }
     rmSync(tempConfigHome, { force: true, recursive: true });
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
+  });
+
+  it("sends async chat from a verified external Claude setup when Bash omits its session ID", async () => {
+    const { sessionId } = connectedExternalChatFixture();
+    vi.stubEnv("CODEX_THREAD_ID", "");
+    vi.stubEnv("CODEX_SESSION_ID", "");
+    vi.stubEnv("CLAUDE_CODE_SESSION_ID", "");
+    const result = await run("chat", freshChatArgs("--async", "--json"));
+    expect(result.exitCode).toBeUndefined();
+    expect(JSON.parse(result.stdout).outcome).toBe("sent");
+    expect(mocks.openConnectedReplyWait).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionKey: `claude:${sessionId}` }),
+    );
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    "wrong Claude",
+    "mixed runtime",
+  ])("refuses async chat before sending for %s identity", async (identityKind) => {
+    const { sessionId } = connectedExternalChatFixture();
+    vi.stubEnv(
+      "CLAUDE_CODE_SESSION_ID",
+      identityKind === "wrong Claude" ? randomUUID() : sessionId,
+    );
+    vi.stubEnv(
+      "CODEX_THREAD_ID",
+      identityKind === "mixed runtime" ? randomUUID() : "",
+    );
+    vi.stubEnv("CODEX_SESSION_ID", "");
+    const result = await run("chat", freshChatArgs("--async", "--json"));
+    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+    expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it("refuses async chat when the selected profile lacks a verified external setup", async () => {
+    const { setupPath } = connectedExternalChatFixture();
+    vi.stubEnv("CODEX_THREAD_ID", "");
+    vi.stubEnv("CODEX_SESSION_ID", "");
+    vi.stubEnv("CLAUDE_CODE_SESSION_ID", "");
+    rmSync(setupPath);
+    const result = await run("chat", freshChatArgs("--async", "--json"));
+    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+    expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 
   it("reports replied with exit 0 when a reply arrives", async () => {

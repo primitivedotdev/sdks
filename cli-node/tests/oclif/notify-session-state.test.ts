@@ -84,6 +84,21 @@ describe("indexed notification receipts", () => {
       notificationReceiptPage(directory, scope, threadId).receipts,
     ).toEqual([r]);
   });
+  it("recovers explicit non-submission and permits only that state to retry", () => {
+    const r = makeReceipt();
+    const store = open();
+    store.save(r);
+    store.release();
+    const p = paths(r);
+    const refused = { ...r, state: "not_submitted" as const };
+    write(p.pending, { receipt: refused, eventId: r.eventId });
+    const recovered = open();
+    expect(recovered.find(r.emailId, r.eventId)).toEqual(refused);
+    expect(existsSync(p.pending)).toBe(false);
+    recovered.save(r);
+    recovered.save({ ...r, state: "accepted" });
+    expect(() => recovered.save(r)).toThrow("inconsistent");
+  });
   it.each([
     "journal",
     "email",

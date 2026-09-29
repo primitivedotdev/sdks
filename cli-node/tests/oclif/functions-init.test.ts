@@ -323,7 +323,7 @@ describe("renderPackageJson", () => {
     const parsed = JSON.parse(raw) as {
       devDependencies: Record<string, string>;
     };
-    expect(parsed.devDependencies["primitive"]).toMatch(/^\^/);
+    expect(parsed.devDependencies.primitive).toMatch(/^\^/);
   });
 
   it("ships primitive at a range that includes this CLI's own published version", () => {
@@ -342,7 +342,7 @@ describe("renderPackageJson", () => {
     const scaffolded = JSON.parse(renderPackageJson("test-fn")) as {
       devDependencies: Record<string, string>;
     };
-    const range = scaffolded.devDependencies["primitive"];
+    const range = scaffolded.devDependencies.primitive;
 
     // Range must be a caret on a 3-part semver: ^X.Y.Z.
     const rangeMatch = range.match(/^\^(\d+)\.(\d+)\.(\d+)$/);

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
+import { unlinkSync } from "node:fs";
 import { join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import {
   getAgentContactPolicy,
   listDomains,
@@ -28,6 +30,12 @@ import {
 } from "./shared-mail-files.js";
 
 const RESPONSE_LIMIT = 32_768;
+const CONNECTION_LIST_LIMIT = 131_072;
+// Server-side challenge reconciliation may run on a minute cadence when the
+// owner's app is closed. Leave a full interval plus startup jitter for it.
+const CONFIRMATION_BUDGET_MS = 120_000;
+const CONFIRMATION_MAX_ATTEMPTS = 40;
+const CONFIRMATION_PAGE_LIMIT = 20;
 const refuse = (message: string) => new AgentConnectionSetupError(message);
 
 type Enrollment = {
@@ -64,6 +72,7 @@ export type AgentEnrollOptions = {
   name?: string;
   receiverMode?: "native" | "external";
   contactRequests?: boolean;
+  confirmationSleep?: (milliseconds: number) => Promise<void>;
 } & EnrollDependencies;
 
 function plainRecord(value: unknown): Record<string, unknown> | null {
@@ -185,14 +194,7 @@ async function preflight(
       );
     return;
   }
-  if (env.CODEX_SESSION_ID && env.CODEX_SESSION_ID !== session)
-    throw refuse(
-      "The requested session differs from this Codex session. No address was created.",
-    );
-  if (env.CODEX_THREAD_ID && env.CODEX_THREAD_ID !== session)
-    throw refuse(
-      "The requested session differs from this Codex thread. No address was created.",
-    );
+  assertNativeSessionIdentity(session, env);
   const connection = await connectNativeSession({
     threadId: session,
     expectedCwd: process.cwd(),
@@ -201,10 +203,30 @@ async function preflight(
   connection.close();
 }
 
-async function managedDomain(
+/** Refuse a different loaded Codex thread before creating an address. */
+export function assertNativeSessionIdentity(
+  session: string,
+  env: { CODEX_THREAD_ID?: string; CODEX_SESSION_ID?: string },
+): void {
+  if (env.CODEX_THREAD_ID && env.CODEX_THREAD_ID !== session)
+    throw refuse(
+      "The requested session differs from this Codex thread. No address was created.",
+    );
+  // Codex can expose a process session ID that differs from the loaded thread.
+  if (
+    !env.CODEX_THREAD_ID &&
+    env.CODEX_SESSION_ID &&
+    env.CODEX_SESSION_ID !== session
+  )
+    throw refuse(
+      "The requested session differs from this Codex session. No address was created.",
+    );
+}
+
+async function managedDomains(
   client: PrimitiveApiClient,
   apiBaseUrl: string,
-): Promise<string> {
+): Promise<string[]> {
   const response = await listDomains({
     client: client.client,
     responseStyle: "fields",
@@ -218,27 +240,34 @@ async function managedDomain(
     apiBaseUrl === "https://api.primitive-staging-1.com/v1"
       ? ".primitive-staging.email"
       : ".primitive.email";
-  const domains = rows
-    .filter(
-      (row) =>
-        row.verified === true &&
-        "is_active" in row &&
-        row.is_active === true &&
-        row.domain.toLowerCase().endsWith(suffix),
-    )
-    .map((row) => row.domain.toLowerCase())
-    .filter((domain) => /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])$/.test(domain))
-    .sort();
+  const domains = [
+    ...new Set(
+      rows
+        .filter(
+          (row) =>
+            row.verified === true &&
+            "is_active" in row &&
+            row.is_active === true &&
+            row.domain.toLowerCase().endsWith(suffix),
+        )
+        .map((row) => row.domain.toLowerCase())
+        .filter((domain) => /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])$/.test(domain)),
+    ),
+  ].sort();
   if (!domains[0])
     throw refuse(
       "This organization has no verified managed domain for agent enrollment.",
     );
-  return domains[0];
+  return domains;
 }
 
-async function boundedJson(response: Response): Promise<unknown> {
+async function boundedJson(
+  response: Response,
+  label = "connection creation",
+  limit = RESPONSE_LIMIT,
+): Promise<unknown> {
   const reader = response.body?.getReader();
-  if (!reader) throw refuse("The connection creation response is incomplete.");
+  if (!reader) throw refuse(`The ${label} response is incomplete.`);
   const chunks: Uint8Array[] = [];
   let size = 0;
   try {
@@ -246,15 +275,29 @@ async function boundedJson(response: Response): Promise<unknown> {
       const part = await reader.read();
       if (part.done) break;
       size += part.value.byteLength;
-      if (size > RESPONSE_LIMIT)
-        throw refuse("The connection creation response is too large.");
+      if (size > limit) throw refuse(`The ${label} response is too large.`);
       chunks.push(part.value);
     }
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
-    throw refuse("The connection creation response is incomplete or invalid.");
+    throw refuse(`The ${label} response is incomplete or invalid.`);
   } finally {
     await reader.cancel().catch(() => undefined);
+  }
+}
+
+async function rejectedUnsuitableDomain(response: Response): Promise<boolean> {
+  if (response.status !== 400) return false;
+  try {
+    const envelope = plainRecord(
+      await boundedJson(response, "connection rejection"),
+    );
+    return (
+      envelope?.success === false &&
+      plainRecord(envelope.error)?.code === "connection_domain_unavailable"
+    );
+  } catch {
+    return false;
   }
 }
 
@@ -325,7 +368,7 @@ async function enableAgentContactRequests(options: {
   apiBaseUrl: string;
   fetch?: typeof fetch;
   now?: () => number;
-}): Promise<void> {
+}): Promise<"enabled" | "owner_disabled" | "unavailable"> {
   const saved = loadCliCredentials(options.configDir);
   if (
     !saved ||
@@ -334,7 +377,7 @@ async function enableAgentContactRequests(options: {
     saved.api_base_url !== options.apiBaseUrl
   )
     throw refuse(
-      "The saved owner login changed before contact requests were enabled. This agent remains connected; sign in to its organization and resume this exact enrollment.",
+      "The saved member login changed before contact requests were enabled. This agent remains connected; sign in to its organization and resume this exact enrollment.",
     );
   const credentials = await refreshStoredCliCredentials({
     apiBaseUrl: options.apiBaseUrl,
@@ -349,7 +392,7 @@ async function enableAgentContactRequests(options: {
     credentials.api_base_url !== options.apiBaseUrl
   )
     throw refuse(
-      "The saved owner login changed before contact requests were enabled. This agent remains connected; sign in to its organization and resume this exact enrollment.",
+      "The saved member login changed before contact requests were enabled. This agent remains connected; sign in to its organization and resume this exact enrollment.",
     );
   const client = new PrimitiveApiClient({
     apiKey: credentials.access_token,
@@ -372,16 +415,13 @@ async function enableAgentContactRequests(options: {
         throw new Error();
       return parseAgentContactPolicy(response.data.data, options.address);
     } catch {
-      throw refuse(
-        "The agent contact policy could not be verified. This agent remains connected; resume this exact enrollment after the policy API is available.",
-      );
+      return null;
     }
   }
   const before = await readPolicy();
+  if (!before) return "unavailable";
   if (before.agent_policy.allow_contact_requests === false)
-    throw refuse(
-      "Contact requests were explicitly disabled for this agent. The policy was not changed; review it in the app before resuming enrollment.",
-    );
+    return "owner_disabled";
   const rules = policyRuleInputs(before.agent_policy.rules);
   if (before.agent_policy.allow_contact_requests !== true) {
     try {
@@ -415,13 +455,12 @@ async function enableAgentContactRequests(options: {
       )
         throw new Error();
     } catch {
-      throw refuse(
-        "The contact policy update was not confirmed or conflicted. This agent remains connected; inspect the policy and resume this exact enrollment. No policy write will be guessed.",
-      );
+      return "unavailable";
     }
   }
   const after = await readPolicy();
   if (
+    !after ||
     after.agent_policy.allow_contact_requests !== true ||
     after.allow_contact_requests !== true ||
     !after.contact_request_since ||
@@ -429,12 +468,131 @@ async function enableAgentContactRequests(options: {
     JSON.stringify(policyRuleInputs(after.agent_policy.rules)) !==
       JSON.stringify(rules)
   )
-    throw refuse(
-      "The agent contact policy did not confirm enabled requests with unchanged rules. This agent remains connected; inspect the policy before resuming.",
-    );
+    return "unavailable";
+  return "enabled";
 }
 
-/** Trusted-machine enrollment using only saved owner OAuth and the public API. */
+type ConnectionConfirmation =
+  | "connected"
+  | "pending"
+  | "revoked"
+  | "owner_inactive"
+  | "unavailable";
+
+async function readOwnerConnection(
+  enrollment: Enrollment,
+  params: AgentEnrollOptions,
+  deadline: number,
+): Promise<ConnectionConfirmation> {
+  const saved = loadCliCredentials(params.configDir);
+  if (
+    !saved ||
+    saved.org_id !== enrollment.orgId ||
+    saved.oauth_grant_id !== enrollment.grantId ||
+    saved.api_base_url !== enrollment.apiBaseUrl
+  )
+    throw refuse(
+      "The saved member login changed before connection confirmation. Preserve this session's profile and resume with the original member login.",
+    );
+  const credentials = await refreshStoredCliCredentials({
+    apiBaseUrl: enrollment.apiBaseUrl,
+    configDir: params.configDir,
+    credentials: saved,
+    fetch: params.fetch,
+    now: params.now,
+  });
+  if (
+    credentials.org_id !== enrollment.orgId ||
+    credentials.oauth_grant_id !== enrollment.grantId ||
+    credentials.api_base_url !== enrollment.apiBaseUrl
+  )
+    throw refuse(
+      "The saved member login changed before connection confirmation. Preserve this session's profile and resume with the original member login.",
+    );
+  let cursor: string | undefined;
+  // This bounded scan confirms small rosters quickly. Missing the row is not
+  // proof that server-side challenge verification failed.
+  for (let page = 0; page < CONFIRMATION_PAGE_LIMIT; page++) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) return "unavailable";
+    const url = new URL(`${enrollment.apiBaseUrl}/agent-connections`);
+    url.searchParams.set("limit", "50");
+    if (cursor) url.searchParams.set("cursor", cursor);
+    let value: unknown;
+    try {
+      const response = await (params.fetch ?? fetch)(url, {
+        method: "GET",
+        redirect: "error",
+        signal: AbortSignal.timeout(Math.min(5_000, remaining)),
+        headers: {
+          authorization: `Bearer ${credentials.access_token}`,
+          accept: "application/json",
+        },
+      });
+      if (response.status !== 200) {
+        await response.body?.cancel();
+        return "unavailable";
+      }
+      value = await boundedJson(
+        response,
+        "connection list",
+        CONNECTION_LIST_LIMIT,
+      );
+    } catch {
+      return "unavailable";
+    }
+    const envelope = plainRecord(value);
+    if (envelope?.success !== true || !Array.isArray(envelope.data))
+      return "unavailable";
+    for (const candidate of envelope.data) {
+      const connection = plainRecord(candidate);
+      if (connection?.address !== enrollment.address) continue;
+      if (
+        connection.name !== enrollment.name ||
+        connection.owner_address !== enrollment.ownerAddress
+      )
+        throw refuse(
+          "The owner connection list did not match this session's saved identity. Preserve the profile and inspect the connection in the app.",
+        );
+      if (connection.owner_active === false) return "owner_inactive";
+      if (connection.status === "revoked") return "revoked";
+      if (
+        connection.status === "connected" &&
+        typeof connection.verified_at === "string" &&
+        Number.isFinite(Date.parse(connection.verified_at))
+      )
+        return "connected";
+      return "pending";
+    }
+    const next = plainRecord(envelope.meta)?.cursor;
+    if (next === null) return "unavailable";
+    if (typeof next !== "string" || !SESSION_UUID.test(next) || next === cursor)
+      return "unavailable";
+    cursor = next;
+  }
+  return "unavailable";
+}
+
+async function confirmOwnerConnection(
+  enrollment: Enrollment,
+  params: AgentEnrollOptions,
+): Promise<ConnectionConfirmation> {
+  const deadline = Date.now() + CONFIRMATION_BUDGET_MS;
+  let last: ConnectionConfirmation = "unavailable";
+  for (let attempt = 0; attempt < CONFIRMATION_MAX_ATTEMPTS; attempt++) {
+    last = await readOwnerConnection(enrollment, params, deadline);
+    if (last === "connected" || last === "revoked" || last === "owner_inactive")
+      return last;
+    const remaining = deadline - Date.now();
+    if (remaining <= 0 || attempt === CONFIRMATION_MAX_ATTEMPTS - 1) break;
+    await (params.confirmationSleep ?? ((milliseconds) => sleep(milliseconds)))(
+      Math.min(3_000, remaining),
+    );
+  }
+  return last;
+}
+
+/** Trusted-machine enrollment using only saved member OAuth and the public API. */
 export async function enrollAgent(params: AgentEnrollOptions) {
   if (!SESSION_UUID.test(params.session))
     throw refuse("Enrollment requires the exact current session UUID.");
@@ -452,12 +610,12 @@ export async function enrollAgent(params: AgentEnrollOptions) {
     env.PRIMITIVE_KEY?.trim()
   )
     throw refuse(
-      "Enrollment requires the saved owner OAuth login. Unset agent-profile and API-key environment overrides.",
+      "Enrollment requires the saved member OAuth login. Unset agent-profile and API-key environment overrides.",
     );
   const saved = loadCliCredentials(params.configDir);
   if (!saved)
     throw refuse(
-      "Sign in with `primitive signin` as this organization's owner or admin first.",
+      "Sign in with `primitive signin` as a member of this organization first.",
     );
   const apiBaseUrl = connectedApiBaseUrl(saved.api_base_url);
   const profile = `session-${params.session}`;
@@ -524,23 +682,42 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         contactRequests,
         fetch: params.fetch,
       });
-      if (!contactRequests)
-        return { ...result, contactRequestPolicy: "not_requested" as const };
       if (result.verification.state !== "reply_submitted")
         return {
           ...result,
-          contactRequestPolicy: "pending_verification" as const,
+          contactRequestPolicy: contactRequests
+            ? ("pending_verification" as const)
+            : ("not_requested" as const),
+          connection: { status: "pending" as const },
         };
-      await enableAgentContactRequests({
-        configDir: params.configDir,
-        address: enrollment.address,
-        orgId: enrollment.orgId,
-        grantId: enrollment.grantId,
-        apiBaseUrl: enrollment.apiBaseUrl,
-        fetch: params.fetch,
-        now: params.now,
-      });
-      return { ...result, contactRequestPolicy: "enabled" as const };
+      const contactRequestPolicy = contactRequests
+        ? await enableAgentContactRequests({
+            configDir: params.configDir,
+            address: enrollment.address,
+            orgId: enrollment.orgId,
+            grantId: enrollment.grantId,
+            apiBaseUrl: enrollment.apiBaseUrl,
+            fetch: params.fetch,
+            now: params.now,
+          })
+        : ("not_requested" as const);
+      const status = await confirmOwnerConnection(enrollment, params);
+      return {
+        ...result,
+        ...(status === "owner_inactive"
+          ? { receiving: { state: "not_ready" as const } }
+          : {}),
+        guidance:
+          status === "connected"
+            ? "The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected."
+            : status === "revoked"
+              ? "The owner connection list reports this pairing revoked. Stop using this profile and ask the owner to review it."
+              : status === "owner_inactive"
+                ? "The original human owner is no longer an active member. This profile must not be treated as receiving; ask an organization manager to review or remove it."
+                : "The challenge reply was submitted, but pairing is not confirmed. Resume this exact enrollment with the same options; do not create another address or resend the reply.",
+        contactRequestPolicy,
+        connection: { status },
+      };
     };
     if (state?.phase === "setup_attempted") {
       if (!existing)
@@ -571,19 +748,24 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       credentials.api_base_url !== apiBaseUrl
     )
       throw refuse(
-        "The saved owner login changed during enrollment. No address was created. Sign in to the intended organization and retry this exact session.",
+        "The saved member login changed during enrollment. No address was created. Sign in to the intended organization and retry this exact session.",
       );
     const fetchImpl = params.fetch ?? fetch;
-    if (!state) {
-      const domain = await managedDomain(
-        new PrimitiveApiClient({
-          apiKey: credentials.access_token,
+    const domains = !state
+      ? await managedDomains(
+          new PrimitiveApiClient({
+            apiKey: credentials.access_token,
+            apiBaseUrl,
+            fetch: params.fetch,
+          }),
           apiBaseUrl,
-          fetch: params.fetch,
-        }),
-        apiBaseUrl,
-      );
-      const address = addressFor(name, params.session, domain);
+        )
+      : [];
+    if (!state) {
+      const firstDomain = domains[0];
+      if (!firstDomain)
+        throw refuse("No managed domain is available for enrollment.");
+      const address = addressFor(name, params.session, firstDomain);
       state = {
         version: 1,
         session: params.session,
@@ -603,27 +785,53 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       writeMailJson(path, state);
     }
     let payload: unknown;
-    try {
-      const response = await fetchImpl(`${apiBaseUrl}/agent-connections`, {
-        method: "POST",
-        redirect: "error",
-        signal: AbortSignal.timeout(25_000),
-        headers: {
-          authorization: `Bearer ${credentials.access_token}`,
-          "content-type": "application/json",
-          accept: "application/json",
-        },
-        body: JSON.stringify({ name: state.name, address: state.address }),
-      });
-      if (response.status !== 200) {
-        await response.body?.cancel();
-        throw new Error();
+    for (const [index, domain] of domains.entries()) {
+      if (index > 0) {
+        state = { ...state, address: addressFor(name, params.session, domain) };
+        writeMailJson(path, state);
       }
-      payload = await boundedJson(response);
-    } catch {
-      throw refuse(
-        "Connection creation has an unknown outcome. Inspect this session's pending address in the app and issue a fresh invitation there if needed. Use `primitive agent connect` with that invitation and this session's profile; do not rerun enrollment or create another address.",
-      );
+      try {
+        const response = await fetchImpl(`${apiBaseUrl}/agent-connections`, {
+          method: "POST",
+          redirect: "error",
+          signal: AbortSignal.timeout(25_000),
+          headers: {
+            authorization: `Bearer ${credentials.access_token}`,
+            "content-type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({ name: state.name, address: state.address }),
+        });
+        // This exact 400 code is emitted before connection insertion. Only it
+        // permits trying a different managed domain in the same invocation.
+        if (await rejectedUnsuitableDomain(response)) {
+          if (index + 1 < domains.length) continue;
+          unlinkSync(path);
+          throw refuse(
+            "No verified managed domain is currently sendable for agent enrollment. No address was created.",
+          );
+        }
+        // The route's other 400 validation, 401 authentication, and 403
+        // authorization paths also return before inserting a connection.
+        if ([400, 401, 403].includes(response.status)) {
+          await response.body?.cancel().catch(() => undefined);
+          unlinkSync(path);
+          throw refuse(
+            "Connection creation was rejected before an address was created. Check the selected organization, managed domain, and member access, then retry this exact session.",
+          );
+        }
+        if (response.status !== 200) {
+          await response.body?.cancel();
+          throw new Error();
+        }
+        payload = await boundedJson(response);
+        break;
+      } catch (error) {
+        if (error instanceof AgentConnectionSetupError) throw error;
+        throw refuse(
+          "Connection creation has an unknown outcome. Inspect this session's pending address in the app and issue a fresh invitation there if needed. Use `primitive agent connect` with that invitation and this session's profile; do not rerun enrollment or create another address.",
+        );
+      }
     }
     const invitation = invitationFrom(
       payload,

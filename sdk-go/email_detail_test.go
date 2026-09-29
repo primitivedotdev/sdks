@@ -45,6 +45,7 @@ const emailDetailSampleJSON = `{
   "from_email": "alice@example.com",
   "to_email": "support@example.com",
   "from_known_address": true,
+  "sender_connected_agent_verified": false,
   "thread_id": "44444444-4444-4444-4444-444444444444",
   "replies": [
     {
@@ -113,6 +114,9 @@ func TestEmailDetailUnmarshalsFromKnownAddress(t *testing.T) {
 	got, ok := detail.FromKnownAddress.Get()
 	if !ok || got != true {
 		t.Errorf("from_known_address: got (%v, %v), want (true, true)", got, ok)
+	}
+	if detail.SenderConnectedAgentVerified {
+		t.Error("A known sender must not become a verified connected-agent sender")
 	}
 }
 

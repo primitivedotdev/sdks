@@ -35,6 +35,7 @@ import {
   NativeSessionError,
   NotificationOutcomeUnknownError,
 } from "./notify-session-errors.js";
+import { openPresenceControls } from "./presence-control.js";
 import { isPlainChatReply, scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   openSharedMailReceiver,
@@ -114,6 +115,22 @@ export async function runSharedNotificationListen(
   const settled = new Set<string>();
   const deferredUntil = new Map<string, number>();
   const sessionKey = `codex:${notify.threadId.toLowerCase()}`;
+  const controls = new Set<string>();
+  const presence = openPresenceControls({
+    configDir: options.configDir,
+    apiClient: auth.apiClient,
+    apiKey: auth.auth.apiKey,
+    baseUrl: auth.auth.apiBaseUrl,
+    identity: auth.auth.connectedAgent,
+    sessionKey,
+    signal,
+    eligible: async () => {
+      const status = receiver?.status();
+      if (!status?.alive || !status.ready || !native.verify) return false;
+      await native.verify();
+      return !signal.aborted;
+    },
+  });
   try {
     const reserved = await reserveSharedMailSubscription({
       configDir: options.configDir,
@@ -169,7 +186,7 @@ export async function runSharedNotificationListen(
     const store = receiver.store;
     async function reconcile(row: SharedMailEmail) {
       const receipt = native.receipt(row.emailId, row.eventId);
-      if (!receipt) return;
+      if (!receipt || receipt.state === "not_submitted") return;
       const unknown =
         receipt.state !== "accepted"
           ? new NotificationOutcomeUnknownError(
@@ -199,11 +216,13 @@ export async function runSharedNotificationListen(
       if (unknown) throw unknown;
     }
     async function processMail(row: SharedMailEmail): Promise<boolean> {
+      if (presence.knownControl(row.emailId)) controls.add(row.emailId);
       if (row.route?.kind === "wait") return true;
       if (row.route?.kind === "notification") {
         if (row.route.state === "skipped") return true;
         if (row.route.sessionKey !== sessionKey) return true;
-        if (native.receipt(row.emailId, row.eventId)) {
+        const existingReceipt = native.receipt(row.emailId, row.eventId);
+        if (existingReceipt && existingReceipt.state !== "not_submitted") {
           await reconcile(row);
           return true;
         }
@@ -215,6 +234,7 @@ export async function runSharedNotificationListen(
       if (!contactPolicy && row.details?.authorization === "trusted") {
         if (!approvedSenders.has(row.details.peer)) return true;
       }
+      const observedAt = performance.now();
       const result = await getEmail({
         client: auth.apiClient.client,
         path: { id: row.emailId },
@@ -240,6 +260,17 @@ export async function runSharedNotificationListen(
         throw new ListenStateError(
           "Email detail does not match the shared recipient and identity.",
         );
+      const control = await presence.handle(detail, row.eventId, observedAt);
+      if (control !== "ordinary") {
+        controls.add(row.emailId);
+        if (control === "pending")
+          deferredUntil.set(
+            row.emailId,
+            presence.nextRetry(row.emailId) ?? performance.now() + 5000,
+          );
+        return control === "quiet";
+      }
+      controls.delete(row.emailId);
       if (detail.status === "rejected") return true;
       if (
         !["accepted", "completed"].includes(detail.status) ||
@@ -611,7 +642,7 @@ export async function runSharedNotificationListen(
                   await store.skipNotification(row.emailId, sessionKey);
               }
               settled.add(row.emailId);
-              if (!historical) processed++;
+              if (!historical && !controls.has(row.emailId)) processed++;
             }
           } catch (error) {
             if (!(error instanceof NotificationRetryError)) throw error;
@@ -640,6 +671,11 @@ export async function runSharedNotificationListen(
     if (!cancelled) failure = error;
   }
   if (signal.reason instanceof NativeSessionError) failure ??= signal.reason;
+  try {
+    await presence.close();
+  } catch (error) {
+    failure ??= error;
+  }
   try {
     await receiver?.close();
   } catch (error) {

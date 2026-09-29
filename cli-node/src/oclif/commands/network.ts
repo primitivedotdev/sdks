@@ -89,19 +89,21 @@ async function run(
 export class NetworkCommand extends Command {
   static summary = "Discover and manage agents in your organization network";
   static description =
-    "Every organization has a private default agent network. `network peers` discovers listed peers from a connected profile or member login; `network members` shows the owner roster. To initiate a network-driven mail wake, the sender must be able to see the network and the recipient must be listed. The sender need not be listed and the recipient need not see the network. Network visibility does not change ordinary email delivery, contacts, address notes, or task authority; explicit silence still applies.";
+    "Every organization has a private default agent network. `network peers` discovers listed peers from a connected profile or member login; `network members` shows the whole roster to owners and admins, or only your personal agents with a member login. Members can set visibility for their own personal agents. To initiate a network-driven mail wake, the sender must be able to see the network and the recipient must be listed. The sender need not be listed and the recipient need not see the network. Network visibility does not change ordinary email delivery, contacts, address notes, or task authority; explicit silence still applies.";
   async run(): Promise<void> {
+    await this.parse(NetworkCommand);
     this.log(
       [
         "Agent network commands:",
         "  primitive network list                         List networks (agent/member)",
-        "  primitive network members                      View owner roster",
-        "  primitive network peers                        Discover listed peers (agent/member)",
+        "  primitive network members                      View roster (members: own agents)",
+        "  primitive network peers [--owner <name-or-id>] Discover listed peers (agent/member)",
         "  primitive network get <address>                Get a listed peer (agent/member)",
         "  primitive network set <address> --see on|off --be-seen on|off",
         "  primitive network add <address>                Restore membership (owner/admin)",
         "  primitive network remove <address>             Exclude membership (owner/admin)",
         "",
+        "Members can set visibility for their own personal agents; owners/admins can set any agent.",
         "Network wake needs sender --see on and recipient --be-seen on. Explicit silence still applies.",
         "Run `primitive network <command> --help` for details. Visibility does not block known-address email.",
       ].join("\n"),
@@ -121,9 +123,9 @@ export class NetworkListCommand extends Command {
 }
 
 export class NetworkMembersCommand extends Command {
-  static summary = "List the owner roster, including excluded agents";
+  static summary = "List network memberships available to your login";
   static description =
-    "List default network memberships with an owner or admin login. Last seen means recorded activity, not presence.";
+    "List default network memberships. Owners and admins see the organization roster, including excluded agents. Other organization members see only their currently owned personal agents. Connected-agent credentials cannot read this roster. Last seen means recorded activity, not presence.";
   static flags = { ...commonFlags, ...pageFlags };
   async run(): Promise<void> {
     const { flags } = await this.parse(NetworkMembersCommand);
@@ -138,13 +140,24 @@ export class NetworkMembersCommand extends Command {
 export class NetworkPeersCommand extends Command {
   static summary = "Discover listed peers in your organization";
   static description =
-    "List visible peer addresses with a connected-agent profile allowed to see the default network, or an organization member login. Last seen is recorded API activity, not presence. Direct known-address email is separate from directory visibility.";
-  static flags = { ...commonFlags, ...pageFlags };
+    "List visible peer addresses with a connected-agent profile allowed to see the default network, or an organization member login. Use --owner with a human name (case-insensitive substring) or exact user ID to narrow discovery. Peer results include owner name and user ID, not email. Last seen is recorded API activity, not presence. Direct known-address email is separate from directory visibility.";
+  static flags = {
+    ...commonFlags,
+    ...pageFlags,
+    owner: Flags.string({
+      description: "Filter by owner name or exact user ID (1-100 characters)",
+    }),
+  };
   async run(): Promise<void> {
     const { flags } = await this.parse(NetworkPeersCommand);
     await run(
       this,
-      { action: "peers", cursor: flags.cursor, limit: flags.limit },
+      {
+        action: "peers",
+        cursor: flags.cursor,
+        limit: flags.limit,
+        owner: flags.owner,
+      },
       flags,
     );
   }
@@ -165,7 +178,7 @@ export class NetworkGetCommand extends Command {
 export class NetworkSetCommand extends Command {
   static summary = "Change whether an agent can see or be seen";
   static description =
-    "Set independent network permissions for an address with an owner or admin login. --see on allows reading listed peers and initiating network-driven mail wake to listed recipients. --be-seen on allows peer discovery and network-driven wake from viewing senders. A sender need not be listed; a recipient need not see the network. Explicit silence overrides network wake. Neither setting blocks ordinary known-address email.";
+    "Set independent network permissions for an address. Owners and admins can set any active agent; other organization members can set only their currently owned personal agents. Connected-agent credentials cannot change visibility. --see on allows reading listed peers and initiating network-driven mail wake to listed recipients. --be-seen on allows peer discovery and network-driven wake from viewing senders. A sender need not be listed; a recipient need not see the network. Explicit silence overrides network wake. Neither setting blocks ordinary known-address email.";
   static args = addressArg;
   static flags = {
     ...commonFlags,

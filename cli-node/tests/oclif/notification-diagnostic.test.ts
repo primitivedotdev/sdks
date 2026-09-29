@@ -57,6 +57,7 @@ const detail: EmailDetail = {
   webhook_attempt_count: 0,
   replies: [],
   from_email: "peer@example.com",
+  sender_connected_agent_verified: false,
   from_header: "peer@example.com",
   parsed: { status: "complete", attachments: [] },
   auth: {

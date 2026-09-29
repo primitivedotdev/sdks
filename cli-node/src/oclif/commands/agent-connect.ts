@@ -5,11 +5,12 @@ import {
   readAgentInvitation,
 } from "../agent-connect.js";
 import { setupAgent } from "../agent-setup.js";
+import { installClaudeWakeHook } from "../claude-wake-install.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
 
 export default class AgentConnectCommand extends Command {
   static description =
-    "Claim an owner's private setup invitation from piped stdin and save a separate connected-agent profile. Add --session to answer one authenticated setup challenge and enable owner notifications. The default receiver preflights and starts a native session listener; --receiver external verifies email but leaves runtime-specific receiving to an external hook. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. Verification reply submission is separate from delivery and receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --status --json to inspect saved identity offline.";
+    "Claim an owner's private setup invitation from piped stdin and save a separate connected-agent profile. Add --session to answer one authenticated setup challenge and enable owner notifications. The default receiver preflights and starts a native session listener; --receiver external requires the exact Claude session and installs a fail-open Stop hook and resume SessionStart hook after the verification reply. A real idle mail event must still verify wake. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. Verification reply submission is separate from delivery and receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --status --json to inspect saved identity offline.";
   static summary = "Connect and verify an agent address";
   static examples = [
     "<%= config.bin %> agent connect --profile work --session 11111111-1111-4111-8111-111111111111 --contact-requests --json < private-invitation.txt",
@@ -32,7 +33,7 @@ export default class AgentConnectCommand extends Command {
     }),
     receiver: Flags.string({
       description:
-        "Native starts a supported session receiver; external verifies email and leaves receiving to a runtime hook",
+        "Native starts a supported session receiver; external installs the exact Claude session's fail-open Stop hook and resume SessionStart hook",
       options: ["native", "external"],
       dependsOn: ["session"],
     }),
@@ -75,6 +76,13 @@ export default class AgentConnectCommand extends Command {
         return;
       }
       if (flags.session) {
+        if (
+          flags.receiver === "external" &&
+          process.env.CLAUDE_CODE_SESSION_ID !== flags.session
+        )
+          throw new AgentConnectionSetupError(
+            "External receiving requires this exact Claude session ID. No invitation was claimed.",
+          );
         const result = await setupAgent({
           configDir: this.config.configDir,
           profileName: flags.profile,
@@ -91,7 +99,19 @@ export default class AgentConnectCommand extends Command {
                 ),
               }),
         });
-        if (flags.json) this.log(JSON.stringify(result));
+        const externalHook =
+          flags.receiver === "external" &&
+          result.verification.state === "reply_submitted"
+            ? installClaudeWakeHook({
+                cliPath: process.argv[1] ?? "",
+                configDir: this.config.configDir,
+                profileName: result.identity.profileName,
+                agentAddress: result.identity.agentAddress,
+                sessionId: flags.session,
+              })
+            : null;
+        const output = { ...result, externalHook };
+        if (flags.json) this.log(JSON.stringify(output));
         else {
           this.log(
             `Agent ${result.identity.agentAddress}: verification ${result.verification.state}; receiving ${result.receiving.state}.`,
@@ -105,12 +125,15 @@ export default class AgentConnectCommand extends Command {
             );
           if (result.receiving.state === "external_setup_required")
             this.log(
-              "Email is verified. Configure the runtime's external event hook before claiming automatic receiving.",
+              externalHook === "installed_unverified"
+                ? "External receive hook installed. Idle wake still needs a live mail check."
+                : "External receive hook is unavailable. Pairing may complete, but this session will not wake automatically.",
             );
           if (result.receiving.state === "not_ready")
             this.log(`Resume: ${result.resumeCommand}`);
         }
         if (
+          externalHook === "unavailable" ||
           (flags.receiver !== "external" &&
             result.receiving.state !== "healthy") ||
           result.verification.state !== "reply_submitted"

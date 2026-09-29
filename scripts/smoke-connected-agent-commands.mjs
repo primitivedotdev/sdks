@@ -65,6 +65,7 @@ try {
   const setupHelp=await run(['agent','connect','--help']);
   assert.match(setupHelp.stdout,/api\.primitive-staging-1\.com/);
   assert.match(setupHelp.stdout,/piped stdin/);
+  assert.match(setupHelp.stdout,/fail-open Stop hook/);
   assert.match((await run(['whoami','--help'])).stdout,/identity offline/);
   await api(['contacts','add',peer,'--name','Peer','--json']);
   await api(['contacts','list','--json']);
@@ -117,6 +118,8 @@ try {
   const diagnosticsHelp=await run(['listen','--help']);
   assert.ok(diagnosticsHelp.stdout.includes('--email-id'));
   assert.ok(diagnosticsHelp.stdout.includes('--json'));
+  assert.ok(diagnosticsHelp.stdout.includes('eligible same-org network peers'));
+  assert.ok(diagnosticsHelp.stdout.includes('explicit contact or owner silence'));
   assert.ok(diagnosticsHelp.stdout.includes('--wake'));
   assert.ok(diagnosticsHelp.stdout.includes('--hook-session'));
 

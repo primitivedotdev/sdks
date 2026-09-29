@@ -87,6 +87,38 @@ describe("connected-agent setup", () => {
     expect(JSON.stringify(status)).not.toContain(token);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+  it("advertises presence only for session setup and persists its trusted fixed return profile", async () => {
+    const result = claim();
+    Object.assign(result.data, {
+      presence_profile: {
+        protocol: "primitive.presence",
+        version: 1,
+        authentication_profile: "primitive-issued-v1",
+        return_address: ownerAddress,
+      },
+    });
+    const fetch = vi.fn<typeof globalThis.fetch>(async (_input, init) => {
+      expect(JSON.parse(String(init?.body))).toEqual({
+        token,
+        capabilities: ["primitive.presence/1"],
+      });
+      return response(result);
+    });
+    await connectAgent({
+      configDir,
+      profileName: "work",
+      invitation: setupUrl,
+      fetch,
+      presence: true,
+    });
+    expect(
+      loadConnectedAgentProfile(configDir, "work")?.presence_profile
+        ?.return_address,
+    ).toBe(ownerAddress);
+    expect(agentConnectionStatus(configDir, "work")).not.toHaveProperty(
+      "presence",
+    );
+  });
   const successfulFetch = () => vi.fn<typeof fetch>(async () => response());
   const params = (fetch: typeof globalThis.fetch) => ({
     configDir,

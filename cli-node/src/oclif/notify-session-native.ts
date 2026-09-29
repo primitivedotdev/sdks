@@ -16,6 +16,24 @@ export {
   NativeSessionNotLoadedError,
 } from "./notify-session-errors.js";
 
+/** Codex explicitly refused this input before adding it to the turn queue. */
+export class NativeTurnNotSubmittedError extends NativeSessionError {
+  constructor() {
+    super("The active Codex turn cannot accept external output yet.");
+  }
+}
+
+export function isNativeTurnNotSteerableResponse(error: unknown): boolean {
+  const response = record(error);
+  return (
+    response.code === -32603 &&
+    typeof response.message === "string" &&
+    /^failed to submit turn input: ActiveTurnNotSteerable \{ turn_kind: (Review|Compact) \}$/.test(
+      response.message,
+    )
+  );
+}
+
 export const SESSION_UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const failure = () =>
@@ -102,7 +120,16 @@ export async function inspectSessionSocket(socketPath: string) {
   };
 }
 
-/** Connect only. The terminal keeps ownership of approvals and runtime policy. */
+/** Subscribe to a verified loaded thread. The terminal owns approvals and policy. */
+export type NativeSessionConnection = {
+  close(): void;
+  verify?: () => Promise<void>;
+  queue(
+    text: string,
+    receiptId: string,
+    beforeDispatch: () => void,
+  ): Promise<void>;
+};
 export async function connectNativeSession(options: {
   threadId: string;
   socketPath?: string;
@@ -111,7 +138,7 @@ export async function connectNativeSession(options: {
   onDisconnect?: (error: NativeSessionError) => void;
   expectedCwd?: string;
   onVerifiedCwd?: (cwd: string) => void;
-}) {
+}): Promise<NativeSessionConnection> {
   if (!SESSION_UUID.test(options.threadId))
     throw new NativeSessionError(
       "--notify-session requires an exact session UUID.",
@@ -135,6 +162,7 @@ export async function connectNativeSession(options: {
   const pending = new Map<
     number,
     {
+      method: string;
       resolve: (result: unknown) => void;
       reject: (error: unknown) => void;
       timer: ReturnType<typeof setTimeout>;
@@ -166,7 +194,17 @@ export async function connectNativeSession(options: {
       if (binary) throw failure();
       const message = record(JSON.parse(bytes.toString()));
       // Server requests, including approvals, belong to the terminal. Never answer.
-      if (typeof message.method === "string") return;
+      if (typeof message.method === "string") {
+        const params = record(message.params);
+        if (
+          params.threadId === options.threadId &&
+          (message.method === "thread/closed" ||
+            (message.method === "thread/status/changed" &&
+              record(params.status).type === "notLoaded"))
+        )
+          close(new NativeSessionNotLoadedError());
+        return;
+      }
       if (!Number.isSafeInteger(message.id)) throw failure();
       const entry = pending.get(message.id as number);
       if (!entry) return;
@@ -174,6 +212,11 @@ export async function connectNativeSession(options: {
       clearTimeout(entry.timer);
       if (Object.hasOwn(message, "result") && !Object.hasOwn(message, "error"))
         entry.resolve(message.result);
+      else if (
+        entry.method === "turn/start" &&
+        isNativeTurnNotSteerableResponse(message.error)
+      )
+        entry.reject(new NativeTurnNotSubmittedError());
       else entry.reject(failure());
     } catch {
       close(failure());
@@ -196,7 +239,7 @@ export async function connectNativeSession(options: {
         pending.delete(id);
         reject(failure());
       }, timeoutMs);
-      pending.set(id, { resolve, reject, timer });
+      pending.set(id, { method, resolve, reject, timer });
       try {
         socket.send(JSON.stringify({ id, method, params }), (error) => {
           if (error) close(connectionFailure(error));
@@ -231,7 +274,7 @@ export async function connectNativeSession(options: {
       )
         throw failure();
       found ||= result.data.includes(options.threadId);
-      if (result.nextCursor === null) {
+      if (result.nextCursor === null || result.nextCursor === undefined) {
         complete = true;
         break;
       }
@@ -303,6 +346,18 @@ export async function connectNativeSession(options: {
     });
     socket.send(JSON.stringify({ method: "initialized", params: {} }));
     await verify();
+    // Subscribe this connection to the already loaded exact thread so the
+    // app server does not unload it when the terminal's subscription ends.
+    // No turn is started and no thread configuration is overridden.
+    const resumed = record(
+      record(await request("thread/resume", { threadId: options.threadId }))
+        .thread,
+    );
+    if (resumed.id !== options.threadId)
+      throw new NativeSessionError(
+        "The exact session changed while subscribing to native events.",
+      );
+    await verify();
   } catch (error) {
     close();
     if (error === options.signal.reason) throw error;
@@ -310,6 +365,7 @@ export async function connectNativeSession(options: {
   }
   return {
     close: () => close(),
+    verify,
     async queue(text: string, receiptId: string, beforeDispatch: () => void) {
       if (!SESSION_UUID.test(receiptId) || Buffer.byteLength(text) > 16_384)
         throw failure();
@@ -344,7 +400,8 @@ export async function connectNativeSession(options: {
           )
         )
           throw failure();
-      } catch {
+      } catch (error) {
+        if (error instanceof NativeTurnNotSubmittedError) throw error;
         throw new NotificationOutcomeUnknownError(
           "Native notification outcome is unknown; it will not be sent again automatically.",
         );

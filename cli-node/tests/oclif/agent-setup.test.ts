@@ -88,6 +88,7 @@ function fixture() {
     subject: "Connect your agent to Primitive",
     sender: identity.ownerAddress,
     from_email: identity.ownerAddress,
+    sender_connected_agent_verified: false,
     from_header: `Owner <${identity.ownerAddress}>`,
     recipient: identity.agentAddress,
     to_email: identity.agentAddress,

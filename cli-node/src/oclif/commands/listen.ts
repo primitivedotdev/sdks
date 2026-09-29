@@ -5,7 +5,11 @@ import { Command, Errors, Flags } from "@oclif/core";
 import { resolveCliApiRequestConfig } from "../api-client.js";
 import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
-import { agentProfileDirectory } from "../connected-agent-profile.js";
+import {
+  agentProfileDirectory,
+  agentProfileName,
+  loadConnectedAgentProfile,
+} from "../connected-agent-profile.js";
 import {
   backgroundListenStatus,
   backgroundListenToken,
@@ -36,10 +40,20 @@ import { notificationReceiptPage } from "../notify-session-state.js";
 import { readMailJson } from "../shared-mail-files.js";
 import { createWakeMail } from "../wake-mail.js";
 
+const RESUME_LOCK_RETRY_MS = 4_000;
+const RESUME_LOCK_RETRY_STEP_MS = 250;
+
+function isListenLockContention(error: unknown): error is ListenStateError {
+  return (
+    error instanceof ListenStateError &&
+    error.message.startsWith("Another listener is using this subscription")
+  );
+}
+
 export default class ListenCommand extends Command {
   static summary = "Receive webhook events locally without a public endpoint";
   static description =
-    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use --notify-session with an exact loaded session UUID and --contacts for saved contact preferences, or approved --sender addresses, for external mail events at tool-output authority, never synthetic user messages, a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Add --background to keep native receiving independent of the calling terminal process; --status reports receiver health and receipts, add --email-id for one email's routing evidence, and --stop stops that receiver. Status is JSON and stdout events are JSONL by default; --json is accepted explicitly without changing delivery mode. Notifications require an existing native local-session socket; the CLI never launches or resumes a session.";
+    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use --notify-session with an exact loaded session UUID and --contacts for saved contact preferences and eligible same-org network peers, or approved --sender addresses, for external mail events at tool-output authority, never synthetic user messages. Explicit silence still wins. Use a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Add --background to keep native receiving independent of the calling terminal process; --status reports receiver health and receipts, add --email-id for one email's routing evidence, and --stop stops that receiver. Status is JSON and stdout events are JSONL by default; --json is accepted explicitly without changing delivery mode. Notifications require an existing native local-session socket; the CLI subscribes only to the exact already-loaded thread and never launches a terminal or creates a session. Verified presence controls are handled without model turns and do not consume --once or --number. Claude hook capability: primitive-hook-profile-bound-v2.";
   static examples = [
     "<%= config.bin %> listen",
     '<%= config.bin %> listen --subscription my-agent --exec "python3 accept.py"',
@@ -70,7 +84,7 @@ export default class ListenCommand extends Command {
     }),
     wake: Flags.boolean({
       description:
-        "For the Claude Code Stop hook: consume one email event, print only its ID to stderr, and exit 2 to wake the idle session; a timeout exits 0",
+        "For a Claude Code Stop or resumed SessionStart hook: consume one eligible mail or conversation-status event, print bounded metadata to stderr, and exit 2 to wake the idle session; a timeout exits 0",
       dependsOn: ["once"],
       exclusive: [
         "exec",
@@ -83,7 +97,7 @@ export default class ListenCommand extends Command {
     }),
     "hook-session": Flags.boolean({
       description:
-        "Read an exact session_id from Claude Code's hook JSON stdin and select its session profile and subscription",
+        "Read an exact session_id from Claude Code's Stop or resumed SessionStart hook JSON stdin and select its session profile and subscription",
       dependsOn: ["wake"],
       exclusive: ["subscription"],
     }),
@@ -113,7 +127,7 @@ export default class ListenCommand extends Command {
     }),
     contacts: Flags.boolean({
       description:
-        "Use this agent address's saved contact notification preferences; disabled contacts never notify.",
+        "Use saved contact preferences and eligible same-org network peers; explicit contact or owner silence still wins.",
       dependsOn: ["notify-session"],
       exclusive: ["sender", "status", "stop"],
     }),
@@ -218,6 +232,8 @@ export default class ListenCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(ListenCommand);
     let hookSessionId: string | undefined;
+    let hookEventName: "Stop" | "SessionStart" | undefined;
+    let hookProfileName: string | undefined;
     if (flags["hook-session"]) {
       let input = "";
       for await (const chunk of process.stdin) {
@@ -229,19 +245,31 @@ export default class ListenCommand extends Command {
         }
       }
       let session: unknown;
+      let hookEvent: unknown;
+      let sessionStartSource: unknown;
       try {
         const row: unknown = JSON.parse(input);
-        session =
+        const hook =
           row && typeof row === "object" && !Array.isArray(row)
-            ? (row as Record<string, unknown>).session_id
+            ? (row as Record<string, unknown>)
             : undefined;
+        session = hook?.session_id;
+        hookEvent = hook?.hook_event_name;
+        sessionStartSource = hook?.source;
       } catch {
         process.stderr.write("Primitive hook input must be JSON.\n");
         process.exitCode = 1;
         return;
       }
-      // The shared skill may also be loaded by runtimes with a different Stop
-      // payload. Their hooks are unrelated to Claude receiving.
+      // Other hook events and new-session starts are unrelated to this
+      // receiver. The installer uses SessionStart only on exact resumes.
+      if (
+        hookEvent !== "Stop" &&
+        !(hookEvent === "SessionStart" && sessionStartSource === "resume")
+      )
+        return;
+      // The shared skill may also be loaded by runtimes with a different
+      // hook payload. Their hooks are unrelated to Claude receiving.
       if (session === undefined) return;
       if (typeof session !== "string" || !SESSION_UUID.test(session)) {
         process.stderr.write("Primitive hook input has no exact session_id.\n");
@@ -249,7 +277,11 @@ export default class ListenCommand extends Command {
         return;
       }
       hookSessionId = session.toLowerCase();
-      process.env.PRIMITIVE_AGENT_PROFILE = `session-${session.toLowerCase()}`;
+      hookEventName = hookEvent;
+      hookProfileName = process.env.PRIMITIVE_HOOK_AGENT_ADDRESS
+        ? agentProfileName(process.env.PRIMITIVE_AGENT_PROFILE ?? "")
+        : `session-${hookSessionId}`;
+      process.env.PRIMITIVE_AGENT_PROFILE = hookProfileName;
       process.env.CLAUDE_CODE_SESSION_ID = hookSessionId;
       flags.subscription = `session-${session.toLowerCase()}`;
     }
@@ -368,7 +400,7 @@ export default class ListenCommand extends Command {
             })),
             nextCursor: page.nextCursor,
             guidance:
-              "Listener health describes the tracked local receiver, not proof a message was read. Older untracked listeners have no health record. Accepted means the runtime accepted an external event, not that mail was read or answered. Unknown receipts are held and are never resent automatically; inspect the exact session before any manual resend.",
+              "Listener health describes the tracked local receiver, not proof a message was read. Older untracked listeners have no health record. Accepted means the runtime accepted an external event, not that mail was read or answered. Not_submitted means Codex explicitly refused the event before queuing it, so the listener will retry. Unknown receipts are held and are never resent automatically; inspect the exact session before any manual resend.",
           },
           null,
           2,
@@ -390,7 +422,7 @@ export default class ListenCommand extends Command {
           join(
             agentProfileDirectory(
               this.config.configDir,
-              `session-${hookSessionId}`,
+              hookProfileName ?? `session-${hookSessionId}`,
             ),
             "setup.json",
           ),
@@ -408,8 +440,19 @@ export default class ListenCommand extends Command {
       receipt?: { status?: unknown };
     } | null;
     // A project or user skill can be present in other, unpaired sessions.
-    // Their Stop hooks must stay silent rather than waking Claude on CLI exit 2.
+    // Their hooks must stay silent rather than waking Claude on CLI exit 2.
     if (hookSessionId && !setupState) return;
+    if (hookSessionId && process.env.PRIMITIVE_HOOK_AGENT_ADDRESS) {
+      const profile = loadConnectedAgentProfile(
+        this.config.configDir,
+        hookProfileName ?? `session-${hookSessionId}`,
+      );
+      if (
+        profile?.agent_address !==
+        process.env.PRIMITIVE_HOOK_AGENT_ADDRESS.toLowerCase()
+      )
+        return;
+    }
     if (
       hookSessionId &&
       (setupState?.session !== hookSessionId ||
@@ -429,6 +472,7 @@ export default class ListenCommand extends Command {
       process.exitCode = 1;
       return;
     }
+    const controller = new AbortController();
     let wake: Awaited<ReturnType<typeof createWakeMail>> | undefined;
     try {
       wake = flags.wake
@@ -439,6 +483,8 @@ export default class ListenCommand extends Command {
             sessionKey: `claude:${hookSessionId}`,
             sessionId: hookSessionId,
             contactRequests: setupState?.contactRequests === true,
+            signal: controller.signal,
+            onWake: () => controller.abort(),
           })
         : undefined;
     } catch {
@@ -452,7 +498,6 @@ export default class ListenCommand extends Command {
       exec: flags.exec,
       forwardTo: flags["forward-to"],
     });
-    const controller = new AbortController();
     let timedOut = false;
     const timer =
       flags.timeout === undefined
@@ -517,10 +562,33 @@ export default class ListenCommand extends Command {
             })
           : undefined,
         signal: controller.signal,
+        onReceivingState: (ready) => wake?.receiving(ready),
       };
       if (!target || !options.notifySession || !requestConfig) {
+        let resumeLockDeadline: number | undefined;
         do {
-          await runListen(options);
+          for (;;) {
+            try {
+              await runListen(options);
+              break;
+            } catch (error) {
+              if (
+                !isListenLockContention(error) ||
+                hookEventName !== "SessionStart" ||
+                controller.signal.aborted
+              )
+                throw error;
+              resumeLockDeadline ??= Date.now() + RESUME_LOCK_RETRY_MS;
+              const remaining = resumeLockDeadline - Date.now();
+              if (remaining <= 0) throw error;
+              await new Promise<void>((resolve) =>
+                setTimeout(
+                  resolve,
+                  Math.min(RESUME_LOCK_RETRY_STEP_MS, remaining),
+                ),
+              );
+            }
+          }
           wake?.completed();
         } while (
           wake &&
@@ -596,13 +664,7 @@ export default class ListenCommand extends Command {
       }
     } catch (error) {
       if (flags.wake) {
-        if (
-          error instanceof ListenStateError &&
-          error.message.startsWith(
-            "Another listener is using this subscription",
-          )
-        )
-          return;
+        if (isListenLockContention(error)) return;
         process.stderr.write(
           "Primitive receiving stopped because its listener could not continue. Check this session's Primitive connection before relying on automatic mail.\n",
         );
@@ -615,6 +677,7 @@ export default class ListenCommand extends Command {
           : "The listener stopped because of a local state or connection error.",
       );
     } finally {
+      await wake?.close();
       clearTimeout(timer);
       process.removeListener("SIGINT", cancel);
       process.removeListener("SIGTERM", cancel);
