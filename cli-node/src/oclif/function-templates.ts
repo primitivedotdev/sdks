@@ -51,7 +51,7 @@ export const PRIMITIVE_TEAM_AUTHOR: FunctionTemplateAuthor = {
 // patch releases of the SDK pick up automatically. Update alongside
 // any minor or major version bump of the SDK so scaffolded projects
 // use the same SDK version this CLI release was tested against.
-const SDK_VERSION_RANGE = "^1.32.0";
+const SDK_VERSION_RANGE = "^1.33.0";
 
 // The CLI version range that ships in the scaffolded devDependencies.
 // Pinned separately from SDK_VERSION_RANGE because primitive
@@ -63,7 +63,7 @@ const SDK_VERSION_RANGE = "^1.32.0";
 // resolves at least v1.2.3, so the user does not silently downgrade
 // the bin under themselves. The lockstep test in functions-init.test.ts
 // enforces that invariant.
-const CLI_VERSION_RANGE = "^1.32.0";
+const CLI_VERSION_RANGE = "^1.33.0";
 
 // esbuild version range. Pinned to the latest stable major used
 // elsewhere in the Primitive codebase for bundling Workers-style
@@ -75,6 +75,12 @@ const ESBUILD_VERSION_RANGE = "^0.27.0";
 // so the unit test can assert content without having to spin up the
 // oclif command lifecycle.
 
+// The handler's loop rules (isLoop and its address helpers) are a
+// rendered copy of loopReasons() in automated-mail.ts, which is also what
+// `primitive inbox next` uses to skip automated mail. The copy exists
+// because scaffolded user code cannot import the CLI. Change the rules
+// in automated-mail.ts first; tests/oclif/automated-mail.test.ts runs
+// this rendered isLoop against the same cases and fails on any drift.
 export function renderHandler(): string {
   return `// env.PRIMITIVE_API_KEY, env.PRIMITIVE_WEBHOOK_SECRET, and
 // env.PRIMITIVE_API_BASE_URL are auto-injected by the Primitive Functions runtime.

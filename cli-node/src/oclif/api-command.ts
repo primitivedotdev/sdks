@@ -13,12 +13,29 @@ import {
   resolveCliAuth,
   saveSignupCredentials,
 } from "./auth.js";
+import {
+  AutomatedFilterUnsupportedError,
+  assertAutomatedVerdict,
+  automatedRejectedError,
+  automatedSurfaceForOperation,
+  ensureSearchReportsAutomated,
+  expectedAutomatedVerdicts,
+  isAutomatedRejectedError,
+} from "./automated-filter.js";
 import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
 } from "./endpoints-test-redirect.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
+import {
+  assertAwaitingFilterRows,
+  awaitingRejectedError,
+  ensureSearchReportsReplyState,
+  isAwaitingRejectedError,
+  ReplyStateUnsupportedError,
+  replyStateSurfaceForOperation,
+} from "./reply-state.js";
 
 type OperationName = keyof typeof operations;
 export type ApiErrorCode = ErrorResponse["error"]["code"];
@@ -1083,18 +1100,41 @@ export function createOperationCommand(
         const operationFn = operations[
           operation.sdkName as OperationName
         ] as unknown as OperationExecutor;
+        const query = collectValues(operation.queryParams, parsedFlags);
+        // Set when this list or search call asked for reply state, so an
+        // older server that lacks it fails loudly instead of returning
+        // unfiltered mail that looks filtered.
+        const replyStateSurface = replyStateSurfaceForOperation(
+          operation.sdkName,
+          query,
+        );
+        // Same for the `automated` filter.
+        const automatedSurface = automatedSurfaceForOperation(
+          operation.sdkName,
+          query,
+        );
         const result = await operationFn({
           body,
           client: apiClient.client,
           parseAs: operation.binaryResponse ? "blob" : "auto",
           path: collectValues(operation.pathParams, parsedFlags),
-          query: collectValues(operation.queryParams, parsedFlags),
+          query,
           responseStyle: "fields",
         });
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
           writeErrorWithHints(errorPayload);
+          if (replyStateSurface && isAwaitingRejectedError(errorPayload)) {
+            process.stderr.write(
+              `${awaitingRejectedError(replyStateSurface).message}\n`,
+            );
+          }
+          if (automatedSurface && isAutomatedRejectedError(errorPayload)) {
+            process.stderr.write(
+              `${automatedRejectedError(automatedSurface).message}\n`,
+            );
+          }
           surfaceUnauthorizedHint({
             auth,
             baseUrlOverridden,
@@ -1145,6 +1185,45 @@ export function createOperationCommand(
         }
 
         const envelope = result.data as OperationResponseEnvelope;
+        if (replyStateSurface) {
+          try {
+            const rows = Array.isArray(envelope?.data) ? envelope.data : [];
+            assertAwaitingFilterRows(rows, replyStateSurface);
+            // Search ignores unknown parameters, so an empty page alone
+            // does not show the filter was applied. List rejects them.
+            if (rows.length === 0 && operation.sdkName === "searchEmails") {
+              await ensureSearchReportsReplyState(apiClient);
+            }
+          } catch (error) {
+            if (!(error instanceof ReplyStateUnsupportedError)) throw error;
+            process.stderr.write(`${error.message}\n`);
+            process.exitCode = 1;
+            return;
+          }
+        }
+        if (automatedSurface) {
+          try {
+            const rows = Array.isArray(envelope?.data) ? envelope.data : [];
+            const expected = expectedAutomatedVerdicts(
+              query?.automated === "true"
+                ? true
+                : query?.automated === "false"
+                  ? false
+                  : undefined,
+              typeof query?.q === "string" ? query.q : undefined,
+            );
+            assertAutomatedVerdict(rows, automatedSurface, expected);
+            if (rows.length === 0 && operation.sdkName === "searchEmails") {
+              await ensureSearchReportsAutomated(apiClient);
+            }
+          } catch (error) {
+            if (!(error instanceof AutomatedFilterUnsupportedError))
+              throw error;
+            process.stderr.write(`${error.message}\n`);
+            process.exitCode = 1;
+            return;
+          }
+        }
         const cursor = envelope?.meta?.cursor;
         if (cursor) {
           process.stderr.write(`next cursor: ${cursor}\n`);

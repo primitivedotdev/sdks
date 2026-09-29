@@ -6104,6 +6104,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           ],
           "description": "SPF / DKIM / DMARC verdicts computed at ingest, matching\nthe `email.auth` object on the webhook payload. Use these\nto decide how much to trust a message before acting on\ninstructions it contains.\n"
+        },
+        "automation_headers": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "What the message declared about being automated, verbatim:\n`List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),\n`Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message\ndeclared none, and on messages received before these headers\nwere captured, so a null value is not evidence that a person\nsent the message.\n",
+          "properties": {
+            "list_unsubscribe": {
+              "type": "string"
+            },
+            "list_id": {
+              "type": "string"
+            },
+            "precedence": {
+              "type": "string"
+            },
+            "auto_submitted": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "reply_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of replies recorded against this email: sends whose\n`in_reply_to_email_id` is this email, the same linkage that populates\n`EmailDetail.replies`, excluding sends that never went out (status\n`gate_denied`, `agent_failed`, `canceled`). Queued and scheduled\nreplies count. Under an agent connection, only the replies that agent\ncan see in `EmailDetail.replies`. Unlike `awaiting`, this counts\nreplies to this one email, not to the thread.\n"
+        },
+        "last_replied_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "`created_at` of the latest reply counted in `reply_count`, or\nnull when `reply_count` is 0.\n"
+        },
+        "awaiting": {
+          "type": "string",
+          "enum": [
+            "you",
+            "them"
+          ],
+          "description": "Whose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n"
+        },
+        "automated": {
+          "type": "boolean",
+          "description": "Whether the message was sent by a machine rather than a person.\nAn inbound email is `automated` when any of these holds, decided once\nwhen it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);\n`no_identifiable_sender` (no address in the envelope or From);\n`own_address` (a sender address is exactly one of the addresses the\nmail was delivered to; sharing a domain with the recipient is not\nenough, so a colleague or another agent in the organization is not\nautomated);\n`mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);\n`auto_submitted` (Auto-Submitted with any keyword but `no`, an\nempty one included);\n`precedence` (Precedence bulk, list, junk or auto_reply);\n`list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id\npresent); `auto_response_suppress` (X-Auto-Response-Suppress asks\nfor no automatic reply: All, OOF or AutoReply);\n`failed_recipients` (X-Failed-Recipients present, a bounce);\n`report` (a delivery, feedback or disposition report). Mail\nPrimitive's own automatic responders decline to answer is always\n`automated`. The header rules only see headers captured at ingest, so\nolder mail may lack them. This is loop and noise protection, not\nsender authentication.\n"
+        },
+        "automated_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
         }
       },
       "required": [
@@ -6119,7 +6173,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "to_email",
         "replies",
         "parsed",
-        "auth"
+        "auth",
+        "reply_count",
+        "last_replied_at",
+        "awaiting",
+        "automated",
+        "automated_reasons"
       ]
     },
     "sdkName": "getEmail",
@@ -6205,6 +6264,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name": "wait",
         "required": false,
         "type": "integer"
+      },
+      {
+        "description": "Only return emails whose `awaiting` has this value. `awaiting=you`\nlists mail waiting on your reply. Combines with every other filter\nand with both `cursor` and `since`.\nThe filter (either value, here, on search and as the `awaiting:`\nsearch term) matches delivered mail only: emails whose `status` is\n`rejected` are never returned by it. A rejected email (for example\none refused because the organization is over its storage limit) was\nnever delivered, so nobody can answer it and it is awaiting no one;\nits own `awaiting` field still reports the stored value, usually\n`you`.\nWhose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n",
+        "enum": [
+          "you",
+          "them"
+        ],
+        "name": "awaiting",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only return emails whose `automated` has this value.\n`awaiting=you&automated=false` lists mail from people that is\nwaiting on your reply. Combines with every other filter and with\nboth `cursor` and `since`. An inbound email is `automated` when any of these holds, decided once\nwhen it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);\n`no_identifiable_sender` (no address in the envelope or From);\n`own_address` (a sender address is exactly one of the addresses the\nmail was delivered to; sharing a domain with the recipient is not\nenough, so a colleague or another agent in the organization is not\nautomated);\n`mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);\n`auto_submitted` (Auto-Submitted with any keyword but `no`, an\nempty one included);\n`precedence` (Precedence bulk, list, junk or auto_reply);\n`list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id\npresent); `auto_response_suppress` (X-Auto-Response-Suppress asks\nfor no automatic reply: All, OOF or AutoReply);\n`failed_recipients` (X-Failed-Recipients present, a bounce);\n`report` (a delivery, feedback or disposition report). Mail\nPrimitive's own automatic responders decline to answer is always\n`automated`. The header rules only see headers captured at ingest, so\nolder mail may lack them. This is loop and noise protection, not\nsender authentication.\n",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "automated",
+        "required": false,
+        "type": "string"
       }
     ],
     "requestSchema": null,
@@ -6308,6 +6387,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "format": "uuid",
             "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
+          },
+          "automation_headers": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "What the message declared about being automated, verbatim:\n`List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),\n`Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message\ndeclared none, and on messages received before these headers\nwere captured, so a null value is not evidence that a person\nsent the message.\n",
+            "properties": {
+              "list_unsubscribe": {
+                "type": "string"
+              },
+              "list_id": {
+                "type": "string"
+              },
+              "precedence": {
+                "type": "string"
+              },
+              "auto_submitted": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "reply_count": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of replies recorded against this email: sends whose\n`in_reply_to_email_id` is this email, the same linkage that populates\n`EmailDetail.replies`, excluding sends that never went out (status\n`gate_denied`, `agent_failed`, `canceled`). Queued and scheduled\nreplies count. Under an agent connection, only the replies that agent\ncan see in `EmailDetail.replies`. Unlike `awaiting`, this counts\nreplies to this one email, not to the thread.\n"
+          },
+          "last_replied_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "`created_at` of the latest reply counted in `reply_count`, or\nnull when `reply_count` is 0.\n"
+          },
+          "awaiting": {
+            "type": "string",
+            "enum": [
+              "you",
+              "them"
+            ],
+            "description": "Whose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n"
+          },
+          "automated": {
+            "type": "boolean",
+            "description": "Whether the message was sent by a machine rather than a person.\nAn inbound email is `automated` when any of these holds, decided once\nwhen it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);\n`no_identifiable_sender` (no address in the envelope or From);\n`own_address` (a sender address is exactly one of the addresses the\nmail was delivered to; sharing a domain with the recipient is not\nenough, so a colleague or another agent in the organization is not\nautomated);\n`mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);\n`auto_submitted` (Auto-Submitted with any keyword but `no`, an\nempty one included);\n`precedence` (Precedence bulk, list, junk or auto_reply);\n`list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id\npresent); `auto_response_suppress` (X-Auto-Response-Suppress asks\nfor no automatic reply: All, OOF or AutoReply);\n`failed_recipients` (X-Failed-Recipients present, a bounce);\n`report` (a delivery, feedback or disposition report). Mail\nPrimitive's own automatic responders decline to answer is always\n`automated`. The header rules only see headers captured at ingest, so\nolder mail may lack them. This is loop and noise protection, not\nsender authentication.\n"
+          },
+          "automated_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
           }
         },
         "required": [
@@ -6318,7 +6451,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "domain",
           "created_at",
           "received_at",
-          "webhook_attempt_count"
+          "webhook_attempt_count",
+          "reply_count",
+          "last_replied_at",
+          "awaiting",
+          "automated",
+          "automated_reasons"
         ]
       }
     },
@@ -6381,7 +6519,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [
       {
-        "description": "Full-text search DSL query.",
+        "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field.",
         "enum": null,
         "name": "q",
         "required": false,
@@ -6473,6 +6611,26 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name": "spam_score_gte",
         "required": false,
         "type": "number"
+      },
+      {
+        "description": "Only return emails whose `awaiting` has this value. Also available\nin `q` as `awaiting:you` or `awaiting:them`.\nThe filter (either value, here, on search and as the `awaiting:`\nsearch term) matches delivered mail only: emails whose `status` is\n`rejected` are never returned by it. A rejected email (for example\none refused because the organization is over its storage limit) was\nnever delivered, so nobody can answer it and it is awaiting no one;\nits own `awaiting` field still reports the stored value, usually\n`you`.\nWhose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n",
+        "enum": [
+          "you",
+          "them"
+        ],
+        "name": "awaiting",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only return emails whose `automated` has this value. Also\navailable in `q` as `automated:true` or `automated:false`. An inbound email is `automated` when any of these holds, decided once\nwhen it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);\n`no_identifiable_sender` (no address in the envelope or From);\n`own_address` (a sender address is exactly one of the addresses the\nmail was delivered to; sharing a domain with the recipient is not\nenough, so a colleague or another agent in the organization is not\nautomated);\n`mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);\n`auto_submitted` (Auto-Submitted with any keyword but `no`, an\nempty one included);\n`precedence` (Precedence bulk, list, junk or auto_reply);\n`list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id\npresent); `auto_response_suppress` (X-Auto-Response-Suppress asks\nfor no automatic reply: All, OOF or AutoReply);\n`failed_recipients` (X-Failed-Recipients present, a bounce);\n`report` (a delivery, feedback or disposition report). Mail\nPrimitive's own automatic responders decline to answer is always\n`automated`. The header rules only see headers captured at ingest, so\nolder mail may lack them. This is loop and noise protection, not\nsender authentication.\n",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "automated",
+        "required": false,
+        "type": "string"
       },
       {
         "description": "Sort mode. Defaults to relevance when a text query is present,\notherwise `received_at_desc`.\n",
@@ -6628,6 +6786,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ],
                 "format": "uuid",
                 "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
+              },
+              "automation_headers": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "What the message declared about being automated, verbatim:\n`List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),\n`Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message\ndeclared none, and on messages received before these headers\nwere captured, so a null value is not evidence that a person\nsent the message.\n",
+                "properties": {
+                  "list_unsubscribe": {
+                    "type": "string"
+                  },
+                  "list_id": {
+                    "type": "string"
+                  },
+                  "precedence": {
+                    "type": "string"
+                  },
+                  "auto_submitted": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              },
+              "reply_count": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of replies recorded against this email: sends whose\n`in_reply_to_email_id` is this email, the same linkage that populates\n`EmailDetail.replies`, excluding sends that never went out (status\n`gate_denied`, `agent_failed`, `canceled`). Queued and scheduled\nreplies count. Under an agent connection, only the replies that agent\ncan see in `EmailDetail.replies`. Unlike `awaiting`, this counts\nreplies to this one email, not to the thread.\n"
+              },
+              "last_replied_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "`created_at` of the latest reply counted in `reply_count`, or\nnull when `reply_count` is 0.\n"
+              },
+              "awaiting": {
+                "type": "string",
+                "enum": [
+                  "you",
+                  "them"
+                ],
+                "description": "Whose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n"
+              },
+              "automated": {
+                "type": "boolean",
+                "description": "Whether the message was sent by a machine rather than a person.\nAn inbound email is `automated` when any of these holds, decided once\nwhen it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);\n`no_identifiable_sender` (no address in the envelope or From);\n`own_address` (a sender address is exactly one of the addresses the\nmail was delivered to; sharing a domain with the recipient is not\nenough, so a colleague or another agent in the organization is not\nautomated);\n`mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);\n`auto_submitted` (Auto-Submitted with any keyword but `no`, an\nempty one included);\n`precedence` (Precedence bulk, list, junk or auto_reply);\n`list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id\npresent); `auto_response_suppress` (X-Auto-Response-Suppress asks\nfor no automatic reply: All, OOF or AutoReply);\n`failed_recipients` (X-Failed-Recipients present, a bounce);\n`report` (a delivery, feedback or disposition report). Mail\nPrimitive's own automatic responders decline to answer is always\n`automated`. The header rules only see headers captured at ingest, so\nolder mail may lack them. This is loop and noise protection, not\nsender authentication.\n"
+              },
+              "automated_reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
               }
             },
             "required": [
@@ -6638,7 +6850,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "domain",
               "created_at",
               "received_at",
-              "webhook_attempt_count"
+              "webhook_attempt_count",
+              "reply_count",
+              "last_replied_at",
+              "awaiting",
+              "automated",
+              "automated_reasons"
             ]
           },
           {

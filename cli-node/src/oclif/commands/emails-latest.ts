@@ -9,6 +9,17 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import {
+  AWAITING_FLAG_DESCRIPTION,
+  AWAITING_VALUES,
+  type Awaiting,
+  assertAwaitingFilterRows,
+  awaitingRejectedError,
+  formatAwaitingCell,
+  formatRepliesCell,
+  isAwaitingRejectedError,
+  ReplyStateUnsupportedError,
+} from "../reply-state.js";
 
 // `primitive emails:latest` is the agent-grade shortcut for "show me
 // the most recent inbound emails as something I can read at a glance."
@@ -38,6 +49,10 @@ const ADDRESS_DISPLAY_WIDTH = 32;
 const ID_DISPLAY_WIDTH_SHORT = 8;
 const ID_DISPLAY_WIDTH_FULL = 36;
 const RECEIVED_DISPLAY_WIDTH = 19;
+// Reply state: whose turn it is (`you` / `them`) and how many replies
+// went out. "-" when the server does not report reply state.
+const AWAITING_DISPLAY_WIDTH = 8;
+const REPLIES_DISPLAY_WIDTH = 7;
 
 // Truncate to width with right-padding; values longer than width are
 // cut to width-3 with a "..." suffix so the output is exactly `width`
@@ -87,11 +102,13 @@ export function formatRow(email: EmailSummary, idWidth: number): string {
   const to = truncate(email.recipient ?? "", ADDRESS_DISPLAY_WIDTH);
   const subject = (email.subject ?? "").replace(/\s+/g, " ");
   const subjectCol = truncate(subject, SUBJECT_DISPLAY_WIDTH);
-  return `${id}  ${received}  ${from}  ${to}  ${subjectCol}`;
+  const awaiting = truncate(formatAwaitingCell(email), AWAITING_DISPLAY_WIDTH);
+  const replies = truncate(formatRepliesCell(email), REPLIES_DISPLAY_WIDTH);
+  return `${id}  ${received}  ${from}  ${to}  ${awaiting}  ${replies}  ${subjectCol}`;
 }
 
 export function formatHeader(idWidth: number): string {
-  return `${"ID".padEnd(idWidth)}  ${"RECEIVED (UTC)".padEnd(RECEIVED_DISPLAY_WIDTH)}  ${"FROM".padEnd(ADDRESS_DISPLAY_WIDTH)}  ${"TO".padEnd(ADDRESS_DISPLAY_WIDTH)}  SUBJECT`;
+  return `${"ID".padEnd(idWidth)}  ${"RECEIVED (UTC)".padEnd(RECEIVED_DISPLAY_WIDTH)}  ${"FROM".padEnd(ADDRESS_DISPLAY_WIDTH)}  ${"TO".padEnd(ADDRESS_DISPLAY_WIDTH)}  ${"AWAITING".padEnd(AWAITING_DISPLAY_WIDTH)}  ${"REPLIES".padEnd(REPLIES_DISPLAY_WIDTH)}  SUBJECT`;
 }
 
 class EmailsLatestCommand extends Command {
@@ -99,6 +116,8 @@ class EmailsLatestCommand extends Command {
     `Print the N most recent inbound emails as a one-line-per-row text table. Designed for quick triage and visual scanning. For programmatic access, use \`primitive emails list\` (full JSON envelope, cursor pagination, filters) or pass \`--json\` here for the same raw shape without pagination/filters.
 
   ID display is TTY-aware. When STDOUT is a terminal, the table truncates each row's id to the first ${ID_DISPLAY_WIDTH_SHORT} characters for readability. When STDOUT is piped or redirected (the row stream is being consumed by another command), the full UUID is printed so the id can be fed straight back into \`emails:get-email\`, \`emails:delete-email\`, etc. without a separate \`--json\` round-trip.
+
+  Reply state: the AWAITING column is whose turn it is in the email's thread (\`you\` = the latest message is inbound and waits on your reply, \`them\` = you replied last) and REPLIES is how many replies to this email went out or are queued or scheduled. Pass \`--awaiting you\` to list only mail still waiting on you. For one email at a time with its whole conversation, use \`primitive inbox next\`.
 
   Output streams: the column header line is written to STDERR so the row data on STDOUT stays grep/awk-friendly. \`--json\` writes everything (including the envelope) to STDOUT and is equivalent to running \`emails list --limit N\` for the same N.`;
 
@@ -109,6 +128,7 @@ class EmailsLatestCommand extends Command {
     "<%= config.bin %> emails latest --limit 25",
     "<%= config.bin %> emails latest | head -1 | awk '{print $1}'  # full UUID since piped",
     "<%= config.bin %> emails latest --json | jq '.data[0].id'",
+    "<%= config.bin %> emails latest --awaiting you",
   ];
 
   static flags = {
@@ -132,6 +152,10 @@ class EmailsLatestCommand extends Command {
       min: 1,
       max: MAX_LIMIT,
     }),
+    awaiting: Flags.string({
+      description: AWAITING_FLAG_DESCRIPTION,
+      options: [...AWAITING_VALUES],
+    }),
     json: Flags.boolean({
       description:
         "Print the raw response envelope (with full UUIDs and meta) as JSON on STDOUT instead of the text table. Useful for piping into `jq`, capturing ids for follow-up commands, or scripting.",
@@ -152,14 +176,22 @@ class EmailsLatestCommand extends Command {
           configDir: this.config.configDir,
         });
 
+      const awaiting = flags.awaiting as Awaiting | undefined;
       const result = await listEmails({
         client: apiClient.client,
-        query: { limit: flags.limit },
+        query: { limit: flags.limit, ...(awaiting ? { awaiting } : {}) },
         responseStyle: "fields",
       });
 
       if (result.error) {
         const errorPayload = extractErrorPayload(result.error);
+        if (awaiting && isAwaitingRejectedError(errorPayload)) {
+          process.stderr.write(
+            `${awaitingRejectedError("GET /emails").message}\n`,
+          );
+          process.exitCode = 1;
+          return;
+        }
         writeErrorWithHints(errorPayload);
         surfaceUnauthorizedHint({
           auth,
@@ -173,6 +205,21 @@ class EmailsLatestCommand extends Command {
 
       const envelope = result.data as { data?: EmailSummary[] } | undefined;
 
+      // With --awaiting the rows are only meaningful when the server
+      // actually filtered on reply state. Rows without the fields mean
+      // an older server ignored the filter; refuse to print them as if
+      // they were filtered.
+      if (awaiting) {
+        try {
+          assertAwaitingFilterRows(envelope?.data ?? [], "GET /emails");
+        } catch (error) {
+          if (!(error instanceof ReplyStateUnsupportedError)) throw error;
+          process.stderr.write(`${error.message}\n`);
+          process.exitCode = 1;
+          return;
+        }
+      }
+
       if (flags.json) {
         // Raw envelope on stdout. Mirrors the shape `emails:list-emails`
         // emits so callers can swap one for the other when they want
@@ -185,7 +232,9 @@ class EmailsLatestCommand extends Command {
 
       if (rows.length === 0) {
         process.stderr.write(
-          "No inbound emails yet. Send an email to one of your verified domains to populate this list.\n",
+          awaiting
+            ? `No inbound emails with awaiting=${awaiting}.\n`
+            : "No inbound emails yet. Send an email to one of your verified domains to populate this list.\n",
         );
         return;
       }

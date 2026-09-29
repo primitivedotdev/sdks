@@ -17,6 +17,16 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import {
+  AWAITING_VALUES,
+  type Awaiting,
+  assertAwaitingFilterRows,
+  awaitingRejectedError,
+  ensureSearchReportsReplyState,
+  isAwaitingRejectedError,
+  queryUsesAwaiting,
+  ReplyStateUnsupportedError,
+} from "../reply-state.js";
+import {
   formatHeader as formatLexicalHeader,
   formatRow as formatLexicalRow,
   pickIdWidth,
@@ -58,6 +68,7 @@ type SemanticEnvelope = {
 // --mode keeps the error specific instead of letting the semantic
 // request silently drop them.
 const LEXICAL_ONLY_FLAGS = [
+  "awaiting",
   "from",
   "to",
   "subject",
@@ -89,6 +100,7 @@ class SearchCommand extends Command {
     '<%= config.bin %> search "kickoff" --mode hybrid',
     '<%= config.bin %> search "shipping" --mode keyword --corpus outbound',
     "<%= config.bin %> search \"needle\" --json | jq '.data[0].id'",
+    '<%= config.bin %> search "invoice" --awaiting you',
   ];
 
   static args = {
@@ -116,6 +128,11 @@ class SearchCommand extends Command {
       options: ["hybrid", "semantic", "keyword"],
     }),
     // Lexical-only structured filters. Rejected when --mode is set.
+    awaiting: Flags.string({
+      description:
+        "Lexical only. Filter on reply state: `you` = waiting on your reply, `them` = you replied last. Same as `awaiting:you` in the query. Fails if the server does not report reply state yet.",
+      options: [...AWAITING_VALUES],
+    }),
     from: Flags.string({
       description: "Lexical only. Filter by sender address or sender domain.",
     }),
@@ -301,6 +318,10 @@ class SearchCommand extends Command {
           : args.query,
         limit: flags.limit,
       };
+      const awaiting = flags.awaiting as Awaiting | undefined;
+      if (awaiting) query.awaiting = awaiting;
+      const wantsReplyState =
+        Boolean(awaiting) || queryUsesAwaiting(args.query);
       if (flags.from) query.from = flags.from;
       if (flags.to) query.to = flags.to;
       if (flags.subject) query.subject = flags.subject;
@@ -328,11 +349,36 @@ class SearchCommand extends Command {
       });
 
       if (result.error) {
+        if (
+          wantsReplyState &&
+          isAwaitingRejectedError(extractErrorPayload(result.error))
+        ) {
+          process.stderr.write(
+            `${awaitingRejectedError("GET /emails/search").message}\n`,
+          );
+          process.exitCode = 1;
+          return;
+        }
         handleError(result.error);
         return;
       }
 
       const envelope = result.data as LexicalEnvelope | undefined;
+      // Search ignores parameters it does not know, so an older server
+      // answers --awaiting with unfiltered rows that lack reply state.
+      if (wantsReplyState) {
+        try {
+          assertAwaitingFilterRows(envelope?.data ?? [], "GET /emails/search");
+          if ((envelope?.data ?? []).length === 0) {
+            await ensureSearchReportsReplyState(apiClient);
+          }
+        } catch (error) {
+          if (!(error instanceof ReplyStateUnsupportedError)) throw error;
+          process.stderr.write(`${error.message}\n`);
+          process.exitCode = 1;
+          return;
+        }
+      }
 
       if (flags.json) {
         this.log(JSON.stringify(envelope ?? null, null, 2));

@@ -83,6 +83,30 @@ describe("client.inbox", () => {
     );
   });
 
+  it("waitForNext and stream pass automated through, and omit it by default", async () => {
+    const seen: Array<string | null> = [];
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      seen.push(new URL((input as Request).url).searchParams.get("automated"));
+      return listResponse(
+        [SUMMARY],
+        "2026-05-01T00:00:00.000000Z|11111111-1111-4111-8111-111111111111",
+      );
+    }) as typeof fetch;
+    const client = new PrimitiveClient({
+      apiKey: "prim_k",
+      apiBaseUrl: BASE,
+      fetch: fetchMock,
+    });
+    await client.inbox.waitForNext({ since: "c|i", automated: false });
+    await client.inbox.waitForNext({ since: "c|i", automated: true });
+    await client.inbox.waitForNext({ since: "c|i" });
+    for await (const email of client.inbox.stream({ automated: false })) {
+      expect(email.subject).toBe("Hi");
+      break;
+    }
+    expect(seen).toEqual(["false", "true", null, "false"]);
+  });
+
   it("waitForNext returns null when the wait window yields no mail", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_k",
