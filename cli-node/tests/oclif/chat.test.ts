@@ -493,10 +493,12 @@ describe("chat command", () => {
     delete process.env.CODEX_THREAD_ID;
     delete process.env.CLAUDE_CODE_SESSION_ID;
     try {
-      connectedAuth(true);
+      connectedAuth(true, "11111111-1111-4111-8111-111111111111");
       await expect(
         runChatCommand(["help@agent.example", "hello", "--async"]),
       ).rejects.toThrow("exact current coding session");
+      expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
       connectedAuth(false);
       process.env.CLAUDE_CODE_SESSION_ID =
         "11111111-1111-4111-8111-111111111111";

@@ -145,10 +145,22 @@ try {
   assert.match(unbound.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
   assert.equal(await readFile(trace,'utf8').catch(()=>''),'','an unbound profile must not attempt any API call');
   await writeFile(join(config,'agent-connections','profiles','work','setup.json'),JSON.stringify({
-    version:1,session,receiverMode:'native',invitationHash:profile.invitation_hash,since:stamp,contactRequests:false,
+    version:1,session,receiverMode:'external',invitationHash:profile.invitation_hash,since:stamp,contactRequests:false,
     challenge:{id:'33333333-3333-4333-8333-333333333333',messageId:'<verification@example.test>',marker:`primitive-connection:${session}:1`},
     phase:'sent',receipt:{id:'44444444-4444-4444-8444-444444444444',status:'delivered'}
   }),{mode:0o600,flag:'wx'});
+  const plainShell=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:{PRIMITIVE_AGENT_PROFILE:'work'},exit:1});
+  assert.match(plainShell.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
+  assert.equal(await readFile(trace,'utf8').catch(()=>''),'','a saved Claude profile in a plain shell must not attempt any API call');
+  const otherProfile=join(config,'agent-connections','profiles','other');
+  await mkdir(otherProfile,{recursive:true,mode:0o700});
+  await writeFile(join(otherProfile,'connection.json'),JSON.stringify(profile),{mode:0o600});
+  const differentProfile=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:{PRIMITIVE_AGENT_PROFILE:'other',CLAUDE_CODE_SESSION_ID:session},exit:1});
+  assert.match(differentProfile.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
+  assert.equal(await readFile(trace,'utf8').catch(()=>''),'','another selected profile must not reuse the verified setup');
+  const mixedRuntime=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:{PRIMITIVE_AGENT_PROFILE:'work',CLAUDE_CODE_SESSION_ID:session,CODEX_SESSION_ID:wrongSession},exit:1});
+  assert.match(mixedRuntime.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
+  assert.equal(await readFile(trace,'utf8').catch(()=>''),'','mixed runtime identities must not attempt any API call');
   const mismatched=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:asyncEnv,exit:1});
   assert.match(mismatched.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
   assert.equal(await readFile(trace,'utf8').catch(()=>''),'','another session must not attempt any API call');

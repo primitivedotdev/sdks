@@ -1585,11 +1585,14 @@ class ChatCommand extends Command {
         if (flags.async) {
           if (auth.connectedAgent) {
             try {
-              asyncSessionKey = contactRequestSessionKey({
+              const runtimeSessionKey = currentMailSessionKey();
+              const verifiedSessionKey = contactRequestSessionKey({
                 apiKey: auth.apiKey,
                 configDir: this.config.configDir,
                 identity: auth.connectedAgent,
               });
+              if (runtimeSessionKey && runtimeSessionKey === verifiedSessionKey)
+                asyncSessionKey = runtimeSessionKey;
             } catch {
               // Never send when this session cannot prove ownership of the
               // selected profile's verified setup.
