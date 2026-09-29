@@ -23,7 +23,7 @@ T = TypeVar("T", bound="ListAgentNetworksResponse200")
 
 @_attrs_define
 class ListAgentNetworksResponse200:
-    """ 
+    """
         Attributes:
             success (bool):
             data (list[AgentNetwork] | Unset):

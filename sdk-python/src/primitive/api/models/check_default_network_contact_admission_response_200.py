@@ -23,7 +23,7 @@ T = TypeVar("T", bound="CheckDefaultNetworkContactAdmissionResponse200")
 
 @_attrs_define
 class CheckDefaultNetworkContactAdmissionResponse200:
-    """ 
+    """
         Attributes:
             success (bool):
             data (AgentNetworkContactAdmission | Unset): Recipient-bound admission for authenticated network mail. Pending

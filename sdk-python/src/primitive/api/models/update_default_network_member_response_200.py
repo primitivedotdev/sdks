@@ -23,7 +23,7 @@ T = TypeVar("T", bound="UpdateDefaultNetworkMemberResponse200")
 
 @_attrs_define
 class UpdateDefaultNetworkMemberResponse200:
-    """ 
+    """
         Attributes:
             success (bool):
             data (AgentNetworkMember | Unset): Owner view of one address in the default organization network.

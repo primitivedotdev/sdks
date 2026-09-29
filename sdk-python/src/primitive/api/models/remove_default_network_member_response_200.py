@@ -23,7 +23,7 @@ T = TypeVar("T", bound="RemoveDefaultNetworkMemberResponse200")
 
 @_attrs_define
 class RemoveDefaultNetworkMemberResponse200:
-    """ 
+    """
         Attributes:
             success (bool):
             data (RemoveDefaultNetworkMemberResponse200Data | Unset):

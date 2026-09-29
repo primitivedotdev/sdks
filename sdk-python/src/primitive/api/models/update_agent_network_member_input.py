@@ -66,4 +66,3 @@ class UpdateAgentNetworkMemberInput:
         )
 
         return update_agent_network_member_input
-

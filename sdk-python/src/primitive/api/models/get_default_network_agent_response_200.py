@@ -23,7 +23,7 @@ T = TypeVar("T", bound="GetDefaultNetworkAgentResponse200")
 
 @_attrs_define
 class GetDefaultNetworkAgentResponse200:
-    """ 
+    """
         Attributes:
             success (bool):
             data (AgentNetworkPeer | Unset): Listed peer profile. The email address is the identity.

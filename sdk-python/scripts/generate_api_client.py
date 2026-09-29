@@ -101,6 +101,19 @@ def use_bytes_for_file_responses(directory: Path) -> None:
             py_file.write_text(new_text)
 
 
+def normalize_network_whitespace(directory: Path) -> None:
+    """Remove trailing codegen whitespace from the agent network files."""
+    network_api = directory / "api" / "agent_networks"
+    files = list(network_api.rglob("*.py")) + list(
+        (directory / "models").glob("*network*.py")
+    )
+    for py_file in files:
+        text = py_file.read_text()
+        normalized = "\n".join(line.rstrip() for line in text.splitlines()).rstrip("\n") + "\n"
+        if normalized != text:
+            py_file.write_text(normalized)
+
+
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="primitive-python-api-") as temp_dir:
         output_path = Path(temp_dir) / "generated"
@@ -126,6 +139,7 @@ def main() -> None:
         dedupe_imports(TARGET_PATH)
         guard_optional_body_content_type(TARGET_PATH)
         use_bytes_for_file_responses(TARGET_PATH)
+        normalize_network_whitespace(TARGET_PATH)
 
 
 if __name__ == "__main__":

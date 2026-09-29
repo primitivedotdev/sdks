@@ -69,4 +69,3 @@ class AgentNetworkContactAdmissionInput:
         )
 
         return agent_network_contact_admission_input
-

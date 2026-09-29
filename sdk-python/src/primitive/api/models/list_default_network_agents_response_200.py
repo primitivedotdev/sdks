@@ -24,7 +24,7 @@ T = TypeVar("T", bound="ListDefaultNetworkAgentsResponse200")
 
 @_attrs_define
 class ListDefaultNetworkAgentsResponse200:
-    """ 
+    """
         Attributes:
             success (bool):
             meta (PaginationMeta):
