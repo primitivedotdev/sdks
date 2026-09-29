@@ -42,6 +42,11 @@ const SAMPLE: EmailDetail = {
   to_email: "support@example.com",
   from_known_address: true,
   thread_id: "44444444-4444-4444-4444-444444444444",
+  reply_count: 1,
+  last_replied_at: "2026-05-03T00:01:00.000Z",
+  awaiting: "them",
+  automated: true,
+  automated_reasons: ["list_unsubscribe", "list_id"],
   replies: [
     {
       id: "33333333-3333-3333-3333-333333333333",
@@ -113,5 +118,16 @@ describe("EmailDetail type contract", () => {
     expect(SAMPLE.parsed.cc?.[0]?.address).toBe("cc@example.com");
     expect(SAMPLE.auth.spf).toBe("pass");
     expect(SAMPLE.auth.dkimSignatures[0]?.result).toBe("pass");
+  });
+
+  it("surfaces reply state", () => {
+    expect(SAMPLE.reply_count).toBe(1);
+    expect(SAMPLE.last_replied_at).toBe("2026-05-03T00:01:00.000Z");
+    expect(SAMPLE.awaiting).toBe("them");
+  });
+
+  it("surfaces the automated verdict", () => {
+    expect(SAMPLE.automated).toBe(true);
+    expect(SAMPLE.automated_reasons).toEqual(["list_unsubscribe", "list_id"]);
   });
 });

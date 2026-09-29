@@ -3,6 +3,7 @@ package primitive
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
 )
@@ -46,6 +47,11 @@ const emailDetailSampleJSON = `{
   "to_email": "support@example.com",
   "from_known_address": true,
   "thread_id": "44444444-4444-4444-4444-444444444444",
+  "reply_count": 1,
+  "last_replied_at": "2026-05-03T00:01:00Z",
+  "awaiting": "them",
+  "automated": true,
+  "automated_reasons": ["list_unsubscribe", "list_id"],
   "replies": [
     {
       "id": "33333333-3333-3333-3333-333333333333",
@@ -131,5 +137,35 @@ func TestEmailDetailUnmarshalsRepliesArray(t *testing.T) {
 	subject, ok := reply.Subject.Get()
 	if !ok || subject != "Re: Hello" {
 		t.Errorf("reply subject: got (%q, %v)", subject, ok)
+	}
+}
+
+func TestEmailDetailUnmarshalsReplyState(t *testing.T) {
+	var detail primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(emailDetailSampleJSON), &detail); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if detail.ReplyCount != 1 {
+		t.Errorf("reply_count: got %d, want 1", detail.ReplyCount)
+	}
+	if detail.Awaiting != primitiveapi.EmailDetailAwaitingThem {
+		t.Errorf("awaiting: got %q, want %q", detail.Awaiting, primitiveapi.EmailDetailAwaitingThem)
+	}
+	lastRepliedAt, ok := detail.LastRepliedAt.Get()
+	if !ok || !lastRepliedAt.Equal(time.Date(2026, 5, 3, 0, 1, 0, 0, time.UTC)) {
+		t.Errorf("last_replied_at: got (%v, %v)", lastRepliedAt, ok)
+	}
+}
+
+func TestEmailDetailUnmarshalsAutomatedVerdict(t *testing.T) {
+	var detail primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(emailDetailSampleJSON), &detail); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !detail.Automated {
+		t.Errorf("automated: got false, want true")
+	}
+	if len(detail.AutomatedReasons) != 2 || detail.AutomatedReasons[0] != "list_unsubscribe" || detail.AutomatedReasons[1] != "list_id" {
+		t.Errorf("automated_reasons: got %v", detail.AutomatedReasons)
 	}
 }

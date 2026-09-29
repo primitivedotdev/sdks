@@ -6094,10 +6094,64 @@ func (s *EmailDetail) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           0,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.ReplyCount)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "reply_count",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Awaiting.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "awaiting",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.AutomatedReasons == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "automated_reasons",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s EmailDetailAwaiting) Validate() error {
+	switch s {
+	case "you":
+		return nil
+	case "them":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s *EmailDetailReply) Validate() error {
@@ -6292,6 +6346,49 @@ func (s *EmailSearchResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           0,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.ReplyCount)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "reply_count",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Awaiting.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "awaiting",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.AutomatedReasons == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "automated_reasons",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Score.Get(); ok {
 			if err := func() error {
 				if err := (validate.Float{}).Validate(float64(value)); err != nil {
@@ -6331,6 +6428,17 @@ func (s *EmailSearchResult) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s EmailSearchResultAwaiting) Validate() error {
+	switch s {
+	case "you":
+		return nil
+	case "them":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s EmailStatus) Validate() error {
@@ -6401,10 +6509,64 @@ func (s *EmailSummary) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           0,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.ReplyCount)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "reply_count",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := s.Awaiting.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "awaiting",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if s.AutomatedReasons == nil {
+			return errors.New("nil is invalid value")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "automated_reasons",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s EmailSummaryAwaiting) Validate() error {
+	switch s {
+	case "you":
+		return nil
+	case "them":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s EmailWebhookStatus) Validate() error {
@@ -9778,6 +9940,28 @@ func (s *ListDomainsOK) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s ListEmailsAutomated) Validate() error {
+	switch s {
+	case "true":
+		return nil
+	case "false":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s ListEmailsAwaiting) Validate() error {
+	switch s {
+	case "you":
+		return nil
+	case "them":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s *ListEmailsBadRequest) Validate() error {
@@ -14210,6 +14394,28 @@ func (s *RunWakeScheduleUnauthorized) Validate() error {
 		return err
 	}
 	return nil
+}
+
+func (s SearchEmailsAutomated) Validate() error {
+	switch s {
+	case "true":
+		return nil
+	case "false":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s SearchEmailsAwaiting) Validate() error {
+	switch s {
+	case "you":
+		return nil
+	case "them":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s *SearchEmailsBadRequest) Validate() error {

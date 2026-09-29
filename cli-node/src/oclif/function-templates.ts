@@ -75,6 +75,12 @@ const ESBUILD_VERSION_RANGE = "^0.27.0";
 // so the unit test can assert content without having to spin up the
 // oclif command lifecycle.
 
+// The handler's loop rules (isLoop and its address helpers) are a
+// rendered copy of loopReasons() in automated-mail.ts, which is also what
+// `primitive inbox next` uses to skip automated mail. The copy exists
+// because scaffolded user code cannot import the CLI. Change the rules
+// in automated-mail.ts first; tests/oclif/automated-mail.test.ts runs
+// this rendered isLoop against the same cases and fails on any drift.
 export function renderHandler(): string {
   return `// env.PRIMITIVE_API_KEY, env.PRIMITIVE_WEBHOOK_SECRET, and
 // env.PRIMITIVE_API_BASE_URL are auto-injected by the Primitive Functions runtime.

@@ -825,12 +825,32 @@ export interface InboxStreamOptions {
   waitSeconds?: number;
   /** Stop the stream when this fires. */
   signal?: AbortSignal;
+  /**
+   * Only mail whose server-decided `automated` verdict has this value:
+   * `false` skips bounces, auto-replies, list and newsletter mail on the
+   * server. Omit for all mail. A server without the filter rejects it.
+   */
+  automated?: boolean;
 }
 
 export interface WaitForNextOptions {
   since?: string;
   waitSeconds?: number;
   signal?: AbortSignal;
+  /**
+   * Only mail whose server-decided `automated` verdict has this value:
+   * `false` skips bounces, auto-replies, list and newsletter mail on the
+   * server. Omit for all mail. A server without the filter rejects it.
+   */
+  automated?: boolean;
+}
+
+function automatedQuery(automated: boolean | undefined): {
+  automated?: "true" | "false";
+} {
+  return automated === undefined
+    ? {}
+    : { automated: automated ? "true" : "false" };
 }
 
 function buildReplyBody(input: ReplyInput): GeneratedReplyInput {
@@ -949,7 +969,7 @@ export class InboxResource {
       const result = await generatedOperations.listEmails({
         // limit 1 makes each page exactly one email, so meta.cursor is the
         // per-email resume position (yielded as email.cursor).
-        query: { since, wait, limit: 1 },
+        query: { since, wait, limit: 1, ...automatedQuery(options.automated) },
         ...resolveRequestOptions({ signal: options.signal }),
         client: this.client,
         responseStyle: "fields",
@@ -985,7 +1005,7 @@ export class InboxResource {
     const since = options.since ?? INBOX_EPOCH_CURSOR;
     const wait = options.waitSeconds ?? DEFAULT_WAIT_SECONDS;
     const result = await generatedOperations.listEmails({
-      query: { since, wait, limit: 1 },
+      query: { since, wait, limit: 1, ...automatedQuery(options.automated) },
       ...resolveRequestOptions({ signal: options.signal }),
       client: this.client,
       responseStyle: "fields",
