@@ -13,6 +13,15 @@ type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
 
+// AddDefaultNetworkMember implements addDefaultNetworkMember operation.
+//
+// Owner or admin login required. Restores an explicitly excluded member.
+//
+// POST /agent-networks/default/members/{address}
+func (UnimplementedHandler) AddDefaultNetworkMember(ctx context.Context, params AddDefaultNetworkMemberParams) (r AddDefaultNetworkMemberRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // AddDomain implements addDomain operation.
 //
 // Creates an unverified domain claim and returns the exact
@@ -63,6 +72,20 @@ func (UnimplementedHandler) AwaitReply(ctx context.Context, params AwaitReplyPar
 //
 // POST /sent-emails/{id}/cancel
 func (UnimplementedHandler) CancelSentEmail(ctx context.Context, params CancelSentEmailParams) (r CancelSentEmailRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CheckDefaultNetworkContactAdmission implements checkDefaultNetworkContactAdmission operation.
+//
+// Requires the recipient's connected-agent credential. The recipient
+// address is derived from that credential. Returns no sender profile or
+// existence detail. This check does not authenticate the inbound email
+// sender; clients must verify the actual email and respect explicit
+// contact silence before using the result. Mail received before
+// allowed_since cannot be newly admitted.
+//
+// POST /agent-networks/default/contact-admission
+func (UnimplementedHandler) CheckDefaultNetworkContactAdmission(ctx context.Context, req *AgentNetworkContactAdmissionInput) (r CheckDefaultNetworkContactAdmissionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -817,6 +840,16 @@ func (UnimplementedHandler) GetCreditBalance(ctx context.Context) (r GetCreditBa
 	return r, ht.ErrNotImplemented
 }
 
+// GetDefaultNetworkAgent implements getDefaultNetworkAgent operation.
+//
+// Requires a connected-agent credential allowed to see the network, or an organization member login.
+// Unlisted agents look absent.
+//
+// GET /agent-networks/default/agents/{address}
+func (UnimplementedHandler) GetDefaultNetworkAgent(ctx context.Context, params GetDefaultNetworkAgentParams) (r GetDefaultNetworkAgentRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetEmail implements getEmail operation.
 //
 // Returns the full record for an inbound email received at one
@@ -1127,6 +1160,16 @@ func (UnimplementedHandler) ListAgentContacts(ctx context.Context, params ListAg
 	return r, ht.ErrNotImplemented
 }
 
+// ListAgentNetworks implements listAgentNetworks operation.
+//
+// An organization member login or an active connected agent allowed to see the network can read
+// networks. The default organization network is always present.
+//
+// GET /agent-networks
+func (UnimplementedHandler) ListAgentNetworks(ctx context.Context) (r ListAgentNetworksRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListContacts implements listContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -1157,6 +1200,25 @@ func (UnimplementedHandler) ListContacts(ctx context.Context, params ListContact
 //
 // GET /x402/declined-payments
 func (UnimplementedHandler) ListDeclinedPayments(ctx context.Context) (r ListDeclinedPaymentsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListDefaultNetworkAgents implements listDefaultNetworkAgents operation.
+//
+// Requires a connected-agent credential for an active member allowed to see the network, or an
+// organization member login.
+//
+// GET /agent-networks/default/agents
+func (UnimplementedHandler) ListDefaultNetworkAgents(ctx context.Context, params ListDefaultNetworkAgentsParams) (r ListDefaultNetworkAgentsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListDefaultNetworkMembers implements listDefaultNetworkMembers operation.
+//
+// Owner or admin login required. Includes hidden and excluded members.
+//
+// GET /agent-networks/default/members
+func (UnimplementedHandler) ListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (r ListDefaultNetworkMembersRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1628,6 +1690,15 @@ func (UnimplementedHandler) RemoveAgentConnection(ctx context.Context, params Re
 	return r, ht.ErrNotImplemented
 }
 
+// RemoveDefaultNetworkMember implements removeDefaultNetworkMember operation.
+//
+// Owner or admin login required. The explicit exclusion persists across synchronization.
+//
+// DELETE /agent-networks/default/members/{address}
+func (UnimplementedHandler) RemoveDefaultNetworkMember(ctx context.Context, params RemoveDefaultNetworkMemberParams) (r RemoveDefaultNetworkMemberRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ReorderRoutes implements reorderRoutes operation.
 //
 // Update the priority of one or more routes in a single call.
@@ -2042,6 +2113,15 @@ func (UnimplementedHandler) UnsetFunctionRoute(ctx context.Context, params Unset
 //
 // PATCH /account
 func (UnimplementedHandler) UpdateAccount(ctx context.Context, req *UpdateAccountInput) (r UpdateAccountRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateDefaultNetworkMember implements updateDefaultNetworkMember operation.
+//
+// Owner or admin login required. Omitted settings keep their current value.
+//
+// PATCH /agent-networks/default/members/{address}
+func (UnimplementedHandler) UpdateDefaultNetworkMember(ctx context.Context, req *UpdateAgentNetworkMemberInput, params UpdateDefaultNetworkMemberParams) (r UpdateDefaultNetworkMemberRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

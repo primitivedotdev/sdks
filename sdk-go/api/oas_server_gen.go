@@ -8,6 +8,12 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
+	// AddDefaultNetworkMember implements addDefaultNetworkMember operation.
+	//
+	// Owner or admin login required. Restores an explicitly excluded member.
+	//
+	// POST /agent-networks/default/members/{address}
+	AddDefaultNetworkMember(ctx context.Context, params AddDefaultNetworkMemberParams) (AddDefaultNetworkMemberRes, error)
 	// AddDomain implements addDomain operation.
 	//
 	// Creates an unverified domain claim and returns the exact
@@ -52,6 +58,17 @@ type Handler interface {
 	//
 	// POST /sent-emails/{id}/cancel
 	CancelSentEmail(ctx context.Context, params CancelSentEmailParams) (CancelSentEmailRes, error)
+	// CheckDefaultNetworkContactAdmission implements checkDefaultNetworkContactAdmission operation.
+	//
+	// Requires the recipient's connected-agent credential. The recipient
+	// address is derived from that credential. Returns no sender profile or
+	// existence detail. This check does not authenticate the inbound email
+	// sender; clients must verify the actual email and respect explicit
+	// contact silence before using the result. Mail received before
+	// allowed_since cannot be newly admitted.
+	//
+	// POST /agent-networks/default/contact-admission
+	CheckDefaultNetworkContactAdmission(ctx context.Context, req *AgentNetworkContactAdmissionInput) (CheckDefaultNetworkContactAdmissionRes, error)
 	// CheckDomainDns implements checkDomainDns operation.
 	//
 	// Re-checks the domain's DNS records and persists the result as
@@ -647,6 +664,13 @@ type Handler interface {
 	//
 	// GET /credits/balance
 	GetCreditBalance(ctx context.Context) (GetCreditBalanceRes, error)
+	// GetDefaultNetworkAgent implements getDefaultNetworkAgent operation.
+	//
+	// Requires a connected-agent credential allowed to see the network, or an organization member login.
+	// Unlisted agents look absent.
+	//
+	// GET /agent-networks/default/agents/{address}
+	GetDefaultNetworkAgent(ctx context.Context, params GetDefaultNetworkAgentParams) (GetDefaultNetworkAgentRes, error)
 	// GetEmail implements getEmail operation.
 	//
 	// Returns the full record for an inbound email received at one
@@ -897,6 +921,13 @@ type Handler interface {
 	//
 	// GET /agent-contacts/{agent_address}
 	ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (ListAgentContactsRes, error)
+	// ListAgentNetworks implements listAgentNetworks operation.
+	//
+	// An organization member login or an active connected agent allowed to see the network can read
+	// networks. The default organization network is always present.
+	//
+	// GET /agent-networks
+	ListAgentNetworks(ctx context.Context) (ListAgentNetworksRes, error)
 	// ListContacts implements listContacts operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -924,6 +955,19 @@ type Handler interface {
 	//
 	// GET /x402/declined-payments
 	ListDeclinedPayments(ctx context.Context) (ListDeclinedPaymentsRes, error)
+	// ListDefaultNetworkAgents implements listDefaultNetworkAgents operation.
+	//
+	// Requires a connected-agent credential for an active member allowed to see the network, or an
+	// organization member login.
+	//
+	// GET /agent-networks/default/agents
+	ListDefaultNetworkAgents(ctx context.Context, params ListDefaultNetworkAgentsParams) (ListDefaultNetworkAgentsRes, error)
+	// ListDefaultNetworkMembers implements listDefaultNetworkMembers operation.
+	//
+	// Owner or admin login required. Includes hidden and excluded members.
+	//
+	// GET /agent-networks/default/members
+	ListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (ListDefaultNetworkMembersRes, error)
 	// ListDeliveries implements listDeliveries operation.
 	//
 	// Returns a paginated list of webhook delivery attempts. Each delivery
@@ -1290,6 +1334,12 @@ type Handler interface {
 	//
 	// POST /agent-connections/{address}/remove
 	RemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (RemoveAgentConnectionRes, error)
+	// RemoveDefaultNetworkMember implements removeDefaultNetworkMember operation.
+	//
+	// Owner or admin login required. The explicit exclusion persists across synchronization.
+	//
+	// DELETE /agent-networks/default/members/{address}
+	RemoveDefaultNetworkMember(ctx context.Context, params RemoveDefaultNetworkMemberParams) (RemoveDefaultNetworkMemberRes, error)
 	// ReorderRoutes implements reorderRoutes operation.
 	//
 	// Update the priority of one or more routes in a single call.
@@ -1620,6 +1670,12 @@ type Handler interface {
 	//
 	// PATCH /account
 	UpdateAccount(ctx context.Context, req *UpdateAccountInput) (UpdateAccountRes, error)
+	// UpdateDefaultNetworkMember implements updateDefaultNetworkMember operation.
+	//
+	// Owner or admin login required. Omitted settings keep their current value.
+	//
+	// PATCH /agent-networks/default/members/{address}
+	UpdateDefaultNetworkMember(ctx context.Context, req *UpdateAgentNetworkMemberInput, params UpdateDefaultNetworkMemberParams) (UpdateDefaultNetworkMemberRes, error)
 	// UpdateDomain implements updateDomain operation.
 	//
 	// Update a verified domain's settings. Only verified domains can be

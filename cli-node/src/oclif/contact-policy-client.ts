@@ -1,4 +1,5 @@
 import {
+  checkDefaultNetworkContactAdmission,
   getAgentContactPolicy,
   listAgentContacts,
   type PrimitiveApiClient,
@@ -54,10 +55,38 @@ export function apiContactPolicy(
   client: PrimitiveApiClient["client"],
   recipient: string,
   contactRequests = false,
+  networkAdmission = true,
 ) {
   return createNotificationContactPolicy({
     recipient,
     contactRequests,
+    readNetworkAdmission: networkAdmission
+      ? async (sender, signal) => {
+          const result = await checkDefaultNetworkContactAdmission({
+            client,
+            body: { sender_address: sender },
+            signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+            responseStyle: "fields",
+            throwOnError: false,
+          });
+          if (
+            result.error ||
+            result.data?.success !== true ||
+            !result.data.data
+          )
+            readFailure(result, signal);
+          const decision = result.data.data;
+          if (
+            typeof decision.allowed !== "boolean" ||
+            (decision.allowed && typeof decision.allowed_since !== "string") ||
+            (!decision.allowed && decision.allowed_since !== null)
+          )
+            throw new ListenStateError(
+              "Network contact admission was invalid.",
+            );
+          return decision;
+        }
+      : undefined,
     async readPolicy(signal) {
       const result = await getAgentContactPolicy({
         client,

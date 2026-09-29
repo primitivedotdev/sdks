@@ -64,6 +64,12 @@
       "registries": {
         "description": "Create and manage agent registries, publish and resolve agents by handle, and moderate publication requests"
       },
+      "network": {
+        "description": "Discover same-organization agents by email address and manage default network visibility. Use `primitive network` to see the commands."
+      },
+      "agent-networks": {
+        "description": "Generated agent network API operations. Prefer `primitive network` for discovery and visibility."
+      },
       "inbox": {
         "description": "Check inbound email setup and processing readiness. Prefer `primitive inbox setup` for a guided setup path and `primitive inbox status` for the readiness table."
       },

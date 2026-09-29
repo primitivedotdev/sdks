@@ -73,6 +73,66 @@ function requestFixture() {
 }
 
 describe("contact notification policy", () => {
+  it("admits current network peers without a contact and rechecks membership before wake", async () => {
+    let decision: { allowed: boolean; allowed_since: string | null } = {
+      allowed: true,
+      allowed_since: activation,
+    };
+    const readNetworkAdmission = vi.fn(async () => decision);
+    const document = emptyContactPolicy(recipient);
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => document,
+      readPage: async () => ({ data: [], cursor: null }),
+      readNetworkAdmission,
+    });
+    expect(
+      await policy.admit(sender, "2026-09-01T09:59:59.999Z", signal),
+    ).toBeNull();
+    const admitted = await policy.admit(sender, received, signal);
+    expect(admitted).toMatchObject({
+      kind: "allowed",
+      source: "network",
+      notifySince: activation,
+    });
+    if (!admitted) throw new Error("Expected network admission");
+    (await policy.recheck(admitted, signal))();
+    decision = { allowed: false, allowed_since: null };
+    await expect(policy.recheck(admitted, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+    decision = { allowed: true, allowed_since: received };
+    await expect(policy.recheck(admitted, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+    expect(readNetworkAdmission).toHaveBeenCalledWith(sender, signal);
+  });
+
+  it("keeps explicit contact and owner silence ahead of network admission", async () => {
+    const readNetworkAdmission = vi.fn(async () => ({
+      allowed: true,
+      allowed_since: activation,
+    }));
+    const document = emptyContactPolicy(recipient);
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => document,
+      readPage: async () => ({
+        data: [
+          row({
+            notify: false,
+            notify_since: null,
+            notification_generation: null,
+          }),
+        ],
+        cursor: null,
+      }),
+      readNetworkAdmission,
+    });
+    expect(await policy.admit(sender, received, signal)).toBeNull();
+    expect(readNetworkAdmission).not.toHaveBeenCalled();
+  });
+
   it("admits a solicited response without unsolicited opt-in but rechecks explicit silence", async () => {
     const f = fixture();
     f.rows([]);

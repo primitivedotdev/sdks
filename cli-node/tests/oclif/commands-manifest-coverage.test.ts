@@ -43,6 +43,38 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("registers agent network parent, convenience commands, and generated operations", () => {
+    for (const name of [
+      "network",
+      "network:list",
+      "network:members",
+      "network:peers",
+      "network:get",
+      "network:set",
+      "network:add",
+      "network:remove",
+    ])
+      expect(COMMANDS[name]).toBeDefined();
+    for (const name of [
+      "list-agent-networks",
+      "list-default-network-members",
+      "list-default-network-agents",
+      "get-default-network-agent",
+      "add-default-network-member",
+      "remove-default-network-member",
+      "update-default-network-member",
+      "check-default-network-contact-admission",
+    ])
+      expect(COMMANDS[`agent-networks:${name}`]).toBeDefined();
+    const set = COMMANDS["network:set"] as unknown as {
+      flags: Record<string, unknown>;
+    };
+    expect(set.flags.see).toBeDefined();
+    expect(set.flags["be-seen"]).toBeDefined();
+    expect(readCliPackageJson().oclif?.topics?.network?.description).toContain(
+      "primitive network",
+    );
+  });
   it("registers explicit signal and scoped doctor help", () => {
     const signal = COMMANDS.signal as unknown as {
       args: { kind: { options: string[] } };

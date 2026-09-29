@@ -137,6 +137,7 @@ export async function runSharedNotificationListen(
           auth.apiClient.client,
           recipient,
           notify.contactRequests,
+          Boolean(auth.auth.connectedAgent),
         )
       : undefined;
     if (contactPolicy) await contactPolicy.refresh(signal);
@@ -254,6 +255,11 @@ export async function runSharedNotificationListen(
         : null;
       if (followed && followed.sessionKey !== sessionKey) return true;
       const sender = detail.from_email.trim().toLowerCase();
+      // Directory membership is never evidence that this email came from the
+      // claimed sender. Verify the carrier before asking for network admission.
+      const senderTrust = scopedChatSenderTrust(detail, sender);
+      if (senderTrust.retryable) return false;
+      if (!senderTrust.trusted) return true;
       // Manual-only contact waits have no coding session to notify, even if
       // this sender is otherwise approved for unsolicited mail.
       if (

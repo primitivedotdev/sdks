@@ -14,6 +14,7 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   "agent:notes",
   "login",
   "listen",
+  "network",
   "otp",
   "signin",
   // Hand-rolled org-level secret commands; /v1/org/secrets is not a generated

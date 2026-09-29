@@ -147,6 +147,10 @@ function setup(
     apiBaseUrl: baseUrl,
   };
   let contactStatus = 200;
+  let networkDecision = {
+    allowed: false,
+    allowed_since: null as string | null,
+  };
   let contactRows: unknown[] = [
     {
       agent_address: detail.recipient,
@@ -215,6 +219,13 @@ function setup(
               },
           { status: contactStatus },
         );
+      if (path === "/v1/agent-networks/default/contact-admission") {
+        expect(request.headers.get("authorization")).toBe(`Bearer ${apiKey}`);
+        expect(await request.json()).toEqual({
+          sender_address: detail.from_email,
+        });
+        return Response.json({ success: true, data: networkDecision });
+      }
       if (path === `/v1/emails/${emailId}/attachments/0` && contactBytes)
         return new Response(new Uint8Array(contactBytes));
       throw new Error(`Unexpected remote request ${path}`);
@@ -349,6 +360,9 @@ function setup(
       contactRows = rows;
       contactStatus = status;
     },
+    network: (allowed: boolean, allowedSince: string | null) => {
+      networkDecision = { allowed, allowed_since: allowedSince };
+    },
     close,
     closeReceiver,
     store: () => opened,
@@ -359,6 +373,102 @@ function setup(
   };
 }
 describe("shared notification listener integration", () => {
+  it.each([
+    {
+      scenario: "first peer mail",
+      allowed: true,
+      old: false,
+      muted: false,
+      notified: true,
+    },
+    {
+      scenario: "network disabled",
+      allowed: false,
+      old: false,
+      muted: false,
+      notified: false,
+    },
+    {
+      scenario: "mail before activation",
+      allowed: true,
+      old: true,
+      muted: false,
+      notified: false,
+    },
+    {
+      scenario: "explicit contact silence",
+      allowed: true,
+      old: false,
+      muted: true,
+      notified: false,
+    },
+  ])("routes $scenario only when current network and contact policy admit it", async ({
+    allowed,
+    old,
+    muted,
+    notified,
+  }) => {
+    const f = setup(["sdk"], ["email.received"], true);
+    const activated = new Date(
+      Date.now() - (old ? 1000 : 60_000),
+    ).toISOString();
+    if (old) f.detail.received_at = new Date(Date.now() - 2000).toISOString();
+    f.network(allowed, allowed ? activated : null);
+    f.contacts(
+      muted
+        ? [
+            {
+              agent_address: f.detail.recipient,
+              contact_address: f.detail.from_email,
+              notify: false,
+              notify_since: null,
+              notification_generation: null,
+              version: randomUUID(),
+            },
+          ]
+        : [],
+    );
+    expect(
+      await runListen({
+        ...f.options,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
+    if (notified) {
+      expect(f.receipt()).toMatchObject({ state: "accepted" });
+      expect(f.handleDetail.mock.calls[0]?.[3]).toMatchObject({
+        sender: f.detail.from_email,
+      });
+    } else expect(f.receipt()).toBeNull();
+    expect(
+      f.order.includes("/v1/agent-networks/default/contact-admission"),
+    ).toBe(!muted);
+  });
+  it("does not ask network admission for mail with unverified sender provenance", async () => {
+    const f = setup(["sdk"], ["email.received"], true);
+    f.contacts([]);
+    f.network(true, new Date(Date.now() - 60_000).toISOString());
+    f.detail.from_header = "different@example.test";
+    expect(
+      await runListen({
+        ...f.options,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(f.order).not.toContain(
+      "/v1/agent-networks/default/contact-admission",
+    );
+  });
   it("delivers only canonical activity for an exact bound send to the native session", async () => {
     const f = setup();
     const sentEmailId = randomUUID();

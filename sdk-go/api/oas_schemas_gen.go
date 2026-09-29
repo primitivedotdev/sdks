@@ -244,6 +244,46 @@ func (s *AccountUpdated) SetDiscardContentOnWebhookConfirmed(val bool) {
 	s.DiscardContentOnWebhookConfirmed = val
 }
 
+type AddDefaultNetworkMemberForbidden ErrorResponse
+
+func (*AddDefaultNetworkMemberForbidden) addDefaultNetworkMemberRes() {}
+
+type AddDefaultNetworkMemberNotFound ErrorResponse
+
+func (*AddDefaultNetworkMemberNotFound) addDefaultNetworkMemberRes() {}
+
+// Merged schema.
+type AddDefaultNetworkMemberOK struct {
+	Success bool               `json:"success"`
+	Data    AgentNetworkMember `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *AddDefaultNetworkMemberOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *AddDefaultNetworkMemberOK) GetData() AgentNetworkMember {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *AddDefaultNetworkMemberOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *AddDefaultNetworkMemberOK) SetData(val AgentNetworkMember) {
+	s.Data = val
+}
+
+func (*AddDefaultNetworkMemberOK) addDefaultNetworkMemberRes() {}
+
+type AddDefaultNetworkMemberUnauthorized ErrorResponse
+
+func (*AddDefaultNetworkMemberUnauthorized) addDefaultNetworkMemberRes() {}
+
 type AddDomainBadRequest ErrorResponse
 
 func (*AddDomainBadRequest) addDomainRes() {}
@@ -821,6 +861,211 @@ func (s *AgentContactPolicyOverride) SetUpdatedAt(val NilDateTime) {
 // SetAllowContactRequests sets the value of AllowContactRequests.
 func (s *AgentContactPolicyOverride) SetAllowContactRequests(val NilBool) {
 	s.AllowContactRequests = val
+}
+
+// An organization-owned network. The default network cannot be deleted.
+// Ref: #/components/schemas/AgentNetwork
+type AgentNetwork struct {
+	ID        uuid.UUID `json:"id"`
+	Kind      string    `json:"kind"`
+	IsDefault bool      `json:"is_default"`
+	Name      string    `json:"name"`
+}
+
+// GetID returns the value of ID.
+func (s *AgentNetwork) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetKind returns the value of Kind.
+func (s *AgentNetwork) GetKind() string {
+	return s.Kind
+}
+
+// GetIsDefault returns the value of IsDefault.
+func (s *AgentNetwork) GetIsDefault() bool {
+	return s.IsDefault
+}
+
+// GetName returns the value of Name.
+func (s *AgentNetwork) GetName() string {
+	return s.Name
+}
+
+// SetID sets the value of ID.
+func (s *AgentNetwork) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetKind sets the value of Kind.
+func (s *AgentNetwork) SetKind(val string) {
+	s.Kind = val
+}
+
+// SetIsDefault sets the value of IsDefault.
+func (s *AgentNetwork) SetIsDefault(val bool) {
+	s.IsDefault = val
+}
+
+// SetName sets the value of Name.
+func (s *AgentNetwork) SetName(val string) {
+	s.Name = val
+}
+
+// Recipient-bound admission for authenticated network mail.
+// Ref: #/components/schemas/AgentNetworkContactAdmission
+type AgentNetworkContactAdmission struct {
+	Allowed bool `json:"allowed"`
+	// Earliest received_at eligible under the current membership and connection state.
+	AllowedSince NilDateTime `json:"allowed_since"`
+}
+
+// GetAllowed returns the value of Allowed.
+func (s *AgentNetworkContactAdmission) GetAllowed() bool {
+	return s.Allowed
+}
+
+// GetAllowedSince returns the value of AllowedSince.
+func (s *AgentNetworkContactAdmission) GetAllowedSince() NilDateTime {
+	return s.AllowedSince
+}
+
+// SetAllowed sets the value of Allowed.
+func (s *AgentNetworkContactAdmission) SetAllowed(val bool) {
+	s.Allowed = val
+}
+
+// SetAllowedSince sets the value of AllowedSince.
+func (s *AgentNetworkContactAdmission) SetAllowedSince(val NilDateTime) {
+	s.AllowedSince = val
+}
+
+// Ref: #/components/schemas/AgentNetworkContactAdmissionInput
+type AgentNetworkContactAdmissionInput struct {
+	SenderAddress string `json:"sender_address"`
+}
+
+// GetSenderAddress returns the value of SenderAddress.
+func (s *AgentNetworkContactAdmissionInput) GetSenderAddress() string {
+	return s.SenderAddress
+}
+
+// SetSenderAddress sets the value of SenderAddress.
+func (s *AgentNetworkContactAdmissionInput) SetSenderAddress(val string) {
+	s.SenderAddress = val
+}
+
+// Owner view of one address in the default organization network.
+// Ref: #/components/schemas/AgentNetworkMember
+type AgentNetworkMember struct {
+	Address string `json:"address"`
+	Name    string `json:"name"`
+	// Whether this agent can read the network directory.
+	CanView bool `json:"can_view"`
+	// Whether this agent appears in network directory discovery. Known-address email is separate.
+	IsListed bool `json:"is_listed"`
+	// Explicit removal from the network; synchronization does not re-add it.
+	Excluded  bool `json:"excluded"`
+	Connected bool `json:"connected"`
+	// Last recorded activity, not a presence or receiving guarantee.
+	LastSeenAt NilDateTime `json:"last_seen_at"`
+}
+
+// GetAddress returns the value of Address.
+func (s *AgentNetworkMember) GetAddress() string {
+	return s.Address
+}
+
+// GetName returns the value of Name.
+func (s *AgentNetworkMember) GetName() string {
+	return s.Name
+}
+
+// GetCanView returns the value of CanView.
+func (s *AgentNetworkMember) GetCanView() bool {
+	return s.CanView
+}
+
+// GetIsListed returns the value of IsListed.
+func (s *AgentNetworkMember) GetIsListed() bool {
+	return s.IsListed
+}
+
+// GetExcluded returns the value of Excluded.
+func (s *AgentNetworkMember) GetExcluded() bool {
+	return s.Excluded
+}
+
+// GetConnected returns the value of Connected.
+func (s *AgentNetworkMember) GetConnected() bool {
+	return s.Connected
+}
+
+// GetLastSeenAt returns the value of LastSeenAt.
+func (s *AgentNetworkMember) GetLastSeenAt() NilDateTime {
+	return s.LastSeenAt
+}
+
+// SetAddress sets the value of Address.
+func (s *AgentNetworkMember) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetName sets the value of Name.
+func (s *AgentNetworkMember) SetName(val string) {
+	s.Name = val
+}
+
+// SetCanView sets the value of CanView.
+func (s *AgentNetworkMember) SetCanView(val bool) {
+	s.CanView = val
+}
+
+// SetIsListed sets the value of IsListed.
+func (s *AgentNetworkMember) SetIsListed(val bool) {
+	s.IsListed = val
+}
+
+// SetExcluded sets the value of Excluded.
+func (s *AgentNetworkMember) SetExcluded(val bool) {
+	s.Excluded = val
+}
+
+// SetConnected sets the value of Connected.
+func (s *AgentNetworkMember) SetConnected(val bool) {
+	s.Connected = val
+}
+
+// SetLastSeenAt sets the value of LastSeenAt.
+func (s *AgentNetworkMember) SetLastSeenAt(val NilDateTime) {
+	s.LastSeenAt = val
+}
+
+// Listed peer profile. The email address is the identity.
+// Ref: #/components/schemas/AgentNetworkPeer
+type AgentNetworkPeer struct {
+	Address string `json:"address"`
+	Name    string `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *AgentNetworkPeer) GetAddress() string {
+	return s.Address
+}
+
+// GetName returns the value of Name.
+func (s *AgentNetworkPeer) GetName() string {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *AgentNetworkPeer) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetName sets the value of Name.
+func (s *AgentNetworkPeer) SetName(val string) {
+	s.Name = val
 }
 
 // Ref: #/components/schemas/AgentOrgRef
@@ -1411,6 +1656,47 @@ func (*CancelSentEmailOK) cancelSentEmailRes() {}
 type CancelSentEmailUnauthorized ErrorResponse
 
 func (*CancelSentEmailUnauthorized) cancelSentEmailRes() {}
+
+type CheckDefaultNetworkContactAdmissionForbidden ErrorResponse
+
+func (*CheckDefaultNetworkContactAdmissionForbidden) checkDefaultNetworkContactAdmissionRes() {}
+
+// Merged schema.
+type CheckDefaultNetworkContactAdmissionOK struct {
+	Success bool                         `json:"success"`
+	Data    AgentNetworkContactAdmission `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CheckDefaultNetworkContactAdmissionOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CheckDefaultNetworkContactAdmissionOK) GetData() AgentNetworkContactAdmission {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CheckDefaultNetworkContactAdmissionOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CheckDefaultNetworkContactAdmissionOK) SetData(val AgentNetworkContactAdmission) {
+	s.Data = val
+}
+
+func (*CheckDefaultNetworkContactAdmissionOK) checkDefaultNetworkContactAdmissionRes() {}
+
+type CheckDefaultNetworkContactAdmissionUnauthorized ErrorResponse
+
+func (*CheckDefaultNetworkContactAdmissionUnauthorized) checkDefaultNetworkContactAdmissionRes() {}
+
+type CheckDefaultNetworkContactAdmissionUnprocessableEntity ErrorResponse
+
+func (*CheckDefaultNetworkContactAdmissionUnprocessableEntity) checkDefaultNetworkContactAdmissionRes() {
+}
 
 type CheckDomainDnsBadRequest ErrorResponse
 
@@ -14464,6 +14750,46 @@ type GetCreditBalanceUnauthorized ErrorResponse
 
 func (*GetCreditBalanceUnauthorized) getCreditBalanceRes() {}
 
+type GetDefaultNetworkAgentForbidden ErrorResponse
+
+func (*GetDefaultNetworkAgentForbidden) getDefaultNetworkAgentRes() {}
+
+type GetDefaultNetworkAgentNotFound ErrorResponse
+
+func (*GetDefaultNetworkAgentNotFound) getDefaultNetworkAgentRes() {}
+
+// Merged schema.
+type GetDefaultNetworkAgentOK struct {
+	Success bool             `json:"success"`
+	Data    AgentNetworkPeer `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetDefaultNetworkAgentOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetDefaultNetworkAgentOK) GetData() AgentNetworkPeer {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetDefaultNetworkAgentOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetDefaultNetworkAgentOK) SetData(val AgentNetworkPeer) {
+	s.Data = val
+}
+
+func (*GetDefaultNetworkAgentOK) getDefaultNetworkAgentRes() {}
+
+type GetDefaultNetworkAgentUnauthorized ErrorResponse
+
+func (*GetDefaultNetworkAgentUnauthorized) getDefaultNetworkAgentRes() {}
+
 type GetEmailBadRequest ErrorResponse
 
 func (*GetEmailBadRequest) getEmailRes() {}
@@ -16095,6 +16421,42 @@ type ListAgentContactsUnauthorized ErrorResponse
 
 func (*ListAgentContactsUnauthorized) listAgentContactsRes() {}
 
+type ListAgentNetworksForbidden ErrorResponse
+
+func (*ListAgentNetworksForbidden) listAgentNetworksRes() {}
+
+// Merged schema.
+type ListAgentNetworksOK struct {
+	Success bool           `json:"success"`
+	Data    []AgentNetwork `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListAgentNetworksOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListAgentNetworksOK) GetData() []AgentNetwork {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListAgentNetworksOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListAgentNetworksOK) SetData(val []AgentNetwork) {
+	s.Data = val
+}
+
+func (*ListAgentNetworksOK) listAgentNetworksRes() {}
+
+type ListAgentNetworksUnauthorized ErrorResponse
+
+func (*ListAgentNetworksUnauthorized) listAgentNetworksRes() {}
+
 type ListContactsBadRequest ErrorResponse
 
 func (*ListContactsBadRequest) listContactsRes() {}
@@ -16344,6 +16706,100 @@ func (*ListDeclinedPaymentsOK) listDeclinedPaymentsRes() {}
 type ListDeclinedPaymentsUnauthorized ErrorResponse
 
 func (*ListDeclinedPaymentsUnauthorized) listDeclinedPaymentsRes() {}
+
+type ListDefaultNetworkAgentsForbidden ErrorResponse
+
+func (*ListDefaultNetworkAgentsForbidden) listDefaultNetworkAgentsRes() {}
+
+// Merged schema.
+type ListDefaultNetworkAgentsOK struct {
+	Success bool               `json:"success"`
+	Meta    PaginationMeta     `json:"meta"`
+	Data    []AgentNetworkPeer `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListDefaultNetworkAgentsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListDefaultNetworkAgentsOK) GetMeta() PaginationMeta {
+	return s.Meta
+}
+
+// GetData returns the value of Data.
+func (s *ListDefaultNetworkAgentsOK) GetData() []AgentNetworkPeer {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListDefaultNetworkAgentsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListDefaultNetworkAgentsOK) SetMeta(val PaginationMeta) {
+	s.Meta = val
+}
+
+// SetData sets the value of Data.
+func (s *ListDefaultNetworkAgentsOK) SetData(val []AgentNetworkPeer) {
+	s.Data = val
+}
+
+func (*ListDefaultNetworkAgentsOK) listDefaultNetworkAgentsRes() {}
+
+type ListDefaultNetworkAgentsUnauthorized ErrorResponse
+
+func (*ListDefaultNetworkAgentsUnauthorized) listDefaultNetworkAgentsRes() {}
+
+type ListDefaultNetworkMembersForbidden ErrorResponse
+
+func (*ListDefaultNetworkMembersForbidden) listDefaultNetworkMembersRes() {}
+
+// Merged schema.
+type ListDefaultNetworkMembersOK struct {
+	Success bool                 `json:"success"`
+	Meta    PaginationMeta       `json:"meta"`
+	Data    []AgentNetworkMember `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListDefaultNetworkMembersOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetMeta returns the value of Meta.
+func (s *ListDefaultNetworkMembersOK) GetMeta() PaginationMeta {
+	return s.Meta
+}
+
+// GetData returns the value of Data.
+func (s *ListDefaultNetworkMembersOK) GetData() []AgentNetworkMember {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListDefaultNetworkMembersOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetMeta sets the value of Meta.
+func (s *ListDefaultNetworkMembersOK) SetMeta(val PaginationMeta) {
+	s.Meta = val
+}
+
+// SetData sets the value of Data.
+func (s *ListDefaultNetworkMembersOK) SetData(val []AgentNetworkMember) {
+	s.Data = val
+}
+
+func (*ListDefaultNetworkMembersOK) listDefaultNetworkMembersRes() {}
+
+type ListDefaultNetworkMembersUnauthorized ErrorResponse
+
+func (*ListDefaultNetworkMembersUnauthorized) listDefaultNetworkMembersRes() {}
 
 type ListDeliveriesBadRequest ErrorResponse
 
@@ -25931,6 +26387,60 @@ type RemoveAgentConnectionUnauthorized ErrorResponse
 
 func (*RemoveAgentConnectionUnauthorized) removeAgentConnectionRes() {}
 
+type RemoveDefaultNetworkMemberForbidden ErrorResponse
+
+func (*RemoveDefaultNetworkMemberForbidden) removeDefaultNetworkMemberRes() {}
+
+type RemoveDefaultNetworkMemberNotFound ErrorResponse
+
+func (*RemoveDefaultNetworkMemberNotFound) removeDefaultNetworkMemberRes() {}
+
+// Merged schema.
+type RemoveDefaultNetworkMemberOK struct {
+	Success bool                             `json:"success"`
+	Data    RemoveDefaultNetworkMemberOKData `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *RemoveDefaultNetworkMemberOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *RemoveDefaultNetworkMemberOK) GetData() RemoveDefaultNetworkMemberOKData {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *RemoveDefaultNetworkMemberOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *RemoveDefaultNetworkMemberOK) SetData(val RemoveDefaultNetworkMemberOKData) {
+	s.Data = val
+}
+
+func (*RemoveDefaultNetworkMemberOK) removeDefaultNetworkMemberRes() {}
+
+type RemoveDefaultNetworkMemberOKData struct {
+	Excluded bool `json:"excluded"`
+}
+
+// GetExcluded returns the value of Excluded.
+func (s *RemoveDefaultNetworkMemberOKData) GetExcluded() bool {
+	return s.Excluded
+}
+
+// SetExcluded sets the value of Excluded.
+func (s *RemoveDefaultNetworkMemberOKData) SetExcluded(val bool) {
+	s.Excluded = val
+}
+
+type RemoveDefaultNetworkMemberUnauthorized ErrorResponse
+
+func (*RemoveDefaultNetworkMemberUnauthorized) removeDefaultNetworkMemberRes() {}
+
 type ReorderRoutesBadRequest ErrorResponse
 
 func (*ReorderRoutesBadRequest) reorderRoutesRes() {}
@@ -33958,6 +34468,77 @@ func (*UpdateAccountOK) updateAccountRes() {}
 type UpdateAccountUnauthorized ErrorResponse
 
 func (*UpdateAccountUnauthorized) updateAccountRes() {}
+
+// Set one or both independent discovery permissions.
+// Ref: #/components/schemas/UpdateAgentNetworkMemberInput
+type UpdateAgentNetworkMemberInput struct {
+	CanView  OptBool `json:"can_view"`
+	IsListed OptBool `json:"is_listed"`
+}
+
+// GetCanView returns the value of CanView.
+func (s *UpdateAgentNetworkMemberInput) GetCanView() OptBool {
+	return s.CanView
+}
+
+// GetIsListed returns the value of IsListed.
+func (s *UpdateAgentNetworkMemberInput) GetIsListed() OptBool {
+	return s.IsListed
+}
+
+// SetCanView sets the value of CanView.
+func (s *UpdateAgentNetworkMemberInput) SetCanView(val OptBool) {
+	s.CanView = val
+}
+
+// SetIsListed sets the value of IsListed.
+func (s *UpdateAgentNetworkMemberInput) SetIsListed(val OptBool) {
+	s.IsListed = val
+}
+
+type UpdateDefaultNetworkMemberForbidden ErrorResponse
+
+func (*UpdateDefaultNetworkMemberForbidden) updateDefaultNetworkMemberRes() {}
+
+type UpdateDefaultNetworkMemberNotFound ErrorResponse
+
+func (*UpdateDefaultNetworkMemberNotFound) updateDefaultNetworkMemberRes() {}
+
+// Merged schema.
+type UpdateDefaultNetworkMemberOK struct {
+	Success bool               `json:"success"`
+	Data    AgentNetworkMember `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateDefaultNetworkMemberOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateDefaultNetworkMemberOK) GetData() AgentNetworkMember {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateDefaultNetworkMemberOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateDefaultNetworkMemberOK) SetData(val AgentNetworkMember) {
+	s.Data = val
+}
+
+func (*UpdateDefaultNetworkMemberOK) updateDefaultNetworkMemberRes() {}
+
+type UpdateDefaultNetworkMemberUnauthorized ErrorResponse
+
+func (*UpdateDefaultNetworkMemberUnauthorized) updateDefaultNetworkMemberRes() {}
+
+type UpdateDefaultNetworkMemberUnprocessableEntity ErrorResponse
+
+func (*UpdateDefaultNetworkMemberUnprocessableEntity) updateDefaultNetworkMemberRes() {}
 
 type UpdateDomainBadRequest ErrorResponse
 

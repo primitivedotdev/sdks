@@ -24,6 +24,20 @@ func encodeAddDomainRequest(
 	return nil
 }
 
+func encodeCheckDefaultNetworkContactAdmissionRequest(
+	req *AgentNetworkContactAdmissionInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeClaimAgentConnectionRequest(
 	req *ClaimAgentConnectionReq,
 	r *http.Request,
@@ -704,6 +718,20 @@ func encodeTestFunctionRequest(
 
 func encodeUpdateAccountRequest(
 	req *UpdateAccountInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateDefaultNetworkMemberRequest(
+	req *UpdateAgentNetworkMemberInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

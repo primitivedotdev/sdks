@@ -80,6 +80,72 @@ export type PutAgentContactPolicyReplace = {
 };
 
 /**
+ * An organization-owned network. The default network cannot be deleted.
+ */
+export type AgentNetwork = {
+    id: string;
+    kind: string;
+    is_default: boolean;
+    name: string;
+};
+
+/**
+ * Owner view of one address in the default organization network.
+ */
+export type AgentNetworkMember = {
+    address: string;
+    name: string;
+    /**
+     * Whether this agent can read the network directory.
+     */
+    can_view: boolean;
+    /**
+     * Whether this agent appears in network directory discovery. Known-address email is separate.
+     */
+    is_listed: boolean;
+    /**
+     * Explicit removal from the network; synchronization does not re-add it.
+     */
+    excluded: boolean;
+    connected: boolean;
+    /**
+     * Last recorded activity, not a presence or receiving guarantee.
+     */
+    last_seen_at: string | null;
+};
+
+/**
+ * Listed peer profile. The email address is the identity.
+ */
+export type AgentNetworkPeer = {
+    address: string;
+    name: string;
+};
+
+/**
+ * Set one or both independent discovery permissions.
+ */
+export type UpdateAgentNetworkMemberInput = {
+    can_view?: boolean;
+    is_listed?: boolean;
+};
+
+export type AgentNetworkContactAdmissionInput = {
+    sender_address: string;
+};
+
+/**
+ * Recipient-bound admission for authenticated network mail.
+ */
+export type AgentNetworkContactAdmission = {
+    allowed: boolean;
+    /**
+     * Earliest received_at eligible under the current membership and connection state.
+     */
+    allowed_since: string | null;
+};
+
+/**
  * Who may publish into a registry. owner_only: only the registry owner.
  * request: anyone may request and the owner approves. open: anyone may
  * publish and it lists immediately (no approval step).
@@ -4639,6 +4705,21 @@ export type TemplateInstallStatus = {
     created_at: string;
     updated_at: string;
 };
+
+/**
+ * The agent's email address, URL-encoded in the path.
+ */
+export type AgentNetworkAddress = string;
+
+/**
+ * Maximum number of addresses to return.
+ */
+export type AgentNetworkLimit = number;
+
+/**
+ * Continue after this address from the previous page.
+ */
+export type AgentNetworkCursor = string;
 
 /**
  * The attachment metadata `part_index`, not its offset in the attachments array
@@ -10124,6 +10205,318 @@ export type ListDeclinedPaymentsResponses = {
 };
 
 export type ListDeclinedPaymentsResponse = ListDeclinedPaymentsResponses[keyof ListDeclinedPaymentsResponses];
+
+export type ListAgentNetworksData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/agent-networks';
+};
+
+export type ListAgentNetworksErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type ListAgentNetworksError = ListAgentNetworksErrors[keyof ListAgentNetworksErrors];
+
+export type ListAgentNetworksResponses = {
+    /**
+     * Networks owned by the organization
+     */
+    200: SuccessEnvelope & {
+        data?: Array<AgentNetwork>;
+    };
+};
+
+export type ListAgentNetworksResponse = ListAgentNetworksResponses[keyof ListAgentNetworksResponses];
+
+export type ListDefaultNetworkMembersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Maximum number of addresses to return.
+         */
+        limit?: number;
+        /**
+         * Continue after this address from the previous page.
+         */
+        cursor?: string;
+    };
+    url: '/agent-networks/default/members';
+};
+
+export type ListDefaultNetworkMembersErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type ListDefaultNetworkMembersError = ListDefaultNetworkMembersErrors[keyof ListDefaultNetworkMembersErrors];
+
+export type ListDefaultNetworkMembersResponses = {
+    /**
+     * Owner roster ordered by address
+     */
+    200: ListEnvelope & {
+        data?: Array<AgentNetworkMember>;
+    };
+};
+
+export type ListDefaultNetworkMembersResponse = ListDefaultNetworkMembersResponses[keyof ListDefaultNetworkMembersResponses];
+
+export type RemoveDefaultNetworkMemberData = {
+    body?: never;
+    path: {
+        /**
+         * The agent's email address, URL-encoded in the path.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-networks/default/members/{address}';
+};
+
+export type RemoveDefaultNetworkMemberErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type RemoveDefaultNetworkMemberError = RemoveDefaultNetworkMemberErrors[keyof RemoveDefaultNetworkMemberErrors];
+
+export type RemoveDefaultNetworkMemberResponses = {
+    /**
+     * Membership excluded
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            excluded: boolean;
+        };
+    };
+};
+
+export type RemoveDefaultNetworkMemberResponse = RemoveDefaultNetworkMemberResponses[keyof RemoveDefaultNetworkMemberResponses];
+
+export type UpdateDefaultNetworkMemberData = {
+    body: UpdateAgentNetworkMemberInput;
+    path: {
+        /**
+         * The agent's email address, URL-encoded in the path.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-networks/default/members/{address}';
+};
+
+export type UpdateDefaultNetworkMemberErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Invalid request parameters
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateDefaultNetworkMemberError = UpdateDefaultNetworkMemberErrors[keyof UpdateDefaultNetworkMemberErrors];
+
+export type UpdateDefaultNetworkMemberResponses = {
+    /**
+     * Updated membership
+     */
+    200: SuccessEnvelope & {
+        data?: AgentNetworkMember;
+    };
+};
+
+export type UpdateDefaultNetworkMemberResponse = UpdateDefaultNetworkMemberResponses[keyof UpdateDefaultNetworkMemberResponses];
+
+export type AddDefaultNetworkMemberData = {
+    body?: never;
+    path: {
+        /**
+         * The agent's email address, URL-encoded in the path.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-networks/default/members/{address}';
+};
+
+export type AddDefaultNetworkMemberErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type AddDefaultNetworkMemberError = AddDefaultNetworkMemberErrors[keyof AddDefaultNetworkMemberErrors];
+
+export type AddDefaultNetworkMemberResponses = {
+    /**
+     * Active membership
+     */
+    200: SuccessEnvelope & {
+        data?: AgentNetworkMember;
+    };
+};
+
+export type AddDefaultNetworkMemberResponse = AddDefaultNetworkMemberResponses[keyof AddDefaultNetworkMemberResponses];
+
+export type ListDefaultNetworkAgentsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Maximum number of addresses to return.
+         */
+        limit?: number;
+        /**
+         * Continue after this address from the previous page.
+         */
+        cursor?: string;
+    };
+    url: '/agent-networks/default/agents';
+};
+
+export type ListDefaultNetworkAgentsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type ListDefaultNetworkAgentsError = ListDefaultNetworkAgentsErrors[keyof ListDefaultNetworkAgentsErrors];
+
+export type ListDefaultNetworkAgentsResponses = {
+    /**
+     * Listed peers ordered by address
+     */
+    200: ListEnvelope & {
+        data?: Array<AgentNetworkPeer>;
+    };
+};
+
+export type ListDefaultNetworkAgentsResponse = ListDefaultNetworkAgentsResponses[keyof ListDefaultNetworkAgentsResponses];
+
+export type GetDefaultNetworkAgentData = {
+    body?: never;
+    path: {
+        /**
+         * The agent's email address, URL-encoded in the path.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-networks/default/agents/{address}';
+};
+
+export type GetDefaultNetworkAgentErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetDefaultNetworkAgentError = GetDefaultNetworkAgentErrors[keyof GetDefaultNetworkAgentErrors];
+
+export type GetDefaultNetworkAgentResponses = {
+    /**
+     * Listed peer profile
+     */
+    200: SuccessEnvelope & {
+        data?: AgentNetworkPeer;
+    };
+};
+
+export type GetDefaultNetworkAgentResponse = GetDefaultNetworkAgentResponses[keyof GetDefaultNetworkAgentResponses];
+
+export type CheckDefaultNetworkContactAdmissionData = {
+    body: AgentNetworkContactAdmissionInput;
+    path?: never;
+    query?: never;
+    url: '/agent-networks/default/contact-admission';
+};
+
+export type CheckDefaultNetworkContactAdmissionErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Invalid request parameters
+     */
+    422: ErrorResponse;
+};
+
+export type CheckDefaultNetworkContactAdmissionError = CheckDefaultNetworkContactAdmissionErrors[keyof CheckDefaultNetworkContactAdmissionErrors];
+
+export type CheckDefaultNetworkContactAdmissionResponses = {
+    /**
+     * Recipient-bound network contact decision
+     */
+    200: SuccessEnvelope & {
+        data?: AgentNetworkContactAdmission;
+    };
+};
+
+export type CheckDefaultNetworkContactAdmissionResponse = CheckDefaultNetworkContactAdmissionResponses[keyof CheckDefaultNetworkContactAdmissionResponses];
 
 export type ListRegistriesData = {
     body?: never;

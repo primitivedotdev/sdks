@@ -64,6 +64,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	signal_smoke_script="$$(pwd)/scripts/smoke-signals.mjs" && \
 	agent_enroll_smoke_script="$$(pwd)/scripts/smoke-agent-enroll.mjs" && \
 	agent_notes_smoke_script="$$(pwd)/scripts/smoke-agent-notes.mjs" && \
+	agent_network_smoke_script="$$(pwd)/scripts/smoke-agent-network.mjs" && \
 	agent_disconnect_smoke_script="$$(pwd)/scripts/smoke-agent-disconnect.mjs" && \
 	contact_requests_smoke_script="$$(pwd)/scripts/smoke-contact-requests.mjs" && \
 	late_contact_smoke_script="$$(pwd)/scripts/smoke-late-contact-notices.mjs" && \
@@ -94,6 +95,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	node "$$connected_agent_smoke_script" "$$bin" && \
 	node "$$agent_enroll_smoke_script" "$$bin" && \
 	node "$$agent_notes_smoke_script" "$$bin" && \
+	node "$$agent_network_smoke_script" "$$bin" && \
 	node "$$agent_disconnect_smoke_script" "$$bin" && \
 	node "$$signal_smoke_script" "$$bin" && \
 	node "$$contact_requests_smoke_script" "$$bin" && \

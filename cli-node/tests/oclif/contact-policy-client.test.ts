@@ -9,6 +9,36 @@ const recipient = "agent@example.com";
 const sender = "owner@example.com";
 const receivedAt = "2026-09-01T10:01:00.000Z";
 
+it("does not query recipient-bound network admission for an org-key listener", async () => {
+  const requests = vi.fn(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(new Request(input, init).url).pathname;
+      if (path.startsWith("/v1/agent-contact-policy/"))
+        return Response.json({
+          success: true,
+          data: emptyContactPolicy(recipient),
+        });
+      if (path.startsWith("/v1/agent-contacts/"))
+        return Response.json({
+          success: true,
+          data: [],
+          meta: { cursor: null },
+        });
+      throw new Error(`Unexpected network admission: ${path}`);
+    },
+  );
+  const api = new PrimitiveApiClient({
+    apiKey: "fixture",
+    apiBaseUrl: "https://example.test/v1",
+    fetch: requests,
+  });
+  const policy = apiContactPolicy(api.client, recipient, false, false);
+  expect(
+    await policy.admit(sender, receivedAt, new AbortController().signal),
+  ).toBeNull();
+  expect(requests).toHaveBeenCalledTimes(2);
+});
+
 describe.each([
   "policy",
   "contacts",

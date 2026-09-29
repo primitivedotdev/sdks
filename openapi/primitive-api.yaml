@@ -220,6 +220,12 @@ tags:
       handle. Discovery reads (list, resolve, get) are public for public
       registries; managing a registry and moderating requests use the owner's
       API key.
+  - name: Agent Networks
+    description: |
+      Organization agent discovery by email address. Every organization has a
+      private default network. Owners manage membership and visibility;
+      connected agents and organization members discover listed peers. Network membership does not grant
+      permission to perform tasks, use tools, or read private information.
   - name: Contacts
     description: Organization contacts and per-address agent preferences.
 
@@ -5763,6 +5769,199 @@ paths:
           $ref: '#/components/responses/RateLimited'
 
   # ---------------------------------------------------------------------------
+  # Agent Networks
+  # ---------------------------------------------------------------------------
+  /agent-networks:
+    get:
+      operationId: listAgentNetworks
+      summary: List your organization's agent networks
+      description: An organization member login or an active connected agent allowed to see the network can read networks. The default organization network is always present.
+      tags: [Agent Networks]
+      responses:
+        '200':
+          description: Networks owned by the organization
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AgentNetwork' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /agent-networks/default/members:
+    get:
+      operationId: listDefaultNetworkMembers
+      summary: List the default network's owner roster
+      description: Owner or admin login required. Includes hidden and excluded members.
+      tags: [Agent Networks]
+      parameters:
+        - $ref: '#/components/parameters/AgentNetworkLimit'
+        - $ref: '#/components/parameters/AgentNetworkCursor'
+      responses:
+        '200':
+          description: Owner roster ordered by address
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AgentNetworkMember' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /agent-networks/default/members/{address}:
+    parameters:
+      - $ref: '#/components/parameters/AgentNetworkAddress'
+    patch:
+      operationId: updateDefaultNetworkMember
+      summary: Change whether an agent can see or be seen in the network
+      description: Owner or admin login required. Omitted settings keep their current value.
+      tags: [Agent Networks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAgentNetworkMemberInput' }
+      responses:
+        '200':
+          description: Updated membership
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/AgentNetworkMember' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      operationId: addDefaultNetworkMember
+      summary: Add an agent to the default network
+      description: Owner or admin login required. Restores an explicitly excluded member.
+      tags: [Agent Networks]
+      responses:
+        '200':
+          description: Active membership
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/AgentNetworkMember' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: removeDefaultNetworkMember
+      summary: Remove an agent from the default network
+      description: Owner or admin login required. The explicit exclusion persists across synchronization.
+      tags: [Agent Networks]
+      responses:
+        '200':
+          description: Membership excluded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          excluded: { type: boolean, const: true }
+                        required: [excluded]
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /agent-networks/default/agents:
+    get:
+      operationId: listDefaultNetworkAgents
+      summary: Discover listed agents in your organization network
+      description: Requires a connected-agent credential for an active member allowed to see the network, or an organization member login.
+      tags: [Agent Networks]
+      parameters:
+        - $ref: '#/components/parameters/AgentNetworkLimit'
+        - $ref: '#/components/parameters/AgentNetworkCursor'
+      responses:
+        '200':
+          description: Listed peers ordered by address
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ListEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/AgentNetworkPeer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /agent-networks/default/agents/{address}:
+    parameters:
+      - $ref: '#/components/parameters/AgentNetworkAddress'
+    get:
+      operationId: getDefaultNetworkAgent
+      summary: Get a listed agent by email address
+      description: Requires a connected-agent credential allowed to see the network, or an organization member login. Unlisted agents look absent.
+      tags: [Agent Networks]
+      responses:
+        '200':
+          description: Listed peer profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/AgentNetworkPeer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /agent-networks/default/contact-admission:
+    post:
+      operationId: checkDefaultNetworkContactAdmission
+      summary: Check whether network mail may wake this connected agent
+      description: |
+        Requires the recipient's connected-agent credential. The recipient
+        address is derived from that credential. Returns no sender profile or
+        existence detail. This check does not authenticate the inbound email
+        sender; clients must verify the actual email and respect explicit
+        contact silence before using the result. Mail received before
+        allowed_since cannot be newly admitted.
+      tags: [Agent Networks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentNetworkContactAdmissionInput' }
+      responses:
+        '200':
+          description: Recipient-bound network contact decision
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data: { $ref: '#/components/schemas/AgentNetworkContactAdmission' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  # ---------------------------------------------------------------------------
   # Registries (Agent Registry)
   # ---------------------------------------------------------------------------
   /registries:
@@ -8058,6 +8257,27 @@ components:
       description: Signed download token provided in webhook payloads
 
   parameters:
+    AgentNetworkAddress:
+      name: address
+      in: path
+      required: true
+      description: The agent's email address, URL-encoded in the path.
+      schema: { type: string, minLength: 3, maxLength: 254 }
+
+    AgentNetworkLimit:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of addresses to return.
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+
+    AgentNetworkCursor:
+      name: cursor
+      in: query
+      required: false
+      description: Continue after this address from the previous page.
+      schema: { type: string, minLength: 3, maxLength: 254 }
+
     AttachmentPartIndex:
       name: part_index
       in: path
@@ -8592,6 +8812,73 @@ components:
       - rules
       - allow_contact_requests
       - if_version
+    AgentNetwork:
+      type: object
+      description: An organization-owned network. The default network cannot be deleted.
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, const: organization }
+        is_default: { type: boolean, const: true }
+        name: { type: string }
+      required: [id, kind, is_default, name]
+
+    AgentNetworkMember:
+      type: object
+      description: Owner view of one address in the default organization network.
+      properties:
+        address: { type: string, format: email }
+        name: { type: string }
+        can_view:
+          type: boolean
+          description: Whether this agent can read the network directory.
+        is_listed:
+          type: boolean
+          description: Whether this agent appears in network directory discovery. Known-address email is separate.
+        excluded:
+          type: boolean
+          description: Explicit removal from the network; synchronization does not re-add it.
+        connected: { type: boolean }
+        last_seen_at:
+          type: [string, 'null']
+          format: date-time
+          description: Last recorded activity, not a presence or receiving guarantee.
+      required: [address, name, can_view, is_listed, excluded, connected, last_seen_at]
+
+    AgentNetworkPeer:
+      type: object
+      description: Listed peer profile. The email address is the identity.
+      properties:
+        address: { type: string, format: email }
+        name: { type: string }
+      required: [address, name]
+
+    UpdateAgentNetworkMemberInput:
+      type: object
+      description: Set one or both independent discovery permissions.
+      properties:
+        can_view: { type: boolean }
+        is_listed: { type: boolean }
+      minProperties: 1
+      additionalProperties: false
+
+    AgentNetworkContactAdmissionInput:
+      type: object
+      properties:
+        sender_address: { type: string, format: email }
+      required: [sender_address]
+      additionalProperties: false
+
+    AgentNetworkContactAdmission:
+      type: object
+      description: Recipient-bound admission for authenticated network mail.
+      properties:
+        allowed: { type: boolean }
+        allowed_since:
+          type: [string, 'null']
+          format: date-time
+          description: Earliest received_at eligible under the current membership and connection state.
+      required: [allowed, allowed_since]
+
     PublishPolicy:
       type: string
       enum: [owner_only, request, open]

@@ -26,6 +26,7 @@ export type ContactNotificationAdmission = {
   notifySince: string;
   kind: "allowed" | "request" | "response";
   effectiveVersion: string;
+  source?: "network";
 };
 type Snapshot = {
   startedAt: number;
@@ -50,6 +51,10 @@ export function createNotificationContactPolicy(options: {
     signal: AbortSignal,
   ): Promise<ContactPolicyPage>;
   readPolicy(signal: AbortSignal): Promise<unknown>;
+  readNetworkAdmission?(
+    sender: string,
+    signal: AbortSignal,
+  ): Promise<{ allowed: boolean; allowed_since: string | null }>;
   contactRequests?: boolean;
   now?: () => number;
 }) {
@@ -174,16 +179,52 @@ export function createNotificationContactPolicy(options: {
       effectiveVersion: value.policy.effective_version,
     };
   }
-  function permits(value: Snapshot, prior: ContactNotificationAdmission) {
-    const current = admission(
-      value,
-      prior.sender,
-      prior.receivedAt,
-      prior.kind === "response",
-    );
+  async function admissionWithNetwork(
+    value: Snapshot,
+    sender: string,
+    receivedAt: string,
+    signal: AbortSignal,
+  ): Promise<ContactNotificationAdmission | null> {
+    const contact = admission(value, sender, receivedAt);
+    if (contact?.kind === "allowed" || !options.readNetworkAdmission)
+      return contact;
+    const decision = evaluateContactPolicy({
+      policy: value.policy,
+      sender,
+      receivedAt,
+      membership: value.senders.get(sender),
+      contactRequests: options.contactRequests === true,
+    });
+    // Explicit per-contact or owner silence always wins. A network peer may
+    // bypass only the default silence or first-contact request path.
+    if (
+      decision.kind !== "request" &&
+      !(decision.kind === "silent" && decision.source === "default")
+    )
+      return contact;
+    const network = await options.readNetworkAdmission(sender, signal);
+    if (!network.allowed) return contact;
+    const since = network.allowed_since && mailTime(network.allowed_since);
+    if (!since) throw unavailable();
+    if (Date.parse(receivedAt) < Date.parse(since)) return contact;
+    return {
+      sender,
+      receivedAt,
+      generation: since,
+      notifySince: since,
+      kind: "allowed",
+      effectiveVersion: value.policy.effective_version,
+      source: "network",
+    };
+  }
+  function permits(
+    prior: ContactNotificationAdmission,
+    current: ContactNotificationAdmission | null,
+  ) {
     return (
       current !== null &&
       current.kind === prior.kind &&
+      current.source === prior.source &&
       current.generation === prior.generation &&
       current.notifySince === prior.notifySince &&
       current.effectiveVersion === prior.effectiveVersion
@@ -206,26 +247,42 @@ export function createNotificationContactPolicy(options: {
       const received = mailTime(receivedAt);
       const cached = fresh(snapshot);
       let current = cached && snapshot ? snapshot : await refreshOnce(signal);
-      let allowed = admission(current, peer, received);
+      let allowed = await admissionWithNetwork(current, peer, received, signal);
       if (cached && allowed?.kind !== "allowed") {
         // Cached denial or request-only intake cannot discard ordinary mail
         // from a newly approved contact before its dispatch permission is read.
         current = await refreshOnce(signal);
-        allowed = admission(current, peer, received);
+        allowed = await admissionWithNetwork(current, peer, received, signal);
       }
       return allowed;
     },
-    async recheck(
-      admission: ContactNotificationAdmission,
-      signal: AbortSignal,
-    ) {
+    async recheck(prior: ContactNotificationAdmission, signal: AbortSignal) {
       const current = await refreshOnce(signal);
-      if (!permits(current, admission)) throw changed();
+      const candidate =
+        prior.source === "network"
+          ? await admissionWithNetwork(
+              current,
+              prior.sender,
+              prior.receivedAt,
+              signal,
+            )
+          : admission(
+              current,
+              prior.sender,
+              prior.receivedAt,
+              prior.kind === "response",
+            );
+      if (!permits(prior, candidate)) throw changed();
       // The native adapter invokes this synchronously before its durable
       // submitting receipt, after socket/session preflight has completed.
       return () => {
         signal.throwIfAborted();
-        if (!fresh(snapshot) || !permits(snapshot, admission)) throw changed();
+        if (
+          !fresh(snapshot) ||
+          snapshot !== current ||
+          !permits(prior, candidate)
+        )
+          throw changed();
       };
     },
     // The caller must first prove an exact, locally initiated reply. This is

@@ -1198,6 +1198,473 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "add-default-network-member",
+    "description": "Owner or admin login required. Restores an explicitly excluded member.",
+    "hasJsonBody": false,
+    "method": "POST",
+    "operationId": "addDefaultNetworkMember",
+    "path": "/agent-networks/default/members/{address}",
+    "pathParams": [
+      {
+        "description": "The agent's email address, URL-encoded in the path.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "Owner view of one address in the default organization network.",
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        },
+        "can_view": {
+          "type": "boolean",
+          "description": "Whether this agent can read the network directory."
+        },
+        "is_listed": {
+          "type": "boolean",
+          "description": "Whether this agent appears in network directory discovery. Known-address email is separate."
+        },
+        "excluded": {
+          "type": "boolean",
+          "description": "Explicit removal from the network; synchronization does not re-add it."
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "last_seen_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Last recorded activity, not a presence or receiving guarantee."
+        }
+      },
+      "required": [
+        "address",
+        "name",
+        "can_view",
+        "is_listed",
+        "excluded",
+        "connected",
+        "last_seen_at"
+      ]
+    },
+    "sdkName": "addDefaultNetworkMember",
+    "summary": "Add an agent to the default network",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "check-default-network-contact-admission",
+    "description": "Requires the recipient's connected-agent credential. The recipient\naddress is derived from that credential. Returns no sender profile or\nexistence detail. This check does not authenticate the inbound email\nsender; clients must verify the actual email and respect explicit\ncontact silence before using the result. Mail received before\nallowed_since cannot be newly admitted.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "checkDefaultNetworkContactAdmission",
+    "path": "/agent-networks/default/contact-admission",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "properties": {
+        "sender_address": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "required": [
+        "sender_address"
+      ],
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "Recipient-bound admission for authenticated network mail.",
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "allowed_since": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Earliest received_at eligible under the current membership and connection state."
+        }
+      },
+      "required": [
+        "allowed",
+        "allowed_since"
+      ]
+    },
+    "sdkName": "checkDefaultNetworkContactAdmission",
+    "summary": "Check whether network mail may wake this connected agent",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-default-network-agent",
+    "description": "Requires a connected-agent credential allowed to see the network, or an organization member login. Unlisted agents look absent.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getDefaultNetworkAgent",
+    "path": "/agent-networks/default/agents/{address}",
+    "pathParams": [
+      {
+        "description": "The agent's email address, URL-encoded in the path.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "Listed peer profile. The email address is the identity.",
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "name"
+      ]
+    },
+    "sdkName": "getDefaultNetworkAgent",
+    "summary": "Get a listed agent by email address",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-agent-networks",
+    "description": "An organization member login or an active connected agent allowed to see the network can read networks. The default organization network is always present.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listAgentNetworks",
+    "path": "/agent-networks",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "An organization-owned network. The default network cannot be deleted.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "const": "organization"
+          },
+          "is_default": {
+            "type": "boolean",
+            "const": true
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "is_default",
+          "name"
+        ]
+      }
+    },
+    "sdkName": "listAgentNetworks",
+    "summary": "List your organization's agent networks",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-default-network-agents",
+    "description": "Requires a connected-agent credential for an active member allowed to see the network, or an organization member login.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listDefaultNetworkAgents",
+    "path": "/agent-networks/default/agents",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "default": 50,
+        "description": "Maximum number of addresses to return.",
+        "enum": null,
+        "maximum": 200,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "Continue after this address from the previous page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "Listed peer profile. The email address is the identity.",
+        "properties": {
+          "address": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "address",
+          "name"
+        ]
+      }
+    },
+    "sdkName": "listDefaultNetworkAgents",
+    "summary": "Discover listed agents in your organization network",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-default-network-members",
+    "description": "Owner or admin login required. Includes hidden and excluded members.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listDefaultNetworkMembers",
+    "path": "/agent-networks/default/members",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "default": 50,
+        "description": "Maximum number of addresses to return.",
+        "enum": null,
+        "maximum": 200,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "Continue after this address from the previous page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "Owner view of one address in the default organization network.",
+        "properties": {
+          "address": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "can_view": {
+            "type": "boolean",
+            "description": "Whether this agent can read the network directory."
+          },
+          "is_listed": {
+            "type": "boolean",
+            "description": "Whether this agent appears in network directory discovery. Known-address email is separate."
+          },
+          "excluded": {
+            "type": "boolean",
+            "description": "Explicit removal from the network; synchronization does not re-add it."
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Last recorded activity, not a presence or receiving guarantee."
+          }
+        },
+        "required": [
+          "address",
+          "name",
+          "can_view",
+          "is_listed",
+          "excluded",
+          "connected",
+          "last_seen_at"
+        ]
+      }
+    },
+    "sdkName": "listDefaultNetworkMembers",
+    "summary": "List the default network's owner roster",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "remove-default-network-member",
+    "description": "Owner or admin login required. The explicit exclusion persists across synchronization.",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "removeDefaultNetworkMember",
+    "path": "/agent-networks/default/members/{address}",
+    "pathParams": [
+      {
+        "description": "The agent's email address, URL-encoded in the path.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "excluded": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "excluded"
+      ]
+    },
+    "sdkName": "removeDefaultNetworkMember",
+    "summary": "Remove an agent from the default network",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-default-network-member",
+    "description": "Owner or admin login required. Omitted settings keep their current value.",
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "updateDefaultNetworkMember",
+    "path": "/agent-networks/default/members/{address}",
+    "pathParams": [
+      {
+        "description": "The agent's email address, URL-encoded in the path.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "description": "Set one or both independent discovery permissions.",
+      "properties": {
+        "can_view": {
+          "type": "boolean"
+        },
+        "is_listed": {
+          "type": "boolean"
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "Owner view of one address in the default organization network.",
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        },
+        "can_view": {
+          "type": "boolean",
+          "description": "Whether this agent can read the network directory."
+        },
+        "is_listed": {
+          "type": "boolean",
+          "description": "Whether this agent appears in network directory discovery. Known-address email is separate."
+        },
+        "excluded": {
+          "type": "boolean",
+          "description": "Explicit removal from the network; synchronization does not re-add it."
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "last_seen_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Last recorded activity, not a presence or receiving guarantee."
+        }
+      },
+      "required": [
+        "address",
+        "name",
+        "can_view",
+        "is_listed",
+        "excluded",
+        "connected",
+        "last_seen_at"
+      ]
+    },
+    "sdkName": "updateDefaultNetworkMember",
+    "summary": "Change whether an agent can see or be seen in the network",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "cli-logout",
     "description": "Revokes the OAuth grant used to authenticate the request. API-key\nauthenticated legacy logout requests succeed without deleting server API\nkeys so old local CLI state can be cleared safely.\n",
     "hasJsonBody": true,
