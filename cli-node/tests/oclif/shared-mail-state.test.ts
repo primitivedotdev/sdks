@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createSharedMailWaiter,
   openSharedMailStore,
   reserveSharedMailSubscription,
   type SharedMailStore,
@@ -55,6 +56,22 @@ async function received(
   return { emailId, eventId, receivedAt };
 }
 describe("shared mail ingress and claims", () => {
+  it("lets a live chat wait own its reply, then suppresses the wake after observation", async () => {
+    const w = intent("claude:session");
+    const waiter = createSharedMailWaiter();
+    const parent = randomUUID();
+    await store.registerWait({ ...w, waiter });
+    await store.bindWait(w.requestId, parent);
+    const e = await received(parent);
+    expect(await store.wakeDisposition(e.emailId, parent)).toBe("waiting");
+    await store.claimForWait(e.emailId, w.requestId, waiter.token);
+    await store.markWaitObserved(e.emailId, w.requestId);
+    expect(await store.wakeDisposition(e.emailId, parent)).toBe("observed");
+    await store.releaseWaiter(w.requestId, waiter.token);
+    expect(await store.wakeDisposition(e.emailId, parent)).toBe("observed");
+    const late = await received(parent);
+    expect(await store.wakeDisposition(late.emailId, parent)).toBe("available");
+  });
   it("bootstraps notify first and wait first with one immutable recipient and subscription", async () => {
     const scope = "notify-first";
     const reserved = await reserveSharedMailSubscription({ configDir, scope });

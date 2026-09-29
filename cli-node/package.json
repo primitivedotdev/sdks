@@ -53,7 +53,7 @@
         "description": "Claim a private invitation from stdin or remove a revoked connection with an owner/admin login."
       },
       "agent": {
-        "description": "Connect an existing agent privately, manage its contacts, or use agent signup operations."
+        "description": "Connect an invited session, enroll a new session using a saved owner login, disconnect one saved profile, or manage contacts and signup."
       },
       "credits": {
         "description": "Redeem credit codes and check the organization credit balance"
@@ -129,13 +129,16 @@
         "description": "Schedule and send wake commands to your own functions over signed email, and manage which senders may wake them. Use `primitive wake schedules list|create|get|update|delete|run`, `primitive wake authorizations list|create|update|delete`, and `primitive wake dispatches list`."
       },
       "listen": {
-        "description": "Receive events locally as JSONL, use --exec or --forward-to, or deliver external mail events as tool output, never user messages, to an exact loaded native session using --notify-session with --contacts or approved --sender addresses. Add --contact-requests for owner-enabled structured first-contact intake. Use --background for independent receiving, --status --notify-session for current receiver health and durable receipts, or --stop --notify-session to stop only that receiver."
+        "description": "Receive events locally as JSONL with JSON status responses by default; --json is accepted explicitly. Use --exec or --forward-to, or deliver external mail events as tool output, never user messages, to an exact loaded native session using --notify-session with --contacts or approved --sender addresses. Add --email-id to --status to explain one received email. Add --contact-requests for owner-enabled structured first-contact intake. Use --background for independent receiving, --status --notify-session for current receiver health and durable receipts, or --stop --notify-session to stop only that receiver."
       },
       "contacts": {
-        "description": "Shared organization contacts plus structured request, accept, and wait commands for connected agents. Directory list, get, add, update, and remove use conditional versions."
+        "description": "Shared organization contacts plus structured request, accept, and wait commands for connected agents. Directory list, get, add, update, and remove use conditional versions. Commands return JSON by default and accept explicit --json."
       },
       "agent:contacts": {
-        "description": "Contacts and notification preferences for one agent address. Connected profiles default to their own address."
+        "description": "Contacts and notification preferences for one agent address. Connected profiles default to their own address. Commands return JSON by default and accept explicit --json."
+      },
+      "agent:notes": {
+        "description": "Read and maintain organization address notes. Connected profiles default to their own address and can write only their own notes. Use agent notes list|get|set|delete; new notes are private, and updates preserve visibility unless explicitly changed. Commands return JSON by default."
       }
     },
     "topicSeparator": " "

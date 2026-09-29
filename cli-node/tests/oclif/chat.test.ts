@@ -363,6 +363,106 @@ describe("chat command", () => {
     expect(mocks.pickDefaultFromAddress).not.toHaveBeenCalled();
   });
 
+  it("sends async work once and leaves the exact session receiving without waiting", async () => {
+    const previous = process.env.CLAUDE_CODE_SESSION_ID;
+    const previousCodex = process.env.CODEX_SESSION_ID;
+    const previousThread = process.env.CODEX_THREAD_ID;
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    process.env.CLAUDE_CODE_SESSION_ID = "11111111-1111-4111-8111-111111111111";
+    try {
+      connectedAuth(true);
+      const result = await runChatCommand([
+        "help@agent.example",
+        "Build a small game",
+        "--async",
+        "--json",
+      ]);
+      const envelope = JSON.parse(result.stdout);
+      expect(result.exitCode).toBeUndefined();
+      expect(envelope).toMatchObject({
+        outcome: "sent",
+        exit_code: 0,
+        sent: { id: "sent-1" },
+        reply: null,
+      });
+      expect(mocks.openConnectedReplyWait.mock.calls[0][0].sessionKey).toBe(
+        "claude:11111111-1111-4111-8111-111111111111",
+      );
+      expect(mocks.ready).toHaveBeenCalledOnce();
+      expect(mocks.sendEmail).toHaveBeenCalledOnce();
+      expect(mocks.bind).toHaveBeenCalledWith("sent-1");
+      expect(mocks.next).not.toHaveBeenCalled();
+      expect(mocks.close).toHaveBeenCalledOnce();
+    } finally {
+      if (previous === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
+      else process.env.CLAUDE_CODE_SESSION_ID = previous;
+      if (previousCodex === undefined) delete process.env.CODEX_SESSION_ID;
+      else process.env.CODEX_SESSION_ID = previousCodex;
+      if (previousThread === undefined) delete process.env.CODEX_THREAD_ID;
+      else process.env.CODEX_THREAD_ID = previousThread;
+    }
+  });
+
+  it("refuses async sending without a connected profile or exact runtime session", async () => {
+    const previous = process.env.CLAUDE_CODE_SESSION_ID;
+    const previousCodex = process.env.CODEX_SESSION_ID;
+    const previousThread = process.env.CODEX_THREAD_ID;
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    delete process.env.CLAUDE_CODE_SESSION_ID;
+    try {
+      connectedAuth(true);
+      await expect(
+        runChatCommand(["help@agent.example", "hello", "--async"]),
+      ).rejects.toThrow("exact current coding session");
+      connectedAuth(false);
+      process.env.CLAUDE_CODE_SESSION_ID =
+        "11111111-1111-4111-8111-111111111111";
+      await expect(
+        runChatCommand([
+          "help@agent.example",
+          "hello",
+          "--from",
+          "agent@sender.example",
+          "--async",
+        ]),
+      ).rejects.toThrow("connected-agent profile");
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+    } finally {
+      if (previous === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
+      else process.env.CLAUDE_CODE_SESSION_ID = previous;
+      if (previousCodex === undefined) delete process.env.CODEX_SESSION_ID;
+      else process.env.CODEX_SESSION_ID = previousCodex;
+      if (previousThread === undefined) delete process.env.CODEX_THREAD_ID;
+      else process.env.CODEX_THREAD_ID = previousThread;
+    }
+  });
+
+  it("refuses async sending when another coding runtime's session leaks into the environment", async () => {
+    const previous = process.env.CLAUDE_CODE_SESSION_ID;
+    const previousCodex = process.env.CODEX_SESSION_ID;
+    const previousThread = process.env.CODEX_THREAD_ID;
+    process.env.CLAUDE_CODE_SESSION_ID = "11111111-1111-4111-8111-111111111111";
+    process.env.CODEX_SESSION_ID = "22222222-2222-4222-8222-222222222222";
+    process.env.CODEX_THREAD_ID = process.env.CODEX_SESSION_ID;
+    try {
+      connectedAuth(true);
+      await expect(
+        runChatCommand(["help@agent.example", "hello", "--async"]),
+      ).rejects.toThrow("exact current coding session");
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+      expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+    } finally {
+      if (previous === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
+      else process.env.CLAUDE_CODE_SESSION_ID = previous;
+      if (previousCodex === undefined) delete process.env.CODEX_SESSION_ID;
+      else process.env.CODEX_SESSION_ID = previousCodex;
+      if (previousThread === undefined) delete process.env.CODEX_THREAD_ID;
+      else process.env.CODEX_THREAD_ID = previousThread;
+    }
+  });
+
   it.each([
     "other@sender.example",
     "",

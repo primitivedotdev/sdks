@@ -8,6 +8,8 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import { followEmailConversation } from "../conversation-follow.js";
+import { currentMailSessionKey } from "../mail-session.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 import {
   buildThrownSendFailureEnvelope,
@@ -20,6 +22,7 @@ import {
   SEND_OUTCOME_HELP,
   sendOutcomeExitCode,
 } from "../send-outcome.js";
+import { sharedMailScope } from "../shared-mail-receiver.js";
 
 class ReplyCommand extends Command {
   static description = `Reply to an inbound email.
@@ -27,10 +30,12 @@ class ReplyCommand extends Command {
   The API derives recipients, the Re: subject, and threading headers from the inbound email id. Use \`primitive send --in-reply-to <message-id>\` only when you need to thread against a raw Message-Id instead of an inbound email stored by Primitive.
 
   Before sending, the CLI looks up the inbound email and warns on stderr
-  when you already replied to it ("You already replied to this email at
-  T (sent id S). Sending another reply."). The warning never blocks the
-  send. If the lookup fails, the reply is still sent and stderr says the
-  check was skipped.
+  when prior outgoing emails reference it. These may include activity
+  updates and do not prove a completed answer. The warning never blocks
+  the send. If the lookup fails, the reply is still sent and stderr says
+  the check was skipped. A connected native session requires the lookup
+  to succeed so it can follow this conversation before sending. Thread
+  ownership or local storage failures then stop before sending.
 
   Stdout is the send record as JSON. A one-line outcome summary goes to
   stderr ("Reply sent (queued for delivery, id X). Do not resend."). A
@@ -175,6 +180,7 @@ class ReplyCommand extends Command {
           configDir: this.config.configDir,
         });
       const attachments = readAttachmentFiles(flags.attachment);
+      const receivingSince = new Date().toISOString();
 
       // Advisory only: a reply the caller already sent is worth a loud
       // warning, but the caller may mean to follow up, so never block.
@@ -189,6 +195,29 @@ class ReplyCommand extends Command {
           : formatPriorRepliesCheckSkipped(flags.id, priorRepliesCheck.reason);
       if (priorRepliesMessage !== null) {
         process.stderr.write(`${priorRepliesMessage}\n`);
+      }
+
+      const sessionKey = currentMailSessionKey();
+      if (auth.connectedAgent && sessionKey) {
+        if (
+          priorRepliesCheck.status !== "checked" ||
+          !priorRepliesCheck.detail ||
+          priorRepliesCheck.detail.id !== flags.id
+        )
+          throw new Errors.CLIError(
+            "Conversation receiving could not be established because this email could not be read. No reply was sent; retry after the lookup succeeds.",
+          );
+        await followEmailConversation(
+          {
+            configDir: this.config.configDir,
+            scope: sharedMailScope(auth.apiKey, auth.apiBaseUrl),
+            recipient: auth.connectedAgent.agentAddress,
+            peer: priorRepliesCheck.detail.from_email,
+            sessionKey,
+            since: receivingSince,
+          },
+          priorRepliesCheck.detail,
+        );
       }
 
       const attemptStartedAtIso = new Date().toISOString();

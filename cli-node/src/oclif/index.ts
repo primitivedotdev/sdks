@@ -9,6 +9,14 @@ import AgentContactsAddCommand from "./commands/agent-contacts-add.js";
 import AgentContactsListCommand from "./commands/agent-contacts-list.js";
 import AgentContactsRemoveCommand from "./commands/agent-contacts-remove.js";
 import AgentContactsUpdateCommand from "./commands/agent-contacts-update.js";
+import AgentDisconnectCommand from "./commands/agent-disconnect.js";
+import AgentEnrollCommand from "./commands/agent-enroll.js";
+import {
+  AgentNotesDeleteCommand,
+  AgentNotesGetCommand,
+  AgentNotesListCommand,
+  AgentNotesSetCommand,
+} from "./commands/agent-notes.js";
 import AgentUpgradeCommand from "./commands/agent-upgrade.js";
 import ChatCommand, { ChatReplyCommand } from "./commands/chat.js";
 import {
@@ -509,6 +517,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   // on top of the generated agent:claim / agent:claim-verify operations.
   "agent:upgrade": AgentUpgradeCommand,
   "agent:connect": AgentConnectCommand,
+  "agent:disconnect": AgentDisconnectCommand,
+  "agent:enroll": AgentEnrollCommand,
   "contacts:request": ContactsRequestCommand,
   "contacts:accept": ContactsAcceptCommand,
   "contacts:wait": ContactsWaitCommand,
@@ -521,6 +531,10 @@ export const COMMANDS: Record<string, typeof Command> = {
   "agent:contacts:add": AgentContactsAddCommand,
   "agent:contacts:update": AgentContactsUpdateCommand,
   "agent:contacts:remove": AgentContactsRemoveCommand,
+  "agent:notes:list": AgentNotesListCommand,
+  "agent:notes:get": AgentNotesGetCommand,
+  "agent:notes:set": AgentNotesSetCommand,
+  "agent:notes:delete": AgentNotesDeleteCommand,
 
   "agent-connections:claim-agent-connection": AgentConnectCommand,
   "list-operations": ListOperationsCommand,
@@ -630,7 +644,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // the server-owned status API instead of making agents compose those lists.
   "inbox:setup": InboxSetupCommand,
   // WebSocket receiving, with explicit poll transport and bounded one-shot waits.
-  // One listener route owns stdout, webhook, native notifications, and paginated receipt status.
+  // One listener route owns events, receiver status and exact-email routing diagnostics.
   listen: ListenCommand,
   "listen:init": ListenInitCommand,
   "inbox:status": InboxStatusCommand,

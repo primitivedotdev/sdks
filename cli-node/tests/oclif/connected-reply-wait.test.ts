@@ -12,6 +12,7 @@ import {
   prepareContactAcceptance,
   prepareContactRequest,
 } from "../../src/oclif/contact-interactions.js";
+import { readConversationFollow } from "../../src/oclif/conversation-follow.js";
 import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
 
 const hooks = vi.hoisted(() => ({
@@ -495,6 +496,28 @@ describe("connected pushed reply waits", () => {
       (await second.receiver.store.readWait(second.requestId))?.status,
     ).toBe("bound");
     await second.close();
+  });
+  it("learns a verified server thread before finishing the first plain reply wait", async () => {
+    const f = fixture();
+    const threadId = randomUUID(),
+      sessionKey = `codex:${randomUUID()}`;
+    f.state.detail.thread_id = threadId;
+    const waiter = await openConnectedReplyWait({ ...f.options, sessionKey });
+    const email = await waiter.next();
+    expect(email?.id).toBe(f.state.detail.id);
+    expect(
+      readConversationFollow(
+        {
+          configDir: f.options.configDir,
+          scope: "test-scope",
+          recipient: target.from,
+        },
+        threadId,
+      ),
+    ).toMatchObject({ peer: target.recipient, sessionKey });
+    await waiter.observed(f.state.detail.id);
+    await waiter.finish();
+    await waiter.close();
   });
   it("cleans up a new intent when binding a completed parent for another peer fails", async () => {
     const f = fixture();

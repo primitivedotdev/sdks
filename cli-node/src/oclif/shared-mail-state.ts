@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { opendirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { ContactRequestReference } from "./contact-interactions.js";
+import { readConversationFollow } from "./conversation-follow.js";
 import {
   compareListenProcessIdentity,
   listenProcessIdentity,
@@ -26,6 +27,7 @@ export type SharedMailDetails = {
   recipient: string;
   peer: string;
   replyToSentEmailId: string | null;
+  threadId?: string;
   receivedAt: string;
   authorization: "pending" | "trusted" | "rejected";
 };
@@ -121,7 +123,11 @@ const hash = (value: string) =>
 const same = (left: unknown, right: unknown) =>
   JSON.stringify(left) === JSON.stringify(right);
 function details(value: unknown): SharedMailDetails {
+  const hasThread = Boolean(
+    value && typeof value === "object" && Object.hasOwn(value, "threadId"),
+  );
   const d = mailObject(value, [
+    ...(hasThread ? ["threadId"] : []),
     "recipient",
     "peer",
     "replyToSentEmailId",
@@ -135,6 +141,7 @@ function details(value: unknown): SharedMailDetails {
   )
     throw invalidSharedMail();
   return {
+    ...(hasThread ? { threadId: mailId(d.threadId) } : {}),
     recipient: mailAddress(d.recipient),
     peer: mailAddress(d.peer),
     replyToSentEmailId:
@@ -529,18 +536,23 @@ export async function openSharedMailStore(options: {
       return transaction(() => {
         const record = requiredEmail(emailId),
           verified = details(input);
+        if (verified.threadId === undefined && record.details?.threadId)
+          verified.threadId = record.details.threadId;
         if (verified.recipient !== recipient) throw invalidSharedMail();
         if (
           record.details &&
           record.details.authorization !== "pending" &&
           !same(
-            record.details.replyToSentEmailId === null
-              ? {
-                  ...record.details,
-                  replyToSentEmailId: verified.replyToSentEmailId,
-                }
-              : record.details,
-            verified,
+            details({
+              ...record.details,
+              ...(record.details.replyToSentEmailId === null
+                ? { replyToSentEmailId: verified.replyToSentEmailId }
+                : {}),
+              ...(record.details.threadId === undefined && verified.threadId
+                ? { threadId: verified.threadId }
+                : {}),
+            }),
+            details(verified),
           )
         )
           throw invalidSharedMail();
@@ -642,6 +654,21 @@ export async function openSharedMailStore(options: {
         return parent === null ? null : requiredWait(parent.requestId);
       });
     },
+    wakeDisposition(emailId: string, sentEmailId: string) {
+      return transaction(() => {
+        const email = readEmail(mailId(emailId));
+        if (email?.route?.kind === "wait" && email.route.observed)
+          return "observed" as const;
+        const parent = read(pathFor("parents", mailId(sentEmailId))) as {
+          requestId: string;
+        } | null;
+        if (!parent) return "available" as const;
+        const w = requiredWait(parent.requestId);
+        if (w.status === "bound" && w.waiters?.some(mayBeWaiting))
+          return "waiting" as const;
+        return "available" as const;
+      });
+    },
     bindWait(requestId: string, sentEmailId: string) {
       return transaction(() => {
         const previous = requiredWait(requestId),
@@ -655,6 +682,9 @@ export async function openSharedMailStore(options: {
           if (
             canonical.sentEmailId !== parent ||
             canonical.peer !== previous.peer ||
+            (canonical.sessionKey !== null &&
+              previous.sessionKey !== null &&
+              canonical.sessionKey !== previous.sessionKey) ||
             !same(
               canonical.contactRequest ?? null,
               previous.contactRequest ?? null,
@@ -689,6 +719,8 @@ export async function openSharedMailStore(options: {
             return joined;
           }
           if (canonical.status !== "completed") throw invalidSharedMail();
+          // A manual resume must not erase the session that follows this conversation.
+          previous.sessionKey ??= canonical.sessionKey;
         }
         if (previous.status === "cancelled" || previous.status === "completed")
           throw invalidSharedMail();
@@ -921,6 +953,14 @@ export async function openSharedMailStore(options: {
           return { status: "held", email: record };
         if (d.authorization !== "trusted")
           return { status: "unmatched", email: record };
+        if (d.threadId) {
+          const followed = readConversationFollow(
+            { configDir: options.configDir, scope: options.scope, recipient },
+            d.threadId,
+          );
+          if (followed && followed.sessionKey !== session)
+            return { status: "held", email: record };
+        }
         if (d.replyToSentEmailId) {
           const parent = read(pathFor("parents", d.replyToSentEmailId)) as {
             requestId: string;
@@ -929,6 +969,10 @@ export async function openSharedMailStore(options: {
             const w = requiredWait(parent.requestId);
             if (w.sentEmailId !== d.replyToSentEmailId)
               throw invalidSharedMail();
+            // Every listener path, including an explicit --sender consumer,
+            // must preserve the native session that owns this conversation.
+            if (w.sessionKey !== null && w.sessionKey !== session)
+              return { status: "held", email: record };
             if (
               w.status === "bound" &&
               w.peer === d.peer &&

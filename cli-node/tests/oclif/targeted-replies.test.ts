@@ -2,7 +2,7 @@ import {
   type EmailDetail,
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   inspectTargetedReply,
   readTargetedReplyPage,
@@ -48,6 +48,8 @@ function fixture() {
     detail: EmailDetail;
     page: unknown;
     status: number;
+    retryAfter?: string;
+    transportError?: boolean;
     requests: URL[];
   } = {
     detail,
@@ -63,8 +65,16 @@ function fixture() {
         url = new URL(request.url);
       requests.push(url);
       expect(request.method).toBe("GET");
-      if (url.pathname === "/v1/emails/search")
-        return Response.json(state.page, { status: state.status });
+      if (url.pathname === "/v1/emails/search") {
+        if (state.transportError) throw new Error("Private transport content");
+        return Response.json(state.page, {
+          status: state.status,
+          headers:
+            state.retryAfter === undefined
+              ? {}
+              : { "Retry-After": state.retryAfter },
+        });
+      }
       if (url.pathname === "/v1/emails/reply-1")
         return Response.json({ data: state.detail });
       throw new Error(`Unexpected request ${url.pathname}`);
@@ -72,6 +82,10 @@ function fixture() {
   });
   return { state, apiClient };
 }
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("targeted reply recovery", () => {
   it("queries the exact parent and peer without reading inbox history", async () => {
@@ -120,16 +134,72 @@ describe("targeted reply recovery", () => {
       readTargetedReplyPage({ apiClient, ...target, pageSize: 1 }),
     ).rejects.toThrow("invalid page");
   });
-  it("fails on unsupported scoped search without falling back to inbox scans", async () => {
+  it.each([
+    [429, "rate limited (HTTP 429)"],
+    [500, "temporarily unavailable (HTTP 500)"],
+    [503, "temporarily unavailable (HTTP 503)"],
+    [401, "access was denied (HTTP 401)"],
+    [403, "access was denied (HTTP 403)"],
+    [404, "unavailable on this API endpoint (HTTP 404)"],
+    [405, "unavailable on this API endpoint (HTTP 405)"],
+    [400, "failed (HTTP 400)"],
+  ])("reports HTTP %s accurately without bodies, retries, or inbox scans", async (status, message) => {
     const { state, apiClient } = fixture();
-    state.page = { error: { code: "forbidden", message: "Not available" } };
-    state.status = 403;
-    await expect(
-      readTargetedReplyPage({ apiClient, ...target, pageSize: 10 }),
-    ).rejects.toThrow("Targeted reply search is unavailable");
+    state.page = { error: { message: "Private server content" } };
+    state.status = status;
+    const error = await readTargetedReplyPage({
+      apiClient,
+      ...target,
+      pageSize: 10,
+    }).catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain(message);
+    expect((error as Error).message).not.toMatch(
+      /Private|requires server support/,
+    );
     expect(state.requests.map((url) => url.pathname)).toEqual([
       "/v1/emails/search",
     ]);
+  });
+  it.each([
+    ["32", "Retry after 32 seconds"],
+    ["Tue, 29 Sep 2026 00:00:32 GMT", "Retry after 32 seconds"],
+    ["private-invalid-header", "after the rate limit resets"],
+    ["-32", "after the rate limit resets"],
+    ["999999999999999999999", "after the rate limit resets"],
+  ])("reports only a valid parsed Retry-After delay: %s", async (header, message) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-29T00:00:00Z"));
+    const { state, apiClient } = fixture();
+    state.status = 429;
+    state.retryAfter = header;
+    state.page = { error: { message: "Private server content" } };
+    const error = await readTargetedReplyPage({
+      apiClient,
+      ...target,
+      pageSize: 10,
+    }).catch((error: unknown) => error);
+    expect((error as Error).message).toContain(message);
+    expect((error as Error).message).not.toMatch(
+      /Private|private-invalid-header|requires server support/,
+    );
+    expect(state.requests).toHaveLength(1);
+  });
+  it("reports transport failure without exposing its error or retrying", async () => {
+    const { state, apiClient } = fixture();
+    state.transportError = true;
+    const error = await readTargetedReplyPage({
+      apiClient,
+      ...target,
+      pageSize: 10,
+    }).catch((error: unknown) => error);
+    expect((error as Error).message).toContain(
+      "temporarily unavailable (transport failure)",
+    );
+    expect((error as Error).message).not.toMatch(
+      /Private|requires server support/,
+    );
+    expect(state.requests).toHaveLength(1);
   });
   it("does not accept substring sender matches or wrong parent/recipient details", async () => {
     const { state, apiClient } = fixture();

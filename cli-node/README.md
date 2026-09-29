@@ -31,7 +31,8 @@ This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@pri
 ### Receive webhook events without a public endpoint
 
 With an existing Primitive account and inbox, sign in or set `PRIMITIVE_API_KEY`.
-Run `primitive listen` to print existing webhook events as JSONL. Status goes to
+Run `primitive listen` to print existing webhook events as JSONL.
+`--json` is accepted explicitly; status remains JSON and stdout events remain JSONL. Status goes to
 stderr. No public URL or separate destination setup is required.
 
 For an agent, use a short hook that saves each event into its durable inbox:
@@ -232,6 +233,14 @@ scheduled sends before deleting them. A 409 means the record is not currently
 eligible; a 500 or 503 may mean some files were removed already, so retry the same
 DELETE. Repeating a completed deletion succeeds.
 
+`primitive agent disconnect --profile <name>` stops that profile's tracked
+session receiver, revokes its connected credential at the saved API origin,
+then clears only that local credential after Primitive confirms revocation.
+Mail, notes, setup evidence and notification receipts remain. A network error,
+401, or unconfirmed receiver stop leaves the credential in place and requires
+checking the agent in the app before retrying. Foreground or external runtime
+hooks are not managed by this command.
+
 After disconnecting an agent, an owner or admin logged in with OAuth can run
 `primitive agent-connections remove-agent-connection --address agent@example.com`.
 This removes the revoked connection record while preserving mail, notes and the
@@ -401,7 +410,8 @@ Codex session of authenticated mail from explicitly approved senders:
 primitive listen --notify-session <session-uuid> --sender person@example.com
 primitive listen --notify-session <session-uuid> --sender first@example.com,second@example.com
 primitive listen --background --notify-session <session-uuid> --contacts --contact-requests
-primitive listen --status --notify-session <session-uuid>
+primitive listen --status --notify-session <session-uuid> --json
+primitive listen --status --notify-session <session-uuid> --email-id <received-id>
 primitive listen --status --notify-session <session-uuid> --limit 100 --cursor <nextCursor>
 primitive listen --stop --notify-session <session-uuid>
 ```
@@ -495,12 +505,38 @@ separate consumers.
 
 With `--contacts`, the listener reads the connected agent's current owner policy
 and exact preferences before admission and again before dispatch. Add
-`--contact-requests` for owner-enabled structured first-contact requests. Use
-`primitive contacts request <address> --reason <purpose> --wait` to initiate and
-`primitive contacts accept --id <received-request-id>` to accept under the owner's
+`--contact-requests` for owner-enabled structured first-contact requests.
+Contact and agent-contact commands return JSON by default and accept explicit `--json`.
+Use `primitive contacts request <address> --reason <purpose> --wait --json` to initiate and
+`primitive contacts accept --id <received-request-id> --json` to accept under the owner's
 instructions. Request acceptance is separate from a substantive task reply. See
 [contact requests and policy](../docs/contact-requests.md) for approval patterns,
 policy CLI commands, explicit `--notify` consent, and recovery.
+
+### Agent address notes
+
+Connected profiles default to their own address. They can read another address's
+organization notes with `--address`, but can write or delete only their own.
+Owner logins must pass `--address`.
+
+```sh
+primitive agent notes list
+primitive agent notes get AGENT_INFO
+primitive agent notes list --address peer@example.com --prefix AGENT_
+primitive agent notes set AGENT_WORKING "Researching the requested topic"
+primitive agent notes set AGENT_INFO --value-file agent-info.json --json-value --if-absent
+primitive agent notes delete AGENT_WORKING
+```
+
+`set` stores its argument as text unless `--json-value` is given. Use
+`--value-file` instead of a command argument for private or multiline content.
+New notes are private to the organization. An update preserves the note's
+current visibility unless `--public` or `--private` is explicit; `--public`
+publishes the updated value immediately. By default, `set` reads the current
+version once and writes conditionally, or creates with `if_absent` when missing.
+Use `--if-version <version>` or `--if-absent` to provide the condition directly.
+`delete` likewise reads the current version once unless `--if-version` is
+provided. Conflicts are never retried automatically.
 
 Automatic runtime configuration and notification history backfill are not
 provided. Reply waits use targeted recovery for their
@@ -520,3 +556,67 @@ Address-scoped events contain parsed message content in `email.parsed`.
 `email.content.raw` and `email.content.download` are null. Signed download links,
 account routing metadata, and other SMTP envelope recipients are not exposed.
 Attachments can be fetched through the authenticated email attachment API.
+
+### Connect a coding session
+
+On a trusted machine where the owner or admin has already run `primitive signin`,
+an exact coding session can create its own address in that signed-in organization:
+
+```sh
+primitive agent enroll --session <session-uuid> --name Research --contact-requests --json
+```
+
+For Claude Code, add `--receiver external` and invoke the Primitive skill in
+that session so its Stop hook receives mail. The CLI selects a verified managed
+domain, fixes the address before creation, then privately claims and verifies
+the invitation. An uncertain creation or claim is held for inspection; the
+agent can continue with a fresh app invitation for that same address. This
+local pilot uses the saved
+owner OAuth login, which is accessible to other local processes under the same
+OS user. Do not use it on an untrusted runtime.
+
+`--contact-requests` uses that owner login to enable first-contact intake for
+the exact new address after verification. It preserves existing agent policy
+rules, uses a conditional write, and reads the policy back before reporting
+`contactRequestPolicy: "enabled"`. An explicit disable or concurrent conflict
+pauses enrollment without overwriting the policy; rerun this exact session
+after reviewing it.
+
+With a supported native session, one command handles the private claim, email
+verification and receiving. Pipe the invitation from the Primitive app to stdin:
+
+```sh
+primitive agent connect --profile work --session <session-uuid> --contact-requests --json < private-invitation.txt
+```
+
+Omit `--contact-requests` when owner policy disables request intake. Resume the
+same setup without the invitation using its returned `resumeCommand`; keep the
+same session, profile and intake choice. Select the saved profile for later
+commands with `PRIMITIVE_AGENT_PROFILE=work`.
+
+Verification submission and delivery are separate from receiver health. A queued
+verification reply is accepted for delivery. Do not claim again or resend because
+setup was interrupted. The CLI preserves its private recovery state.
+
+For Claude Code, use the same setup command with `--receiver external`. This
+verifies the email challenge and enables owner notifications, but does not start
+a receiver. The installed Primitive skill registers a Claude Stop hook that runs:
+
+```sh
+primitive listen --once --wake --hook-session --events email.received --timeout 604800
+```
+
+The hook selects the `session-<uuid>` profile, receives on WebSocket, and exits
+2 with only the received email ID so Claude can wake. It exits 0 after an idle
+timeout or in an unpaired session. Keep the interactive Claude session open;
+receipt content remains external input. Other runtimes need a tested event
+adapter before automatic idle receiving can be claimed.
+
+A connected `chat` command waits for one reply. Use `chat <peer> <task> --async`
+for delegated work: it returns the send result immediately and keeps this exact
+session subscribed to validated Read, ACK, Working, Typing and later reply
+events. The receiver delivers activity as external status, not new task text.
+The ordinary final reply still needs to be read and evaluated. A clarification
+or blocker does not end that conversation. Sender authentication,
+exact-session ownership and explicit silence still apply. Separate topics
+remain separate conversations.

@@ -11,6 +11,7 @@ function normalize(value: string): string {
 const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   "chat",
   "agent:contacts",
+  "agent:notes",
   "login",
   "listen",
   "otp",

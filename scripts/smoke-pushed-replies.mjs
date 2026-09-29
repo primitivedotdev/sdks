@@ -284,6 +284,10 @@ native.on("connection", (socket) =>
 );
 const env = {
   ...process.env,
+  // All fixture commands run inside the same simulated native session. Never
+  // inherit the developer's live identity into durable reply ownership.
+  CODEX_SESSION_ID: sessionId,
+  CODEX_THREAD_ID: sessionId,
   PRIMITIVE_CONFIG_DIR: join(directory, "config"),
   XDG_CONFIG_HOME: directory,
   PRIMITIVE_API_KEY: ["pconn", randomUUID().replaceAll("-", "").repeat(2)].join(

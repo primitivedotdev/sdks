@@ -144,6 +144,23 @@ describe("prior replies", () => {
   it("formats no warning when there is nothing to warn about", () => {
     expect(formatPriorRepliesWarning([])).toBeNull();
   });
+
+  it("describes outgoing emails without claiming they are answers", () => {
+    const prior = [
+      reply("blocked", "delivered", "2026-09-28T18:56:46Z"),
+      reply("working", "delivered", "2026-09-28T18:58:12Z"),
+      reply("typing", "delivered", "2026-09-28T18:59:27Z"),
+    ];
+    const warning = formatPriorRepliesWarning(prior);
+    expect(warning).toContain("3 outgoing emails");
+    expect(warning).toContain("sent id typing");
+    expect(warning).toContain("may include activity updates");
+    expect(warning).toContain("do not prove a completed answer");
+    expect(warning).not.toContain("already replied");
+    expect(formatPriorRepliesWarning(prior.slice(0, 1))).toContain(
+      "1 outgoing email,",
+    );
+  });
 });
 
 describe("sent history window", () => {

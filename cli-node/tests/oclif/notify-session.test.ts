@@ -130,6 +130,55 @@ describe("native email notifications", () => {
       first.notifications.receipt(detail.id, delivery.event_id)?.state,
     ).toBe("accepted");
   });
+  it("queues a typed, content-free conversation status through the durable external tool event", async () => {
+    const first = await open();
+    const detail = currentDetail();
+    const sentEmailId = randomUUID();
+    detail.reply_to_sent_email_id = sentEmailId;
+    const status = {
+      emailId: detail.id,
+      sentEmailId,
+      kind: "typing" as const,
+      peer: sender,
+    };
+    expect(
+      await first.notifications.handleDetail(
+        detail,
+        delivery.event_id,
+        signal,
+        undefined,
+        status,
+      ),
+    ).toEqual({ disposition: "notified" });
+    const output = first.queue.mock.calls[0]?.[0] ?? "";
+    expect(output).toContain('"kind":"typing"');
+    expect(output).toContain('"sent_email_id"');
+    expect(output).toContain("not a new task");
+    expect(output).not.toContain(detail.body_text);
+    expect(output).not.toContain(detail.subject);
+    expect(
+      first.notifications.receipt(detail.id, delivery.event_id)?.state,
+    ).toBe("accepted");
+    expect(
+      await first.notifications.handleDetail(
+        detail,
+        delivery.event_id,
+        signal,
+        undefined,
+        status,
+      ),
+    ).toEqual({ disposition: "notified" });
+    expect(first.queue).toHaveBeenCalledTimes(1);
+    await expect(
+      first.notifications.handleDetail(
+        detail,
+        randomUUID(),
+        signal,
+        undefined,
+        { ...status, sentEmailId: randomUUID() },
+      ),
+    ).rejects.toThrow("does not match");
+  });
   it("rejects wrong-recipient detail and keeps incomplete processing retryable", async () => {
     const first = await open();
     await expect(

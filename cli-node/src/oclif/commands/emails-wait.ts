@@ -7,6 +7,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { openConnectedReplyWait } from "../connected-reply-wait.js";
+import { currentMailSessionKey } from "../mail-session.js";
 import { isConnectedChatCredential } from "../scoped-chat.js";
 import { resolveScopedEmailWait } from "../scoped-email-wait.js";
 import { formatHeader, formatRow, pickIdWidth } from "./emails-latest.js";
@@ -185,6 +186,7 @@ class EmailsWaitCommand extends Command {
         | undefined;
       try {
         waiter = await openConnectedReplyWait({
+          sessionKey: currentMailSessionKey(),
           apiClient,
           apiKey: auth.apiKey,
           baseUrl: auth.apiBaseUrl,

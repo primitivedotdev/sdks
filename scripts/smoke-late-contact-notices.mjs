@@ -25,7 +25,8 @@ const sends = new Map(), emails = new Map(), parts = new Map();
 const pending = [], completed = [], notices = [], children = [], failures = [];
 const fixture = JSON.parse(await readFile(new URL("../test-fixtures/webhook/valid-email-received.json", import.meta.url), "utf8"));
 let muted = false, silenced = false, posts = 0, activeStreams = 0, streamOpens = 0, maximumStreams = 0;
-let receiver, listener;
+let receiver, listener, directoryContact;
+let directoryWrites = 0;
 function json(response, data, meta) {
   response.setHeader("content-type", "application/json");
   response.end(JSON.stringify({ success: true, data, ...(meta ? { meta } : {}) }));
@@ -72,6 +73,11 @@ function policy() {
     allow_contact_requests: false, contact_request_since: null, contact_request_generation: null,
   };
 }
+function memberships() {
+  const rows = [{ agent_address: agent, contact_address: sentinelPeer, notify: true, notify_since: old, notification_generation: version, version }];
+  if (muted) rows.push({ agent_address: agent, contact_address: peer, notify: false, notify_since: null, notification_generation: null, version });
+  return rows.sort((left, right) => left.contact_address.localeCompare(right.contact_address));
+}
 const api = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, "http://localhost");
@@ -81,9 +87,16 @@ const api = createServer(async (request, response) => {
     if (url.pathname === "/v1/agent-connections/claim") return json(response, { org_id: org, api_base_url: "https://api.primitive.dev/v1", api_key: credential, owner_address: "owner@sender.example", connection: { address: agent, owner_address: "owner@sender.example", status: "claimed" } });
     assert.equal(request.headers.authorization, `Bearer ${credential}`);
     if (request.method === "POST" && url.pathname === "/v1/endpoints") return json(response, { id: endpoint, name: body.name, kind: "pull", enabled: true, recipient: agent, rules: { event_types: ["email.received"] }, receiver_capabilities: { completion_modes: ["sdk"], stream_protocols: ["primitive.events.v1"] } });
+    if (request.method === "PUT" && url.pathname === `/v1/contacts/${encodeURIComponent(peer)}`) {
+      assert.deepEqual(body, { if_absent: true }, "Only address-only directory creation is authorized");
+      directoryWrites++;
+      directoryContact ??= { address: peer, display_name: null, version, created_at: old, updated_at: old };
+      return json(response, directoryContact);
+    }
     if (request.method === "POST" && url.pathname === "/v1/send-mail") {
       assert.equal(body.from, agent);
       assert.equal(body.to, peer);
+      assert.equal(directoryContact?.address, peer, "Directory save must precede the request email");
       assert.match(request.headers["idempotency-key"], /^contact-/);
       const control = JSON.parse(Buffer.from(body.attachments[0].content_base64, "base64").toString());
       assert.equal(control.protocol, "primitive.contact");
@@ -111,12 +124,8 @@ const api = createServer(async (request, response) => {
     const sent = url.pathname.match(/^\/v1\/sent-emails\/([^/]+)$/);
     if (sent) { assert.ok(sends.has(sent[1])); return json(response, sends.get(sent[1])); }
     if (url.pathname === `/v1/agent-contact-policy/${encodeURIComponent(agent)}` && request.method === "GET") return json(response, policy());
-    if (url.pathname === `/v1/agent-contacts/${encodeURIComponent(agent)}` && request.method === "GET") {
-      const rows = [{ agent_address: agent, contact_address: sentinelPeer, notify: true, notify_since: old, notification_generation: version, version }];
-      if (muted) rows.push({ agent_address: agent, contact_address: peer, notify: false, notify_since: null, notification_generation: null, version });
-      rows.sort((left, right) => left.contact_address.localeCompare(right.contact_address));
-      return json(response, rows, { cursor: null });
-    }
+    if (url.pathname === `/v1/agent-contacts/${encodeURIComponent(agent)}` && request.method === "GET")
+      return json(response, memberships(), { cursor: null });
     throw new Error(`Unexpected fixture route ${request.method} ${url.pathname}`);
   } catch (error) {
     failures.push(error);
@@ -176,6 +185,10 @@ const preload = join(root, "local-boundaries.mjs");
 await writeFile(preload, `const realFetch=globalThis.fetch;const RealSocket=globalThis.WebSocket;const base=${JSON.stringify(base)};function local(value){const u=new URL(value);if(u.hostname!=='api.primitive.dev')throw new Error('External network forbidden');return base+u.pathname+u.search;}globalThis.fetch=async(input,init)=>{const r=new Request(input,init);return realFetch(local(r.url),{method:r.method,headers:r.headers,body:r.body,signal:r.signal,duplex:'half',redirect:'error'});};globalThis.WebSocket=class extends RealSocket{constructor(url,protocol){super(local(url).replace('http:','ws:'),protocol);}};`, { mode: 0o600 });
 const env = { ...process.env, PRIMITIVE_CONFIG_DIR: config, XDG_CONFIG_HOME: config, PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1", NO_COLOR: "1" };
 for (const name of Object.keys(env)) if ((name.startsWith("PRIMITIVE_") && !["PRIMITIVE_CONFIG_DIR", "PRIMITIVE_SKIP_NEW_VERSION_CHECK"].includes(name)) || /proxy/i.test(name)) delete env[name];
+// Keep the synthetic runtime identity consistent with the native session fixture.
+env.CODEX_SESSION_ID = session;
+env.CODEX_THREAD_ID = session;
+delete env.CLAUDE_CODE_SESSION_ID;
 function invoke(args, { profile = true, stdin = "" } = {}) {
   const child = spawn(process.execPath, ["--import", pathToFileURL(preload).href, binary, ...args], { cwd: root, env: { ...env, ...(profile ? { PRIMITIVE_AGENT_PROFILE: "smoke" } : {}) }, stdio: ["pipe", "pipe", "pipe"] });
   const run = { child, stdout: "", stderr: "", result: null };
@@ -226,11 +239,31 @@ async function sentinel(suffix) {
 }
 try {
   await command(["agent", "connect", "--profile", "smoke", "--json"], 0, { profile: false, stdin: JSON.stringify({ token: ["inert", "invite", "x".repeat(48)].join("_") }) });
+  // This fixture starts after a successful session verification. Preserve the
+  // same binding that setup would save before testing late contact notices.
+  const profileDirectory = join(config, "agent-connections", "profiles", "smoke");
+  const savedProfile = JSON.parse(await readFile(join(profileDirectory, "connection.json"), "utf8"));
+  await writeFile(join(profileDirectory, "setup.json"), JSON.stringify({
+    version: 1,
+    session,
+    receiverMode: "native",
+    invitationHash: savedProfile.invitation_hash,
+    since: new Date().toISOString(),
+    contactRequests: true,
+    challenge: { id: randomUUID(), messageId: `<${randomUUID()}@sender.example>`, marker: `primitive-connection:${randomUUID()}:1` },
+    phase: "sent",
+    receipt: { id: randomUUID(), status: "delivered" },
+  }), { mode: 0o600, flag: "wx" });
   await start();
+  const originalMemberships = structuredClone(memberships());
   const request = await command(["contacts", "request", peer, "--reason", "Public coordination", "--wait", "--timeout", "1"], 3);
   assert.equal(request.outcome, "sent_awaiting_reply");
   assert.equal(request.contact_accepted, false);
   assert.equal(posts, 1);
+  assert.equal(directoryWrites, 1);
+  assert.equal(directoryContact.address, peer);
+  assert.deepEqual(memberships(), originalMemberships, "Requesting a conversation must leave memberships unchanged");
+  directoryContact.display_name = "Existing owner label";
   const control = sends.get(request.sent_id).control;
   const forged = [
     inbound({ ...acceptance(control), prev_step_id: randomUUID() }, request.sent_id, "11111111-1111-4111-8111-111111111111"),
@@ -252,6 +285,7 @@ try {
   assert.equal(resumed.acceptance_email_id, accepted.detail.id);
   assert.equal((await command(["contacts", "wait", "--id", request.sent_id, "--timeout", "1"])).contact_accepted, true);
   assert.equal(posts, 1, "Resume and repeated wait must not resend");
+  assert.equal(directoryWrites, 1, "Resume and repeated wait must not write contacts");
   assert.equal(matching(accepted.detail.id).length, 1, "Explicit recovery must not repeat the native notice");
   await stop();
   await start();
@@ -261,6 +295,9 @@ try {
 
   const second = await command(["contacts", "request", peer, "--reason", "Independent permission boundary", "--wait", "--timeout", "1"], 3);
   assert.equal(posts, 2);
+  assert.equal(directoryWrites, 2);
+  assert.equal(directoryContact.display_name, "Existing owner label", "Address-only creation preserves labels");
+  assert.deepEqual(memberships(), originalMemberships, "A second request must not enable or mute this peer");
   await stop();
   muted = true;
   await start();
@@ -279,6 +316,7 @@ try {
   for (const message of forged) assert.equal(matching(message.detail.id).length, 0);
   assert.equal(notices.length, 4, "Only exact acceptance and three independent sentinels may notify");
   assert.equal(posts, 2, "Only the two explicitly requested contact sends may occur");
+  assert.equal(directoryWrites, 2, "Late notices and recovery must not create extra directory writes");
   assert.equal(maximumStreams, 1, "Waits and notifications must share one stream owner");
   assert.deepEqual(failures, []);
   console.log("Late contact notice smoke passed: timed-out request, exact metadata notice, explicit recovery, restart dedupe, forged correlation and silence boundaries. Local fixtures only.");

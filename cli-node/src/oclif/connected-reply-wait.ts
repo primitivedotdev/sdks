@@ -4,6 +4,7 @@ import type {
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import type { ContactRequestReference } from "./contact-interactions.js";
+import { followEmailConversation } from "./conversation-follow.js";
 import {
   openSharedMailReceiver,
   sharedMailScope,
@@ -24,6 +25,7 @@ function recoveryEventId(id: string): string {
 
 /** A durable wait joins the address receiver before sending or recovering replies. */
 export async function openConnectedReplyWait(options: {
+  sessionKey?: string | null;
   contactRequest?: ContactRequestReference;
   apiClient: PrimitiveApiClient;
   apiKey: string | undefined;
@@ -66,6 +68,9 @@ export async function openConnectedReplyWait(options: {
         !["bound", "completed"].includes(saved.status) ||
         saved.sentEmailId !== sentId ||
         saved.peer !== options.recipient ||
+        (saved.sessionKey !== null &&
+          options.sessionKey != null &&
+          saved.sessionKey !== options.sessionKey) ||
         JSON.stringify(saved.contactRequest ?? null) !==
           JSON.stringify(options.contactRequest ?? null) ||
         email?.route?.kind !== "wait" ||
@@ -79,6 +84,12 @@ export async function openConnectedReplyWait(options: {
       await store.joinWait(requestId, waiter);
     } else {
       const prior = sentId ? await store.findWaitByParent(sentId) : null;
+      if (
+        prior?.sessionKey &&
+        options.sessionKey &&
+        prior.sessionKey !== options.sessionKey
+      )
+        throw new Error("This conversation belongs to another native session.");
       if (
         prior &&
         JSON.stringify(prior.contactRequest ?? null) !==
@@ -112,6 +123,7 @@ export async function openConnectedReplyWait(options: {
             ? { contactRequest: options.contactRequest }
             : {}),
           requestId,
+          sessionKey: options.sessionKey ?? null,
           peer: options.recipient,
           idempotencyKey: options.idempotencyKey ?? `wait-${requestId}`,
           createdAt: options.createdAt ?? new Date().toISOString(),
@@ -198,6 +210,7 @@ export async function openConnectedReplyWait(options: {
       recipient: options.from,
       peer: options.recipient,
       replyToSentEmailId: sentId,
+      ...(email.thread_id ? { threadId: email.thread_id } : {}),
       receivedAt: email.received_at,
       authorization: "trusted",
     });
@@ -207,7 +220,7 @@ export async function openConnectedReplyWait(options: {
         options.notice?.(
           options.contactRequest
             ? `Reply ${id} does not complete this contact acceptance wait; inspect it with primitive emails get --id ${id}.`
-            : `Reply ${id} contains an interaction attachment; inspect it with primitive emails get --id ${id}. Waiting for a plain reply.`,
+            : `Reply ${id} contains an interaction attachment. Waiting for a plain reply; no extra fetch is needed for activity updates. Inspect only if your task explicitly expects a structured result.`,
         );
       }
       settled.add(id);
@@ -222,11 +235,29 @@ export async function openConnectedReplyWait(options: {
       }
     }
     settled.add(id);
-    return claim.status === "claimed" ||
+    const observed =
+      claim.status === "claimed" ||
       (claim.status === "already_observed" &&
-        options.resumeReply?.emailId === id)
-      ? email
-      : null;
+        options.resumeReply?.emailId === id);
+    if (observed && options.sessionKey && !options.contactRequest) {
+      const intent = await store.readWait(requestId);
+      if (!intent)
+        throw new Error(
+          "The conversation's initiating request is unavailable.",
+        );
+      await followEmailConversation(
+        {
+          configDir: options.configDir,
+          scope: sharedMailScope(options.apiKey, options.baseUrl),
+          recipient: options.from,
+          peer: options.recipient,
+          sessionKey: options.sessionKey,
+          since: intent.createdAt,
+        },
+        email,
+      );
+    }
+    return observed ? email : null;
   }
   return {
     receiver,

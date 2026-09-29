@@ -8,6 +8,10 @@ import {
   sendEmail,
 } from "@primitivedotdev/api-core";
 import type { ConnectedAgentIdentity } from "./connected-agent-profile.js";
+import {
+  agentProfileDirectory,
+  loadConnectedAgentProfile,
+} from "./connected-agent-profile.js";
 import { openConnectedReplyWait } from "./connected-reply-wait.js";
 import {
   type ContactInteraction,
@@ -20,6 +24,7 @@ import { evaluateContactPolicy } from "./contact-policy.js";
 import { apiContactPolicy } from "./contact-policy-client.js";
 import { canonicalContactSelector } from "./contact-rule-matcher.js";
 import { runContactRequest } from "./contacts.js";
+import { currentMailSessionKey } from "./mail-session.js";
 import { notificationPartReader } from "./notify-session-content.js";
 import { reconcileChatSend } from "./reconcile-chat-send.js";
 import { scopedChatSenderTrust } from "./scoped-chat.js";
@@ -57,6 +62,80 @@ const timeout = (seconds: number) => {
     throw new Error("Contact wait timeout must be 1-86400 seconds.");
   return Date.now() + seconds * 1000;
 };
+const sessionRequired = () =>
+  new Error(
+    "This contact request needs the selected profile's verified setup for this exact coding session. No request was sent. Reconnect this session, then start a new contact request.",
+  );
+
+/** A saved profile binds one runtime session; a missing Claude Bash ID uses only its verified external setup. */
+export function contactRequestSessionKey(
+  context: Pick<Context, "apiKey" | "configDir" | "identity">,
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  try {
+    const profile = loadConnectedAgentProfile(
+      context.configDir,
+      context.identity.profileName,
+    );
+    const raw = readMailJson(
+      join(
+        agentProfileDirectory(context.configDir, context.identity.profileName),
+        "setup.json",
+      ),
+    );
+    if (
+      !profile ||
+      context.apiKey !== profile.api_key ||
+      profile.org_id !== context.identity.orgId ||
+      profile.agent_address !== context.identity.agentAddress ||
+      profile.owner_address !== context.identity.ownerAddress ||
+      profile.api_base_url !== context.identity.apiBaseUrl
+    )
+      throw sessionRequired();
+    const runtime = currentMailSessionKey(env);
+    const hasRuntime = Boolean(
+      env.CODEX_SESSION_ID || env.CODEX_THREAD_ID || env.CLAUDE_CODE_SESSION_ID,
+    );
+    // A bare CLI profile can request and manually wait for contact acceptance.
+    // It has no session to wake, even when invoked inside a coding runtime.
+    if (raw === null) {
+      if (hasRuntime && !runtime) throw sessionRequired();
+      return null;
+    }
+    if (typeof raw !== "object" || Array.isArray(raw)) throw sessionRequired();
+    const setup = raw as Record<string, unknown>;
+    const session = mailId(setup.session);
+    const receiverMode = setup.receiverMode ?? "native";
+    const receipt = setup.receipt;
+    if (
+      setup.version !== 1 ||
+      setup.invitationHash !== profile.invitation_hash ||
+      setup.phase !== "sent" ||
+      !["native", "external"].includes(String(receiverMode)) ||
+      !receipt ||
+      typeof receipt !== "object" ||
+      Array.isArray(receipt) ||
+      ![
+        "queued",
+        "submitted_to_agent",
+        "delivered",
+        "deferred",
+        "scheduled",
+      ].includes(String((receipt as Record<string, unknown>).status))
+    )
+      throw sessionRequired();
+    mailId((receipt as Record<string, unknown>).id);
+    const key = `${receiverMode === "external" ? "claude" : "codex"}:${session}`;
+    if (
+      (hasRuntime && runtime !== key) ||
+      (!hasRuntime && receiverMode !== "external")
+    )
+      throw sessionRequired();
+    return key;
+  } catch {
+    throw sessionRequired();
+  }
+}
 function sentResult(sent: SendMailResult): Result {
   const outcome = successfulSendOutcome(sent);
   return {
@@ -65,7 +144,6 @@ function sentResult(sent: SendMailResult): Result {
       outcome,
       sent_id: sent.id,
       delivery_status: sent.status,
-      contact_accepted: false,
     },
   };
 }
@@ -130,6 +208,7 @@ export async function requestContact(
   }).value;
   if (peer === context.identity.agentAddress)
     throw new Error("Choose a different contact address.");
+  const sessionKey = contactRequestSessionKey(context);
   const request = prepareContactRequest(
     context.identity.agentAddress,
     options.reason,
@@ -140,8 +219,25 @@ export async function requestContact(
     Date.parse(request.expires_at),
   );
   if (options.notify) await enablePeer(context, peer, options.reason);
+  else {
+    // An owner-initiated request saves the address, not notification permission.
+    // Finish this idempotent directory write before any email can be submitted.
+    try {
+      await runContactRequest(context.apiClient.client, {
+        target: "directory",
+        action: "add",
+        address: peer,
+        signal: AbortSignal.timeout(30_000),
+      });
+    } catch {
+      throw new Error(
+        "The organization contact could not be confirmed. No contact email was sent. Retrying this request is safe; any saved contact will be reused unchanged.",
+      );
+    }
+  }
   const wait = await openConnectedReplyWait({
     ...context,
+    sessionKey,
     baseUrl: context.identity.apiBaseUrl,
     from: context.identity.agentAddress,
     recipient: peer,
@@ -194,6 +290,7 @@ export async function requestContact(
     }
     const sent = response.data.data;
     const result = sentResult(sent);
+    result.data.contact_accepted = false;
     if (result.data.outcome === "not_sent") {
       await wait.cancelRejectedSend();
       return result;
@@ -294,6 +391,13 @@ export async function recoverContactRequest(
     throw new Error(
       "No saved contact request matches this local request ID and connected profile.",
     );
+  if (
+    saved.sessionKey &&
+    saved.sessionKey !== contactRequestSessionKey(context)
+  )
+    throw new Error(
+      "This contact request belongs to another or an unbound session. No recovery was attempted; start a new request from this connected session.",
+    );
   if (saved.sentEmailId)
     return waitForContact(context, saved.sentEmailId, timeoutSeconds);
   if (saved.status !== "uncertain" && saved.status !== "unbound")
@@ -353,6 +457,11 @@ export async function waitForContact(
     throw new Error(
       "No saved contact request matches this sent ID and connected profile. Ordinary task waits use emails wait.",
     );
+  const sessionKey = contactRequestSessionKey(context);
+  if (saved.sessionKey && saved.sessionKey !== sessionKey)
+    throw new Error(
+      "This contact request belongs to another or an unbound session. No acceptance was consumed; start a new request from this connected session.",
+    );
   if (saved.status === "completed")
     return {
       exitCode: 0,
@@ -366,6 +475,7 @@ export async function waitForContact(
     };
   const wait = await openConnectedReplyWait({
     ...context,
+    sessionKey,
     baseUrl: context.identity.apiBaseUrl,
     from: context.identity.agentAddress,
     recipient: saved.peer,
@@ -477,8 +587,11 @@ export async function acceptContact(
           outcome: saved.state === "sent" ? "already_sent" : "uncertain",
           sent_id: saved.sentId,
           local_preference_saved: true,
+          acceptance_sent: saved.state === "sent" ? true : null,
           guidance:
-            "An acceptance was already attempted. Do not resend; inspect sent history and this exact request.",
+            saved.state === "sent"
+              ? "Acceptance email already submitted. No second email was sent. This does not prove delivery or grant task permission."
+              : "Acceptance submission is uncertain. Do not resend; inspect sent history and this exact request.",
         },
       };
   }
@@ -524,6 +637,7 @@ export async function acceptContact(
         data: {
           outcome,
           local_preference_saved: true,
+          acceptance_sent: outcome === "not_sent" ? false : null,
           guidance:
             outcome === "not_sent"
               ? "The local preference was saved, but the acceptance email was refused before sending. Fix the reported API access or sending problem before retrying acceptance."
@@ -549,8 +663,18 @@ export async function acceptContact(
       data: {
         ...output.data,
         local_preference_saved: true,
+        acceptance_sent:
+          output.exitCode === 0
+            ? true
+            : output.data.outcome === "not_sent"
+              ? false
+              : null,
         guidance:
-          "Local communication preference saved. Acceptance email submitted; delivery status is separate. No task or private-context permission granted.",
+          output.exitCode === 0
+            ? "Local communication preference saved. Acceptance email submitted; delivery status is separate. No task or private-context permission granted."
+            : output.data.outcome === "not_sent"
+              ? "Local communication preference saved, but the acceptance email was not sent. Fix the sending problem before retrying acceptance."
+              : "Local communication preference saved, but acceptance submission is uncertain. Inspect sent history; do not resend blindly.",
       },
     };
   } catch {
@@ -559,6 +683,7 @@ export async function acceptContact(
       data: {
         outcome: "uncertain",
         local_preference_saved: true,
+        acceptance_sent: null,
         guidance:
           "Acceptance delivery is uncertain. Preserve the local journal and inspect sent history; do not resend blindly.",
       },

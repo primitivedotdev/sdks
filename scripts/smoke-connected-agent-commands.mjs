@@ -65,16 +65,18 @@ try {
   assert.match(setupHelp.stdout,/api\.primitive-staging-1\.com/);
   assert.match(setupHelp.stdout,/piped stdin/);
   assert.match((await run(['whoami','--help'])).stdout,/identity offline/);
-  await api(['contacts','add',peer,'--name','Peer']);
-  await api(['contacts','list']);
-  assert.equal(JSON.parse((await api(['contacts','get',peer])).stdout).address,peer);
-  await api(['contacts','update',peer,'--name','Renamed']);
-  await api(['agent','contacts','add',peer,'--agent',agent,'--notify']);
+  await api(['contacts','add',peer,'--name','Peer','--json']);
+  await api(['contacts','list','--json']);
+  assert.equal(JSON.parse((await api(['contacts','get',peer,'--json'])).stdout).address,peer);
+  const defaultContact=await api(['contacts','get',peer]);
+  assert.deepEqual(JSON.parse(defaultContact.stdout),JSON.parse((await api(['contacts','get',peer,'--json'])).stdout),'explicit JSON preserves the default output');
+  await api(['contacts','update',peer,'--name','Renamed','--json']);
+  await api(['agent','contacts','add',peer,'--agent',agent,'--notify','--json']);
   assert.equal(contact.display_name,'Renamed');assert.equal(member.notify,true);
-  await api(['agent','contacts','list','--agent',agent]);
-  await api(['agent','contacts','update',peer,'--agent',agent,'--no-notify']);assert.equal(member.notify,false);
-  await api(['agent','contacts','remove',peer,'--agent',agent]);
-  await api(['contacts','remove',peer]);assert.equal(contact,undefined);assert.equal(member,undefined);
+  await api(['agent','contacts','list','--agent',agent,'--json']);
+  await api(['agent','contacts','update',peer,'--agent',agent,'--no-notify','--json']);assert.equal(member.notify,false);
+  await api(['agent','contacts','remove',peer,'--agent',agent,'--json']);
+  await api(['contacts','remove',peer,'--json']);assert.equal(contact,undefined);assert.equal(member,undefined);
   const session=version;
   for(const args of [['--contact-requests'],['--notify-session',session,'--contact-requests'],['--notify-session',session,'--contacts','--contact-requests','--sender',peer],['--notify-session',session,'--contacts','--sender',peer],['--notify-session',session,'--contacts','--status']]) await run(['listen',...args],{exit:2});
   const token=['inert','invitation','x'.repeat(48)].join('_');
@@ -91,6 +93,32 @@ try {
   assert.equal(JSON.parse(identity.stdout).verification,'offline');
   assert.equal(JSON.parse(identity.stdout).identity.agentAddress,agent);
   assert.match(JSON.parse(identity.stdout).status_command,/agent connect --profile work --status --json/);
+  for (const args of [
+    ['agent','connect','--profile','work','--resume'],
+    ['agent','connect','--profile','work','--receiver','external'],
+    ['agent','connect','--profile','work','--session',session,'--receiver','unsupported'],
+    ['agent','connect','--profile','work','--contact-requests'],
+    ['agent','connect','--profile','work','--status','--session',session],
+    ['listen','--email-id',session],
+  ]) await run(args,{exit:2});
+  await run(['listen','--once','--wake','--hook-session','--events','email.received'],{exit:1});
+  const unusedHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({session_id:session})});
+  assert.equal(unusedHook.stdout+unusedHook.stderr,'','an unpaired Claude session must not be woken or emit mail');
+  const otherRuntimeHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({thread_id:session})});
+  assert.equal(otherRuntimeHook.stdout+otherRuntimeHook.stderr,'','a different runtime hook must be ignored');
+  const corruptHookProfile=join(config,'agent-connections','profiles',`session-${session}`);
+  await mkdir(corruptHookProfile,{recursive:true,mode:0o700});
+  await writeFile(join(corruptHookProfile,'setup.json'),'not-json',{mode:0o600});
+  const corruptHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({session_id:session}),exit:1});
+  assert.match(corruptHook.stderr,/setup state is unreadable/);
+  const updatedSetupHelp=await run(['agent','connect','--help']);
+  for(const flag of ['--session','--receiver','--resume','--contact-requests']) assert.ok(updatedSetupHelp.stdout.includes(flag));
+  const diagnosticsHelp=await run(['listen','--help']);
+  assert.ok(diagnosticsHelp.stdout.includes('--email-id'));
+  assert.ok(diagnosticsHelp.stdout.includes('--json'));
+  assert.ok(diagnosticsHelp.stdout.includes('--wake'));
+  assert.ok(diagnosticsHelp.stdout.includes('--hook-session'));
+
   assert.ok(!identity.stdout.includes(credential));
   const humanIdentity=await run(['whoami'],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work'}});
   assert.match(humanIdentity.stdout,/not verified/);
@@ -100,9 +128,12 @@ try {
   assert.match(rawIdentity.stderr,/PRIMITIVE_AGENT_PROFILE/);
   await writeFile(join(config,'config.json'),JSON.stringify({version:1,current_environment:'staging',environments:{staging:{}}}));
   const notification=await run(['listen','--status','--notify-session',session],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work',PRIMITIVE_API_HEADERS:'invalid ambient JSON'}});assert.deepEqual(JSON.parse(notification.stdout).receipts,[]);assert.ok(!notification.stdout.includes(credential));
+  const explicitNotification=await run(['listen','--status','--notify-session',session,'--json'],{preload:deny,env:{PRIMITIVE_AGENT_PROFILE:'work',PRIMITIVE_API_HEADERS:'invalid ambient JSON'}});
+  assert.deepEqual(JSON.parse(explicitNotification.stdout),JSON.parse(notification.stdout),'explicit JSON preserves listener status shape');
+  assert.ok(!(explicitNotification.stdout+explicitNotification.stderr).includes(credential));
   const rejected=await run(['agent-connections','claim-agent-connection','--profile','other','--token',token],{preload:deny,exit:2});
   assert.ok(!(rejected.stdout+rejected.stderr).includes(token)&&!(rejected.stdout+rejected.stderr).includes(credential));
   assert.equal(hits,before);
   const profile=JSON.parse(await readFile(join(config,'agent-connections','profiles','work','connection.json'),'utf8'));assert.equal(profile.api_key,credential);
-  console.log('Built CLI: contact commands, bare parents, private stdin claim, offline profile/status, secret-safe claim alias, and contact notification flag conflicts pass. No external network or real email.');
+  console.log('Built CLI: explicit/default JSON contact commands, bare parents, private stdin claim, offline profile/status and explicit JSON listener status, secret-safe claim alias, and contact notification flag conflicts pass. No external network or real email.');
 } finally {await new Promise(r=>server.close(r));await rm(directory,{recursive:true,force:true});}

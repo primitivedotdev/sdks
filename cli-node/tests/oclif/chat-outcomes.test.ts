@@ -635,7 +635,7 @@ describe("chat send outcomes", () => {
     ]);
 
     expect(result.stderr).toContain(
-      "You already replied to this email at 2026-05-25T00:00:05.000Z (sent id sent-earlier). Sending another reply.",
+      "This email already has 1 outgoing email, most recently at 2026-05-25T00:00:05.000Z (sent id sent-earlier). These may include activity updates and do not prove a completed answer. Sending this reply.",
     );
     expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
     const envelope = JSON.parse(result.stdout);
@@ -661,7 +661,7 @@ describe("chat send outcomes", () => {
       "--json",
     ]);
 
-    expect(result.stderr).not.toContain("You already replied");
+    expect(result.stderr).not.toContain("outgoing email");
     expect(JSON.parse(result.stdout).prior_replies).toEqual([]);
   });
 

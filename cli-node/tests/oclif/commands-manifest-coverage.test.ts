@@ -83,6 +83,58 @@ describe("COMMANDS / manifest coverage", () => {
       readCliPackageJson().oclif?.topics?.["agent:contacts"],
     ).toBeDefined();
   });
+  it("registers address note commands with explicit value and visibility controls", () => {
+    for (const action of ["list", "get", "set", "delete"])
+      expect(COMMANDS[`agent:notes:${action}`]).toBeDefined();
+    const set = COMMANDS["agent:notes:set"] as unknown as {
+      flags: Record<string, { exclusive?: string[] }>;
+      description: string;
+    };
+    for (const flag of [
+      "address",
+      "json",
+      "value-file",
+      "json-value",
+      "if-absent",
+      "if-version",
+      "public",
+      "private",
+    ])
+      expect(set.flags[flag]).toBeDefined();
+    expect(set.flags.public.exclusive).toContain("private");
+    expect(set.flags["if-version"].exclusive).toContain("if-absent");
+    expect(set.description).toContain("Existing visibility is preserved");
+    expect(
+      readCliPackageJson().oclif?.topics?.["agent:notes"]?.description,
+    ).toContain("private");
+  });
+  it("accepts explicit JSON on every contact and agent-contact convenience command", () => {
+    for (const route of [
+      ...[
+        "list",
+        "get",
+        "add",
+        "update",
+        "remove",
+        "request",
+        "accept",
+        "wait",
+      ].map((action) => `contacts:${action}`),
+      ...["list", "add", "update", "remove"].map(
+        (action) => `agent:contacts:${action}`,
+      ),
+    ]) {
+      const command = COMMANDS[route] as unknown as {
+        flags: Record<string, { type?: string; description?: string }>;
+      };
+      expect(command.flags.json.type).toBe("boolean");
+      expect(command.flags.json.description).toContain("already the default");
+    }
+    for (const topic of ["contacts", "agent:contacts"])
+      expect(
+        readCliPackageJson().oclif?.topics?.[topic]?.description,
+      ).toContain("--json");
+  });
   it("exposes the four owner policy operations with explicit JSON replacement bodies", () => {
     for (const name of [
       "get-contact-policy",
@@ -103,8 +155,22 @@ describe("COMMANDS / manifest coverage", () => {
   it("exposes explicit contact request consent and durable acceptance recovery", () => {
     const request = COMMANDS["contacts:request"] as unknown as {
       flags: Record<string, unknown>;
+      description: string;
     };
-    for (const flag of ["reason", "notify", "wait", "expires-in", "timeout"])
+    expect(request.description).toContain(
+      "Save the peer in the organization directory",
+    );
+    expect(request.description).toContain(
+      "no agent membership or notification preference is changed",
+    );
+    for (const flag of [
+      "reason",
+      "notify",
+      "wait",
+      "expires-in",
+      "timeout",
+      "json",
+    ])
       expect(request.flags[flag]).toBeDefined();
     const wait = COMMANDS["contacts:wait"] as unknown as {
       flags: Record<string, { exclusive?: string[] }>;
@@ -126,14 +192,50 @@ describe("COMMANDS / manifest coverage", () => {
     expect(setup.description).toContain("piped stdin");
     expect(setup.flags.profile).toBeDefined();
     expect(setup.flags.status).toBeDefined();
+    for (const flag of ["session", "receiver", "resume", "contact-requests"])
+      expect(setup.flags[flag]).toBeDefined();
     expect(setup.flags.token).toBeUndefined();
     expect(setup.flags["raw-body"]).toBeUndefined();
+  });
+  it("registers exact-profile disconnect separately from owner-only removal", () => {
+    const disconnect = COMMANDS["agent:disconnect"] as unknown as {
+      flags: Record<string, { required?: boolean }>;
+      description: string;
+    };
+    expect(disconnect.flags.profile.required).toBe(true);
+    expect(disconnect.flags["api-key"]).toBeUndefined();
+    expect(disconnect.flags["api-base-url"]).toBeUndefined();
+    expect(disconnect.description).toContain("pinned Primitive origin");
+    expect(COMMANDS["agent-connections:remove-agent-connection"]).toBeDefined();
+  });
+  it("registers trusted-machine session enrollment without an invitation argument", () => {
+    const enroll = COMMANDS["agent:enroll"] as unknown as {
+      flags: Record<string, { required?: boolean; description?: string }>;
+      description: string;
+    };
+    expect(enroll.flags.session.required).toBe(true);
+    expect(enroll.flags.receiver).toBeDefined();
+    expect(enroll.flags["contact-requests"]).toBeDefined();
+    expect(enroll.flags["contact-requests"].description).toContain(
+      "saved owner login",
+    );
+    expect(enroll.flags["api-key"]).toBeUndefined();
+    expect(enroll.flags.invitation).toBeUndefined();
+    expect(enroll.description).toContain("saved owner/admin OAuth login");
+    expect(enroll.description).toContain("preserving existing policy rules");
   });
   it("exposes saved-contact notification preferences without mixing allowlists", () => {
     const listener = COMMANDS.listen as unknown as {
       flags: Record<string, { dependsOn?: string[]; exclusive?: string[] }>;
     };
+    expect(listener.flags.json).toBeDefined();
+    expect(listener.flags.wake).toBeDefined();
+    expect(listener.flags["hook-session"].dependsOn).toContain("wake");
+    expect(readCliPackageJson().oclif?.topics?.listen?.description).toContain(
+      "--json",
+    );
     expect(listener.flags.contacts.dependsOn).toContain("notify-session");
+    expect(listener.flags["email-id"].dependsOn).toContain("status");
     expect(listener.flags.contacts.exclusive).toContain("sender");
     expect(listener.flags.contacts.exclusive).toContain("status");
     expect(listener.flags["contact-requests"].dependsOn).toEqual([
@@ -174,6 +276,8 @@ describe("COMMANDS / manifest coverage", () => {
     );
     expect(chat.description).toContain("share an address event receiver");
     expect(chat.flags.from).toBeDefined();
+    expect(chat.flags.async).toBeDefined();
+    expect(chat.description).toContain("With --async");
     expect(COMMANDS["chat:reply"]).toBeDefined();
   });
   it("registers mailbox deletion operations and the sent alias", () => {

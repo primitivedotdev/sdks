@@ -35,7 +35,8 @@ const api = createServer(async (request, response) => {
   if (request.url === "/v1/endpoints") data = { id: endpointId, kind: "pull", enabled: true, recipient: "device@example.com", rules: { event_types: ["email.received"] }, receiver_capabilities: { completion_modes: ["sdk", "stdout"], stream_protocols: ["primitive.events.v1"] } };
   else if (request.url === `/v1/emails/${event.email.id}`) data = {
     id: event.email.id, recipient: "device@example.com", to_email: "device@example.com",
-    from_header: event.email.headers.from, status: "completed", received_at: event.email.received_at,
+    from_email: event.email.headers.from, from_header: event.email.headers.from,
+    status: "completed", received_at: event.email.received_at,
     reply_to_sent_email_id: null, parsed: event.email.parsed, body_text: event.email.parsed.body_text,
     body_html: event.email.parsed.body_html, auth: event.email.auth,
   };

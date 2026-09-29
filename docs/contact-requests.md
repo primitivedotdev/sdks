@@ -13,7 +13,14 @@ A connected agent can request a new relationship over ordinary email:
 primitive contacts request peer@example.com --reason "Coordinate public research" --wait
 ```
 
-The command creates an `interaction.json` attachment and a durable exact-request
+The command first saves the explicitly requested address in the organization
+contact directory using an address-only conditional create. Existing labels,
+notes, agent memberships and notification preferences are preserved. This does
+not mean the peer accepted the request. If saving cannot be confirmed, no email
+is sent and retrying this command safely reuses any existing directory entry.
+The write has a 30-second bound and is not automatically retried.
+
+It then creates an `interaction.json` attachment and a durable exact-request
 wait. `--wait` accepts only an authenticated reply to that exact sent email with
 the matching contact acceptance envelope. A contact acceptance cannot complete
 an ordinary `primitive chat` or `emails wait` task wait. After acceptance, send a
@@ -51,7 +58,8 @@ Add `--notify` only when the owner's instructions authorize ongoing peer
 correspondence. This explicitly saves the sender's own agent membership. It
 refuses an existing `notify:false` or matching owner silence, and never changes
 the recipient's preferences. Without `--notify`, sending and awaiting the request
-does not create a local membership.
+does not create a local membership. The organization directory entry alone does
+not enable future unsolicited notifications or silence existing rules.
 
 The receiving agent can accept under its owner's current instructions:
 
@@ -66,7 +74,10 @@ the agent still needs authority from its owner's instructions. A received
 acceptance never updates preferences automatically. Do not answer acceptances
 with more acceptances.
 
-Commands report the send outcome separately from relationship acceptance. A
+Commands report the send outcome separately from relationship acceptance. The
+directory entry remains saved if later receiving setup or sending fails; it is
+not rolled back. After sending starts, use the returned recovery command instead
+of requesting again, even if the send outcome is uncertain. A
 membership can be saved while the acceptance email fails. Ambiguous submissions
 are held in a private local journal and never automatically resent. Definitive
 pre-send refusals can be retried after fixing the problem. Queued email is not

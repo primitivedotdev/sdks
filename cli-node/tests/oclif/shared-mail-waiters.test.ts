@@ -70,6 +70,67 @@ const notify = (id: string) =>
   store.claimForNotification(id, "runtime:session");
 
 describe("active reply wait handoff", () => {
+  it.each([
+    "bound",
+    "completed",
+  ] as const)("only the owning native session can claim a %s conversation after its synchronous wait ends", async (phase) => {
+    const owner = createSharedMailWaiter();
+    const requestId = randomUUID(),
+      parent = randomUUID();
+    const session = `codex:${randomUUID()}`;
+    await store.registerWait({
+      requestId,
+      peer,
+      sessionKey: session,
+      createdAt: new Date().toISOString(),
+      idempotencyKey: randomUUID(),
+      waiter: owner,
+    });
+    await store.bindWait(requestId, parent);
+    if (phase === "completed") {
+      const interim = await receive(parent);
+      await store.claimForWait(interim, requestId, owner.token);
+      await store.markWaitObserved(interim, requestId);
+      await store.finishWait(requestId);
+    }
+    await store.releaseWaiter(requestId, owner.token);
+    const reply = await receive(parent);
+    const other = `codex:${randomUUID()}`;
+    // Explicit sender and contact-preference listeners both use this atomic
+    // claim. A consumer that bypasses policy cannot steal or skip the event.
+    expect((await store.claimForNotification(reply, other)).status).toBe(
+      "held",
+    );
+    expect((await store.readEmail(reply))?.route).toBeNull();
+    const [wrong, right] = await Promise.all([
+      store.claimForNotification(reply, other),
+      store.claimForNotification(reply, session),
+    ]);
+    expect(wrong.status).toBe("held");
+    expect(right.status).toBe("claimed");
+    await expect(store.skipNotification(reply, other)).rejects.toThrow(
+      "inconsistent",
+    );
+    expect((await store.readEmail(reply))?.route).toMatchObject({
+      kind: "notification",
+      sessionKey: session,
+      state: "selected",
+    });
+    await store.markNotification(reply, "submitting");
+    await store.markNotification(reply, "accepted");
+    store = await openSharedMailStore({
+      configDir: directory,
+      scope: "fixture",
+      recipient,
+    });
+    expect((await store.claimForNotification(reply, other)).status).toBe(
+      "held",
+    );
+    expect((await store.claimForNotification(reply, session)).status).toBe(
+      "already_observed",
+    );
+  });
+
   it("holds a live legacy macOS waiter after clock correction or identity upgrade", async () => {
     lifecycle.identity.mockReturnValue(
       "darwin:1700000000:123:Wed Sep 9 12:34:56 2026",
