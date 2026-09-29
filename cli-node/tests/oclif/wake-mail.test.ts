@@ -187,18 +187,22 @@ function fixture(
 describe("Claude mail wake", () => {
   it("wakes for an exact solicited contact acceptance even when intake classifies unknown mail as a request", async () => {
     const f = fixture(true, true);
+    const signal = new AbortController().signal;
     const wake = await createWakeMail({
       configDir: "/tmp/test",
       sessionKey: `claude:${f.sessionId}`,
       sessionId: f.sessionId,
       contactRequests: true,
     });
-    const handled = await wake.handler(
-      f.delivery as never,
-      new AbortController().signal,
-    );
+    const handled = await wake.handler(f.delivery as never, signal);
     wake.completed();
     expect(handled.succeeded).toBe(true);
+    expect(mocks.policy.mock.results[0]?.value.admit).toHaveBeenCalledWith(
+      "peer@example.test",
+      expect.any(String),
+      signal,
+      f.emailId,
+    );
     expect(
       mocks.policy.mock.results[0]?.value.admitResponse,
     ).toHaveBeenCalledOnce();

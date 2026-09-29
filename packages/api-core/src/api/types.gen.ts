@@ -134,15 +134,23 @@ export type UpdateAgentNetworkMemberInput = {
     is_listed?: boolean;
 };
 
+/**
+ * Check only a received email already stored for the bound recipient. The server verifies its sender against delivery evidence.
+ */
 export type AgentNetworkContactAdmissionInput = {
+    email_id: string;
     sender_address: string;
 };
 
 /**
- * Recipient-bound admission for authenticated network mail.
+ * Recipient-bound admission for authenticated network mail. Pending means delivery proof is still settling and the same email should be retried.
  */
 export type AgentNetworkContactAdmission = {
     allowed: boolean;
+    /**
+     * True only while authenticated inbound mail awaits settled delivery evidence, for at most 120 seconds after receipt.
+     */
+    pending: boolean;
     /**
      * Earliest received_at eligible under the current membership and connection state.
      */

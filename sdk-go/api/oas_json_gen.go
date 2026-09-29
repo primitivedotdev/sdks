@@ -2466,14 +2466,19 @@ func (s *AgentNetworkContactAdmission) encodeFields(e *jx.Encoder) {
 		e.Bool(s.Allowed)
 	}
 	{
+		e.FieldStart("pending")
+		e.Bool(s.Pending)
+	}
+	{
 		e.FieldStart("allowed_since")
 		s.AllowedSince.Encode(e, json.EncodeDateTime)
 	}
 }
 
-var jsonFieldsNameOfAgentNetworkContactAdmission = [2]string{
+var jsonFieldsNameOfAgentNetworkContactAdmission = [3]string{
 	0: "allowed",
-	1: "allowed_since",
+	1: "pending",
+	2: "allowed_since",
 }
 
 // Decode decodes AgentNetworkContactAdmission from json.
@@ -2497,8 +2502,20 @@ func (s *AgentNetworkContactAdmission) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"allowed\"")
 			}
-		case "allowed_since":
+		case "pending":
 			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Bool()
+				s.Pending = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"pending\"")
+			}
+		case "allowed_since":
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				if err := s.AllowedSince.Decode(d, json.DecodeDateTime); err != nil {
 					return err
@@ -2517,7 +2534,7 @@ func (s *AgentNetworkContactAdmission) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -2573,13 +2590,18 @@ func (s *AgentNetworkContactAdmissionInput) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *AgentNetworkContactAdmissionInput) encodeFields(e *jx.Encoder) {
 	{
+		e.FieldStart("email_id")
+		json.EncodeUUID(e, s.EmailID)
+	}
+	{
 		e.FieldStart("sender_address")
 		e.Str(s.SenderAddress)
 	}
 }
 
-var jsonFieldsNameOfAgentNetworkContactAdmissionInput = [1]string{
-	0: "sender_address",
+var jsonFieldsNameOfAgentNetworkContactAdmissionInput = [2]string{
+	0: "email_id",
+	1: "sender_address",
 }
 
 // Decode decodes AgentNetworkContactAdmissionInput from json.
@@ -2591,8 +2613,20 @@ func (s *AgentNetworkContactAdmissionInput) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "sender_address":
+		case "email_id":
 			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.EmailID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"email_id\"")
+			}
+		case "sender_address":
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := d.Str()
 				s.SenderAddress = string(v)
@@ -2613,7 +2647,7 @@ func (s *AgentNetworkContactAdmissionInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000001,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

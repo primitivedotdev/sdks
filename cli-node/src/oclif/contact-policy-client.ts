@@ -61,10 +61,10 @@ export function apiContactPolicy(
     recipient,
     contactRequests,
     readNetworkAdmission: networkAdmission
-      ? async (sender, signal) => {
+      ? async (emailId, sender, signal) => {
           const result = await checkDefaultNetworkContactAdmission({
             client,
-            body: { sender_address: sender },
+            body: { email_id: emailId, sender_address: sender },
             signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
             responseStyle: "fields",
             throwOnError: false,
@@ -78,6 +78,9 @@ export function apiContactPolicy(
           const decision = result.data.data;
           if (
             typeof decision.allowed !== "boolean" ||
+            typeof decision.pending !== "boolean" ||
+            (decision.pending && decision.allowed) ||
+            (decision.pending && decision.allowed_since !== null) ||
             (decision.allowed && typeof decision.allowed_since !== "string") ||
             (!decision.allowed && decision.allowed_since !== null)
           )

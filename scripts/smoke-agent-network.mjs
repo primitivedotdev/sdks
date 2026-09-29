@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 const runFile = promisify(execFile);
 const binary = resolve(process.argv[2] ?? "cli-node/bin/run.js");
 const agent = "peer+network@example.test";
+const inboundId = "11111111-1111-4111-8111-111111111111";
 const path = `/v1/agent-networks/default/members/${encodeURIComponent(agent)}`;
 const peerPath = `/v1/agent-networks/default/agents/${encodeURIComponent(agent)}`;
 const calls = [];
@@ -32,6 +33,10 @@ const server = createServer(async (request, response) => {
     return reply([{ address: agent, name: "Peer", last_seen_at: null }], { cursor: null });
   if (url.pathname === peerPath && request.method === "GET")
     return reply({ address: agent, name: "Peer", last_seen_at: "2026-09-28T12:00:00Z" });
+  if (url.pathname === "/v1/agent-networks/default/contact-admission" && request.method === "POST") {
+    assert.deepEqual(body, { email_id: inboundId, sender_address: agent });
+    return reply({ allowed: false, allowed_since: null, pending: false });
+  }
   if (url.pathname === path && request.method === "PATCH") {
     member = { ...member, ...(body.can_view === undefined ? {} : { can_view: body.can_view }), ...(body.is_listed === undefined ? {} : { is_listed: body.is_listed }) };
     return reply(member);
@@ -65,6 +70,8 @@ try {
   for (const action of ["list", "members", "peers", "get", "set", "add", "remove"])
     assert.match(await invoke(["network", action, "--help"]), /USAGE|DESCRIPTION/i);
   assert.match((await invoke(["network", "peers", "--help"])).replace(/\s+/g, " "), /recorded API activity/);
+  assert.match(await invoke(["agent-networks"]), /check-default-network-contact-admission/);
+  assert.match(await invoke(["agent-networks", "check-default-network-contact-admission", "--help"]), /--email-id/);
   assert.match(await invoke(["network", "--help"]), /agent network/i);
   const operations = JSON.parse(await invoke(["list-operations"]));
   assert.ok(operations.some((operation) => operation.operationId === "listDefaultNetworkAgents"));
@@ -81,7 +88,11 @@ try {
   assert.equal(member.is_listed, false);
   assert.deepEqual(JSON.parse(await api(["network", "remove", agent])), { excluded: true });
   assert.equal(JSON.parse(await api(["network", "add", agent])).excluded, false);
-  assert.deepEqual(calls.map(({ method }) => method), ["GET", "GET", "GET", "GET", "PATCH", "DELETE", "POST"]);
+  assert.deepEqual(
+    JSON.parse(await api(["agent-networks", "check-default-network-contact-admission", "--email-id", inboundId, "--sender-address", agent])),
+    { allowed: false, allowed_since: null, pending: false },
+  );
+  assert.deepEqual(calls.map(({ method }) => method), ["GET", "GET", "GET", "GET", "PATCH", "DELETE", "POST", "POST"]);
   assert.deepEqual(calls[4].body, { can_view: false, is_listed: false });
   assert.equal(calls[1].query.get("limit"), "10");
   assert.equal(calls[2].query.get("limit"), "10");

@@ -37,7 +37,10 @@ vi.mock("../../src/oclif/shared-mail-receiver.js", async (original) => ({
 
 import { runListen } from "../../src/oclif/listen-runner.js";
 import { ListenStateError } from "../../src/oclif/listen-state.js";
-import { CONTACT_POLICY_RETRY_MIN_MS } from "../../src/oclif/notification-contact-policy.js";
+import {
+  CONTACT_POLICY_RETRY_MIN_MS,
+  NETWORK_ADMISSION_PENDING_RETRY_MS,
+} from "../../src/oclif/notification-contact-policy.js";
 import type { DetailNotificationAuthorization } from "../../src/oclif/notify-session.js";
 import { sharedMailScope } from "../../src/oclif/shared-mail-receiver.js";
 import {
@@ -150,6 +153,7 @@ function setup(
   let networkDecision = {
     allowed: false,
     allowed_since: null as string | null,
+    pending: false,
   };
   let contactRows: unknown[] = [
     {
@@ -222,6 +226,7 @@ function setup(
       if (path === "/v1/agent-networks/default/contact-admission") {
         expect(request.headers.get("authorization")).toBe(`Bearer ${apiKey}`);
         expect(await request.json()).toEqual({
+          email_id: detail.id,
           sender_address: detail.from_email,
         });
         return Response.json({ success: true, data: networkDecision });
@@ -360,8 +365,12 @@ function setup(
       contactRows = rows;
       contactStatus = status;
     },
-    network: (allowed: boolean, allowedSince: string | null) => {
-      networkDecision = { allowed, allowed_since: allowedSince };
+    network: (
+      allowed: boolean,
+      allowedSince: string | null,
+      pending = false,
+    ) => {
+      networkDecision = { allowed, allowed_since: allowedSince, pending };
     },
     close,
     closeReceiver,
@@ -373,6 +382,47 @@ function setup(
   };
 }
 describe("shared notification listener integration", () => {
+  it.each([
+    { resolved: true, notified: true },
+    { resolved: false, notified: false },
+  ])("retries one recipient-bound pending email, then applies final allowed=$resolved", async ({
+    resolved,
+    notified,
+  }) => {
+    const f = setup(["sdk"], ["email.received"], true);
+    f.contacts([]);
+    f.network(false, null, true);
+    let clock = performance.now();
+    const spy = vi.spyOn(performance, "now").mockImplementation(() => clock);
+    f.changed.mockImplementation(async () => {
+      clock += NETWORK_ADMISSION_PENDING_RETRY_MS + 1;
+      f.network(
+        resolved,
+        resolved ? new Date(Date.now() - 60_000).toISOString() : null,
+      );
+    });
+    try {
+      expect(
+        await runListen({
+          ...f.options,
+          notifySession: {
+            ...f.options.notifySession,
+            senders: [],
+            contactPreferences: true,
+          },
+        }),
+      ).toBe(1);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(f.changed).toHaveBeenCalledOnce();
+    expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
+    expect(
+      f.order.filter(
+        (path) => path === "/v1/agent-networks/default/contact-admission",
+      ).length,
+    ).toBeGreaterThanOrEqual(2);
+  });
   it.each([
     {
       scenario: "first peer mail",

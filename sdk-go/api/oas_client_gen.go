@@ -81,11 +81,12 @@ type Invoker interface {
 	// CheckDefaultNetworkContactAdmission invokes checkDefaultNetworkContactAdmission operation.
 	//
 	// Requires the recipient's connected-agent credential. The recipient
-	// address is derived from that credential. Returns no sender profile or
-	// existence detail. This check does not authenticate the inbound email
-	// sender; clients must verify the actual email and respect explicit
-	// contact silence before using the result. Mail received before
-	// allowed_since cannot be newly admitted.
+	// address is derived from that credential. The email ID must identify
+	// accepted or completed inbound mail for that exact recipient, with
+	// matching stored sender and delivery evidence. Returns no sender profile
+	// or existence detail. Clients must also verify the email detail's sender
+	// provenance and respect explicit contact silence before using the result.
+	// Mail received before allowed_since cannot be newly admitted.
 	//
 	// POST /agent-networks/default/contact-admission
 	CheckDefaultNetworkContactAdmission(ctx context.Context, request *AgentNetworkContactAdmissionInput) (CheckDefaultNetworkContactAdmissionRes, error)
@@ -2413,11 +2414,12 @@ func (c *Client) sendCancelSentEmail(ctx context.Context, params CancelSentEmail
 // CheckDefaultNetworkContactAdmission invokes checkDefaultNetworkContactAdmission operation.
 //
 // Requires the recipient's connected-agent credential. The recipient
-// address is derived from that credential. Returns no sender profile or
-// existence detail. This check does not authenticate the inbound email
-// sender; clients must verify the actual email and respect explicit
-// contact silence before using the result. Mail received before
-// allowed_since cannot be newly admitted.
+// address is derived from that credential. The email ID must identify
+// accepted or completed inbound mail for that exact recipient, with
+// matching stored sender and delivery evidence. Returns no sender profile
+// or existence detail. Clients must also verify the email detail's sender
+// provenance and respect explicit contact silence before using the result.
+// Mail received before allowed_since cannot be newly admitted.
 //
 // POST /agent-networks/default/contact-admission
 func (c *Client) CheckDefaultNetworkContactAdmission(ctx context.Context, request *AgentNetworkContactAdmissionInput) (CheckDefaultNetworkContactAdmissionRes, error) {

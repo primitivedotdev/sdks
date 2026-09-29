@@ -19,6 +19,10 @@ import {
 import type { ListenOptions } from "./listen-runner.js";
 import { ListenStateError } from "./listen-state.js";
 import {
+  NETWORK_ADMISSION_PENDING_RETRY_MS,
+  NetworkAdmissionPendingError,
+} from "./notification-contact-policy.js";
+import {
   notificationScope,
   openSessionNotifications,
 } from "./notify-session.js";
@@ -323,6 +327,7 @@ export async function runSharedNotificationListen(
             detail.from_email,
             detail.received_at,
             signal,
+            detail.id,
           )
         : undefined;
       if (
@@ -610,6 +615,11 @@ export async function runSharedNotificationListen(
             }
           } catch (error) {
             if (!(error instanceof NotificationRetryError)) throw error;
+            if (error instanceof NetworkAdmissionPendingError)
+              deferredUntil.set(
+                row.emailId,
+                performance.now() + NETWORK_ADMISSION_PENDING_RETRY_MS,
+              );
           }
           if (options.number !== undefined && processed >= options.number)
             break receiving;

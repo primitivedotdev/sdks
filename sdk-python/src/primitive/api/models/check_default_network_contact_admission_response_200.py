@@ -26,7 +26,8 @@ class CheckDefaultNetworkContactAdmissionResponse200:
     """ 
         Attributes:
             success (bool):
-            data (AgentNetworkContactAdmission | Unset): Recipient-bound admission for authenticated network mail.
+            data (AgentNetworkContactAdmission | Unset): Recipient-bound admission for authenticated network mail. Pending
+                means delivery proof is still settling and the same email should be retried.
      """
 
     success: bool

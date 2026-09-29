@@ -5936,11 +5936,12 @@ paths:
       summary: Check whether network mail may wake this connected agent
       description: |
         Requires the recipient's connected-agent credential. The recipient
-        address is derived from that credential. Returns no sender profile or
-        existence detail. This check does not authenticate the inbound email
-        sender; clients must verify the actual email and respect explicit
-        contact silence before using the result. Mail received before
-        allowed_since cannot be newly admitted.
+        address is derived from that credential. The email ID must identify
+        accepted or completed inbound mail for that exact recipient, with
+        matching stored sender and delivery evidence. Returns no sender profile
+        or existence detail. Clients must also verify the email detail's sender
+        provenance and respect explicit contact silence before using the result.
+        Mail received before allowed_since cannot be newly admitted.
       tags: [Agent Networks]
       requestBody:
         required: true
@@ -8867,21 +8868,26 @@ components:
 
     AgentNetworkContactAdmissionInput:
       type: object
+      description: Check only a received email already stored for the bound recipient. The server verifies its sender against delivery evidence.
       properties:
+        email_id: { type: string, format: uuid }
         sender_address: { type: string, format: email }
-      required: [sender_address]
+      required: [email_id, sender_address]
       additionalProperties: false
 
     AgentNetworkContactAdmission:
       type: object
-      description: Recipient-bound admission for authenticated network mail.
+      description: Recipient-bound admission for authenticated network mail. Pending means delivery proof is still settling and the same email should be retried.
       properties:
         allowed: { type: boolean }
+        pending:
+          type: boolean
+          description: True only while authenticated inbound mail awaits settled delivery evidence, for at most 120 seconds after receipt.
         allowed_since:
           type: [string, 'null']
           format: date-time
           description: Earliest received_at eligible under the current membership and connection state.
-      required: [allowed, allowed_since]
+      required: [allowed, allowed_since, pending]
 
     PublishPolicy:
       type: string

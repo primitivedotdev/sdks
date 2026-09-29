@@ -66,6 +66,13 @@ describe("COMMANDS / manifest coverage", () => {
       "check-default-network-contact-admission",
     ])
       expect(COMMANDS[`agent-networks:${name}`]).toBeDefined();
+    const admission = operationManifest.find(
+      (operation) =>
+        operation.operationId === "checkDefaultNetworkContactAdmission",
+    );
+    expect(admission?.requestSchema).toMatchObject({
+      required: ["email_id", "sender_address"],
+    });
     const set = COMMANDS["network:set"] as unknown as {
       flags: Record<string, unknown>;
     };

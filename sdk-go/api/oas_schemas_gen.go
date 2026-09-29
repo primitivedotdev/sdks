@@ -912,10 +912,14 @@ func (s *AgentNetwork) SetName(val string) {
 	s.Name = val
 }
 
-// Recipient-bound admission for authenticated network mail.
+// Recipient-bound admission for authenticated network mail. Pending means delivery proof is still
+// settling and the same email should be retried.
 // Ref: #/components/schemas/AgentNetworkContactAdmission
 type AgentNetworkContactAdmission struct {
 	Allowed bool `json:"allowed"`
+	// True only while authenticated inbound mail awaits settled delivery evidence, for at most 120
+	// seconds after receipt.
+	Pending bool `json:"pending"`
 	// Earliest received_at eligible under the current membership and connection state.
 	AllowedSince NilDateTime `json:"allowed_since"`
 }
@@ -923,6 +927,11 @@ type AgentNetworkContactAdmission struct {
 // GetAllowed returns the value of Allowed.
 func (s *AgentNetworkContactAdmission) GetAllowed() bool {
 	return s.Allowed
+}
+
+// GetPending returns the value of Pending.
+func (s *AgentNetworkContactAdmission) GetPending() bool {
+	return s.Pending
 }
 
 // GetAllowedSince returns the value of AllowedSince.
@@ -935,19 +944,37 @@ func (s *AgentNetworkContactAdmission) SetAllowed(val bool) {
 	s.Allowed = val
 }
 
+// SetPending sets the value of Pending.
+func (s *AgentNetworkContactAdmission) SetPending(val bool) {
+	s.Pending = val
+}
+
 // SetAllowedSince sets the value of AllowedSince.
 func (s *AgentNetworkContactAdmission) SetAllowedSince(val NilDateTime) {
 	s.AllowedSince = val
 }
 
+// Check only a received email already stored for the bound recipient. The server verifies its sender
+// against delivery evidence.
 // Ref: #/components/schemas/AgentNetworkContactAdmissionInput
 type AgentNetworkContactAdmissionInput struct {
-	SenderAddress string `json:"sender_address"`
+	EmailID       uuid.UUID `json:"email_id"`
+	SenderAddress string    `json:"sender_address"`
+}
+
+// GetEmailID returns the value of EmailID.
+func (s *AgentNetworkContactAdmissionInput) GetEmailID() uuid.UUID {
+	return s.EmailID
 }
 
 // GetSenderAddress returns the value of SenderAddress.
 func (s *AgentNetworkContactAdmissionInput) GetSenderAddress() string {
 	return s.SenderAddress
+}
+
+// SetEmailID sets the value of EmailID.
+func (s *AgentNetworkContactAdmissionInput) SetEmailID(val uuid.UUID) {
+	s.EmailID = val
 }
 
 // SetSenderAddress sets the value of SenderAddress.

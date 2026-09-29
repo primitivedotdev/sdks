@@ -95,14 +95,16 @@ def sync_detailed(
     """ Check whether network mail may wake this connected agent
 
      Requires the recipient's connected-agent credential. The recipient
-    address is derived from that credential. Returns no sender profile or
-    existence detail. This check does not authenticate the inbound email
-    sender; clients must verify the actual email and respect explicit
-    contact silence before using the result. Mail received before
-    allowed_since cannot be newly admitted.
+    address is derived from that credential. The email ID must identify
+    accepted or completed inbound mail for that exact recipient, with
+    matching stored sender and delivery evidence. Returns no sender profile
+    or existence detail. Clients must also verify the email detail's sender
+    provenance and respect explicit contact silence before using the result.
+    Mail received before allowed_since cannot be newly admitted.
 
     Args:
-        body (AgentNetworkContactAdmissionInput):
+        body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
+            the bound recipient. The server verifies its sender against delivery evidence.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -133,14 +135,16 @@ def sync(
     """ Check whether network mail may wake this connected agent
 
      Requires the recipient's connected-agent credential. The recipient
-    address is derived from that credential. Returns no sender profile or
-    existence detail. This check does not authenticate the inbound email
-    sender; clients must verify the actual email and respect explicit
-    contact silence before using the result. Mail received before
-    allowed_since cannot be newly admitted.
+    address is derived from that credential. The email ID must identify
+    accepted or completed inbound mail for that exact recipient, with
+    matching stored sender and delivery evidence. Returns no sender profile
+    or existence detail. Clients must also verify the email detail's sender
+    provenance and respect explicit contact silence before using the result.
+    Mail received before allowed_since cannot be newly admitted.
 
     Args:
-        body (AgentNetworkContactAdmissionInput):
+        body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
+            the bound recipient. The server verifies its sender against delivery evidence.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -166,14 +170,16 @@ async def asyncio_detailed(
     """ Check whether network mail may wake this connected agent
 
      Requires the recipient's connected-agent credential. The recipient
-    address is derived from that credential. Returns no sender profile or
-    existence detail. This check does not authenticate the inbound email
-    sender; clients must verify the actual email and respect explicit
-    contact silence before using the result. Mail received before
-    allowed_since cannot be newly admitted.
+    address is derived from that credential. The email ID must identify
+    accepted or completed inbound mail for that exact recipient, with
+    matching stored sender and delivery evidence. Returns no sender profile
+    or existence detail. Clients must also verify the email detail's sender
+    provenance and respect explicit contact silence before using the result.
+    Mail received before allowed_since cannot be newly admitted.
 
     Args:
-        body (AgentNetworkContactAdmissionInput):
+        body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
+            the bound recipient. The server verifies its sender against delivery evidence.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -204,14 +210,16 @@ async def asyncio(
     """ Check whether network mail may wake this connected agent
 
      Requires the recipient's connected-agent credential. The recipient
-    address is derived from that credential. Returns no sender profile or
-    existence detail. This check does not authenticate the inbound email
-    sender; clients must verify the actual email and respect explicit
-    contact silence before using the result. Mail received before
-    allowed_since cannot be newly admitted.
+    address is derived from that credential. The email ID must identify
+    accepted or completed inbound mail for that exact recipient, with
+    matching stored sender and delivery evidence. Returns no sender profile
+    or existence detail. Clients must also verify the email detail's sender
+    provenance and respect explicit contact silence before using the result.
+    Mail received before allowed_since cannot be newly admitted.
 
     Args:
-        body (AgentNetworkContactAdmissionInput):
+        body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
+            the bound recipient. The server verifies its sender against delivery evidence.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

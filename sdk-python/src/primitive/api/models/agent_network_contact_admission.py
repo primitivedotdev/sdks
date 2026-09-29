@@ -23,15 +23,19 @@ T = TypeVar("T", bound="AgentNetworkContactAdmission")
 
 @_attrs_define
 class AgentNetworkContactAdmission:
-    """ Recipient-bound admission for authenticated network mail.
+    """ Recipient-bound admission for authenticated network mail. Pending means delivery proof is still settling and the
+    same email should be retried.
 
         Attributes:
             allowed (bool):
+            pending (bool): True only while authenticated inbound mail awaits settled delivery evidence, for at most 120
+                seconds after receipt.
             allowed_since (datetime.datetime | None): Earliest received_at eligible under the current membership and
                 connection state.
      """
 
     allowed: bool
+    pending: bool
     allowed_since: datetime.datetime | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -41,6 +45,8 @@ class AgentNetworkContactAdmission:
 
     def to_dict(self) -> dict[str, Any]:
         allowed = self.allowed
+
+        pending = self.pending
 
         allowed_since: None | str
         if isinstance(self.allowed_since, datetime.datetime):
@@ -53,6 +59,7 @@ class AgentNetworkContactAdmission:
         field_dict.update(self.additional_properties)
         field_dict.update({
             "allowed": allowed,
+            "pending": pending,
             "allowed_since": allowed_since,
         })
 
@@ -64,6 +71,8 @@ class AgentNetworkContactAdmission:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         allowed = d.pop("allowed")
+
+        pending = d.pop("pending")
 
         def _parse_allowed_since(data: object) -> datetime.datetime | None:
             if data is None:
@@ -85,6 +94,7 @@ class AgentNetworkContactAdmission:
 
         agent_network_contact_admission = cls(
             allowed=allowed,
+            pending=pending,
             allowed_since=allowed_since,
         )
 

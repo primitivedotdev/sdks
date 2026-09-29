@@ -7,6 +7,7 @@ import {
   type ContactPolicyPage,
   ContactPolicyReadRetryError,
   createNotificationContactPolicy,
+  NetworkAdmissionPendingError,
 } from "../../src/oclif/notification-contact-policy.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
@@ -74,9 +75,15 @@ function requestFixture() {
 
 describe("contact notification policy", () => {
   it("admits current network peers without a contact and rechecks membership before wake", async () => {
-    let decision: { allowed: boolean; allowed_since: string | null } = {
+    const inboundId = randomUUID();
+    let decision: {
+      allowed: boolean;
+      allowed_since: string | null;
+      pending: boolean;
+    } = {
       allowed: true,
       allowed_since: activation,
+      pending: false,
     };
     const readNetworkAdmission = vi.fn(async () => decision);
     const document = emptyContactPolicy(recipient);
@@ -87,31 +94,39 @@ describe("contact notification policy", () => {
       readNetworkAdmission,
     });
     expect(
-      await policy.admit(sender, "2026-09-01T09:59:59.999Z", signal),
+      await policy.admit(sender, "2026-09-01T09:59:59.999Z", signal, inboundId),
     ).toBeNull();
-    const admitted = await policy.admit(sender, received, signal);
+    expect(await policy.admit(sender, received, signal)).toBeNull();
+    expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
+    const admitted = await policy.admit(sender, received, signal, inboundId);
     expect(admitted).toMatchObject({
       kind: "allowed",
       source: "network",
+      emailId: inboundId,
       notifySince: activation,
     });
     if (!admitted) throw new Error("Expected network admission");
     (await policy.recheck(admitted, signal))();
-    decision = { allowed: false, allowed_since: null };
+    decision = { allowed: false, allowed_since: null, pending: false };
     await expect(policy.recheck(admitted, signal)).rejects.toThrow(
       "changed or expired",
     );
-    decision = { allowed: true, allowed_since: received };
+    decision = { allowed: true, allowed_since: received, pending: false };
     await expect(policy.recheck(admitted, signal)).rejects.toThrow(
       "changed or expired",
     );
-    expect(readNetworkAdmission).toHaveBeenCalledWith(sender, signal);
+    expect(readNetworkAdmission).toHaveBeenCalledWith(
+      inboundId,
+      sender,
+      signal,
+    );
   });
 
   it("keeps explicit contact and owner silence ahead of network admission", async () => {
     const readNetworkAdmission = vi.fn(async () => ({
       allowed: true,
       allowed_since: activation,
+      pending: false,
     }));
     const document = emptyContactPolicy(recipient);
     const policy = createNotificationContactPolicy({
@@ -129,8 +144,38 @@ describe("contact notification policy", () => {
       }),
       readNetworkAdmission,
     });
-    expect(await policy.admit(sender, received, signal)).toBeNull();
+    expect(
+      await policy.admit(sender, received, signal, randomUUID()),
+    ).toBeNull();
     expect(readNetworkAdmission).not.toHaveBeenCalled();
+  });
+
+  it("leaves an exact inbound email pending until delivery evidence settles", async () => {
+    const inboundId = randomUUID();
+    let decision = {
+      allowed: false,
+      allowed_since: null as string | null,
+      pending: true,
+    };
+    const readNetworkAdmission = vi.fn(async () => decision);
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => emptyContactPolicy(recipient),
+      readPage: async () => ({ data: [], cursor: null }),
+      readNetworkAdmission,
+    });
+    await expect(
+      policy.admit(sender, received, signal, inboundId),
+    ).rejects.toBeInstanceOf(NetworkAdmissionPendingError);
+    decision = { allowed: true, allowed_since: activation, pending: false };
+    expect(
+      await policy.admit(sender, received, signal, inboundId),
+    ).toMatchObject({ kind: "allowed", source: "network", emailId: inboundId });
+    expect(readNetworkAdmission).toHaveBeenCalledWith(
+      inboundId,
+      sender,
+      signal,
+    );
   });
 
   it("admits a solicited response without unsolicited opt-in but rechecks explicit silence", async () => {

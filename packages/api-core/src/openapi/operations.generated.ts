@@ -1269,7 +1269,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "check-default-network-contact-admission",
-    "description": "Requires the recipient's connected-agent credential. The recipient\naddress is derived from that credential. Returns no sender profile or\nexistence detail. This check does not authenticate the inbound email\nsender; clients must verify the actual email and respect explicit\ncontact silence before using the result. Mail received before\nallowed_since cannot be newly admitted.\n",
+    "description": "Requires the recipient's connected-agent credential. The recipient\naddress is derived from that credential. The email ID must identify\naccepted or completed inbound mail for that exact recipient, with\nmatching stored sender and delivery evidence. Returns no sender profile\nor existence detail. Clients must also verify the email detail's sender\nprovenance and respect explicit contact silence before using the result.\nMail received before allowed_since cannot be newly admitted.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "checkDefaultNetworkContactAdmission",
@@ -1278,23 +1278,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "queryParams": [],
     "requestSchema": {
       "type": "object",
+      "description": "Check only a received email already stored for the bound recipient. The server verifies its sender against delivery evidence.",
       "properties": {
+        "email_id": {
+          "type": "string",
+          "format": "uuid"
+        },
         "sender_address": {
           "type": "string",
           "format": "email"
         }
       },
       "required": [
+        "email_id",
         "sender_address"
       ],
       "additionalProperties": false
     },
     "responseSchema": {
       "type": "object",
-      "description": "Recipient-bound admission for authenticated network mail.",
+      "description": "Recipient-bound admission for authenticated network mail. Pending means delivery proof is still settling and the same email should be retried.",
       "properties": {
         "allowed": {
           "type": "boolean"
+        },
+        "pending": {
+          "type": "boolean",
+          "description": "True only while authenticated inbound mail awaits settled delivery evidence, for at most 120 seconds after receipt."
         },
         "allowed_since": {
           "type": [
@@ -1307,7 +1317,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       "required": [
         "allowed",
-        "allowed_since"
+        "allowed_since",
+        "pending"
       ]
     },
     "sdkName": "checkDefaultNetworkContactAdmission",

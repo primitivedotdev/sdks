@@ -113,6 +113,7 @@ export async function explainNotification(options: {
     detail.from_email,
     detail.received_at,
     signal,
+    detail.id,
   );
   if (
     admission?.kind !== "allowed" &&

@@ -139,7 +139,12 @@ export async function createWakeMail(options: {
       const trust = scopedChatSenderTrust(detail, sender);
       if (trust.retryable) return outcome(false);
       if (!trust.trusted) return outcome(true);
-      let admission = await policy.admit(sender, detail.received_at, signal);
+      let admission = await policy.admit(
+        sender,
+        detail.received_at,
+        signal,
+        detail.id,
+      );
       const requested = detail.reply_to_sent_email_id
         ? await store.findWaitByParent(detail.reply_to_sent_email_id)
         : null;

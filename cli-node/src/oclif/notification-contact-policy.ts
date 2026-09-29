@@ -11,6 +11,12 @@ import { mailAddress, mailId, mailTime } from "./shared-mail-files.js";
 export const CONTACT_POLICY_MAX_AGE_MS = 30_000;
 export const CONTACT_POLICY_RETRY_MIN_MS = 1000;
 export const CONTACT_POLICY_RETRY_MAX_MS = 30_000;
+export const NETWORK_ADMISSION_PENDING_RETRY_MS = 5_000;
+export class NetworkAdmissionPendingError extends NotificationRetryError {
+  constructor() {
+    super("Network mail admission is pending delivery proof.");
+  }
+}
 export class ContactPolicyReadRetryError extends NotificationRetryError {
   constructor() {
     super(
@@ -21,6 +27,7 @@ export class ContactPolicyReadRetryError extends NotificationRetryError {
 export type ContactPolicyPage = { data: unknown; cursor: unknown };
 export type ContactNotificationAdmission = {
   sender: string;
+  emailId?: string;
   receivedAt: string;
   generation: string;
   notifySince: string;
@@ -52,9 +59,14 @@ export function createNotificationContactPolicy(options: {
   ): Promise<ContactPolicyPage>;
   readPolicy(signal: AbortSignal): Promise<unknown>;
   readNetworkAdmission?(
+    emailId: string,
     sender: string,
     signal: AbortSignal,
-  ): Promise<{ allowed: boolean; allowed_since: string | null }>;
+  ): Promise<{
+    allowed: boolean;
+    allowed_since: string | null;
+    pending: boolean;
+  }>;
   contactRequests?: boolean;
   now?: () => number;
 }) {
@@ -184,9 +196,14 @@ export function createNotificationContactPolicy(options: {
     sender: string,
     receivedAt: string,
     signal: AbortSignal,
+    emailId?: string,
   ): Promise<ContactNotificationAdmission | null> {
     const contact = admission(value, sender, receivedAt);
-    if (contact?.kind === "allowed" || !options.readNetworkAdmission)
+    if (
+      contact?.kind === "allowed" ||
+      !options.readNetworkAdmission ||
+      !emailId
+    )
       return contact;
     const decision = evaluateContactPolicy({
       policy: value.policy,
@@ -202,13 +219,15 @@ export function createNotificationContactPolicy(options: {
       !(decision.kind === "silent" && decision.source === "default")
     )
       return contact;
-    const network = await options.readNetworkAdmission(sender, signal);
+    const network = await options.readNetworkAdmission(emailId, sender, signal);
+    if (network.pending) throw new NetworkAdmissionPendingError();
     if (!network.allowed) return contact;
     const since = network.allowed_since && mailTime(network.allowed_since);
     if (!since) throw unavailable();
     if (Date.parse(receivedAt) < Date.parse(since)) return contact;
     return {
       sender,
+      emailId,
       receivedAt,
       generation: since,
       notifySince: since,
@@ -223,6 +242,7 @@ export function createNotificationContactPolicy(options: {
   ) {
     return (
       current !== null &&
+      current.emailId === prior.emailId &&
       current.kind === prior.kind &&
       current.source === prior.source &&
       current.generation === prior.generation &&
@@ -236,7 +256,12 @@ export function createNotificationContactPolicy(options: {
       if (!fresh(snapshot)) throw unavailable();
       return snapshot.senders.keys();
     },
-    async admit(sender: string, receivedAt: string, signal: AbortSignal) {
+    async admit(
+      sender: string,
+      receivedAt: string,
+      signal: AbortSignal,
+      emailId?: string,
+    ) {
       signal.throwIfAborted();
       let peer: string;
       try {
@@ -245,14 +270,27 @@ export function createNotificationContactPolicy(options: {
         return null;
       }
       const received = mailTime(receivedAt);
+      const inboundId = emailId === undefined ? undefined : mailId(emailId);
       const cached = fresh(snapshot);
       let current = cached && snapshot ? snapshot : await refreshOnce(signal);
-      let allowed = await admissionWithNetwork(current, peer, received, signal);
+      let allowed = await admissionWithNetwork(
+        current,
+        peer,
+        received,
+        signal,
+        inboundId,
+      );
       if (cached && allowed?.kind !== "allowed") {
         // Cached denial or request-only intake cannot discard ordinary mail
         // from a newly approved contact before its dispatch permission is read.
         current = await refreshOnce(signal);
-        allowed = await admissionWithNetwork(current, peer, received, signal);
+        allowed = await admissionWithNetwork(
+          current,
+          peer,
+          received,
+          signal,
+          inboundId,
+        );
       }
       return allowed;
     },
@@ -265,6 +303,7 @@ export function createNotificationContactPolicy(options: {
               prior.sender,
               prior.receivedAt,
               signal,
+              prior.emailId,
             )
           : admission(
               current,
