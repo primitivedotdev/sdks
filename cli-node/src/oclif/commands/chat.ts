@@ -45,6 +45,7 @@ import {
   type ConnectedReplyWait,
   openConnectedReplyWait,
 } from "../connected-reply-wait.js";
+import { contactRequestSessionKey } from "../contact-request-commands.js";
 import { formatAlreadySentNotice } from "../idempotent-replay-banner.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
@@ -1580,10 +1581,25 @@ class ChatCommand extends Command {
             apiBaseUrl: flags["api-base-url"],
             configDir: this.config.configDir,
           });
-        if (flags.async && (!auth.connectedAgent || !currentMailSessionKey()))
-          throw cliError(
-            "--async requires a connected-agent profile in the exact current coding session. Connect this session and enable receiving first.",
-          );
+        let asyncSessionKey: string | null = null;
+        if (flags.async) {
+          if (auth.connectedAgent) {
+            try {
+              asyncSessionKey = contactRequestSessionKey({
+                apiKey: auth.apiKey,
+                configDir: this.config.configDir,
+                identity: auth.connectedAgent,
+              });
+            } catch {
+              // Never send when this session cannot prove ownership of the
+              // selected profile's verified setup.
+            }
+          }
+          if (!asyncSessionKey)
+            throw cliError(
+              "--async requires a connected-agent profile verified for the exact current coding session. Connect this session and enable receiving first.",
+            );
+        }
 
         let selectedFrom = flags.from;
         if (auth.connectedAgent) {
@@ -1765,7 +1781,7 @@ class ChatCommand extends Command {
             flags.timeout === 0 ? null : Date.now() + flags.timeout * 1000;
           const key = receipt.data.idempotency_key;
           connectedWait = await openConnectedReplyWait({
-            sessionKey: currentMailSessionKey(),
+            sessionKey: flags.async ? asyncSessionKey : currentMailSessionKey(),
             apiClient,
             apiKey: auth.apiKey,
             baseUrl: auth.apiBaseUrl,

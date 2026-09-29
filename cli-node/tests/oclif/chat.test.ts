@@ -103,6 +103,10 @@ import ChatCommand, {
   formatChatResponse,
   resolveChatResponseBody,
 } from "../../src/oclif/commands/chat.js";
+import {
+  agentProfileDirectory,
+  saveConnectedAgentProfile,
+} from "../../src/oclif/connected-agent-profile.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 
 import {
@@ -326,17 +330,62 @@ describe("chat command", () => {
     vi.restoreAllMocks();
   });
 
-  function connectedAuth(profile = false) {
+  function connectedAuth(profile = false, verifiedSession?: string) {
+    const apiKey = ["pconn", "fixture"].join("_");
+    const apiBaseUrl = "https://api.primitive.dev/v1";
+    const orgId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const ownerAddress = "owner@sender.example";
+    if (profile) {
+      mkdirSync(testConfigDir(), { recursive: true, mode: 0o700 });
+      saveConnectedAgentProfile(testConfigDir(), "work", {
+        version: 1,
+        auth_method: "agent_connection",
+        api_key: apiKey,
+        api_base_url: apiBaseUrl,
+        org_id: orgId,
+        agent_address: "agent@sender.example",
+        owner_address: ownerAddress,
+        invitation_hash: "a".repeat(64),
+        created_at: "2026-01-01T00:00:00Z",
+      });
+    }
+    if (verifiedSession) {
+      writeFileSync(
+        join(agentProfileDirectory(testConfigDir(), "work"), "setup.json"),
+        JSON.stringify({
+          version: 1,
+          session: verifiedSession,
+          receiverMode: "external",
+          invitationHash: "a".repeat(64),
+          since: "2026-01-01T00:00:00Z",
+          contactRequests: true,
+          challenge: {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            messageId: "<verification@sender.example>",
+            marker: `primitive-connection:${verifiedSession}:1`,
+          },
+          phase: "sent",
+          receipt: {
+            id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            status: "delivered",
+          },
+        }),
+        { mode: 0o600 },
+      );
+    }
     mocks.createAuthenticatedCliApiClient.mockResolvedValue({
       apiClient: { client: {} },
       auth: {
-        apiKey: ["pconn", "fixture"].join("_"),
-        apiBaseUrl: "https://api.example.test/v1",
+        apiKey,
+        apiBaseUrl,
         ...(profile
           ? {
               connectedAgent: {
                 profileName: "work",
+                orgId,
                 agentAddress: "agent@sender.example",
+                ownerAddress,
+                apiBaseUrl,
               },
             }
           : {}),
@@ -371,7 +420,7 @@ describe("chat command", () => {
     delete process.env.CODEX_THREAD_ID;
     process.env.CLAUDE_CODE_SESSION_ID = "11111111-1111-4111-8111-111111111111";
     try {
-      connectedAuth(true);
+      connectedAuth(true, "11111111-1111-4111-8111-111111111111");
       const result = await runChatCommand([
         "help@agent.example",
         "Build a small game",
@@ -394,6 +443,38 @@ describe("chat command", () => {
       expect(mocks.bind).toHaveBeenCalledWith("sent-1");
       expect(mocks.next).not.toHaveBeenCalled();
       expect(mocks.close).toHaveBeenCalledOnce();
+    } finally {
+      if (previous === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
+      else process.env.CLAUDE_CODE_SESSION_ID = previous;
+      if (previousCodex === undefined) delete process.env.CODEX_SESSION_ID;
+      else process.env.CODEX_SESSION_ID = previousCodex;
+      if (previousThread === undefined) delete process.env.CODEX_THREAD_ID;
+      else process.env.CODEX_THREAD_ID = previousThread;
+    }
+  });
+
+  it.each([
+    {
+      name: "another session",
+      verifiedSession: "11111111-1111-4111-8111-111111111111",
+    },
+    { name: "an unbound profile", verifiedSession: undefined },
+  ])("refuses async sending from $name before opening a wait or sending", async ({
+    verifiedSession,
+  }) => {
+    const previous = process.env.CLAUDE_CODE_SESSION_ID;
+    const previousCodex = process.env.CODEX_SESSION_ID;
+    const previousThread = process.env.CODEX_THREAD_ID;
+    delete process.env.CODEX_SESSION_ID;
+    delete process.env.CODEX_THREAD_ID;
+    process.env.CLAUDE_CODE_SESSION_ID = "22222222-2222-4222-8222-222222222222";
+    try {
+      connectedAuth(true, verifiedSession);
+      await expect(
+        runChatCommand(["help@agent.example", "hello", "--async"]),
+      ).rejects.toThrow("exact current coding session");
+      expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
     } finally {
       if (previous === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
       else process.env.CLAUDE_CODE_SESSION_ID = previous;

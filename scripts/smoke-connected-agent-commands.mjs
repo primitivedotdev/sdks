@@ -12,6 +12,7 @@ const config = join(directory, 'config');
 await mkdir(config, { mode: 0o700 });
 const env = { ...process.env, PRIMITIVE_CONFIG_DIR: config, XDG_CONFIG_HOME: config, NO_COLOR: '1' };
 for (const name of Object.keys(env)) if ((name.startsWith('PRIMITIVE_') && name !== 'PRIMITIVE_CONFIG_DIR') || /proxy/i.test(name)) delete env[name];
+for (const name of ['CODEX_SESSION_ID','CODEX_THREAD_ID','CLAUDE_CODE_SESSION_ID']) delete env[name];
 const peer = 'peer+demo@example.test', agent = 'agent@example.test';
 const version = '11111111-1111-4111-8111-111111111111';
 const stamp = '2026-09-27T12:00:00Z';
@@ -135,5 +136,22 @@ try {
   assert.ok(!(rejected.stdout+rejected.stderr).includes(token)&&!(rejected.stdout+rejected.stderr).includes(credential));
   assert.equal(hits,before);
   const profile=JSON.parse(await readFile(join(config,'agent-connections','profiles','work','connection.json'),'utf8'));assert.equal(profile.api_key,credential);
-  console.log('Built CLI: explicit/default JSON contact commands, bare parents, private stdin claim, offline profile/status and explicit JSON listener status, secret-safe claim alias, and contact notification flag conflicts pass. No external network or real email.');
+  const trace=join(directory,'async-network-attempts.txt');
+  const tracePreload=join(directory,'trace-async-network.mjs');
+  await writeFile(tracePreload,`import { appendFileSync } from 'node:fs';globalThis.fetch=async()=>{appendFileSync(${JSON.stringify(trace)},'attempt\\n');throw new Error('Unexpected network');};`,{mode:0o600});
+  const wrongSession='22222222-2222-4222-8222-222222222222';
+  const asyncEnv={PRIMITIVE_AGENT_PROFILE:'work',CODEX_SESSION_ID:wrongSession,CODEX_THREAD_ID:wrongSession};
+  const unbound=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:asyncEnv,exit:1});
+  assert.match(unbound.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
+  assert.equal(await readFile(trace,'utf8').catch(()=>''),'','an unbound profile must not attempt any API call');
+  await writeFile(join(config,'agent-connections','profiles','work','setup.json'),JSON.stringify({
+    version:1,session,receiverMode:'native',invitationHash:profile.invitation_hash,since:stamp,contactRequests:false,
+    challenge:{id:'33333333-3333-4333-8333-333333333333',messageId:'<verification@example.test>',marker:`primitive-connection:${session}:1`},
+    phase:'sent',receipt:{id:'44444444-4444-4444-8444-444444444444',status:'delivered'}
+  }),{mode:0o600,flag:'wx'});
+  const mismatched=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:asyncEnv,exit:1});
+  assert.match(mismatched.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
+  assert.equal(await readFile(trace,'utf8').catch(()=>''),'','another session must not attempt any API call');
+  assert.equal(hits,before,'wrong-session async chat must not send email');
+  console.log('Built CLI: connected commands, exact-session async refusal without network, contact notification flags, and offline status pass. No external network or real email.');
 } finally {await new Promise(r=>server.close(r));await rm(directory,{recursive:true,force:true});}
