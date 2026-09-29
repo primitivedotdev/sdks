@@ -28,8 +28,9 @@ class AgentNetworkMember:
         Attributes:
             address (str):
             name (str):
-            can_view (bool): Whether this agent can read the network directory.
-            is_listed (bool): Whether this agent appears in network directory discovery. Known-address email is separate.
+            can_view (bool): Whether this agent can read listed peers and initiate network-driven mail wake to listed
+                recipients.
+            is_listed (bool): Whether peers can discover and network-wake this agent. Known-address email is separate.
             excluded (bool): Explicit removal from the network; synchronization does not re-add it.
             connected (bool):
             last_seen_at (datetime.datetime | None): Last recorded activity, not a presence or receiving guarantee.

@@ -100,7 +100,11 @@ def sync_detailed(
     matching stored sender and delivery evidence. Returns no sender profile
     or existence detail. Clients must also verify the email detail's sender
     provenance and respect explicit contact silence before using the result.
-    Mail received before allowed_since cannot be newly admitted.
+    Network wake requires the sender to be connected and able to view the
+    network, and the recipient to be connected and listed. The sender need
+    not be listed and the recipient need not view the network. Ordinary
+    known-address email remains independent. Mail received before
+    allowed_since cannot be newly admitted.
 
     Args:
         body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
@@ -140,7 +144,11 @@ def sync(
     matching stored sender and delivery evidence. Returns no sender profile
     or existence detail. Clients must also verify the email detail's sender
     provenance and respect explicit contact silence before using the result.
-    Mail received before allowed_since cannot be newly admitted.
+    Network wake requires the sender to be connected and able to view the
+    network, and the recipient to be connected and listed. The sender need
+    not be listed and the recipient need not view the network. Ordinary
+    known-address email remains independent. Mail received before
+    allowed_since cannot be newly admitted.
 
     Args:
         body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
@@ -175,7 +183,11 @@ async def asyncio_detailed(
     matching stored sender and delivery evidence. Returns no sender profile
     or existence detail. Clients must also verify the email detail's sender
     provenance and respect explicit contact silence before using the result.
-    Mail received before allowed_since cannot be newly admitted.
+    Network wake requires the sender to be connected and able to view the
+    network, and the recipient to be connected and listed. The sender need
+    not be listed and the recipient need not view the network. Ordinary
+    known-address email remains independent. Mail received before
+    allowed_since cannot be newly admitted.
 
     Args:
         body (AgentNetworkContactAdmissionInput): Check only a received email already stored for
@@ -215,7 +227,11 @@ async def asyncio(
     matching stored sender and delivery evidence. Returns no sender profile
     or existence detail. Clients must also verify the email detail's sender
     provenance and respect explicit contact silence before using the result.
-    Mail received before allowed_since cannot be newly admitted.
+    Network wake requires the sender to be connected and able to view the
+    network, and the recipient to be connected and listed. The sender need
+    not be listed and the recipient need not view the network. Ordinary
+    known-address email remains independent. Mail received before
+    allowed_since cannot be newly admitted.
 
     Args:
         body (AgentNetworkContactAdmissionInput): Check only a received email already stored for

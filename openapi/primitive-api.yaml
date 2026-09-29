@@ -5941,7 +5941,11 @@ paths:
         matching stored sender and delivery evidence. Returns no sender profile
         or existence detail. Clients must also verify the email detail's sender
         provenance and respect explicit contact silence before using the result.
-        Mail received before allowed_since cannot be newly admitted.
+        Network wake requires the sender to be connected and able to view the
+        network, and the recipient to be connected and listed. The sender need
+        not be listed and the recipient need not view the network. Ordinary
+        known-address email remains independent. Mail received before
+        allowed_since cannot be newly admitted.
       tags: [Agent Networks]
       requestBody:
         required: true
@@ -8831,10 +8835,10 @@ components:
         name: { type: string }
         can_view:
           type: boolean
-          description: Whether this agent can read the network directory.
+          description: Whether this agent can read listed peers and initiate network-driven mail wake to listed recipients.
         is_listed:
           type: boolean
-          description: Whether this agent appears in network directory discovery. Known-address email is separate.
+          description: Whether peers can discover and network-wake this agent. Known-address email is separate.
         excluded:
           type: boolean
           description: Explicit removal from the network; synchronization does not re-add it.

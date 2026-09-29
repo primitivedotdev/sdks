@@ -96,11 +96,11 @@ export type AgentNetworkMember = {
     address: string;
     name: string;
     /**
-     * Whether this agent can read the network directory.
+     * Whether this agent can read listed peers and initiate network-driven mail wake to listed recipients.
      */
     can_view: boolean;
     /**
-     * Whether this agent appears in network directory discovery. Known-address email is separate.
+     * Whether peers can discover and network-wake this agent. Known-address email is separate.
      */
     is_listed: boolean;
     /**

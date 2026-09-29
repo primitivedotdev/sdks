@@ -86,7 +86,11 @@ type Invoker interface {
 	// matching stored sender and delivery evidence. Returns no sender profile
 	// or existence detail. Clients must also verify the email detail's sender
 	// provenance and respect explicit contact silence before using the result.
-	// Mail received before allowed_since cannot be newly admitted.
+	// Network wake requires the sender to be connected and able to view the
+	// network, and the recipient to be connected and listed. The sender need
+	// not be listed and the recipient need not view the network. Ordinary
+	// known-address email remains independent. Mail received before
+	// allowed_since cannot be newly admitted.
 	//
 	// POST /agent-networks/default/contact-admission
 	CheckDefaultNetworkContactAdmission(ctx context.Context, request *AgentNetworkContactAdmissionInput) (CheckDefaultNetworkContactAdmissionRes, error)
@@ -2419,7 +2423,11 @@ func (c *Client) sendCancelSentEmail(ctx context.Context, params CancelSentEmail
 // matching stored sender and delivery evidence. Returns no sender profile
 // or existence detail. Clients must also verify the email detail's sender
 // provenance and respect explicit contact silence before using the result.
-// Mail received before allowed_since cannot be newly admitted.
+// Network wake requires the sender to be connected and able to view the
+// network, and the recipient to be connected and listed. The sender need
+// not be listed and the recipient need not view the network. Ordinary
+// known-address email remains independent. Mail received before
+// allowed_since cannot be newly admitted.
 //
 // POST /agent-networks/default/contact-admission
 func (c *Client) CheckDefaultNetworkContactAdmission(ctx context.Context, request *AgentNetworkContactAdmissionInput) (CheckDefaultNetworkContactAdmissionRes, error) {

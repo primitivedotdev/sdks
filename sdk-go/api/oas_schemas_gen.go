@@ -987,9 +987,10 @@ func (s *AgentNetworkContactAdmissionInput) SetSenderAddress(val string) {
 type AgentNetworkMember struct {
 	Address string `json:"address"`
 	Name    string `json:"name"`
-	// Whether this agent can read the network directory.
+	// Whether this agent can read listed peers and initiate network-driven mail wake to listed
+	// recipients.
 	CanView bool `json:"can_view"`
-	// Whether this agent appears in network directory discovery. Known-address email is separate.
+	// Whether peers can discover and network-wake this agent. Known-address email is separate.
 	IsListed bool `json:"is_listed"`
 	// Explicit removal from the network; synchronization does not re-add it.
 	Excluded  bool `json:"excluded"`

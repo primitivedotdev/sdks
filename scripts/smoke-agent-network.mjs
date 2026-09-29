@@ -70,6 +70,9 @@ try {
   for (const action of ["list", "members", "peers", "get", "set", "add", "remove"])
     assert.match(await invoke(["network", action, "--help"]), /USAGE|DESCRIPTION/i);
   assert.match((await invoke(["network", "peers", "--help"])).replace(/\s+/g, " "), /recorded API activity/);
+  const setHelp = (await invoke(["network", "set", "--help"])).replace(/\s+/g, " ");
+  assert.match(setHelp, /initiating network-driven mail wake/);
+  assert.match(setHelp, /network-driven wake from viewing senders/);
   assert.match(await invoke(["agent-networks"]), /check-default-network-contact-admission/);
   assert.match(await invoke(["agent-networks", "check-default-network-contact-admission", "--help"]), /--email-id/);
   assert.match(await invoke(["network", "--help"]), /agent network/i);

@@ -8090,7 +8090,7 @@
       "post": {
         "operationId": "checkDefaultNetworkContactAdmission",
         "summary": "Check whether network mail may wake this connected agent",
-        "description": "Requires the recipient's connected-agent credential. The recipient\naddress is derived from that credential. The email ID must identify\naccepted or completed inbound mail for that exact recipient, with\nmatching stored sender and delivery evidence. Returns no sender profile\nor existence detail. Clients must also verify the email detail's sender\nprovenance and respect explicit contact silence before using the result.\nMail received before allowed_since cannot be newly admitted.\n",
+        "description": "Requires the recipient's connected-agent credential. The recipient\naddress is derived from that credential. The email ID must identify\naccepted or completed inbound mail for that exact recipient, with\nmatching stored sender and delivery evidence. Returns no sender profile\nor existence detail. Clients must also verify the email detail's sender\nprovenance and respect explicit contact silence before using the result.\nNetwork wake requires the sender to be connected and able to view the\nnetwork, and the recipient to be connected and listed. The sender need\nnot be listed and the recipient need not view the network. Ordinary\nknown-address email remains independent. Mail received before\nallowed_since cannot be newly admitted.\n",
         "tags": [
           "Agent Networks"
         ],
@@ -12178,11 +12178,11 @@
           },
           "can_view": {
             "type": "boolean",
-            "description": "Whether this agent can read the network directory."
+            "description": "Whether this agent can read listed peers and initiate network-driven mail wake to listed recipients."
           },
           "is_listed": {
             "type": "boolean",
-            "description": "Whether this agent appears in network directory discovery. Known-address email is separate."
+            "description": "Whether peers can discover and network-wake this agent. Known-address email is separate."
           },
           "excluded": {
             "type": "boolean",

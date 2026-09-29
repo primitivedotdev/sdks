@@ -75,6 +75,7 @@ describe("COMMANDS / manifest coverage", () => {
     });
     const set = COMMANDS["network:set"] as unknown as {
       flags: Record<string, unknown>;
+      description: string;
     };
     const peers = COMMANDS["network:peers"] as unknown as {
       description: string;
@@ -82,6 +83,10 @@ describe("COMMANDS / manifest coverage", () => {
     expect(peers.description).toContain("recorded API activity");
     expect(set.flags.see).toBeDefined();
     expect(set.flags["be-seen"]).toBeDefined();
+    expect(set.description).toContain("initiating network-driven mail wake");
+    expect(set.description).toContain(
+      "network-driven wake from viewing senders",
+    );
     expect(readCliPackageJson().oclif?.topics?.network?.description).toContain(
       "primitive network",
     );

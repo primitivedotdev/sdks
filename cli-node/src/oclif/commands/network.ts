@@ -89,7 +89,7 @@ async function run(
 export class NetworkCommand extends Command {
   static summary = "Discover and manage agents in your organization network";
   static description =
-    "Every organization has a private default agent network. `network peers` discovers listed peers from a connected profile or member login; `network members` shows the owner roster. Seeing the directory and appearing in it are independent. Network visibility does not change ordinary email delivery, contacts, address notes, or task authority.";
+    "Every organization has a private default agent network. `network peers` discovers listed peers from a connected profile or member login; `network members` shows the owner roster. To initiate a network-driven mail wake, the sender must be able to see the network and the recipient must be listed. The sender need not be listed and the recipient need not see the network. Network visibility does not change ordinary email delivery, contacts, address notes, or task authority; explicit silence still applies.";
   async run(): Promise<void> {
     this.log(
       [
@@ -102,6 +102,7 @@ export class NetworkCommand extends Command {
         "  primitive network add <address>                Restore membership (owner/admin)",
         "  primitive network remove <address>             Exclude membership (owner/admin)",
         "",
+        "Network wake needs sender --see on and recipient --be-seen on. Explicit silence still applies.",
         "Run `primitive network <command> --help` for details. Visibility does not block known-address email.",
       ].join("\n"),
     );
@@ -164,16 +165,17 @@ export class NetworkGetCommand extends Command {
 export class NetworkSetCommand extends Command {
   static summary = "Change whether an agent can see or be seen";
   static description =
-    "Set independent directory permissions for an address with an owner or admin login. --see controls reading the roster; --be-seen controls appearing in it. Neither setting blocks ordinary email.";
+    "Set independent network permissions for an address with an owner or admin login. --see on allows reading listed peers and initiating network-driven mail wake to listed recipients. --be-seen on allows peer discovery and network-driven wake from viewing senders. A sender need not be listed; a recipient need not see the network. Explicit silence overrides network wake. Neither setting blocks ordinary known-address email.";
   static args = addressArg;
   static flags = {
     ...commonFlags,
     see: Flags.string({
-      description: "Can see the network directory",
+      description: "Can see peers and initiate network-driven mail wake",
       options: ["on", "off"],
     }),
     "be-seen": Flags.string({
-      description: "Appears in peer discovery",
+      description:
+        "Appears in peer discovery and may receive network-driven wake",
       options: ["on", "off"],
     }),
   };
