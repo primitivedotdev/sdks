@@ -37,7 +37,10 @@ vi.mock("../../src/oclif/shared-mail-receiver.js", async (original) => ({
 
 import { runListen } from "../../src/oclif/listen-runner.js";
 import { ListenStateError } from "../../src/oclif/listen-state.js";
-import { CONTACT_POLICY_RETRY_MIN_MS } from "../../src/oclif/notification-contact-policy.js";
+import {
+  CONTACT_POLICY_RETRY_MIN_MS,
+  NETWORK_ADMISSION_PENDING_RETRY_MS,
+} from "../../src/oclif/notification-contact-policy.js";
 import type { DetailNotificationAuthorization } from "../../src/oclif/notify-session.js";
 import { sharedMailScope } from "../../src/oclif/shared-mail-receiver.js";
 import {
@@ -73,6 +76,7 @@ function setup(
     to_email: "device@example.com",
     from_header: "sender@example.com",
     from_email: "sender@example.com",
+    sender_connected_agent_verified: false,
     status: "completed",
     received_at: receivedAt,
     reply_to_sent_email_id: null as string | null,
@@ -147,6 +151,12 @@ function setup(
     apiBaseUrl: baseUrl,
   };
   let contactStatus = 200;
+  let networkStatus = 200;
+  let networkDecision = {
+    allowed: false,
+    allowed_since: null as string | null,
+    pending: false,
+  };
   let contactRows: unknown[] = [
     {
       agent_address: detail.recipient,
@@ -215,6 +225,19 @@ function setup(
               },
           { status: contactStatus },
         );
+      if (path === "/v1/agent-networks/default/contact-admission") {
+        expect(request.headers.get("authorization")).toBe(`Bearer ${apiKey}`);
+        expect(await request.json()).toEqual({
+          email_id: detail.id,
+          sender_address: detail.from_email,
+        });
+        return Response.json(
+          networkStatus === 200
+            ? { success: true, data: networkDecision }
+            : { success: false, error: "Network admission unavailable" },
+          { status: networkStatus },
+        );
+      }
       if (path === `/v1/emails/${emailId}/attachments/0` && contactBytes)
         return new Response(new Uint8Array(contactBytes));
       throw new Error(`Unexpected remote request ${path}`);
@@ -349,6 +372,15 @@ function setup(
       contactRows = rows;
       contactStatus = status;
     },
+    network: (
+      allowed: boolean,
+      allowedSince: string | null,
+      pending = false,
+      status = 200,
+    ) => {
+      networkDecision = { allowed, allowed_since: allowedSince, pending };
+      networkStatus = status;
+    },
     close,
     closeReceiver,
     store: () => opened,
@@ -359,6 +391,164 @@ function setup(
   };
 }
 describe("shared notification listener integration", () => {
+  it.each([
+    "verified",
+    "pending",
+  ])("does not count %s controls or notify the model before simultaneous ordinary mail", async (status) => {
+    const f = setup();
+    Object.assign(f.detail, { presence_control: { status, valid_for_ms: 0 } });
+    f.changed.mockImplementationOnce(async () => {
+      f.nextEmail();
+      Reflect.deleteProperty(f.detail, "presence_control");
+      await f.store()?.ingest({
+        emailId: f.detail.id,
+        eventId: randomUUID(),
+        receivedAt: f.detail.received_at,
+      });
+    });
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.changed).toHaveBeenCalledOnce();
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.close).toHaveBeenCalledOnce();
+    expect(f.closeReceiver).toHaveBeenCalledOnce();
+  });
+  it.each([
+    { resolved: true, notified: true },
+    { resolved: false, notified: false },
+  ])("retries one recipient-bound pending email, then applies final allowed=$resolved", async ({
+    resolved,
+    notified,
+  }) => {
+    const f = setup(["sdk"], ["email.received"], true);
+    f.contacts([]);
+    f.network(false, null, true);
+    let clock = performance.now();
+    const spy = vi.spyOn(performance, "now").mockImplementation(() => clock);
+    f.changed.mockImplementation(async () => {
+      clock += NETWORK_ADMISSION_PENDING_RETRY_MS + 1;
+      f.network(
+        resolved,
+        resolved ? new Date(Date.now() - 60_000).toISOString() : null,
+      );
+    });
+    try {
+      expect(
+        await runListen({
+          ...f.options,
+          notifySession: {
+            ...f.options.notifySession,
+            senders: [],
+            contactPreferences: true,
+          },
+        }),
+      ).toBe(1);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(f.changed).toHaveBeenCalledOnce();
+    expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
+    expect(
+      f.order.filter(
+        (path) => path === "/v1/agent-networks/default/contact-admission",
+      ).length,
+    ).toBeGreaterThanOrEqual(2);
+  });
+  it.each([
+    {
+      scenario: "first peer mail",
+      allowed: true,
+      old: false,
+      muted: false,
+      notified: true,
+    },
+    {
+      scenario: "network disabled",
+      allowed: false,
+      old: false,
+      muted: false,
+      notified: false,
+    },
+    {
+      scenario: "mail before activation",
+      allowed: true,
+      old: true,
+      muted: false,
+      notified: false,
+    },
+    {
+      scenario: "explicit contact silence",
+      allowed: true,
+      old: false,
+      muted: true,
+      notified: false,
+    },
+  ])("routes $scenario only when current network and contact policy admit it", async ({
+    allowed,
+    old,
+    muted,
+    notified,
+  }) => {
+    const f = setup(["sdk"], ["email.received"], true);
+    const activated = new Date(
+      Date.now() - (old ? 1000 : 60_000),
+    ).toISOString();
+    if (old) f.detail.received_at = new Date(Date.now() - 2000).toISOString();
+    f.network(allowed, allowed ? activated : null);
+    f.contacts(
+      muted
+        ? [
+            {
+              agent_address: f.detail.recipient,
+              contact_address: f.detail.from_email,
+              notify: false,
+              notify_since: null,
+              notification_generation: null,
+              version: randomUUID(),
+            },
+          ]
+        : [],
+    );
+    expect(
+      await runListen({
+        ...f.options,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
+    if (notified) {
+      expect(f.receipt()).toMatchObject({ state: "accepted" });
+      expect(f.handleDetail.mock.calls[0]?.[3]).toMatchObject({
+        sender: f.detail.from_email,
+      });
+    } else expect(f.receipt()).toBeNull();
+    expect(
+      f.order.includes("/v1/agent-networks/default/contact-admission"),
+    ).toBe(!muted);
+  });
+  it("does not ask network admission for mail with unverified sender provenance", async () => {
+    const f = setup(["sdk"], ["email.received"], true);
+    f.contacts([]);
+    f.network(true, new Date(Date.now() - 60_000).toISOString());
+    f.detail.from_header = "different@example.test";
+    expect(
+      await runListen({
+        ...f.options,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(f.order).not.toContain(
+      "/v1/agent-networks/default/contact-admission",
+    );
+  });
   it("delivers only canonical activity for an exact bound send to the native session", async () => {
     const f = setup();
     const sentEmailId = randomUUID();
@@ -960,6 +1150,46 @@ describe("first-contact intake", () => {
 });
 
 describe("locally solicited notification replies", () => {
+  it.each([
+    503,
+    "pending",
+  ] as const)("delivers an exact solicited reply independently of network %s", async (failure) => {
+    const f = await solicited("plain");
+    f.network(false, null, failure === "pending", failure === 503 ? 503 : 200);
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+      sender: f.detail.from_email,
+      contactRequest: false,
+    });
+  });
+
+  it.each([
+    503,
+    "pending",
+  ] as const)("keeps unrelated mail pending during network %s", async (failure) => {
+    const f = setup();
+    f.contacts([]);
+    f.network(false, null, failure === "pending", failure === 503 ? 503 : 200);
+    const controller = new AbortController();
+    f.changed.mockImplementationOnce(async () => controller.abort());
+    expect(
+      await runListen({
+        ...f.options,
+        signal: controller.signal,
+        notifySession: {
+          ...f.options.notifySession,
+          senders: [],
+          contactPreferences: true,
+        },
+      }),
+    ).toBe(0);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+      route: null,
+    });
+  });
+
   it("follows a fresh async reply through a changed parent without admitting unrelated senders", async () => {
     const f = setup();
     f.contacts([]);

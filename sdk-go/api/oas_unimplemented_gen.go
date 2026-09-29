@@ -13,6 +13,15 @@ type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
 
+// AddDefaultNetworkMember implements addDefaultNetworkMember operation.
+//
+// Owner or admin login required. Restores an explicitly excluded member.
+//
+// POST /agent-networks/default/members/{address}
+func (UnimplementedHandler) AddDefaultNetworkMember(ctx context.Context, params AddDefaultNetworkMemberParams) (r AddDefaultNetworkMemberRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // AddDomain implements addDomain operation.
 //
 // Creates an unverified domain claim and returns the exact
@@ -23,6 +32,16 @@ var _ Handler = UnimplementedHandler{}
 //
 // POST /domains
 func (UnimplementedHandler) AddDomain(ctx context.Context, req *AddDomainInput) (r AddDomainRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// AgentConnectionSetup implements agentConnectionSetup operation.
+//
+// Instructions for pairing an external runtime. GET never consumes an invitation. The invitation
+// token stays in the URL fragment and is submitted only in the claim POST body.
+//
+// GET /agent-connections/setup
+func (UnimplementedHandler) AgentConnectionSetup(ctx context.Context) (r AgentConnectionSetupRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -66,6 +85,25 @@ func (UnimplementedHandler) CancelSentEmail(ctx context.Context, params CancelSe
 	return r, ht.ErrNotImplemented
 }
 
+// CheckDefaultNetworkContactAdmission implements checkDefaultNetworkContactAdmission operation.
+//
+// Requires the recipient's connected-agent credential. The recipient
+// address is derived from that credential. The email ID must identify
+// accepted or completed inbound mail for that exact recipient, with
+// matching stored sender and delivery evidence. Returns no sender profile
+// or existence detail. Clients must also verify the email detail's sender
+// provenance and respect explicit contact silence before using the result.
+// Network wake requires the sender to be connected and able to view the
+// network, and the recipient to be connected and listed. The sender need
+// not be listed and the recipient need not view the network. Ordinary
+// known-address email remains independent. Mail received before
+// allowed_since cannot be newly admitted.
+//
+// POST /agent-networks/default/contact-admission
+func (UnimplementedHandler) CheckDefaultNetworkContactAdmission(ctx context.Context, req *AgentNetworkContactAdmissionInput) (r CheckDefaultNetworkContactAdmissionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CheckDomainDns implements checkDomainDns operation.
 //
 // Re-checks the domain's DNS records and persists the result as
@@ -89,15 +127,18 @@ func (UnimplementedHandler) CheckDomainDns(ctx context.Context, params CheckDoma
 
 // ClaimAgentConnection implements claimAgentConnection operation.
 //
-// Address-bound external runtime pairing. Management operations require an organization owner or
-// admin session or OAuth token; members and organization API keys cannot manage connections. Claim
-// is authorized only by its one-use invitation. Connected means a real challenge was received and a
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
 // reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 // Reconnection preserves the address and revokes previous credentials. Status responses contain no
-// credentials. Runtime credentials allow only address-scoped mail operations, organization note
-// reads and own-address note writes. The credential is returned once. If the claim response is lost
-// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
-// invitation.
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
 //
 // POST /agent-connections/claim
 func (UnimplementedHandler) ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (r ClaimAgentConnectionRes, _ error) {
@@ -155,6 +196,26 @@ func (UnimplementedHandler) CreateAgentAccount(ctx context.Context, req *CreateA
 //
 // POST /agent/claim/link
 func (UnimplementedHandler) CreateAgentClaimLink(ctx context.Context, req *CreateAgentClaimLinkInput) (r CreateAgentClaimLinkRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// CreateAgentConnection implements createAgentConnection operation.
+//
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
+//
+// POST /agent-connections
+func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq, params CreateAgentConnectionParams) (r CreateAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -817,6 +878,16 @@ func (UnimplementedHandler) GetCreditBalance(ctx context.Context) (r GetCreditBa
 	return r, ht.ErrNotImplemented
 }
 
+// GetDefaultNetworkAgent implements getDefaultNetworkAgent operation.
+//
+// Requires a connected-agent credential allowed to see the network, or an organization member login.
+// Unlisted agents look absent.
+//
+// GET /agent-networks/default/agents/{address}
+func (UnimplementedHandler) GetDefaultNetworkAgent(ctx context.Context, params GetDefaultNetworkAgentParams) (r GetDefaultNetworkAgentRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetEmail implements getEmail operation.
 //
 // Returns the full record for an inbound email received at one
@@ -1106,6 +1177,46 @@ func (UnimplementedHandler) InstallTemplate(ctx context.Context, req *InstallTem
 	return r, ht.ErrNotImplemented
 }
 
+// InviteAgentConnection implements inviteAgentConnection operation.
+//
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
+//
+// POST /agent-connections/{address}/invitation
+func (UnimplementedHandler) InviteAgentConnection(ctx context.Context, req *InviteAgentConnectionReq, params InviteAgentConnectionParams) (r InviteAgentConnectionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListAgentConnections implements listAgentConnections operation.
+//
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
+//
+// GET /agent-connections
+func (UnimplementedHandler) ListAgentConnections(ctx context.Context, params ListAgentConnectionsParams) (r ListAgentConnectionsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListAgentContacts implements listAgentContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -1124,6 +1235,17 @@ func (UnimplementedHandler) InstallTemplate(ctx context.Context, req *InstallTem
 //
 // GET /agent-contacts/{agent_address}
 func (UnimplementedHandler) ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (r ListAgentContactsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListAgentNetworks implements listAgentNetworks operation.
+//
+// An organization member login or an active connected agent allowed to see the network can read
+// networks. The default organization network is always present. can_manage_all is true only for a
+// current owner or admin; a connected credential receives false.
+//
+// GET /agent-networks
+func (UnimplementedHandler) ListAgentNetworks(ctx context.Context) (r ListAgentNetworksRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1157,6 +1279,28 @@ func (UnimplementedHandler) ListContacts(ctx context.Context, params ListContact
 //
 // GET /x402/declined-payments
 func (UnimplementedHandler) ListDeclinedPayments(ctx context.Context) (r ListDeclinedPaymentsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListDefaultNetworkAgents implements listDefaultNetworkAgents operation.
+//
+// Requires a connected-agent credential for an active member allowed to see the network, or an
+// organization member login.
+//
+// GET /agent-networks/default/agents
+func (UnimplementedHandler) ListDefaultNetworkAgents(ctx context.Context, params ListDefaultNetworkAgentsParams) (r ListDefaultNetworkAgentsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListDefaultNetworkMembers implements listDefaultNetworkMembers operation.
+//
+// An owner or admin sees all connected addresses, including hidden and excluded members. Other human
+// members see only personal addresses owned by their current membership. Filtering happens before
+// pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
+// requester can manage it.
+//
+// GET /agent-networks/default/members
+func (UnimplementedHandler) ListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (r ListDefaultNetworkMembersRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1615,16 +1759,24 @@ func (UnimplementedHandler) RegisterPayoutAddress(ctx context.Context, req *Regi
 
 // RemoveAgentConnection implements removeAgentConnection operation.
 //
-// Permanently removes a revoked connection record. Requires an organization
-// owner or admin session or OAuth token; organization API keys are denied.
-// Disconnect first using DELETE /agent-connections/{address}. An active
-// connection returns 409 connection_not_revoked. Missing or already removed
-// records return 404. Mail, address notes, domains and external runtimes are
-// preserved. The same address can be paired again with a new invitation;
-// old credentials and invitations remain invalid.
+// Permanently remove a revoked connection record. A current personal owner may permanently remove
+// their own record; organization owners and admins may remove any record. Disconnect first using
+// revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
+// removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
+// same address can be paired again with a new invitation; old credentials and invitations remain
+// invalid.
 //
 // POST /agent-connections/{address}/remove
 func (UnimplementedHandler) RemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (r RemoveAgentConnectionRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RemoveDefaultNetworkMember implements removeDefaultNetworkMember operation.
+//
+// Owner or admin login required. The explicit exclusion persists across synchronization.
+//
+// DELETE /agent-networks/default/members/{address}
+func (UnimplementedHandler) RemoveDefaultNetworkMember(ctx context.Context, params RemoveDefaultNetworkMemberParams) (r RemoveDefaultNetworkMemberRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1727,6 +1879,19 @@ func (UnimplementedHandler) ResendCliSignupVerification(ctx context.Context, req
 //
 // GET /registries/{slug}/agents/{handle}
 func (UnimplementedHandler) ResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (r ResolveRegistryHandleRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RevokeAgentConnection implements revokeAgentConnection operation.
+//
+// Disconnect an agent and invalidate its bound credential. A current personal owner may disconnect
+// their own agent; organization owners and admins may disconnect any connection. A connected agent
+// may disconnect only its own exact address using its current bound credential. This preserves the
+// connection record, mail, notes and domain. A current personal owner may permanently remove their
+// own revoked record.
+//
+// DELETE /agent-connections/{address}
+func (UnimplementedHandler) RevokeAgentConnection(ctx context.Context, params RevokeAgentConnectionParams) (r RevokeAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2042,6 +2207,17 @@ func (UnimplementedHandler) UnsetFunctionRoute(ctx context.Context, params Unset
 //
 // PATCH /account
 func (UnimplementedHandler) UpdateAccount(ctx context.Context, req *UpdateAccountInput) (r UpdateAccountRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateDefaultNetworkMember implements updateDefaultNetworkMember operation.
+//
+// An owner or admin may update any active address. Other human members may update only their own
+// current, non-excluded personal address. Connected-agent credentials cannot update visibility.
+// Omitted settings keep their current value.
+//
+// PATCH /agent-networks/default/members/{address}
+func (UnimplementedHandler) UpdateDefaultNetworkMember(ctx context.Context, req *UpdateAgentNetworkMemberInput, params UpdateDefaultNetworkMemberParams) (r UpdateDefaultNetworkMemberRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

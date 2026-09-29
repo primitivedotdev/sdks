@@ -118,7 +118,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "items": {
             "type": "string"
           },
-          "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here — e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
+          "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here - e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
         },
         "managed_inbox_address": {
           "type": [
@@ -986,9 +986,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "agent-connection-setup",
+    "description": "Instructions for pairing an external runtime. GET never consumes an invitation. The invitation token stays in the URL fragment and is submitted only in the claim POST body.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "agentConnectionSetup",
+    "path": "/agent-connections/setup",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": null,
+    "sdkName": "agentConnectionSetup",
+    "summary": "agent Connection Setup",
+    "tag": "Agent Connections",
+    "tagCommand": "agent-connections"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": true,
     "command": "claim-agent-connection",
-    "description": "Address-bound external runtime pairing. Management operations require an organization owner or admin session or OAuth token; members and organization API keys cannot manage connections. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow only address-scoped mail operations, organization note reads and own-address note writes. The credential is returned once. If the claim response is lost or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.",
+    "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "claimAgentConnection",
@@ -1003,6 +1021,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "string",
           "minLength": 32,
           "maxLength": 256
+        },
+        "capabilities": {
+          "maxItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "const": "primitive.presence/1"
+          }
         }
       },
       "required": [
@@ -1063,35 +1089,77 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
                 },
                 "claimed_at": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
                 },
                 "verified_at": {
-                  "anyOf": [
-                    {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
                 },
                 "last_seen_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "ownership_kind": {
+                  "type": "string",
+                  "enum": [
+                    "personal",
+                    "shared",
+                    "legacy_unknown"
+                  ]
+                },
+                "owner_user_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "owner_active": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "presence": {
                   "anyOf": [
                     {
-                      "type": "string",
-                      "format": "date-time",
-                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                      "type": "object",
+                      "properties": {
+                        "last_checked_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "valid_for_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 600000
+                        }
+                      },
+                      "required": [
+                        "last_checked_at",
+                        "expires_at",
+                        "valid_for_ms"
+                      ],
+                      "additionalProperties": false
                     },
                     {
                       "type": "null"
@@ -1108,7 +1176,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "updated_at",
                 "claimed_at",
                 "verified_at",
-                "last_seen_at"
+                "last_seen_at",
+                "ownership_kind",
+                "owner_user_id",
+                "owner_active"
               ],
               "additionalProperties": false
             },
@@ -1127,6 +1198,35 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "api_base_url": {
               "type": "string",
               "format": "uri"
+            },
+            "presence_profile": {
+              "type": "object",
+              "properties": {
+                "protocol": {
+                  "type": "string",
+                  "const": "primitive.presence"
+                },
+                "version": {
+                  "type": "number",
+                  "const": 1
+                },
+                "authentication_profile": {
+                  "type": "string",
+                  "const": "primitive-issued-v1"
+                },
+                "return_address": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                }
+              },
+              "required": [
+                "protocol",
+                "version",
+                "authentication_profile",
+                "return_address"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -1147,16 +1247,644 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "create-agent-connection",
+    "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "createAgentConnection",
+    "path": "/agent-connections",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 254,
+          "format": "email",
+          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        },
+        "owner_address": {
+          "type": "string",
+          "maxLength": 254,
+          "format": "email",
+          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        },
+        "ownership_kind": {
+          "type": "string",
+          "enum": [
+            "personal",
+            "shared"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "const": true,
+          "type": "boolean"
+        },
+        "data": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "connection": {
+              "type": "object",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "owner_address": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "claimed",
+                    "connected",
+                    "revoked"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "claimed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "verified_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "last_seen_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "ownership_kind": {
+                  "type": "string",
+                  "enum": [
+                    "personal",
+                    "shared",
+                    "legacy_unknown"
+                  ]
+                },
+                "owner_user_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "owner_active": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "presence": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "last_checked_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "valid_for_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 600000
+                        }
+                      },
+                      "required": [
+                        "last_checked_at",
+                        "expires_at",
+                        "valid_for_ms"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "name",
+                "owner_address",
+                "status",
+                "created_at",
+                "updated_at",
+                "claimed_at",
+                "verified_at",
+                "last_seen_at",
+                "ownership_kind",
+                "owner_user_id",
+                "owner_active"
+              ],
+              "additionalProperties": false
+            },
+            "invitation": {
+              "type": "object",
+              "properties": {
+                "claim_url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                }
+              },
+              "required": [
+                "claim_url",
+                "expires_at"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "connection",
+            "invitation"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "sdkName": "createAgentConnection",
+    "summary": "create Agent Connection",
+    "tag": "Agent Connections",
+    "tagCommand": "agent-connections"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "invite-agent-connection",
+    "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "inviteAgentConnection",
+    "path": "/agent-connections/{address}/invitation",
+    "pathParams": [
+      {
+        "description": "address for agent connections.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "const": true,
+          "type": "boolean"
+        },
+        "data": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "connection": {
+              "type": "object",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "owner_address": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "claimed",
+                    "connected",
+                    "revoked"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "claimed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "verified_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "last_seen_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "ownership_kind": {
+                  "type": "string",
+                  "enum": [
+                    "personal",
+                    "shared",
+                    "legacy_unknown"
+                  ]
+                },
+                "owner_user_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "owner_active": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "presence": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "last_checked_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "valid_for_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 600000
+                        }
+                      },
+                      "required": [
+                        "last_checked_at",
+                        "expires_at",
+                        "valid_for_ms"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "name",
+                "owner_address",
+                "status",
+                "created_at",
+                "updated_at",
+                "claimed_at",
+                "verified_at",
+                "last_seen_at",
+                "ownership_kind",
+                "owner_user_id",
+                "owner_active"
+              ],
+              "additionalProperties": false
+            },
+            "invitation": {
+              "type": "object",
+              "properties": {
+                "claim_url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                }
+              },
+              "required": [
+                "claim_url",
+                "expires_at"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "connection",
+            "invitation"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "sdkName": "inviteAgentConnection",
+    "summary": "invite Agent Connection",
+    "tag": "Agent Connections",
+    "tagCommand": "agent-connections"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-agent-connections",
+    "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listAgentConnections",
+    "path": "/agent-connections",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "default": 50,
+        "description": "limit for agent connections.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "cursor for agent connections.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "const": true,
+          "type": "boolean"
+        },
+        "data": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email",
+                "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "owner_address": {
+                "type": "string",
+                "format": "email",
+                "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "claimed",
+                  "connected",
+                  "revoked"
+                ]
+              },
+              "created_at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "claimed_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "verified_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "last_seen_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "ownership_kind": {
+                "type": "string",
+                "enum": [
+                  "personal",
+                  "shared",
+                  "legacy_unknown"
+                ]
+              },
+              "owner_user_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "owner_active": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "presence": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "last_checked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                      },
+                      "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                      },
+                      "valid_for_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 600000
+                      }
+                    },
+                    "required": [
+                      "last_checked_at",
+                      "expires_at",
+                      "valid_for_ms"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "address",
+              "name",
+              "owner_address",
+              "status",
+              "created_at",
+              "updated_at",
+              "claimed_at",
+              "verified_at",
+              "last_seen_at",
+              "ownership_kind",
+              "owner_user_id",
+              "owner_active"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer"
+            },
+            "cursor": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "sdkName": "listAgentConnections",
+    "summary": "list Agent Connections",
+    "tag": "Agent Connections",
+    "tagCommand": "agent-connections"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "remove-agent-connection",
-    "description": "Permanently removes a revoked connection record. Requires an organization\nowner or admin session or OAuth token; organization API keys are denied.\nDisconnect first using DELETE /agent-connections/{address}. An active\nconnection returns 409 connection_not_revoked. Missing or already removed\nrecords return 404. Mail, address notes, domains and external runtimes are\npreserved. The same address can be paired again with a new invitation;\nold credentials and invitations remain invalid.\n",
+    "description": "Permanently remove a revoked connection record. A current personal owner may permanently remove their own record; organization owners and admins may remove any record. Disconnect first using revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already removed records return 404. Mail, address notes, domains and external runtimes are preserved. The same address can be paired again with a new invitation; old credentials and invitations remain invalid.",
     "hasJsonBody": false,
     "method": "POST",
     "operationId": "removeAgentConnection",
     "path": "/agent-connections/{address}/remove",
     "pathParams": [
       {
-        "description": "The email address identifying the revoked connection.",
+        "description": "address for agent connections.",
         "enum": null,
         "name": "address",
         "required": true,
@@ -1173,27 +1901,1088 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       ],
       "properties": {
         "success": {
-          "type": "boolean",
-          "const": true
+          "const": true,
+          "type": "boolean"
         },
         "data": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
           "type": "object",
-          "required": [
-            "deleted"
-          ],
           "properties": {
             "deleted": {
               "type": "boolean",
               "const": true
             }
-          }
+          },
+          "required": [
+            "deleted"
+          ],
+          "additionalProperties": false
         }
       }
     },
     "sdkName": "removeAgentConnection",
-    "summary": "Remove a revoked agent connection",
+    "summary": "remove Agent Connection",
     "tag": "Agent Connections",
     "tagCommand": "agent-connections"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "revoke-agent-connection",
+    "description": "Disconnect an agent and invalidate its bound credential. A current personal owner may disconnect their own agent; organization owners and admins may disconnect any connection. A connected agent may disconnect only its own exact address using its current bound credential. This preserves the connection record, mail, notes and domain. A current personal owner may permanently remove their own revoked record.",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "revokeAgentConnection",
+    "path": "/agent-connections/{address}",
+    "pathParams": [
+      {
+        "description": "address for agent connections.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "required": [
+        "success",
+        "data"
+      ],
+      "properties": {
+        "success": {
+          "const": true,
+          "type": "boolean"
+        },
+        "data": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "connection": {
+              "type": "object",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 80
+                },
+                "owner_address": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "claimed",
+                    "connected",
+                    "revoked"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "claimed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "verified_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "last_seen_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "ownership_kind": {
+                  "type": "string",
+                  "enum": [
+                    "personal",
+                    "shared",
+                    "legacy_unknown"
+                  ]
+                },
+                "owner_user_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "owner_active": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "presence": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "last_checked_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        "valid_for_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 600000
+                        }
+                      },
+                      "required": [
+                        "last_checked_at",
+                        "expires_at",
+                        "valid_for_ms"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "name",
+                "owner_address",
+                "status",
+                "created_at",
+                "updated_at",
+                "claimed_at",
+                "verified_at",
+                "last_seen_at",
+                "ownership_kind",
+                "owner_user_id",
+                "owner_active"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "connection"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "sdkName": "revokeAgentConnection",
+    "summary": "revoke Agent Connection",
+    "tag": "Agent Connections",
+    "tagCommand": "agent-connections"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "add-default-network-member",
+    "description": "Owner or admin login required. Restores an explicitly excluded member.",
+    "hasJsonBody": false,
+    "method": "POST",
+    "operationId": "addDefaultNetworkMember",
+    "path": "/agent-networks/default/members/{address}",
+    "pathParams": [
+      {
+        "description": "The agent's email address, URL-encoded in the path.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "One address in the default organization network, visible to the current requester.",
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        },
+        "can_view": {
+          "type": "boolean",
+          "description": "Whether this agent can read listed peers and initiate network-driven mail wake to listed recipients."
+        },
+        "is_listed": {
+          "type": "boolean",
+          "description": "Whether peers can discover and network-wake this agent. Known-address email is separate."
+        },
+        "excluded": {
+          "type": "boolean",
+          "description": "Explicit removal from the network; synchronization does not re-add it."
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "can_manage": {
+          "type": "boolean",
+          "description": "Whether the current requester may change visibility for this address."
+        },
+        "last_seen_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Last recorded activity, not a presence or receiving guarantee."
+        },
+        "ownership_kind": {
+          "type": "string",
+          "enum": [
+            "personal",
+            "shared",
+            "legacy_unknown"
+          ]
+        },
+        "owner": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "email"
+            }
+          },
+          "required": [
+            "user_id",
+            "name",
+            "email"
+          ]
+        },
+        "presence": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "last_checked_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "valid_for_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 600000
+                }
+              },
+              "required": [
+                "last_checked_at",
+                "expires_at",
+                "valid_for_ms"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "address",
+        "name",
+        "can_view",
+        "is_listed",
+        "excluded",
+        "connected",
+        "can_manage",
+        "last_seen_at",
+        "ownership_kind",
+        "owner"
+      ]
+    },
+    "sdkName": "addDefaultNetworkMember",
+    "summary": "Add an agent to the default network",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "check-default-network-contact-admission",
+    "description": "Requires the recipient's connected-agent credential. The recipient\naddress is derived from that credential. The email ID must identify\naccepted or completed inbound mail for that exact recipient, with\nmatching stored sender and delivery evidence. Returns no sender profile\nor existence detail. Clients must also verify the email detail's sender\nprovenance and respect explicit contact silence before using the result.\nNetwork wake requires the sender to be connected and able to view the\nnetwork, and the recipient to be connected and listed. The sender need\nnot be listed and the recipient need not view the network. Ordinary\nknown-address email remains independent. Mail received before\nallowed_since cannot be newly admitted.\n",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "checkDefaultNetworkContactAdmission",
+    "path": "/agent-networks/default/contact-admission",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "description": "Check only a received email already stored for the bound recipient. The server verifies its sender against delivery evidence.",
+      "properties": {
+        "email_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sender_address": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "required": [
+        "email_id",
+        "sender_address"
+      ],
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "Recipient-bound admission for authenticated network mail. Pending means delivery proof is still settling and the same email should be retried.",
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "pending": {
+          "type": "boolean",
+          "description": "True only while authenticated inbound mail awaits settled delivery evidence, for at most 120 seconds after receipt."
+        },
+        "allowed_since": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Earliest received_at eligible under the current membership and connection state."
+        }
+      },
+      "required": [
+        "allowed",
+        "allowed_since",
+        "pending"
+      ]
+    },
+    "sdkName": "checkDefaultNetworkContactAdmission",
+    "summary": "Check whether network mail may wake this connected agent",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "get-default-network-agent",
+    "description": "Requires a connected-agent credential allowed to see the network, or an organization member login. Unlisted agents look absent.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "getDefaultNetworkAgent",
+    "path": "/agent-networks/default/agents/{address}",
+    "pathParams": [
+      {
+        "description": "The agent's email address, URL-encoded in the path.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "description": "Listed peer profile. The email address is the identity.",
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        },
+        "last_seen_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Last recorded API activity, not a presence or receiving guarantee."
+        },
+        "ownership_kind": {
+          "type": "string",
+          "enum": [
+            "personal",
+            "shared",
+            "legacy_unknown"
+          ]
+        },
+        "owner": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "user_id",
+            "name"
+          ]
+        },
+        "presence": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "last_checked_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "valid_for_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 600000
+                }
+              },
+              "required": [
+                "last_checked_at",
+                "expires_at",
+                "valid_for_ms"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "address",
+        "name",
+        "last_seen_at",
+        "ownership_kind",
+        "owner"
+      ]
+    },
+    "sdkName": "getDefaultNetworkAgent",
+    "summary": "Get a listed agent by email address",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-agent-networks",
+    "description": "An organization member login or an active connected agent allowed to see the network can read networks. The default organization network is always present. can_manage_all is true only for a current owner or admin; a connected credential receives false.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listAgentNetworks",
+    "path": "/agent-networks",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "An organization-owned network. The default network cannot be deleted.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "const": "organization"
+          },
+          "is_default": {
+            "type": "boolean",
+            "const": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "can_manage_all": {
+            "type": "boolean",
+            "description": "Whether the current requester may manage every membership in this network."
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "is_default",
+          "name",
+          "can_manage_all"
+        ]
+      }
+    },
+    "sdkName": "listAgentNetworks",
+    "summary": "List your organization's agent networks",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-default-network-agents",
+    "description": "Requires a connected-agent credential for an active member allowed to see the network, or an organization member login.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listDefaultNetworkAgents",
+    "path": "/agent-networks/default/agents",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "default": 50,
+        "description": "Maximum number of addresses to return.",
+        "enum": null,
+        "maximum": 200,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "Continue after this address from the previous page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter by exact owner user ID or case-insensitive owner name substring. The manager roster also matches owner email; peer discovery does not expose or match email.",
+        "enum": null,
+        "name": "owner",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "Listed peer profile. The email address is the identity.",
+        "properties": {
+          "address": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Last recorded API activity, not a presence or receiving guarantee."
+          },
+          "ownership_kind": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "shared",
+              "legacy_unknown"
+            ]
+          },
+          "owner": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "user_id",
+              "name"
+            ]
+          },
+          "presence": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "last_checked_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "valid_for_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 600000
+                  }
+                },
+                "required": [
+                  "last_checked_at",
+                  "expires_at",
+                  "valid_for_ms"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "address",
+          "name",
+          "last_seen_at",
+          "ownership_kind",
+          "owner"
+        ]
+      }
+    },
+    "sdkName": "listDefaultNetworkAgents",
+    "summary": "Discover listed agents in your organization network",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "list-default-network-members",
+    "description": "An owner or admin sees all connected addresses, including hidden and excluded members. Other human members see only personal addresses owned by their current membership. Filtering happens before pagination. Connected-agent credentials cannot read this roster. Each row includes whether the requester can manage it.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listDefaultNetworkMembers",
+    "path": "/agent-networks/default/members",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "default": 50,
+        "description": "Maximum number of addresses to return.",
+        "enum": null,
+        "maximum": 200,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "Continue after this address from the previous page.",
+        "enum": null,
+        "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Filter by exact owner user ID or case-insensitive owner name substring. The manager roster also matches owner email; peer discovery does not expose or match email.",
+        "enum": null,
+        "name": "owner",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "description": "One address in the default organization network, visible to the current requester.",
+        "properties": {
+          "address": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "can_view": {
+            "type": "boolean",
+            "description": "Whether this agent can read listed peers and initiate network-driven mail wake to listed recipients."
+          },
+          "is_listed": {
+            "type": "boolean",
+            "description": "Whether peers can discover and network-wake this agent. Known-address email is separate."
+          },
+          "excluded": {
+            "type": "boolean",
+            "description": "Explicit removal from the network; synchronization does not re-add it."
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "can_manage": {
+            "type": "boolean",
+            "description": "Whether the current requester may change visibility for this address."
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Last recorded activity, not a presence or receiving guarantee."
+          },
+          "ownership_kind": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "shared",
+              "legacy_unknown"
+            ]
+          },
+          "owner": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "email"
+              }
+            },
+            "required": [
+              "user_id",
+              "name",
+              "email"
+            ]
+          },
+          "presence": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "last_checked_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "valid_for_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 600000
+                  }
+                },
+                "required": [
+                  "last_checked_at",
+                  "expires_at",
+                  "valid_for_ms"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "address",
+          "name",
+          "can_view",
+          "is_listed",
+          "excluded",
+          "connected",
+          "can_manage",
+          "last_seen_at",
+          "ownership_kind",
+          "owner"
+        ]
+      }
+    },
+    "sdkName": "listDefaultNetworkMembers",
+    "summary": "List default network memberships available to your login",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "remove-default-network-member",
+    "description": "Owner or admin login required. The explicit exclusion persists across synchronization.",
+    "hasJsonBody": false,
+    "method": "DELETE",
+    "operationId": "removeDefaultNetworkMember",
+    "path": "/agent-networks/default/members/{address}",
+    "pathParams": [
+      {
+        "description": "The agent's email address, URL-encoded in the path.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "excluded": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": [
+        "excluded"
+      ]
+    },
+    "sdkName": "removeDefaultNetworkMember",
+    "summary": "Remove an agent from the default network",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "update-default-network-member",
+    "description": "An owner or admin may update any active address. Other human members may update only their own current, non-excluded personal address. Connected-agent credentials cannot update visibility. Omitted settings keep their current value.",
+    "hasJsonBody": true,
+    "method": "PATCH",
+    "operationId": "updateDefaultNetworkMember",
+    "path": "/agent-networks/default/members/{address}",
+    "pathParams": [
+      {
+        "description": "The agent's email address, URL-encoded in the path.",
+        "enum": null,
+        "name": "address",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "description": "Set one or both independent discovery permissions.",
+      "properties": {
+        "can_view": {
+          "type": "boolean"
+        },
+        "is_listed": {
+          "type": "boolean"
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "description": "One address in the default organization network, visible to the current requester.",
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        },
+        "can_view": {
+          "type": "boolean",
+          "description": "Whether this agent can read listed peers and initiate network-driven mail wake to listed recipients."
+        },
+        "is_listed": {
+          "type": "boolean",
+          "description": "Whether peers can discover and network-wake this agent. Known-address email is separate."
+        },
+        "excluded": {
+          "type": "boolean",
+          "description": "Explicit removal from the network; synchronization does not re-add it."
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "can_manage": {
+          "type": "boolean",
+          "description": "Whether the current requester may change visibility for this address."
+        },
+        "last_seen_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Last recorded activity, not a presence or receiving guarantee."
+        },
+        "ownership_kind": {
+          "type": "string",
+          "enum": [
+            "personal",
+            "shared",
+            "legacy_unknown"
+          ]
+        },
+        "owner": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "email"
+            }
+          },
+          "required": [
+            "user_id",
+            "name",
+            "email"
+          ]
+        },
+        "presence": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "last_checked_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "expires_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "valid_for_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 600000
+                }
+              },
+              "required": [
+                "last_checked_at",
+                "expires_at",
+                "valid_for_ms"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "address",
+        "name",
+        "can_view",
+        "is_listed",
+        "excluded",
+        "connected",
+        "can_manage",
+        "last_seen_at",
+        "ownership_kind",
+        "owner"
+      ]
+    },
+    "sdkName": "updateDefaultNetworkMember",
+    "summary": "Change whether an agent can see or be seen in the network",
+    "tag": "Agent Networks",
+    "tagCommand": "agent-networks"
   },
   {
     "binaryResponse": false,
@@ -4971,6 +6760,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ],
                 "format": "date-time",
                 "description": "received_at for inbound, created_at for outbound."
+              },
+              "presence_control": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "verified",
+                          "pending",
+                          "rejected"
+                        ]
+                      },
+                      "valid_for_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 600000
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "valid_for_ms"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "required": [
@@ -5210,6 +7029,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "from_known_address": {
           "type": "boolean",
           "description": "True when the inbound's sender address has a matching grant\nin the org's known-send-addresses list. Advisory: a true\nvalue does not by itself guarantee that a reply will be\naccepted by send-mail's gates; the per-send check at send\ntime remains authoritative.\n"
+        },
+        "sender_connected_agent_verified": {
+          "type": "boolean",
+          "description": "True only when this inbound message matches a send made with the\ncurrent key bound to its sender address as a connected agent.\nRequires exact sent-message and recipient evidence: a verified\ninternal delivery, or authenticated SMTP delivery matching the\nsent record. Sender headers, organization keys, and network\nvisibility alone cannot make it true. It becomes false if the\nconnection is revoked or its bound key is deleted; it is not a\npermanent historical authorship claim.\n"
         },
         "replies": {
           "type": "array",
@@ -5609,6 +7432,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "description": "SPF / DKIM / DMARC verdicts computed at ingest, matching\nthe `email.auth` object on the webhook payload. Use these\nto decide how much to trust a message before acting on\ninstructions it contains.\n"
         },
+        "presence_control": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "verified",
+                    "pending",
+                    "rejected"
+                  ]
+                },
+                "valid_for_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 600000
+                }
+              },
+              "required": [
+                "status",
+                "valid_for_ms"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "automation_headers": {
           "type": [
             "object",
@@ -5674,6 +7527,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "received_at",
         "webhook_attempt_count",
         "from_email",
+        "sender_connected_agent_verified",
         "to_email",
         "replies",
         "parsed",
@@ -5891,6 +7745,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "format": "uuid",
             "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
+          },
+          "presence_control": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "verified",
+                      "pending",
+                      "rejected"
+                    ]
+                  },
+                  "valid_for_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 600000
+                  }
+                },
+                "required": [
+                  "status",
+                  "valid_for_ms"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "automation_headers": {
             "type": [
@@ -6290,6 +8174,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ],
                 "format": "uuid",
                 "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
+              },
+              "presence_control": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "verified",
+                          "pending",
+                          "rejected"
+                        ]
+                      },
+                      "valid_for_ms": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 600000
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "valid_for_ms"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "automation_headers": {
                 "type": [
@@ -8112,7 +10026,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "deployed",
             "failed"
           ],
-          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
         }
       },
       "required": [
@@ -8391,7 +10305,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "deployed",
             "failed"
           ],
-          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
         },
         "deploy_error": {
           "type": [
@@ -9373,7 +11287,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "description": "One row from GET /functions/{id}/secrets. Discriminate on the\n`managed` field:\n  * `managed = true`  — system secret provisioned by Primitive.\n    `description` is set; `created_at` / `updated_at` are\n    null because the row is virtual (resolved at deploy time\n    from the managed registry, not stored in the secrets\n    table).\n  * `managed = false` — secret the user set via the API.\n    `created_at` / `updated_at` are set; `description` is\n    null.\n",
+            "description": "One row from GET /functions/{id}/secrets. Discriminate on the\n`managed` field:\n  * `managed = true`  - system secret provisioned by Primitive.\n    `description` is set; `created_at` / `updated_at` are\n    null because the row is virtual (resolved at deploy time\n    from the managed registry, not stored in the secrets\n    table).\n  * `managed = false` - secret the user set via the API.\n    `created_at` / `updated_at` are set; `description` is\n    null.\n",
             "properties": {
               "key": {
                 "type": "string"
@@ -9456,7 +11370,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "deployed",
               "failed"
             ],
-            "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+            "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
           },
           "deployed_at": {
             "type": [
@@ -10074,7 +11988,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "deployed",
             "failed"
           ],
-          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+          "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
         },
         "deploy_error": {
           "type": [
@@ -14551,6 +16465,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "format": "date-time",
               "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
+            },
+            "presence_control": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "verified",
+                        "pending",
+                        "rejected"
+                      ]
+                    },
+                    "valid_for_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 600000
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "valid_for_ms"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "required": [
@@ -14645,7 +16589,39 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         }
-      ]
+      ],
+      "properties": {
+        "presence_control": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "verified",
+                    "pending",
+                    "rejected"
+                  ]
+                },
+                "valid_for_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 600000
+                }
+              },
+              "required": [
+                "status",
+                "valid_for_ms"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     },
     "sdkName": "cancelSentEmail",
     "summary": "Cancel a scheduled send",
@@ -15270,6 +17246,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "format": "date-time",
               "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
+            },
+            "presence_control": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "verified",
+                        "pending",
+                        "rejected"
+                      ]
+                    },
+                    "valid_for_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 600000
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "valid_for_ms"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "required": [
@@ -15364,7 +17370,39 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         }
-      ]
+      ],
+      "properties": {
+        "presence_control": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "verified",
+                    "pending",
+                    "rejected"
+                  ]
+                },
+                "valid_for_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 600000
+                }
+              },
+              "required": [
+                "status",
+                "valid_for_ms"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     },
     "sdkName": "getSentEmail",
     "summary": "Get a sent email by id",
@@ -15716,6 +17754,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             ],
             "format": "date-time",
             "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
+          },
+          "presence_control": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "verified",
+                      "pending",
+                      "rejected"
+                    ]
+                  },
+                  "valid_for_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 600000
+                  }
+                },
+                "required": [
+                  "status",
+                  "valid_for_ms"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -16226,6 +18294,36 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ],
               "format": "date-time",
               "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
+            },
+            "presence_control": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "verified",
+                        "pending",
+                        "rejected"
+                      ]
+                    },
+                    "valid_for_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 600000
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "valid_for_ms"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "required": [
@@ -16320,7 +18418,39 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             }
           }
         }
-      ]
+      ],
+      "properties": {
+        "presence_control": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "verified",
+                    "pending",
+                    "rejected"
+                  ]
+                },
+                "valid_for_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 600000
+                }
+              },
+              "required": [
+                "status",
+                "valid_for_ms"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     },
     "sdkName": "rescheduleSentEmail",
     "summary": "Reschedule a scheduled send",
@@ -16458,11 +18588,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "payload_attachments": {
           "type": "array",
           "maxItems": 1,
-          "description": "Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.",
+          "description": "Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes - the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "description": "A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes — the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.",
+            "description": "A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes - the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.",
             "properties": {
               "root": {
                 "type": "string",

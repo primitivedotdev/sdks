@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -88,6 +89,7 @@ vi.mock("../../src/oclif/scoped-chat.js", async (original) => ({
 }));
 
 import { createWakeMail } from "../../src/oclif/wake-mail.js";
+import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 function fixture(
   solicited: boolean,
@@ -185,20 +187,130 @@ function fixture(
 }
 
 describe("Claude mail wake", () => {
-  it("wakes for an exact solicited contact acceptance even when intake classifies unknown mail as a request", async () => {
-    const f = fixture(true, true);
+  it.each([
+    { failure: 503, solicited: true },
+    { failure: "pending", solicited: true },
+    { failure: 503, solicited: false },
+    { failure: "pending", solicited: false },
+  ] as const)("handles solicited=$solicited mail independently of network $failure without admitting unrelated mail", async ({
+    failure,
+    solicited,
+  }) => {
+    const f = fixture(solicited, true, "chat");
+    const api = new PrimitiveApiClient({
+      apiKey: "fixture",
+      apiBaseUrl: "https://example.test/v1",
+      fetch: async (input, init) => {
+        const path = new URL(new Request(input, init).url).pathname;
+        if (path.startsWith("/v1/agent-contact-policy/"))
+          return Response.json({
+            success: true,
+            data: emptyContactPolicy("agent@example.test"),
+          });
+        if (path.startsWith("/v1/agent-contacts/"))
+          return Response.json({
+            success: true,
+            data: [],
+            meta: { cursor: null },
+          });
+        if (path === "/v1/agent-networks/default/contact-admission")
+          return failure === 503
+            ? Response.json({ success: false }, { status: 503 })
+            : Response.json({
+                success: true,
+                data: { allowed: false, allowed_since: null, pending: true },
+              });
+        throw new Error("Unexpected fixture route");
+      },
+    });
+    const { apiContactPolicy } = await vi.importActual<
+      typeof import("../../src/oclif/contact-policy-client.js")
+    >("../../src/oclif/contact-policy-client.js");
+    mocks.policy.mockReturnValue(
+      apiContactPolicy(api.client, "agent@example.test"),
+    );
+    const wake = await createWakeMail({
+      configDir: "/tmp/test",
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    try {
+      const handled = await wake.handler(
+        f.delivery as never,
+        new AbortController().signal,
+      );
+      expect(handled.succeeded).toBe(solicited);
+      expect(wake.wakeId()).toBe(solicited ? f.emailId : undefined);
+    } finally {
+      await wake.close();
+    }
+  });
+
+  it.each([
+    "verified",
+    "pending",
+  ])("keeps %s controls out of model routing while ordinary mail still wakes", async (status) => {
+    const f = fixture(true, true, "chat");
+    const ordinary = await mocks.getEmail();
+    mocks.getEmail
+      .mockResolvedValueOnce({
+        ...ordinary,
+        data: {
+          ...ordinary.data,
+          data: {
+            ...ordinary.data.data,
+            presence_control: { status, valid_for_ms: 0 },
+          },
+        },
+      })
+      .mockResolvedValue(ordinary);
     const wake = await createWakeMail({
       configDir: "/tmp/test",
       sessionKey: `claude:${f.sessionId}`,
       sessionId: f.sessionId,
       contactRequests: true,
     });
-    const handled = await wake.handler(
-      f.delivery as never,
-      new AbortController().signal,
-    );
+    try {
+      const handled = await wake.handler(
+        f.delivery as never,
+        new AbortController().signal,
+      );
+      wake.completed();
+      expect(handled).toMatchObject({
+        succeeded: true,
+        countTowardLimit: false,
+      });
+      expect(wake.wakeId()).toBeUndefined();
+      expect(wake.status()).toBeUndefined();
+      expect(mocks.policy.mock.results[0]?.value.admit).not.toHaveBeenCalled();
+      expect(mocks.routine).not.toHaveBeenCalled();
+      expect(mocks.statusContent).not.toHaveBeenCalled();
+      await wake.handler(f.delivery as never, new AbortController().signal);
+      wake.completed();
+      expect(wake.wakeId()).toBe(f.emailId);
+    } finally {
+      await wake.close();
+    }
+  });
+  it("wakes for an exact solicited contact acceptance even when intake classifies unknown mail as a request", async () => {
+    const f = fixture(true, true);
+    const signal = new AbortController().signal;
+    const wake = await createWakeMail({
+      configDir: "/tmp/test",
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: true,
+    });
+    const handled = await wake.handler(f.delivery as never, signal);
     wake.completed();
     expect(handled.succeeded).toBe(true);
+    expect(mocks.policy.mock.results[0]?.value.admit).toHaveBeenCalledWith(
+      "peer@example.test",
+      expect.any(String),
+      signal,
+      f.emailId,
+    );
     expect(
       mocks.policy.mock.results[0]?.value.admitResponse,
     ).toHaveBeenCalledOnce();

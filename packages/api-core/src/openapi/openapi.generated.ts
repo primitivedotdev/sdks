@@ -121,6 +121,10 @@ export const openapiDocument: Record<string, unknown> = {
       "description": "The Agent Registry: ownable directories of agents, addressable by a\nregistry-scoped handle. A registry's publish policy (owner_only, request,\nor open) decides whether a publish lists immediately or pends owner\napproval. An agent is defined once with a globally unique,\nreachability-verified address, then published into any registry under a\nhandle. Discovery reads (list, resolve, get) are public for public\nregistries; managing a registry and moderating requests use the owner's\nAPI key.\n"
     },
     {
+      "name": "Agent Networks",
+      "description": "Organization agent discovery by email address. Every organization has a\nprivate default network. Owners manage membership and visibility;\nconnected agents and organization members discover listed peers. Network membership does not grant\npermission to perform tasks, use tools, or read private information.\n"
+    },
+    {
       "name": "Contacts",
       "description": "Organization contacts and per-address agent preferences."
     }
@@ -5150,30 +5154,74 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
-    "/agent-connections/{address}/remove": {
+    "/agent-connections": {
       "post": {
-        "operationId": "removeAgentConnection",
-        "summary": "Remove a revoked agent connection",
-        "description": "Permanently removes a revoked connection record. Requires an organization\nowner or admin session or OAuth token; organization API keys are denied.\nDisconnect first using DELETE /agent-connections/{address}. An active\nconnection returns 409 connection_not_revoked. Missing or already removed\nrecords return 404. Mail, address notes, domains and external runtimes are\npreserved. The same address can be paired again with a new invitation;\nold credentials and invitations remain invalid.\n",
+        "operationId": "createAgentConnection",
         "tags": [
           "Agent Connections"
         ],
+        "summary": "create Agent Connection",
+        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
         "parameters": [
           {
-            "name": "address",
-            "in": "path",
-            "required": true,
-            "description": "The email address identifying the revoked connection.",
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.",
             "schema": {
               "type": "string",
-              "format": "email",
-              "maxLength": 254
+              "minLength": 1,
+              "maxLength": 255
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Deletion completed",
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 3000
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 2998
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "string",
+                  "example": "3000;w=60"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -5184,18 +5232,524 @@ export const openapiDocument: Record<string, unknown> = {
                   ],
                   "properties": {
                     "success": {
-                      "type": "boolean",
-                      "const": true
+                      "const": true,
+                      "type": "boolean"
                     },
                     "data": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
                       "type": "object",
-                      "required": [
-                        "deleted"
-                      ],
                       "properties": {
-                        "deleted": {
-                          "type": "boolean",
-                          "const": true
+                        "connection": {
+                          "type": "object",
+                          "properties": {
+                            "address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "owner_address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "pending",
+                                "claimed",
+                                "connected",
+                                "revoked"
+                              ]
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "claimed_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "verified_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "last_seen_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "ownership_kind": {
+                              "type": "string",
+                              "enum": [
+                                "personal",
+                                "shared",
+                                "legacy_unknown"
+                              ]
+                            },
+                            "owner_user_id": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            },
+                            "owner_active": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "presence": {
+                              "$ref": "#/components/schemas/AgentPresence"
+                            }
+                          },
+                          "required": [
+                            "address",
+                            "name",
+                            "owner_address",
+                            "status",
+                            "created_at",
+                            "updated_at",
+                            "claimed_at",
+                            "verified_at",
+                            "last_seen_at",
+                            "ownership_kind",
+                            "owner_user_id",
+                            "owner_active"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "invitation": {
+                          "type": "object",
+                          "properties": {
+                            "claim_url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "expires_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            }
+                          },
+                          "required": [
+                            "claim_url",
+                            "expires_at"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "connection",
+                        "invitation"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "address": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "owner_address": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "ownership_kind": {
+                    "type": "string",
+                    "enum": [
+                      "personal",
+                      "shared"
+                    ]
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listAgentConnections",
+        "tags": [
+          "Agent Connections"
+        ],
+        "summary": "list Agent Connections",
+        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "limit for agent connections.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "cursor for agent connections.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 3000
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 2998
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "string",
+                  "example": "3000;w=60"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true,
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "string",
+                            "format": "email",
+                            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                          },
+                          "owner_address": {
+                            "type": "string",
+                            "format": "email",
+                            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "claimed",
+                              "connected",
+                              "revoked"
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "claimed_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "verified_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "last_seen_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "ownership_kind": {
+                            "type": "string",
+                            "enum": [
+                              "personal",
+                              "shared",
+                              "legacy_unknown"
+                            ]
+                          },
+                          "owner_user_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                          },
+                          "owner_active": {
+                            "type": [
+                              "boolean",
+                              "null"
+                            ]
+                          },
+                          "presence": {
+                            "$ref": "#/components/schemas/AgentPresence"
+                          }
+                        },
+                        "required": [
+                          "address",
+                          "name",
+                          "owner_address",
+                          "status",
+                          "created_at",
+                          "updated_at",
+                          "claimed_at",
+                          "verified_at",
+                          "last_seen_at",
+                          "ownership_kind",
+                          "owner_user_id",
+                          "owner_active"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "cursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         }
                       }
                     }
@@ -5205,22 +5759,1582 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "400": {
-            "$ref": "#/components/responses/ValidationError"
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
           },
           "401": {
-            "$ref": "#/components/responses/Unauthorized"
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              }
+            }
           },
           "403": {
-            "$ref": "#/components/responses/Forbidden"
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
           },
           "404": {
-            "$ref": "#/components/responses/NotFound"
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
           },
           "409": {
-            "$ref": "#/components/responses/Conflict"
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
           },
           "429": {
-            "$ref": "#/components/responses/RateLimited"
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-connections/{address}/invitation": {
+      "post": {
+        "operationId": "inviteAgentConnection",
+        "tags": [
+          "Agent Connections"
+        ],
+        "summary": "invite Agent Connection",
+        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "description": "address for agent connections.",
+            "schema": {
+              "type": "string",
+              "maxLength": 254,
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 3000
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 2998
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "string",
+                  "example": "3000;w=60"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true,
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object",
+                      "properties": {
+                        "connection": {
+                          "type": "object",
+                          "properties": {
+                            "address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "owner_address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "pending",
+                                "claimed",
+                                "connected",
+                                "revoked"
+                              ]
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "claimed_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "verified_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "last_seen_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "ownership_kind": {
+                              "type": "string",
+                              "enum": [
+                                "personal",
+                                "shared",
+                                "legacy_unknown"
+                              ]
+                            },
+                            "owner_user_id": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            },
+                            "owner_active": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "presence": {
+                              "$ref": "#/components/schemas/AgentPresence"
+                            }
+                          },
+                          "required": [
+                            "address",
+                            "name",
+                            "owner_address",
+                            "status",
+                            "created_at",
+                            "updated_at",
+                            "claimed_at",
+                            "verified_at",
+                            "last_seen_at",
+                            "ownership_kind",
+                            "owner_user_id",
+                            "owner_active"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "invitation": {
+                          "type": "object",
+                          "properties": {
+                            "claim_url": {
+                              "type": "string",
+                              "format": "uri"
+                            },
+                            "expires_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            }
+                          },
+                          "required": [
+                            "claim_url",
+                            "expires_at"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "connection",
+                        "invitation"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-connections/{address}": {
+      "delete": {
+        "operationId": "revokeAgentConnection",
+        "tags": [
+          "Agent Connections"
+        ],
+        "summary": "revoke Agent Connection",
+        "description": "Disconnect an agent and invalidate its bound credential. A current personal owner may disconnect their own agent; organization owners and admins may disconnect any connection. A connected agent may disconnect only its own exact address using its current bound credential. This preserves the connection record, mail, notes and domain. A current personal owner may permanently remove their own revoked record.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "description": "address for agent connections.",
+            "schema": {
+              "type": "string",
+              "maxLength": 254,
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 3000
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 2998
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "string",
+                  "example": "3000;w=60"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true,
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object",
+                      "properties": {
+                        "connection": {
+                          "type": "object",
+                          "properties": {
+                            "address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "owner_address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "pending",
+                                "claimed",
+                                "connected",
+                                "revoked"
+                              ]
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "claimed_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "verified_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "last_seen_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "ownership_kind": {
+                              "type": "string",
+                              "enum": [
+                                "personal",
+                                "shared",
+                                "legacy_unknown"
+                              ]
+                            },
+                            "owner_user_id": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            },
+                            "owner_active": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "presence": {
+                              "$ref": "#/components/schemas/AgentPresence"
+                            }
+                          },
+                          "required": [
+                            "address",
+                            "name",
+                            "owner_address",
+                            "status",
+                            "created_at",
+                            "updated_at",
+                            "claimed_at",
+                            "verified_at",
+                            "last_seen_at",
+                            "ownership_kind",
+                            "owner_user_id",
+                            "owner_active"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "connection"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-connections/{address}/remove": {
+      "post": {
+        "operationId": "removeAgentConnection",
+        "tags": [
+          "Agent Connections"
+        ],
+        "summary": "remove Agent Connection",
+        "description": "Permanently remove a revoked connection record. A current personal owner may permanently remove their own record; organization owners and admins may remove any record. Disconnect first using revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already removed records return 404. Mail, address notes, domains and external runtimes are preserved. The same address can be paired again with a new invitation; old credentials and invitations remain invalid.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "description": "address for agent connections.",
+            "schema": {
+              "type": "string",
+              "maxLength": 254,
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 3000
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 2998
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "string",
+                  "example": "3000;w=60"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true,
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object",
+                      "properties": {
+                        "deleted": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "deleted"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-connections/claim": {
+      "post": {
+        "operationId": "claimAgentConnection",
+        "tags": [
+          "Agent Connections"
+        ],
+        "summary": "claim Agent Connection",
+        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true,
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object",
+                      "properties": {
+                        "connection": {
+                          "type": "object",
+                          "properties": {
+                            "address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "owner_address": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "pending",
+                                "claimed",
+                                "connected",
+                                "revoked"
+                              ]
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "claimed_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "verified_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "last_seen_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "ownership_kind": {
+                              "type": "string",
+                              "enum": [
+                                "personal",
+                                "shared",
+                                "legacy_unknown"
+                              ]
+                            },
+                            "owner_user_id": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                            },
+                            "owner_active": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "presence": {
+                              "$ref": "#/components/schemas/AgentPresence"
+                            }
+                          },
+                          "required": [
+                            "address",
+                            "name",
+                            "owner_address",
+                            "status",
+                            "created_at",
+                            "updated_at",
+                            "claimed_at",
+                            "verified_at",
+                            "last_seen_at",
+                            "ownership_kind",
+                            "owner_user_id",
+                            "owner_active"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "org_id": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        },
+                        "owner_address": {
+                          "type": "string",
+                          "format": "email",
+                          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                        },
+                        "api_key": {
+                          "type": "string"
+                        },
+                        "api_base_url": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "presence_profile": {
+                          "$ref": "#/components/schemas/PresenceProfile"
+                        }
+                      },
+                      "required": [
+                        "connection",
+                        "org_id",
+                        "owner_address",
+                        "api_key",
+                        "api_base_url"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 32,
+                    "maxLength": 256
+                  },
+                  "capabilities": {
+                    "maxItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "const": "primitive.presence/1"
+                    }
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-connections/setup": {
+      "get": {
+        "operationId": "agentConnectionSetup",
+        "tags": [
+          "Agent Connections"
+        ],
+        "summary": "agent Connection Setup",
+        "description": "Instructions for pairing an external runtime. GET never consumes an invitation. The invitation token stays in the URL fragment and is submitted only in the claim POST body.",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -7801,6 +9915,402 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/agent-networks": {
+      "get": {
+        "operationId": "listAgentNetworks",
+        "summary": "List your organization's agent networks",
+        "description": "An organization member login or an active connected agent allowed to see the network can read networks. The default organization network is always present. can_manage_all is true only for a current owner or admin; a connected credential receives false.",
+        "tags": [
+          "Agent Networks"
+        ],
+        "responses": {
+          "200": {
+            "description": "Networks owned by the organization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AgentNetwork"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/agent-networks/default/members": {
+      "get": {
+        "operationId": "listDefaultNetworkMembers",
+        "summary": "List default network memberships available to your login",
+        "description": "An owner or admin sees all connected addresses, including hidden and excluded members. Other human members see only personal addresses owned by their current membership. Filtering happens before pagination. Connected-agent credentials cannot read this roster. Each row includes whether the requester can manage it.",
+        "tags": [
+          "Agent Networks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AgentNetworkLimit"
+          },
+          {
+            "$ref": "#/components/parameters/AgentNetworkCursor"
+          },
+          {
+            "$ref": "#/components/parameters/AgentNetworkOwner"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized roster ordered by address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListEnvelope"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AgentNetworkMember"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/agent-networks/default/members/{address}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AgentNetworkAddress"
+        }
+      ],
+      "patch": {
+        "operationId": "updateDefaultNetworkMember",
+        "summary": "Change whether an agent can see or be seen in the network",
+        "description": "An owner or admin may update any active address. Other human members may update only their own current, non-excluded personal address. Connected-agent credentials cannot update visibility. Omitted settings keep their current value.",
+        "tags": [
+          "Agent Networks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAgentNetworkMemberInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated membership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentNetworkMember"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      },
+      "post": {
+        "operationId": "addDefaultNetworkMember",
+        "summary": "Add an agent to the default network",
+        "description": "Owner or admin login required. Restores an explicitly excluded member.",
+        "tags": [
+          "Agent Networks"
+        ],
+        "responses": {
+          "200": {
+            "description": "Active membership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentNetworkMember"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeDefaultNetworkMember",
+        "summary": "Remove an agent from the default network",
+        "description": "Owner or admin login required. The explicit exclusion persists across synchronization.",
+        "tags": [
+          "Agent Networks"
+        ],
+        "responses": {
+          "200": {
+            "description": "Membership excluded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "excluded": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "excluded"
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/agent-networks/default/agents": {
+      "get": {
+        "operationId": "listDefaultNetworkAgents",
+        "summary": "Discover listed agents in your organization network",
+        "description": "Requires a connected-agent credential for an active member allowed to see the network, or an organization member login.",
+        "tags": [
+          "Agent Networks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AgentNetworkLimit"
+          },
+          {
+            "$ref": "#/components/parameters/AgentNetworkCursor"
+          },
+          {
+            "$ref": "#/components/parameters/AgentNetworkOwner"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listed peers ordered by address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ListEnvelope"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AgentNetworkPeer"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/agent-networks/default/agents/{address}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AgentNetworkAddress"
+        }
+      ],
+      "get": {
+        "operationId": "getDefaultNetworkAgent",
+        "summary": "Get a listed agent by email address",
+        "description": "Requires a connected-agent credential allowed to see the network, or an organization member login. Unlisted agents look absent.",
+        "tags": [
+          "Agent Networks"
+        ],
+        "responses": {
+          "200": {
+            "description": "Listed peer profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentNetworkPeer"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/agent-networks/default/contact-admission": {
+      "post": {
+        "operationId": "checkDefaultNetworkContactAdmission",
+        "summary": "Check whether network mail may wake this connected agent",
+        "description": "Requires the recipient's connected-agent credential. The recipient\naddress is derived from that credential. The email ID must identify\naccepted or completed inbound mail for that exact recipient, with\nmatching stored sender and delivery evidence. Returns no sender profile\nor existence detail. Clients must also verify the email detail's sender\nprovenance and respect explicit contact silence before using the result.\nNetwork wake requires the sender to be connected and able to view the\nnetwork, and the recipient to be connected and listed. The sender need\nnot be listed and the recipient need not view the network. Ordinary\nknown-address email remains independent. Mail received before\nallowed_since cannot be newly admitted.\n",
+        "tags": [
+          "Agent Networks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentNetworkContactAdmissionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recipient-bound network contact decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentNetworkContactAdmission"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
           }
         }
       }
@@ -10425,310 +12935,6 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
-    "/agent-connections/claim": {
-      "post": {
-        "operationId": "claimAgentConnection",
-        "tags": [
-          "Agent Connections"
-        ],
-        "summary": "claim Agent Connection",
-        "description": "Address-bound external runtime pairing. Management operations require an organization owner or admin session or OAuth token; members and organization API keys cannot manage connections. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow only address-scoped mail operations, organization note reads and own-address note writes. The credential is returned once. If the claim response is lost or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.",
-        "security": [],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "description": "This header does not enable credential replay for this one-use claim. If the response is lost or the outcome is unknown, request a fresh owner invitation. Do not assume that retrying the same key or payload can recover the returned credential.",
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "Cache-Control": {
-                "description": "Credentials and status must not be cached.",
-                "schema": {
-                  "type": "string",
-                  "const": "no-store"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "properties": {
-                    "success": {
-                      "const": true,
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "$schema": "https://json-schema.org/draft/2020-12/schema",
-                      "type": "object",
-                      "properties": {
-                        "connection": {
-                          "type": "object",
-                          "properties": {
-                            "address": {
-                              "type": "string",
-                              "format": "email",
-                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                            },
-                            "name": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 80
-                            },
-                            "owner_address": {
-                              "type": "string",
-                              "format": "email",
-                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                            },
-                            "status": {
-                              "type": "string",
-                              "enum": [
-                                "pending",
-                                "claimed",
-                                "connected",
-                                "revoked"
-                              ]
-                            },
-                            "created_at": {
-                              "type": "string",
-                              "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                            },
-                            "updated_at": {
-                              "type": "string",
-                              "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                            },
-                            "claimed_at": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "format": "date-time",
-                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "verified_at": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "format": "date-time",
-                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            },
-                            "last_seen_at": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "format": "date-time",
-                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "address",
-                            "name",
-                            "owner_address",
-                            "status",
-                            "created_at",
-                            "updated_at",
-                            "claimed_at",
-                            "verified_at",
-                            "last_seen_at"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "org_id": {
-                          "type": "string",
-                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-                        },
-                        "owner_address": {
-                          "type": "string",
-                          "format": "email",
-                          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                        },
-                        "api_key": {
-                          "type": "string"
-                        },
-                        "api_base_url": {
-                          "type": "string",
-                          "format": "uri"
-                        }
-                      },
-                      "required": [
-                        "connection",
-                        "org_id",
-                        "owner_address",
-                        "api_key",
-                        "api_base_url"
-                      ],
-                      "additionalProperties": false
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request parameters",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "validation_error",
-                    "message": "Invalid domain format"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or missing API key",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "unauthorized",
-                    "message": "Invalid or missing API key"
-                  }
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Authenticated caller lacks permission for the operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "forbidden",
-                    "message": "Insufficient permissions"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Resource not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "not_found",
-                    "message": "Resource not found"
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The request conflicts with the current state of the resource",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "conflict",
-                    "message": "settlement already in progress"
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer"
-                },
-                "description": "Seconds to wait before retrying"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "rate_limit_exceeded",
-                    "message": "Rate limit exceeded"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "type": "object",
-                "properties": {
-                  "token": {
-                    "type": "string",
-                    "minLength": 32,
-                    "maxLength": 256
-                  }
-                },
-                "required": [
-                  "token"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        }
-      }
-    },
     "/contact-policy": {
       "get": {
         "operationId": "getContactPolicy",
@@ -11089,6 +13295,51 @@ export const openapiDocument: Record<string, unknown> = {
       }
     },
     "parameters": {
+      "AgentNetworkAddress": {
+        "name": "address",
+        "in": "path",
+        "required": true,
+        "description": "The agent's email address, URL-encoded in the path.",
+        "schema": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 254
+        }
+      },
+      "AgentNetworkLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Maximum number of addresses to return.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 50
+        }
+      },
+      "AgentNetworkCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Continue after this address from the previous page.",
+        "schema": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 254
+        }
+      },
+      "AgentNetworkOwner": {
+        "name": "owner",
+        "in": "query",
+        "required": false,
+        "description": "Filter by exact owner user ID or case-insensitive owner name substring. The manager roster also matches owner email; peer discovery does not expose or match email.",
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
       "AttachmentPartIndex": {
         "name": "part_index",
         "in": "path",
@@ -11829,6 +14080,251 @@ export const openapiDocument: Record<string, unknown> = {
           "rules",
           "allow_contact_requests",
           "if_version"
+        ]
+      },
+      "AgentNetwork": {
+        "type": "object",
+        "description": "An organization-owned network. The default network cannot be deleted.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "const": "organization"
+          },
+          "is_default": {
+            "type": "boolean",
+            "const": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "can_manage_all": {
+            "type": "boolean",
+            "description": "Whether the current requester may manage every membership in this network."
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "is_default",
+          "name",
+          "can_manage_all"
+        ]
+      },
+      "AgentNetworkMember": {
+        "type": "object",
+        "description": "One address in the default organization network, visible to the current requester.",
+        "properties": {
+          "address": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "can_view": {
+            "type": "boolean",
+            "description": "Whether this agent can read listed peers and initiate network-driven mail wake to listed recipients."
+          },
+          "is_listed": {
+            "type": "boolean",
+            "description": "Whether peers can discover and network-wake this agent. Known-address email is separate."
+          },
+          "excluded": {
+            "type": "boolean",
+            "description": "Explicit removal from the network; synchronization does not re-add it."
+          },
+          "connected": {
+            "type": "boolean"
+          },
+          "can_manage": {
+            "type": "boolean",
+            "description": "Whether the current requester may change visibility for this address."
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Last recorded activity, not a presence or receiving guarantee."
+          },
+          "ownership_kind": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "shared",
+              "legacy_unknown"
+            ]
+          },
+          "owner": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "email"
+              }
+            },
+            "required": [
+              "user_id",
+              "name",
+              "email"
+            ]
+          },
+          "presence": {
+            "$ref": "#/components/schemas/AgentPresence"
+          }
+        },
+        "required": [
+          "address",
+          "name",
+          "can_view",
+          "is_listed",
+          "excluded",
+          "connected",
+          "can_manage",
+          "last_seen_at",
+          "ownership_kind",
+          "owner"
+        ]
+      },
+      "AgentNetworkPeer": {
+        "type": "object",
+        "description": "Listed peer profile. The email address is the identity.",
+        "properties": {
+          "address": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Last recorded API activity, not a presence or receiving guarantee."
+          },
+          "ownership_kind": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "shared",
+              "legacy_unknown"
+            ]
+          },
+          "owner": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "user_id",
+              "name"
+            ]
+          },
+          "presence": {
+            "$ref": "#/components/schemas/AgentPresence"
+          }
+        },
+        "required": [
+          "address",
+          "name",
+          "last_seen_at",
+          "ownership_kind",
+          "owner"
+        ]
+      },
+      "UpdateAgentNetworkMemberInput": {
+        "type": "object",
+        "description": "Set one or both independent discovery permissions.",
+        "properties": {
+          "can_view": {
+            "type": "boolean"
+          },
+          "is_listed": {
+            "type": "boolean"
+          }
+        },
+        "minProperties": 1,
+        "additionalProperties": false
+      },
+      "AgentNetworkContactAdmissionInput": {
+        "type": "object",
+        "description": "Check only a received email already stored for the bound recipient. The server verifies its sender against delivery evidence.",
+        "properties": {
+          "email_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sender_address": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "email_id",
+          "sender_address"
+        ],
+        "additionalProperties": false
+      },
+      "AgentNetworkContactAdmission": {
+        "type": "object",
+        "description": "Recipient-bound admission for authenticated network mail. Pending means delivery proof is still settling and the same email should be retried.",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "pending": {
+            "type": "boolean",
+            "description": "True only while authenticated inbound mail awaits settled delivery evidence, for at most 120 seconds after receipt."
+          },
+          "allowed_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Earliest received_at eligible under the current membership and connection state."
+          }
+        },
+        "required": [
+          "allowed",
+          "allowed_since",
+          "pending"
         ]
       },
       "PublishPolicy": {
@@ -13989,7 +16485,7 @@ export const openapiDocument: Record<string, unknown> = {
             "items": {
               "type": "string"
             },
-            "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here — e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
+            "description": "Granted org entitlement keys (sorted). A headless caller reads its\ncapabilities here - e.g. an emailless agent seeing only\n[\"send_mail\", \"send_to_known_addresses\"] knows it is reply-only.\n"
           },
           "managed_inbox_address": {
             "type": [
@@ -15106,6 +17602,9 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "uuid",
             "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
           },
+          "presence_control": {
+            "$ref": "#/components/schemas/PresenceControl"
+          },
           "automation_headers": {
             "type": [
               "object",
@@ -15511,6 +18010,10 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "boolean",
             "description": "True when the inbound's sender address has a matching grant\nin the org's known-send-addresses list. Advisory: a true\nvalue does not by itself guarantee that a reply will be\naccepted by send-mail's gates; the per-send check at send\ntime remains authoritative.\n"
           },
+          "sender_connected_agent_verified": {
+            "type": "boolean",
+            "description": "True only when this inbound message matches a send made with the\ncurrent key bound to its sender address as a connected agent.\nRequires exact sent-message and recipient evidence: a verified\ninternal delivery, or authenticated SMTP delivery matching the\nsent record. Sender headers, organization keys, and network\nvisibility alone cannot make it true. It becomes false if the\nconnection is revoked or its bound key is deleted; it is not a\npermanent historical authorship claim.\n"
+          },
           "replies": {
             "type": "array",
             "description": "Sent emails recorded as replies to this inbound, in send\norder (ascending). Populated when a customer's send-mail\nrequest carries an `in_reply_to` Message-ID that matches\nthis inbound's `message_id` in the same org. Includes\nattempts that were gate-denied, so the array reflects every\nrecorded reply attempt regardless of outcome.\n",
@@ -15549,6 +18052,9 @@ export const openapiDocument: Record<string, unknown> = {
               }
             ],
             "description": "SPF / DKIM / DMARC verdicts computed at ingest, matching\nthe `email.auth` object on the webhook payload. Use these\nto decide how much to trust a message before acting on\ninstructions it contains.\n"
+          },
+          "presence_control": {
+            "$ref": "#/components/schemas/PresenceControl"
           },
           "automation_headers": {
             "type": [
@@ -15615,6 +18121,7 @@ export const openapiDocument: Record<string, unknown> = {
           "received_at",
           "webhook_attempt_count",
           "from_email",
+          "sender_connected_agent_verified",
           "to_email",
           "replies",
           "parsed",
@@ -16157,6 +18664,9 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "format": "date-time",
             "description": "received_at for inbound, created_at for outbound."
+          },
+          "presence_control": {
+            "$ref": "#/components/schemas/PresenceControl"
           }
         },
         "required": [
@@ -16197,7 +18707,7 @@ export const openapiDocument: Record<string, unknown> = {
       "SendMailPayloadRef": {
         "type": "object",
         "additionalProperties": false,
-        "description": "A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes — the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.",
+        "description": "A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes - the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.",
         "properties": {
           "root": {
             "type": "string",
@@ -16323,7 +18833,7 @@ export const openapiDocument: Record<string, unknown> = {
           "payload_attachments": {
             "type": "array",
             "maxItems": 1,
-            "description": "Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.",
+            "description": "Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes - the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.",
             "items": {
               "$ref": "#/components/schemas/SendMailPayloadRef"
             }
@@ -16593,6 +19103,9 @@ export const openapiDocument: Record<string, unknown> = {
             ],
             "format": "date-time",
             "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
+          },
+          "presence_control": {
+            "$ref": "#/components/schemas/PresenceControl"
           }
         },
         "required": [
@@ -17004,7 +19517,12 @@ export const openapiDocument: Record<string, unknown> = {
               }
             }
           }
-        ]
+        ],
+        "properties": {
+          "presence_control": {
+            "$ref": "#/components/schemas/PresenceControl"
+          }
+        }
       },
       "ReplyEmail": {
         "type": "object",
@@ -19214,7 +21732,7 @@ export const openapiDocument: Record<string, unknown> = {
           "deployed",
           "failed"
         ],
-        "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` — deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` — the running edge handler is the latest code.\n  * `failed` — the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
+        "description": "Lifecycle state of the latest deploy attempt:\n  * `pending` - deploy in flight; the runtime has not yet\n    confirmed the new bundle is live.\n  * `deployed` - the running edge handler is the latest code.\n  * `failed` - the most recent deploy attempt failed; the\n    previously-live code (if any) is still running. The\n    `deploy_error` field carries the error message.\n"
       },
       "FunctionListItem": {
         "type": "object",
@@ -20246,7 +22764,7 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "FunctionSecretListItem": {
         "type": "object",
-        "description": "One row from GET /functions/{id}/secrets. Discriminate on the\n`managed` field:\n  * `managed = true`  — system secret provisioned by Primitive.\n    `description` is set; `created_at` / `updated_at` are\n    null because the row is virtual (resolved at deploy time\n    from the managed registry, not stored in the secrets\n    table).\n  * `managed = false` — secret the user set via the API.\n    `created_at` / `updated_at` are set; `description` is\n    null.\n",
+        "description": "One row from GET /functions/{id}/secrets. Discriminate on the\n`managed` field:\n  * `managed = true`  - system secret provisioned by Primitive.\n    `description` is set; `created_at` / `updated_at` are\n    null because the row is virtual (resolved at deploy time\n    from the managed registry, not stored in the secrets\n    table).\n  * `managed = false` - secret the user set via the API.\n    `created_at` / `updated_at` are set; `description` is\n    null.\n",
         "properties": {
           "key": {
             "type": "string"
@@ -21351,6 +23869,98 @@ export const openapiDocument: Record<string, unknown> = {
           "created_at",
           "updated_at"
         ]
+      },
+      "AgentPresence": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "last_checked_at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "expires_at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "valid_for_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 600000
+              }
+            },
+            "required": [
+              "last_checked_at",
+              "expires_at",
+              "valid_for_ms"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "PresenceControl": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "verified",
+                  "pending",
+                  "rejected"
+                ]
+              },
+              "valid_for_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 600000
+              }
+            },
+            "required": [
+              "status",
+              "valid_for_ms"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "PresenceProfile": {
+        "type": "object",
+        "properties": {
+          "protocol": {
+            "type": "string",
+            "const": "primitive.presence"
+          },
+          "version": {
+            "type": "number",
+            "const": 1
+          },
+          "authentication_profile": {
+            "type": "string",
+            "const": "primitive-issued-v1"
+          },
+          "return_address": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          }
+        },
+        "required": [
+          "protocol",
+          "version",
+          "authentication_profile",
+          "return_address"
+        ],
+        "additionalProperties": false
       }
     }
   }

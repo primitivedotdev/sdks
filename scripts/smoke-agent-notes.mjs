@@ -45,7 +45,7 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === "PUT") {
     assert.equal(body.if_absent === true || body.if_version === saved?.version, true);
-    assert.equal(body.visibility, undefined);
+    assert.ok(body.visibility === undefined || body.visibility === "private");
     version += 1;
     saved = {
       address,
@@ -93,7 +93,10 @@ try {
   assert.equal(JSON.parse(await invoke(["agent", "notes", "get", name, ...common])).version, "1");
   assert.equal(JSON.parse(await invoke(["agent", "notes", "list", ...common])).data.length, 1);
   assert.deepEqual(JSON.parse(await invoke(["agent", "notes", "delete", name, ...common])), { deleted: true });
-  assert.deepEqual(calls.map((call) => call.method), ["PUT", "GET", "GET", "GET", "DELETE"]);
+  const seeded = JSON.parse(await invoke(["agent", "notes", "set", name, "Research agent; can summarize reports", "--if-absent", "--private", ...common]));
+  assert.equal(seeded.value, "Research agent; can summarize reports");
+  assert.equal(calls.at(-1)?.body.visibility, "private");
+  assert.deepEqual(calls.map((call) => call.method), ["PUT", "GET", "GET", "GET", "DELETE", "PUT"]);
   process.stdout.write("Built agent notes list/get/set/delete and bare parent passed.\n");
 } finally {
   server.close();

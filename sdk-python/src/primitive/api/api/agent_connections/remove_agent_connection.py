@@ -10,19 +10,26 @@ from ... import errors
 
 from ...models.error_response import ErrorResponse
 from ...models.remove_agent_connection_response_200 import RemoveAgentConnectionResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
 
 def _get_kwargs(
     address: str,
+    *,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
-    
+    headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
 
-    
 
-    
+
+
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -30,6 +37,7 @@ def _get_kwargs(
     }
 
 
+    _kwargs["headers"] = headers
     return _kwargs
 
 
@@ -102,21 +110,22 @@ def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Res
 def sync_detailed(
     address: str,
     *,
-    client: AuthenticatedClient | Client,
+    client: AuthenticatedClient,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RemoveAgentConnectionResponse200]:
-    """ Remove a revoked agent connection
+    """ remove Agent Connection
 
-     Permanently removes a revoked connection record. Requires an organization
-    owner or admin session or OAuth token; organization API keys are denied.
-    Disconnect first using DELETE /agent-connections/{address}. An active
-    connection returns 409 connection_not_revoked. Missing or already removed
-    records return 404. Mail, address notes, domains and external runtimes are
-    preserved. The same address can be paired again with a new invitation;
-    old credentials and invitations remain invalid.
+     Permanently remove a revoked connection record. A current personal owner may permanently remove
+    their own record; organization owners and admins may remove any record. Disconnect first using
+    revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
+    removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
+    same address can be paired again with a new invitation; old credentials and invitations remain
+    invalid.
 
     Args:
         address (str):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -129,6 +138,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         address=address,
+idempotency_key=idempotency_key,
 
     )
 
@@ -141,21 +151,22 @@ def sync_detailed(
 def sync(
     address: str,
     *,
-    client: AuthenticatedClient | Client,
+    client: AuthenticatedClient,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | RemoveAgentConnectionResponse200 | None:
-    """ Remove a revoked agent connection
+    """ remove Agent Connection
 
-     Permanently removes a revoked connection record. Requires an organization
-    owner or admin session or OAuth token; organization API keys are denied.
-    Disconnect first using DELETE /agent-connections/{address}. An active
-    connection returns 409 connection_not_revoked. Missing or already removed
-    records return 404. Mail, address notes, domains and external runtimes are
-    preserved. The same address can be paired again with a new invitation;
-    old credentials and invitations remain invalid.
+     Permanently remove a revoked connection record. A current personal owner may permanently remove
+    their own record; organization owners and admins may remove any record. Disconnect first using
+    revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
+    removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
+    same address can be paired again with a new invitation; old credentials and invitations remain
+    invalid.
 
     Args:
         address (str):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -169,27 +180,29 @@ def sync(
     return sync_detailed(
         address=address,
 client=client,
+idempotency_key=idempotency_key,
 
     ).parsed
 
 async def asyncio_detailed(
     address: str,
     *,
-    client: AuthenticatedClient | Client,
+    client: AuthenticatedClient,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | RemoveAgentConnectionResponse200]:
-    """ Remove a revoked agent connection
+    """ remove Agent Connection
 
-     Permanently removes a revoked connection record. Requires an organization
-    owner or admin session or OAuth token; organization API keys are denied.
-    Disconnect first using DELETE /agent-connections/{address}. An active
-    connection returns 409 connection_not_revoked. Missing or already removed
-    records return 404. Mail, address notes, domains and external runtimes are
-    preserved. The same address can be paired again with a new invitation;
-    old credentials and invitations remain invalid.
+     Permanently remove a revoked connection record. A current personal owner may permanently remove
+    their own record; organization owners and admins may remove any record. Disconnect first using
+    revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
+    removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
+    same address can be paired again with a new invitation; old credentials and invitations remain
+    invalid.
 
     Args:
         address (str):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -202,6 +215,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         address=address,
+idempotency_key=idempotency_key,
 
     )
 
@@ -214,21 +228,22 @@ async def asyncio_detailed(
 async def asyncio(
     address: str,
     *,
-    client: AuthenticatedClient | Client,
+    client: AuthenticatedClient,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | RemoveAgentConnectionResponse200 | None:
-    """ Remove a revoked agent connection
+    """ remove Agent Connection
 
-     Permanently removes a revoked connection record. Requires an organization
-    owner or admin session or OAuth token; organization API keys are denied.
-    Disconnect first using DELETE /agent-connections/{address}. An active
-    connection returns 409 connection_not_revoked. Missing or already removed
-    records return 404. Mail, address notes, domains and external runtimes are
-    preserved. The same address can be paired again with a new invitation;
-    old credentials and invitations remain invalid.
+     Permanently remove a revoked connection record. A current personal owner may permanently remove
+    their own record; organization owners and admins may remove any record. Disconnect first using
+    revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
+    removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
+    same address can be paired again with a new invitation; old credentials and invitations remain
+    invalid.
 
     Args:
         address (str):
+        idempotency_key (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -242,5 +257,6 @@ async def asyncio(
     return (await asyncio_detailed(
         address=address,
 client=client,
+idempotency_key=idempotency_key,
 
     )).parsed

@@ -80,6 +80,105 @@ export type PutAgentContactPolicyReplace = {
 };
 
 /**
+ * An organization-owned network. The default network cannot be deleted.
+ */
+export type AgentNetwork = {
+    id: string;
+    kind: string;
+    is_default: boolean;
+    name: string;
+    /**
+     * Whether the current requester may manage every membership in this network.
+     */
+    can_manage_all: boolean;
+};
+
+/**
+ * One address in the default organization network, visible to the current requester.
+ */
+export type AgentNetworkMember = {
+    address: string;
+    name: string;
+    /**
+     * Whether this agent can read listed peers and initiate network-driven mail wake to listed recipients.
+     */
+    can_view: boolean;
+    /**
+     * Whether peers can discover and network-wake this agent. Known-address email is separate.
+     */
+    is_listed: boolean;
+    /**
+     * Explicit removal from the network; synchronization does not re-add it.
+     */
+    excluded: boolean;
+    connected: boolean;
+    /**
+     * Whether the current requester may change visibility for this address.
+     */
+    can_manage: boolean;
+    /**
+     * Last recorded activity, not a presence or receiving guarantee.
+     */
+    last_seen_at: string | null;
+    ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
+    owner: {
+        user_id: string;
+        name: string | null;
+        email: string | null;
+    } | null;
+    presence?: AgentPresence;
+};
+
+/**
+ * Listed peer profile. The email address is the identity.
+ */
+export type AgentNetworkPeer = {
+    address: string;
+    name: string;
+    /**
+     * Last recorded API activity, not a presence or receiving guarantee.
+     */
+    last_seen_at: string | null;
+    ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
+    owner: {
+        user_id: string;
+        name: string | null;
+    } | null;
+    presence?: AgentPresence;
+};
+
+/**
+ * Set one or both independent discovery permissions.
+ */
+export type UpdateAgentNetworkMemberInput = {
+    can_view?: boolean;
+    is_listed?: boolean;
+};
+
+/**
+ * Check only a received email already stored for the bound recipient. The server verifies its sender against delivery evidence.
+ */
+export type AgentNetworkContactAdmissionInput = {
+    email_id: string;
+    sender_address: string;
+};
+
+/**
+ * Recipient-bound admission for authenticated network mail. Pending means delivery proof is still settling and the same email should be retried.
+ */
+export type AgentNetworkContactAdmission = {
+    allowed: boolean;
+    /**
+     * True only while authenticated inbound mail awaits settled delivery evidence, for at most 120 seconds after receipt.
+     */
+    pending: boolean;
+    /**
+     * Earliest received_at eligible under the current membership and connection state.
+     */
+    allowed_since: string | null;
+};
+
+/**
  * Who may publish into a registry. owner_only: only the registry owner.
  * request: anyone may request and the owner approves. open: anyone may
  * publish and it lists immediately (no approval step).
@@ -1075,7 +1174,7 @@ export type Account = {
     limits: PlanLimits;
     /**
      * Granted org entitlement keys (sorted). A headless caller reads its
-     * capabilities here — e.g. an emailless agent seeing only
+     * capabilities here - e.g. an emailless agent seeing only
      * ["send_mail", "send_to_known_addresses"] knows it is reply-only.
      *
      */
@@ -1608,6 +1707,7 @@ export type EmailSummary = {
      *
      */
     thread_id?: string | null;
+    presence_control?: PresenceControl;
     /**
      * What the message declared about being automated, verbatim:
      * `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
@@ -1860,6 +1960,18 @@ export type EmailDetail = {
      */
     from_known_address?: boolean;
     /**
+     * True only when this inbound message matches a send made with the
+     * current key bound to its sender address as a connected agent.
+     * Requires exact sent-message and recipient evidence: a verified
+     * internal delivery, or authenticated SMTP delivery matching the
+     * sent record. Sender headers, organization keys, and network
+     * visibility alone cannot make it true. It becomes false if the
+     * connection is revoked or its bound key is deleted; it is not a
+     * permanent historical authorship claim.
+     *
+     */
+    sender_connected_agent_verified: boolean;
+    /**
      * Sent emails recorded as replies to this inbound, in send
      * order (ascending). Populated when a customer's send-mail
      * request carries an `in_reply_to` Message-ID that matches
@@ -1910,6 +2022,7 @@ export type EmailDetail = {
      *
      */
     auth: EmailAuth;
+    presence_control?: PresenceControl;
     /**
      * What the message declared about being automated, verbatim:
      * `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
@@ -2288,6 +2401,7 @@ export type ConversationMessage = {
      * received_at for inbound, created_at for outbound.
      */
     timestamp?: string | null;
+    presence_control?: PresenceControl;
 };
 
 export type SendMailAttachment = {
@@ -2306,7 +2420,7 @@ export type SendMailAttachment = {
 };
 
 /**
- * A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes — the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.
+ * A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without inlining the bytes - the way to send an attachment larger than the inline cap. Upload the object via /v1/payloads (with a client-held CEK the server never sees), then reference it here.
  */
 export type SendMailPayloadRef = {
     /**
@@ -2369,7 +2483,7 @@ export type SendMailInput = {
      */
     attachments?: Array<SendMailAttachment>;
     /**
-     * Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes — the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.
+     * Deliver an already-uploaded Primitive Payloads object as an attachment by reference, without inlining the bytes - the way to send attachments larger than the inline cap. Upload the object via /v1/payloads (client-held CEK), then reference it here. v1 supports at most one.
      */
     payload_attachments?: Array<SendMailPayloadRef>;
     /**
@@ -2696,6 +2810,7 @@ export type SentEmailSummary = {
      *
      */
     canceled_at?: string | null;
+    presence_control?: PresenceControl;
 };
 
 /**
@@ -2905,6 +3020,8 @@ export type SentEmailDetail = SentEmailSummary & {
      * Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives.
      */
     attachments_download_available?: boolean;
+} & {
+    presence_control?: PresenceControl;
 };
 
 /**
@@ -3940,10 +4057,10 @@ export type DiscardContentResult = {
 
 /**
  * Lifecycle state of the latest deploy attempt:
- * * `pending` — deploy in flight; the runtime has not yet
+ * * `pending` - deploy in flight; the runtime has not yet
  * confirmed the new bundle is live.
- * * `deployed` — the running edge handler is the latest code.
- * * `failed` — the most recent deploy attempt failed; the
+ * * `deployed` - the running edge handler is the latest code.
+ * * `failed` - the most recent deploy attempt failed; the
  * previously-live code (if any) is still running. The
  * `deploy_error` field carries the error message.
  *
@@ -4374,12 +4491,12 @@ export type FunctionLogRow = {
 /**
  * One row from GET /functions/{id}/secrets. Discriminate on the
  * `managed` field:
- * * `managed = true`  — system secret provisioned by Primitive.
+ * * `managed = true`  - system secret provisioned by Primitive.
  * `description` is set; `created_at` / `updated_at` are
  * null because the row is virtual (resolved at deploy time
  * from the managed registry, not stored in the secrets
  * table).
- * * `managed = false` — secret the user set via the API.
+ * * `managed = false` - secret the user set via the API.
  * `created_at` / `updated_at` are set; `description` is
  * null.
  *
@@ -4813,6 +4930,44 @@ export type TemplateInstallStatus = {
     created_at: string;
     updated_at: string;
 };
+
+export type AgentPresence = {
+    last_checked_at: string;
+    expires_at: string;
+    valid_for_ms: number;
+} | unknown;
+
+export type PresenceControl = {
+    status: 'verified' | 'pending' | 'rejected';
+    valid_for_ms: number;
+} | unknown;
+
+export type PresenceProfile = {
+    protocol: string;
+    version: number;
+    authentication_profile: string;
+    return_address: string;
+};
+
+/**
+ * The agent's email address, URL-encoded in the path.
+ */
+export type AgentNetworkAddress = string;
+
+/**
+ * Maximum number of addresses to return.
+ */
+export type AgentNetworkLimit = number;
+
+/**
+ * Continue after this address from the previous page.
+ */
+export type AgentNetworkCursor = string;
+
+/**
+ * Filter by exact owner user ID or case-insensitive owner name substring. The manager roster also matches owner email; peer discovery does not expose or match email.
+ */
+export type AgentNetworkOwner = string;
 
 /**
  * The attachment metadata `part_index`, not its offset in the attachments array
@@ -8444,11 +8599,321 @@ export type RescheduleSentEmailResponses = {
 
 export type RescheduleSentEmailResponse = RescheduleSentEmailResponses[keyof RescheduleSentEmailResponses];
 
-export type RemoveAgentConnectionData = {
+export type ListAgentConnectionsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * limit for agent connections.
+         */
+        limit?: number;
+        /**
+         * cursor for agent connections.
+         */
+        cursor?: string;
+    };
+    url: '/agent-connections';
+};
+
+export type ListAgentConnectionsErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type ListAgentConnectionsError = ListAgentConnectionsErrors[keyof ListAgentConnectionsErrors];
+
+export type ListAgentConnectionsResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: Array<{
+            address: string;
+            name: string;
+            owner_address: string;
+            status: 'pending' | 'claimed' | 'connected' | 'revoked';
+            created_at: string;
+            updated_at: string;
+            claimed_at: string | null;
+            verified_at: string | null;
+            last_seen_at: string | null;
+            ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
+            owner_user_id: string | null;
+            owner_active: boolean | null;
+            presence?: AgentPresence;
+        }>;
+        meta?: {
+            limit?: number;
+            cursor?: string | null;
+        };
+    };
+};
+
+export type ListAgentConnectionsResponse = ListAgentConnectionsResponses[keyof ListAgentConnectionsResponses];
+
+export type CreateAgentConnectionData = {
+    body: {
+        name: string;
+        address?: string;
+        owner_address?: string;
+        ownership_kind?: 'personal' | 'shared';
+    };
+    headers?: {
+        /**
+         * Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/agent-connections';
+};
+
+export type CreateAgentConnectionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type CreateAgentConnectionError = CreateAgentConnectionErrors[keyof CreateAgentConnectionErrors];
+
+export type CreateAgentConnectionResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: {
+            connection: {
+                address: string;
+                name: string;
+                owner_address: string;
+                status: 'pending' | 'claimed' | 'connected' | 'revoked';
+                created_at: string;
+                updated_at: string;
+                claimed_at: string | null;
+                verified_at: string | null;
+                last_seen_at: string | null;
+                ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
+                owner_user_id: string | null;
+                owner_active: boolean | null;
+                presence?: AgentPresence;
+            };
+            invitation: {
+                claim_url: string;
+                expires_at: string;
+            };
+        };
+    };
+};
+
+export type CreateAgentConnectionResponse = CreateAgentConnectionResponses[keyof CreateAgentConnectionResponses];
+
+export type InviteAgentConnectionData = {
+    body: {
+        [key: string]: never;
+    };
+    headers?: {
+        /**
+         * Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        /**
+         * address for agent connections.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-connections/{address}/invitation';
+};
+
+export type InviteAgentConnectionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type InviteAgentConnectionError = InviteAgentConnectionErrors[keyof InviteAgentConnectionErrors];
+
+export type InviteAgentConnectionResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: {
+            connection: {
+                address: string;
+                name: string;
+                owner_address: string;
+                status: 'pending' | 'claimed' | 'connected' | 'revoked';
+                created_at: string;
+                updated_at: string;
+                claimed_at: string | null;
+                verified_at: string | null;
+                last_seen_at: string | null;
+                ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
+                owner_user_id: string | null;
+                owner_active: boolean | null;
+                presence?: AgentPresence;
+            };
+            invitation: {
+                claim_url: string;
+                expires_at: string;
+            };
+        };
+    };
+};
+
+export type InviteAgentConnectionResponse = InviteAgentConnectionResponses[keyof InviteAgentConnectionResponses];
+
+export type RevokeAgentConnectionData = {
     body?: never;
     path: {
         /**
-         * The email address identifying the revoked connection.
+         * address for agent connections.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-connections/{address}';
+};
+
+export type RevokeAgentConnectionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type RevokeAgentConnectionError = RevokeAgentConnectionErrors[keyof RevokeAgentConnectionErrors];
+
+export type RevokeAgentConnectionResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: {
+            connection: {
+                address: string;
+                name: string;
+                owner_address: string;
+                status: 'pending' | 'claimed' | 'connected' | 'revoked';
+                created_at: string;
+                updated_at: string;
+                claimed_at: string | null;
+                verified_at: string | null;
+                last_seen_at: string | null;
+                ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
+                owner_user_id: string | null;
+                owner_active: boolean | null;
+                presence?: AgentPresence;
+            };
+        };
+    };
+};
+
+export type RevokeAgentConnectionResponse = RevokeAgentConnectionResponses[keyof RevokeAgentConnectionResponses];
+
+export type RemoveAgentConnectionData = {
+    body?: never;
+    headers?: {
+        /**
+         * Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        /**
+         * address for agent connections.
          */
         address: string;
     };
@@ -8487,7 +8952,7 @@ export type RemoveAgentConnectionError = RemoveAgentConnectionErrors[keyof Remov
 
 export type RemoveAgentConnectionResponses = {
     /**
-     * Deletion completed
+     * Success
      */
     200: {
         success: boolean;
@@ -8498,6 +8963,129 @@ export type RemoveAgentConnectionResponses = {
 };
 
 export type RemoveAgentConnectionResponse = RemoveAgentConnectionResponses[keyof RemoveAgentConnectionResponses];
+
+export type ClaimAgentConnectionData = {
+    body: {
+        token: string;
+        capabilities?: Array<string>;
+    };
+    headers?: {
+        /**
+         * Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+         */
+        'Idempotency-Key'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/agent-connections/claim';
+};
+
+export type ClaimAgentConnectionErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type ClaimAgentConnectionError = ClaimAgentConnectionErrors[keyof ClaimAgentConnectionErrors];
+
+export type ClaimAgentConnectionResponses = {
+    /**
+     * Success
+     */
+    200: {
+        success: boolean;
+        data: {
+            connection: {
+                address: string;
+                name: string;
+                owner_address: string;
+                status: 'pending' | 'claimed' | 'connected' | 'revoked';
+                created_at: string;
+                updated_at: string;
+                claimed_at: string | null;
+                verified_at: string | null;
+                last_seen_at: string | null;
+                ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
+                owner_user_id: string | null;
+                owner_active: boolean | null;
+                presence?: AgentPresence;
+            };
+            org_id: string;
+            owner_address: string;
+            api_key: string;
+            api_base_url: string;
+            presence_profile?: PresenceProfile;
+        };
+    };
+};
+
+export type ClaimAgentConnectionResponse = ClaimAgentConnectionResponses[keyof ClaimAgentConnectionResponses];
+
+export type AgentConnectionSetupData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/agent-connections/setup';
+};
+
+export type AgentConnectionSetupErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+    /**
+     * Rate limit exceeded
+     */
+    429: ErrorResponse;
+};
+
+export type AgentConnectionSetupError = AgentConnectionSetupErrors[keyof AgentConnectionSetupErrors];
+
+export type AgentConnectionSetupResponses = {
+    /**
+     * Success
+     */
+    200: string;
+};
+
+export type AgentConnectionSetupResponse = AgentConnectionSetupResponses[keyof AgentConnectionSetupResponses];
 
 export type CancelSentEmailData = {
     body?: never;
@@ -10408,6 +10996,326 @@ export type ListDeclinedPaymentsResponses = {
 
 export type ListDeclinedPaymentsResponse = ListDeclinedPaymentsResponses[keyof ListDeclinedPaymentsResponses];
 
+export type ListAgentNetworksData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/agent-networks';
+};
+
+export type ListAgentNetworksErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type ListAgentNetworksError = ListAgentNetworksErrors[keyof ListAgentNetworksErrors];
+
+export type ListAgentNetworksResponses = {
+    /**
+     * Networks owned by the organization
+     */
+    200: SuccessEnvelope & {
+        data?: Array<AgentNetwork>;
+    };
+};
+
+export type ListAgentNetworksResponse = ListAgentNetworksResponses[keyof ListAgentNetworksResponses];
+
+export type ListDefaultNetworkMembersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Maximum number of addresses to return.
+         */
+        limit?: number;
+        /**
+         * Continue after this address from the previous page.
+         */
+        cursor?: string;
+        /**
+         * Filter by exact owner user ID or case-insensitive owner name substring. The manager roster also matches owner email; peer discovery does not expose or match email.
+         */
+        owner?: string;
+    };
+    url: '/agent-networks/default/members';
+};
+
+export type ListDefaultNetworkMembersErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type ListDefaultNetworkMembersError = ListDefaultNetworkMembersErrors[keyof ListDefaultNetworkMembersErrors];
+
+export type ListDefaultNetworkMembersResponses = {
+    /**
+     * Authorized roster ordered by address
+     */
+    200: ListEnvelope & {
+        data?: Array<AgentNetworkMember>;
+    };
+};
+
+export type ListDefaultNetworkMembersResponse = ListDefaultNetworkMembersResponses[keyof ListDefaultNetworkMembersResponses];
+
+export type RemoveDefaultNetworkMemberData = {
+    body?: never;
+    path: {
+        /**
+         * The agent's email address, URL-encoded in the path.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-networks/default/members/{address}';
+};
+
+export type RemoveDefaultNetworkMemberErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type RemoveDefaultNetworkMemberError = RemoveDefaultNetworkMemberErrors[keyof RemoveDefaultNetworkMemberErrors];
+
+export type RemoveDefaultNetworkMemberResponses = {
+    /**
+     * Membership excluded
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            excluded: boolean;
+        };
+    };
+};
+
+export type RemoveDefaultNetworkMemberResponse = RemoveDefaultNetworkMemberResponses[keyof RemoveDefaultNetworkMemberResponses];
+
+export type UpdateDefaultNetworkMemberData = {
+    body: UpdateAgentNetworkMemberInput;
+    path: {
+        /**
+         * The agent's email address, URL-encoded in the path.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-networks/default/members/{address}';
+};
+
+export type UpdateDefaultNetworkMemberErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Invalid request parameters
+     */
+    422: ErrorResponse;
+};
+
+export type UpdateDefaultNetworkMemberError = UpdateDefaultNetworkMemberErrors[keyof UpdateDefaultNetworkMemberErrors];
+
+export type UpdateDefaultNetworkMemberResponses = {
+    /**
+     * Updated membership
+     */
+    200: SuccessEnvelope & {
+        data?: AgentNetworkMember;
+    };
+};
+
+export type UpdateDefaultNetworkMemberResponse = UpdateDefaultNetworkMemberResponses[keyof UpdateDefaultNetworkMemberResponses];
+
+export type AddDefaultNetworkMemberData = {
+    body?: never;
+    path: {
+        /**
+         * The agent's email address, URL-encoded in the path.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-networks/default/members/{address}';
+};
+
+export type AddDefaultNetworkMemberErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type AddDefaultNetworkMemberError = AddDefaultNetworkMemberErrors[keyof AddDefaultNetworkMemberErrors];
+
+export type AddDefaultNetworkMemberResponses = {
+    /**
+     * Active membership
+     */
+    200: SuccessEnvelope & {
+        data?: AgentNetworkMember;
+    };
+};
+
+export type AddDefaultNetworkMemberResponse = AddDefaultNetworkMemberResponses[keyof AddDefaultNetworkMemberResponses];
+
+export type ListDefaultNetworkAgentsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Maximum number of addresses to return.
+         */
+        limit?: number;
+        /**
+         * Continue after this address from the previous page.
+         */
+        cursor?: string;
+        /**
+         * Filter by exact owner user ID or case-insensitive owner name substring. The manager roster also matches owner email; peer discovery does not expose or match email.
+         */
+        owner?: string;
+    };
+    url: '/agent-networks/default/agents';
+};
+
+export type ListDefaultNetworkAgentsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type ListDefaultNetworkAgentsError = ListDefaultNetworkAgentsErrors[keyof ListDefaultNetworkAgentsErrors];
+
+export type ListDefaultNetworkAgentsResponses = {
+    /**
+     * Listed peers ordered by address
+     */
+    200: ListEnvelope & {
+        data?: Array<AgentNetworkPeer>;
+    };
+};
+
+export type ListDefaultNetworkAgentsResponse = ListDefaultNetworkAgentsResponses[keyof ListDefaultNetworkAgentsResponses];
+
+export type GetDefaultNetworkAgentData = {
+    body?: never;
+    path: {
+        /**
+         * The agent's email address, URL-encoded in the path.
+         */
+        address: string;
+    };
+    query?: never;
+    url: '/agent-networks/default/agents/{address}';
+};
+
+export type GetDefaultNetworkAgentErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetDefaultNetworkAgentError = GetDefaultNetworkAgentErrors[keyof GetDefaultNetworkAgentErrors];
+
+export type GetDefaultNetworkAgentResponses = {
+    /**
+     * Listed peer profile
+     */
+    200: SuccessEnvelope & {
+        data?: AgentNetworkPeer;
+    };
+};
+
+export type GetDefaultNetworkAgentResponse = GetDefaultNetworkAgentResponses[keyof GetDefaultNetworkAgentResponses];
+
+export type CheckDefaultNetworkContactAdmissionData = {
+    body: AgentNetworkContactAdmissionInput;
+    path?: never;
+    query?: never;
+    url: '/agent-networks/default/contact-admission';
+};
+
+export type CheckDefaultNetworkContactAdmissionErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Invalid request parameters
+     */
+    422: ErrorResponse;
+};
+
+export type CheckDefaultNetworkContactAdmissionError = CheckDefaultNetworkContactAdmissionErrors[keyof CheckDefaultNetworkContactAdmissionErrors];
+
+export type CheckDefaultNetworkContactAdmissionResponses = {
+    /**
+     * Recipient-bound network contact decision
+     */
+    200: SuccessEnvelope & {
+        data?: AgentNetworkContactAdmission;
+    };
+};
+
+export type CheckDefaultNetworkContactAdmissionResponse = CheckDefaultNetworkContactAdmissionResponses[keyof CheckDefaultNetworkContactAdmissionResponses];
+
 export type ListRegistriesData = {
     body?: never;
     path?: never;
@@ -11432,78 +12340,6 @@ export type PutAgentContactResponses = {
 };
 
 export type PutAgentContactResponse = PutAgentContactResponses[keyof PutAgentContactResponses];
-
-export type ClaimAgentConnectionData = {
-    body: {
-        token: string;
-    };
-    headers?: {
-        /**
-         * This header does not enable credential replay for this one-use claim. If the response is lost or the outcome is unknown, request a fresh owner invitation. Do not assume that retrying the same key or payload can recover the returned credential.
-         */
-        'Idempotency-Key'?: string;
-    };
-    path?: never;
-    query?: never;
-    url: '/agent-connections/claim';
-};
-
-export type ClaimAgentConnectionErrors = {
-    /**
-     * Invalid request parameters
-     */
-    400: ErrorResponse;
-    /**
-     * Invalid or missing API key
-     */
-    401: ErrorResponse;
-    /**
-     * Authenticated caller lacks permission for the operation
-     */
-    403: ErrorResponse;
-    /**
-     * Resource not found
-     */
-    404: ErrorResponse;
-    /**
-     * The request conflicts with the current state of the resource
-     */
-    409: ErrorResponse;
-    /**
-     * Rate limit exceeded
-     */
-    429: ErrorResponse;
-};
-
-export type ClaimAgentConnectionError = ClaimAgentConnectionErrors[keyof ClaimAgentConnectionErrors];
-
-export type ClaimAgentConnectionResponses = {
-    /**
-     * Success
-     */
-    200: {
-        success: boolean;
-        data: {
-            connection: {
-                address: string;
-                name: string;
-                owner_address: string;
-                status: 'pending' | 'claimed' | 'connected' | 'revoked';
-                created_at: string;
-                updated_at: string;
-                claimed_at: string | unknown;
-                verified_at: string | unknown;
-                last_seen_at: string | unknown;
-            };
-            org_id: string;
-            owner_address: string;
-            api_key: string;
-            api_base_url: string;
-        };
-    };
-};
-
-export type ClaimAgentConnectionResponse = ClaimAgentConnectionResponses[keyof ClaimAgentConnectionResponses];
 
 export type GetContactPolicyData = {
     body?: never;

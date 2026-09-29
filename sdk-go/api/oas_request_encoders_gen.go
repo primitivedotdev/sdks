@@ -24,6 +24,20 @@ func encodeAddDomainRequest(
 	return nil
 }
 
+func encodeCheckDefaultNetworkContactAdmissionRequest(
+	req *AgentNetworkContactAdmissionInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeClaimAgentConnectionRequest(
 	req *ClaimAgentConnectionReq,
 	r *http.Request,
@@ -96,6 +110,20 @@ func encodeCreateAgentClaimLinkRequest(
 		if req != nil {
 			req.Encode(e)
 		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeCreateAgentConnectionRequest(
+	req *CreateAgentConnectionReq,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
 	}
 	encoded := e.Bytes()
 	ht.SetBody(r, bytes.NewReader(encoded), contentType)
@@ -286,6 +314,20 @@ func encodeDefineAgentRequest(
 
 func encodeInstallTemplateRequest(
 	req *InstallTemplateBody,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeInviteAgentConnectionRequest(
+	req *InviteAgentConnectionReq,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -704,6 +746,20 @@ func encodeTestFunctionRequest(
 
 func encodeUpdateAccountRequest(
 	req *UpdateAccountInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateDefaultNetworkMemberRequest(
+	req *UpdateAgentNetworkMemberInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

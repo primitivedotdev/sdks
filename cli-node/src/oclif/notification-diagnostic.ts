@@ -113,6 +113,7 @@ export async function explainNotification(options: {
     detail.from_email,
     detail.received_at,
     signal,
+    detail.id,
   );
   if (
     admission?.kind !== "allowed" &&
@@ -170,6 +171,6 @@ export async function explainNotification(options: {
       : null,
     evaluatedPolicy: "saved_contacts",
     guidance:
-      "Current saved contact policy and local receipts only. A receiver started with an explicit --sender list or with contact-request intake disabled can be narrower. No message was dispatched, and event acceptance does not prove reading.",
+      "Current saved contact policy and local receipts only; this diagnostic does not evaluate same-org network admission. A receiver started with an explicit --sender list or with contact-request intake disabled can be narrower. No message was dispatched, and event acceptance does not prove reading.",
   };
 }

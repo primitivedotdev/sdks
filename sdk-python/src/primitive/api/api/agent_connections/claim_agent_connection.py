@@ -28,9 +28,9 @@ def _get_kwargs(
 
 
 
-    
 
-    
+
+
 
     _kwargs: dict[str, Any] = {
         "method": "post",
@@ -121,14 +121,17 @@ def sync_detailed(
 ) -> Response[ClaimAgentConnectionResponse200 | ErrorResponse]:
     """ claim Agent Connection
 
-     Address-bound external runtime pairing. Management operations require an organization owner or admin
-    session or OAuth token; members and organization API keys cannot manage connections. Claim is
-    authorized only by its one-use invitation. Connected means a real challenge was received and a reply
-    sent by the current bound credential was received back. Invitations expire after 15 minutes.
-    Reconnection preserves the address and revokes previous credentials. Status responses contain no
-    credentials. Runtime credentials allow only address-scoped mail operations, organization note reads
-    and own-address note writes. The credential is returned once. If the claim response is lost or the
-    outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.
+     Address-bound external runtime pairing. Any current human organization member may create and manage
+    their personal agent connections. Organization owners and admins may manage all connections and
+    explicitly create shared ones. An owner removed from the organization loses personal agent access,
+    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
+    current connected credential may disconnect only its own exact address. Claim is authorized only by
+    its one-use invitation. Connected means a real challenge was received and a reply sent by the
+    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
+    preserves the address and revokes previous credentials. Status responses contain no credentials.
+    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
+    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
+    bound network contact admission.
 
     Args:
         idempotency_key (str | Unset):
@@ -164,14 +167,17 @@ def sync(
 ) -> ClaimAgentConnectionResponse200 | ErrorResponse | None:
     """ claim Agent Connection
 
-     Address-bound external runtime pairing. Management operations require an organization owner or admin
-    session or OAuth token; members and organization API keys cannot manage connections. Claim is
-    authorized only by its one-use invitation. Connected means a real challenge was received and a reply
-    sent by the current bound credential was received back. Invitations expire after 15 minutes.
-    Reconnection preserves the address and revokes previous credentials. Status responses contain no
-    credentials. Runtime credentials allow only address-scoped mail operations, organization note reads
-    and own-address note writes. The credential is returned once. If the claim response is lost or the
-    outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.
+     Address-bound external runtime pairing. Any current human organization member may create and manage
+    their personal agent connections. Organization owners and admins may manage all connections and
+    explicitly create shared ones. An owner removed from the organization loses personal agent access,
+    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
+    current connected credential may disconnect only its own exact address. Claim is authorized only by
+    its one-use invitation. Connected means a real challenge was received and a reply sent by the
+    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
+    preserves the address and revokes previous credentials. Status responses contain no credentials.
+    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
+    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
+    bound network contact admission.
 
     Args:
         idempotency_key (str | Unset):
@@ -202,14 +208,17 @@ async def asyncio_detailed(
 ) -> Response[ClaimAgentConnectionResponse200 | ErrorResponse]:
     """ claim Agent Connection
 
-     Address-bound external runtime pairing. Management operations require an organization owner or admin
-    session or OAuth token; members and organization API keys cannot manage connections. Claim is
-    authorized only by its one-use invitation. Connected means a real challenge was received and a reply
-    sent by the current bound credential was received back. Invitations expire after 15 minutes.
-    Reconnection preserves the address and revokes previous credentials. Status responses contain no
-    credentials. Runtime credentials allow only address-scoped mail operations, organization note reads
-    and own-address note writes. The credential is returned once. If the claim response is lost or the
-    outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.
+     Address-bound external runtime pairing. Any current human organization member may create and manage
+    their personal agent connections. Organization owners and admins may manage all connections and
+    explicitly create shared ones. An owner removed from the organization loses personal agent access,
+    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
+    current connected credential may disconnect only its own exact address. Claim is authorized only by
+    its one-use invitation. Connected means a real challenge was received and a reply sent by the
+    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
+    preserves the address and revokes previous credentials. Status responses contain no credentials.
+    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
+    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
+    bound network contact admission.
 
     Args:
         idempotency_key (str | Unset):
@@ -245,14 +254,17 @@ async def asyncio(
 ) -> ClaimAgentConnectionResponse200 | ErrorResponse | None:
     """ claim Agent Connection
 
-     Address-bound external runtime pairing. Management operations require an organization owner or admin
-    session or OAuth token; members and organization API keys cannot manage connections. Claim is
-    authorized only by its one-use invitation. Connected means a real challenge was received and a reply
-    sent by the current bound credential was received back. Invitations expire after 15 minutes.
-    Reconnection preserves the address and revokes previous credentials. Status responses contain no
-    credentials. Runtime credentials allow only address-scoped mail operations, organization note reads
-    and own-address note writes. The credential is returned once. If the claim response is lost or the
-    outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.
+     Address-bound external runtime pairing. Any current human organization member may create and manage
+    their personal agent connections. Organization owners and admins may manage all connections and
+    explicitly create shared ones. An owner removed from the organization loses personal agent access,
+    and rejoining does not revive the old connection. Organization API keys cannot manage connections. A
+    current connected credential may disconnect only its own exact address. Claim is authorized only by
+    its one-use invitation. Connected means a real challenge was received and a reply sent by the
+    current bound credential was received back. Invitations expire after 15 minutes. Reconnection
+    preserves the address and revokes previous credentials. Status responses contain no credentials.
+    Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
+    writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
+    bound network contact admission.
 
     Args:
         idempotency_key (str | Unset):

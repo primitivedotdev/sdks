@@ -15,6 +15,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.presence_control_type_0 import PresenceControlType0
 
 
 
@@ -42,6 +44,7 @@ class ConversationMessage:
             to (None | str | Unset):
             subject (None | str | Unset):
             timestamp (datetime.datetime | None | Unset): received_at for inbound, created_at for outbound.
+            presence_control (None | PresenceControlType0 | Unset):
      """
 
     role: ConversationMessageRole
@@ -53,6 +56,7 @@ class ConversationMessage:
     to: None | str | Unset = UNSET
     subject: None | str | Unset = UNSET
     timestamp: datetime.datetime | None | Unset = UNSET
+    presence_control: None | PresenceControlType0 | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -60,6 +64,7 @@ class ConversationMessage:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.presence_control_type_0 import PresenceControlType0
         role = self.role.value
 
         direction = self.direction.value
@@ -100,6 +105,14 @@ class ConversationMessage:
         else:
             timestamp = self.timestamp
 
+        presence_control: dict[str, Any] | None | Unset
+        if isinstance(self.presence_control, Unset):
+            presence_control = UNSET
+        elif isinstance(self.presence_control, PresenceControlType0):
+            presence_control = self.presence_control.to_dict()
+        else:
+            presence_control = self.presence_control
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -119,6 +132,8 @@ class ConversationMessage:
             field_dict["subject"] = subject
         if timestamp is not UNSET:
             field_dict["timestamp"] = timestamp
+        if presence_control is not UNSET:
+            field_dict["presence_control"] = presence_control
 
         return field_dict
 
@@ -126,6 +141,7 @@ class ConversationMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.presence_control_type_0 import PresenceControlType0
         d = dict(src_dict)
         role = ConversationMessageRole(d.pop("role"))
 
@@ -204,6 +220,26 @@ class ConversationMessage:
         timestamp = _parse_timestamp(d.pop("timestamp", UNSET))
 
 
+        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+
+
+
+                return componentsschemas_presence_control_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | PresenceControlType0 | Unset, data)
+
+        presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
+
+
         conversation_message = cls(
             role=role,
             direction=direction,
@@ -214,6 +250,7 @@ class ConversationMessage:
             to=to,
             subject=subject,
             timestamp=timestamp,
+            presence_control=presence_control,
         )
 
 

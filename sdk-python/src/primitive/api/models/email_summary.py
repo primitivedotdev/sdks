@@ -20,6 +20,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
+  from ..models.presence_control_type_0 import PresenceControlType0
 
 
 
@@ -158,6 +159,7 @@ class EmailSummary:
             thread_id (None | Unset | UUID): Conversation thread this message belongs to. Fetch
                 `/threads/{thread_id}` for the full ordered thread. NULL on
                 messages received before threading was enabled.
+            presence_control (None | PresenceControlType0 | Unset):
             automation_headers (EmailSummaryAutomationHeadersType0 | None | Unset): What the message declared about being
                 automated, verbatim:
                 `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
@@ -188,6 +190,7 @@ class EmailSummary:
     raw_size_bytes: int | None | Unset = UNSET
     webhook_status: EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset = UNSET
     thread_id: None | Unset | UUID = UNSET
+    presence_control: None | PresenceControlType0 | Unset = UNSET
     automation_headers: EmailSummaryAutomationHeadersType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -197,6 +200,7 @@ class EmailSummary:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
+        from ..models.presence_control_type_0 import PresenceControlType0
         id = str(self.id)
 
         status = self.status.value
@@ -289,6 +293,14 @@ class EmailSummary:
         else:
             thread_id = self.thread_id
 
+        presence_control: dict[str, Any] | None | Unset
+        if isinstance(self.presence_control, Unset):
+            presence_control = UNSET
+        elif isinstance(self.presence_control, PresenceControlType0):
+            presence_control = self.presence_control.to_dict()
+        else:
+            presence_control = self.presence_control
+
         automation_headers: dict[str, Any] | None | Unset
         if isinstance(self.automation_headers, Unset):
             automation_headers = UNSET
@@ -331,6 +343,8 @@ class EmailSummary:
             field_dict["webhook_status"] = webhook_status
         if thread_id is not UNSET:
             field_dict["thread_id"] = thread_id
+        if presence_control is not UNSET:
+            field_dict["presence_control"] = presence_control
         if automation_headers is not UNSET:
             field_dict["automation_headers"] = automation_headers
 
@@ -341,6 +355,7 @@ class EmailSummary:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
+        from ..models.presence_control_type_0 import PresenceControlType0
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -540,6 +555,26 @@ class EmailSummary:
         thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
 
 
+        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+
+
+
+                return componentsschemas_presence_control_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | PresenceControlType0 | Unset, data)
+
+        presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
+
+
         def _parse_automation_headers(data: object) -> EmailSummaryAutomationHeadersType0 | None | Unset:
             if data is None:
                 return data
@@ -582,6 +617,7 @@ class EmailSummary:
             raw_size_bytes=raw_size_bytes,
             webhook_status=webhook_status,
             thread_id=thread_id,
+            presence_control=presence_control,
             automation_headers=automation_headers,
         )
 

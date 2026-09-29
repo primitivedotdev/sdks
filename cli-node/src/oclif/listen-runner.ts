@@ -52,6 +52,7 @@ export interface ListenOptions {
   expectedNotificationScope?: string;
   signal: AbortSignal;
   onReady?: () => void;
+  onReceivingState?: (ready: boolean) => void;
   stderr?: { write(value: string): unknown };
   now?: () => number;
   random?: () => number;
@@ -165,6 +166,7 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
         if (result.data !== undefined && !result.error) return result.data;
         error = failure(result, now());
       } catch (caught) {
+        options.onReceivingState?.(false);
         if (signal.aborted) throw signal.reason;
         if (caught instanceof EventReceiverError) {
           if (["invalid_response", "unsupported"].includes(caught.code))
@@ -182,6 +184,7 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
           error = new RequestFailure(0, "transport", 0);
         }
       }
+      options.onReceivingState?.(false);
       if (
         ![0, 408, 429].includes(error.status) &&
         !(error.status >= 500 && error.status <= 599)
@@ -367,6 +370,7 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
       )
         throw new ListenError("The API returned an invalid pull response.");
       const data = result.data;
+      options.onReceivingState?.(true);
       const gapReasons: Record<string, string> = {
         retention_expired: "24-hour retention expired",
         content_unavailable: "source content was discarded or is unavailable",
@@ -455,8 +459,9 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
           throw new ListenError(
             "The API returned an invalid completion receipt.",
           );
-        if (handled.succeeded) confirmed++;
-        else
+        if (handled.succeeded && handled.countTowardLimit !== false)
+          confirmed++;
+        else if (!handled.succeeded)
           stderr.write(
             "Handler reported failure; the server will apply its retry policy.\n",
           );
@@ -475,6 +480,7 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
   } catch (error) {
     if (!signal.aborted) throw error;
   } finally {
+    options.onReceivingState?.(false);
     stream?.close();
     release?.();
   }

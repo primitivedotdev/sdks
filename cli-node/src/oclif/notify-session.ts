@@ -19,6 +19,7 @@ import { NotificationOutcomeUnknownError } from "./notify-session-errors.js";
 import {
   connectNativeSession,
   NativeSessionError,
+  NativeTurnNotSubmittedError,
   SESSION_UUID,
 } from "./notify-session-native.js";
 import {
@@ -233,14 +234,15 @@ export async function openSessionNotifications(
         );
       if (previous.state === "accepted")
         return { disposition: "notified" as const };
-      throw new NotificationOutcomeUnknownError(
-        `Notification ${previous.clientId} for email ${previous.emailId} has an unknown outcome. Inspect the exact session before any manual resend; restarting will not resend it.`,
-      );
+      if (previous.state !== "not_submitted")
+        throw new NotificationOutcomeUnknownError(
+          `Notification ${previous.clientId} for email ${previous.emailId} has an unknown outcome. Inspect the exact session before any manual resend; restarting will not resend it.`,
+        );
     }
     const receipt: NotificationReceipt = {
       emailId: input.emailId,
-      eventId: input.eventId,
-      clientId: randomUUID(),
+      eventId: previous?.eventId ?? input.eventId,
+      clientId: previous?.clientId ?? randomUUID(),
       state: "submitting",
     };
     const text = input.status
@@ -274,7 +276,11 @@ export async function openSessionNotifications(
       await native.queue(text, receipt.clientId, () => {
         signal.throwIfAborted();
         authorizeDispatch?.();
-        const reservation = input.authorization?.reserve?.(receipt);
+        // A prior explicit pre-dispatch refusal already reserved a first-contact
+        // notice. Reuse it instead of suppressing the retry as a duplicate.
+        const reservation = previous
+          ? undefined
+          : input.authorization?.reserve?.(receipt);
         if (reservation === "deferred") throw new ContactNoticeDeferred();
         if (reservation === false) throw new ContactNoticeSuppressed();
         store.save(receipt);
@@ -284,6 +290,10 @@ export async function openSessionNotifications(
         return { disposition: "skipped" as const };
       if (error instanceof ContactNoticeDeferred)
         return { disposition: "deferred" as const };
+      if (error instanceof NativeTurnNotSubmittedError) {
+        store.save({ ...receipt, state: "not_submitted" });
+        return { disposition: "deferred" as const };
+      }
       if (error instanceof NativeSessionError && error.submitted) {
         store.save({ ...receipt, state: "unknown" });
         throw new NotificationOutcomeUnknownError(
@@ -297,6 +307,7 @@ export async function openSessionNotifications(
   }
   return {
     handler,
+    verify: native.verify,
     async handleDetail(
       detail: EmailDetail,
       eventId: string,

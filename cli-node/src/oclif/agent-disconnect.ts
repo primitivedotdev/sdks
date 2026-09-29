@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
+import { uninstallClaudeWakeHook } from "./claude-wake-install.js";
 import {
   agentProfileDirectory,
   agentProfileName,
@@ -30,6 +31,7 @@ type DisconnectResult = {
   identity: ReturnType<typeof connectedAgentIdentity>;
   receiver: BackgroundListenStatus | null;
   revocation: "confirmed" | "previously_confirmed";
+  externalHook: "removed" | "unavailable" | null;
 };
 
 type DisconnectDependencies = {
@@ -38,6 +40,7 @@ type DisconnectDependencies = {
     target: BackgroundListenTarget,
   ) => Promise<BackgroundListenStatus>;
   now?: () => Date;
+  env?: NodeJS.ProcessEnv;
 };
 
 function credentialDigest(profile: ConnectedAgentProfile): string {
@@ -234,11 +237,23 @@ export async function disconnectAgent(
         "Primitive confirmed revocation, but the local credential could not be removed. Confirmation is saved; retry this command to finish local cleanup.",
       );
     }
+    const externalHook = session
+      ? uninstallClaudeWakeHook({
+          configDir: params.configDir,
+          profileName,
+          agentAddress: profile.agent_address,
+          sessionId: session,
+          env: params.env,
+        })
+        ? "removed"
+        : "unavailable"
+      : null;
     return {
       status: "disconnected",
       identity: connectedAgentIdentity(profileName, profile),
       receiver,
       revocation: previous ? "previously_confirmed" : "confirmed",
+      externalHook,
     };
   } catch (error) {
     if (error instanceof AgentDisconnectError) throw error;

@@ -66,6 +66,16 @@ import {
   MemoriesSearchCommand,
   MemoriesSetCommand,
 } from "./commands/memories.js";
+import {
+  NetworkAddCommand,
+  NetworkCommand,
+  NetworkGetCommand,
+  NetworkListCommand,
+  NetworkMembersCommand,
+  NetworkPeersCommand,
+  NetworkRemoveCommand,
+  NetworkSetCommand,
+} from "./commands/network.js";
 import OrgSecretsListCommand from "./commands/org-secrets-list.js";
 import OrgSecretsRemoveCommand from "./commands/org-secrets-remove.js";
 import OrgSecretsSetCommand from "./commands/org-secrets-set.js";
@@ -536,6 +546,14 @@ export const COMMANDS: Record<string, typeof Command> = {
   "agent:notes:get": AgentNotesGetCommand,
   "agent:notes:set": AgentNotesSetCommand,
   "agent:notes:delete": AgentNotesDeleteCommand,
+  network: NetworkCommand,
+  "network:list": NetworkListCommand,
+  "network:members": NetworkMembersCommand,
+  "network:peers": NetworkPeersCommand,
+  "network:get": NetworkGetCommand,
+  "network:set": NetworkSetCommand,
+  "network:add": NetworkAddCommand,
+  "network:remove": NetworkRemoveCommand,
 
   "agent-connections:claim-agent-connection": AgentConnectCommand,
   "list-operations": ListOperationsCommand,

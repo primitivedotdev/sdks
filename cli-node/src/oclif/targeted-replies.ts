@@ -13,6 +13,7 @@ import {
   NotificationRetryError,
   notificationPartReader,
 } from "./notify-session-content.js";
+import { presenceDisposition } from "./presence-provenance.js";
 import {
   isPlainChatReply,
   isScopedChatReply,
@@ -96,6 +97,13 @@ export async function inspectTargetedReply(
   const email = result.data?.data;
   if (result.error || !email || email.id !== params.id)
     throw invalid(`Could not inspect reply candidate ${params.id}.`);
+  const presence = presenceDisposition(email);
+  if (presence !== "ordinary")
+    return {
+      kind: presence === "pending" ? "pending" : "unrelated",
+      id: params.id,
+      email,
+    };
   if (
     email.reply_to_sent_email_id != null &&
     email.reply_to_sent_email_id !== params.sentId

@@ -8,11 +8,14 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.claim_agent_connection_response_200_data_connection_ownership_kind import ClaimAgentConnectionResponse200DataConnectionOwnershipKind
 from ..models.claim_agent_connection_response_200_data_connection_status import ClaimAgentConnectionResponse200DataConnectionStatus
 from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.agent_presence_type_0 import AgentPresenceType0
 
 
 
@@ -24,7 +27,7 @@ T = TypeVar("T", bound="ClaimAgentConnectionResponse200DataConnection")
 
 @_attrs_define
 class ClaimAgentConnectionResponse200DataConnection:
-    """ 
+    """
         Attributes:
             address (str):
             name (str):
@@ -35,6 +38,10 @@ class ClaimAgentConnectionResponse200DataConnection:
             claimed_at (datetime.datetime | None):
             verified_at (datetime.datetime | None):
             last_seen_at (datetime.datetime | None):
+            ownership_kind (ClaimAgentConnectionResponse200DataConnectionOwnershipKind):
+            owner_user_id (None | str):
+            owner_active (bool | None):
+            presence (AgentPresenceType0 | None | Unset):
      """
 
     address: str
@@ -46,12 +53,17 @@ class ClaimAgentConnectionResponse200DataConnection:
     claimed_at: datetime.datetime | None
     verified_at: datetime.datetime | None
     last_seen_at: datetime.datetime | None
+    ownership_kind: ClaimAgentConnectionResponse200DataConnectionOwnershipKind
+    owner_user_id: None | str
+    owner_active: bool | None
+    presence: AgentPresenceType0 | None | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.agent_presence_type_0 import AgentPresenceType0
         address = self.address
 
         name = self.name
@@ -82,6 +94,22 @@ class ClaimAgentConnectionResponse200DataConnection:
         else:
             last_seen_at = self.last_seen_at
 
+        ownership_kind = self.ownership_kind.value
+
+        owner_user_id: None | str
+        owner_user_id = self.owner_user_id
+
+        owner_active: bool | None
+        owner_active = self.owner_active
+
+        presence: dict[str, Any] | None | Unset
+        if isinstance(self.presence, Unset):
+            presence = UNSET
+        elif isinstance(self.presence, AgentPresenceType0):
+            presence = self.presence.to_dict()
+        else:
+            presence = self.presence
+
 
         field_dict: dict[str, Any] = {}
 
@@ -95,7 +123,12 @@ class ClaimAgentConnectionResponse200DataConnection:
             "claimed_at": claimed_at,
             "verified_at": verified_at,
             "last_seen_at": last_seen_at,
+            "ownership_kind": ownership_kind,
+            "owner_user_id": owner_user_id,
+            "owner_active": owner_active,
         })
+        if presence is not UNSET:
+            field_dict["presence"] = presence
 
         return field_dict
 
@@ -103,6 +136,7 @@ class ClaimAgentConnectionResponse200DataConnection:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.agent_presence_type_0 import AgentPresenceType0
         d = dict(src_dict)
         address = d.pop("address")
 
@@ -179,6 +213,47 @@ class ClaimAgentConnectionResponse200DataConnection:
         last_seen_at = _parse_last_seen_at(d.pop("last_seen_at"))
 
 
+        ownership_kind = ClaimAgentConnectionResponse200DataConnectionOwnershipKind(d.pop("ownership_kind"))
+
+
+
+
+        def _parse_owner_user_id(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        owner_user_id = _parse_owner_user_id(d.pop("owner_user_id"))
+
+
+        def _parse_owner_active(data: object) -> bool | None:
+            if data is None:
+                return data
+            return cast(bool | None, data)
+
+        owner_active = _parse_owner_active(d.pop("owner_active"))
+
+
+        def _parse_presence(data: object) -> AgentPresenceType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_agent_presence_type_0 = AgentPresenceType0.from_dict(data)
+
+
+
+                return componentsschemas_agent_presence_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(AgentPresenceType0 | None | Unset, data)
+
+        presence = _parse_presence(d.pop("presence", UNSET))
+
+
         claim_agent_connection_response_200_data_connection = cls(
             address=address,
             name=name,
@@ -189,7 +264,10 @@ class ClaimAgentConnectionResponse200DataConnection:
             claimed_at=claimed_at,
             verified_at=verified_at,
             last_seen_at=last_seen_at,
+            ownership_kind=ownership_kind,
+            owner_user_id=owner_user_id,
+            owner_active=owner_active,
+            presence=presence,
         )
 
         return claim_agent_connection_response_200_data_connection
-

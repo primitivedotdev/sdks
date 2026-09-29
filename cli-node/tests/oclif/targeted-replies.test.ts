@@ -19,6 +19,7 @@ function fixture() {
     id: "reply-1",
     sender: target.recipient,
     from_email: target.recipient,
+    sender_connected_agent_verified: false,
     from_header: `Peer <${target.recipient}>`,
     recipient: target.from,
     to_email: target.from,
@@ -93,6 +94,22 @@ afterEach(() => {
 });
 
 describe("targeted reply recovery", () => {
+  it.each([
+    "verified",
+    "pending",
+  ])("never completes a chat wait for %s presence controls even with matching reply metadata", async (status) => {
+    const { state, apiClient } = fixture();
+    Object.assign(state.detail, {
+      presence_control: { status, valid_for_ms: 0 },
+    });
+    const result = await inspectTargetedReply({
+      apiClient,
+      ...target,
+      id: "reply-1",
+    });
+    expect(result?.kind).toBe(status === "verified" ? "unrelated" : "pending");
+    expect(state.requests).toHaveLength(1);
+  });
   it("queries the exact parent and peer without reading inbox history", async () => {
     const { state, apiClient } = fixture();
     const page = await readTargetedReplyPage({

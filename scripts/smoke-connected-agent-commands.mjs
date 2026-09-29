@@ -65,6 +65,7 @@ try {
   const setupHelp=await run(['agent','connect','--help']);
   assert.match(setupHelp.stdout,/api\.primitive-staging-1\.com/);
   assert.match(setupHelp.stdout,/piped stdin/);
+  assert.match(setupHelp.stdout,/fail-open Stop hook/);
   assert.match((await run(['whoami','--help'])).stdout,/identity offline/);
   await api(['contacts','add',peer,'--name','Peer','--json']);
   await api(['contacts','list','--json']);
@@ -103,20 +104,22 @@ try {
     ['listen','--email-id',session],
   ]) await run(args,{exit:2});
   await run(['listen','--once','--wake','--hook-session','--events','email.received'],{exit:1});
-  const unusedHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({session_id:session})});
+  const unusedHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({hook_event_name:'Stop',session_id:session})});
   assert.equal(unusedHook.stdout+unusedHook.stderr,'','an unpaired Claude session must not be woken or emit mail');
-  const otherRuntimeHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({thread_id:session})});
+  const otherRuntimeHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({hook_event_name:'Stop',thread_id:session})});
   assert.equal(otherRuntimeHook.stdout+otherRuntimeHook.stderr,'','a different runtime hook must be ignored');
   const corruptHookProfile=join(config,'agent-connections','profiles',`session-${session}`);
   await mkdir(corruptHookProfile,{recursive:true,mode:0o700});
   await writeFile(join(corruptHookProfile,'setup.json'),'not-json',{mode:0o600});
-  const corruptHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({session_id:session}),exit:1});
+  const corruptHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({hook_event_name:'Stop',session_id:session}),exit:1});
   assert.match(corruptHook.stderr,/setup state is unreadable/);
   const updatedSetupHelp=await run(['agent','connect','--help']);
   for(const flag of ['--session','--receiver','--resume','--contact-requests']) assert.ok(updatedSetupHelp.stdout.includes(flag));
   const diagnosticsHelp=await run(['listen','--help']);
   assert.ok(diagnosticsHelp.stdout.includes('--email-id'));
   assert.ok(diagnosticsHelp.stdout.includes('--json'));
+  assert.ok(diagnosticsHelp.stdout.includes('eligible same-org network peers'));
+  assert.ok(diagnosticsHelp.stdout.includes('explicit contact or owner silence'));
   assert.ok(diagnosticsHelp.stdout.includes('--wake'));
   assert.ok(diagnosticsHelp.stdout.includes('--hook-session'));
 
@@ -138,7 +141,7 @@ try {
   const profile=JSON.parse(await readFile(join(config,'agent-connections','profiles','work','connection.json'),'utf8'));assert.equal(profile.api_key,credential);
   const trace=join(directory,'async-network-attempts.txt');
   const tracePreload=join(directory,'trace-async-network.mjs');
-  await writeFile(tracePreload,`import { appendFileSync } from 'node:fs';globalThis.fetch=async()=>{appendFileSync(${JSON.stringify(trace)},'attempt\\n');throw new Error('Unexpected network');};`,{mode:0o600});
+  await writeFile(tracePreload,`import { appendFileSync } from 'node:fs';globalThis.fetch=async(input)=>{appendFileSync(${JSON.stringify(trace)},new URL(typeof input === 'string' ? input : input.url).pathname+'\\n');throw new Error('Unexpected network');};`,{mode:0o600});
   const wrongSession='22222222-2222-4222-8222-222222222222';
   const asyncEnv={PRIMITIVE_AGENT_PROFILE:'work',CODEX_SESSION_ID:wrongSession,CODEX_THREAD_ID:wrongSession};
   const unbound=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:asyncEnv,exit:1});
@@ -149,9 +152,15 @@ try {
     challenge:{id:'33333333-3333-4333-8333-333333333333',messageId:'<verification@example.test>',marker:`primitive-connection:${session}:1`},
     phase:'sent',receipt:{id:'44444444-4444-4444-8444-444444444444',status:'delivered'}
   }),{mode:0o600,flag:'wx'});
-  const plainShell=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:{PRIMITIVE_AGENT_PROFILE:'work'},exit:1});
-  assert.match(plainShell.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
-  assert.equal(await readFile(trace,'utf8').catch(()=>''),'','a saved Claude profile in a plain shell must not attempt any API call');
+  const plainShell=await run(['chat',peer,'hello','--async','--json','--timeout','1'],{preload:tracePreload,env:{PRIMITIVE_AGENT_PROFILE:'work'},exit:1});
+  const plainShellResult=JSON.parse(plainShell.stdout);
+  assert.equal(plainShellResult.outcome,'not_sent');
+  assert.equal(plainShellResult.sent,null);
+  assert.match(plainShellResult.error.message,/timed out/i);
+  const fallbackTrace=await readFile(trace,'utf8');
+  assert.match(fallbackTrace,/\/endpoints/,'verified external setup can identify the exact receiver when Bash omits its runtime ID');
+  assert.ok(!fallbackTrace.includes('/send-mail'),'receiver readiness failure must not send email');
+  await rm(trace);
   const otherProfile=join(config,'agent-connections','profiles','other');
   await mkdir(otherProfile,{recursive:true,mode:0o700});
   await writeFile(join(otherProfile,'connection.json'),JSON.stringify(profile),{mode:0o600});

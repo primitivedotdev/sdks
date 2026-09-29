@@ -39,6 +39,7 @@ function fixture() {
     recipient: context.recipient,
     to_email: context.recipient,
     from_email: context.peer,
+    sender_connected_agent_verified: false,
     from_header: context.peer,
     domain: "example.com",
     status: "completed",

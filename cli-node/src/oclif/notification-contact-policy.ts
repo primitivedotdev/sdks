@@ -11,6 +11,12 @@ import { mailAddress, mailId, mailTime } from "./shared-mail-files.js";
 export const CONTACT_POLICY_MAX_AGE_MS = 30_000;
 export const CONTACT_POLICY_RETRY_MIN_MS = 1000;
 export const CONTACT_POLICY_RETRY_MAX_MS = 30_000;
+export const NETWORK_ADMISSION_PENDING_RETRY_MS = 5_000;
+export class NetworkAdmissionPendingError extends NotificationRetryError {
+  constructor() {
+    super("Network mail admission is pending delivery proof.");
+  }
+}
 export class ContactPolicyReadRetryError extends NotificationRetryError {
   constructor() {
     super(
@@ -21,11 +27,13 @@ export class ContactPolicyReadRetryError extends NotificationRetryError {
 export type ContactPolicyPage = { data: unknown; cursor: unknown };
 export type ContactNotificationAdmission = {
   sender: string;
+  emailId?: string;
   receivedAt: string;
   generation: string;
   notifySince: string;
   kind: "allowed" | "request" | "response";
   effectiveVersion: string;
+  source?: "network";
 };
 type Snapshot = {
   startedAt: number;
@@ -50,6 +58,15 @@ export function createNotificationContactPolicy(options: {
     signal: AbortSignal,
   ): Promise<ContactPolicyPage>;
   readPolicy(signal: AbortSignal): Promise<unknown>;
+  readNetworkAdmission?(
+    emailId: string,
+    sender: string,
+    signal: AbortSignal,
+  ): Promise<{
+    allowed: boolean;
+    allowed_since: string | null;
+    pending: boolean;
+  }>;
   contactRequests?: boolean;
   now?: () => number;
 }) {
@@ -174,16 +191,71 @@ export function createNotificationContactPolicy(options: {
       effectiveVersion: value.policy.effective_version,
     };
   }
-  function permits(value: Snapshot, prior: ContactNotificationAdmission) {
-    const current = admission(
-      value,
-      prior.sender,
-      prior.receivedAt,
-      prior.kind === "response",
-    );
+  async function admissionWithNetwork(
+    value: Snapshot,
+    sender: string,
+    receivedAt: string,
+    signal: AbortSignal,
+    emailId?: string,
+    networkReader = options.readNetworkAdmission,
+  ): Promise<ContactNotificationAdmission | null> {
+    const contact = admission(value, sender, receivedAt);
+    if (contact?.kind === "allowed" || !networkReader || !emailId)
+      return contact;
+    const decision = evaluateContactPolicy({
+      policy: value.policy,
+      sender,
+      receivedAt,
+      membership: value.senders.get(sender),
+      contactRequests: options.contactRequests === true,
+    });
+    // Explicit per-contact or owner silence always wins. A network peer may
+    // bypass only the default silence or first-contact request path.
+    if (
+      decision.kind !== "request" &&
+      !(decision.kind === "silent" && decision.source === "default")
+    )
+      return contact;
+    let network: Awaited<ReturnType<NonNullable<typeof networkReader>>>;
+    try {
+      network = await networkReader(emailId, sender, signal);
+    } catch (error) {
+      signal.throwIfAborted();
+      // Contact-request intake has independent owner permission. A network
+      // lookup failure cannot suppress it or grant ordinary-message admission.
+      if (contact?.kind === "request") return contact;
+      throw error;
+    }
+    if (network.pending) throw new NetworkAdmissionPendingError();
+    if (!network.allowed) return contact;
+    const networkSince =
+      network.allowed_since && mailTime(network.allowed_since);
+    if (!networkSince) throw unavailable();
+    const since =
+      Date.parse(value.policy.effective_since) > Date.parse(networkSince)
+        ? value.policy.effective_since
+        : networkSince;
+    if (Date.parse(receivedAt) < Date.parse(since)) return contact;
+    return {
+      sender,
+      emailId,
+      receivedAt,
+      generation: since,
+      notifySince: since,
+      kind: "allowed",
+      effectiveVersion: value.policy.effective_version,
+      source: "network",
+    };
+  }
+  function permits(
+    prior: ContactNotificationAdmission,
+    current: ContactNotificationAdmission | null,
+  ) {
     return (
       current !== null &&
+      current.emailId === prior.emailId &&
       current.kind === prior.kind &&
+      current.source === prior.source &&
       current.generation === prior.generation &&
       current.notifySince === prior.notifySince &&
       current.effectiveVersion === prior.effectiveVersion
@@ -195,7 +267,12 @@ export function createNotificationContactPolicy(options: {
       if (!fresh(snapshot)) throw unavailable();
       return snapshot.senders.keys();
     },
-    async admit(sender: string, receivedAt: string, signal: AbortSignal) {
+    async admit(
+      sender: string,
+      receivedAt: string,
+      signal: AbortSignal,
+      emailId?: string,
+    ) {
       signal.throwIfAborted();
       let peer: string;
       try {
@@ -204,28 +281,67 @@ export function createNotificationContactPolicy(options: {
         return null;
       }
       const received = mailTime(receivedAt);
+      const inboundId = emailId === undefined ? undefined : mailId(emailId);
+      const reader = options.readNetworkAdmission;
+      let networkResult: ReturnType<NonNullable<typeof reader>> | undefined;
+      // Reuse one exact-email lookup across a cached denial and policy refresh.
+      // Dispatch recheck still makes its own fresh authorization request.
+      const networkReader: typeof reader = reader
+        ? (id, address, abort) => (networkResult ??= reader(id, address, abort))
+        : undefined;
       const cached = fresh(snapshot);
       let current = cached && snapshot ? snapshot : await refreshOnce(signal);
-      let allowed = admission(current, peer, received);
+      let allowed = await admissionWithNetwork(
+        current,
+        peer,
+        received,
+        signal,
+        inboundId,
+        networkReader,
+      );
       if (cached && allowed?.kind !== "allowed") {
         // Cached denial or request-only intake cannot discard ordinary mail
         // from a newly approved contact before its dispatch permission is read.
         current = await refreshOnce(signal);
-        allowed = admission(current, peer, received);
+        allowed = await admissionWithNetwork(
+          current,
+          peer,
+          received,
+          signal,
+          inboundId,
+          networkReader,
+        );
       }
       return allowed;
     },
-    async recheck(
-      admission: ContactNotificationAdmission,
-      signal: AbortSignal,
-    ) {
+    async recheck(prior: ContactNotificationAdmission, signal: AbortSignal) {
       const current = await refreshOnce(signal);
-      if (!permits(current, admission)) throw changed();
+      const candidate =
+        prior.source === "network"
+          ? await admissionWithNetwork(
+              current,
+              prior.sender,
+              prior.receivedAt,
+              signal,
+              prior.emailId,
+            )
+          : admission(
+              current,
+              prior.sender,
+              prior.receivedAt,
+              prior.kind === "response",
+            );
+      if (!permits(prior, candidate)) throw changed();
       // The native adapter invokes this synchronously before its durable
       // submitting receipt, after socket/session preflight has completed.
       return () => {
         signal.throwIfAborted();
-        if (!fresh(snapshot) || !permits(snapshot, admission)) throw changed();
+        if (
+          !fresh(snapshot) ||
+          snapshot !== current ||
+          !permits(prior, candidate)
+        )
+          throw changed();
       };
     },
     // The caller must first prove an exact, locally initiated reply. This is

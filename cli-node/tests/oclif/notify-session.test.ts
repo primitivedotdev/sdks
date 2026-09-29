@@ -15,7 +15,10 @@ import {
   openSessionNotifications,
 } from "../../src/oclif/notify-session.js";
 import { notificationEventReader } from "../../src/oclif/notify-session-content.js";
-import { NativeSessionError } from "../../src/oclif/notify-session-native.js";
+import {
+  NativeSessionError,
+  NativeTurnNotSubmittedError,
+} from "../../src/oclif/notify-session-native.js";
 import {
   openNotificationReceipts,
   readNotificationReceipts,
@@ -69,9 +72,11 @@ async function open(
   queue = vi.fn(async (_text: string, _id: string, dispatch: () => void) => {
     dispatch();
   }),
-  extras: Pick<
-    Parameters<typeof openSessionNotifications>[0],
-    "readPart" | "refreshEvent"
+  extras: Partial<
+    Pick<
+      Parameters<typeof openSessionNotifications>[0],
+      "readPart" | "refreshEvent" | "contactPreferences" | "senders"
+    >
   > = {},
 ) {
   const close = vi.fn();
@@ -97,6 +102,7 @@ function currentDetail(): EmailDetail {
     to_email: recipient,
     sender,
     from_email: sender,
+    sender_connected_agent_verified: false,
     from_header: event.email.headers.from,
     status: "completed",
     parsed: event.email.parsed,
@@ -332,6 +338,70 @@ describe("native email notifications", () => {
     const third = await open();
     await expect(third.handle()).rejects.toThrow("unknown outcome");
     expect(third.queue).not.toHaveBeenCalled();
+  });
+  it("retries an explicit pre-dispatch refusal across restart with one receipt identity", async () => {
+    const detail = currentDetail();
+    const first = await open(
+      vi.fn(async (_text, _id, dispatch) => {
+        dispatch();
+        throw new NativeTurnNotSubmittedError();
+      }),
+    );
+    expect(
+      await first.notifications.handleDetail(detail, delivery.event_id, signal),
+    ).toEqual({ disposition: "deferred" });
+    const held = first.notifications.receipt(detail.id, delivery.event_id);
+    expect(held?.state).toBe("not_submitted");
+    first.notifications.close();
+    resources.splice(resources.indexOf(first.notifications), 1);
+    const second = await open();
+    const alias = randomUUID();
+    expect(
+      await second.notifications.handleDetail(detail, alias, signal),
+    ).toEqual({ disposition: "notified" });
+    expect(second.queue).toHaveBeenCalledOnce();
+    expect(second.queue.mock.calls[0]?.[1]).toBe(held?.clientId);
+    expect(second.notifications.receipt(detail.id, alias)?.state).toBe(
+      "accepted",
+    );
+    await second.notifications.handleDetail(detail, delivery.event_id, signal);
+    expect(second.queue).toHaveBeenCalledOnce();
+  });
+  it("reuses a first-contact reservation after an explicit refusal", async () => {
+    let attempts = 0;
+    const first = await open(
+      vi.fn(async (_text, _id, dispatch) => {
+        dispatch();
+        if (++attempts === 1) throw new NativeTurnNotSubmittedError();
+      }),
+      { contactPreferences: true, senders: [] },
+    );
+    const reserve = vi.fn(() => true);
+    const authorization = {
+      sender,
+      contactRequest: true,
+      reserve,
+      recheck: async () => () => {},
+    };
+    const detail = currentDetail();
+    expect(
+      await first.notifications.handleDetail(
+        detail,
+        delivery.event_id,
+        signal,
+        authorization,
+      ),
+    ).toEqual({ disposition: "deferred" });
+    expect(
+      await first.notifications.handleDetail(
+        detail,
+        delivery.event_id,
+        signal,
+        authorization,
+      ),
+    ).toEqual({ disposition: "notified" });
+    expect(reserve).toHaveBeenCalledOnce();
+    expect(first.queue).toHaveBeenCalledTimes(2);
   });
   it("leaves offline failures eligible for redelivery when no dispatch occurred", async () => {
     const first = await open(

@@ -124,6 +124,29 @@ const bodies = (suffix: string) =>
     .map((request) => request.body);
 
 describe("local webhook runner", () => {
+  it("completes control transport receipts without consuming the next task's delivery limit", async () => {
+    steps["/v1/endpoints/endpoint-a/pull"] = [
+      pull(delivery),
+      pull({
+        ...delivery,
+        event_id: "44444444-4444-4444-8444-444444444444",
+        delivery_id: "55555555-5555-4555-8555-555555555555",
+      }),
+    ];
+    steps["/v1/endpoints/endpoint-a/complete"] = [
+      ok({ result: "completed" }),
+      ok({ result: "completed" }),
+    ];
+    let call = 0;
+    options.handler = vi.fn(async () => ({
+      succeeded: true,
+      countTowardLimit: ++call > 1,
+      outcome: { mode: "sdk" as const, accepted: true, duration_ms: 0 },
+    }));
+    expect(await runListen(options)).toBe(1);
+    expect(options.handler).toHaveBeenCalledTimes(2);
+    expect(bodies("/complete")).toHaveLength(2);
+  });
   it.each([
     "device@example.test",
     null,
@@ -225,11 +248,15 @@ describe("local webhook runner", () => {
     expect(completions[2]).toEqual(completions[0]);
   });
   it("respects Retry-After and warns when server retention has lost events", async () => {
+    options.onReceivingState = vi.fn();
     steps["/v1/endpoints/endpoint-a/pull"] = [
       apiError(429, "rate_limited", { "Retry-After": "3" }),
       pull(delivery, 2),
     ];
     expect(await runListen(options)).toBe(1);
+    expect(options.onReceivingState).toHaveBeenNthCalledWith(1, false);
+    expect(options.onReceivingState).toHaveBeenNthCalledWith(2, true);
+    expect(options.onReceivingState).toHaveBeenLastCalledWith(false);
     expect(options.sleep).toHaveBeenCalledWith(3000, controller.signal);
     expect(options.stderr?.write).toHaveBeenCalledWith(
       expect.stringContaining("2 lost events"),

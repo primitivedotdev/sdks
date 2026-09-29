@@ -9,6 +9,36 @@ const recipient = "agent@example.com";
 const sender = "owner@example.com";
 const receivedAt = "2026-09-01T10:01:00.000Z";
 
+it("does not query recipient-bound network admission for an org-key listener", async () => {
+  const requests = vi.fn(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const path = new URL(new Request(input, init).url).pathname;
+      if (path.startsWith("/v1/agent-contact-policy/"))
+        return Response.json({
+          success: true,
+          data: emptyContactPolicy(recipient),
+        });
+      if (path.startsWith("/v1/agent-contacts/"))
+        return Response.json({
+          success: true,
+          data: [],
+          meta: { cursor: null },
+        });
+      throw new Error(`Unexpected network admission: ${path}`);
+    },
+  );
+  const api = new PrimitiveApiClient({
+    apiKey: "fixture",
+    apiBaseUrl: "https://example.test/v1",
+    fetch: requests,
+  });
+  const policy = apiContactPolicy(api.client, recipient, false, false);
+  expect(
+    await policy.admit(sender, receivedAt, new AbortController().signal),
+  ).toBeNull();
+  expect(requests).toHaveBeenCalledTimes(2);
+});
+
 describe.each([
   "policy",
   "contacts",
@@ -119,3 +149,51 @@ function fixture(operation: string, failure: number | string) {
     privateDetail,
   };
 }
+
+describe("network route refusal preserves independent reply admission", () => {
+  it.each([
+    403, 404, 422,
+  ])("denies network wake on %s without terminating a solicited reply", async (status) => {
+    const requests = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const path = new URL(new Request(input, init).url).pathname;
+        if (path.startsWith("/v1/agent-contact-policy/"))
+          return Response.json({
+            success: true,
+            data: emptyContactPolicy(recipient),
+          });
+        if (path.startsWith("/v1/agent-contacts/"))
+          return Response.json({
+            success: true,
+            data: [],
+            meta: { cursor: null },
+          });
+        if (path === "/v1/agent-networks/default/contact-admission")
+          return Response.json(
+            { success: false, error: "private upstream response" },
+            { status },
+          );
+        throw new Error("Unexpected fixture route");
+      },
+    );
+    const api = new PrimitiveApiClient({
+      apiKey: "fixture",
+      apiBaseUrl: "https://example.test/v1",
+      fetch: requests,
+    });
+    const policy = apiContactPolicy(api.client, recipient);
+    const signal = new AbortController().signal;
+    expect(
+      await policy.admit(
+        sender,
+        receivedAt,
+        signal,
+        "11111111-1111-4111-8111-111111111111",
+      ),
+    ).toBeNull();
+    const reply = await policy.admitResponse(sender, receivedAt, signal);
+    expect(reply).toMatchObject({ kind: "response", sender });
+    if (!reply) throw new Error("Expected independently authorized response");
+    (await policy.recheck(reply, signal))();
+  });
+});

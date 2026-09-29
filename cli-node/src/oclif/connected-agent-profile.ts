@@ -28,7 +28,53 @@ export type ConnectedAgentProfile = {
   owner_address: string;
   invitation_hash: string;
   created_at: string;
+  presence_profile?: PresenceProfile;
 };
+
+export type PresenceProfile = {
+  protocol: "primitive.presence";
+  version: 1;
+  authentication_profile: "primitive-issued-v1";
+  return_address: string;
+};
+
+export function parsePresenceProfile(
+  value: unknown,
+  owner: string,
+): PresenceProfile {
+  const row = mailObject(value, [
+    "protocol",
+    "version",
+    "authentication_profile",
+    "return_address",
+  ]);
+  if (
+    row.protocol !== "primitive.presence" ||
+    row.version !== 1 ||
+    row.authentication_profile !== "primitive-issued-v1" ||
+    mailAddress(row.return_address) !== owner
+  )
+    throw new AgentConnectionSetupError(
+      "The presence authentication profile is not supported.",
+    );
+  return {
+    protocol: "primitive.presence",
+    version: 1,
+    authentication_profile: "primitive-issued-v1",
+    return_address: owner,
+  };
+}
+
+function supportedPresenceProfile(value: unknown, owner: string) {
+  if (value === undefined) return undefined;
+  try {
+    return parsePresenceProfile(value, owner);
+  } catch {
+    // An additive profile the adapter cannot authenticate disables presence,
+    // without preventing the existing connection and ordinary mail setup.
+    return undefined;
+  }
+}
 
 export class AgentConnectionSetupError extends Error {}
 
@@ -84,7 +130,7 @@ export function parseConnectedAgentProfile(
   value: unknown,
 ): ConnectedAgentProfile {
   try {
-    const row = mailObject(value, [
+    const keys = [
       "version",
       "auth_method",
       "api_key",
@@ -94,7 +140,15 @@ export function parseConnectedAgentProfile(
       "owner_address",
       "invitation_hash",
       "created_at",
-    ]);
+    ];
+    const row = mailObject(
+      value,
+      value &&
+        typeof value === "object" &&
+        Object.hasOwn(value, "presence_profile")
+        ? [...keys, "presence_profile"]
+        : keys,
+    );
     const apiKey = mailString(row.api_key, 4096);
     const invitationHash = mailString(row.invitation_hash, 64);
     if (
@@ -105,6 +159,10 @@ export function parseConnectedAgentProfile(
       !/^[a-f0-9]{64}$/.test(invitationHash)
     )
       throw new Error();
+    const presence = supportedPresenceProfile(
+      row.presence_profile,
+      mailAddress(row.owner_address),
+    );
     return {
       version: 1,
       auth_method: "agent_connection",
@@ -115,6 +173,7 @@ export function parseConnectedAgentProfile(
       owner_address: mailAddress(row.owner_address),
       invitation_hash: invitationHash,
       created_at: mailTime(row.created_at),
+      ...(presence === undefined ? {} : { presence_profile: presence }),
     };
   } catch {
     throw new AgentConnectionSetupError(

@@ -16,6 +16,7 @@ import datetime
 
 if TYPE_CHECKING:
   from ..models.gate_denial import GateDenial
+  from ..models.presence_control_type_0 import PresenceControlType0
   from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
 
 
@@ -141,6 +142,7 @@ class SentEmailDetail:
                 ordinary immediate sends.
             canceled_at (datetime.datetime | None | Unset): When a scheduled send was canceled. Null unless the row
                 reached the `canceled` status.
+            presence_control (None | PresenceControlType0 | Unset):
             body_text (None | str | Unset): Plain-text body sent on the wire. Null when the
                 send carried only an HTML body, or when bodies have
                 been discarded post-send (`content_discarded_at`
@@ -194,6 +196,7 @@ class SentEmailDetail:
     request_id: None | str | Unset = UNSET
     scheduled_at: datetime.datetime | None | Unset = UNSET
     canceled_at: datetime.datetime | None | Unset = UNSET
+    presence_control: None | PresenceControlType0 | Unset = UNSET
     body_text: None | str | Unset = UNSET
     body_html: None | str | Unset = UNSET
     attachments: list[SentEmailDetailAttachmentsItem] | Unset = UNSET
@@ -208,6 +211,7 @@ class SentEmailDetail:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.gate_denial import GateDenial
+        from ..models.presence_control_type_0 import PresenceControlType0
         from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
         id = str(self.id)
 
@@ -364,6 +368,14 @@ class SentEmailDetail:
         else:
             canceled_at = self.canceled_at
 
+        presence_control: dict[str, Any] | None | Unset
+        if isinstance(self.presence_control, Unset):
+            presence_control = UNSET
+        elif isinstance(self.presence_control, PresenceControlType0):
+            presence_control = self.presence_control.to_dict()
+        else:
+            presence_control = self.presence_control
+
         body_text: None | str | Unset
         if isinstance(self.body_text, Unset):
             body_text = UNSET
@@ -446,6 +458,8 @@ class SentEmailDetail:
             field_dict["scheduled_at"] = scheduled_at
         if canceled_at is not UNSET:
             field_dict["canceled_at"] = canceled_at
+        if presence_control is not UNSET:
+            field_dict["presence_control"] = presence_control
         if body_text is not UNSET:
             field_dict["body_text"] = body_text
         if body_html is not UNSET:
@@ -466,6 +480,7 @@ class SentEmailDetail:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.gate_denial import GateDenial
+        from ..models.presence_control_type_0 import PresenceControlType0
         from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -762,6 +777,26 @@ class SentEmailDetail:
         canceled_at = _parse_canceled_at(d.pop("canceled_at", UNSET))
 
 
+        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+
+
+
+                return componentsschemas_presence_control_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | PresenceControlType0 | Unset, data)
+
+        presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
+
+
         def _parse_body_text(data: object) -> None | str | Unset:
             if data is None:
                 return data
@@ -832,6 +867,7 @@ class SentEmailDetail:
             request_id=request_id,
             scheduled_at=scheduled_at,
             canceled_at=canceled_at,
+            presence_control=presence_control,
             body_text=body_text,
             body_html=body_html,
             attachments=attachments,

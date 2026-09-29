@@ -1,0 +1,616 @@
+{
+  "preparation": [
+    {
+      "name": "probe",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "prepared",
+      "prepared": {
+        "accountScope": "account-a",
+        "preparedAtMs": 1800000000123,
+        "expiresAtMs": 1800000600123,
+        "idempotencyKey": "presence-22222222-2222-4222-8222-222222222222",
+        "requestJson": "{\"from\":\"owner@example.test\",\"to\":\"agent@example.test\",\"subject\":\"Receiver presence check\",\"body_text\":\"This email checks whether your receiver is available.\",\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLnRlc3QiLCJwcm90b2NvbCI6InByaW1pdGl2ZS5wcmVzZW5jZSIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJwcm9iZSIsInN0ZXBfaWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJwcmV2X3N0ZXBfaWQiOm51bGwsImV4cGlyZXNfYXQiOiIyMDI3LTAxLTE1VDA4OjEwOjAwLjEyM1oiLCJwYXlsb2FkIjp7Im5vbmNlIjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJpc3N1ZWRfYXQiOiIyMDI3LTAxLTE1VDA4OjAwOjAwLjEyM1oiLCJhZGRyZXNzIjoiYWdlbnRAZXhhbXBsZS50ZXN0In19\"}]}"
+      }
+    },
+    {
+      "name": "probe-256-bit-nonce",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "status": "prepared",
+      "prepared": {
+        "accountScope": "account-a",
+        "preparedAtMs": 1800000000123,
+        "expiresAtMs": 1800000600123,
+        "idempotencyKey": "presence-22222222-2222-4222-8222-222222222222",
+        "requestJson": "{\"from\":\"owner@example.test\",\"to\":\"agent@example.test\",\"subject\":\"Receiver presence check\",\"body_text\":\"This email checks whether your receiver is available.\",\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLnRlc3QiLCJwcm90b2NvbCI6InByaW1pdGl2ZS5wcmVzZW5jZSIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJwcm9iZSIsInN0ZXBfaWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJwcmV2X3N0ZXBfaWQiOm51bGwsImV4cGlyZXNfYXQiOiIyMDI3LTAxLTE1VDA4OjEwOjAwLjEyM1oiLCJwYXlsb2FkIjp7Im5vbmNlIjoiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYiIsImlzc3VlZF9hdCI6IjIwMjctMDEtMTVUMDg6MDA6MDAuMTIzWiIsImFkZHJlc3MiOiJhZ2VudEBleGFtcGxlLnRlc3QifX0=\"}]}"
+      }
+    },
+    {
+      "name": "normalize-mailboxes",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "Owner@Example.TEST",
+        "to": "Agent@Example.TEST"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "prepared",
+      "prepared": {
+        "accountScope": "account-a",
+        "preparedAtMs": 1800000000123,
+        "expiresAtMs": 1800000600123,
+        "idempotencyKey": "presence-22222222-2222-4222-8222-222222222222",
+        "requestJson": "{\"from\":\"owner@example.test\",\"to\":\"agent@example.test\",\"subject\":\"Receiver presence check\",\"body_text\":\"This email checks whether your receiver is available.\",\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLnRlc3QiLCJwcm90b2NvbCI6InByaW1pdGl2ZS5wcmVzZW5jZSIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJwcm9iZSIsInN0ZXBfaWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJwcmV2X3N0ZXBfaWQiOm51bGwsImV4cGlyZXNfYXQiOiIyMDI3LTAxLTE1VDA4OjEwOjAwLjEyM1oiLCJwYXlsb2FkIjp7Im5vbmNlIjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJpc3N1ZWRfYXQiOiIyMDI3LTAxLTE1VDA4OjAwOjAwLjEyM1oiLCJhZGRyZXNzIjoiYWdlbnRAZXhhbXBsZS50ZXN0In19\"}]}"
+      }
+    },
+    {
+      "name": "alive",
+      "kind": "alive",
+      "input": {
+        "accountScope": "account-a",
+        "from": "agent@example.test",
+        "to": "owner@example.test",
+        "probe": {
+          "interaction_version": 1,
+          "interaction_id": "11111111-1111-4111-8111-111111111111@example.test",
+          "protocol": "primitive.presence",
+          "protocol_version": 1,
+          "step": "probe",
+          "step_id": "22222222-2222-4222-8222-222222222222",
+          "prev_step_id": null,
+          "expires_at": "2027-01-15T08:10:00.123Z",
+          "payload": {
+            "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "issued_at": "2027-01-15T08:00:00.123Z",
+            "address": "agent@example.test"
+          }
+        },
+        "messageId": "<wire@example.test>",
+        "references": [
+          "<root@example.test>",
+          "<wire@example.test>"
+        ]
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "33333333-3333-4333-8333-333333333333"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "prepared",
+      "prepared": {
+        "accountScope": "account-a",
+        "preparedAtMs": 1800000000123,
+        "expiresAtMs": 1800000600123,
+        "idempotencyKey": "presence-33333333-3333-4333-8333-333333333333",
+        "requestJson": "{\"from\":\"agent@example.test\",\"to\":\"owner@example.test\",\"subject\":\"Re: Receiver presence check\",\"body_text\":\"This receiver answered the presence check.\",\"in_reply_to\":\"<wire@example.test>\",\"references\":[\"<root@example.test>\",\"<wire@example.test>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLnRlc3QiLCJwcm90b2NvbCI6InByaW1pdGl2ZS5wcmVzZW5jZSIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJhbGl2ZSIsInN0ZXBfaWQiOiIzMzMzMzMzMy0zMzMzLTQzMzMtODMzMy0zMzMzMzMzMzMzMzMiLCJwcmV2X3N0ZXBfaWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJleHBpcmVzX2F0IjoiMjAyNy0wMS0xNVQwODoxMDowMC4xMjNaIiwicGF5bG9hZCI6eyJub25jZSI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwiaXNzdWVkX2F0IjoiMjAyNy0wMS0xNVQwODowMDowMC4xMjNaIiwiYWRkcmVzcyI6ImFnZW50QGV4YW1wbGUudGVzdCJ9fQ==\"}]}"
+      }
+    },
+    {
+      "name": "alive-no-client-freshness-decision",
+      "kind": "alive",
+      "input": {
+        "accountScope": "account-a",
+        "from": "agent@example.test",
+        "to": "owner@example.test",
+        "probe": {
+          "interaction_version": 1,
+          "interaction_id": "11111111-1111-4111-8111-111111111111@example.test",
+          "protocol": "primitive.presence",
+          "protocol_version": 1,
+          "step": "probe",
+          "step_id": "22222222-2222-4222-8222-222222222222",
+          "prev_step_id": null,
+          "expires_at": "2027-01-15T08:10:00.123Z",
+          "payload": {
+            "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "issued_at": "2027-01-15T08:00:00.123Z",
+            "address": "agent@example.test"
+          }
+        },
+        "messageId": "<wire@example.test>",
+        "references": [
+          "<root@example.test>",
+          "<wire@example.test>"
+        ]
+      },
+      "now": 1800001200123,
+      "uuids": [
+        "33333333-3333-4333-8333-333333333333"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "prepared",
+      "prepared": {
+        "accountScope": "account-a",
+        "preparedAtMs": 1800001200123,
+        "expiresAtMs": 1800000600123,
+        "idempotencyKey": "presence-33333333-3333-4333-8333-333333333333",
+        "requestJson": "{\"from\":\"agent@example.test\",\"to\":\"owner@example.test\",\"subject\":\"Re: Receiver presence check\",\"body_text\":\"This receiver answered the presence check.\",\"in_reply_to\":\"<wire@example.test>\",\"references\":[\"<root@example.test>\",\"<wire@example.test>\"],\"attachments\":[{\"filename\":\"interaction.json\",\"content_type\":\"application/json\",\"content_base64\":\"eyJpbnRlcmFjdGlvbl92ZXJzaW9uIjoxLCJpbnRlcmFjdGlvbl9pZCI6IjExMTExMTExLTExMTEtNDExMS04MTExLTExMTExMTExMTExMUBleGFtcGxlLnRlc3QiLCJwcm90b2NvbCI6InByaW1pdGl2ZS5wcmVzZW5jZSIsInByb3RvY29sX3ZlcnNpb24iOjEsInN0ZXAiOiJhbGl2ZSIsInN0ZXBfaWQiOiIzMzMzMzMzMy0zMzMzLTQzMzMtODMzMy0zMzMzMzMzMzMzMzMiLCJwcmV2X3N0ZXBfaWQiOiIyMjIyMjIyMi0yMjIyLTQyMjItODIyMi0yMjIyMjIyMjIyMjIiLCJleHBpcmVzX2F0IjoiMjAyNy0wMS0xNVQwODoxMDowMC4xMjNaIiwicGF5bG9hZCI6eyJub25jZSI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwiaXNzdWVkX2F0IjoiMjAyNy0wMS0xNVQwODowMDowMC4xMjNaIiwiYWRkcmVzcyI6ImFnZW50QGV4YW1wbGUudGVzdCJ9fQ==\"}]}"
+      }
+    },
+    {
+      "name": "alive-missing-parent",
+      "kind": "alive",
+      "input": {
+        "accountScope": "account-a",
+        "from": "agent@example.test",
+        "to": "owner@example.test",
+        "probe": {
+          "interaction_version": 1,
+          "interaction_id": "11111111-1111-4111-8111-111111111111@example.test",
+          "protocol": "primitive.presence",
+          "protocol_version": 1,
+          "step": "probe",
+          "step_id": "22222222-2222-4222-8222-222222222222",
+          "prev_step_id": null,
+          "expires_at": "2027-01-15T08:10:00.123Z",
+          "payload": {
+            "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "issued_at": "2027-01-15T08:00:00.123Z",
+            "address": "agent@example.test"
+          }
+        },
+        "messageId": null,
+        "references": [
+          "<root@example.test>",
+          "<wire@example.test>"
+        ]
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "waiting_on_parent"
+    },
+    {
+      "name": "sender-header-injection",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test\r\nX-Test: x",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "recipient-display-name",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "Agent <agent@example.test>"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "unicode-mailbox",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "\u212a@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "scope-control",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account\nvalue",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "single-label-domain",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@localhost"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "nonce-short",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "nonce-uppercase",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "status": "invalid"
+    },
+    {
+      "name": "nonce-odd",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "nonce-unbounded",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "duplicate-ids",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "11111111-1111-4111-8111-111111111111"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "clock-before-epoch",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": -1,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "expiry-out-of-range",
+      "kind": "probe",
+      "input": {
+        "accountScope": "account-a",
+        "from": "owner@example.test",
+        "to": "agent@example.test"
+      },
+      "now": 253402300200000,
+      "uuids": [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "wrong-recipient",
+      "kind": "alive",
+      "input": {
+        "accountScope": "account-a",
+        "from": "other@example.test",
+        "to": "owner@example.test",
+        "probe": {
+          "interaction_version": 1,
+          "interaction_id": "11111111-1111-4111-8111-111111111111@example.test",
+          "protocol": "primitive.presence",
+          "protocol_version": 1,
+          "step": "probe",
+          "step_id": "22222222-2222-4222-8222-222222222222",
+          "prev_step_id": null,
+          "expires_at": "2027-01-15T08:10:00.123Z",
+          "payload": {
+            "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "issued_at": "2027-01-15T08:00:00.123Z",
+            "address": "agent@example.test"
+          }
+        },
+        "messageId": "<wire@example.test>",
+        "references": [
+          "<root@example.test>",
+          "<wire@example.test>"
+        ]
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "33333333-3333-4333-8333-333333333333"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "message-id-injection",
+      "kind": "alive",
+      "input": {
+        "accountScope": "account-a",
+        "from": "agent@example.test",
+        "to": "owner@example.test",
+        "probe": {
+          "interaction_version": 1,
+          "interaction_id": "11111111-1111-4111-8111-111111111111@example.test",
+          "protocol": "primitive.presence",
+          "protocol_version": 1,
+          "step": "probe",
+          "step_id": "22222222-2222-4222-8222-222222222222",
+          "prev_step_id": null,
+          "expires_at": "2027-01-15T08:10:00.123Z",
+          "payload": {
+            "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "issued_at": "2027-01-15T08:00:00.123Z",
+            "address": "agent@example.test"
+          }
+        },
+        "messageId": "<wire@example.test>\r\nX: x",
+        "references": [
+          "<root@example.test>",
+          "<wire@example.test>"
+        ]
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "33333333-3333-4333-8333-333333333333"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "bad-reference",
+      "kind": "alive",
+      "input": {
+        "accountScope": "account-a",
+        "from": "agent@example.test",
+        "to": "owner@example.test",
+        "probe": {
+          "interaction_version": 1,
+          "interaction_id": "11111111-1111-4111-8111-111111111111@example.test",
+          "protocol": "primitive.presence",
+          "protocol_version": 1,
+          "step": "probe",
+          "step_id": "22222222-2222-4222-8222-222222222222",
+          "prev_step_id": null,
+          "expires_at": "2027-01-15T08:10:00.123Z",
+          "payload": {
+            "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "issued_at": "2027-01-15T08:00:00.123Z",
+            "address": "agent@example.test"
+          }
+        },
+        "messageId": "<wire@example.test>",
+        "references": [
+          "bad"
+        ]
+      },
+      "now": 1800000000123,
+      "uuids": [
+        "33333333-3333-4333-8333-333333333333"
+      ],
+      "nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    }
+  ],
+  "parse": [
+    {
+      "name": "probe",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "valid"
+    },
+    {
+      "name": "expired-shape-still-valid",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "valid"
+    },
+    {
+      "name": "alive",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"alive\",\"step_id\":\"33333333-3333-4333-8333-333333333333\",\"prev_step_id\":\"22222222-2222-4222-8222-222222222222\",\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "valid"
+    },
+    {
+      "name": "short-nonce",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"x\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "extra-payload",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\",\"extra\":\"x\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "unicode-address",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"ag\\u00e9nt@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "uppercase-address",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"Agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "bad-calendar",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-02-30T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "offset-date",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123+00:00\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "non-ms-date",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "wrong-expiry",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.124Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "extra-envelope",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"},\"extra\":\"x\"}",
+      "status": "invalid"
+    },
+    {
+      "name": "probe-prev",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":\"33333333-3333-4333-8333-333333333333\",\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "invalid-domain",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@invalid\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "same-ids",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"11111111-1111-4111-8111-111111111111\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "wrong-protocol",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"working\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "unknown-step",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "protocol-version",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":2,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "unsupported"
+    },
+    {
+      "name": "envelope-version",
+      "raw": "{\"interaction_version\":2,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "unsupported"
+    },
+    {
+      "name": "duplicate-envelope-key",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step\":\"alive\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "duplicate-decoded-payload-key",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"no\\u006ece\":\"other\",\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "oversize-envelope",
+      "raw": "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 {\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "bom",
+      "raw": "\ufeff{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "surrogate",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent\\ud800@example.test\"}}",
+      "status": "invalid"
+    },
+    {
+      "name": "integer-token-equivalence",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"11111111-1111-4111-8111-111111111111@example.test\",\"protocol\":\"primitive.presence\",\"protocol_version\":1.0,\"step\":\"probe\",\"step_id\":\"22222222-2222-4222-8222-222222222222\",\"prev_step_id\":null,\"expires_at\":\"2027-01-15T08:10:00.123Z\",\"payload\":{\"nonce\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"issued_at\":\"2027-01-15T08:00:00.123Z\",\"address\":\"agent@example.test\"}}",
+      "status": "valid"
+    }
+  ]
+}

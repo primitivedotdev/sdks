@@ -23,7 +23,7 @@ T = TypeVar("T", bound="ClaimAgentConnectionResponse200")
 
 @_attrs_define
 class ClaimAgentConnectionResponse200:
-    """ 
+    """
         Attributes:
             success (bool):
             data (ClaimAgentConnectionResponse200Data):

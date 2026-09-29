@@ -2,6 +2,7 @@
 
 from .account import Account
 from .account_updated import AccountUpdated
+from .add_default_network_member_response_200 import AddDefaultNetworkMemberResponse200
 from .add_domain_input import AddDomainInput
 from .add_domain_response_201 import AddDomainResponse201
 from .agent_account_result import AgentAccountResult
@@ -14,7 +15,17 @@ from .agent_claim_result_plan import AgentClaimResultPlan
 from .agent_claim_start_result import AgentClaimStartResult
 from .agent_contact_policy import AgentContactPolicy
 from .agent_contact_policy_override import AgentContactPolicyOverride
+from .agent_network import AgentNetwork
+from .agent_network_contact_admission import AgentNetworkContactAdmission
+from .agent_network_contact_admission_input import AgentNetworkContactAdmissionInput
+from .agent_network_member import AgentNetworkMember
+from .agent_network_member_owner_type_0 import AgentNetworkMemberOwnerType0
+from .agent_network_member_ownership_kind import AgentNetworkMemberOwnershipKind
+from .agent_network_peer import AgentNetworkPeer
+from .agent_network_peer_owner_type_0 import AgentNetworkPeerOwnerType0
+from .agent_network_peer_ownership_kind import AgentNetworkPeerOwnershipKind
 from .agent_org_ref import AgentOrgRef
+from .agent_presence_type_0 import AgentPresenceType0
 from .agent_signup_resend_result import AgentSignupResendResult
 from .agent_signup_start_result import AgentSignupStartResult
 from .agent_signup_verify_result import AgentSignupVerifyResult
@@ -23,11 +34,13 @@ from .agent_signup_verify_result_token_type import AgentSignupVerifyResultTokenT
 from .await_reply_response_200 import AwaitReplyResponse200
 from .await_reply_result import AwaitReplyResult
 from .cancel_sent_email_response_200 import CancelSentEmailResponse200
+from .check_default_network_contact_admission_response_200 import CheckDefaultNetworkContactAdmissionResponse200
 from .check_domain_dns_response_200 import CheckDomainDnsResponse200
 from .claim_agent_connection_body import ClaimAgentConnectionBody
 from .claim_agent_connection_response_200 import ClaimAgentConnectionResponse200
 from .claim_agent_connection_response_200_data import ClaimAgentConnectionResponse200Data
 from .claim_agent_connection_response_200_data_connection import ClaimAgentConnectionResponse200DataConnection
+from .claim_agent_connection_response_200_data_connection_ownership_kind import ClaimAgentConnectionResponse200DataConnectionOwnershipKind
 from .claim_agent_connection_response_200_data_connection_status import ClaimAgentConnectionResponse200DataConnectionStatus
 from .cli_login_poll_result import CliLoginPollResult
 from .cli_login_poll_result_auth_method import CliLoginPollResultAuthMethod
@@ -70,6 +83,14 @@ from .create_agent_account_input import CreateAgentAccountInput
 from .create_agent_account_response_200 import CreateAgentAccountResponse200
 from .create_agent_claim_link_input import CreateAgentClaimLinkInput
 from .create_agent_claim_link_response_200 import CreateAgentClaimLinkResponse200
+from .create_agent_connection_body import CreateAgentConnectionBody
+from .create_agent_connection_body_ownership_kind import CreateAgentConnectionBodyOwnershipKind
+from .create_agent_connection_response_200 import CreateAgentConnectionResponse200
+from .create_agent_connection_response_200_data import CreateAgentConnectionResponse200Data
+from .create_agent_connection_response_200_data_connection import CreateAgentConnectionResponse200DataConnection
+from .create_agent_connection_response_200_data_connection_ownership_kind import CreateAgentConnectionResponse200DataConnectionOwnershipKind
+from .create_agent_connection_response_200_data_connection_status import CreateAgentConnectionResponse200DataConnectionStatus
+from .create_agent_connection_response_200_data_invitation import CreateAgentConnectionResponse200DataInvitation
 from .create_challenge_input import CreateChallengeInput
 from .create_challenge_input_network import CreateChallengeInputNetwork
 from .create_challenge_response_201 import CreateChallengeResponse201
@@ -240,6 +261,7 @@ from .get_contact_response_200 import GetContactResponse200
 from .get_contact_response_200_data import GetContactResponse200Data
 from .get_conversation_response_200 import GetConversationResponse200
 from .get_credit_balance_response_200 import GetCreditBalanceResponse200
+from .get_default_network_agent_response_200 import GetDefaultNetworkAgentResponse200
 from .get_email_response_200 import GetEmailResponse200
 from .get_function_response_200 import GetFunctionResponse200
 from .get_function_routing_response_200 import GetFunctionRoutingResponse200
@@ -271,13 +293,28 @@ from .install_template_body import InstallTemplateBody
 from .install_template_body_secrets import InstallTemplateBodySecrets
 from .install_template_body_variables import InstallTemplateBodyVariables
 from .install_template_response_201 import InstallTemplateResponse201
+from .invite_agent_connection_body import InviteAgentConnectionBody
+from .invite_agent_connection_response_200 import InviteAgentConnectionResponse200
+from .invite_agent_connection_response_200_data import InviteAgentConnectionResponse200Data
+from .invite_agent_connection_response_200_data_connection import InviteAgentConnectionResponse200DataConnection
+from .invite_agent_connection_response_200_data_connection_ownership_kind import InviteAgentConnectionResponse200DataConnectionOwnershipKind
+from .invite_agent_connection_response_200_data_connection_status import InviteAgentConnectionResponse200DataConnectionStatus
+from .invite_agent_connection_response_200_data_invitation import InviteAgentConnectionResponse200DataInvitation
+from .list_agent_connections_response_200 import ListAgentConnectionsResponse200
+from .list_agent_connections_response_200_data_item import ListAgentConnectionsResponse200DataItem
+from .list_agent_connections_response_200_data_item_ownership_kind import ListAgentConnectionsResponse200DataItemOwnershipKind
+from .list_agent_connections_response_200_data_item_status import ListAgentConnectionsResponse200DataItemStatus
+from .list_agent_connections_response_200_meta import ListAgentConnectionsResponse200Meta
 from .list_agent_contacts_response_200 import ListAgentContactsResponse200
 from .list_agent_contacts_response_200_data_item import ListAgentContactsResponse200DataItem
 from .list_agent_contacts_response_200_meta import ListAgentContactsResponse200Meta
+from .list_agent_networks_response_200 import ListAgentNetworksResponse200
 from .list_contacts_response_200 import ListContactsResponse200
 from .list_contacts_response_200_data_item import ListContactsResponse200DataItem
 from .list_contacts_response_200_meta import ListContactsResponse200Meta
 from .list_declined_payments_response_200 import ListDeclinedPaymentsResponse200
+from .list_default_network_agents_response_200 import ListDefaultNetworkAgentsResponse200
+from .list_default_network_members_response_200 import ListDefaultNetworkMembersResponse200
 from .list_deliveries_response_200 import ListDeliveriesResponse200
 from .list_deliveries_status import ListDeliveriesStatus
 from .list_domains_response_200 import ListDomainsResponse200
@@ -328,6 +365,9 @@ from .pay_challenge_response_200 import PayChallengeResponse200
 from .plan_limits import PlanLimits
 from .poll_cli_login_input import PollCliLoginInput
 from .poll_cli_login_response_200 import PollCliLoginResponse200
+from .presence_control_type_0 import PresenceControlType0
+from .presence_control_type_0_status import PresenceControlType0Status
+from .presence_profile import PresenceProfile
 from .publish_agent_input import PublishAgentInput
 from .publish_agent_response_200 import PublishAgentResponse200
 from .publish_agent_response_201 import PublishAgentResponse201
@@ -368,6 +408,8 @@ from .registry_agent import RegistryAgent
 from .registry_request import RegistryRequest
 from .remove_agent_connection_response_200 import RemoveAgentConnectionResponse200
 from .remove_agent_connection_response_200_data import RemoveAgentConnectionResponse200Data
+from .remove_default_network_member_response_200 import RemoveDefaultNetworkMemberResponse200
+from .remove_default_network_member_response_200_data import RemoveDefaultNetworkMemberResponse200Data
 from .reorder_routes_input import ReorderRoutesInput
 from .reorder_routes_input_updates_item import ReorderRoutesInputUpdatesItem
 from .reorder_routes_response_200 import ReorderRoutesResponse200
@@ -383,6 +425,11 @@ from .resend_agent_signup_verification_response_200 import ResendAgentSignupVeri
 from .resend_cli_signup_verification_input import ResendCliSignupVerificationInput
 from .resend_cli_signup_verification_response_200 import ResendCliSignupVerificationResponse200
 from .resolve_registry_handle_response_200 import ResolveRegistryHandleResponse200
+from .revoke_agent_connection_response_200 import RevokeAgentConnectionResponse200
+from .revoke_agent_connection_response_200_data import RevokeAgentConnectionResponse200Data
+from .revoke_agent_connection_response_200_data_connection import RevokeAgentConnectionResponse200DataConnection
+from .revoke_agent_connection_response_200_data_connection_ownership_kind import RevokeAgentConnectionResponse200DataConnectionOwnershipKind
+from .revoke_agent_connection_response_200_data_connection_status import RevokeAgentConnectionResponse200DataConnectionStatus
 from .rotate_webhook_secret_response_200 import RotateWebhookSecretResponse200
 from .route_evaluated_entry import RouteEvaluatedEntry
 from .route_evaluated_entry_result import RouteEvaluatedEntryResult
@@ -506,6 +553,8 @@ from .unset_function_route_response_200_data import UnsetFunctionRouteResponse20
 from .unverified_domain import UnverifiedDomain
 from .update_account_input import UpdateAccountInput
 from .update_account_response_200 import UpdateAccountResponse200
+from .update_agent_network_member_input import UpdateAgentNetworkMemberInput
+from .update_default_network_member_response_200 import UpdateDefaultNetworkMemberResponse200
 from .update_domain_input import UpdateDomainInput
 from .update_domain_response_200 import UpdateDomainResponse200
 from .update_endpoint_input import UpdateEndpointInput
@@ -566,6 +615,7 @@ from .x402_spend_policy import X402SpendPolicy
 __all__ = (
     "Account",
     "AccountUpdated",
+    "AddDefaultNetworkMemberResponse200",
     "AddDomainInput",
     "AddDomainResponse201",
     "AgentAccountResult",
@@ -578,7 +628,17 @@ __all__ = (
     "AgentClaimStartResult",
     "AgentContactPolicy",
     "AgentContactPolicyOverride",
+    "AgentNetwork",
+    "AgentNetworkContactAdmission",
+    "AgentNetworkContactAdmissionInput",
+    "AgentNetworkMember",
+    "AgentNetworkMemberOwnershipKind",
+    "AgentNetworkMemberOwnerType0",
+    "AgentNetworkPeer",
+    "AgentNetworkPeerOwnershipKind",
+    "AgentNetworkPeerOwnerType0",
     "AgentOrgRef",
+    "AgentPresenceType0",
     "AgentSignupResendResult",
     "AgentSignupStartResult",
     "AgentSignupVerifyResult",
@@ -587,11 +647,13 @@ __all__ = (
     "AwaitReplyResponse200",
     "AwaitReplyResult",
     "CancelSentEmailResponse200",
+    "CheckDefaultNetworkContactAdmissionResponse200",
     "CheckDomainDnsResponse200",
     "ClaimAgentConnectionBody",
     "ClaimAgentConnectionResponse200",
     "ClaimAgentConnectionResponse200Data",
     "ClaimAgentConnectionResponse200DataConnection",
+    "ClaimAgentConnectionResponse200DataConnectionOwnershipKind",
     "ClaimAgentConnectionResponse200DataConnectionStatus",
     "CliLoginPollResult",
     "CliLoginPollResultAuthMethod",
@@ -634,6 +696,14 @@ __all__ = (
     "CreateAgentAccountResponse200",
     "CreateAgentClaimLinkInput",
     "CreateAgentClaimLinkResponse200",
+    "CreateAgentConnectionBody",
+    "CreateAgentConnectionBodyOwnershipKind",
+    "CreateAgentConnectionResponse200",
+    "CreateAgentConnectionResponse200Data",
+    "CreateAgentConnectionResponse200DataConnection",
+    "CreateAgentConnectionResponse200DataConnectionOwnershipKind",
+    "CreateAgentConnectionResponse200DataConnectionStatus",
+    "CreateAgentConnectionResponse200DataInvitation",
     "CreateChallengeInput",
     "CreateChallengeInputNetwork",
     "CreateChallengeResponse201",
@@ -804,6 +874,7 @@ __all__ = (
     "GetContactResponse200Data",
     "GetConversationResponse200",
     "GetCreditBalanceResponse200",
+    "GetDefaultNetworkAgentResponse200",
     "GetEmailResponse200",
     "GetFunctionResponse200",
     "GetFunctionRoutingResponse200",
@@ -835,13 +906,28 @@ __all__ = (
     "InstallTemplateBodySecrets",
     "InstallTemplateBodyVariables",
     "InstallTemplateResponse201",
+    "InviteAgentConnectionBody",
+    "InviteAgentConnectionResponse200",
+    "InviteAgentConnectionResponse200Data",
+    "InviteAgentConnectionResponse200DataConnection",
+    "InviteAgentConnectionResponse200DataConnectionOwnershipKind",
+    "InviteAgentConnectionResponse200DataConnectionStatus",
+    "InviteAgentConnectionResponse200DataInvitation",
+    "ListAgentConnectionsResponse200",
+    "ListAgentConnectionsResponse200DataItem",
+    "ListAgentConnectionsResponse200DataItemOwnershipKind",
+    "ListAgentConnectionsResponse200DataItemStatus",
+    "ListAgentConnectionsResponse200Meta",
     "ListAgentContactsResponse200",
     "ListAgentContactsResponse200DataItem",
     "ListAgentContactsResponse200Meta",
+    "ListAgentNetworksResponse200",
     "ListContactsResponse200",
     "ListContactsResponse200DataItem",
     "ListContactsResponse200Meta",
     "ListDeclinedPaymentsResponse200",
+    "ListDefaultNetworkAgentsResponse200",
+    "ListDefaultNetworkMembersResponse200",
     "ListDeliveriesResponse200",
     "ListDeliveriesStatus",
     "ListDomainsResponse200",
@@ -892,6 +978,9 @@ __all__ = (
     "PlanLimits",
     "PollCliLoginInput",
     "PollCliLoginResponse200",
+    "PresenceControlType0",
+    "PresenceControlType0Status",
+    "PresenceProfile",
     "PublishAgentInput",
     "PublishAgentResponse200",
     "PublishAgentResponse201",
@@ -932,6 +1021,8 @@ __all__ = (
     "RegistryRequest",
     "RemoveAgentConnectionResponse200",
     "RemoveAgentConnectionResponse200Data",
+    "RemoveDefaultNetworkMemberResponse200",
+    "RemoveDefaultNetworkMemberResponse200Data",
     "ReorderRoutesInput",
     "ReorderRoutesInputUpdatesItem",
     "ReorderRoutesResponse200",
@@ -947,6 +1038,11 @@ __all__ = (
     "ResendCliSignupVerificationInput",
     "ResendCliSignupVerificationResponse200",
     "ResolveRegistryHandleResponse200",
+    "RevokeAgentConnectionResponse200",
+    "RevokeAgentConnectionResponse200Data",
+    "RevokeAgentConnectionResponse200DataConnection",
+    "RevokeAgentConnectionResponse200DataConnectionOwnershipKind",
+    "RevokeAgentConnectionResponse200DataConnectionStatus",
     "RotateWebhookSecretResponse200",
     "RouteEvaluatedEntry",
     "RouteEvaluatedEntryResult",
@@ -1070,6 +1166,8 @@ __all__ = (
     "UnverifiedDomain",
     "UpdateAccountInput",
     "UpdateAccountResponse200",
+    "UpdateAgentNetworkMemberInput",
+    "UpdateDefaultNetworkMemberResponse200",
     "UpdateDomainInput",
     "UpdateDomainResponse200",
     "UpdateEndpointInput",

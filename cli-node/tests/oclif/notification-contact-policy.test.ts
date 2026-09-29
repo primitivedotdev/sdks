@@ -7,6 +7,7 @@ import {
   type ContactPolicyPage,
   ContactPolicyReadRetryError,
   createNotificationContactPolicy,
+  NetworkAdmissionPendingError,
 } from "../../src/oclif/notification-contact-policy.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
@@ -73,6 +74,110 @@ function requestFixture() {
 }
 
 describe("contact notification policy", () => {
+  it("admits current network peers without a contact and rechecks membership before wake", async () => {
+    const inboundId = randomUUID();
+    let decision: {
+      allowed: boolean;
+      allowed_since: string | null;
+      pending: boolean;
+    } = {
+      allowed: true,
+      allowed_since: activation,
+      pending: false,
+    };
+    const readNetworkAdmission = vi.fn(async () => decision);
+    const document = emptyContactPolicy(recipient);
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => document,
+      readPage: async () => ({ data: [], cursor: null }),
+      readNetworkAdmission,
+    });
+    expect(
+      await policy.admit(sender, "2026-09-01T09:59:59.999Z", signal, inboundId),
+    ).toBeNull();
+    expect(await policy.admit(sender, received, signal)).toBeNull();
+    expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
+    const admitted = await policy.admit(sender, received, signal, inboundId);
+    expect(admitted).toMatchObject({
+      kind: "allowed",
+      source: "network",
+      emailId: inboundId,
+      notifySince: activation,
+    });
+    if (!admitted) throw new Error("Expected network admission");
+    (await policy.recheck(admitted, signal))();
+    decision = { allowed: false, allowed_since: null, pending: false };
+    await expect(policy.recheck(admitted, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+    decision = { allowed: true, allowed_since: received, pending: false };
+    await expect(policy.recheck(admitted, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+    expect(readNetworkAdmission).toHaveBeenCalledWith(
+      inboundId,
+      sender,
+      signal,
+    );
+  });
+
+  it("keeps explicit contact and owner silence ahead of network admission", async () => {
+    const readNetworkAdmission = vi.fn(async () => ({
+      allowed: true,
+      allowed_since: activation,
+      pending: false,
+    }));
+    const document = emptyContactPolicy(recipient);
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => document,
+      readPage: async () => ({
+        data: [
+          row({
+            notify: false,
+            notify_since: null,
+            notification_generation: null,
+          }),
+        ],
+        cursor: null,
+      }),
+      readNetworkAdmission,
+    });
+    expect(
+      await policy.admit(sender, received, signal, randomUUID()),
+    ).toBeNull();
+    expect(readNetworkAdmission).not.toHaveBeenCalled();
+  });
+
+  it("leaves an exact inbound email pending until delivery evidence settles", async () => {
+    const inboundId = randomUUID();
+    let decision = {
+      allowed: false,
+      allowed_since: null as string | null,
+      pending: true,
+    };
+    const readNetworkAdmission = vi.fn(async () => decision);
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => emptyContactPolicy(recipient),
+      readPage: async () => ({ data: [], cursor: null }),
+      readNetworkAdmission,
+    });
+    await expect(
+      policy.admit(sender, received, signal, inboundId),
+    ).rejects.toBeInstanceOf(NetworkAdmissionPendingError);
+    decision = { allowed: true, allowed_since: activation, pending: false };
+    expect(
+      await policy.admit(sender, received, signal, inboundId),
+    ).toMatchObject({ kind: "allowed", source: "network", emailId: inboundId });
+    expect(readNetworkAdmission).toHaveBeenCalledWith(
+      inboundId,
+      sender,
+      signal,
+    );
+  });
+
   it("admits a solicited response without unsolicited opt-in but rechecks explicit silence", async () => {
     const f = fixture();
     f.rows([]);
@@ -454,4 +559,97 @@ it("does not fall back to exact membership when the policy read is unavailable",
   await expect(f.policy.recheck(admission, signal)).rejects.toThrow(
     "unavailable or invalid",
   );
+});
+
+describe("independent network and contact admission", () => {
+  it("keeps owner-enabled contact request intake when the network lookup fails", async () => {
+    const f = requestFixture();
+    const readNetworkAdmission = vi.fn(async () => {
+      throw new ContactPolicyReadRetryError();
+    });
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: f.readPolicy,
+      readPage: f.readPage,
+      readNetworkAdmission,
+      contactRequests: true,
+    });
+    const admission = await policy.admit(
+      sender,
+      received,
+      signal,
+      randomUUID(),
+    );
+    expect(admission).toMatchObject({ kind: "request" });
+    expect(admission?.source).toBeUndefined();
+    expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
+    if (!admission) throw new Error("Expected contact request admission");
+    (await policy.recheck(admission, signal))();
+    expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not convert a network outage into ordinary unsolicited permission", async () => {
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => emptyContactPolicy(recipient),
+      readPage: async () => ({ data: [], cursor: null }),
+      readNetworkAdmission: async () => {
+        throw new ContactPolicyReadRetryError();
+      },
+    });
+    await expect(
+      policy.admit(sender, received, signal, randomUUID()),
+    ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
+  });
+
+  it("rejects queued network mail before the latest recipient policy activation", async () => {
+    const document = emptyContactPolicy(recipient);
+    document.effective_since = "2026-09-01T10:02:00.000Z";
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => document,
+      readPage: async () => ({ data: [], cursor: null }),
+      readNetworkAdmission: async () => ({
+        allowed: true,
+        allowed_since: activation,
+        pending: false,
+      }),
+    });
+    expect(
+      await policy.admit(sender, received, signal, randomUUID()),
+    ).toBeNull();
+    expect(
+      await policy.admit(
+        sender,
+        "2026-09-01T10:03:00.000Z",
+        signal,
+        randomUUID(),
+      ),
+    ).toMatchObject({
+      notifySince: document.effective_since,
+      generation: document.effective_since,
+      source: "network",
+    });
+  });
+
+  it("makes one exact-mail network denial check across cached and refreshed policy", async () => {
+    const readNetworkAdmission = vi.fn(async () => ({
+      allowed: false,
+      allowed_since: null,
+      pending: false,
+    }));
+    const readPolicy = vi.fn(async () => emptyContactPolicy(recipient));
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy,
+      readPage: async () => ({ data: [], cursor: null }),
+      readNetworkAdmission,
+    });
+    await policy.refresh(signal);
+    expect(
+      await policy.admit(sender, received, signal, randomUUID()),
+    ).toBeNull();
+    expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
+    expect(readPolicy).toHaveBeenCalledTimes(2);
+  });
 });

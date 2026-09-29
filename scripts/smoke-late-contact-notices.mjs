@@ -86,6 +86,10 @@ const api = createServer(async (request, response) => {
     const body = raw ? JSON.parse(raw) : null;
     if (url.pathname === "/v1/agent-connections/claim") return json(response, { org_id: org, api_base_url: "https://api.primitive.dev/v1", api_key: credential, owner_address: "owner@sender.example", connection: { address: agent, owner_address: "owner@sender.example", status: "claimed" } });
     assert.equal(request.headers.authorization, `Bearer ${credential}`);
+    if (request.method === "POST" && url.pathname === "/v1/agent-networks/default/contact-admission") {
+      assert.equal(emails.get(body.email_id)?.sender, body.sender_address);
+      return json(response, { allowed: false, allowed_since: null, pending: false });
+    }
     if (request.method === "POST" && url.pathname === "/v1/endpoints") return json(response, { id: endpoint, name: body.name, kind: "pull", enabled: true, recipient: agent, rules: { event_types: ["email.received"] }, receiver_capabilities: { completion_modes: ["sdk"], stream_protocols: ["primitive.events.v1"] } });
     if (request.method === "PUT" && url.pathname === `/v1/contacts/${encodeURIComponent(peer)}`) {
       assert.deepEqual(body, { if_absent: true }, "Only address-only directory creation is authorized");
@@ -168,6 +172,10 @@ native.on("connection", (socket) => socket.on("message", (bytes) => {
     if (frame.method === "initialize") result = {};
     else if (frame.method === "thread/loaded/list") result = { data: [session], nextCursor: null };
     else if (frame.method === "thread/read") result = { thread: { id: session, cwd: root, canAcceptDirectInput: true } };
+    else if (frame.method === "thread/resume") {
+      assert.deepEqual(frame.params, { threadId: session });
+      result = { thread: { id: session, cwd: root, canAcceptDirectInput: true } };
+    }
     else if (frame.method === "turn/start") {
       assert.deepEqual(Object.keys(frame.params).sort(), ["input", "threadId", "toolOutput"]);
       assert.deepEqual(frame.params.input, []);

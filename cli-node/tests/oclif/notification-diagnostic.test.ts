@@ -62,6 +62,7 @@ const detail: EmailDetail = {
   automated: false,
   automated_reasons: [],
   from_email: "peer@example.com",
+  sender_connected_agent_verified: false,
   from_header: "peer@example.com",
   parsed: { status: "complete", attachments: [] },
   auth: {

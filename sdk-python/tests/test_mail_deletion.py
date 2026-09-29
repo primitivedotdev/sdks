@@ -8,7 +8,7 @@ from test_client import RECEIVED_EMAIL
 
 from primitive.api.api.agent_connections import remove_agent_connection
 from primitive.api.api.sending import delete_sent_email
-from primitive.api.client import Client
+from primitive.api.client import AuthenticatedClient, Client
 from primitive.api.models.delete_sent_email_response_200 import (
     DeleteSentEmailResponse200,
 )
@@ -37,8 +37,9 @@ def test_delete_routes(kind: str) -> None:
         assert request.content == b""
         return httpx.Response(200, json={"success": True, "data": {"deleted": True}})
 
-    with Client(
+    with AuthenticatedClient(
         base_url="https://example.test",
+        token="test",
         httpx_args={"transport": httpx.MockTransport(handler)},
     ) as client:
         result = (

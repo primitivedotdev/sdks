@@ -28,6 +28,12 @@ func trimTrailingSlashes(u *url.URL) {
 
 // Invoker invokes operations described by OpenAPI v3 specification.
 type Invoker interface {
+	// AddDefaultNetworkMember invokes addDefaultNetworkMember operation.
+	//
+	// Owner or admin login required. Restores an explicitly excluded member.
+	//
+	// POST /agent-networks/default/members/{address}
+	AddDefaultNetworkMember(ctx context.Context, params AddDefaultNetworkMemberParams) (AddDefaultNetworkMemberRes, error)
 	// AddDomain invokes addDomain operation.
 	//
 	// Creates an unverified domain claim and returns the exact
@@ -38,6 +44,13 @@ type Invoker interface {
 	//
 	// POST /domains
 	AddDomain(ctx context.Context, request *AddDomainInput) (AddDomainRes, error)
+	// AgentConnectionSetup invokes agentConnectionSetup operation.
+	//
+	// Instructions for pairing an external runtime. GET never consumes an invitation. The invitation
+	// token stays in the URL fragment and is submitted only in the claim POST body.
+	//
+	// GET /agent-connections/setup
+	AgentConnectionSetup(ctx context.Context) (AgentConnectionSetupRes, error)
 	// AwaitReply invokes awaitReply operation.
 	//
 	// Returns the first threaded inbound reply to a send, keyed by
@@ -72,6 +85,22 @@ type Invoker interface {
 	//
 	// POST /sent-emails/{id}/cancel
 	CancelSentEmail(ctx context.Context, params CancelSentEmailParams) (CancelSentEmailRes, error)
+	// CheckDefaultNetworkContactAdmission invokes checkDefaultNetworkContactAdmission operation.
+	//
+	// Requires the recipient's connected-agent credential. The recipient
+	// address is derived from that credential. The email ID must identify
+	// accepted or completed inbound mail for that exact recipient, with
+	// matching stored sender and delivery evidence. Returns no sender profile
+	// or existence detail. Clients must also verify the email detail's sender
+	// provenance and respect explicit contact silence before using the result.
+	// Network wake requires the sender to be connected and able to view the
+	// network, and the recipient to be connected and listed. The sender need
+	// not be listed and the recipient need not view the network. Ordinary
+	// known-address email remains independent. Mail received before
+	// allowed_since cannot be newly admitted.
+	//
+	// POST /agent-networks/default/contact-admission
+	CheckDefaultNetworkContactAdmission(ctx context.Context, request *AgentNetworkContactAdmissionInput) (CheckDefaultNetworkContactAdmissionRes, error)
 	// CheckDomainDns invokes checkDomainDns operation.
 	//
 	// Re-checks the domain's DNS records and persists the result as
@@ -92,15 +121,17 @@ type Invoker interface {
 	CheckDomainDns(ctx context.Context, params CheckDomainDnsParams) (CheckDomainDnsRes, error)
 	// ClaimAgentConnection invokes claimAgentConnection operation.
 	//
-	// Address-bound external runtime pairing. Management operations require an organization owner or
-	// admin session or OAuth token; members and organization API keys cannot manage connections. Claim
-	// is authorized only by its one-use invitation. Connected means a real challenge was received and a
+	// Address-bound external runtime pairing. Any current human organization member may create and
+	// manage their personal agent connections. Organization owners and admins may manage all connections
+	// and explicitly create shared ones. An owner removed from the organization loses personal agent
+	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+	// connections. A current connected credential may disconnect only its own exact address. Claim is
+	// authorized only by its one-use invitation. Connected means a real challenge was received and a
 	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
-	// credentials. Runtime credentials allow only address-scoped mail operations, organization note
-	// reads and own-address note writes. The credential is returned once. If the claim response is lost
-	// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
-	// invitation.
+	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+	//  and recipient-bound network contact admission.
 	//
 	// POST /agent-connections/claim
 	ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error)
@@ -146,6 +177,22 @@ type Invoker interface {
 	//
 	// POST /agent/claim/link
 	CreateAgentClaimLink(ctx context.Context, request *CreateAgentClaimLinkInput) (CreateAgentClaimLinkRes, error)
+	// CreateAgentConnection invokes createAgentConnection operation.
+	//
+	// Address-bound external runtime pairing. Any current human organization member may create and
+	// manage their personal agent connections. Organization owners and admins may manage all connections
+	// and explicitly create shared ones. An owner removed from the organization loses personal agent
+	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+	// connections. A current connected credential may disconnect only its own exact address. Claim is
+	// authorized only by its one-use invitation. Connected means a real challenge was received and a
+	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+	//  and recipient-bound network contact admission.
+	//
+	// POST /agent-connections
+	CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
 	// CreateChallenge invokes createChallenge operation.
 	//
 	// Create an x402 payment challenge (the payee side of a payment). The
@@ -667,6 +714,13 @@ type Invoker interface {
 	//
 	// GET /credits/balance
 	GetCreditBalance(ctx context.Context) (GetCreditBalanceRes, error)
+	// GetDefaultNetworkAgent invokes getDefaultNetworkAgent operation.
+	//
+	// Requires a connected-agent credential allowed to see the network, or an organization member login.
+	// Unlisted agents look absent.
+	//
+	// GET /agent-networks/default/agents/{address}
+	GetDefaultNetworkAgent(ctx context.Context, params GetDefaultNetworkAgentParams) (GetDefaultNetworkAgentRes, error)
 	// GetEmail invokes getEmail operation.
 	//
 	// Returns the full record for an inbound email received at one
@@ -899,6 +953,38 @@ type Invoker interface {
 	//
 	// POST /templates/{id}/install
 	InstallTemplate(ctx context.Context, request *InstallTemplateBody, params InstallTemplateParams) (InstallTemplateRes, error)
+	// InviteAgentConnection invokes inviteAgentConnection operation.
+	//
+	// Address-bound external runtime pairing. Any current human organization member may create and
+	// manage their personal agent connections. Organization owners and admins may manage all connections
+	// and explicitly create shared ones. An owner removed from the organization loses personal agent
+	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+	// connections. A current connected credential may disconnect only its own exact address. Claim is
+	// authorized only by its one-use invitation. Connected means a real challenge was received and a
+	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+	//  and recipient-bound network contact admission.
+	//
+	// POST /agent-connections/{address}/invitation
+	InviteAgentConnection(ctx context.Context, request *InviteAgentConnectionReq, params InviteAgentConnectionParams) (InviteAgentConnectionRes, error)
+	// ListAgentConnections invokes listAgentConnections operation.
+	//
+	// Address-bound external runtime pairing. Any current human organization member may create and
+	// manage their personal agent connections. Organization owners and admins may manage all connections
+	// and explicitly create shared ones. An owner removed from the organization loses personal agent
+	// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+	// connections. A current connected credential may disconnect only its own exact address. Claim is
+	// authorized only by its one-use invitation. Connected means a real challenge was received and a
+	// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+	//  and recipient-bound network contact admission.
+	//
+	// GET /agent-connections
+	ListAgentConnections(ctx context.Context, params ListAgentConnectionsParams) (ListAgentConnectionsRes, error)
 	// ListAgentContacts invokes listAgentContacts operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -917,6 +1003,14 @@ type Invoker interface {
 	//
 	// GET /agent-contacts/{agent_address}
 	ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (ListAgentContactsRes, error)
+	// ListAgentNetworks invokes listAgentNetworks operation.
+	//
+	// An organization member login or an active connected agent allowed to see the network can read
+	// networks. The default organization network is always present. can_manage_all is true only for a
+	// current owner or admin; a connected credential receives false.
+	//
+	// GET /agent-networks
+	ListAgentNetworks(ctx context.Context) (ListAgentNetworksRes, error)
 	// ListContacts invokes listContacts operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -944,6 +1038,22 @@ type Invoker interface {
 	//
 	// GET /x402/declined-payments
 	ListDeclinedPayments(ctx context.Context) (ListDeclinedPaymentsRes, error)
+	// ListDefaultNetworkAgents invokes listDefaultNetworkAgents operation.
+	//
+	// Requires a connected-agent credential for an active member allowed to see the network, or an
+	// organization member login.
+	//
+	// GET /agent-networks/default/agents
+	ListDefaultNetworkAgents(ctx context.Context, params ListDefaultNetworkAgentsParams) (ListDefaultNetworkAgentsRes, error)
+	// ListDefaultNetworkMembers invokes listDefaultNetworkMembers operation.
+	//
+	// An owner or admin sees all connected addresses, including hidden and excluded members. Other human
+	// members see only personal addresses owned by their current membership. Filtering happens before
+	// pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
+	// requester can manage it.
+	//
+	// GET /agent-networks/default/members
+	ListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (ListDefaultNetworkMembersRes, error)
 	// ListDeliveries invokes listDeliveries operation.
 	//
 	// Returns a paginated list of webhook delivery attempts. Each delivery
@@ -1300,16 +1410,21 @@ type Invoker interface {
 	RegisterPayoutAddress(ctx context.Context, request *RegisterPayoutAddressInput) (RegisterPayoutAddressRes, error)
 	// RemoveAgentConnection invokes removeAgentConnection operation.
 	//
-	// Permanently removes a revoked connection record. Requires an organization
-	// owner or admin session or OAuth token; organization API keys are denied.
-	// Disconnect first using DELETE /agent-connections/{address}. An active
-	// connection returns 409 connection_not_revoked. Missing or already removed
-	// records return 404. Mail, address notes, domains and external runtimes are
-	// preserved. The same address can be paired again with a new invitation;
-	// old credentials and invitations remain invalid.
+	// Permanently remove a revoked connection record. A current personal owner may permanently remove
+	// their own record; organization owners and admins may remove any record. Disconnect first using
+	// revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
+	// removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
+	// same address can be paired again with a new invitation; old credentials and invitations remain
+	// invalid.
 	//
 	// POST /agent-connections/{address}/remove
 	RemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (RemoveAgentConnectionRes, error)
+	// RemoveDefaultNetworkMember invokes removeDefaultNetworkMember operation.
+	//
+	// Owner or admin login required. The explicit exclusion persists across synchronization.
+	//
+	// DELETE /agent-networks/default/members/{address}
+	RemoveDefaultNetworkMember(ctx context.Context, params RemoveDefaultNetworkMemberParams) (RemoveDefaultNetworkMemberRes, error)
 	// ReorderRoutes invokes reorderRoutes operation.
 	//
 	// Update the priority of one or more routes in a single call.
@@ -1388,6 +1503,16 @@ type Invoker interface {
 	//
 	// GET /registries/{slug}/agents/{handle}
 	ResolveRegistryHandle(ctx context.Context, params ResolveRegistryHandleParams) (ResolveRegistryHandleRes, error)
+	// RevokeAgentConnection invokes revokeAgentConnection operation.
+	//
+	// Disconnect an agent and invalidate its bound credential. A current personal owner may disconnect
+	// their own agent; organization owners and admins may disconnect any connection. A connected agent
+	// may disconnect only its own exact address using its current bound credential. This preserves the
+	// connection record, mail, notes and domain. A current personal owner may permanently remove their
+	// own revoked record.
+	//
+	// DELETE /agent-connections/{address}
+	RevokeAgentConnection(ctx context.Context, params RevokeAgentConnectionParams) (RevokeAgentConnectionRes, error)
 	// RotateWebhookSecret invokes rotateWebhookSecret operation.
 	//
 	// Generates a new webhook signing secret, replacing the current one.
@@ -1640,6 +1765,14 @@ type Invoker interface {
 	//
 	// PATCH /account
 	UpdateAccount(ctx context.Context, request *UpdateAccountInput) (UpdateAccountRes, error)
+	// UpdateDefaultNetworkMember invokes updateDefaultNetworkMember operation.
+	//
+	// An owner or admin may update any active address. Other human members may update only their own
+	// current, non-excluded personal address. Connected-agent credentials cannot update visibility.
+	// Omitted settings keep their current value.
+	//
+	// PATCH /agent-networks/default/members/{address}
+	UpdateDefaultNetworkMember(ctx context.Context, request *UpdateAgentNetworkMemberInput, params UpdateDefaultNetworkMemberParams) (UpdateDefaultNetworkMemberRes, error)
 	// UpdateDomain invokes updateDomain operation.
 	//
 	// Update a verified domain's settings. Only verified domains can be
@@ -1803,6 +1936,131 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 	return u
 }
 
+// AddDefaultNetworkMember invokes addDefaultNetworkMember operation.
+//
+// Owner or admin login required. Restores an explicitly excluded member.
+//
+// POST /agent-networks/default/members/{address}
+func (c *Client) AddDefaultNetworkMember(ctx context.Context, params AddDefaultNetworkMemberParams) (AddDefaultNetworkMemberRes, error) {
+	res, err := c.sendAddDefaultNetworkMember(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendAddDefaultNetworkMember(ctx context.Context, params AddDefaultNetworkMemberParams) (res AddDefaultNetworkMemberRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("addDefaultNetworkMember"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent-networks/default/members/{address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, AddDefaultNetworkMemberOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-networks/default/members/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, AddDefaultNetworkMemberOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeAddDefaultNetworkMemberResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // AddDomain invokes addDomain operation.
 //
 // Creates an unverified domain claim and returns the exact
@@ -1910,6 +2168,81 @@ func (c *Client) sendAddDomain(ctx context.Context, request *AddDomainInput) (re
 
 	stage = "DecodeResponse"
 	result, err := decodeAddDomainResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// AgentConnectionSetup invokes agentConnectionSetup operation.
+//
+// Instructions for pairing an external runtime. GET never consumes an invitation. The invitation
+// token stays in the URL fragment and is submitted only in the claim POST body.
+//
+// GET /agent-connections/setup
+func (c *Client) AgentConnectionSetup(ctx context.Context) (AgentConnectionSetupRes, error) {
+	res, err := c.sendAgentConnectionSetup(ctx)
+	return res, err
+}
+
+func (c *Client) sendAgentConnectionSetup(ctx context.Context) (res AgentConnectionSetupRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("agentConnectionSetup"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-connections/setup"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, AgentConnectionSetupOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-connections/setup"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeAgentConnectionSetupResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -2229,6 +2562,126 @@ func (c *Client) sendCancelSentEmail(ctx context.Context, params CancelSentEmail
 	return result, nil
 }
 
+// CheckDefaultNetworkContactAdmission invokes checkDefaultNetworkContactAdmission operation.
+//
+// Requires the recipient's connected-agent credential. The recipient
+// address is derived from that credential. The email ID must identify
+// accepted or completed inbound mail for that exact recipient, with
+// matching stored sender and delivery evidence. Returns no sender profile
+// or existence detail. Clients must also verify the email detail's sender
+// provenance and respect explicit contact silence before using the result.
+// Network wake requires the sender to be connected and able to view the
+// network, and the recipient to be connected and listed. The sender need
+// not be listed and the recipient need not view the network. Ordinary
+// known-address email remains independent. Mail received before
+// allowed_since cannot be newly admitted.
+//
+// POST /agent-networks/default/contact-admission
+func (c *Client) CheckDefaultNetworkContactAdmission(ctx context.Context, request *AgentNetworkContactAdmissionInput) (CheckDefaultNetworkContactAdmissionRes, error) {
+	res, err := c.sendCheckDefaultNetworkContactAdmission(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCheckDefaultNetworkContactAdmission(ctx context.Context, request *AgentNetworkContactAdmissionInput) (res CheckDefaultNetworkContactAdmissionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("checkDefaultNetworkContactAdmission"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent-networks/default/contact-admission"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CheckDefaultNetworkContactAdmissionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-networks/default/contact-admission"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCheckDefaultNetworkContactAdmissionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CheckDefaultNetworkContactAdmissionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCheckDefaultNetworkContactAdmissionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // CheckDomainDns invokes checkDomainDns operation.
 //
 // Re-checks the domain's DNS records and persists the result as
@@ -2369,15 +2822,18 @@ func (c *Client) sendCheckDomainDns(ctx context.Context, params CheckDomainDnsPa
 
 // ClaimAgentConnection invokes claimAgentConnection operation.
 //
-// Address-bound external runtime pairing. Management operations require an organization owner or
-// admin session or OAuth token; members and organization API keys cannot manage connections. Claim
-// is authorized only by its one-use invitation. Connected means a real challenge was received and a
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
 // reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
 // Reconnection preserves the address and revokes previous credentials. Status responses contain no
-// credentials. Runtime credentials allow only address-scoped mail operations, organization note
-// reads and own-address note writes. The credential is returned once. If the claim response is lost
-// or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed
-// invitation.
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
 //
 // POST /agent-connections/claim
 func (c *Client) ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error) {
@@ -2906,6 +3362,144 @@ func (c *Client) sendCreateAgentClaimLink(ctx context.Context, request *CreateAg
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateAgentClaimLinkResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateAgentConnection invokes createAgentConnection operation.
+//
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
+//
+// POST /agent-connections
+func (c *Client) CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error) {
+	res, err := c.sendCreateAgentConnection(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (res CreateAgentConnectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createAgentConnection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent-connections"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateAgentConnectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-connections"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateAgentConnectionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateAgentConnectionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateAgentConnectionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -8510,6 +9104,132 @@ func (c *Client) sendGetCreditBalance(ctx context.Context) (res GetCreditBalance
 	return result, nil
 }
 
+// GetDefaultNetworkAgent invokes getDefaultNetworkAgent operation.
+//
+// Requires a connected-agent credential allowed to see the network, or an organization member login.
+// Unlisted agents look absent.
+//
+// GET /agent-networks/default/agents/{address}
+func (c *Client) GetDefaultNetworkAgent(ctx context.Context, params GetDefaultNetworkAgentParams) (GetDefaultNetworkAgentRes, error) {
+	res, err := c.sendGetDefaultNetworkAgent(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetDefaultNetworkAgent(ctx context.Context, params GetDefaultNetworkAgentParams) (res GetDefaultNetworkAgentRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getDefaultNetworkAgent"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-networks/default/agents/{address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetDefaultNetworkAgentOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-networks/default/agents/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetDefaultNetworkAgentOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetDefaultNetworkAgentResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // GetEmail invokes getEmail operation.
 //
 // Returns the full record for an inbound email received at one
@@ -10887,6 +11607,319 @@ func (c *Client) sendInstallTemplate(ctx context.Context, request *InstallTempla
 	return result, nil
 }
 
+// InviteAgentConnection invokes inviteAgentConnection operation.
+//
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
+//
+// POST /agent-connections/{address}/invitation
+func (c *Client) InviteAgentConnection(ctx context.Context, request *InviteAgentConnectionReq, params InviteAgentConnectionParams) (InviteAgentConnectionRes, error) {
+	res, err := c.sendInviteAgentConnection(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendInviteAgentConnection(ctx context.Context, request *InviteAgentConnectionReq, params InviteAgentConnectionParams) (res InviteAgentConnectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("inviteAgentConnection"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent-connections/{address}/invitation"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, InviteAgentConnectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/agent-connections/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/invitation"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeInviteAgentConnectionRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, InviteAgentConnectionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeInviteAgentConnectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListAgentConnections invokes listAgentConnections operation.
+//
+// Address-bound external runtime pairing. Any current human organization member may create and
+// manage their personal agent connections. Organization owners and admins may manage all connections
+// and explicitly create shared ones. An owner removed from the organization loses personal agent
+// access, and rejoining does not revive the old connection. Organization API keys cannot manage
+// connections. A current connected credential may disconnect only its own exact address. Claim is
+// authorized only by its one-use invitation. Connected means a real challenge was received and a
+// reply sent by the current bound credential was received back. Invitations expire after 15 minutes.
+// Reconnection preserves the address and revokes previous credentials. Status responses contain no
+// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
+// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
+//
+//	and recipient-bound network contact admission.
+//
+// GET /agent-connections
+func (c *Client) ListAgentConnections(ctx context.Context, params ListAgentConnectionsParams) (ListAgentConnectionsRes, error) {
+	res, err := c.sendListAgentConnections(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListAgentConnections(ctx context.Context, params ListAgentConnectionsParams) (res ListAgentConnectionsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listAgentConnections"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-connections"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListAgentConnectionsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-connections"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListAgentConnectionsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListAgentConnectionsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListAgentContacts invokes listAgentContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -11055,6 +12088,115 @@ func (c *Client) sendListAgentContacts(ctx context.Context, params ListAgentCont
 
 	stage = "DecodeResponse"
 	result, err := decodeListAgentContactsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListAgentNetworks invokes listAgentNetworks operation.
+//
+// An organization member login or an active connected agent allowed to see the network can read
+// networks. The default organization network is always present. can_manage_all is true only for a
+// current owner or admin; a connected credential receives false.
+//
+// GET /agent-networks
+func (c *Client) ListAgentNetworks(ctx context.Context) (ListAgentNetworksRes, error) {
+	res, err := c.sendListAgentNetworks(ctx)
+	return res, err
+}
+
+func (c *Client) sendListAgentNetworks(ctx context.Context) (res ListAgentNetworksRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listAgentNetworks"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-networks"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListAgentNetworksOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-networks"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListAgentNetworksOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListAgentNetworksResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -11322,6 +12464,334 @@ func (c *Client) sendListDeclinedPayments(ctx context.Context) (res ListDeclined
 
 	stage = "DecodeResponse"
 	result, err := decodeListDeclinedPaymentsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListDefaultNetworkAgents invokes listDefaultNetworkAgents operation.
+//
+// Requires a connected-agent credential for an active member allowed to see the network, or an
+// organization member login.
+//
+// GET /agent-networks/default/agents
+func (c *Client) ListDefaultNetworkAgents(ctx context.Context, params ListDefaultNetworkAgentsParams) (ListDefaultNetworkAgentsRes, error) {
+	res, err := c.sendListDefaultNetworkAgents(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListDefaultNetworkAgents(ctx context.Context, params ListDefaultNetworkAgentsParams) (res ListDefaultNetworkAgentsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listDefaultNetworkAgents"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-networks/default/agents"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListDefaultNetworkAgentsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-networks/default/agents"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "owner" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "owner",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Owner.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListDefaultNetworkAgentsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListDefaultNetworkAgentsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListDefaultNetworkMembers invokes listDefaultNetworkMembers operation.
+//
+// An owner or admin sees all connected addresses, including hidden and excluded members. Other human
+// members see only personal addresses owned by their current membership. Filtering happens before
+// pagination. Connected-agent credentials cannot read this roster. Each row includes whether the
+// requester can manage it.
+//
+// GET /agent-networks/default/members
+func (c *Client) ListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (ListDefaultNetworkMembersRes, error) {
+	res, err := c.sendListDefaultNetworkMembers(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (res ListDefaultNetworkMembersRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listDefaultNetworkMembers"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-networks/default/members"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListDefaultNetworkMembersOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-networks/default/members"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "cursor" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "cursor",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "owner" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "owner",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Owner.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListDefaultNetworkMembersOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListDefaultNetworkMembersResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -15442,13 +16912,12 @@ func (c *Client) sendRegisterPayoutAddress(ctx context.Context, request *Registe
 
 // RemoveAgentConnection invokes removeAgentConnection operation.
 //
-// Permanently removes a revoked connection record. Requires an organization
-// owner or admin session or OAuth token; organization API keys are denied.
-// Disconnect first using DELETE /agent-connections/{address}. An active
-// connection returns 409 connection_not_revoked. Missing or already removed
-// records return 404. Mail, address notes, domains and external runtimes are
-// preserved. The same address can be paired again with a new invitation;
-// old credentials and invitations remain invalid.
+// Permanently remove a revoked connection record. A current personal owner may permanently remove
+// their own record; organization owners and admins may remove any record. Disconnect first using
+// revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already
+// removed records return 404. Mail, address notes, domains and external runtimes are preserved. The
+// same address can be paired again with a new invitation; old credentials and invitations remain
+// invalid.
 //
 // POST /agent-connections/{address}/remove
 func (c *Client) RemoveAgentConnection(ctx context.Context, params RemoveAgentConnectionParams) (RemoveAgentConnectionRes, error) {
@@ -15522,6 +16991,23 @@ func (c *Client) sendRemoveAgentConnection(ctx context.Context, params RemoveAge
 		return res, errors.Wrap(err, "create request")
 	}
 
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
@@ -15565,6 +17051,131 @@ func (c *Client) sendRemoveAgentConnection(ctx context.Context, params RemoveAge
 
 	stage = "DecodeResponse"
 	result, err := decodeRemoveAgentConnectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RemoveDefaultNetworkMember invokes removeDefaultNetworkMember operation.
+//
+// Owner or admin login required. The explicit exclusion persists across synchronization.
+//
+// DELETE /agent-networks/default/members/{address}
+func (c *Client) RemoveDefaultNetworkMember(ctx context.Context, params RemoveDefaultNetworkMemberParams) (RemoveDefaultNetworkMemberRes, error) {
+	res, err := c.sendRemoveDefaultNetworkMember(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendRemoveDefaultNetworkMember(ctx context.Context, params RemoveDefaultNetworkMemberParams) (res RemoveDefaultNetworkMemberRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("removeDefaultNetworkMember"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/agent-networks/default/members/{address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RemoveDefaultNetworkMemberOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-networks/default/members/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RemoveDefaultNetworkMemberOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRemoveDefaultNetworkMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -16479,6 +18090,135 @@ func (c *Client) sendResolveRegistryHandle(ctx context.Context, params ResolveRe
 
 	stage = "DecodeResponse"
 	result, err := decodeResolveRegistryHandleResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RevokeAgentConnection invokes revokeAgentConnection operation.
+//
+// Disconnect an agent and invalidate its bound credential. A current personal owner may disconnect
+// their own agent; organization owners and admins may disconnect any connection. A connected agent
+// may disconnect only its own exact address using its current bound credential. This preserves the
+// connection record, mail, notes and domain. A current personal owner may permanently remove their
+// own revoked record.
+//
+// DELETE /agent-connections/{address}
+func (c *Client) RevokeAgentConnection(ctx context.Context, params RevokeAgentConnectionParams) (RevokeAgentConnectionRes, error) {
+	res, err := c.sendRevokeAgentConnection(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendRevokeAgentConnection(ctx context.Context, params RevokeAgentConnectionParams) (res RevokeAgentConnectionRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("revokeAgentConnection"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/agent-connections/{address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RevokeAgentConnectionOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-connections/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RevokeAgentConnectionOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRevokeAgentConnectionResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -19536,6 +21276,136 @@ func (c *Client) sendUpdateAccount(ctx context.Context, request *UpdateAccountIn
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateAccountResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateDefaultNetworkMember invokes updateDefaultNetworkMember operation.
+//
+// An owner or admin may update any active address. Other human members may update only their own
+// current, non-excluded personal address. Connected-agent credentials cannot update visibility.
+// Omitted settings keep their current value.
+//
+// PATCH /agent-networks/default/members/{address}
+func (c *Client) UpdateDefaultNetworkMember(ctx context.Context, request *UpdateAgentNetworkMemberInput, params UpdateDefaultNetworkMemberParams) (UpdateDefaultNetworkMemberRes, error) {
+	res, err := c.sendUpdateDefaultNetworkMember(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateDefaultNetworkMember(ctx context.Context, request *UpdateAgentNetworkMemberInput, params UpdateDefaultNetworkMemberParams) (res UpdateDefaultNetworkMemberRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateDefaultNetworkMember"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.URLTemplateKey.String("/agent-networks/default/members/{address}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateDefaultNetworkMemberOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-networks/default/members/"
+	{
+		// Encode "address" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "address",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.StringToString(params.Address))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateDefaultNetworkMemberRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateDefaultNetworkMemberOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateDefaultNetworkMemberResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

@@ -351,6 +351,12 @@ describe("contact request command lifecycle", () => {
         CODEX_THREAD_ID: f.sessionId,
       }),
     ).toBe(`codex:${f.sessionId}`);
+    expect(
+      contactRequestSessionKey(f.context, {
+        CODEX_SESSION_ID: randomUUID(),
+        CODEX_THREAD_ID: f.sessionId,
+      }),
+    ).toBe(`codex:${f.sessionId}`);
     // Older saved native setups had no receiverMode field.
     writeMailJson(f.setupPath, { ...f.setup, receiverMode: undefined });
     expect(

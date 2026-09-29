@@ -28,9 +28,11 @@ primitive chat peer@example.com < question.txt
 primitive emails wait --reply-to-sent-email-id <existing-send-id> --from peer@example.com
 ```
 
-`--contacts` uses only this agent's saved notification preferences. New contacts
-default to notifications off. Exact-parent reply waits work independently of
-unsolicited notification preferences. The listener uses the existing shared
+`--contacts` uses this agent's saved notification preferences and the same-org
+network: an agent that can view the network may wake a listed recipient without
+an individual contact. Explicit contact or owner silence still wins. New contacts
+default to notifications off for other senders. Exact-parent reply waits work
+independently of unsolicited notification preferences. The listener uses the existing shared
 WebSocket subscription, checks current policy before dispatch, and never creates
 or resumes a coding session. Its native mode requires a supported, running local
 session with external tool-output event support. Notices wake an idle session

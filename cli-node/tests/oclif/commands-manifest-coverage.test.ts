@@ -43,6 +43,81 @@ function readCliPackageJson(): {
 // explicit guard against that mode: the package must not ship a
 // pre-built oclif manifest.
 describe("COMMANDS / manifest coverage", () => {
+  it("registers agent network parent, convenience commands, and generated operations", () => {
+    for (const name of [
+      "network",
+      "network:list",
+      "network:members",
+      "network:peers",
+      "network:get",
+      "network:set",
+      "network:add",
+      "network:remove",
+    ])
+      expect(COMMANDS[name]).toBeDefined();
+    for (const name of [
+      "list-agent-networks",
+      "list-default-network-members",
+      "list-default-network-agents",
+      "get-default-network-agent",
+      "add-default-network-member",
+      "remove-default-network-member",
+      "update-default-network-member",
+      "check-default-network-contact-admission",
+    ])
+      expect(COMMANDS[`agent-networks:${name}`]).toBeDefined();
+    const admission = operationManifest.find(
+      (operation) =>
+        operation.operationId === "checkDefaultNetworkContactAdmission",
+    );
+    expect(admission?.requestSchema).toMatchObject({
+      required: ["email_id", "sender_address"],
+    });
+    const listNetworks = operationManifest.find(
+      (operation) => operation.operationId === "listAgentNetworks",
+    );
+    expect(listNetworks?.responseSchema).toMatchObject({
+      items: { required: expect.arrayContaining(["can_manage_all"]) },
+    });
+    const listMembers = operationManifest.find(
+      (operation) => operation.operationId === "listDefaultNetworkMembers",
+    );
+    expect(listMembers?.responseSchema).toMatchObject({
+      items: { required: expect.arrayContaining(["can_manage"]) },
+    });
+    const set = COMMANDS["network:set"] as unknown as {
+      flags: Record<string, unknown>;
+      description: string;
+    };
+    const members = COMMANDS["network:members"] as unknown as {
+      description: string;
+    };
+    const peers = COMMANDS["network:peers"] as unknown as {
+      description: string;
+      flags: Record<string, unknown>;
+    };
+    expect(peers.description).toContain("recorded API activity");
+    expect(peers.description).toContain("owner name");
+    expect(peers.flags.owner).toBeDefined();
+    expect(
+      operationManifest
+        .find(
+          (operation) => operation.operationId === "listDefaultNetworkAgents",
+        )
+        ?.queryParams.map((parameter) => parameter.name),
+    ).toContain("owner");
+    expect(set.flags.see).toBeDefined();
+    expect(set.flags["be-seen"]).toBeDefined();
+    expect(members.description).toContain("currently owned personal agents");
+    expect(set.description).toContain("currently owned personal agents");
+    expect(set.description).toContain("initiating network-driven mail wake");
+    expect(set.description).toContain(
+      "network-driven wake from viewing senders",
+    );
+    expect(readCliPackageJson().oclif?.topics?.network?.description).toContain(
+      "primitive network",
+    );
+  });
   it("registers explicit signal and scoped doctor help", () => {
     const signal = COMMANDS.signal as unknown as {
       args: { kind: { options: string[] } };
@@ -63,6 +138,30 @@ describe("COMMANDS / manifest coverage", () => {
     expect(
       (COMMANDS.doctor as unknown as { description: string }).description,
     ).toContain("identity offline");
+  });
+  it("advertises exact-session external receiving on invitation setup", () => {
+    const connect = COMMANDS["agent:connect"] as unknown as {
+      flags: Record<string, unknown>;
+      description: string;
+    };
+    expect(connect.flags.session).toBeDefined();
+    expect(connect.flags.receiver).toBeDefined();
+    expect(connect.description).toContain("fail-open Stop hook");
+    expect(connect.description).toContain("resume SessionStart hook");
+    expect(connect.description).toContain("real idle mail event");
+    const listen = COMMANDS.listen as unknown as {
+      description: string;
+      flags: { contacts: { description: string } };
+    };
+    expect(listen.description).toContain("exact already-loaded thread");
+    expect(listen.description).toContain(
+      "Verified presence controls are handled without model turns",
+    );
+    expect(listen.description).toContain("do not consume --once or --number");
+    expect(listen.description).toContain("eligible same-org network peers");
+    expect(listen.flags.contacts.description).toContain(
+      "explicit contact or owner silence",
+    );
   });
   it("registers organization and per-agent contact commands", () => {
     for (const action of [
@@ -197,6 +296,69 @@ describe("COMMANDS / manifest coverage", () => {
     expect(setup.flags.token).toBeUndefined();
     expect(setup.flags["raw-body"]).toBeUndefined();
   });
+  it("registers every public agent connection management operation", () => {
+    const expected = [
+      [
+        "createAgentConnection",
+        "agent-connections:create-agent-connection",
+        "POST",
+        "/agent-connections",
+      ],
+      [
+        "listAgentConnections",
+        "agent-connections:list-agent-connections",
+        "GET",
+        "/agent-connections",
+      ],
+      [
+        "inviteAgentConnection",
+        "agent-connections:invite-agent-connection",
+        "POST",
+        "/agent-connections/{address}/invitation",
+      ],
+      [
+        "revokeAgentConnection",
+        "agent-connections:revoke-agent-connection",
+        "DELETE",
+        "/agent-connections/{address}",
+      ],
+      [
+        "removeAgentConnection",
+        "agent-connections:remove-agent-connection",
+        "POST",
+        "/agent-connections/{address}/remove",
+      ],
+      [
+        "claimAgentConnection",
+        "agent-connections:claim-agent-connection",
+        "POST",
+        "/agent-connections/claim",
+      ],
+      [
+        "agentConnectionSetup",
+        "agent-connections:agent-connection-setup",
+        "GET",
+        "/agent-connections/setup",
+      ],
+    ] as const;
+    for (const [operationId, command, method, path] of expected) {
+      expect(COMMANDS[command], command).toBeDefined();
+      expect(
+        operationManifest.find((op) => op.operationId === operationId),
+      ).toMatchObject({
+        method,
+        path,
+      });
+    }
+    const list = operationManifest.find(
+      (op) => op.operationId === "listAgentConnections",
+    );
+    expect(JSON.stringify(list?.responseSchema)).toContain("owner_active");
+    expect(JSON.stringify(list?.responseSchema)).toContain("ownership_kind");
+    expect(
+      readCliPackageJson().oclif?.topics?.["agent-connections"]?.description,
+    ).toContain("Create, list, invite, revoke, and remove");
+  });
   it("registers exact-profile disconnect separately from owner-only removal", () => {
     const disconnect = COMMANDS["agent:disconnect"] as unknown as {
       flags: Record<string, { required?: boolean }>;
@@ -217,20 +379,37 @@ describe("COMMANDS / manifest coverage", () => {
     expect(enroll.flags.receiver).toBeDefined();
     expect(enroll.flags["contact-requests"]).toBeDefined();
     expect(enroll.flags["contact-requests"].description).toContain(
-      "saved owner login",
+      "saved member login",
     );
     expect(enroll.flags["api-key"]).toBeUndefined();
     expect(enroll.flags.invitation).toBeUndefined();
-    expect(enroll.description).toContain("saved owner/admin OAuth login");
+    expect(enroll.description).toContain("saved member OAuth login");
     expect(enroll.description).toContain("preserving existing policy rules");
+    expect(enroll.description).toContain(
+      "owner's connection list for confirmed pairing",
+    );
+    expect(enroll.description).toContain("install a fail-open Stop hook");
+    expect(enroll.description).toContain("resume SessionStart hook");
+    expect(enroll.description).toContain(
+      "pre-create domain-unavailable rejection",
+    );
   });
   it("exposes saved-contact notification preferences without mixing allowlists", () => {
     const listener = COMMANDS.listen as unknown as {
-      flags: Record<string, { dependsOn?: string[]; exclusive?: string[] }>;
+      flags: Record<
+        string,
+        { dependsOn?: string[]; exclusive?: string[]; description?: string }
+      >;
+      description: string;
     };
     expect(listener.flags.json).toBeDefined();
     expect(listener.flags.wake).toBeDefined();
     expect(listener.flags["hook-session"].dependsOn).toContain("wake");
+    expect(listener.flags.wake.description).toContain("resumed SessionStart");
+    expect(listener.flags["hook-session"].description).toContain(
+      "resumed SessionStart",
+    );
+    expect(listener.description).toContain("primitive-hook-profile-bound-v2");
     expect(readCliPackageJson().oclif?.topics?.listen?.description).toContain(
       "--json",
     );
@@ -278,6 +457,9 @@ describe("COMMANDS / manifest coverage", () => {
     expect(chat.flags.from).toBeDefined();
     expect(chat.flags.async).toBeDefined();
     expect(chat.description).toContain("With --async");
+    expect(chat.description).toContain(
+      "external Claude setup can identify its session when Bash omits the runtime",
+    );
     expect(COMMANDS["chat:reply"]).toBeDefined();
   });
   it("registers mailbox deletion operations and the sent alias", () => {

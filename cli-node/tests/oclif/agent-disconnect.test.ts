@@ -1,4 +1,10 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +12,7 @@ import {
   AgentDisconnectError,
   disconnectAgent,
 } from "../../src/oclif/agent-disconnect.js";
+import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
 import {
   agentProfileDirectory,
   loadConnectedAgentProfile,
@@ -87,6 +94,53 @@ afterEach(() => {
 });
 
 describe("connected agent self-disconnect", () => {
+  it("removes only the disconnected Claude session's Stop hook", async () => {
+    const directory = configDir();
+    const claudeDir = join(directory, "claude");
+    const bin = join(directory, "bin");
+    mkdirSync(claudeDir);
+    mkdirSync(bin);
+    const cliPath = join(bin, "run.js");
+    writeFileSync(cliPath, "");
+    writeFileSync(join(bin, "claude-wake.mjs"), "");
+    saved(directory, "work", true);
+    const otherSession = "33333333-3333-4333-8333-333333333333";
+    const env = { CLAUDE_CONFIG_DIR: claudeDir };
+    expect(
+      installClaudeWakeHook({
+        cliPath,
+        configDir: directory,
+        profileName: "work",
+        agentAddress: profile.agent_address,
+        sessionId: session,
+        env,
+      }),
+    ).toBe("installed_unverified");
+    expect(
+      installClaudeWakeHook({
+        cliPath,
+        configDir: directory,
+        profileName: "other",
+        agentAddress: "other@example.test",
+        sessionId: otherSession,
+        env,
+      }),
+    ).toBe("installed_unverified");
+    const result = await disconnectAgent({
+      configDir: directory,
+      profileName: "work",
+      fetch: server().fetch,
+      stopReceiver: async () => stopped,
+      env,
+    });
+    expect(result.externalHook).toBe("removed");
+    const settings = JSON.parse(
+      readFileSync(join(claudeDir, "settings.json"), "utf8"),
+    );
+    expect(settings.hooks.Stop).toHaveLength(1);
+    expect(settings.hooks.Stop[0].hooks[0].args[5]).toBe(otherSession);
+  });
+
   it("revokes only the selected profile at its pinned origin and preserves evidence", async () => {
     const directory = configDir();
     saved(directory, "work", true);

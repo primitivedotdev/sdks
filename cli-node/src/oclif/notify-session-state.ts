@@ -19,7 +19,7 @@ export type NotificationReceipt = {
   emailId: string;
   eventId: string;
   clientId: string;
-  state: "submitting" | "accepted" | "unknown";
+  state: "submitting" | "not_submitted" | "accepted" | "unknown";
 };
 type EventIndex = { emailId: string; clientId: string; eventId: string };
 type PendingWrite = { receipt: NotificationReceipt; eventId: string };
@@ -40,7 +40,7 @@ function receipt(value: unknown): NotificationReceipt {
   const r = object(value);
   if (
     typeof r.state !== "string" ||
-    !["submitting", "accepted", "unknown"].includes(r.state) ||
+    !["submitting", "not_submitted", "accepted", "unknown"].includes(r.state) ||
     Object.keys(r).length !== 4
   )
     throw invalid();
@@ -166,7 +166,11 @@ function checkCoherence(directory: string, update: PendingWrite) {
     (current.clientId !== update.receipt.clientId ||
       current.eventId !== update.receipt.eventId ||
       (current.state !== "submitting" &&
-        current.state !== update.receipt.state))
+        current.state !== update.receipt.state &&
+        !(
+          current.state === "not_submitted" &&
+          update.receipt.state === "submitting"
+        )))
   )
     throw invalid();
   if (

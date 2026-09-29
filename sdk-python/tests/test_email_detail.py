@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 # Round-trip test that pins the new fields on EmailDetail (replies,
-# from_known_address, body_text, body_html). A future regen that
+# from_known_address, sender_connected_agent_verified, body_text, body_html). A future regen that
 # drops one of these fields would silently break the SDK contract;
 # this test fails loudly when that happens.
 from primitive.api.models.email_detail import EmailDetail
@@ -41,6 +41,7 @@ SAMPLE = {
     "from_email": "alice@example.com",
     "to_email": "support@example.com",
     "from_known_address": True,
+    "sender_connected_agent_verified": False,
     "thread_id": "44444444-4444-4444-4444-444444444444",
     "reply_count": 1,
     "last_replied_at": "2026-05-03T00:01:00Z",
@@ -103,6 +104,11 @@ def test_email_detail_surfaces_from_known_address() -> None:
     assert detail.from_known_address is True
 
 
+def test_email_detail_surfaces_sender_connected_agent_proof() -> None:
+    detail = EmailDetail.from_dict(SAMPLE)
+    assert detail.sender_connected_agent_verified is False
+
+
 def test_email_detail_surfaces_replies_array() -> None:
     detail = EmailDetail.from_dict(SAMPLE)
     assert len(detail.replies) == 1
@@ -142,6 +148,7 @@ def test_email_detail_round_trips_to_dict() -> None:
     assert serialized["body_text"] == "Hi there"
     assert serialized["body_html"] == "<p>Hi there</p>"
     assert serialized["from_known_address"] is True
+    assert serialized["sender_connected_agent_verified"] is False
     assert len(serialized["replies"]) == 1
     assert serialized["parsed"]["status"] == "complete"
     assert serialized["auth"]["spf"] == "pass"

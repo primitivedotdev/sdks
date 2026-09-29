@@ -269,6 +269,10 @@ native.on("connection", (socket) =>
       result = {
         thread: { id: sessionId, cwd: directory, canAcceptDirectInput: true },
       };
+    else if (frame.method === "thread/resume") {
+      assert.deepEqual(frame.params, { threadId: sessionId });
+      result = { thread: { id: sessionId } };
+    }
     else if (frame.method === "turn/start") {
       queued.push(frame.params);
       result = {
@@ -299,6 +303,7 @@ const env = {
   no_proxy: "127.0.0.1,localhost",
 };
 for (const name of [
+  "CLAUDE_CODE_SESSION_ID",
   "PRIMITIVE_API_HEADERS",
   "HTTP_PROXY",
   "HTTPS_PROXY",

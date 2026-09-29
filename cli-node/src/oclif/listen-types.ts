@@ -16,6 +16,7 @@ export type ListenOutcome = WithoutOwnership<CompleteWebhookInput>;
 export type ListenHandlerResult = {
   outcome: ListenOutcome;
   succeeded: boolean;
+  countTowardLimit?: boolean;
 };
 
 export type ListenHandler = (

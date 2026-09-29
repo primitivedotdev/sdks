@@ -2,7 +2,7 @@ import type { EmailDetail } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 
 // Round-trip pin for the new fields on EmailDetail (replies,
-// from_known_address, body_text, body_html). TS types are erased at
+// from_known_address, sender_connected_agent_verified, body_text, body_html). TS types are erased at
 // runtime, so the assertion here is the structural-conformance of the
 // fixture against the declared type plus a runtime read of each new
 // field. A future regen that drops one of these fields fails compile
@@ -41,6 +41,7 @@ const SAMPLE: EmailDetail = {
   from_email: "alice@example.com",
   to_email: "support@example.com",
   from_known_address: true,
+  sender_connected_agent_verified: false,
   thread_id: "44444444-4444-4444-4444-444444444444",
   reply_count: 1,
   last_replied_at: "2026-05-03T00:01:00.000Z",
@@ -99,6 +100,10 @@ describe("EmailDetail type contract", () => {
 
   it("surfaces from_known_address", () => {
     expect(SAMPLE.from_known_address).toBe(true);
+  });
+
+  it("surfaces sender_connected_agent_verified", () => {
+    expect(SAMPLE.sender_connected_agent_verified).toBe(false);
   });
 
   it("surfaces the replies array with EmailDetailReply elements", () => {

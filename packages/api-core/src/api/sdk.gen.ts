@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client/index.js';
 import { client } from './client.gen.js';
-import type { AddDomainData, AddDomainErrors, AddDomainResponses, AwaitReplyData, AwaitReplyErrors, AwaitReplyResponses, CancelSentEmailData, CancelSentEmailErrors, CancelSentEmailResponses, CheckDomainDnsData, CheckDomainDnsErrors, CheckDomainDnsResponses, ClaimAgentConnectionData, ClaimAgentConnectionErrors, ClaimAgentConnectionResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CompleteWebhookEventData, CompleteWebhookEventErrors, CompleteWebhookEventResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateChallengeData, CreateChallengeErrors, CreateChallengeResponses, CreateEmailChallengeData, CreateEmailChallengeErrors, CreateEmailChallengeResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, CreateRegistryData, CreateRegistryErrors, CreateRegistryResponses, CreateRouteData, CreateRouteErrors, CreateRouteResponses, CreateWakeAuthorizationData, CreateWakeAuthorizationErrors, CreateWakeAuthorizationResponses, CreateWakeScheduleData, CreateWakeScheduleErrors, CreateWakeScheduleResponses, DecideRegistryRequestData, DecideRegistryRequestErrors, DecideRegistryRequestResponses, DefineAgentData, DefineAgentErrors, DefineAgentResponses, DeleteAgentContactData, DeleteAgentContactErrors, DeleteAgentContactResponses, DeleteContactData, DeleteContactErrors, DeleteContactResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteMemoryData, DeleteMemoryErrors, DeleteMemoryResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DeleteRegistryData, DeleteRegistryErrors, DeleteRegistryResponses, DeleteRouteData, DeleteRouteErrors, DeleteRouteResponses, DeleteSentEmailData, DeleteSentEmailErrors, DeleteSentEmailResponses, DeleteWakeAuthorizationData, DeleteWakeAuthorizationErrors, DeleteWakeAuthorizationResponses, DeleteWakeScheduleData, DeleteWakeScheduleErrors, DeleteWakeScheduleResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadEmailAttachmentPartData, DownloadEmailAttachmentPartErrors, DownloadEmailAttachmentPartResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, DownloadSentAttachmentPartData, DownloadSentAttachmentPartErrors, DownloadSentAttachmentPartResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetAgentContactPolicyData, GetAgentContactPolicyErrors, GetAgentContactPolicyResponses, GetAgentData, GetAgentErrors, GetAgentResponses, GetChallengeData, GetChallengeErrors, GetChallengeResponses, GetContactData, GetContactErrors, GetContactPolicyData, GetContactPolicyErrors, GetContactPolicyResponses, GetContactResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetCreditBalanceData, GetCreditBalanceErrors, GetCreditBalanceResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetMemoryData, GetMemoryErrors, GetMemoryResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetOutboundStatusData, GetOutboundStatusErrors, GetOutboundStatusResponses, GetRegistryData, GetRegistryErrors, GetRegistryResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetSpendPolicyData, GetSpendPolicyErrors, GetSpendPolicyResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetTemplateData, GetTemplateErrors, GetTemplateInstallData, GetTemplateInstallErrors, GetTemplateInstallResponses, GetTemplateResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWakeScheduleData, GetWakeScheduleErrors, GetWakeScheduleResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, InstallTemplateData, InstallTemplateErrors, InstallTemplateResponses, ListAgentContactsData, ListAgentContactsErrors, ListAgentContactsResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListDeclinedPaymentsData, ListDeclinedPaymentsErrors, ListDeclinedPaymentsResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListPayoutAddressesData, ListPayoutAddressesErrors, ListPayoutAddressesResponses, ListRegistriesData, ListRegistriesErrors, ListRegistriesResponses, ListRegistryAgentsData, ListRegistryAgentsResponses, ListRegistryRequestsData, ListRegistryRequestsErrors, ListRegistryRequestsResponses, ListRoutesData, ListRoutesErrors, ListRoutesResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, ListTemplatesData, ListTemplatesErrors, ListTemplatesResponses, ListWakeAuthorizationsData, ListWakeAuthorizationsErrors, ListWakeAuthorizationsResponses, ListWakeDispatchesData, ListWakeDispatchesErrors, ListWakeDispatchesResponses, ListWakeSchedulesData, ListWakeSchedulesErrors, ListWakeSchedulesResponses, PayChallengeData, PayChallengeErrors, PayChallengeResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, PublishAgentData, PublishAgentErrors, PublishAgentResponses, PullWebhookEventData, PullWebhookEventErrors, PullWebhookEventResponses, PutAgentContactData, PutAgentContactErrors, PutAgentContactPolicyData, PutAgentContactPolicyErrors, PutAgentContactPolicyResponses, PutAgentContactResponses, PutContactData, PutContactErrors, PutContactPolicyData, PutContactPolicyErrors, PutContactPolicyResponses, PutContactResponses, RedeemCreditCodeData, RedeemCreditCodeErrors, RedeemCreditCodeResponses, RegisterPayoutAddressData, RegisterPayoutAddressErrors, RegisterPayoutAddressResponses, RemoveAgentConnectionData, RemoveAgentConnectionErrors, RemoveAgentConnectionResponses, ReorderRoutesData, ReorderRoutesErrors, ReorderRoutesResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RescheduleSentEmailData, RescheduleSentEmailErrors, RescheduleSentEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, ResolveRegistryHandleData, ResolveRegistryHandleErrors, ResolveRegistryHandleResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, RunWakeScheduleData, RunWakeScheduleErrors, RunWakeScheduleResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SearchMemoriesData, SearchMemoriesErrors, SearchMemoriesResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetMemoryData, SetMemoryErrors, SetMemoryResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, SimulateRouteData, SimulateRouteErrors, SimulateRouteResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestEndpointRulesData, TestEndpointRulesErrors, TestEndpointRulesResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnpublishAgentData, UnpublishAgentErrors, UnpublishAgentResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, UpdateRegistryData, UpdateRegistryErrors, UpdateRegistryResponses, UpdateRouteData, UpdateRouteErrors, UpdateRouteResponses, UpdateSpendPolicyData, UpdateSpendPolicyErrors, UpdateSpendPolicyResponses, UpdateWakeAuthorizationData, UpdateWakeAuthorizationErrors, UpdateWakeAuthorizationResponses, UpdateWakeScheduleData, UpdateWakeScheduleErrors, UpdateWakeScheduleResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
+import type { AddDefaultNetworkMemberData, AddDefaultNetworkMemberErrors, AddDefaultNetworkMemberResponses, AddDomainData, AddDomainErrors, AddDomainResponses, AgentConnectionSetupData, AgentConnectionSetupErrors, AgentConnectionSetupResponses, AwaitReplyData, AwaitReplyErrors, AwaitReplyResponses, CancelSentEmailData, CancelSentEmailErrors, CancelSentEmailResponses, CheckDefaultNetworkContactAdmissionData, CheckDefaultNetworkContactAdmissionErrors, CheckDefaultNetworkContactAdmissionResponses, CheckDomainDnsData, CheckDomainDnsErrors, CheckDomainDnsResponses, ClaimAgentConnectionData, ClaimAgentConnectionErrors, ClaimAgentConnectionResponses, CliLogoutData, CliLogoutErrors, CliLogoutResponses, CompleteWebhookEventData, CompleteWebhookEventErrors, CompleteWebhookEventResponses, CreateAgentAccountData, CreateAgentAccountErrors, CreateAgentAccountResponses, CreateAgentClaimLinkData, CreateAgentClaimLinkErrors, CreateAgentClaimLinkResponses, CreateAgentConnectionData, CreateAgentConnectionErrors, CreateAgentConnectionResponses, CreateChallengeData, CreateChallengeErrors, CreateChallengeResponses, CreateEmailChallengeData, CreateEmailChallengeErrors, CreateEmailChallengeResponses, CreateEndpointData, CreateEndpointErrors, CreateEndpointResponses, CreateFilterData, CreateFilterErrors, CreateFilterResponses, CreateFunctionData, CreateFunctionErrors, CreateFunctionResponses, CreateFunctionSecretData, CreateFunctionSecretErrors, CreateFunctionSecretResponses, CreateOrgSecretData, CreateOrgSecretErrors, CreateOrgSecretResponses, CreateRegistryData, CreateRegistryErrors, CreateRegistryResponses, CreateRouteData, CreateRouteErrors, CreateRouteResponses, CreateWakeAuthorizationData, CreateWakeAuthorizationErrors, CreateWakeAuthorizationResponses, CreateWakeScheduleData, CreateWakeScheduleErrors, CreateWakeScheduleResponses, DecideRegistryRequestData, DecideRegistryRequestErrors, DecideRegistryRequestResponses, DefineAgentData, DefineAgentErrors, DefineAgentResponses, DeleteAgentContactData, DeleteAgentContactErrors, DeleteAgentContactResponses, DeleteContactData, DeleteContactErrors, DeleteContactResponses, DeleteDomainData, DeleteDomainErrors, DeleteDomainResponses, DeleteEmailData, DeleteEmailErrors, DeleteEmailResponses, DeleteEndpointData, DeleteEndpointErrors, DeleteEndpointResponses, DeleteFilterData, DeleteFilterErrors, DeleteFilterResponses, DeleteFunctionData, DeleteFunctionErrors, DeleteFunctionResponses, DeleteFunctionSecretData, DeleteFunctionSecretErrors, DeleteFunctionSecretResponses, DeleteMemoryData, DeleteMemoryErrors, DeleteMemoryResponses, DeleteOrgSecretData, DeleteOrgSecretErrors, DeleteOrgSecretResponses, DeleteRegistryData, DeleteRegistryErrors, DeleteRegistryResponses, DeleteRouteData, DeleteRouteErrors, DeleteRouteResponses, DeleteSentEmailData, DeleteSentEmailErrors, DeleteSentEmailResponses, DeleteWakeAuthorizationData, DeleteWakeAuthorizationErrors, DeleteWakeAuthorizationResponses, DeleteWakeScheduleData, DeleteWakeScheduleErrors, DeleteWakeScheduleResponses, DiscardEmailContentData, DiscardEmailContentErrors, DiscardEmailContentResponses, DownloadAttachmentsData, DownloadAttachmentsErrors, DownloadAttachmentsResponses, DownloadDomainZoneFileData, DownloadDomainZoneFileErrors, DownloadDomainZoneFileResponses, DownloadEmailAttachmentPartData, DownloadEmailAttachmentPartErrors, DownloadEmailAttachmentPartResponses, DownloadRawEmailData, DownloadRawEmailErrors, DownloadRawEmailResponses, DownloadSentAttachmentPartData, DownloadSentAttachmentPartErrors, DownloadSentAttachmentPartResponses, GetAccountData, GetAccountErrors, GetAccountResponses, GetAgentContactPolicyData, GetAgentContactPolicyErrors, GetAgentContactPolicyResponses, GetAgentData, GetAgentErrors, GetAgentResponses, GetChallengeData, GetChallengeErrors, GetChallengeResponses, GetContactData, GetContactErrors, GetContactPolicyData, GetContactPolicyErrors, GetContactPolicyResponses, GetContactResponses, GetConversationData, GetConversationErrors, GetConversationResponses, GetCreditBalanceData, GetCreditBalanceErrors, GetCreditBalanceResponses, GetDefaultNetworkAgentData, GetDefaultNetworkAgentErrors, GetDefaultNetworkAgentResponses, GetEmailData, GetEmailErrors, GetEmailResponses, GetFunctionData, GetFunctionErrors, GetFunctionResponses, GetFunctionRoutingData, GetFunctionRoutingErrors, GetFunctionRoutingResponses, GetFunctionTestRunTraceData, GetFunctionTestRunTraceErrors, GetFunctionTestRunTraceResponses, GetInboxStatusData, GetInboxStatusErrors, GetInboxStatusResponses, GetMemoryData, GetMemoryErrors, GetMemoryResponses, GetOrgRoutingTopologyData, GetOrgRoutingTopologyErrors, GetOrgRoutingTopologyResponses, GetOutboundStatusData, GetOutboundStatusErrors, GetOutboundStatusResponses, GetRegistryData, GetRegistryErrors, GetRegistryResponses, GetSendPermissionsData, GetSendPermissionsErrors, GetSendPermissionsResponses, GetSentEmailData, GetSentEmailErrors, GetSentEmailResponses, GetSpendPolicyData, GetSpendPolicyErrors, GetSpendPolicyResponses, GetStorageStatsData, GetStorageStatsErrors, GetStorageStatsResponses, GetTemplateData, GetTemplateErrors, GetTemplateInstallData, GetTemplateInstallErrors, GetTemplateInstallResponses, GetTemplateResponses, GetThreadData, GetThreadErrors, GetThreadResponses, GetWakeScheduleData, GetWakeScheduleErrors, GetWakeScheduleResponses, GetWebhookSecretData, GetWebhookSecretErrors, GetWebhookSecretResponses, InstallTemplateData, InstallTemplateErrors, InstallTemplateResponses, InviteAgentConnectionData, InviteAgentConnectionErrors, InviteAgentConnectionResponses, ListAgentConnectionsData, ListAgentConnectionsErrors, ListAgentConnectionsResponses, ListAgentContactsData, ListAgentContactsErrors, ListAgentContactsResponses, ListAgentNetworksData, ListAgentNetworksErrors, ListAgentNetworksResponses, ListContactsData, ListContactsErrors, ListContactsResponses, ListDeclinedPaymentsData, ListDeclinedPaymentsErrors, ListDeclinedPaymentsResponses, ListDefaultNetworkAgentsData, ListDefaultNetworkAgentsErrors, ListDefaultNetworkAgentsResponses, ListDefaultNetworkMembersData, ListDefaultNetworkMembersErrors, ListDefaultNetworkMembersResponses, ListDeliveriesData, ListDeliveriesErrors, ListDeliveriesResponses, ListDomainsData, ListDomainsErrors, ListDomainsResponses, ListEmailsData, ListEmailsErrors, ListEmailsResponses, ListEndpointsData, ListEndpointsErrors, ListEndpointsResponses, ListFiltersData, ListFiltersErrors, ListFiltersResponses, ListFunctionLogsData, ListFunctionLogsErrors, ListFunctionLogsResponses, ListFunctionsData, ListFunctionSecretsData, ListFunctionSecretsErrors, ListFunctionSecretsResponses, ListFunctionsErrors, ListFunctionsResponses, ListOrgSecretsData, ListOrgSecretsErrors, ListOrgSecretsResponses, ListPayoutAddressesData, ListPayoutAddressesErrors, ListPayoutAddressesResponses, ListRegistriesData, ListRegistriesErrors, ListRegistriesResponses, ListRegistryAgentsData, ListRegistryAgentsResponses, ListRegistryRequestsData, ListRegistryRequestsErrors, ListRegistryRequestsResponses, ListRoutesData, ListRoutesErrors, ListRoutesResponses, ListSentEmailsData, ListSentEmailsErrors, ListSentEmailsResponses, ListTemplatesData, ListTemplatesErrors, ListTemplatesResponses, ListWakeAuthorizationsData, ListWakeAuthorizationsErrors, ListWakeAuthorizationsResponses, ListWakeDispatchesData, ListWakeDispatchesErrors, ListWakeDispatchesResponses, ListWakeSchedulesData, ListWakeSchedulesErrors, ListWakeSchedulesResponses, PayChallengeData, PayChallengeErrors, PayChallengeResponses, PollCliLoginData, PollCliLoginErrors, PollCliLoginResponses, PublishAgentData, PublishAgentErrors, PublishAgentResponses, PullWebhookEventData, PullWebhookEventErrors, PullWebhookEventResponses, PutAgentContactData, PutAgentContactErrors, PutAgentContactPolicyData, PutAgentContactPolicyErrors, PutAgentContactPolicyResponses, PutAgentContactResponses, PutContactData, PutContactErrors, PutContactPolicyData, PutContactPolicyErrors, PutContactPolicyResponses, PutContactResponses, RedeemCreditCodeData, RedeemCreditCodeErrors, RedeemCreditCodeResponses, RegisterPayoutAddressData, RegisterPayoutAddressErrors, RegisterPayoutAddressResponses, RemoveAgentConnectionData, RemoveAgentConnectionErrors, RemoveAgentConnectionResponses, RemoveDefaultNetworkMemberData, RemoveDefaultNetworkMemberErrors, RemoveDefaultNetworkMemberResponses, ReorderRoutesData, ReorderRoutesErrors, ReorderRoutesResponses, ReplayDeliveryData, ReplayDeliveryErrors, ReplayDeliveryResponses, ReplayEmailWebhooksData, ReplayEmailWebhooksErrors, ReplayEmailWebhooksResponses, ReplyToEmailData, ReplyToEmailErrors, ReplyToEmailResponses, RescheduleSentEmailData, RescheduleSentEmailErrors, RescheduleSentEmailResponses, ResendAgentSignupVerificationData, ResendAgentSignupVerificationErrors, ResendAgentSignupVerificationResponses, ResendCliSignupVerificationData, ResendCliSignupVerificationErrors, ResendCliSignupVerificationResponses, ResolveRegistryHandleData, ResolveRegistryHandleErrors, ResolveRegistryHandleResponses, RevokeAgentConnectionData, RevokeAgentConnectionErrors, RevokeAgentConnectionResponses, RotateWebhookSecretData, RotateWebhookSecretErrors, RotateWebhookSecretResponses, RunWakeScheduleData, RunWakeScheduleErrors, RunWakeScheduleResponses, SearchEmailsData, SearchEmailsErrors, SearchEmailsResponses, SearchMemoriesData, SearchMemoriesErrors, SearchMemoriesResponses, SemanticSearchData, SemanticSearchErrors, SemanticSearchResponses, SendEmailData, SendEmailErrors, SendEmailResponses, SetFunctionRouteData, SetFunctionRouteErrors, SetFunctionRouteResponses, SetFunctionSecretData, SetFunctionSecretErrors, SetFunctionSecretResponses, SetMemoryData, SetMemoryErrors, SetMemoryResponses, SetOrgSecretData, SetOrgSecretErrors, SetOrgSecretResponses, SimulateRouteData, SimulateRouteErrors, SimulateRouteResponses, StartAgentClaimData, StartAgentClaimErrors, StartAgentClaimResponses, StartAgentSignupData, StartAgentSignupErrors, StartAgentSignupResponses, StartCliLoginData, StartCliLoginErrors, StartCliLoginResponses, StartCliSignupData, StartCliSignupErrors, StartCliSignupResponses, TestEndpointData, TestEndpointErrors, TestEndpointResponses, TestEndpointRulesData, TestEndpointRulesErrors, TestEndpointRulesResponses, TestFunctionData, TestFunctionErrors, TestFunctionResponses, UnpublishAgentData, UnpublishAgentErrors, UnpublishAgentResponses, UnsetFunctionRouteData, UnsetFunctionRouteErrors, UnsetFunctionRouteResponses, UpdateAccountData, UpdateAccountErrors, UpdateAccountResponses, UpdateDefaultNetworkMemberData, UpdateDefaultNetworkMemberErrors, UpdateDefaultNetworkMemberResponses, UpdateDomainData, UpdateDomainErrors, UpdateDomainResponses, UpdateEndpointData, UpdateEndpointErrors, UpdateEndpointResponses, UpdateFilterData, UpdateFilterErrors, UpdateFilterResponses, UpdateFunctionData, UpdateFunctionErrors, UpdateFunctionResponses, UpdateRegistryData, UpdateRegistryErrors, UpdateRegistryResponses, UpdateRouteData, UpdateRouteErrors, UpdateRouteResponses, UpdateSpendPolicyData, UpdateSpendPolicyErrors, UpdateSpendPolicyResponses, UpdateWakeAuthorizationData, UpdateWakeAuthorizationErrors, UpdateWakeAuthorizationResponses, UpdateWakeScheduleData, UpdateWakeScheduleErrors, UpdateWakeScheduleResponses, VerifyAgentClaimData, VerifyAgentClaimErrors, VerifyAgentClaimResponses, VerifyAgentSignupData, VerifyAgentSignupErrors, VerifyAgentSignupResponses, VerifyCliSignupData, VerifyCliSignupErrors, VerifyCliSignupResponses, VerifyDomainData, VerifyDomainErrors, VerifyDomainResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -1482,22 +1482,88 @@ export const rescheduleSentEmail = <ThrowOnError extends boolean = false>(option
 });
 
 /**
- * Remove a revoked agent connection
+ * list Agent Connections
  *
- * Permanently removes a revoked connection record. Requires an organization
- * owner or admin session or OAuth token; organization API keys are denied.
- * Disconnect first using DELETE /agent-connections/{address}. An active
- * connection returns 409 connection_not_revoked. Missing or already removed
- * records return 404. Mail, address notes, domains and external runtimes are
- * preserved. The same address can be paired again with a new invitation;
- * old credentials and invitations remain invalid.
+ * Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.
+ */
+export const listAgentConnections = <ThrowOnError extends boolean = false>(options?: Options<ListAgentConnectionsData, ThrowOnError>) => (options?.client ?? client).get<ListAgentConnectionsResponses, ListAgentConnectionsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-connections',
+    ...options
+});
+
+/**
+ * create Agent Connection
  *
+ * Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.
+ */
+export const createAgentConnection = <ThrowOnError extends boolean = false>(options: Options<CreateAgentConnectionData, ThrowOnError>) => (options.client ?? client).post<CreateAgentConnectionResponses, CreateAgentConnectionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-connections',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * invite Agent Connection
+ *
+ * Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.
+ */
+export const inviteAgentConnection = <ThrowOnError extends boolean = false>(options: Options<InviteAgentConnectionData, ThrowOnError>) => (options.client ?? client).post<InviteAgentConnectionResponses, InviteAgentConnectionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-connections/{address}/invitation',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * revoke Agent Connection
+ *
+ * Disconnect an agent and invalidate its bound credential. A current personal owner may disconnect their own agent; organization owners and admins may disconnect any connection. A connected agent may disconnect only its own exact address using its current bound credential. This preserves the connection record, mail, notes and domain. A current personal owner may permanently remove their own revoked record.
+ */
+export const revokeAgentConnection = <ThrowOnError extends boolean = false>(options: Options<RevokeAgentConnectionData, ThrowOnError>) => (options.client ?? client).delete<RevokeAgentConnectionResponses, RevokeAgentConnectionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-connections/{address}',
+    ...options
+});
+
+/**
+ * remove Agent Connection
+ *
+ * Permanently remove a revoked connection record. A current personal owner may permanently remove their own record; organization owners and admins may remove any record. Disconnect first using revokeAgentConnection; an active connection returns 409 connection_not_revoked. Missing or already removed records return 404. Mail, address notes, domains and external runtimes are preserved. The same address can be paired again with a new invitation; old credentials and invitations remain invalid.
  */
 export const removeAgentConnection = <ThrowOnError extends boolean = false>(options: Options<RemoveAgentConnectionData, ThrowOnError>) => (options.client ?? client).post<RemoveAgentConnectionResponses, RemoveAgentConnectionErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/agent-connections/{address}/remove',
     ...options
 });
+
+/**
+ * claim Agent Connection
+ *
+ * Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.
+ */
+export const claimAgentConnection = <ThrowOnError extends boolean = false>(options: Options<ClaimAgentConnectionData, ThrowOnError>) => (options.client ?? client).post<ClaimAgentConnectionResponses, ClaimAgentConnectionErrors, ThrowOnError>({
+    url: '/agent-connections/claim',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * agent Connection Setup
+ *
+ * Instructions for pairing an external runtime. GET never consumes an invitation. The invitation token stays in the URL fragment and is submitted only in the claim POST body.
+ */
+export const agentConnectionSetup = <ThrowOnError extends boolean = false>(options?: Options<AgentConnectionSetupData, ThrowOnError>) => (options?.client ?? client).get<AgentConnectionSetupResponses, AgentConnectionSetupErrors, ThrowOnError>({ url: '/agent-connections/setup', ...options });
 
 /**
  * Cancel a scheduled send
@@ -2286,6 +2352,113 @@ export const listDeclinedPayments = <ThrowOnError extends boolean = false>(optio
 });
 
 /**
+ * List your organization's agent networks
+ *
+ * An organization member login or an active connected agent allowed to see the network can read networks. The default organization network is always present. can_manage_all is true only for a current owner or admin; a connected credential receives false.
+ */
+export const listAgentNetworks = <ThrowOnError extends boolean = false>(options?: Options<ListAgentNetworksData, ThrowOnError>) => (options?.client ?? client).get<ListAgentNetworksResponses, ListAgentNetworksErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-networks',
+    ...options
+});
+
+/**
+ * List default network memberships available to your login
+ *
+ * An owner or admin sees all connected addresses, including hidden and excluded members. Other human members see only personal addresses owned by their current membership. Filtering happens before pagination. Connected-agent credentials cannot read this roster. Each row includes whether the requester can manage it.
+ */
+export const listDefaultNetworkMembers = <ThrowOnError extends boolean = false>(options?: Options<ListDefaultNetworkMembersData, ThrowOnError>) => (options?.client ?? client).get<ListDefaultNetworkMembersResponses, ListDefaultNetworkMembersErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-networks/default/members',
+    ...options
+});
+
+/**
+ * Remove an agent from the default network
+ *
+ * Owner or admin login required. The explicit exclusion persists across synchronization.
+ */
+export const removeDefaultNetworkMember = <ThrowOnError extends boolean = false>(options: Options<RemoveDefaultNetworkMemberData, ThrowOnError>) => (options.client ?? client).delete<RemoveDefaultNetworkMemberResponses, RemoveDefaultNetworkMemberErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-networks/default/members/{address}',
+    ...options
+});
+
+/**
+ * Change whether an agent can see or be seen in the network
+ *
+ * An owner or admin may update any active address. Other human members may update only their own current, non-excluded personal address. Connected-agent credentials cannot update visibility. Omitted settings keep their current value.
+ */
+export const updateDefaultNetworkMember = <ThrowOnError extends boolean = false>(options: Options<UpdateDefaultNetworkMemberData, ThrowOnError>) => (options.client ?? client).patch<UpdateDefaultNetworkMemberResponses, UpdateDefaultNetworkMemberErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-networks/default/members/{address}',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
+ * Add an agent to the default network
+ *
+ * Owner or admin login required. Restores an explicitly excluded member.
+ */
+export const addDefaultNetworkMember = <ThrowOnError extends boolean = false>(options: Options<AddDefaultNetworkMemberData, ThrowOnError>) => (options.client ?? client).post<AddDefaultNetworkMemberResponses, AddDefaultNetworkMemberErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-networks/default/members/{address}',
+    ...options
+});
+
+/**
+ * Discover listed agents in your organization network
+ *
+ * Requires a connected-agent credential for an active member allowed to see the network, or an organization member login.
+ */
+export const listDefaultNetworkAgents = <ThrowOnError extends boolean = false>(options?: Options<ListDefaultNetworkAgentsData, ThrowOnError>) => (options?.client ?? client).get<ListDefaultNetworkAgentsResponses, ListDefaultNetworkAgentsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-networks/default/agents',
+    ...options
+});
+
+/**
+ * Get a listed agent by email address
+ *
+ * Requires a connected-agent credential allowed to see the network, or an organization member login. Unlisted agents look absent.
+ */
+export const getDefaultNetworkAgent = <ThrowOnError extends boolean = false>(options: Options<GetDefaultNetworkAgentData, ThrowOnError>) => (options.client ?? client).get<GetDefaultNetworkAgentResponses, GetDefaultNetworkAgentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-networks/default/agents/{address}',
+    ...options
+});
+
+/**
+ * Check whether network mail may wake this connected agent
+ *
+ * Requires the recipient's connected-agent credential. The recipient
+ * address is derived from that credential. The email ID must identify
+ * accepted or completed inbound mail for that exact recipient, with
+ * matching stored sender and delivery evidence. Returns no sender profile
+ * or existence detail. Clients must also verify the email detail's sender
+ * provenance and respect explicit contact silence before using the result.
+ * Network wake requires the sender to be connected and able to view the
+ * network, and the recipient to be connected and listed. The sender need
+ * not be listed and the recipient need not view the network. Ordinary
+ * known-address email remains independent. Mail received before
+ * allowed_since cannot be newly admitted.
+ *
+ */
+export const checkDefaultNetworkContactAdmission = <ThrowOnError extends boolean = false>(options: Options<CheckDefaultNetworkContactAdmissionData, ThrowOnError>) => (options.client ?? client).post<CheckDefaultNetworkContactAdmissionResponses, CheckDefaultNetworkContactAdmissionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/agent-networks/default/contact-admission',
+    ...options,
+    headers: {
+        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...options.headers
+    }
+});
+
+/**
  * List the registries you own
  */
 export const listRegistries = <ThrowOnError extends boolean = false>(options?: Options<ListRegistriesData, ThrowOnError>) => (options?.client ?? client).get<ListRegistriesResponses, ListRegistriesErrors, ThrowOnError>({
@@ -2486,20 +2659,6 @@ export const deleteAgentContact = <ThrowOnError extends boolean = false>(options
 export const putAgentContact = <ThrowOnError extends boolean = false>(options: Options<PutAgentContactData, ThrowOnError>) => (options.client ?? client).put<PutAgentContactResponses, PutAgentContactErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/agent-contacts/{agent_address}/{contact_address}',
-    ...options,
-    headers: {
-        ...(options.body !== undefined && { 'Content-Type': 'application/json' }),
-        ...options.headers
-    }
-});
-
-/**
- * claim Agent Connection
- *
- * Address-bound external runtime pairing. Management operations require an organization owner or admin session or OAuth token; members and organization API keys cannot manage connections. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow only address-scoped mail operations, organization note reads and own-address note writes. The credential is returned once. If the claim response is lost or the outcome is unknown, request a fresh owner invitation instead of retrying the consumed invitation.
- */
-export const claimAgentConnection = <ThrowOnError extends boolean = false>(options: Options<ClaimAgentConnectionData, ThrowOnError>) => (options.client ?? client).post<ClaimAgentConnectionResponses, ClaimAgentConnectionErrors, ThrowOnError>({
-    url: '/agent-connections/claim',
     ...options,
     headers: {
         ...(options.body !== undefined && { 'Content-Type': 'application/json' }),

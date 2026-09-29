@@ -188,6 +188,8 @@ function replyEmail(overrides: Partial<EmailDetail> = {}): EmailDetail {
       dkimSignatures: [],
     },
     ...overrides,
+    sender_connected_agent_verified:
+      overrides.sender_connected_agent_verified ?? false,
   };
 }
 
@@ -490,7 +492,7 @@ describe("chat command", () => {
     }
   });
 
-  it("refuses async sending without a connected profile or exact runtime session", async () => {
+  it("uses verified external setup without a runtime ID but refuses an unbound profile", async () => {
     const previous = process.env.CLAUDE_CODE_SESSION_ID;
     const previousCodex = process.env.CODEX_SESSION_ID;
     const previousThread = process.env.CODEX_THREAD_ID;
@@ -501,9 +503,12 @@ describe("chat command", () => {
       connectedAuth(true, "11111111-1111-4111-8111-111111111111");
       await expect(
         runChatCommand(["help@agent.example", "hello", "--async"]),
-      ).rejects.toThrow("exact current coding session");
-      expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
-      expect(mocks.sendEmail).not.toHaveBeenCalled();
+      ).resolves.toMatchObject({ exitCode: undefined });
+      expect(mocks.openConnectedReplyWait.mock.calls[0][0].sessionKey).toBe(
+        "claude:11111111-1111-4111-8111-111111111111",
+      );
+      expect(mocks.sendEmail).toHaveBeenCalledOnce();
+      mocks.sendEmail.mockClear();
       connectedAuth(false);
       process.env.CLAUDE_CODE_SESSION_ID =
         "11111111-1111-4111-8111-111111111111";
