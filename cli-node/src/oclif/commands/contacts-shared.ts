@@ -16,6 +16,9 @@ import {
 } from "../contacts.js";
 
 export const contactFlags = {
+  json: Flags.boolean({
+    description: "Print JSON (already the default for contact commands)",
+  }),
   "api-key": Flags.string({
     description: "API key override",
     env: "PRIMITIVE_API_KEY",
@@ -81,6 +84,7 @@ type ParsedContactFlags = {
   "api-key"?: string;
   "api-base-url"?: string;
   time?: boolean;
+  json?: boolean;
   "if-version"?: string;
   "clear-name"?: boolean;
   "clear-purpose"?: boolean;

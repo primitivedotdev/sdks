@@ -15,6 +15,9 @@ for (const key of [
   "PRIMITIVE_API_KEY",
   "PRIMITIVE_API_BASE_URL",
   "PRIMITIVE_API_HEADERS",
+  "PRIMITIVE_AGENT_PROFILE",
+  "PRIMITIVE_LISTEN_BACKGROUND_TOKEN",
+  "PRIMITIVE_LISTEN_BACKGROUND_TARGET",
 ])
   delete env[key];
 async function run(args) {
@@ -48,7 +51,25 @@ try {
   const help = await run(["listen", "--help"]);
   assert.equal(help.code, 0, help.stderr);
   assert.match(help.stdout, /--notify-session/);
+  assert.match(help.stdout, /external mail events/);
+  assert.match(help.stdout, /tool[- ]output/);
+  assert.match(help.stdout, /never\s+(synthetic\s+)?user messages/);
+  assert.match(help.stdout, /--background/);
+  assert.match(help.stdout, /--stop/);
   const session = "11111111-1111-4111-8111-111111111111";
+  const bare = await run(["listen"]);
+  assert.notEqual(bare.code, 0);
+  assert.match(bare.stderr, /sign.?in|auth|API key|credential/i);
+  for (const args of [
+    ["--background"], ["--stop"],
+    ["--background", "--notify-session", session, "--once"],
+    ["--background", "--notify-session", session, "--status"],
+    ["--stop", "--notify-session", session, "--contacts"],
+  ]) {
+    const invalid = await run(["listen", ...args]);
+    assert.notEqual(invalid.code, 0);
+    assert.doesNotMatch(invalid.stderr, /API key is required|native socket|sign.?in/i);
+  }
   for (const [flag, value, message] of [
     ["--transport", "poll", /requires --transport websocket/],
     ["--subscription", "custom", /omit --subscription/],

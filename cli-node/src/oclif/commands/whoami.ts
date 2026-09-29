@@ -10,6 +10,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { isConnectedChatCredential } from "../scoped-chat.js";
 
 // `primitive whoami` is the credentials smoke test. Default output stays
 // intentionally sparse so routine auth checks do not expose account internals;
@@ -38,16 +39,19 @@ export function formatWhoamiSummary(
 
 class WhoamiCommand extends Command {
   static description =
-    `Print the account currently authenticated by saved OAuth credentials or an explicit API key. Useful as a credentials smoke test: confirms auth is live and shows which account it belongs to.
+    `Print the account currently authenticated by saved OAuth credentials or an explicit API key. For account credentials this is a live credentials smoke test.
 
-  The default output is a concise human summary. Pass --json only when a script intentionally needs the full /account response.`;
+  With PRIMITIVE_AGENT_PROFILE selected, print the saved connected-agent identity offline. This does not verify live authentication, app pairing, or listener readiness. Inspect the receiver separately with listen --status --notify-session <session-id> under the same profile.
 
-  static summary = "Print the authenticated account (credentials smoke test)";
+  The default output is a concise human summary. Pass --json for the full /account response or the explicit offline connected-agent identity envelope.`;
+
+  static summary = "Print the live account or saved connected-agent identity";
 
   static examples = [
     "<%= config.bin %> whoami",
     "<%= config.bin %> whoami --api-key prim_...",
     "<%= config.bin %> whoami --json | jq .id",
+    "PRIMITIVE_AGENT_PROFILE=work <%= config.bin %> whoami --json",
   ];
 
   static flags = {
@@ -63,7 +67,7 @@ class WhoamiCommand extends Command {
     }),
     json: Flags.boolean({
       description:
-        "Print the full account JSON response. Default output hides setup and billing internals.",
+        "Print the account JSON response, or the saved connected identity marked verification: offline. Never prints credentials.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
@@ -80,6 +84,35 @@ class WhoamiCommand extends Command {
           apiBaseUrl: flags["api-base-url"],
           configDir: this.config.configDir,
         });
+
+      if (auth.connectedAgent) {
+        const identity = auth.connectedAgent;
+        const statusCommand = `primitive agent connect --profile ${identity.profileName} --status --json`;
+        const guidance =
+          "Saved identity only. Live authentication, app pairing, and receiving readiness are not verified. Inspect the receiver with listen --status --notify-session <session-id> under the same profile.";
+        this.log(
+          flags.json
+            ? JSON.stringify(
+                {
+                  auth_method: "agent_connection",
+                  verification: "offline",
+                  identity,
+                  status_command: statusCommand,
+                  guidance,
+                },
+                null,
+                2,
+              )
+            : `Saved connected-agent profile: ${identity.profileName}\nAgent address: ${identity.agentAddress}\nOwner address: ${identity.ownerAddress}\nAPI origin: ${identity.apiBaseUrl}\n${guidance}\nSaved profile status: ${statusCommand}`,
+        );
+        return;
+      }
+      if (isConnectedChatCredential(auth.apiKey)) {
+        throw new Errors.CLIError(
+          "This connection credential cannot inspect an account. Select its saved profile with PRIMITIVE_AGENT_PROFILE to inspect the connected identity offline.",
+          { exit: 1 },
+        );
+      }
 
       const result = await getAccount({
         client: apiClient.client,

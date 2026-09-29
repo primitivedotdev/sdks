@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
   CONTACT_POLICY_MAX_AGE_MS,
+  CONTACT_POLICY_RETRY_MAX_MS,
+  CONTACT_POLICY_RETRY_MIN_MS,
   type ContactPolicyPage,
+  ContactPolicyReadRetryError,
   createNotificationContactPolicy,
 } from "../../src/oclif/notification-contact-policy.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
@@ -23,7 +26,7 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     ...overrides,
   };
 }
-function fixture(initial = row()) {
+function fixture(initial = row(), contactRequests = false) {
   let clock = 0;
   let rows = [initial];
   const readPage = vi.fn(
@@ -34,6 +37,7 @@ function fixture(initial = row()) {
   const policy = createNotificationContactPolicy({
     readPolicy,
     recipient,
+    contactRequests,
     readPage,
     now: () => clock,
   });
@@ -51,7 +55,147 @@ function fixture(initial = row()) {
   };
 }
 
+function requestFixture() {
+  const f = fixture(row(), true);
+  f.rows([]);
+  f.document.agent_policy = {
+    rules: [],
+    allow_contact_requests: true,
+    contact_request_since: activation,
+    contact_request_generation: randomUUID(),
+    version: randomUUID(),
+    updated_at: activation,
+  };
+  f.document.allow_contact_requests = true;
+  f.document.contact_request_since = activation;
+  f.document.contact_request_generation = "b".repeat(64);
+  return f;
+}
+
 describe("contact notification policy", () => {
+  it("admits a solicited response without unsolicited opt-in but rechecks explicit silence", async () => {
+    const f = fixture();
+    f.rows([]);
+    expect(await f.policy.admit(sender, received, signal)).toBeNull();
+    const admission = await f.policy.admitResponse(sender, received, signal);
+    expect(admission).toMatchObject({ kind: "response", sender });
+    if (!admission) throw new Error("Expected response admission");
+    const dispatch = await f.policy.recheck(admission, signal);
+    dispatch();
+    f.rows([
+      row({ notify: false, notify_since: null, notification_generation: null }),
+    ]);
+    await expect(f.policy.recheck(admission, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+    expect(dispatch).toThrow("changed or expired");
+    expect(await f.policy.admitResponse(sender, received, signal)).toBeNull();
+  });
+  it.each([
+    "agent",
+    "org",
+  ] as const)("does not bypass %s silence for solicited responses", async (source) => {
+    const f = fixture();
+    f.rows([]);
+    f.document[`${source}_policy`] = {
+      ...f.document[`${source}_policy`],
+      version: randomUUID(),
+      updated_at: activation,
+      rules: [
+        {
+          pattern: sender,
+          effect: "silence",
+          notify_since: null,
+          notification_generation: null,
+        },
+      ],
+    };
+    expect(await f.policy.admitResponse(sender, received, signal)).toBeNull();
+  });
+  it("does not backfill a solicited reply before the membership activation", async () => {
+    const f = fixture();
+    expect(
+      await f.policy.admitResponse(sender, "2026-09-01T09:59:59.999Z", signal),
+    ).toBeNull();
+  });
+  it("keeps cached request-only mail pending through a paced transient refresh", async () => {
+    const f = requestFixture();
+    expect(await f.policy.admit(sender, received, signal)).toMatchObject({
+      kind: "request",
+    });
+    f.readPolicy.mockRejectedValueOnce(new ContactPolicyReadRetryError());
+    await expect(
+      f.policy.admit(sender, received, signal),
+    ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
+    expect(() => f.policy.members()).toThrow("unavailable");
+    f.rows([row()]);
+    for (let attempt = 0; attempt < 100; attempt++)
+      await expect(
+        f.policy.admit(sender, received, signal),
+      ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
+    expect(f.readPolicy).toHaveBeenCalledTimes(2);
+    f.advance(CONTACT_POLICY_RETRY_MIN_MS);
+    expect(await f.policy.admit(sender, received, signal)).toMatchObject({
+      kind: "allowed",
+    });
+    expect(f.readPolicy).toHaveBeenCalledTimes(3);
+  });
+
+  it("invalidates prior dispatch permission and bounds repeated transient read attempts", async () => {
+    const f = fixture();
+    const admission = await f.policy.admit(sender, received, signal);
+    if (!admission) throw new Error("Expected admission");
+    const dispatch = await f.policy.recheck(admission, signal);
+    f.readPage.mockRejectedValue(new ContactPolicyReadRetryError());
+    await expect(f.policy.recheck(admission, signal)).rejects.toBeInstanceOf(
+      ContactPolicyReadRetryError,
+    );
+    expect(dispatch).toThrow("changed or expired");
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const count = f.readPage.mock.calls.length;
+      const backoff = Math.min(
+        CONTACT_POLICY_RETRY_MIN_MS * 2 ** attempt,
+        CONTACT_POLICY_RETRY_MAX_MS,
+      );
+      f.advance(backoff - 1);
+      await expect(
+        f.policy.admit(sender, received, signal),
+      ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
+      expect(f.readPage).toHaveBeenCalledTimes(count);
+      f.advance(1);
+      await expect(
+        f.policy.admit(sender, received, signal),
+      ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
+      expect(f.readPage).toHaveBeenCalledTimes(count + 1);
+    }
+  });
+
+  it("exposes temporary startup failure to supervision without retaining authority", async () => {
+    const f = fixture();
+    f.readPolicy.mockRejectedValueOnce(new ContactPolicyReadRetryError());
+    await expect(f.policy.refresh(signal)).rejects.toBeInstanceOf(
+      ContactPolicyReadRetryError,
+    );
+    expect(f.readPolicy).toHaveBeenCalledTimes(1);
+    expect(() => f.policy.members()).toThrow("unavailable");
+    await expect(f.policy.refresh(signal)).rejects.toBeInstanceOf(
+      ContactPolicyReadRetryError,
+    );
+    expect(f.readPolicy).toHaveBeenCalledTimes(1);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(f.policy.refresh(controller.signal)).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    expect(f.readPolicy).toHaveBeenCalledTimes(1);
+    f.advance(CONTACT_POLICY_RETRY_MIN_MS);
+    await f.policy.refresh(signal);
+    expect(f.readPolicy).toHaveBeenCalledTimes(2);
+    expect(await f.policy.admit(sender, received, signal)).toMatchObject({
+      kind: "allowed",
+    });
+  });
+
   it("requires an enabled exact membership and mail at or after activation", async () => {
     const f = fixture();
     expect(await f.policy.admit(sender, activation, signal)).toMatchObject({
@@ -82,6 +226,49 @@ describe("contact notification policy", () => {
     expect(await f.policy.admit(sender, received, signal)).toMatchObject({
       sender,
     });
+  });
+
+  it.each([
+    { receivedAt: "2026-09-01T10:01:04.700Z", allowed: true },
+    { receivedAt: "2026-09-01T10:00:59.999Z", allowed: false },
+  ])("refreshes request-only admission after acceptance without backfilling $receivedAt", async ({
+    receivedAt,
+    allowed,
+  }) => {
+    const f = requestFixture();
+    expect(await f.policy.admit(sender, received, signal)).toMatchObject({
+      kind: "request",
+    });
+    const membership = row({ notify_since: received });
+    f.rows([membership]);
+    f.advance(4700);
+
+    const admission = await f.policy.admit(sender, receivedAt, signal);
+    if (allowed)
+      expect(admission).toMatchObject({
+        kind: "allowed",
+        generation: membership.notification_generation,
+        notifySince: received,
+      });
+    else expect(admission).toBeNull();
+    expect(f.readPage).toHaveBeenCalledTimes(2);
+    expect(f.readPolicy).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes request-only decisions once and still rechecks permission before dispatch", async () => {
+    const f = requestFixture();
+    await f.policy.admit(sender, received, signal);
+    const admission = await f.policy.admit(sender, received, signal);
+    expect(admission?.kind).toBe("request");
+    expect(f.readPage).toHaveBeenCalledTimes(2);
+    if (!admission) throw new Error("Expected request admission");
+    f.rows([
+      row({ notify: false, notify_since: null, notification_generation: null }),
+    ]);
+    await expect(f.policy.recheck(admission, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+    expect(f.readPage).toHaveBeenCalledTimes(3);
   });
 
   it("refreshes before dispatch and refuses disable, deletion, or a new generation", async () => {

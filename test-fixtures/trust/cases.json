@@ -1554,6 +1554,558 @@
         "retryable": false,
         "reason": "dmarc-domain-mismatch"
       }
+    },
+    {
+      "name": "staging-managed-inbox-provider-dkim",
+      "from": "player@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": true,
+        "retryable": false,
+        "reason": "trusted"
+      }
+    },
+    {
+      "name": "staging-managed-inbox-exact-dkim",
+      "from": "player@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "test-inbox.primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": true,
+        "retryable": false,
+        "reason": "trusted"
+      }
+    },
+    {
+      "name": "staging-managed-inbox-wrong-local-part",
+      "from": "other@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "sender-mismatch"
+      }
+    },
+    {
+      "name": "staging-managed-inbox-wrong-from-domain",
+      "from": "player@other-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "from-domain-mismatch"
+      }
+    },
+    {
+      "name": "staging-managed-inbox-sibling-dkim-rejected",
+      "from": "player@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "other-inbox.primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "staging-managed-inbox-spf-only-rejected",
+      "from": "player@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": false,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": []
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "staging-managed-inbox-suffix-lookalike",
+      "from": "player@inbox.notprimitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "notprimitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "inbox.notprimitive-staging.email",
+        "sender": "player@inbox.notprimitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "staging-managed-inbox-prefix-lookalike",
+      "from": "player@inbox.primitive-staging.email.example.org",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "example.org",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "inbox.primitive-staging.email.example.org",
+        "sender": "player@inbox.primitive-staging.email.example.org"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "staging-nested-domain-not-managed-inbox",
+      "from": "player@child.inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "child.inbox.primitive-staging.email",
+        "sender": "player@child.inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "staging-managed-inbox-provider-dkim-without-spf",
+      "from": "player@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "softfail",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": false,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": true,
+        "retryable": false,
+        "reason": "trusted"
+      }
+    },
+    {
+      "name": "staging-managed-inbox-weak-provider-signature",
+      "from": "player@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 512,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "production-rejects-cross-root-dmarc",
+      "from": "player@test-inbox.primitive.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive.email",
+        "sender": "player@test-inbox.primitive.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "production-rejects-cross-root-signer",
+      "from": "player@test-inbox.primitive.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive.email",
+        "sender": "player@test-inbox.primitive.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "production-rejects-cross-root-both",
+      "from": "player@test-inbox.primitive.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive.email",
+        "sender": "player@test-inbox.primitive.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "staging-rejects-cross-root-dmarc",
+      "from": "player@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive-staging.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "staging-rejects-cross-root-signer",
+      "from": "player@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive-staging.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
+    },
+    {
+      "name": "staging-rejects-cross-root-both",
+      "from": "player@test-inbox.primitive-staging.email",
+      "auth": {
+        "spf": "pass",
+        "dmarc": "pass",
+        "dmarcPolicy": "reject",
+        "dmarcFromDomain": "primitive.email",
+        "dmarcSpfAligned": true,
+        "dmarcDkimAligned": true,
+        "dmarcSpfStrict": false,
+        "dmarcDkimStrict": false,
+        "dkimSignatures": [
+          {
+            "domain": "primitive.email",
+            "selector": "default",
+            "result": "pass",
+            "aligned": true,
+            "keyBits": 2048,
+            "algo": "rsa-sha256"
+          }
+        ]
+      },
+      "options": {
+        "domain": "test-inbox.primitive-staging.email",
+        "sender": "player@test-inbox.primitive-staging.email"
+      },
+      "expected": {
+        "trusted": false,
+        "retryable": false,
+        "reason": "dmarc-domain-mismatch"
+      }
     }
   ]
 }

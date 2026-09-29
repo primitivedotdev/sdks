@@ -39,6 +39,42 @@ function invalid(message: string): Errors.CLIError {
   return new Errors.CLIError(message, { exit: 1 });
 }
 
+/** Diagnostics use status and a parsed delay only, never response bodies or transport errors. */
+function searchFailure(response?: Response): Errors.CLIError {
+  const status = response?.status;
+  if (status === 429) {
+    const raw = response?.headers.get("retry-after")?.trim() ?? "";
+    let seconds: number | undefined;
+    if (/^\d+$/.test(raw) && Number.isSafeInteger(Number(raw)))
+      seconds = Number(raw);
+    else if (
+      /^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(raw)
+    ) {
+      const timestamp = Date.parse(raw);
+      if (Number.isFinite(timestamp))
+        seconds = Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
+    }
+    return invalid(
+      `Targeted reply search is rate limited (HTTP 429). ${seconds === undefined ? "Resume this same wait after the rate limit resets" : `Retry after ${seconds} seconds and resume this same wait`}; do not resend the email.`,
+    );
+  }
+  if (status === undefined || (status >= 500 && status <= 599))
+    return invalid(
+      `Targeted reply search is temporarily unavailable${status === undefined ? " (transport failure)" : ` (HTTP ${status})`}. Resume this same wait later; do not resend the email.`,
+    );
+  if (status === 401 || status === 403)
+    return invalid(
+      `Targeted reply search access was denied (HTTP ${status}). Check this profile's access before resuming the same wait.`,
+    );
+  if (status === 404 || status === 405)
+    return invalid(
+      `Targeted reply search is unavailable on this API endpoint (HTTP ${status}). Check the API host before resuming this wait.`,
+    );
+  return invalid(
+    `Targeted reply search failed (HTTP ${status}). Check the wait parameters before resuming this wait.`,
+  );
+}
+
 /** Inspect an exact email ID obtained from a targeted query or event journal. */
 export async function inspectTargetedReply(
   params: ReplyTarget & {
@@ -160,12 +196,12 @@ export async function readTargetedReplyPage(
       },
       responseStyle: "fields",
     }),
-  );
+  ).catch(() => {
+    throw searchFailure();
+  });
   if (result === null) return null;
-  if (result.error)
-    throw invalid(
-      "Targeted reply search is unavailable. This wait requires server support for connected-credential search; no inbox scan was attempted.",
-    );
+  if (result.error || (result.response && result.response.status >= 400))
+    throw searchFailure(result.response);
   const envelope = result.data;
   if (
     !envelope ||

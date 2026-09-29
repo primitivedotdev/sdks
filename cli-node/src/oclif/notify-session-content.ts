@@ -10,6 +10,7 @@ import {
 import {
   classifySignalContent,
   MAX_INTERACTION_BYTES,
+  type SignalContentResult,
 } from "@primitivedotdev/sdk/interactions";
 import {
   type EmailReceivedEvent,
@@ -149,11 +150,69 @@ export type NotificationContent = {
     body_html?: string | null;
   } | null;
 };
+export type ConversationStatusContent = {
+  kind: "read" | "ack" | "working" | "typing";
+  subjectMessageId: string;
+  expiresAt: string | null;
+  interactionDomain: string;
+};
+
+/** Validated canonical signal only. This is still not sender or conversation authorization. */
+export async function readConversationStatusContent(
+  email: NotificationContent,
+  readPart: ReadNotificationPart | undefined,
+  signal: AbortSignal,
+): Promise<ConversationStatusContent | null> {
+  // A typed status must not hide conflicting content behind duplicated API
+  // projections of the same MIME body.
+  if (
+    email.body_text !== undefined &&
+    email.parsed?.body_text !== undefined &&
+    email.body_text !== email.parsed.body_text
+  )
+    return null;
+  if (
+    email.body_html !== undefined &&
+    email.parsed?.body_html !== undefined &&
+    email.body_html !== email.parsed.body_html
+  )
+    return null;
+  const result = await classifyNotificationContent(email, readPart, signal);
+  if (
+    result.classification !== "informational_only" ||
+    result.interaction?.status !== "valid"
+  )
+    return null;
+  const envelope = result.interaction.envelope;
+  if (!["read", "ack", "working", "typing"].includes(envelope.protocol))
+    return null;
+  const payload = envelope.payload as { subject_message_id: string };
+  return {
+    kind: envelope.protocol as ConversationStatusContent["kind"],
+    subjectMessageId: payload.subject_message_id,
+    expiresAt: envelope.expires_at,
+    interactionDomain: envelope.interaction_id
+      .slice(envelope.interaction_id.lastIndexOf("@") + 1)
+      .toLowerCase(),
+  };
+}
+
 export async function isRoutineNotificationContent(
   email: NotificationContent,
   readPart: ReadNotificationPart | undefined,
   signal: AbortSignal,
 ): Promise<boolean> {
+  return (
+    (await classifyNotificationContent(email, readPart, signal))
+      .classification === "informational_only"
+  );
+}
+
+async function classifyNotificationContent(
+  email: NotificationContent,
+  readPart: ReadNotificationPart | undefined,
+  signal: AbortSignal,
+): Promise<SignalContentResult> {
   const parsed = email.parsed;
   if (parsed?.status !== "complete" || !Array.isArray(parsed.attachments))
     throw new NotificationRetryError(
@@ -180,8 +239,7 @@ export async function isRoutineNotificationContent(
     ...content,
     canonicalPartBytes: null,
   });
-  if (preliminary.classification !== "unavailable")
-    return preliminary.classification === "informational_only";
+  if (preliminary.classification !== "unavailable") return preliminary;
   const part = canonical[0];
   if (!part)
     throw new NotificationRetryError(
@@ -195,7 +253,7 @@ export async function isRoutineNotificationContent(
       "application/json" ||
     part.size_bytes > MAX_INTERACTION_BYTES
   )
-    return false;
+    return preliminary;
   if (
     !readPart ||
     !Number.isSafeInteger(part.part_index) ||
@@ -233,5 +291,5 @@ export async function isRoutineNotificationContent(
     throw new NotificationRetryError(
       "Interaction classification is unavailable; retrying through the delivery queue.",
     );
-  return classification.classification === "informational_only";
+  return classification;
 }

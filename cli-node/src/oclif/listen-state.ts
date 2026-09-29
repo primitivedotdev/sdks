@@ -95,12 +95,10 @@ export function listenProcessIdentity(pid: number): string | null {
       };
       const boot = execFileSync(
         "/usr/sbin/sysctl",
-        ["-n", "kern.boottime"],
+        ["-n", "kern.bootsessionuuid"],
         options,
       );
-      const bootMatch = /\{\s*sec\s*=\s*(\d+),\s*usec\s*=\s*(\d+)\s*\}/.exec(
-        boot,
-      );
+      const bootId = boot.trim().toLowerCase();
       const started = execFileSync(
         "/bin/ps",
         ["-p", String(pid), "-o", "lstart="],
@@ -109,13 +107,14 @@ export function listenProcessIdentity(pid: number): string | null {
         .trim()
         .replace(/\s+/g, " ");
       if (
-        !bootMatch ||
+        !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(bootId) ||
         !/^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{2}:\d{2}:\d{2} \d{4}$/.test(
           started,
         )
       )
         return null;
-      return `darwin:${bootMatch[1]}:${bootMatch[2]}:${started}`;
+      // Calendar-clock corrections change kern.boottime during the same boot.
+      return `darwin-boot:${bootId}:${started}`;
     }
     if (process.platform === "win32") {
       const root = process.env.SystemRoot;
@@ -151,6 +150,17 @@ export function listenProcessIdentity(pid: number): string | null {
   return null;
 }
 
+/** Legacy macOS timestamps cannot prove that a live PID changed owners. */
+export function compareListenProcessIdentity(
+  saved: string | null,
+  current: string | null,
+): boolean | null {
+  if (saved === null || current === null) return null;
+  if (saved === current) return true;
+  if (saved.startsWith("darwin:") || current.startsWith("darwin:")) return null;
+  return false;
+}
+
 function ownerIdentity(path: string): string | null {
   try {
     const stat = lstatSync(path);
@@ -168,7 +178,7 @@ function ownerIdentity(path: string): string | null {
       return null;
     // Unrecognized records (including blank files from older releases) cannot
     // establish a mismatch with a process that is still alive.
-    return /^(?:linux:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}:\d+|darwin:\d+:\d+:[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{2}:\d{2}:\d{2} \d{4}|win32:\d{1,20})$/.test(
+    return /^(?:linux:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}:\d+|darwin:\d+:\d+:[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{2}:\d{2}:\d{2} \d{4}|darwin-boot:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}:[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{2}:\d{2}:\d{2} \d{4}|win32:\d{1,20})$/.test(
       saved.identity,
     )
       ? saved.identity
@@ -248,7 +258,7 @@ export function acquireListenLock(
       if (!stale && pid !== null) {
         const saved = ownerIdentity(join(path, entries[0] ?? ""));
         const current = saved === null ? null : listenProcessIdentity(pid);
-        stale = saved !== null && current !== null && saved !== current;
+        stale = compareListenProcessIdentity(saved, current) === false;
       }
       if (!stale)
         throw new ListenStateError(

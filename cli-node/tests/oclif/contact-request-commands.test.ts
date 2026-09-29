@@ -5,9 +5,14 @@ import { join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  agentProfileDirectory,
+  saveConnectedAgentProfile,
+} from "../../src/oclif/connected-agent-profile.js";
+import {
   contactReference,
   prepareContactRequest,
 } from "../../src/oclif/contact-interactions.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 import { sharedMailScope } from "../../src/oclif/shared-mail-receiver.js";
 import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
@@ -19,6 +24,7 @@ vi.mock("../../src/oclif/connected-reply-wait.js", () => ({
 
 import {
   acceptContact,
+  contactRequestSessionKey,
   recoverContactRequest,
   requestContact,
   waitForContact,
@@ -26,11 +32,16 @@ import {
 
 const directories: string[] = [];
 afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   for (const path of directories.splice(0))
     rmSync(path, { recursive: true, force: true });
 });
 beforeEach(() => {
   hooks.open.mockReset();
+  vi.stubEnv("CODEX_SESSION_ID", "");
+  vi.stubEnv("CODEX_THREAD_ID", "");
+  vi.stubEnv("CLAUDE_CODE_SESSION_ID", "");
 });
 function fixture() {
   const recipient = "agent@example.com",
@@ -52,6 +63,15 @@ function fixture() {
     status: 200,
     sendStatus: "queued",
     membershipStatus: 200,
+    directoryStatus: 200,
+    directoryThrows: false,
+    directoryStalls: false,
+    directoryAddress: peer,
+    directory: null as {
+      address: string;
+      display_name: string | null;
+      version: string;
+    } | null,
     sendThrows: false,
     auth: "pass",
     parsed: true,
@@ -91,6 +111,10 @@ function fixture() {
       dkimSignatures: [],
     },
   };
+  let resolveDirectoryStarted!: (signal: AbortSignal) => void;
+  const directoryStarted = new Promise<AbortSignal>((resolve) => {
+    resolveDirectoryStarted = resolve;
+  });
   const apiClient = new PrimitiveApiClient({
     apiKey: ["pconn", "test"].join("_"),
     apiBaseUrl: "https://api.primitive.dev/v1",
@@ -115,8 +139,28 @@ function fixture() {
       if (path === `/v1/agent-contact-policy/${recipient}`)
         return ok(state.policy);
       if (path === `/v1/agent-contacts/${recipient}`) return ok(state.rows);
-      if (path === `/v1/contacts/${peer}`)
-        return ok({ address: peer, version });
+      if (path === `/v1/contacts/${peer}`) {
+        resolveDirectoryStarted(req.signal);
+        if (state.directoryStalls)
+          return new Promise<Response>((_resolve, reject) => {
+            if (req.signal.aborted) reject(req.signal.reason);
+            else
+              req.signal.addEventListener(
+                "abort",
+                () => reject(req.signal.reason),
+                { once: true },
+              );
+          });
+        if (state.directoryStatus !== 200)
+          return Response.json(
+            { error: { message: "Private directory failure" } },
+            { status: state.directoryStatus },
+          );
+        state.directory ??= { address: peer, display_name: null, version };
+        if (state.directoryThrows)
+          throw new Error("Private directory response lost after write");
+        return ok({ ...state.directory, address: state.directoryAddress });
+      }
       if (path === `/v1/agent-contacts/${recipient}/${peer}`) {
         if (state.membershipStatus !== 200)
           return Response.json(
@@ -179,6 +223,35 @@ function fixture() {
       apiBaseUrl: "https://api.primitive.dev/v1",
     },
   };
+  const sessionId = randomUUID();
+  const invitationHash = "a".repeat(64);
+  saveConnectedAgentProfile(configDir, context.identity.profileName, {
+    version: 1,
+    auth_method: "agent_connection",
+    api_key: context.apiKey,
+    api_base_url: context.identity.apiBaseUrl,
+    org_id: context.identity.orgId,
+    agent_address: context.identity.agentAddress,
+    owner_address: context.identity.ownerAddress,
+    invitation_hash: invitationHash,
+    created_at: new Date().toISOString(),
+  });
+  const setupPath = join(
+    agentProfileDirectory(configDir, context.identity.profileName),
+    "setup.json",
+  );
+  const setup = {
+    version: 1,
+    session: sessionId,
+    receiverMode: "external",
+    invitationHash,
+    since: new Date().toISOString(),
+    contactRequests: true,
+    challenge: null,
+    phase: "sent",
+    receipt: { id: randomUUID(), status: "queued" },
+  };
+  writeMailJson(setupPath, setup);
   const options = {
     address: peer,
     reason: "Coordinate public research",
@@ -189,6 +262,10 @@ function fixture() {
   };
   return {
     context,
+    sessionId,
+    setup,
+    setupPath,
+    directoryStarted,
     state,
     writes,
     wait,
@@ -202,6 +279,84 @@ function fixture() {
 }
 
 describe("contact request command lifecycle", () => {
+  it("binds an initiated request to the selected profile's verified Claude session", async () => {
+    const f = fixture();
+    await requestContact(f.context, f.options);
+    expect(hooks.open.mock.calls[0][0].sessionKey).toBe(
+      `claude:${f.sessionId}`,
+    );
+  });
+
+  it("keeps a bare CLI profile manual-only without assigning another session", async () => {
+    const f = fixture();
+    rmSync(f.setupPath);
+    expect(contactRequestSessionKey(f.context, {})).toBeNull();
+    await requestContact(f.context, f.options);
+    expect(hooks.open.mock.calls[0][0].sessionKey).toBeNull();
+    expect(f.writes.some((row) => row.path === "/v1/send-mail")).toBe(true);
+  });
+
+  it("uses the exact runtime identity and rejects mixed or mismatched session IDs", () => {
+    const f = fixture();
+    expect(contactRequestSessionKey(f.context, {})).toBe(
+      `claude:${f.sessionId}`,
+    );
+    expect(
+      contactRequestSessionKey(f.context, {
+        CLAUDE_CODE_SESSION_ID: f.sessionId,
+      }),
+    ).toBe(`claude:${f.sessionId}`);
+    expect(() =>
+      contactRequestSessionKey(f.context, {
+        CLAUDE_CODE_SESSION_ID: randomUUID(),
+      }),
+    ).toThrow("exact coding session");
+    expect(() =>
+      contactRequestSessionKey(f.context, {
+        CLAUDE_CODE_SESSION_ID: f.sessionId,
+        CODEX_SESSION_ID: randomUUID(),
+      }),
+    ).toThrow("exact coding session");
+  });
+
+  it("rejects incomplete or mismatched setup before touching the directory or sending", async () => {
+    const f = fixture();
+    writeMailJson(f.setupPath, { ...f.setup, invitationHash: "b".repeat(64) });
+    await expect(requestContact(f.context, f.options)).rejects.toThrow(
+      "No request was sent",
+    );
+    expect(f.writes).toEqual([]);
+    expect(hooks.open).not.toHaveBeenCalled();
+  });
+
+  it("refuses a different live session before any contact write or email", async () => {
+    const f = fixture();
+    vi.stubEnv("CLAUDE_CODE_SESSION_ID", randomUUID());
+    await expect(requestContact(f.context, f.options)).rejects.toThrow(
+      "No request was sent",
+    );
+    expect(f.writes).toEqual([]);
+    expect(hooks.open).not.toHaveBeenCalled();
+  });
+
+  it("requires a live exact Codex session for native setup", () => {
+    const f = fixture();
+    writeMailJson(f.setupPath, { ...f.setup, receiverMode: "native" });
+    expect(() => contactRequestSessionKey(f.context, {})).toThrow(
+      "exact coding session",
+    );
+    expect(
+      contactRequestSessionKey(f.context, {
+        CODEX_SESSION_ID: f.sessionId,
+        CODEX_THREAD_ID: f.sessionId,
+      }),
+    ).toBe(`codex:${f.sessionId}`);
+    // Older saved native setups had no receiverMode field.
+    writeMailJson(f.setupPath, { ...f.setup, receiverMode: undefined });
+    expect(
+      contactRequestSessionKey(f.context, { CODEX_SESSION_ID: f.sessionId }),
+    ).toBe(`codex:${f.sessionId}`);
+  });
   it("sends a generated bounded envelope without silently creating membership and returns exact resume evidence", async () => {
     const f = fixture();
     const result = await requestContact(f.context, f.options);
@@ -214,8 +369,14 @@ describe("contact request command lifecycle", () => {
         next_command: `primitive contacts wait --id ${f.sentId}`,
       },
     });
-    expect(f.writes.map((row) => row.path)).toEqual(["/v1/send-mail"]);
-    const sent = f.writes[0];
+    expect(f.writes.map((row) => row.path)).toEqual([
+      `/v1/contacts/${f.peer}`,
+      "/v1/send-mail",
+    ]);
+    expect(f.writes[0].body).toEqual({ if_absent: true });
+    expect(f.state.directory?.address).toBe(f.peer);
+    expect(f.state.rows).toEqual([]);
+    const sent = f.writes[1];
     const part = (sent.body.attachments as { content_base64: string }[])[0];
     const envelope = JSON.parse(
       Buffer.from(part.content_base64, "base64").toString(),
@@ -232,6 +393,99 @@ describe("contact request command lifecycle", () => {
       envelope.step_id,
     );
     expect(f.wait.bind).toHaveBeenCalledWith(f.sentId);
+  });
+  it("preserves an existing directory label and explicit silence without --notify", async () => {
+    const f = fixture();
+    f.state.directory = {
+      address: f.peer,
+      display_name: "Owner's label",
+      version: randomUUID(),
+    };
+    const original = { ...f.state.directory };
+    f.state.rows = [
+      { agent_address: f.recipient, contact_address: f.peer, notify: false },
+    ];
+    const existingRows = structuredClone(f.state.rows);
+    const result = await requestContact(f.context, f.options);
+    expect(result.data.outcome).toBe("sent");
+    expect(f.state.directory).toEqual(original);
+    expect(f.state.rows).toEqual(existingRows);
+    expect(f.writes.map((row) => row.path)).toEqual([
+      `/v1/contacts/${f.peer}`,
+      "/v1/send-mail",
+    ]);
+    expect(f.writes[0].body).toEqual({ if_absent: true });
+  });
+  it.each([
+    403,
+    409,
+    429,
+    503,
+    "transport",
+    "wrong-address",
+  ])("stops before receiving or sending after directory failure %s", async (failure) => {
+    const f = fixture();
+    if (typeof failure === "number") f.state.directoryStatus = failure;
+    else if (failure === "transport") f.state.directoryThrows = true;
+    else f.state.directoryAddress = "other@example.net";
+    const error = await requestContact(f.context, f.options).catch(
+      (error: unknown) => error,
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("No contact email was sent");
+    expect((error as Error).message).not.toContain("Private");
+    expect(f.writes.map((row) => row.path)).toEqual([`/v1/contacts/${f.peer}`]);
+    expect(hooks.open).not.toHaveBeenCalled();
+    expect(f.state.rows).toEqual([]);
+  });
+  it("reuses a directory entry after its response was lost, then sends only on the explicit retry", async () => {
+    const f = fixture();
+    f.state.directoryThrows = true;
+    await expect(requestContact(f.context, f.options)).rejects.toThrow(
+      "Retrying this request is safe",
+    );
+    const saved = { ...f.state.directory };
+    f.state.directoryThrows = false;
+    expect((await requestContact(f.context, f.options)).data.outcome).toBe(
+      "sent",
+    );
+    expect(f.state.directory).toEqual(saved);
+    expect(f.writes.map((row) => row.path)).toEqual([
+      `/v1/contacts/${f.peer}`,
+      `/v1/contacts/${f.peer}`,
+      "/v1/send-mail",
+    ]);
+    expect(hooks.open).toHaveBeenCalledOnce();
+  });
+  it("bounds a stalled directory save and never starts receiving or sends", async () => {
+    const f = fixture();
+    const controller = new AbortController();
+    const timeout = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(controller.signal);
+    f.state.directoryStalls = true;
+    const result = requestContact(f.context, f.options);
+    const rejected = expect(result).rejects.toThrow(
+      "No contact email was sent",
+    );
+    const signal = await f.directoryStarted;
+    expect(timeout).toHaveBeenCalledExactlyOnceWith(30_000);
+    controller.abort();
+    await rejected;
+    expect(signal.aborted).toBe(true);
+    expect(hooks.open).not.toHaveBeenCalled();
+    expect(f.writes).toHaveLength(1);
+  });
+  it("retains a saved directory entry when receiver setup fails before sending", async () => {
+    const f = fixture();
+    f.wait.ready.mockResolvedValue(false);
+    await expect(requestContact(f.context, f.options)).rejects.toThrow(
+      "No request was sent",
+    );
+    expect(f.state.directory?.address).toBe(f.peer);
+    expect(f.writes.map((row) => row.path)).toEqual([`/v1/contacts/${f.peer}`]);
+    expect(f.wait.cancelBeforeSend).toHaveBeenCalledOnce();
+    expect(f.wait.close).toHaveBeenCalledOnce();
   });
   it("requires explicit --notify before saving this agent's exact preference", async () => {
     const f = fixture();
@@ -304,7 +558,9 @@ describe("contact request command lifecycle", () => {
     ).toMatchObject({
       data: { outcome: "contact_accepted", contact_accepted: true },
     });
-    expect(f.writes).toHaveLength(1);
+    expect(f.writes.filter((row) => row.path === "/v1/send-mail")).toHaveLength(
+      1,
+    );
     expect(f.wait.observed).toHaveBeenCalledOnce();
     expect(f.wait.finish).toHaveBeenCalledOnce();
   });
@@ -315,7 +571,9 @@ describe("contact request command lifecycle", () => {
       exitCode: 4,
       data: { outcome: "uncertain", contact_accepted: false },
     });
-    expect(f.writes).toHaveLength(1);
+    expect(f.writes.filter((row) => row.path === "/v1/send-mail")).toHaveLength(
+      1,
+    );
     expect(f.wait.uncertain).toHaveBeenCalledOnce();
   });
   it("classifies an authoritative refusal as not sent", async () => {
@@ -333,8 +591,14 @@ describe("contact request command lifecycle", () => {
     const result = await acceptContact(f.context, f.emailId);
     expect(result).toMatchObject({
       exitCode: 0,
-      data: { outcome: "sent", local_preference_saved: true },
+      data: {
+        outcome: "sent",
+        local_preference_saved: true,
+        acceptance_sent: true,
+        delivery_status: "queued",
+      },
     });
+    expect(result.data).not.toHaveProperty("contact_accepted");
     const reply = f.writes.at(-1);
     expect(reply?.path).toBe(`/v1/emails/${f.emailId}/reply`);
     const part = (reply?.body.attachments as { content_base64: string }[])[0];
@@ -347,9 +611,11 @@ describe("contact request command lifecycle", () => {
       payload: {},
     });
     const count = f.writes.length;
-    expect(await acceptContact(f.context, f.emailId)).toMatchObject({
-      data: { outcome: "already_sent" },
+    const repeated = await acceptContact(f.context, f.emailId);
+    expect(repeated).toMatchObject({
+      data: { outcome: "already_sent", acceptance_sent: true },
     });
+    expect(repeated.data).not.toHaveProperty("contact_accepted");
     expect(f.writes).toHaveLength(count);
   });
   it("reports saved preference separately from failed acceptance and permits safe retry only after definitive refusal", async () => {
@@ -357,22 +623,74 @@ describe("contact request command lifecycle", () => {
     f.state.status = 403;
     expect(await acceptContact(f.context, f.emailId)).toMatchObject({
       exitCode: 1,
-      data: { outcome: "not_sent", local_preference_saved: true },
+      data: {
+        outcome: "not_sent",
+        local_preference_saved: true,
+        acceptance_sent: false,
+      },
     });
     f.state.status = 200;
     expect(await acceptContact(f.context, f.emailId)).toMatchObject({
       exitCode: 0,
-      data: { outcome: "sent" },
+      data: { outcome: "sent", acceptance_sent: true },
     });
     expect(
       f.writes.filter((row) => row.path.includes("/agent-contacts/")).length,
     ).toBe(1);
   });
-  it("does not write preferences for an unauthenticated request", async () => {
+  it.each([
+    "transport",
+    "send-record",
+  ])("keeps %s uncertainty distinct from a sent acceptance, including repeated recovery", async (failure) => {
     const f = fixture();
-    f.state.auth = "fail";
+    if (failure === "transport") f.state.sendThrows = true;
+    else f.state.sendStatus = "unknown";
+    const initial = await acceptContact(f.context, f.emailId);
+    expect(initial).toMatchObject({
+      exitCode: 4,
+      data: {
+        outcome: "uncertain",
+        local_preference_saved: true,
+        acceptance_sent: null,
+      },
+    });
+    expect(initial.data).not.toHaveProperty("contact_accepted");
+    const count = f.writes.length;
+    f.state.sendThrows = false;
+    f.state.sendStatus = "delivered";
+    expect(await acceptContact(f.context, f.emailId)).toMatchObject({
+      exitCode: 4,
+      data: { outcome: "uncertain", acceptance_sent: null },
+    });
+    expect(f.writes).toHaveLength(count);
+  });
+  it("reports a refused send record truthfully and permits an explicit retry", async () => {
+    const f = fixture();
+    f.state.sendStatus = "gate_denied";
+    const refused = await acceptContact(f.context, f.emailId);
+    expect(refused).toMatchObject({
+      exitCode: 1,
+      data: { outcome: "not_sent", acceptance_sent: false },
+    });
+    expect(refused.data.guidance).toContain("was not sent");
+    expect(refused.data.guidance).not.toContain("email submitted");
+    f.state.sendStatus = "delivered";
+    expect(await acceptContact(f.context, f.emailId)).toMatchObject({
+      exitCode: 0,
+      data: { outcome: "sent", acceptance_sent: true },
+    });
+    expect(
+      f.writes.filter((row) => row.path === `/v1/emails/${f.emailId}/reply`),
+    ).toHaveLength(2);
+  });
+  it.each([
+    ["fail", "auth-suspicious", false],
+    ["temperror", "dmarc-temperror", true],
+  ])("reports a safe trust reason without writing preferences (%s)", async (dmarc, reason, retryable) => {
+    const f = fixture();
+    f.state.auth = String(dmarc);
     await expect(acceptContact(f.context, f.emailId)).rejects.toThrow(
-      "authentication",
+      `authentication rejected (reason: ${reason}; retryable: ${retryable}). No acceptance or contact preference was written.`,
     );
     expect(f.writes).toEqual([]);
   });
@@ -389,6 +707,7 @@ it("recovers a lost send response using only its durable exact idempotency looku
     key = `contact-${randomUUID()}`;
   await store.registerWait({
     requestId,
+    sessionKey: `claude:${f.sessionId}`,
     peer: f.peer,
     idempotencyKey: key,
     createdAt: new Date().toISOString(),
@@ -434,6 +753,7 @@ it("resumes an expired request to recover an acceptance without resending", asyn
   const requestId = randomUUID();
   await store.registerWait({
     requestId,
+    sessionKey: `claude:${f.sessionId}`,
     peer: f.peer,
     idempotencyKey: `contact-${randomUUID()}`,
     createdAt: new Date(createdAt).toISOString(),
@@ -451,6 +771,62 @@ it("resumes an expired request to recover an acceptance without resending", asyn
   expect(hooks.open.mock.calls[0][0].deadline).toBeGreaterThan(Date.now());
   expect(f.wait.observed).toHaveBeenCalledWith(f.emailId);
   expect(f.wait.finish).toHaveBeenCalledOnce();
+  expect(f.writes).toEqual([]);
+});
+
+it("lets a bare profile manually recover an unbound contact wait", async () => {
+  const f = fixture();
+  rmSync(f.setupPath);
+  const store = await openSharedMailStore({
+    configDir: f.context.configDir,
+    scope: sharedMailScope(f.context.apiKey, f.context.identity.apiBaseUrl),
+    recipient: f.recipient,
+  });
+  const requestId = randomUUID();
+  await store.registerWait({
+    requestId,
+    peer: f.peer,
+    idempotencyKey: `contact-${randomUUID()}`,
+    createdAt: new Date().toISOString(),
+    contactRequest: contactReference(f.request),
+  });
+  await store.bindWait(requestId, f.sentId);
+  f.wait.next.mockResolvedValue({ id: f.emailId });
+  expect(await waitForContact(f.context, f.sentId, 5)).toMatchObject({
+    data: { outcome: "contact_accepted", acceptance_email_id: f.emailId },
+  });
+  expect((await store.readWait(requestId))?.sessionKey).toBeNull();
+  expect(hooks.open.mock.calls[0][0].sessionKey).toBeNull();
+  expect(await recoverContactRequest(f.context, requestId, 5)).toMatchObject({
+    data: { outcome: "contact_accepted" },
+  });
+  expect(f.writes).toEqual([]);
+});
+
+it("refuses another session's wait before consuming an acceptance", async () => {
+  const f = fixture();
+  const store = await openSharedMailStore({
+    configDir: f.context.configDir,
+    scope: sharedMailScope(f.context.apiKey, f.context.identity.apiBaseUrl),
+    recipient: f.recipient,
+  });
+  const requestId = randomUUID();
+  await store.registerWait({
+    requestId,
+    sessionKey: `claude:${randomUUID()}`,
+    peer: f.peer,
+    idempotencyKey: `contact-${randomUUID()}`,
+    createdAt: new Date().toISOString(),
+    contactRequest: contactReference(f.request),
+  });
+  await store.bindWait(requestId, f.sentId);
+  await expect(waitForContact(f.context, f.sentId, 5)).rejects.toThrow(
+    "another or an unbound session",
+  );
+  await expect(recoverContactRequest(f.context, requestId, 5)).rejects.toThrow(
+    "another or an unbound session",
+  );
+  expect(hooks.open).not.toHaveBeenCalled();
   expect(f.writes).toEqual([]);
 });
 
@@ -482,5 +858,7 @@ it("returns local-request recovery after a known send whose durable binding fail
       next_command: `primitive contacts wait --request-id ${f.wait.requestId}`,
     },
   });
-  expect(f.writes).toHaveLength(1);
+  expect(f.writes.filter((row) => row.path === "/v1/send-mail")).toHaveLength(
+    1,
+  );
 });

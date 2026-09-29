@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getEmail: vi.fn(),
   replyToEmail: vi.fn(),
   sendEmail: vi.fn(),
+  followEmailConversation: vi.fn(),
 }));
 
 vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
@@ -22,6 +23,9 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
 
 vi.mock("../../src/oclif/api-client.js", () => ({
   createAuthenticatedCliApiClient: mocks.createAuthenticatedCliApiClient,
+}));
+vi.mock("../../src/oclif/conversation-follow.js", () => ({
+  followEmailConversation: mocks.followEmailConversation,
 }));
 
 import ReplyCommand from "../../src/oclif/commands/reply.js";
@@ -131,14 +135,90 @@ beforeEach(() => {
   mocks.getEmail.mockResolvedValue(inboundWithReplies([]));
   mocks.replyToEmail.mockResolvedValue({ data: { data: sendResult() } });
   mocks.sendEmail.mockResolvedValue({ data: { data: sendResult() } });
+  mocks.followEmailConversation.mockReset().mockResolvedValue(null);
 });
 
 afterEach(() => {
   process.exitCode = undefined;
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("reply outcomes", () => {
+  function connectedSession() {
+    vi.stubEnv("CODEX_SESSION_ID", "cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+    vi.stubEnv("CODEX_THREAD_ID", "cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+    vi.stubEnv("CLAUDE_CODE_SESSION_ID", undefined);
+    mocks.createAuthenticatedCliApiClient.mockResolvedValue({
+      apiClient: { client: {} },
+      auth: {
+        apiKey: ["pconn", "fixture"].join("_"),
+        apiBaseUrl: "https://example.test/v1",
+        connectedAgent: { agentAddress: "support@example.com" },
+      },
+      baseUrlOverridden: false,
+    });
+    const detail = {
+      id: "email-1",
+      from_email: "alice@example.com",
+      thread_id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      replies: [],
+      body_text: "Private incoming message",
+    };
+    mocks.getEmail.mockResolvedValue({ data: { data: detail } });
+    return detail;
+  }
+  it("registers native conversation receiving before sending using one detail read", async () => {
+    const detail = connectedSession();
+    const order: string[] = [];
+    mocks.followEmailConversation.mockImplementation(async () => {
+      order.push("follow");
+      return null;
+    });
+    mocks.replyToEmail.mockImplementation(async () => {
+      order.push("send");
+      return { data: { data: sendResult() } };
+    });
+    const result = await run("reply", replyArgs("--json"));
+    expect(result.exitCode).toBeUndefined();
+    expect(order, result.stdout).toEqual(["follow", "send"]);
+    expect(mocks.getEmail).toHaveBeenCalledOnce();
+    expect(mocks.followEmailConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipient: "support@example.com",
+        peer: "alice@example.com",
+        sessionKey: "codex:cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      }),
+      detail,
+    );
+    expect(result.stdout).not.toContain("Private incoming message");
+    expect(JSON.parse(result.stdout).outcome).toBe("sent");
+  });
+  it("does not send when native conversation ownership cannot be established", async () => {
+    connectedSession();
+    mocks.followEmailConversation.mockRejectedValue(
+      new Error("Conversation belongs to another native session."),
+    );
+    const result = await run("reply", replyArgs("--json"));
+    expect(mocks.replyToEmail).not.toHaveBeenCalled();
+    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+  });
+  it("fails before sending on connected-session lookup failure instead of falsely promising receiving", async () => {
+    connectedSession();
+    mocks.getEmail.mockResolvedValue(apiFailure(503));
+    const result = await run("reply", replyArgs("--json"));
+    expect(mocks.replyToEmail).not.toHaveBeenCalled();
+    expect(mocks.followEmailConversation).not.toHaveBeenCalled();
+    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+  });
+  it("never retries an uncertain reply after conversation receiving was registered", async () => {
+    connectedSession();
+    mocks.replyToEmail.mockResolvedValue(apiFailure(503));
+    const result = await run("reply", replyArgs("--json"));
+    expect(mocks.followEmailConversation, result.stdout).toHaveBeenCalledOnce();
+    expect(mocks.replyToEmail).toHaveBeenCalledOnce();
+    expect(JSON.parse(result.stdout).outcome).toBe("uncertain");
+  });
   it("keeps stdout byte-compatible and summarises a queued reply as sent on stderr", async () => {
     const result = await run("reply", replyArgs());
 
@@ -198,7 +278,7 @@ describe("reply outcomes", () => {
       expect.objectContaining({ path: { id: "email-1" } }),
     );
     expect(result.stderr).toContain(
-      "You already replied to this email at 2026-09-01T11:00:00.000Z (sent id sent-prior). Sending another reply.",
+      "This email already has 1 outgoing email, most recently at 2026-09-01T11:00:00.000Z (sent id sent-prior). These may include activity updates and do not prove a completed answer. Sending this reply.",
     );
     expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
     expect(result.exitCode).toBeUndefined();
@@ -208,7 +288,7 @@ describe("reply outcomes", () => {
     ]);
   });
 
-  it("counts several prior replies in the warning", async () => {
+  it("counts prior outgoing emails without claiming they are answers", async () => {
     mocks.getEmail.mockResolvedValue(
       inboundWithReplies([
         {
@@ -229,7 +309,7 @@ describe("reply outcomes", () => {
     const result = await run("reply", replyArgs());
 
     expect(result.stderr).toContain(
-      "You already replied to this email 2 times, most recently at 2026-09-01T11:00:00.000Z (sent id sent-b). Sending another reply.",
+      "This email already has 2 outgoing emails, most recently at 2026-09-01T11:00:00.000Z (sent id sent-b). These may include activity updates and do not prove a completed answer. Sending this reply.",
     );
   });
 

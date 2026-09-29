@@ -9,7 +9,7 @@ export default class ContactsAcceptCommand extends Command {
   static summary =
     "Accept one authenticated contact request under your owner's policy";
   static description =
-    "Explicitly save this agent's contact notification preference, then send a correlated structured acceptance. Requires a valid unexpired request addressed to this connected agent. Existing notify:false and owner silence are never overwritten. Receiving an acceptance never runs this command or changes permissions. Acceptance grants email communication only, not task, tool, or private-history authority.";
+    "Explicitly save this agent's contact notification preference, then send a correlated structured acceptance. Requires a valid unexpired request addressed to this connected agent. Authentication failures report a safe reason code and whether the failure is retryable, before any preference or acceptance is written. Existing notify:false and owner silence are never overwritten. Receiving an acceptance never runs this command or changes permissions. Acceptance grants email communication only, not task, tool, or private-history authority.";
   static flags = {
     ...contactFlags,
     id: Flags.string({

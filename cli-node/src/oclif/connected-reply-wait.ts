@@ -4,11 +4,15 @@ import type {
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import type { ContactRequestReference } from "./contact-interactions.js";
+import { followEmailConversation } from "./conversation-follow.js";
 import {
   openSharedMailReceiver,
   sharedMailScope,
 } from "./shared-mail-receiver.js";
-import { openSharedMailStore } from "./shared-mail-state.js";
+import {
+  createSharedMailWaiter,
+  openSharedMailStore,
+} from "./shared-mail-state.js";
 import {
   inspectTargetedReply,
   readTargetedReplyPage,
@@ -21,6 +25,7 @@ function recoveryEventId(id: string): string {
 
 /** A durable wait joins the address receiver before sending or recovering replies. */
 export async function openConnectedReplyWait(options: {
+  sessionKey?: string | null;
   contactRequest?: ContactRequestReference;
   apiClient: PrimitiveApiClient;
   apiKey: string | undefined;
@@ -43,6 +48,7 @@ export async function openConnectedReplyWait(options: {
     from: options.from.trim().toLowerCase(),
     recipient: options.recipient.trim().toLowerCase(),
   };
+  const waiter = createSharedMailWaiter();
   const receiver = await openSharedMailReceiver({
     ...options,
     recipient: options.from,
@@ -51,6 +57,7 @@ export async function openConnectedReplyWait(options: {
   let requestId = options.requestId ?? randomUUID();
   let sentId = options.sentId;
   let newlyRegisteredId: string | undefined;
+  let ownershipAttempted = false;
   try {
     if (options.resumeReply) {
       const saved = await store.readWait(options.resumeReply.requestId);
@@ -61,6 +68,9 @@ export async function openConnectedReplyWait(options: {
         !["bound", "completed"].includes(saved.status) ||
         saved.sentEmailId !== sentId ||
         saved.peer !== options.recipient ||
+        (saved.sessionKey !== null &&
+          options.sessionKey != null &&
+          saved.sessionKey !== options.sessionKey) ||
         JSON.stringify(saved.contactRequest ?? null) !==
           JSON.stringify(options.contactRequest ?? null) ||
         email?.route?.kind !== "wait" ||
@@ -70,8 +80,16 @@ export async function openConnectedReplyWait(options: {
           "The saved reply does not match its durable wait claim.",
         );
       requestId = saved.requestId;
+      ownershipAttempted = true;
+      await store.joinWait(requestId, waiter);
     } else {
       const prior = sentId ? await store.findWaitByParent(sentId) : null;
+      if (
+        prior?.sessionKey &&
+        options.sessionKey &&
+        prior.sessionKey !== options.sessionKey
+      )
+        throw new Error("This conversation belongs to another native session.");
       if (
         prior &&
         JSON.stringify(prior.contactRequest ?? null) !==
@@ -93,18 +111,23 @@ export async function openConnectedReplyWait(options: {
           throw new Error(
             "The existing wait has a different reply type. Resume it with the matching contact or task command.",
           );
+        ownershipAttempted = true;
+        await store.joinWait(requestId, waiter);
       } else {
         if (prior?.requestId === requestId) requestId = randomUUID();
         const existing = await store.readWait(requestId);
         if (!existing) newlyRegisteredId = requestId;
+        ownershipAttempted = true;
         await store.registerWait({
           ...(options.contactRequest
             ? { contactRequest: options.contactRequest }
             : {}),
           requestId,
+          sessionKey: options.sessionKey ?? null,
           peer: options.recipient,
           idempotencyKey: options.idempotencyKey ?? `wait-${requestId}`,
           createdAt: options.createdAt ?? new Date().toISOString(),
+          waiter,
         });
         if (sentId)
           requestId = (await store.bindWait(requestId, sentId)).requestId;
@@ -112,7 +135,7 @@ export async function openConnectedReplyWait(options: {
     }
   } catch (error) {
     try {
-      if (newlyRegisteredId) {
+      if (ownershipAttempted) {
         // Setup may fail after registration or after the receive signal expires.
         // Never cancel an intent that existed before this construction attempt.
         const cleanup = await openSharedMailStore({
@@ -121,9 +144,13 @@ export async function openConnectedReplyWait(options: {
           recipient: options.from,
           signal: AbortSignal.timeout(2000),
         });
-        const registered = await cleanup.readWait(newlyRegisteredId);
-        if (registered?.status === "unbound")
-          await cleanup.cancelWaitBeforeSend(newlyRegisteredId);
+        if (await cleanup.readWait(requestId))
+          await cleanup.releaseWaiter(requestId, waiter.token);
+        if (newlyRegisteredId) {
+          const registered = await cleanup.readWait(newlyRegisteredId);
+          if (registered?.status === "unbound")
+            await cleanup.cancelWaitBeforeSend(newlyRegisteredId);
+        }
       }
     } finally {
       await receiver.close();
@@ -139,9 +166,25 @@ export async function openConnectedReplyWait(options: {
   let cursors = new Set<string>();
   let generation: string | undefined;
   let gapCount: number | undefined;
+  let released = false;
+  let closed = false;
+  let closing: Promise<void> | undefined;
   const timedOut = () =>
     options.deadline != null && Date.now() >= options.deadline;
+  async function release() {
+    if (released) return;
+    // The receiver's signal has already expired on the normal timeout path.
+    const cleanup = await openSharedMailStore({
+      configDir: options.configDir,
+      scope: sharedMailScope(options.apiKey, options.baseUrl),
+      recipient: options.from,
+      signal: AbortSignal.timeout(2000),
+    });
+    await cleanup.releaseWaiter(requestId, waiter.token);
+    released = true;
+  }
   async function inspect(id: string): Promise<EmailDetail | null> {
+    if (closed || released || timedOut()) return null;
     if (settled.has(id)) return null;
     if (!sentId)
       throw new Error("Bind the sent email before waiting for a reply.");
@@ -167,6 +210,7 @@ export async function openConnectedReplyWait(options: {
       recipient: options.from,
       peer: options.recipient,
       replyToSentEmailId: sentId,
+      ...(email.thread_id ? { threadId: email.thread_id } : {}),
       receivedAt: email.received_at,
       authorization: "trusted",
     });
@@ -176,19 +220,44 @@ export async function openConnectedReplyWait(options: {
         options.notice?.(
           options.contactRequest
             ? `Reply ${id} does not complete this contact acceptance wait; inspect it with primitive emails get --id ${id}.`
-            : `Reply ${id} contains an interaction attachment; inspect it with primitive emails get --id ${id}. Waiting for a plain reply.`,
+            : `Reply ${id} contains an interaction attachment. Waiting for a plain reply; no extra fetch is needed for activity updates. Inspect only if your task explicitly expects a structured result.`,
         );
       }
       settled.add(id);
       return null;
     }
-    const claim = await store.claimForWait(id, requestId);
+    if (closed || released || timedOut()) return null;
+    const claim = await store.claimForWait(id, requestId, waiter.token);
+    if (options.contactRequest && claim.email.route?.kind === "notification") {
+      if (["selected", "submitting"].includes(claim.email.route.state)) {
+        pending.add(id);
+        return null;
+      }
+    }
     settled.add(id);
-    return claim.status === "claimed" ||
+    const observed =
+      claim.status === "claimed" ||
       (claim.status === "already_observed" &&
-        options.resumeReply?.emailId === id)
-      ? email
-      : null;
+        options.resumeReply?.emailId === id);
+    if (observed && options.sessionKey && !options.contactRequest) {
+      const intent = await store.readWait(requestId);
+      if (!intent)
+        throw new Error(
+          "The conversation's initiating request is unavailable.",
+        );
+      await followEmailConversation(
+        {
+          configDir: options.configDir,
+          scope: sharedMailScope(options.apiKey, options.baseUrl),
+          recipient: options.from,
+          peer: options.recipient,
+          sessionKey: options.sessionKey,
+          since: intent.createdAt,
+        },
+        email,
+      );
+    }
+    return observed ? email : null;
   }
   return {
     receiver,
@@ -228,14 +297,35 @@ export async function openConnectedReplyWait(options: {
       });
       return cleanup.cancelRejectedSend(requestId);
     },
-    observed: (emailId: string) => store.markWaitObserved(emailId, requestId),
+    async observed(emailId: string) {
+      if (
+        options.contactRequest &&
+        (await store.observeNotifiedContactReply(
+          emailId,
+          requestId,
+          waiter.token,
+        ))
+      )
+        return;
+      await store.markWaitObserved(emailId, requestId);
+    },
     finish: () => store.finishWait(requestId),
-    close: () => receiver.close(),
+    close() {
+      closed = true;
+      closing ??= (async () => {
+        try {
+          await release();
+        } finally {
+          await receiver.close();
+        }
+      })();
+      return closing;
+    },
     async next(): Promise<EmailDetail | null> {
       try {
         if (!sentId)
           throw new Error("Bind the sent email before waiting for a reply.");
-        while (!timedOut()) {
+        while (!closed && !released && !timedOut()) {
           const owner = await receiver.ready(options.deadline);
           if (!owner) return null;
           if (options.resumeReply) {
@@ -273,7 +363,7 @@ export async function openConnectedReplyWait(options: {
               recoveryNeeded = false;
             }
           }
-          for (const id of pending) {
+          for (const id of [...pending]) {
             const reply = await inspect(id);
             if (reply) return reply;
           }
@@ -300,8 +390,10 @@ export async function openConnectedReplyWait(options: {
         }
         return null;
       } catch (error) {
-        if (timedOut()) return null;
+        if (closed || released || timedOut()) return null;
         throw error;
+      } finally {
+        if (timedOut()) await release();
       }
     },
   };

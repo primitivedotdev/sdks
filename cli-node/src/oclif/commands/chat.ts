@@ -45,7 +45,9 @@ import {
   type ConnectedReplyWait,
   openConnectedReplyWait,
 } from "../connected-reply-wait.js";
+import { contactRequestSessionKey } from "../contact-request-commands.js";
 import { formatAlreadySentNotice } from "../idempotent-replay-banner.js";
+import { currentMailSessionKey } from "../mail-session.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 import { reconcileChatSend } from "../reconcile-chat-send.js";
 import {
@@ -841,7 +843,10 @@ export function formatChatAwaitingReplyMessage(
     options.waitError === undefined
       ? `No reply yet after ${context.timeoutSeconds}s.`
       : `Waiting for the reply failed: ${options.waitError}`;
-  return `${chatNoun(context)} sent (id ${context.sent.id}). ${status} Do NOT resend; wait with: ${wait.command}`;
+  const nextStep = context.scopedInbox
+    ? `Do NOT resend. An active session listener can notify you later; continue independent work instead of immediately chaining another wait. To resume manually: ${wait.command}`
+    : `Do NOT resend; wait with: ${wait.command}`;
+  return `${chatNoun(context)} sent (id ${context.sent.id}). ${status} ${nextStep}`;
 }
 
 export function buildChatExistingReplyCommands(
@@ -1219,7 +1224,14 @@ async function findLatestInboundFromRecipient(params: {
 class ChatCommand extends Command {
   static description = `Send a message to an address and wait for the reply.
 
-  Connected agents must supply --from. They share an address event receiver and
+  With --async, a connected agent sends and returns immediately. The exact
+  current session must already be receiving external mail events; later status
+  signals and replies belong to that session. Use this for delegated work that
+  should continue while the owner does something else.
+
+  A saved connected-agent profile supplies its pinned sender address; an explicit
+  --from must match it. Raw connection credentials still require --from.
+  Connected agents share an address event receiver and
   recover through targeted search for
   an authenticated, exactly threaded reply. Interaction attachments remain
   pending for inspection; a plain reply does not prove task completion.
@@ -1290,6 +1302,7 @@ class ChatCommand extends Command {
     "<%= config.bin %> chat help@agent.acme.dev --reply 'one more thing' --reply-to-email-id <inbound-email-id>",
     "<%= config.bin %> chat help@agent.acme.dev 'can you review this?' --attachment ./report.pdf",
     "<%= config.bin %> chat help@agent.acme.dev 'follow up question' --json",
+    "<%= config.bin %> chat peer@agent.acme.dev 'build a small game' --async --json",
     "<%= config.bin %> chat help@agent.acme.dev 'one more thing' --timeout 300",
   ];
 
@@ -1317,7 +1330,7 @@ class ChatCommand extends Command {
     }),
     from: Flags.string({
       description:
-        "Sender address. Defaults to agent@<your-first-verified-outbound-domain>.",
+        "Sender address. Defaults to the selected connected profile's pinned address, otherwise agent@<your-first-verified-outbound-domain>. A connected profile rejects another sender.",
     }),
     subject: Flags.string({
       description:
@@ -1355,6 +1368,10 @@ class ChatCommand extends Command {
     quiet: Flags.boolean({
       description:
         "Suppress stderr progress updates while sending and waiting. Errors and recovery commands are still written to stderr.",
+    }),
+    async: Flags.boolean({
+      description:
+        "Send and return immediately while this connected session receives later activity and replies as external events. Requires an exact live runtime session and a connected-agent profile.",
     }),
     timeout: Flags.integer({
       default: DEFAULT_CHAT_TIMEOUT_SECONDS,
@@ -1564,8 +1581,45 @@ class ChatCommand extends Command {
             apiBaseUrl: flags["api-base-url"],
             configDir: this.config.configDir,
           });
+        let asyncSessionKey: string | null = null;
+        if (flags.async) {
+          if (auth.connectedAgent) {
+            try {
+              const runtimeSessionKey = currentMailSessionKey();
+              const verifiedSessionKey = contactRequestSessionKey({
+                apiKey: auth.apiKey,
+                configDir: this.config.configDir,
+                identity: auth.connectedAgent,
+              });
+              if (runtimeSessionKey && runtimeSessionKey === verifiedSessionKey)
+                asyncSessionKey = runtimeSessionKey;
+            } catch {
+              // Never send when this session cannot prove ownership of the
+              // selected profile's verified setup.
+            }
+          }
+          if (!asyncSessionKey)
+            throw cliError(
+              "--async requires a connected-agent profile verified for the exact current coding session. Connect this session and enable receiving first.",
+            );
+        }
 
-        if (isConnectedChatCredential(auth.apiKey) && !flags.from?.trim()) {
+        let selectedFrom = flags.from;
+        if (auth.connectedAgent) {
+          if (selectedFrom !== undefined) {
+            const parsed = parseFromHeader(selectedFrom);
+            if (
+              !parsed.ok ||
+              parsed.value.address.toLowerCase() !==
+                auth.connectedAgent.agentAddress.toLowerCase()
+            )
+              throw cliError(
+                "--from must match the selected connected-agent profile's pinned address.",
+              );
+          }
+          selectedFrom ??= auth.connectedAgent.agentAddress;
+        }
+        if (isConnectedChatCredential(auth.apiKey) && !selectedFrom?.trim()) {
           throw cliError(
             "Connected agents must pass --from with their connected email address.",
           );
@@ -1604,13 +1658,13 @@ class ChatCommand extends Command {
                 replyContextFailureMessage = `Inbound email ${flags["reply-to-email-id"]} does not match recipient ${args.recipient}.`;
                 assertParentMatchesRecipient(exactParentReply, args.recipient);
                 return {
-                  from: flags.from ?? exactParentReply.to_email,
+                  from: selectedFrom ?? exactParentReply.to_email,
                   parentReply: exactParentReply,
                 };
               }
 
               const replyFrom =
-                flags.from ??
+                selectedFrom ??
                 (await pickDefaultFromAddress(apiClient, authFailureContext));
               progress?.start(
                 `Finding latest inbound email from ${args.recipient}`,
@@ -1641,7 +1695,7 @@ class ChatCommand extends Command {
           subject = derivedReplySubject(replyContext.parentReply);
         } else {
           from =
-            flags.from ??
+            selectedFrom ??
             (await pickDefaultFromAddress(apiClient, authFailureContext));
           subject = flags.subject ?? deriveSubject(message);
         }
@@ -1730,6 +1784,7 @@ class ChatCommand extends Command {
             flags.timeout === 0 ? null : Date.now() + flags.timeout * 1000;
           const key = receipt.data.idempotency_key;
           connectedWait = await openConnectedReplyWait({
+            sessionKey: flags.async ? asyncSessionKey : currentMailSessionKey(),
             apiClient,
             apiKey: auth.apiKey,
             baseUrl: auth.apiBaseUrl,
@@ -1978,6 +2033,33 @@ class ChatCommand extends Command {
         receipt.data.sent = sent;
         saveChatReceipt(receipt);
         await connectedWait?.bind(sent.id);
+
+        if (flags.async) {
+          const outcome = sent.idempotent_replay ? "already_sent" : "sent";
+          const message = sent.idempotent_replay
+            ? `${formatAlreadySentNotice(sent)} This conversation remains bound to this session; inspect it if the answer may have arrived already.`
+            : `${chatNoun(baseContext)} sent (id ${sent.id}). This conversation is bound to this session for status and later replies. Keep its configured receiver active.`;
+          const result: ChatNoReplyEnvelope = {
+            outcome,
+            exit_code: sendOutcomeExitCode(outcome),
+            outcome_message: message,
+            sent,
+            reply: null,
+            local_chat_id: null,
+            response_body: null,
+            response_body_format: null,
+            match: null,
+            follow_up_commands: buildChatRecoveryCommands(baseContext),
+            prior_replies: baseContext.priorReplies ?? null,
+            http_status: null,
+            error: null,
+          };
+          this.chatProgress.outcomeReported = true;
+          progress?.succeed(message);
+          if (flags.json) this.log(JSON.stringify(result, null, 2));
+          else this.log(message);
+          return;
+        }
 
         // Server-side idempotency dedup: when the same content
         // (from + to + subject + body) is sent within the dedup

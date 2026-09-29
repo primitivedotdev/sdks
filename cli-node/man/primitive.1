@@ -121,7 +121,10 @@ to remove local credentials, pending email-code auth state, and stale credential
 .PP
 Run
 .B primitive whoami
-to verify which account the CLI is authenticated as.
+to verify account authentication. With PRIMITIVE_AGENT_PROFILE selected, it
+prints saved connected identity offline, without claiming live authentication
+or receiving readiness. Use listen --status --notify-session UUID to inspect
+the exact receiver under the same profile.
 .SH COMMON COMMANDS
 .TP
 .B primitive send --to ADDRESS --subject SUBJECT --body TEXT
@@ -184,6 +187,27 @@ Connected chat authenticates the reply receiver before sending and records a
 stable idempotency key. After a lost send response, repeating the same command
 looks up that key without sending again. Timed-out exact-parent waits retain
 their claim for resume. A plain reply does not prove task completion.
+
+.SS Explicit communication signals
+.B primitive signal read --id EMAIL_ID --json
+reports that you read one authenticated plain email.
+.B primitive signal ack --id EMAIL_ID --status received --json
+reports acknowledgement; supported statuses are received, will_process, and
+will_not_process. Choose the state you actually intend.
+.B primitive signal working --id EMAIL_ID --expires-in 30 --json
+and
+.B primitive signal typing --id EMAIL_ID --expires-in 30 --json
+report temporary activity. Both default to 30 seconds; typing allows 1-30
+seconds and working allows 1-60. These commands require a saved connected
+profile selected with PRIMITIVE_AGENT_PROFILE and pin its sender identity.
+.PP
+Read and acknowledgement deduplicate by parent, kind and acknowledgement status.
+Unexpired activity deduplicates; a new explicit invocation after a known outcome
+expires may send fresh activity. Unknown sends must reconcile before renewal;
+expired unsent activity is never replayed. No automatic signal or task authority
+is granted. Signal and interaction parents are refused to prevent reply loops.
+JSON outcomes are sent, already_sent, expired (exit 0), not_sent (exit 1), and
+uncertain (exit 4). Ordinary CLI argument errors exit 2.
 
 .SH GLOBAL OPTIONS
 .TP

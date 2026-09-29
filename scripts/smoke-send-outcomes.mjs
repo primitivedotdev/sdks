@@ -97,11 +97,24 @@ try {
   ] } });
   result = await cli([...replyArgs, "--json"]);
   assert.equal(result.code, 0, result.stderr);
-  assert.match(result.stderr, /You already replied to this email at 2026-09-01T11:00:00\.000Z \(sent id sent-prior\)\. Sending another reply\./);
+  assert.match(result.stderr, /1 outgoing email, most recently at 2026-09-01T11:00:00\.000Z \(sent id sent-prior\)/);
+  assert.match(result.stderr, /may include activity updates and do not prove a completed answer/);
   assert.equal(posts(), 1, "The prior-reply warning must not block the send");
   let envelope = JSON.parse(result.stdout);
   assert.equal(envelope.outcome, "sent");
   assert.deepEqual(envelope.prior_replies.map((entry) => entry.id), ["sent-prior"]);
+
+  reset({ inbound: { id: "inbound-1", replies: [
+    { id: "blocked", status: "delivered", to_address: "alice@example.test", created_at: "2026-09-01T11:00:00.000Z" },
+    { id: "working", status: "delivered", to_address: "alice@example.test", created_at: "2026-09-01T11:01:00.000Z" },
+    { id: "typing", status: "delivered", to_address: "alice@example.test", created_at: "2026-09-01T11:02:00.000Z" },
+  ] } });
+  result = await cli([...replyArgs, "--json"]);
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stderr, /3 outgoing emails/);
+  assert.doesNotMatch(result.stderr, /already replied|3 answers/);
+  assert.equal(requests.filter((entry) => entry.method === "GET").length, 1, "Warning must not fetch every prior reply to classify it");
+  assert.equal(posts(), 1, "Activity history must not block the final reply");
 
   reset({ inboundStatus: 503 });
   result = await cli([...replyArgs, "--json"]);
