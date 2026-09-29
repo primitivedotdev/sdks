@@ -1005,6 +1005,11 @@ describe("locally solicited notification replies", () => {
       domain: "example.com",
       created_at: new Date().toISOString(),
       replies: [],
+      reply_count: 0,
+      last_replied_at: null,
+      awaiting: "you",
+      automated: false,
+      automated_reasons: [],
       webhook_attempt_count: 0,
     } as EmailDetail;
     await followEmailConversation(
