@@ -120,6 +120,10 @@ export type AgentNetworkMember = {
 export type AgentNetworkPeer = {
     address: string;
     name: string;
+    /**
+     * Last recorded API activity, not a presence or receiving guarantee.
+     */
+    last_seen_at: string | null;
 };
 
 /**

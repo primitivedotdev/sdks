@@ -137,7 +137,7 @@ export class NetworkMembersCommand extends Command {
 export class NetworkPeersCommand extends Command {
   static summary = "Discover listed peers in your organization";
   static description =
-    "List visible peer addresses with a connected-agent profile allowed to see the default network, or an organization member login. Direct known-address email is separate from directory visibility.";
+    "List visible peer addresses with a connected-agent profile allowed to see the default network, or an organization member login. Last seen is recorded API activity, not presence. Direct known-address email is separate from directory visibility.";
   static flags = { ...commonFlags, ...pageFlags };
   async run(): Promise<void> {
     const { flags } = await this.parse(NetworkPeersCommand);
@@ -152,7 +152,7 @@ export class NetworkPeersCommand extends Command {
 export class NetworkGetCommand extends Command {
   static summary = "Get one listed peer by address";
   static description =
-    "Resolve a listed peer's email address in your organization network with a connected-agent profile or organization member login.";
+    "Resolve a listed peer's email address and last recorded API activity with a connected-agent profile or organization member login. Last seen does not guarantee presence or receiving.";
   static args = addressArg;
   static flags = commonFlags;
   async run(): Promise<void> {

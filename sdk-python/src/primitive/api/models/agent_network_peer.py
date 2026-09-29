@@ -8,6 +8,9 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from dateutil.parser import isoparse
+from typing import cast
+import datetime
 
 
 
@@ -25,10 +28,12 @@ class AgentNetworkPeer:
         Attributes:
             address (str):
             name (str):
+            last_seen_at (datetime.datetime | None): Last recorded API activity, not a presence or receiving guarantee.
      """
 
     address: str
     name: str
+    last_seen_at: datetime.datetime | None
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -40,12 +45,19 @@ class AgentNetworkPeer:
 
         name = self.name
 
+        last_seen_at: None | str
+        if isinstance(self.last_seen_at, datetime.datetime):
+            last_seen_at = self.last_seen_at.isoformat()
+        else:
+            last_seen_at = self.last_seen_at
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
         field_dict.update({
             "address": address,
             "name": name,
+            "last_seen_at": last_seen_at,
         })
 
         return field_dict
@@ -59,9 +71,28 @@ class AgentNetworkPeer:
 
         name = d.pop("name")
 
+        def _parse_last_seen_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                last_seen_at_type_0 = isoparse(data)
+
+
+
+                return last_seen_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        last_seen_at = _parse_last_seen_at(d.pop("last_seen_at"))
+
+
         agent_network_peer = cls(
             address=address,
             name=name,
+            last_seen_at=last_seen_at,
         )
 
 

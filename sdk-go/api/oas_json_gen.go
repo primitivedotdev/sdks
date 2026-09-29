@@ -2872,11 +2872,16 @@ func (s *AgentNetworkPeer) encodeFields(e *jx.Encoder) {
 		e.FieldStart("name")
 		e.Str(s.Name)
 	}
+	{
+		e.FieldStart("last_seen_at")
+		s.LastSeenAt.Encode(e, json.EncodeDateTime)
+	}
 }
 
-var jsonFieldsNameOfAgentNetworkPeer = [2]string{
+var jsonFieldsNameOfAgentNetworkPeer = [3]string{
 	0: "address",
 	1: "name",
+	2: "last_seen_at",
 }
 
 // Decode decodes AgentNetworkPeer from json.
@@ -2912,6 +2917,16 @@ func (s *AgentNetworkPeer) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"name\"")
 			}
+		case "last_seen_at":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				if err := s.LastSeenAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"last_seen_at\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -2922,7 +2937,7 @@ func (s *AgentNetworkPeer) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

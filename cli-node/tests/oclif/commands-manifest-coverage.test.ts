@@ -69,6 +69,10 @@ describe("COMMANDS / manifest coverage", () => {
     const set = COMMANDS["network:set"] as unknown as {
       flags: Record<string, unknown>;
     };
+    const peers = COMMANDS["network:peers"] as unknown as {
+      description: string;
+    };
+    expect(peers.description).toContain("recorded API activity");
     expect(set.flags.see).toBeDefined();
     expect(set.flags["be-seen"]).toBeDefined();
     expect(readCliPackageJson().oclif?.topics?.network?.description).toContain(

@@ -1046,6 +1046,8 @@ func (s *AgentNetworkMember) SetLastSeenAt(val NilDateTime) {
 type AgentNetworkPeer struct {
 	Address string `json:"address"`
 	Name    string `json:"name"`
+	// Last recorded API activity, not a presence or receiving guarantee.
+	LastSeenAt NilDateTime `json:"last_seen_at"`
 }
 
 // GetAddress returns the value of Address.
@@ -1058,6 +1060,11 @@ func (s *AgentNetworkPeer) GetName() string {
 	return s.Name
 }
 
+// GetLastSeenAt returns the value of LastSeenAt.
+func (s *AgentNetworkPeer) GetLastSeenAt() NilDateTime {
+	return s.LastSeenAt
+}
+
 // SetAddress sets the value of Address.
 func (s *AgentNetworkPeer) SetAddress(val string) {
 	s.Address = val
@@ -1066,6 +1073,11 @@ func (s *AgentNetworkPeer) SetAddress(val string) {
 // SetName sets the value of Name.
 func (s *AgentNetworkPeer) SetName(val string) {
 	s.Name = val
+}
+
+// SetLastSeenAt sets the value of LastSeenAt.
+func (s *AgentNetworkPeer) SetLastSeenAt(val NilDateTime) {
+	s.LastSeenAt = val
 }
 
 // Ref: #/components/schemas/AgentOrgRef

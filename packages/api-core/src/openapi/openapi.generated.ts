@@ -12289,11 +12289,20 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "name": {
             "type": "string"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Last recorded API activity, not a presence or receiving guarantee."
           }
         },
         "required": [
           "address",
-          "name"
+          "name",
+          "last_seen_at"
         ]
       },
       "UpdateAgentNetworkMemberInput": {
