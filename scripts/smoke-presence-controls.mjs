@@ -103,6 +103,11 @@ const server = createServer(async (request, response) => {
     effective_version: "a".repeat(64), effective_since: before, allow_contact_requests: false,
     contact_request_since: null, contact_request_generation: null,
   };
+  else if (url.pathname === "/v1/agent-networks/default/contact-admission") {
+    assert.deepEqual(body, { email_id: body.email_id, sender_address: owner });
+    assert.ok(messages.has(body.email_id));
+    data = { allowed: false, allowed_since: null, pending: false, member_policy_required: false };
+  }
   else if (url.pathname.startsWith("/v1/agent-contacts/")) {
     data = [{ agent_address: address, contact_address: owner, notify: true, version,
       notification_generation: version, notify_since: before }];

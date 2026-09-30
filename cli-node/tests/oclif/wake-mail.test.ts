@@ -192,7 +192,7 @@ describe("Claude mail wake", () => {
     { failure: "pending", solicited: true },
     { failure: 503, solicited: false },
     { failure: "pending", solicited: false },
-  ] as const)("handles solicited=$solicited mail independently of network $failure without admitting unrelated mail", async ({
+  ] as const)("holds solicited=$solicited mail while exact-mail proof is $failure", async ({
     failure,
     solicited,
   }) => {
@@ -218,7 +218,12 @@ describe("Claude mail wake", () => {
             ? Response.json({ success: false }, { status: 503 })
             : Response.json({
                 success: true,
-                data: { allowed: false, allowed_since: null, pending: true },
+                data: {
+                  allowed: false,
+                  allowed_since: null,
+                  pending: true,
+                  member_policy_required: true,
+                },
               });
         throw new Error("Unexpected fixture route");
       },
@@ -240,8 +245,8 @@ describe("Claude mail wake", () => {
         f.delivery as never,
         new AbortController().signal,
       );
-      expect(handled.succeeded).toBe(solicited);
-      expect(wake.wakeId()).toBe(solicited ? f.emailId : undefined);
+      expect(handled.succeeded).toBe(false);
+      expect(wake.wakeId()).toBeUndefined();
     } finally {
       await wake.close();
     }

@@ -8,8 +8,8 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.create_agent_connection_response_200_data_connection_ownership_kind import CreateAgentConnectionResponse200DataConnectionOwnershipKind
-from ..models.create_agent_connection_response_200_data_connection_status import CreateAgentConnectionResponse200DataConnectionStatus
+from ..models.create_agent_connection_response_200_data_type_0_connection_ownership_kind import CreateAgentConnectionResponse200DataType0ConnectionOwnershipKind
+from ..models.create_agent_connection_response_200_data_type_0_connection_status import CreateAgentConnectionResponse200DataType0ConnectionStatus
 from dateutil.parser import isoparse
 from typing import cast
 import datetime
@@ -21,24 +21,24 @@ if TYPE_CHECKING:
 
 
 
-T = TypeVar("T", bound="CreateAgentConnectionResponse200DataConnection")
+T = TypeVar("T", bound="CreateAgentConnectionResponse200DataType0Connection")
 
 
 
 @_attrs_define
-class CreateAgentConnectionResponse200DataConnection:
+class CreateAgentConnectionResponse200DataType0Connection:
     """
         Attributes:
             address (str):
             name (str):
             owner_address (str):
-            status (CreateAgentConnectionResponse200DataConnectionStatus):
+            status (CreateAgentConnectionResponse200DataType0ConnectionStatus):
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
             claimed_at (datetime.datetime | None):
             verified_at (datetime.datetime | None):
             last_seen_at (datetime.datetime | None):
-            ownership_kind (CreateAgentConnectionResponse200DataConnectionOwnershipKind):
+            ownership_kind (CreateAgentConnectionResponse200DataType0ConnectionOwnershipKind):
             owner_user_id (None | str):
             owner_active (bool | None):
             presence (AgentPresenceType0 | None | Unset):
@@ -47,13 +47,13 @@ class CreateAgentConnectionResponse200DataConnection:
     address: str
     name: str
     owner_address: str
-    status: CreateAgentConnectionResponse200DataConnectionStatus
+    status: CreateAgentConnectionResponse200DataType0ConnectionStatus
     created_at: datetime.datetime
     updated_at: datetime.datetime
     claimed_at: datetime.datetime | None
     verified_at: datetime.datetime | None
     last_seen_at: datetime.datetime | None
-    ownership_kind: CreateAgentConnectionResponse200DataConnectionOwnershipKind
+    ownership_kind: CreateAgentConnectionResponse200DataType0ConnectionOwnershipKind
     owner_user_id: None | str
     owner_active: bool | None
     presence: AgentPresenceType0 | None | Unset = UNSET
@@ -144,7 +144,7 @@ class CreateAgentConnectionResponse200DataConnection:
 
         owner_address = d.pop("owner_address")
 
-        status = CreateAgentConnectionResponse200DataConnectionStatus(d.pop("status"))
+        status = CreateAgentConnectionResponse200DataType0ConnectionStatus(d.pop("status"))
 
 
 
@@ -213,7 +213,7 @@ class CreateAgentConnectionResponse200DataConnection:
         last_seen_at = _parse_last_seen_at(d.pop("last_seen_at"))
 
 
-        ownership_kind = CreateAgentConnectionResponse200DataConnectionOwnershipKind(d.pop("ownership_kind"))
+        ownership_kind = CreateAgentConnectionResponse200DataType0ConnectionOwnershipKind(d.pop("ownership_kind"))
 
 
 
@@ -254,7 +254,7 @@ class CreateAgentConnectionResponse200DataConnection:
         presence = _parse_presence(d.pop("presence", UNSET))
 
 
-        create_agent_connection_response_200_data_connection = cls(
+        create_agent_connection_response_200_data_type_0_connection = cls(
             address=address,
             name=name,
             owner_address=owner_address,
@@ -270,4 +270,4 @@ class CreateAgentConnectionResponse200DataConnection:
             presence=presence,
         )
 
-        return create_agent_connection_response_200_data_connection
+        return create_agent_connection_response_200_data_type_0_connection

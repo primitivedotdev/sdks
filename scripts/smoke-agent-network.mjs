@@ -45,7 +45,7 @@ const server = createServer(async (request, response) => {
     return reply({ ...peer, last_seen_at: "2026-09-28T12:00:00Z" });
   if (url.pathname === "/v1/agent-networks/default/contact-admission" && request.method === "POST") {
     assert.deepEqual(body, { email_id: inboundId, sender_address: agent });
-    return reply({ allowed: false, allowed_since: null, pending: false });
+    return reply({ allowed: false, allowed_since: null, pending: false, member_policy_required: false });
   }
   if (url.pathname === path && request.method === "PATCH") {
     member = { ...member, ...(body.can_view === undefined ? {} : { can_view: body.can_view }), ...(body.is_listed === undefined ? {} : { is_listed: body.is_listed }) };
@@ -122,7 +122,7 @@ try {
   assert.equal(JSON.parse(await api(["network", "add", agent])).excluded, false);
   assert.deepEqual(
     JSON.parse(await api(["agent-networks", "check-default-network-contact-admission", "--email-id", inboundId, "--sender-address", agent])),
-    { allowed: false, allowed_since: null, pending: false },
+    { allowed: false, allowed_since: null, pending: false, member_policy_required: false },
   );
   assert.deepEqual(calls.map(({ method }) => method), ["GET", "GET", "GET", "GET", "GET", "PATCH", "DELETE", "POST", "POST"]);
   assert.deepEqual(calls[5].body, { can_view: false, is_listed: false });

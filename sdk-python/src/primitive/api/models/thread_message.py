@@ -14,6 +14,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
 
 
 
@@ -38,6 +40,8 @@ class ThreadMessage:
             subject (None | str | Unset):
             status (None | str | Unset): Lifecycle status (an EmailStatus or SentEmailStatus value, per `direction`).
             timestamp (datetime.datetime | None | Unset): received_at for inbound, created_at for outbound.
+            sender_member (None | ThreadMessageSenderMemberType0 | Unset): Verified human authorship, projected only within
+                the member organization. Historical attribution is not current sending or owner authority.
      """
 
     direction: ThreadMessageDirection
@@ -48,6 +52,7 @@ class ThreadMessage:
     subject: None | str | Unset = UNSET
     status: None | str | Unset = UNSET
     timestamp: datetime.datetime | None | Unset = UNSET
+    sender_member: None | ThreadMessageSenderMemberType0 | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -55,6 +60,7 @@ class ThreadMessage:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
         direction = self.direction.value
 
         id = str(self.id)
@@ -97,6 +103,14 @@ class ThreadMessage:
         else:
             timestamp = self.timestamp
 
+        sender_member: dict[str, Any] | None | Unset
+        if isinstance(self.sender_member, Unset):
+            sender_member = UNSET
+        elif isinstance(self.sender_member, ThreadMessageSenderMemberType0):
+            sender_member = self.sender_member.to_dict()
+        else:
+            sender_member = self.sender_member
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -116,6 +130,8 @@ class ThreadMessage:
             field_dict["status"] = status
         if timestamp is not UNSET:
             field_dict["timestamp"] = timestamp
+        if sender_member is not UNSET:
+            field_dict["sender_member"] = sender_member
 
         return field_dict
 
@@ -123,6 +139,7 @@ class ThreadMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
         d = dict(src_dict)
         direction = ThreadMessageDirection(d.pop("direction"))
 
@@ -204,6 +221,26 @@ class ThreadMessage:
         timestamp = _parse_timestamp(d.pop("timestamp", UNSET))
 
 
+        def _parse_sender_member(data: object) -> None | ThreadMessageSenderMemberType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                sender_member_type_0 = ThreadMessageSenderMemberType0.from_dict(data)
+
+
+
+                return sender_member_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | ThreadMessageSenderMemberType0 | Unset, data)
+
+        sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
+
+
         thread_message = cls(
             direction=direction,
             id=id,
@@ -213,6 +250,7 @@ class ThreadMessage:
             subject=subject,
             status=status,
             timestamp=timestamp,
+            sender_member=sender_member,
         )
 
 

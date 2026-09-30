@@ -156,6 +156,7 @@ function setup(
     allowed: false,
     allowed_since: null as string | null,
     pending: false,
+    member_policy_required: false,
   };
   let contactRows: unknown[] = [
     {
@@ -377,8 +378,14 @@ function setup(
       allowedSince: string | null,
       pending = false,
       status = 200,
+      memberPolicyRequired = false,
     ) => {
-      networkDecision = { allowed, allowed_since: allowedSince, pending };
+      networkDecision = {
+        allowed,
+        allowed_since: allowedSince,
+        pending,
+        member_policy_required: memberPolicyRequired,
+      };
       networkStatus = status;
     },
     close,
@@ -527,7 +534,7 @@ describe("shared notification listener integration", () => {
     } else expect(f.receipt()).toBeNull();
     expect(
       f.order.includes("/v1/agent-networks/default/contact-admission"),
-    ).toBe(!muted);
+    ).toBe(true);
   });
   it("does not ask network admission for mail with unverified sender provenance", async () => {
     const f = setup(["sdk"], ["email.received"], true);
@@ -1153,15 +1160,30 @@ describe("locally solicited notification replies", () => {
   it.each([
     503,
     "pending",
-  ] as const)("delivers an exact solicited reply independently of network %s", async (failure) => {
+  ] as const)("holds an exact solicited reply while current member proof is %s", async (failure) => {
     const f = await solicited("plain");
-    f.network(false, null, failure === "pending", failure === 503 ? 503 : 200);
+    f.network(
+      false,
+      null,
+      failure === "pending",
+      failure === 503 ? 503 : 200,
+      true,
+    );
+    const controller = new AbortController();
+    f.changed.mockImplementationOnce(async () => controller.abort());
+    expect(await runListen({ ...f.options, signal: controller.signal })).toBe(
+      0,
+    );
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+      route: null,
+    });
+  });
+  it("keeps exact external solicited replies independent of generic network eligibility", async () => {
+    const f = await solicited("plain");
+    f.network(false, null, true);
     expect(await runListen(f.options)).toBe(1);
     expect(f.handleDetail).toHaveBeenCalledOnce();
-    expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
-      sender: f.detail.from_email,
-      contactRequest: false,
-    });
   });
 
   it.each([

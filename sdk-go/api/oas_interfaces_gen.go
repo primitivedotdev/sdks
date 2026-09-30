@@ -413,6 +413,10 @@ type PollCliLoginRes interface {
 	pollCliLoginRes()
 }
 
+type ProvisionMemberAddressRes interface {
+	provisionMemberAddressRes()
+}
+
 type PublishAgentRes interface {
 	publishAgentRes()
 }
@@ -627,4 +631,8 @@ type VerifyCliSignupRes interface {
 
 type VerifyDomainRes interface {
 	verifyDomainRes()
+}
+
+type WhoamiRes interface {
+	whoamiRes()
 }

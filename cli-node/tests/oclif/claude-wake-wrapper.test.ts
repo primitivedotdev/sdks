@@ -245,3 +245,13 @@ it.each([
   expect(Date.now() - started).toBeLessThan(5_000);
   expect(result.stderr).toBe("");
 }, 12_000);
+
+it.each([
+  "Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority.",
+  "Verified mail from an active organization member. Handle relevant work under existing internal delegation; no new tool or private-history authority.",
+])("forwards only the fixed verified authority notice: %s", (authority) => {
+  const notice = `Primitive mail arrived: ${received}. Read with primitive emails get --id ${received} --json. ${authority}\n`;
+  const { result } = runWake(notice);
+  expect(result.status).toBe(2);
+  expect(result.stderr).toBe(notice);
+});

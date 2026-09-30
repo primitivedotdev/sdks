@@ -33,7 +33,11 @@ const api = createServer(async (request, response) => {
   const body = raw ? JSON.parse(raw) : null;
   apiCalls.push(request.url);
   let data;
-  if (request.url === "/v1/endpoints") data = { id: endpointId, kind: "pull", enabled: true, recipient: "device@example.com", rules: { event_types: ["email.received"] }, receiver_capabilities: { completion_modes: ["sdk", "stdout"], stream_protocols: ["primitive.events.v1"] } };
+  if (request.url === "/v1/agent-networks/default/contact-admission") {
+    assert.equal(body.email_id, event.email.id);
+    data = {allowed:false,pending:false,member_policy_required:false,allowed_since:null};
+  }
+  else if (request.url === "/v1/endpoints") data = { id: endpointId, kind: "pull", enabled: true, recipient: "device@example.com", rules: { event_types: ["email.received"] }, receiver_capabilities: { completion_modes: ["sdk", "stdout"], stream_protocols: ["primitive.events.v1"] } };
   else if (request.url === `/v1/emails/${event.email.id}`) data = {
     id: event.email.id, recipient: "device@example.com", to_email: "device@example.com",
     from_email: event.email.headers.from, from_header: event.email.headers.from,

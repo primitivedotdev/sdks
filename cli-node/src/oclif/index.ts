@@ -621,6 +621,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   // current OAuth session or explicit API key authenticates as. AGX
   // walkthroughs kept wanting this before risking a real call against
   // possibly-bad auth.
+  // Member identity and address provisioning stay available through the
+  // generated account:whoami and account:provision-member-address routes.
   whoami: WhoamiCommand,
   signal: SignalCommand,
   // `doctor` is the environment health check. Node version, proxy

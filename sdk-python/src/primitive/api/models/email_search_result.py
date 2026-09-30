@@ -21,6 +21,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.email_search_highlights import EmailSearchHighlights
   from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
+  from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
   from ..models.presence_control_type_0 import PresenceControlType0
 
 
@@ -171,6 +172,8 @@ class EmailSearchResult:
                 declared none, and on messages received before these headers
                 were captured, so a null value is not evidence that a person
                 sent the message.
+            sender_member (EmailSummarySenderMemberType0 | None | Unset): Verified human authorship, projected only within
+                the member organization. Historical attribution is not current sending or owner authority.
             score (float | Unset): Relevance score. Present only when sorting by relevance.
             highlights (EmailSearchHighlights | Unset):
      """
@@ -200,6 +203,7 @@ class EmailSearchResult:
     thread_id: None | Unset | UUID = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
     automation_headers: EmailSummaryAutomationHeadersType0 | None | Unset = UNSET
+    sender_member: EmailSummarySenderMemberType0 | None | Unset = UNSET
     score: float | Unset = UNSET
     highlights: EmailSearchHighlights | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -211,6 +215,7 @@ class EmailSearchResult:
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_search_highlights import EmailSearchHighlights
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
+        from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
         from ..models.presence_control_type_0 import PresenceControlType0
         id = str(self.id)
 
@@ -324,6 +329,14 @@ class EmailSearchResult:
         else:
             automation_headers = self.automation_headers
 
+        sender_member: dict[str, Any] | None | Unset
+        if isinstance(self.sender_member, Unset):
+            sender_member = UNSET
+        elif isinstance(self.sender_member, EmailSummarySenderMemberType0):
+            sender_member = self.sender_member.to_dict()
+        else:
+            sender_member = self.sender_member
+
         score = self.score
 
         highlights: dict[str, Any] | Unset = UNSET
@@ -370,6 +383,8 @@ class EmailSearchResult:
             field_dict["presence_control"] = presence_control
         if automation_headers is not UNSET:
             field_dict["automation_headers"] = automation_headers
+        if sender_member is not UNSET:
+            field_dict["sender_member"] = sender_member
         if score is not UNSET:
             field_dict["score"] = score
         if highlights is not UNSET:
@@ -383,6 +398,7 @@ class EmailSearchResult:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_search_highlights import EmailSearchHighlights
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
+        from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
         from ..models.presence_control_type_0 import PresenceControlType0
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -627,6 +643,26 @@ class EmailSearchResult:
         automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
 
 
+        def _parse_sender_member(data: object) -> EmailSummarySenderMemberType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                sender_member_type_0 = EmailSummarySenderMemberType0.from_dict(data)
+
+
+
+                return sender_member_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummarySenderMemberType0 | None | Unset, data)
+
+        sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
+
+
         score = d.pop("score", UNSET)
 
         _highlights = d.pop("highlights", UNSET)
@@ -665,6 +701,7 @@ class EmailSearchResult:
             thread_id=thread_id,
             presence_control=presence_control,
             automation_headers=automation_headers,
+            sender_member=sender_member,
             score=score,
             highlights=highlights,
         )

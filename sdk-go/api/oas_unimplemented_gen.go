@@ -141,7 +141,7 @@ func (UnimplementedHandler) CheckDomainDns(ctx context.Context, params CheckDoma
 //	and recipient-bound network contact admission.
 //
 // POST /agent-connections/claim
-func (UnimplementedHandler) ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (r ClaimAgentConnectionRes, _ error) {
+func (UnimplementedHandler) ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq) (r ClaimAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -212,10 +212,13 @@ func (UnimplementedHandler) CreateAgentClaimLink(ctx context.Context, req *Creat
 // credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 // own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
 //
-//	and recipient-bound network contact admission.
+//	and recipient-bound network contact admission. Save create_request_id before dispatch to recover
+//
+// an interrupted creation. Recovery returns the original current connection with recovered:true and
+// invitation:null; it never replays a secret or rotates credentials.
 //
 // POST /agent-connections
-func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq, params CreateAgentConnectionParams) (r CreateAgentConnectionRes, _ error) {
+func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq) (r CreateAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1190,7 +1193,10 @@ func (UnimplementedHandler) InstallTemplate(ctx context.Context, req *InstallTem
 // credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 // own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
 //
-//	and recipient-bound network contact admission.
+//	and recipient-bound network contact admission. pending_only protects an already claimed
+//
+// credential. An ambiguous invitation response must not be retried automatically; invitation secrets
+// are never replayed.
 //
 // POST /agent-connections/{address}/invitation
 func (UnimplementedHandler) InviteAgentConnection(ctx context.Context, req *InviteAgentConnectionReq, params InviteAgentConnectionParams) (r InviteAgentConnectionRes, _ error) {
@@ -1555,6 +1561,19 @@ func (UnimplementedHandler) PayChallenge(ctx context.Context, req *PayChallengeI
 //
 // POST /cli/login/poll
 func (UnimplementedHandler) PollCliLogin(ctx context.Context, req *PollCliLoginInput) (r PollCliLoginRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ProvisionMemberAddress implements provisionMemberAddress operation.
+//
+// Provision or return this authenticated human member's stable managed address in this organization.
+// API keys, connected agents and Functions cannot provision or impersonate humans. The owner
+// explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
+// cannot be overridden. There is no target user input. An unavailable domain never silently changes
+// the address.
+//
+// PUT /account/member-address
+func (UnimplementedHandler) ProvisionMemberAddress(ctx context.Context, req *ProvisionMemberAddressReq) (r ProvisionMemberAddressRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2377,5 +2396,15 @@ func (UnimplementedHandler) VerifyCliSignup(ctx context.Context, req *VerifyCliS
 //
 // POST /domains/{id}/verify
 func (UnimplementedHandler) VerifyDomain(ctx context.Context, params VerifyDomainParams) (r VerifyDomainRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// Whoami implements whoami operation.
+//
+// Current authenticated identity. member_address is null for machine credentials or an unavailable
+// member address.
+//
+// GET /whoami
+func (UnimplementedHandler) Whoami(ctx context.Context) (r WhoamiRes, _ error) {
 	return r, ht.ErrNotImplemented
 }

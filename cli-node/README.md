@@ -634,6 +634,17 @@ Address-scoped events contain parsed message content in `email.parsed`.
 account routing metadata, and other SMTP envelope recipients are not exposed.
 Attachments can be fetched through the authenticated email attachment API.
 
+### Your member identity
+
+`primitive account whoami` returns the authenticated caller, their assigned
+member email address, and a suggestion when setup is needed. Choose an address
+with `primitive account provision-member-address --address <email>`. Reserved
+addresses are unavailable. If retained mail exists for an available address,
+review the warning before retrying with `--confirm-existing-mail`. The saved
+address remains fixed; repeating the same choice is safe. Organization
+keys and connected-agent credentials cannot impersonate or provision a human.
+The root `primitive whoami` retains its account summary and saved-profile behavior.
+
 ### Connect a coding session
 
 On a trusted machine where an organization member has already run `primitive signin`,
@@ -645,10 +656,13 @@ primitive agent enroll --session <session-uuid> --name Research --contact-reques
 
 For Claude Code, add `--receiver external` from that exact session. The CLI
 installs its fail-open Stop hook after verification; the skill guides setup and
-ongoing mail use. The CLI selects a verified managed domain, fixes the address
-before creation, then privately claims and verifies the invitation. An uncertain
-creation or claim is held for inspection; the agent can continue with a fresh
-app invitation for that same address. This local pilot uses the saved member
+ongoing mail use. The server allocates a readable address on a verified managed domain, then the CLI
+privately claims and verifies the invitation. The CLI saves a creation request
+before dispatch, so rerunning an uncertain create recovers the same identity.
+Recovered responses contain no invitation. For a still-pending connection, add
+`--continue-setup` once to explicitly obtain an invitation; it cannot revoke a
+claimed credential. An uncertain continuation or claim stays held for inspection.
+Existing enrollment state without a creation request keeps its recovery hold. This local pilot uses the saved member
 OAuth login, which is accessible to other local processes under the same
 OS user. Do not use it on an untrusted runtime.
 

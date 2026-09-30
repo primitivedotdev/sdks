@@ -22,6 +22,7 @@ if TYPE_CHECKING:
   from ..models.email_auth import EmailAuth
   from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
   from ..models.email_detail_reply import EmailDetailReply
+  from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
   from ..models.parsed_email_data import ParsedEmailData
   from ..models.presence_control_type_0 import PresenceControlType0
 
@@ -250,6 +251,8 @@ class EmailDetail:
                 declared none, and on messages received before these headers
                 were captured, so a null value is not evidence that a person
                 sent the message.
+            sender_member (EmailDetailSenderMemberType0 | None | Unset): Verified human authorship, projected only within
+                the member organization. Historical attribution is not current sending or owner authority.
      """
 
     id: UUID
@@ -297,6 +300,7 @@ class EmailDetail:
     thread_id: None | Unset | UUID = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
     automation_headers: EmailDetailAutomationHeadersType0 | None | Unset = UNSET
+    sender_member: EmailDetailSenderMemberType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -307,6 +311,7 @@ class EmailDetail:
         from ..models.email_auth import EmailAuth
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
         from ..models.email_detail_reply import EmailDetailReply
+        from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
         from ..models.parsed_email_data import ParsedEmailData
         from ..models.presence_control_type_0 import PresenceControlType0
         id = str(self.id)
@@ -538,6 +543,14 @@ class EmailDetail:
         else:
             automation_headers = self.automation_headers
 
+        sender_member: dict[str, Any] | None | Unset
+        if isinstance(self.sender_member, Unset):
+            sender_member = UNSET
+        elif isinstance(self.sender_member, EmailDetailSenderMemberType0):
+            sender_member = self.sender_member.to_dict()
+        else:
+            sender_member = self.sender_member
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -614,6 +627,8 @@ class EmailDetail:
             field_dict["presence_control"] = presence_control
         if automation_headers is not UNSET:
             field_dict["automation_headers"] = automation_headers
+        if sender_member is not UNSET:
+            field_dict["sender_member"] = sender_member
 
         return field_dict
 
@@ -624,6 +639,7 @@ class EmailDetail:
         from ..models.email_auth import EmailAuth
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
         from ..models.email_detail_reply import EmailDetailReply
+        from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
         from ..models.parsed_email_data import ParsedEmailData
         from ..models.presence_control_type_0 import PresenceControlType0
         d = dict(src_dict)
@@ -1091,6 +1107,26 @@ class EmailDetail:
         automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
 
 
+        def _parse_sender_member(data: object) -> EmailDetailSenderMemberType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                sender_member_type_0 = EmailDetailSenderMemberType0.from_dict(data)
+
+
+
+                return sender_member_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailDetailSenderMemberType0 | None | Unset, data)
+
+        sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
+
+
         email_detail = cls(
             id=id,
             sender=sender,
@@ -1137,6 +1173,7 @@ class EmailDetail:
             thread_id=thread_id,
             presence_control=presence_control,
             automation_headers=automation_headers,
+            sender_member=sender_member,
         )
 
 

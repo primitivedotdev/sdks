@@ -1423,16 +1423,6 @@ func (s *Server) handleClaimAgentConnectionRequest(args [0]string, argsEscaped b
 			ID:   "claimAgentConnection",
 		}
 	)
-	params, err := decodeClaimAgentConnectionParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
 
 	var rawBody []byte
 	request, rawBody, close, err := s.decodeClaimAgentConnectionRequest(r)
@@ -1460,18 +1450,13 @@ func (s *Server) handleClaimAgentConnectionRequest(args [0]string, argsEscaped b
 			OperationID:      "claimAgentConnection",
 			Body:             request,
 			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "Idempotency-Key",
-					In:   "header",
-				}: params.IdempotencyKey,
-			},
-			Raw: r,
+			Params:           middleware.Parameters{},
+			Raw:              r,
 		}
 
 		type (
 			Request  = *ClaimAgentConnectionReq
-			Params   = ClaimAgentConnectionParams
+			Params   = struct{}
 			Response = ClaimAgentConnectionRes
 		)
 		response, err = middleware.HookMiddleware[
@@ -1481,14 +1466,14 @@ func (s *Server) handleClaimAgentConnectionRequest(args [0]string, argsEscaped b
 		](
 			m,
 			mreq,
-			unpackClaimAgentConnectionParams,
+			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ClaimAgentConnection(ctx, request, params)
+				response, err = s.h.ClaimAgentConnection(ctx, request)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.ClaimAgentConnection(ctx, request, params)
+		response, err = s.h.ClaimAgentConnection(ctx, request)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -2255,7 +2240,10 @@ func (s *Server) handleCreateAgentClaimLinkRequest(args [0]string, argsEscaped b
 // credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 // own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
 //
-//	and recipient-bound network contact admission.
+//	and recipient-bound network contact admission. Save create_request_id before dispatch to recover
+//
+// an interrupted creation. Recovery returns the original current connection with recovered:true and
+// invitation:null; it never replays a secret or rotates credentials.
 //
 // POST /agent-connections
 func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -2373,16 +2361,6 @@ func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped 
 			return
 		}
 	}
-	params, err := decodeCreateAgentConnectionParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
 
 	var rawBody []byte
 	request, rawBody, close, err := s.decodeCreateAgentConnectionRequest(r)
@@ -2410,18 +2388,13 @@ func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped 
 			OperationID:      "createAgentConnection",
 			Body:             request,
 			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "Idempotency-Key",
-					In:   "header",
-				}: params.IdempotencyKey,
-			},
-			Raw: r,
+			Params:           middleware.Parameters{},
+			Raw:              r,
 		}
 
 		type (
 			Request  = *CreateAgentConnectionReq
-			Params   = CreateAgentConnectionParams
+			Params   = struct{}
 			Response = CreateAgentConnectionRes
 		)
 		response, err = middleware.HookMiddleware[
@@ -2431,14 +2404,14 @@ func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped 
 		](
 			m,
 			mreq,
-			unpackCreateAgentConnectionParams,
+			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateAgentConnection(ctx, request, params)
+				response, err = s.h.CreateAgentConnection(ctx, request)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.CreateAgentConnection(ctx, request, params)
+		response, err = s.h.CreateAgentConnection(ctx, request)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -14348,7 +14321,10 @@ func (s *Server) handleInstallTemplateRequest(args [1]string, argsEscaped bool, 
 // credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 // own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
 //
-//	and recipient-bound network contact admission.
+//	and recipient-bound network contact admission. pending_only protects an already claimed
+//
+// credential. An ambiguous invitation response must not be retried automatically; invitation secrets
+// are never replayed.
 //
 // POST /agent-connections/{address}/invitation
 func (s *Server) handleInviteAgentConnectionRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -14508,10 +14484,6 @@ func (s *Server) handleInviteAgentConnectionRequest(args [1]string, argsEscaped 
 					Name: "address",
 					In:   "path",
 				}: params.Address,
-				{
-					Name: "Idempotency-Key",
-					In:   "header",
-				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}
@@ -14714,6 +14686,10 @@ func (s *Server) handleListAgentConnectionsRequest(args [0]string, argsEscaped b
 					Name: "cursor",
 					In:   "query",
 				}: params.Cursor,
+				{
+					Name: "owner",
+					In:   "query",
+				}: params.Owner,
 			},
 			Raw: r,
 		}
@@ -16488,6 +16464,10 @@ func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w htt
 					Name: "automated",
 					In:   "query",
 				}: params.Automated,
+				{
+					Name: "recipient",
+					In:   "query",
+				}: params.Recipient,
 			},
 			Raw: r,
 		}
@@ -19763,6 +19743,197 @@ func (s *Server) handlePollCliLoginRequest(args [0]string, argsEscaped bool, w h
 	}
 
 	if err := encodePollCliLoginResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleProvisionMemberAddressRequest handles provisionMemberAddress operation.
+//
+// Provision or return this authenticated human member's stable managed address in this organization.
+// API keys, connected agents and Functions cannot provision or impersonate humans. The owner
+// explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
+// cannot be overridden. There is no target user input. An unavailable domain never silently changes
+// the address.
+//
+// PUT /account/member-address
+func (s *Server) handleProvisionMemberAddressRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("provisionMemberAddress"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.HTTPRouteKey.String("/account/member-address"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ProvisionMemberAddressOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ProvisionMemberAddressOperation,
+			ID:   "provisionMemberAddress",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ProvisionMemberAddressOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeProvisionMemberAddressRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response ProvisionMemberAddressRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ProvisionMemberAddressOperation,
+			OperationSummary: "Provision your member email address",
+			OperationID:      "provisionMemberAddress",
+			Body:             request,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = *ProvisionMemberAddressReq
+			Params   = struct{}
+			Response = ProvisionMemberAddressRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ProvisionMemberAddress(ctx, request)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ProvisionMemberAddress(ctx, request)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeProvisionMemberAddressResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -30318,6 +30489,179 @@ func (s *Server) handleVerifyDomainRequest(args [1]string, argsEscaped bool, w h
 	}
 
 	if err := encodeVerifyDomainResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleWhoamiRequest handles whoami operation.
+//
+// Current authenticated identity. member_address is null for machine credentials or an unavailable
+// member address.
+//
+// GET /whoami
+func (s *Server) handleWhoamiRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("whoami"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/whoami"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), WhoamiOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: WhoamiOperation,
+			ID:   "whoami",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, WhoamiOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+
+	var rawBody []byte
+
+	var response WhoamiRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    WhoamiOperation,
+			OperationSummary: "Get current caller identity",
+			OperationID:      "whoami",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = struct{}
+			Response = WhoamiRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.Whoami(ctx)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.Whoami(ctx)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeWhoamiResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

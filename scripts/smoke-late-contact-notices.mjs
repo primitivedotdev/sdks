@@ -88,7 +88,7 @@ const api = createServer(async (request, response) => {
     assert.equal(request.headers.authorization, `Bearer ${credential}`);
     if (request.method === "POST" && url.pathname === "/v1/agent-networks/default/contact-admission") {
       assert.equal(emails.get(body.email_id)?.sender, body.sender_address);
-      return json(response, { allowed: false, allowed_since: null, pending: false });
+      return json(response, { allowed: false, allowed_since: null, pending: false, member_policy_required: false });
     }
     if (request.method === "POST" && url.pathname === "/v1/endpoints") return json(response, { id: endpoint, name: body.name, kind: "pull", enabled: true, recipient: agent, rules: { event_types: ["email.received"] }, receiver_capabilities: { completion_modes: ["sdk"], stream_protocols: ["primitive.events.v1"] } });
     if (request.method === "PUT" && url.pathname === `/v1/contacts/${encodeURIComponent(peer)}`) {

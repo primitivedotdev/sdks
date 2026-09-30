@@ -79,6 +79,7 @@ export async function createWakeMail(options: {
       : undefined;
   const readPart = notificationPartReader(async () => apiClient.client);
   let wakeId: string | undefined;
+  let senderRelation: "owner" | "member" | undefined;
   let statusEvent: ConversationStatus | undefined;
   let pendingRequest:
     | {
@@ -299,6 +300,7 @@ export async function createWakeMail(options: {
             sender,
             detail.received_at,
             signal,
+            detail.id,
           );
         if (admissionRetry && admission?.kind !== "response")
           throw admissionRetry;
@@ -348,6 +350,7 @@ export async function createWakeMail(options: {
               sender,
               detail.received_at,
               signal,
+              detail.id,
             );
             if (admission) {
               const disposition = await store.wakeDisposition(
@@ -371,6 +374,7 @@ export async function createWakeMail(options: {
           sender,
           detail.received_at,
           signal,
+          detail.id,
         );
       if (admissionRetry && admission?.kind !== "response")
         throw admissionRetry;
@@ -433,7 +437,10 @@ export async function createWakeMail(options: {
           eventId: eventId,
           decidedSenders: [...policy.members()],
         };
-      else wakeId = detail.id;
+      else {
+        wakeId = detail.id;
+        senderRelation = admission.senderRelation;
+      }
       return outcome(true);
     } catch (error) {
       if (
@@ -447,6 +454,7 @@ export async function createWakeMail(options: {
   return {
     handler,
     wakeId: () => wakeId,
+    senderRelation: () => senderRelation,
     status: () => statusEvent,
     completed: completePending,
     receiving: (ready: boolean) => {

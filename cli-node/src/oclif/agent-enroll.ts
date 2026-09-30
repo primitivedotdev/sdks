@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -39,11 +39,13 @@ const CONFIRMATION_PAGE_LIMIT = 20;
 const refuse = (message: string) => new AgentConnectionSetupError(message);
 
 type Enrollment = {
-  version: 1;
+  version: 1 | 2;
   session: string;
   profile: string;
   name: string;
-  address: string;
+  address: string | null;
+  createRequestId?: string;
+  continueAttempted?: boolean;
   orgId: string;
   grantId: string;
   apiBaseUrl: string;
@@ -72,6 +74,7 @@ export type AgentEnrollOptions = {
   name?: string;
   receiverMode?: "native" | "external";
   contactRequests?: boolean;
+  continueSetup?: boolean;
   confirmationSleep?: (milliseconds: number) => Promise<void>;
 } & EnrollDependencies;
 
@@ -99,18 +102,27 @@ function savedEnrollment(value: unknown): Enrollment {
     "invitationHash",
     "ownerAddress",
   ];
+  if (row?.version === 2) keys.push("createRequestId", "continueAttempted");
   if (
     !row ||
     Object.keys(row).length !== keys.length ||
     keys.some((key) => !Object.hasOwn(row, key)) ||
-    row.version !== 1 ||
+    (row.version !== 1 && row.version !== 2) ||
+    (row.version === 2 &&
+      (typeof row.createRequestId !== "string" ||
+        !SESSION_UUID.test(row.createRequestId) ||
+        typeof row.continueAttempted !== "boolean")) ||
     typeof row.session !== "string" ||
     !SESSION_UUID.test(row.session) ||
     row.profile !== `session-${row.session}` ||
     typeof row.name !== "string" ||
     !validName(row.name) ||
-    typeof row.address !== "string" ||
-    !validAddress(row.address) ||
+    !(
+      (typeof row.address === "string" && validAddress(row.address)) ||
+      (row.version === 2 &&
+        row.address === null &&
+        row.phase === "create_attempted")
+    ) ||
     typeof row.orgId !== "string" ||
     !row.orgId ||
     typeof row.grantId !== "string" ||
@@ -124,7 +136,8 @@ function savedEnrollment(value: unknown): Enrollment {
     (row.phase === "create_attempted" &&
       (row.invitationHash !== null || row.ownerAddress !== null)) ||
     (row.phase === "setup_attempted" &&
-      (typeof row.invitationHash !== "string" ||
+      (typeof row.address !== "string" ||
+        typeof row.invitationHash !== "string" ||
         !/^[a-f0-9]{64}$/.test(row.invitationHash) ||
         typeof row.ownerAddress !== "string" ||
         !row.ownerAddress.includes("@")))
@@ -164,22 +177,13 @@ function validAddress(value: string): boolean {
   );
 }
 
-function sessionName(session: string): string {
-  return `coding-${session.slice(0, 8)}`;
-}
-
-function addressFor(name: string, session: string, domain: string): string {
-  const slug =
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 20) || "agent";
-  const local = `${slug}-${session.replaceAll("-", "")}`;
-  const address = `${local}@${domain.toLowerCase()}`;
-  if (!validAddress(address))
-    throw refuse("No safe managed address could be selected for this session.");
-  return address;
+type ResolvedEnrollment = Enrollment & { address: string };
+function resolvedEnrollment(state: Enrollment): ResolvedEnrollment {
+  if (!state.address)
+    throw refuse(
+      "The server has not assigned this session an address yet. Preserve its setup request.",
+    );
+  return { ...state, address: state.address };
 }
 
 async function preflight(
@@ -313,7 +317,7 @@ function invitationFrom(
   if (
     envelope?.success !== true ||
     connection?.address !== expected.address ||
-    connection?.name !== expected.name ||
+    typeof connection?.name !== "string" ||
     connection?.status !== "pending" ||
     typeof connection.owner_address !== "string" ||
     typeof invitation?.claim_url !== "string" ||
@@ -596,7 +600,7 @@ async function confirmOwnerConnection(
 export async function enrollAgent(params: AgentEnrollOptions) {
   if (!SESSION_UUID.test(params.session))
     throw refuse("Enrollment requires the exact current session UUID.");
-  const name = params.name ?? sessionName(params.session);
+  let name = params.name ?? "Coding agent";
   if (!validName(name))
     throw refuse(
       "Agent name must be 1-80 characters without control characters.",
@@ -633,6 +637,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
     const path = join(directory, "state.json");
     const old = readMailJson(path);
     let state = old === null ? null : savedEnrollment(old);
+    if (state && params.name === undefined) name = state.name;
     if (
       state &&
       (state.session !== params.session ||
@@ -669,7 +674,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         "This session profile already belongs to another connection. Nothing was changed.",
       );
     const finish = async (
-      enrollment: Enrollment,
+      enrollment: ResolvedEnrollment,
       resume: boolean,
       invitation?: string,
     ) => {
@@ -724,13 +729,13 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         throw refuse(
           "The invitation claim may have been consumed. Keep this pending agent and inspect it in the app; do not create or claim another address.",
         );
-      return finish(state, true);
+      return finish(resolvedEnrollment(state), true);
     }
     if (existing)
       throw refuse(
         "This profile is already connected without a matching enrollment. Nothing was changed.",
       );
-    if (state)
+    if (state?.version === 1)
       throw refuse(
         "Connection creation may already have happened. Inspect this session's pending address in the app and issue a fresh invitation there if needed. Use `primitive agent connect` with that invitation and this session's profile; do not rerun enrollment or create another address.",
       );
@@ -751,27 +756,34 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         "The saved member login changed during enrollment. No address was created. Sign in to the intended organization and retry this exact session.",
       );
     const fetchImpl = params.fetch ?? fetch;
-    const domains = !state
-      ? await managedDomains(
-          new PrimitiveApiClient({
-            apiKey: credentials.access_token,
-            apiBaseUrl,
-            fetch: params.fetch,
-          }),
-          apiBaseUrl,
-        )
-      : [];
+    const firstAttempt = state === null;
+    if (state?.continueAttempted)
+      throw refuse(
+        "Continue setup already ran and its result may be uncertain. Inspect the saved agent in the app; do not issue another invitation automatically.",
+      );
     if (!state) {
-      const firstDomain = domains[0];
-      if (!firstDomain)
+      if (params.continueSetup)
+        throw refuse(
+          "There is no saved enrollment to continue. Start enrollment normally first.",
+        );
+      const domains = await managedDomains(
+        new PrimitiveApiClient({
+          apiKey: credentials.access_token,
+          apiBaseUrl,
+          fetch: params.fetch,
+        }),
+        apiBaseUrl,
+      );
+      if (!domains.length)
         throw refuse("No managed domain is available for enrollment.");
-      const address = addressFor(name, params.session, firstDomain);
       state = {
-        version: 1,
+        version: 2,
         session: params.session,
         profile,
         name,
-        address,
+        address: null,
+        createRequestId: randomUUID(),
+        continueAttempted: false,
         orgId: saved.org_id,
         grantId: saved.oauth_grant_id,
         apiBaseUrl,
@@ -782,54 +794,127 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         invitationHash: null,
         ownerAddress: null,
       };
+      // The request identity must be durable before dispatch. The server owns
+      // friendly address allocation; an uncertain response cannot pick another.
       writeMailJson(path, state);
     }
     let payload: unknown;
-    for (const [index, domain] of domains.entries()) {
-      if (index > 0) {
-        state = { ...state, address: addressFor(name, params.session, domain) };
-        writeMailJson(path, state);
+    try {
+      const response = await fetchImpl(`${apiBaseUrl}/agent-connections`, {
+        method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(25_000),
+        headers: {
+          authorization: `Bearer ${credentials.access_token}`,
+          "content-type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          name: state.name,
+          create_request_id: state.createRequestId,
+        }),
+      });
+      if (await rejectedUnsuitableDomain(response)) {
+        if (firstAttempt) unlinkSync(path);
+        throw refuse(
+          "No verified managed domain is currently sendable for agent enrollment. No address was created by this request.",
+        );
       }
+      if ([400, 401, 403].includes(response.status)) {
+        await response.body?.cancel().catch(() => undefined);
+        if (firstAttempt) unlinkSync(path);
+        throw refuse(
+          "Connection creation was rejected before an address was created. Check the selected organization, managed domain, and member access, then retry this exact session.",
+        );
+      }
+      if (response.status !== 200) {
+        const failed = plainRecord(
+          await boundedJson(response, "connection recovery"),
+        );
+        const code = plainRecord(failed?.error)?.code;
+        if (code === "connection_removed")
+          throw refuse(
+            "This saved setup belongs to a removed agent. It cannot create another identity. Review the removed agent in the app.",
+          );
+        if (code === "connection_create_request_conflict")
+          throw refuse(
+            "This saved setup belongs to different choices or membership. Preserve its request and inspect the original agent in the app.",
+          );
+        throw new Error();
+      }
+      payload = await boundedJson(response);
+    } catch (error) {
+      if (error instanceof AgentConnectionSetupError) throw error;
+      throw refuse(
+        "Connection creation has an unknown outcome. Rerun this exact enrollment to recover the same saved request; no second identity or invitation will be created automatically.",
+      );
+    }
+    const envelope = plainRecord(payload);
+    const data = plainRecord(envelope?.data);
+    const connection = plainRecord(data?.connection);
+    if (
+      envelope?.success !== true ||
+      typeof connection?.address !== "string" ||
+      !validAddress(connection.address) ||
+      typeof connection.name !== "string" ||
+      !validName(connection.name) ||
+      !["pending", "claimed", "connected", "revoked"].includes(
+        String(connection.status),
+      ) ||
+      (state.address !== null && state.address !== connection.address)
+    )
+      throw refuse(
+        "The connection result was incomplete or changed the saved identity. Preserve this setup request; no invitation was claimed.",
+      );
+    state = { ...state, address: connection.address };
+    writeMailJson(path, state);
+    if (data?.recovered === true) {
+      if (data.invitation !== null)
+        throw refuse(
+          "Recovered setup unexpectedly included an invitation. Preserve the saved identity; no invitation was claimed.",
+        );
+      if (connection.status !== "pending")
+        throw refuse(
+          "The saved agent is already claimed, connected or disconnected. Its credential was not changed. Inspect it in the app; do not automatically reconnect it.",
+        );
+      if (!params.continueSetup)
+        throw refuse(
+          `Recovered ${state.address}. Run this exact command with --continue-setup to explicitly obtain one pending-only invitation.`,
+        );
+      state = { ...state, continueAttempted: true };
+      writeMailJson(path, state);
       try {
-        const response = await fetchImpl(`${apiBaseUrl}/agent-connections`, {
-          method: "POST",
-          redirect: "error",
-          signal: AbortSignal.timeout(25_000),
-          headers: {
-            authorization: `Bearer ${credentials.access_token}`,
-            "content-type": "application/json",
-            accept: "application/json",
+        const response = await fetchImpl(
+          `${apiBaseUrl}/agent-connections/${encodeURIComponent(connection.address)}/invitation`,
+          {
+            method: "POST",
+            redirect: "error",
+            signal: AbortSignal.timeout(25_000),
+            headers: {
+              authorization: `Bearer ${credentials.access_token}`,
+              "content-type": "application/json",
+              accept: "application/json",
+            },
+            body: JSON.stringify({ pending_only: true }),
           },
-          body: JSON.stringify({ name: state.name, address: state.address }),
-        });
-        // This exact 400 code is emitted before connection insertion. Only it
-        // permits trying a different managed domain in the same invocation.
-        if (await rejectedUnsuitableDomain(response)) {
-          if (index + 1 < domains.length) continue;
-          unlinkSync(path);
-          throw refuse(
-            "No verified managed domain is currently sendable for agent enrollment. No address was created.",
-          );
-        }
-        // The route's other 400 validation, 401 authentication, and 403
-        // authorization paths also return before inserting a connection.
-        if ([400, 401, 403].includes(response.status)) {
-          await response.body?.cancel().catch(() => undefined);
-          unlinkSync(path);
-          throw refuse(
-            "Connection creation was rejected before an address was created. Check the selected organization, managed domain, and member access, then retry this exact session.",
-          );
-        }
+        );
         if (response.status !== 200) {
-          await response.body?.cancel();
+          const rejected = plainRecord(
+            await boundedJson(response, "pending setup continuation"),
+          );
+          if (
+            plainRecord(rejected?.error)?.code === "connection_already_claimed"
+          )
+            throw refuse(
+              "This agent was claimed before Continue setup. Its credential was not changed. Inspect it in the app.",
+            );
           throw new Error();
         }
         payload = await boundedJson(response);
-        break;
       } catch (error) {
         if (error instanceof AgentConnectionSetupError) throw error;
         throw refuse(
-          "Connection creation has an unknown outcome. Inspect this session's pending address in the app and issue a fresh invitation there if needed. Use `primitive agent connect` with that invitation and this session's profile; do not rerun enrollment or create another address.",
+          "Continue setup has an uncertain outcome. Inspect the saved agent in the app; do not repeat it and invalidate another invitation.",
         );
       }
     }
@@ -845,7 +930,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       ownerAddress: invitation.ownerAddress,
     };
     writeMailJson(path, state);
-    return finish(state, false, invitation.url);
+    return finish(resolvedEnrollment(state), false, invitation.url);
   } finally {
     release();
   }

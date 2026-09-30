@@ -9,6 +9,7 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.create_agent_connection_body_ownership_kind import CreateAgentConnectionBodyOwnershipKind
+from uuid import UUID
 
 
 
@@ -27,12 +28,15 @@ class CreateAgentConnectionBody:
             address (str | Unset):
             owner_address (str | Unset):
             ownership_kind (CreateAgentConnectionBodyOwnershipKind | Unset):
+            create_request_id (UUID | Unset): Stable request UUID saved before creating this agent. Replay recovers the
+                original current connection without returning or rotating an invitation.
      """
 
     name: str
     address: str | Unset = UNSET
     owner_address: str | Unset = UNSET
     ownership_kind: CreateAgentConnectionBodyOwnershipKind | Unset = UNSET
+    create_request_id: UUID | Unset = UNSET
 
 
 
@@ -50,6 +54,10 @@ class CreateAgentConnectionBody:
             ownership_kind = self.ownership_kind.value
 
 
+        create_request_id: str | Unset = UNSET
+        if not isinstance(self.create_request_id, Unset):
+            create_request_id = str(self.create_request_id)
+
 
         field_dict: dict[str, Any] = {}
 
@@ -62,6 +70,8 @@ class CreateAgentConnectionBody:
             field_dict["owner_address"] = owner_address
         if ownership_kind is not UNSET:
             field_dict["ownership_kind"] = ownership_kind
+        if create_request_id is not UNSET:
+            field_dict["create_request_id"] = create_request_id
 
         return field_dict
 
@@ -86,11 +96,22 @@ class CreateAgentConnectionBody:
 
 
 
+        _create_request_id = d.pop("create_request_id", UNSET)
+        create_request_id: UUID | Unset
+        if isinstance(_create_request_id,  Unset):
+            create_request_id = UNSET
+        else:
+            create_request_id = UUID(_create_request_id)
+
+
+
+
         create_agent_connection_body = cls(
             name=name,
             address=address,
             owner_address=owner_address,
             ownership_kind=ownership_kind,
+            create_request_id=create_request_id,
         )
 
         return create_agent_connection_body

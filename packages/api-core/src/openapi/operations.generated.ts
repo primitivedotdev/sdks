@@ -279,6 +279,60 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   },
   {
     "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "provision-member-address",
+    "description": "Provision or return this authenticated human member's stable managed address in this organization. API keys, connected agents and Functions cannot provision or impersonate humans. The owner explicitly chooses the address. Existing retained mail requires confirmation; reserved identities cannot be overridden. There is no target user input. An unavailable domain never silently changes the address.",
+    "hasJsonBody": true,
+    "method": "PUT",
+    "operationId": "provisionMemberAddress",
+    "path": "/account/member-address",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "maxLength": 254,
+          "format": "email",
+          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        },
+        "confirm_existing_mail": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "address"
+      ],
+      "additionalProperties": false
+    },
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "address",
+        "name"
+      ]
+    },
+    "sdkName": "provisionMemberAddress",
+    "summary": "Provision your member email address",
+    "tag": "Account",
+    "tagCommand": "account"
+  },
+  {
+    "binaryResponse": false,
     "bodyRequired": false,
     "command": "rotate-webhook-secret",
     "description": "Generates a new webhook signing secret, replacing the current one.\nRate limited to once per 60 minutes.\n",
@@ -371,6 +425,91 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "updateAccount",
     "summary": "Update account settings",
+    "tag": "Account",
+    "tagCommand": "account"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
+    "command": "whoami",
+    "description": "Current authenticated identity. member_address is null for machine credentials or an unavailable member address.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "whoami",
+    "path": "/whoami",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "properties": {
+        "org_id": {
+          "type": "string"
+        },
+        "user_id": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "auth_method": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "key_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "member_address": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "address": {
+              "type": "string",
+              "format": "email"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "address",
+            "name"
+          ]
+        },
+        "member_address_suggestion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Suggested personal address; nothing is assigned until explicitly saved."
+        }
+      },
+      "required": [
+        "org_id",
+        "user_id",
+        "role",
+        "request_id",
+        "auth_method",
+        "key_id",
+        "member_address",
+        "member_address_suggestion"
+      ]
+    },
+    "sdkName": "whoami",
+    "summary": "Get current caller identity",
     "tag": "Account",
     "tagCommand": "account"
   },
@@ -1249,7 +1388,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-agent-connection",
-    "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
+    "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission. Save create_request_id before dispatch to recover an interrupted creation. Recovery returns the original current connection with recovered:true and invitation:null; it never replays a secret or rotates credentials.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createAgentConnection",
@@ -1283,6 +1422,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "personal",
             "shared"
           ]
+        },
+        "create_request_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Stable request UUID saved before creating this agent. Replay recovers the original current connection without returning or rotating an invitation."
         }
       },
       "required": [
@@ -1302,166 +1446,320 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "boolean"
         },
         "data": {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "type": "object",
-          "properties": {
-            "connection": {
+          "oneOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
               "type": "object",
               "properties": {
-                "address": {
-                  "type": "string",
-                  "format": "email",
-                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                },
-                "name": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 80
-                },
-                "owner_address": {
-                  "type": "string",
-                  "format": "email",
-                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "pending",
-                    "claimed",
-                    "connected",
-                    "revoked"
-                  ]
-                },
-                "created_at": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                },
-                "updated_at": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                },
-                "claimed_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                },
-                "verified_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                },
-                "last_seen_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                },
-                "ownership_kind": {
-                  "type": "string",
-                  "enum": [
-                    "personal",
-                    "shared",
-                    "legacy_unknown"
-                  ]
-                },
-                "owner_user_id": {
-                  "type": [
-                    "string",
-                    "null"
-                  ],
-                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-                },
-                "owner_active": {
-                  "type": [
-                    "boolean",
-                    "null"
-                  ]
-                },
-                "presence": {
-                  "anyOf": [
-                    {
-                      "type": "object",
-                      "properties": {
-                        "last_checked_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                        },
-                        "expires_at": {
-                          "type": "string",
-                          "format": "date-time",
-                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                        },
-                        "valid_for_ms": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 600000
-                        }
-                      },
-                      "required": [
-                        "last_checked_at",
-                        "expires_at",
-                        "valid_for_ms"
-                      ],
-                      "additionalProperties": false
+                "connection": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
                     },
-                    {
-                      "type": "null"
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "owner_address": {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "claimed",
+                        "connected",
+                        "revoked"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "claimed_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "verified_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "last_seen_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "ownership_kind": {
+                      "type": "string",
+                      "enum": [
+                        "personal",
+                        "shared",
+                        "legacy_unknown"
+                      ]
+                    },
+                    "owner_user_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                    },
+                    "owner_active": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "presence": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "last_checked_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "expires_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "valid_for_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 600000
+                            }
+                          },
+                          "required": [
+                            "last_checked_at",
+                            "expires_at",
+                            "valid_for_ms"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
-                  ]
+                  },
+                  "required": [
+                    "address",
+                    "name",
+                    "owner_address",
+                    "status",
+                    "created_at",
+                    "updated_at",
+                    "claimed_at",
+                    "verified_at",
+                    "last_seen_at",
+                    "ownership_kind",
+                    "owner_user_id",
+                    "owner_active"
+                  ],
+                  "additionalProperties": false
+                },
+                "invitation": {
+                  "type": "object",
+                  "properties": {
+                    "claim_url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    }
+                  },
+                  "required": [
+                    "claim_url",
+                    "expires_at"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
-                "address",
-                "name",
-                "owner_address",
-                "status",
-                "created_at",
-                "updated_at",
-                "claimed_at",
-                "verified_at",
-                "last_seen_at",
-                "ownership_kind",
-                "owner_user_id",
-                "owner_active"
+                "connection",
+                "invitation"
               ],
               "additionalProperties": false
             },
-            "invitation": {
+            {
               "type": "object",
               "properties": {
-                "claim_url": {
-                  "type": "string",
-                  "format": "uri"
+                "connection": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "owner_address": {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "claimed",
+                        "connected",
+                        "revoked"
+                      ]
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "claimed_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "verified_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "last_seen_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "ownership_kind": {
+                      "type": "string",
+                      "enum": [
+                        "personal",
+                        "shared",
+                        "legacy_unknown"
+                      ]
+                    },
+                    "owner_user_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                    },
+                    "owner_active": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "presence": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "last_checked_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "expires_at": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "valid_for_ms": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 600000
+                            }
+                          },
+                          "required": [
+                            "last_checked_at",
+                            "expires_at",
+                            "valid_for_ms"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "address",
+                    "name",
+                    "owner_address",
+                    "status",
+                    "created_at",
+                    "updated_at",
+                    "claimed_at",
+                    "verified_at",
+                    "last_seen_at",
+                    "ownership_kind",
+                    "owner_user_id",
+                    "owner_active"
+                  ],
+                  "additionalProperties": false
                 },
-                "expires_at": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                "recovered": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "invitation": {
+                  "type": "null"
                 }
               },
               "required": [
-                "claim_url",
-                "expires_at"
+                "connection",
+                "recovered",
+                "invitation"
               ],
               "additionalProperties": false
             }
-          },
-          "required": [
-            "connection",
-            "invitation"
-          ],
-          "additionalProperties": false
+          ]
         }
       }
     },
@@ -1474,7 +1772,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "invite-agent-connection",
-    "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
+    "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission. pending_only protects an already claimed credential. An ambiguous invitation response must not be retried automatically; invitation secrets are never replayed.",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "inviteAgentConnection",
@@ -1492,7 +1790,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "requestSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
-      "properties": {},
+      "properties": {
+        "pending_only": {
+          "type": "boolean",
+          "description": "Issue setup only while this exact connection is pending. A claimed, connected or revoked connection returns connection_already_claimed without changing its credential."
+        }
+      },
       "additionalProperties": false
     },
     "responseSchema": {
@@ -1700,6 +2003,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "cursor for agent connections.",
         "enum": null,
         "name": "cursor",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "owner for agent connections.",
+        "enum": null,
+        "name": "owner",
         "required": false,
         "type": "string"
       }
@@ -2301,12 +2611,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           ],
           "format": "date-time",
           "description": "Earliest received_at eligible under the current membership and connection state."
+        },
+        "member_policy_required": {
+          "type": "boolean",
+          "description": "Reserved human sender policy applies, not authorship proof. If true, allowed/pending is final and contact permission cannot bypass it. Check before contact shortcuts."
+        },
+        "sender_relation": {
+          "type": "string",
+          "enum": [
+            "owner",
+            "member"
+          ],
+          "description": "Recipient-relative relation derived only from current exact delivered-email proof. Historical sender_member metadata does not establish this relation."
         }
       },
       "required": [
         "allowed",
         "allowed_since",
-        "pending"
+        "pending",
+        "member_policy_required"
       ]
     },
     "sdkName": "checkDefaultNetworkContactAdmission",
@@ -6790,6 +7113,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                     "type": "null"
                   }
                 ]
+              },
+              "sender_member": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "user_id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "address",
+                  "user_id",
+                  "name"
+                ]
               }
             },
             "required": [
@@ -7515,6 +7865,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "type": "string"
           },
           "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
+        },
+        "sender_member": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+          "properties": {
+            "address": {
+              "type": "string",
+              "format": "email"
+            },
+            "user_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "address",
+            "user_id",
+            "name"
+          ]
         }
       },
       "required": [
@@ -7640,6 +8017,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "false"
         ],
         "name": "automated",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with existing filters and cursors; does not search message text.",
+        "enum": null,
+        "name": "recipient",
         "required": false,
         "type": "string"
       }
@@ -7829,6 +8213,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "type": "string"
             },
             "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
+          },
+          "sender_member": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "address",
+              "user_id",
+              "name"
+            ]
           }
         },
         "required": [
@@ -8258,6 +8669,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "string"
                 },
                 "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
+              },
+              "sender_member": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "user_id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "address",
+                  "user_id",
+                  "name"
+                ]
               }
             },
             "required": [
@@ -16495,6 +16933,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "null"
                 }
               ]
+            },
+            "sender_member": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "user_id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "user_id",
+                "name"
+              ]
             }
           },
           "required": [
@@ -16619,6 +17084,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             {
               "type": "null"
             }
+          ]
+        },
+        "sender_member": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+          "properties": {
+            "address": {
+              "type": "string",
+              "format": "email"
+            },
+            "user_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "address",
+            "user_id",
+            "name"
           ]
         }
       }
@@ -17276,6 +17768,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "null"
                 }
               ]
+            },
+            "sender_member": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "user_id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "user_id",
+                "name"
+              ]
             }
           },
           "required": [
@@ -17400,6 +17919,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             {
               "type": "null"
             }
+          ]
+        },
+        "sender_member": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+          "properties": {
+            "address": {
+              "type": "string",
+              "format": "email"
+            },
+            "user_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "address",
+            "user_id",
+            "name"
           ]
         }
       }
@@ -17783,6 +18329,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               {
                 "type": "null"
               }
+            ]
+          },
+          "sender_member": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "address",
+              "user_id",
+              "name"
             ]
           }
         },
@@ -18324,6 +18897,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "type": "null"
                 }
               ]
+            },
+            "sender_member": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "user_id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "user_id",
+                "name"
+              ]
             }
           },
           "required": [
@@ -18448,6 +19048,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             {
               "type": "null"
             }
+          ]
+        },
+        "sender_member": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+          "properties": {
+            "address": {
+              "type": "string",
+              "format": "email"
+            },
+            "user_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "address",
+            "user_id",
+            "name"
           ]
         }
       }
@@ -19651,6 +20278,33 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ],
                 "format": "date-time",
                 "description": "received_at for inbound, created_at for outbound."
+              },
+              "sender_member": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "user_id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "address",
+                  "user_id",
+                  "name"
+                ]
               }
             },
             "required": [

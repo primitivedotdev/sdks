@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { operationManifest } from "@primitivedotdev/api-core";
+import { openapiDocument, operationManifest } from "@primitivedotdev/api-core";
 import { describe, expect, it } from "vitest";
 import {
   CANONICAL_OPERATION_ALIASES,
@@ -359,6 +359,67 @@ describe("COMMANDS / manifest coverage", () => {
       readCliPackageJson().oclif?.topics?.["agent-connections"]?.description,
     ).toContain("Create, list, invite, revoke, and remove");
   });
+  it("preserves caller identity and member address provisioning in the public registry", () => {
+    expect(COMMANDS["account:whoami"]).toBeDefined();
+    expect(COMMANDS["account:provision-member-address"]).toBeDefined();
+    expect(COMMANDS["account:whoami"]).not.toBe(COMMANDS.whoami);
+    expect(
+      operationManifest.find((op) => op.operationId === "whoami")?.path,
+    ).toBe("/whoami");
+    expect(
+      operationManifest.find(
+        (op) => op.operationId === "provisionMemberAddress",
+      )?.path,
+    ).toBe("/account/member-address");
+    const provision = operationManifest.find(
+      (op) => op.operationId === "provisionMemberAddress",
+    );
+    expect(provision?.bodyRequired).toBe(true);
+    expect(provision?.requestSchema).toMatchObject({
+      required: ["address"],
+      properties: {
+        address: { type: "string" },
+        confirm_existing_mail: { type: "boolean" },
+      },
+    });
+    const identity = operationManifest.find(
+      (op) => op.operationId === "whoami",
+    );
+    expect(JSON.stringify(identity?.responseSchema)).toContain(
+      "member_address_suggestion",
+    );
+    expect(
+      (COMMANDS.whoami as unknown as { description: string }).description,
+    ).toContain("account whoami");
+  });
+  it("keeps recoverable create and pending-only invitation fields in the generated command manifest", () => {
+    const create = operationManifest.find(
+      (op) => op.operationId === "createAgentConnection",
+    );
+    expect(create?.requestSchema).toMatchObject({
+      properties: { create_request_id: { type: "string", format: "uuid" } },
+    });
+    expect(JSON.stringify(create?.responseSchema)).toContain('"recovered"');
+    expect(JSON.stringify(create?.responseSchema)).toContain('"type":"null"');
+    const invite = operationManifest.find(
+      (op) => op.operationId === "inviteAgentConnection",
+    );
+    expect(invite?.requestSchema).toMatchObject({
+      properties: { pending_only: { type: "boolean" } },
+    });
+    for (const path of [
+      "/agent-connections",
+      "/agent-connections/claim",
+      "/agent-connections/{address}/invitation",
+    ] as const) {
+      const paths = openapiDocument.paths as Record<
+        string,
+        { post: { parameters?: unknown[] } }
+      >;
+      const parameters = paths[path].post.parameters;
+      expect(JSON.stringify(parameters ?? [])).not.toContain("Idempotency-Key");
+    }
+  });
   it("registers exact-profile disconnect separately from owner-only removal", () => {
     const disconnect = COMMANDS["agent:disconnect"] as unknown as {
       flags: Record<string, { required?: boolean }>;
@@ -377,6 +438,10 @@ describe("COMMANDS / manifest coverage", () => {
     };
     expect(enroll.flags.session.required).toBe(true);
     expect(enroll.flags.receiver).toBeDefined();
+    expect(enroll.flags["continue-setup"]).toBeDefined();
+    expect(enroll.flags["continue-setup"].description).toContain(
+      "still pending",
+    );
     expect(enroll.flags["contact-requests"]).toBeDefined();
     expect(enroll.flags["contact-requests"].description).toContain(
       "saved member login",
@@ -390,9 +455,7 @@ describe("COMMANDS / manifest coverage", () => {
     );
     expect(enroll.description).toContain("install a fail-open Stop hook");
     expect(enroll.description).toContain("resume SessionStart hook");
-    expect(enroll.description).toContain(
-      "pre-create domain-unavailable rejection",
-    );
+    expect(enroll.description).toContain("saved request");
   });
   it("exposes saved-contact notification preferences without mixing allowlists", () => {
     const listener = COMMANDS.listen as unknown as {

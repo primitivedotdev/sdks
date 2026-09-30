@@ -17,12 +17,12 @@ import datetime
 
 
 
-T = TypeVar("T", bound="CreateAgentConnectionResponse200DataInvitation")
+T = TypeVar("T", bound="CreateAgentConnectionResponse200DataType0Invitation")
 
 
 
 @_attrs_define
-class CreateAgentConnectionResponse200DataInvitation:
+class CreateAgentConnectionResponse200DataType0Invitation:
     """
         Attributes:
             claim_url (str):
@@ -63,9 +63,9 @@ class CreateAgentConnectionResponse200DataInvitation:
 
 
 
-        create_agent_connection_response_200_data_invitation = cls(
+        create_agent_connection_response_200_data_type_0_invitation = cls(
             claim_url=claim_url,
             expires_at=expires_at,
         )
 
-        return create_agent_connection_response_200_data_invitation
+        return create_agent_connection_response_200_data_type_0_invitation

@@ -134,7 +134,7 @@ type Invoker interface {
 	//  and recipient-bound network contact admission.
 	//
 	// POST /agent-connections/claim
-	ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error)
+	ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq) (ClaimAgentConnectionRes, error)
 	// CliLogout invokes cliLogout operation.
 	//
 	// Revokes the OAuth grant used to authenticate the request. API-key
@@ -189,10 +189,12 @@ type Invoker interface {
 	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
 	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-	//  and recipient-bound network contact admission.
+	//  and recipient-bound network contact admission. Save create_request_id before dispatch to recover
+	// an interrupted creation. Recovery returns the original current connection with recovered:true and
+	// invitation:null; it never replays a secret or rotates credentials.
 	//
 	// POST /agent-connections
-	CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
+	CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq) (CreateAgentConnectionRes, error)
 	// CreateChallenge invokes createChallenge operation.
 	//
 	// Create an x402 payment challenge (the payee side of a payment). The
@@ -965,7 +967,9 @@ type Invoker interface {
 	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
 	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-	//  and recipient-bound network contact admission.
+	//  and recipient-bound network contact admission. pending_only protects an already claimed
+	// credential. An ambiguous invitation response must not be retried automatically; invitation secrets
+	// are never replayed.
 	//
 	// POST /agent-connections/{address}/invitation
 	InviteAgentConnection(ctx context.Context, request *InviteAgentConnectionReq, params InviteAgentConnectionParams) (InviteAgentConnectionRes, error)
@@ -1245,6 +1249,16 @@ type Invoker interface {
 	//
 	// POST /cli/login/poll
 	PollCliLogin(ctx context.Context, request *PollCliLoginInput) (PollCliLoginRes, error)
+	// ProvisionMemberAddress invokes provisionMemberAddress operation.
+	//
+	// Provision or return this authenticated human member's stable managed address in this organization.
+	// API keys, connected agents and Functions cannot provision or impersonate humans. The owner
+	// explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
+	// cannot be overridden. There is no target user input. An unavailable domain never silently changes
+	// the address.
+	//
+	// PUT /account/member-address
+	ProvisionMemberAddress(ctx context.Context, request *ProvisionMemberAddressReq) (ProvisionMemberAddressRes, error)
 	// PublishAgent invokes publishAgent operation.
 	//
 	// Publish an agent into a registry.
@@ -1893,6 +1907,13 @@ type Invoker interface {
 	//
 	// POST /domains/{id}/verify
 	VerifyDomain(ctx context.Context, params VerifyDomainParams) (VerifyDomainRes, error)
+	// Whoami invokes whoami operation.
+	//
+	// Current authenticated identity. member_address is null for machine credentials or an unavailable
+	// member address.
+	//
+	// GET /whoami
+	Whoami(ctx context.Context) (WhoamiRes, error)
 }
 
 // Client implements OAS client.
@@ -2836,12 +2857,12 @@ func (c *Client) sendCheckDomainDns(ctx context.Context, params CheckDomainDnsPa
 //	and recipient-bound network contact admission.
 //
 // POST /agent-connections/claim
-func (c *Client) ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error) {
-	res, err := c.sendClaimAgentConnection(ctx, request, params)
+func (c *Client) ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq) (ClaimAgentConnectionRes, error) {
+	res, err := c.sendClaimAgentConnection(ctx, request)
 	return res, err
 }
 
-func (c *Client) sendClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (res ClaimAgentConnectionRes, err error) {
+func (c *Client) sendClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq) (res ClaimAgentConnectionRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("claimAgentConnection"),
 		semconv.HTTPRequestMethodKey.String("POST"),
@@ -2889,23 +2910,6 @@ func (c *Client) sendClaimAgentConnection(ctx context.Context, request *ClaimAge
 	}
 	if err := encodeClaimAgentConnectionRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
-	}
-
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.IdempotencyKey.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
 	}
 
 	stage = "SendRequest"
@@ -3382,15 +3386,18 @@ func (c *Client) sendCreateAgentClaimLink(ctx context.Context, request *CreateAg
 // credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 // own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
 //
-//	and recipient-bound network contact admission.
+//	and recipient-bound network contact admission. Save create_request_id before dispatch to recover
+//
+// an interrupted creation. Recovery returns the original current connection with recovered:true and
+// invitation:null; it never replays a secret or rotates credentials.
 //
 // POST /agent-connections
-func (c *Client) CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error) {
-	res, err := c.sendCreateAgentConnection(ctx, request, params)
+func (c *Client) CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq) (CreateAgentConnectionRes, error) {
+	res, err := c.sendCreateAgentConnection(ctx, request)
 	return res, err
 }
 
-func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (res CreateAgentConnectionRes, err error) {
+func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq) (res CreateAgentConnectionRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAgentConnection"),
 		semconv.HTTPRequestMethodKey.String("POST"),
@@ -3438,23 +3445,6 @@ func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateA
 	}
 	if err := encodeCreateAgentConnectionRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
-	}
-
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.IdempotencyKey.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
 	}
 
 	{
@@ -11620,7 +11610,10 @@ func (c *Client) sendInstallTemplate(ctx context.Context, request *InstallTempla
 // credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 // own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
 //
-//	and recipient-bound network contact admission.
+//	and recipient-bound network contact admission. pending_only protects an already claimed
+//
+// credential. An ambiguous invitation response must not be retried automatically; invitation secrets
+// are never replayed.
 //
 // POST /agent-connections/{address}/invitation
 func (c *Client) InviteAgentConnection(ctx context.Context, request *InviteAgentConnectionReq, params InviteAgentConnectionParams) (InviteAgentConnectionRes, error) {
@@ -11695,23 +11688,6 @@ func (c *Client) sendInviteAgentConnection(ctx context.Context, request *InviteA
 	}
 	if err := encodeInviteAgentConnectionRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
-	}
-
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "Idempotency-Key",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			if val, ok := params.IdempotencyKey.Get(); ok {
-				return e.EncodeValue(conv.StringToString(val))
-			}
-			return nil
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
 	}
 
 	{
@@ -11855,6 +11831,23 @@ func (c *Client) sendListAgentConnections(ctx context.Context, params ListAgentC
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Cursor.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "owner" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "owner",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Owner.Get(); ok {
 				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
@@ -13368,6 +13361,23 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Automated.Get(); ok {
 				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "recipient" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "recipient",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Recipient.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
 		}); err != nil {
@@ -15771,6 +15781,120 @@ func (c *Client) sendPollCliLogin(ctx context.Context, request *PollCliLoginInpu
 
 	stage = "DecodeResponse"
 	result, err := decodePollCliLoginResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ProvisionMemberAddress invokes provisionMemberAddress operation.
+//
+// Provision or return this authenticated human member's stable managed address in this organization.
+// API keys, connected agents and Functions cannot provision or impersonate humans. The owner
+// explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
+// cannot be overridden. There is no target user input. An unavailable domain never silently changes
+// the address.
+//
+// PUT /account/member-address
+func (c *Client) ProvisionMemberAddress(ctx context.Context, request *ProvisionMemberAddressReq) (ProvisionMemberAddressRes, error) {
+	res, err := c.sendProvisionMemberAddress(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendProvisionMemberAddress(ctx context.Context, request *ProvisionMemberAddressReq) (res ProvisionMemberAddressRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("provisionMemberAddress"),
+		semconv.HTTPRequestMethodKey.String("PUT"),
+		semconv.URLTemplateKey.String("/account/member-address"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ProvisionMemberAddressOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/account/member-address"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PUT", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeProvisionMemberAddressRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ProvisionMemberAddressOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeProvisionMemberAddressResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -22972,6 +23096,114 @@ func (c *Client) sendVerifyDomain(ctx context.Context, params VerifyDomainParams
 
 	stage = "DecodeResponse"
 	result, err := decodeVerifyDomainResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// Whoami invokes whoami operation.
+//
+// Current authenticated identity. member_address is null for machine credentials or an unavailable
+// member address.
+//
+// GET /whoami
+func (c *Client) Whoami(ctx context.Context) (WhoamiRes, error) {
+	res, err := c.sendWhoami(ctx)
+	return res, err
+}
+
+func (c *Client) sendWhoami(ctx context.Context) (res WhoamiRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("whoami"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/whoami"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, WhoamiOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/whoami"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, WhoamiOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeWhoamiResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

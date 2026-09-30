@@ -133,6 +133,7 @@ var operationRolesBearerAuth = map[string][]string{
 	ListWakeDispatchesOperation:                  []string{},
 	ListWakeSchedulesOperation:                   []string{},
 	PayChallengeOperation:                        []string{},
+	ProvisionMemberAddressOperation:              []string{},
 	PublishAgentOperation:                        []string{},
 	PullWebhookEventOperation:                    []string{},
 	PutAgentContactOperation:                     []string{},
@@ -179,6 +180,7 @@ var operationRolesBearerAuth = map[string][]string{
 	UpdateWakeScheduleOperation:                  []string{},
 	VerifyAgentClaimOperation:                    []string{},
 	VerifyDomainOperation:                        []string{},
+	WhoamiOperation:                              []string{},
 }
 
 // GetRolesForBearerAuth returns the required roles for the given operation.

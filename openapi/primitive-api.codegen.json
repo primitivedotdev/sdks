@@ -2021,6 +2021,17 @@
               ]
             },
             "description": "Only return emails whose `automated` has this value.\n`awaiting=you&automated=false` lists mail from people that is\nwaiting on your reply. Combines with every other filter and with\nboth `cursor` and `since`. An inbound email is `automated` when any of these holds, decided once\nwhen it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);\n`no_identifiable_sender` (no address in the envelope or From);\n`own_address` (a sender address is exactly one of the addresses the\nmail was delivered to; sharing a domain with the recipient is not\nenough, so a colleague or another agent in the organization is not\nautomated);\n`mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);\n`auto_submitted` (Auto-Submitted with any keyword but `no`, an\nempty one included);\n`precedence` (Precedence bulk, list, junk or auto_reply);\n`list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id\npresent); `auto_response_suppress` (X-Auto-Response-Suppress asks\nfor no automatic reply: All, OOF or AutoReply);\n`failed_recipients` (X-Failed-Recipients present, a bounce);\n`report` (a delivery, feedback or disposition report). Mail\nPrimitive's own automatic responders decline to answer is always\n`automated`. The header rules only see headers captured at ingest, so\nolder mail may lack them. This is loop and noise protection, not\nsender authentication.\n"
+          },
+          {
+            "name": "recipient",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "maxLength": 320
+            },
+            "description": "Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with existing filters and cursors; does not search message text."
           }
         ],
         "responses": {
@@ -5154,6 +5165,490 @@
           "Agent Connections"
         ],
         "summary": "create Agent Connection",
+        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission. Save create_request_id before dispatch to recover an interrupted creation. Recovery returns the original current connection with recovered:true and invitation:null; it never replays a secret or rotates credentials.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 3000
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 2998
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "string",
+                  "example": "3000;w=60"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true,
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "oneOf": [
+                        {
+                          "$schema": "https://json-schema.org/draft/2020-12/schema",
+                          "type": "object",
+                          "properties": {
+                            "connection": {
+                              "type": "object",
+                              "properties": {
+                                "address": {
+                                  "type": "string",
+                                  "format": "email",
+                                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 80
+                                },
+                                "owner_address": {
+                                  "type": "string",
+                                  "format": "email",
+                                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pending",
+                                    "claimed",
+                                    "connected",
+                                    "revoked"
+                                  ]
+                                },
+                                "created_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "updated_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "claimed_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                                  "nullable": true
+                                },
+                                "verified_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                                  "nullable": true
+                                },
+                                "last_seen_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                                  "nullable": true
+                                },
+                                "ownership_kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "personal",
+                                    "shared",
+                                    "legacy_unknown"
+                                  ]
+                                },
+                                "owner_user_id": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                                  "nullable": true
+                                },
+                                "owner_active": {
+                                  "type": "boolean",
+                                  "nullable": true
+                                },
+                                "presence": {
+                                  "$ref": "#/components/schemas/AgentPresence"
+                                }
+                              },
+                              "required": [
+                                "address",
+                                "name",
+                                "owner_address",
+                                "status",
+                                "created_at",
+                                "updated_at",
+                                "claimed_at",
+                                "verified_at",
+                                "last_seen_at",
+                                "ownership_kind",
+                                "owner_user_id",
+                                "owner_active"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "invitation": {
+                              "type": "object",
+                              "properties": {
+                                "claim_url": {
+                                  "type": "string",
+                                  "format": "uri"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                }
+                              },
+                              "required": [
+                                "claim_url",
+                                "expires_at"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "connection",
+                            "invitation"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "connection": {
+                              "type": "object",
+                              "properties": {
+                                "address": {
+                                  "type": "string",
+                                  "format": "email",
+                                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 80
+                                },
+                                "owner_address": {
+                                  "type": "string",
+                                  "format": "email",
+                                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pending",
+                                    "claimed",
+                                    "connected",
+                                    "revoked"
+                                  ]
+                                },
+                                "created_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "updated_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                "claimed_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                                  "nullable": true
+                                },
+                                "verified_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                                  "nullable": true
+                                },
+                                "last_seen_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                                  "nullable": true
+                                },
+                                "ownership_kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "personal",
+                                    "shared",
+                                    "legacy_unknown"
+                                  ]
+                                },
+                                "owner_user_id": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                                  "nullable": true
+                                },
+                                "owner_active": {
+                                  "type": "boolean",
+                                  "nullable": true
+                                },
+                                "presence": {
+                                  "$ref": "#/components/schemas/AgentPresence"
+                                }
+                              },
+                              "required": [
+                                "address",
+                                "name",
+                                "owner_address",
+                                "status",
+                                "created_at",
+                                "updated_at",
+                                "claimed_at",
+                                "verified_at",
+                                "last_seen_at",
+                                "ownership_kind",
+                                "owner_user_id",
+                                "owner_active"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "recovered": {
+                              "type": "boolean",
+                              "const": true
+                            },
+                            "invitation": {
+                              "type": "null"
+                            }
+                          },
+                          "required": [
+                            "connection",
+                            "recovered",
+                            "invitation"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "address": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "owner_address": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "ownership_kind": {
+                    "type": "string",
+                    "enum": [
+                      "personal",
+                      "shared"
+                    ]
+                  },
+                  "create_request_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Stable request UUID saved before creating this agent. Replay recovers the original current connection without returning or rotating an invitation."
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listAgentConnections",
+        "tags": [
+          "Agent Connections"
+        ],
+        "summary": "list Agent Connections",
         "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
         "security": [
           {
@@ -5162,14 +5657,360 @@
         ],
         "parameters": [
           {
-            "name": "Idempotency-Key",
-            "in": "header",
+            "name": "limit",
+            "in": "query",
             "required": false,
-            "description": "Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.",
+            "description": "limit for agent connections.",
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "cursor for agent connections.",
             "schema": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 255
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            }
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "description": "owner for agent connections.",
+            "schema": {
+              "type": "string",
+              "const": "self"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "Cache-Control": {
+                "description": "Credentials and status must not be cached.",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "ratelimit-limit": {
+                "description": "Maximum number of requests allowed in the current window. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 3000
+                }
+              },
+              "ratelimit-remaining": {
+                "description": "Remaining requests in the current window.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 2998
+                }
+              },
+              "ratelimit-reset": {
+                "description": "Unix timestamp (seconds) when the current window resets.",
+                "schema": {
+                  "type": "integer",
+                  "example": 1700000060
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Rate-limit policy in `limit;w=seconds` format. Example: a standard authenticated organization.",
+                "schema": {
+                  "type": "string",
+                  "example": "3000;w=60"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "const": true,
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "string",
+                            "format": "email",
+                            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                          },
+                          "owner_address": {
+                            "type": "string",
+                            "format": "email",
+                            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "claimed",
+                              "connected",
+                              "revoked"
+                            ]
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "claimed_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                            "nullable": true
+                          },
+                          "verified_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                            "nullable": true
+                          },
+                          "last_seen_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                            "nullable": true
+                          },
+                          "ownership_kind": {
+                            "type": "string",
+                            "enum": [
+                              "personal",
+                              "shared",
+                              "legacy_unknown"
+                            ]
+                          },
+                          "owner_user_id": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+                            "nullable": true
+                          },
+                          "owner_active": {
+                            "type": "boolean",
+                            "nullable": true
+                          },
+                          "presence": {
+                            "$ref": "#/components/schemas/AgentPresence"
+                          }
+                        },
+                        "required": [
+                          "address",
+                          "name",
+                          "owner_address",
+                          "status",
+                          "created_at",
+                          "updated_at",
+                          "claimed_at",
+                          "verified_at",
+                          "last_seen_at",
+                          "ownership_kind",
+                          "owner_user_id",
+                          "owner_active"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "cursor": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "ratelimit-limit": {
+                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "example": 120
+                }
+              },
+              "ratelimit-policy": {
+                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
+                "schema": {
+                  "type": "string",
+                  "example": "120;w=60"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated caller lacks permission for the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "forbidden",
+                    "message": "Insufficient permissions"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The request conflicts with the current state of the resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "conflict",
+                    "message": "settlement already in progress"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-connections/{address}/invitation": {
+      "post": {
+        "operationId": "inviteAgentConnection",
+        "tags": [
+          "Agent Connections"
+        ],
+        "summary": "invite Agent Connection",
+        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission. pending_only protects an already claimed credential. An ambiguous invitation response must not be retried automatically; invitation secrets are never replayed.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "description": "address for agent connections.",
+            "schema": {
+              "type": "string",
+              "maxLength": 254,
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
             }
           }
         ],
@@ -5491,730 +6332,11 @@
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
                 "properties": {
-                  "name": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 80
-                  },
-                  "address": {
-                    "type": "string",
-                    "maxLength": 254,
-                    "format": "email",
-                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  },
-                  "owner_address": {
-                    "type": "string",
-                    "maxLength": 254,
-                    "format": "email",
-                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                  },
-                  "ownership_kind": {
-                    "type": "string",
-                    "enum": [
-                      "personal",
-                      "shared"
-                    ]
+                  "pending_only": {
+                    "type": "boolean",
+                    "description": "Issue setup only while this exact connection is pending. A claimed, connected or revoked connection returns connection_already_claimed without changing its credential."
                   }
                 },
-                "required": [
-                  "name"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        }
-      },
-      "get": {
-        "operationId": "listAgentConnections",
-        "tags": [
-          "Agent Connections"
-        ],
-        "summary": "list Agent Connections",
-        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "description": "limit for agent connections.",
-            "schema": {
-              "default": 50,
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "description": "cursor for agent connections.",
-            "schema": {
-              "type": "string",
-              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "Cache-Control": {
-                "description": "Credentials and status must not be cached.",
-                "schema": {
-                  "type": "string",
-                  "const": "no-store"
-                }
-              },
-              "ratelimit-limit": {
-                "description": "Maximum number of requests allowed in the current window. Example: a standard authenticated organization.",
-                "schema": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "example": 3000
-                }
-              },
-              "ratelimit-remaining": {
-                "description": "Remaining requests in the current window.",
-                "schema": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "example": 2998
-                }
-              },
-              "ratelimit-reset": {
-                "description": "Unix timestamp (seconds) when the current window resets.",
-                "schema": {
-                  "type": "integer",
-                  "example": 1700000060
-                }
-              },
-              "ratelimit-policy": {
-                "description": "Rate-limit policy in `limit;w=seconds` format. Example: a standard authenticated organization.",
-                "schema": {
-                  "type": "string",
-                  "example": "3000;w=60"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "properties": {
-                    "success": {
-                      "const": true,
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "$schema": "https://json-schema.org/draft/2020-12/schema",
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "address": {
-                            "type": "string",
-                            "format": "email",
-                            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                          },
-                          "name": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 80
-                          },
-                          "owner_address": {
-                            "type": "string",
-                            "format": "email",
-                            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                          },
-                          "status": {
-                            "type": "string",
-                            "enum": [
-                              "pending",
-                              "claimed",
-                              "connected",
-                              "revoked"
-                            ]
-                          },
-                          "created_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                          },
-                          "updated_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                          },
-                          "claimed_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
-                            "nullable": true
-                          },
-                          "verified_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
-                            "nullable": true
-                          },
-                          "last_seen_at": {
-                            "type": "string",
-                            "format": "date-time",
-                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
-                            "nullable": true
-                          },
-                          "ownership_kind": {
-                            "type": "string",
-                            "enum": [
-                              "personal",
-                              "shared",
-                              "legacy_unknown"
-                            ]
-                          },
-                          "owner_user_id": {
-                            "type": "string",
-                            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                            "nullable": true
-                          },
-                          "owner_active": {
-                            "type": "boolean",
-                            "nullable": true
-                          },
-                          "presence": {
-                            "$ref": "#/components/schemas/AgentPresence"
-                          }
-                        },
-                        "required": [
-                          "address",
-                          "name",
-                          "owner_address",
-                          "status",
-                          "created_at",
-                          "updated_at",
-                          "claimed_at",
-                          "verified_at",
-                          "last_seen_at",
-                          "ownership_kind",
-                          "owner_user_id",
-                          "owner_active"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "meta": {
-                      "type": "object",
-                      "properties": {
-                        "limit": {
-                          "type": "integer"
-                        },
-                        "cursor": {
-                          "type": "string",
-                          "nullable": true
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request parameters",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "validation_error",
-                    "message": "Invalid domain format"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or missing API key",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "unauthorized",
-                    "message": "Invalid or missing API key"
-                  }
-                }
-              }
-            },
-            "headers": {
-              "ratelimit-limit": {
-                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
-                "schema": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "example": 120
-                }
-              },
-              "ratelimit-policy": {
-                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
-                "schema": {
-                  "type": "string",
-                  "example": "120;w=60"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Authenticated caller lacks permission for the operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "forbidden",
-                    "message": "Insufficient permissions"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Resource not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "not_found",
-                    "message": "Resource not found"
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The request conflicts with the current state of the resource",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "conflict",
-                    "message": "settlement already in progress"
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer"
-                },
-                "description": "Seconds to wait before retrying"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "rate_limit_exceeded",
-                    "message": "Rate limit exceeded"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/agent-connections/{address}/invitation": {
-      "post": {
-        "operationId": "inviteAgentConnection",
-        "tags": [
-          "Agent Connections"
-        ],
-        "summary": "invite Agent Connection",
-        "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
-        "security": [
-          {
-            "BearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "address",
-            "in": "path",
-            "required": true,
-            "description": "address for agent connections.",
-            "schema": {
-              "type": "string",
-              "maxLength": 254,
-              "format": "email",
-              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "description": "Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.",
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "Cache-Control": {
-                "description": "Credentials and status must not be cached.",
-                "schema": {
-                  "type": "string",
-                  "const": "no-store"
-                }
-              },
-              "ratelimit-limit": {
-                "description": "Maximum number of requests allowed in the current window. Example: a standard authenticated organization.",
-                "schema": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "example": 3000
-                }
-              },
-              "ratelimit-remaining": {
-                "description": "Remaining requests in the current window.",
-                "schema": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "example": 2998
-                }
-              },
-              "ratelimit-reset": {
-                "description": "Unix timestamp (seconds) when the current window resets.",
-                "schema": {
-                  "type": "integer",
-                  "example": 1700000060
-                }
-              },
-              "ratelimit-policy": {
-                "description": "Rate-limit policy in `limit;w=seconds` format. Example: a standard authenticated organization.",
-                "schema": {
-                  "type": "string",
-                  "example": "3000;w=60"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "success",
-                    "data"
-                  ],
-                  "properties": {
-                    "success": {
-                      "const": true,
-                      "type": "boolean"
-                    },
-                    "data": {
-                      "$schema": "https://json-schema.org/draft/2020-12/schema",
-                      "type": "object",
-                      "properties": {
-                        "connection": {
-                          "type": "object",
-                          "properties": {
-                            "address": {
-                              "type": "string",
-                              "format": "email",
-                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                            },
-                            "name": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 80
-                            },
-                            "owner_address": {
-                              "type": "string",
-                              "format": "email",
-                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                            },
-                            "status": {
-                              "type": "string",
-                              "enum": [
-                                "pending",
-                                "claimed",
-                                "connected",
-                                "revoked"
-                              ]
-                            },
-                            "created_at": {
-                              "type": "string",
-                              "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                            },
-                            "updated_at": {
-                              "type": "string",
-                              "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                            },
-                            "claimed_at": {
-                              "type": "string",
-                              "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
-                              "nullable": true
-                            },
-                            "verified_at": {
-                              "type": "string",
-                              "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
-                              "nullable": true
-                            },
-                            "last_seen_at": {
-                              "type": "string",
-                              "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
-                              "nullable": true
-                            },
-                            "ownership_kind": {
-                              "type": "string",
-                              "enum": [
-                                "personal",
-                                "shared",
-                                "legacy_unknown"
-                              ]
-                            },
-                            "owner_user_id": {
-                              "type": "string",
-                              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-                              "nullable": true
-                            },
-                            "owner_active": {
-                              "type": "boolean",
-                              "nullable": true
-                            },
-                            "presence": {
-                              "$ref": "#/components/schemas/AgentPresence"
-                            }
-                          },
-                          "required": [
-                            "address",
-                            "name",
-                            "owner_address",
-                            "status",
-                            "created_at",
-                            "updated_at",
-                            "claimed_at",
-                            "verified_at",
-                            "last_seen_at",
-                            "ownership_kind",
-                            "owner_user_id",
-                            "owner_active"
-                          ],
-                          "additionalProperties": false
-                        },
-                        "invitation": {
-                          "type": "object",
-                          "properties": {
-                            "claim_url": {
-                              "type": "string",
-                              "format": "uri"
-                            },
-                            "expires_at": {
-                              "type": "string",
-                              "format": "date-time",
-                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
-                            }
-                          },
-                          "required": [
-                            "claim_url",
-                            "expires_at"
-                          ],
-                          "additionalProperties": false
-                        }
-                      },
-                      "required": [
-                        "connection",
-                        "invitation"
-                      ],
-                      "additionalProperties": false
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request parameters",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "validation_error",
-                    "message": "Invalid domain format"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid or missing API key",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "unauthorized",
-                    "message": "Invalid or missing API key"
-                  }
-                }
-              }
-            },
-            "headers": {
-              "ratelimit-limit": {
-                "description": "Unauthenticated IP request limit for a missing or invalid bearer token.",
-                "schema": {
-                  "type": "integer",
-                  "minimum": 1,
-                  "example": 120
-                }
-              },
-              "ratelimit-policy": {
-                "description": "Unauthenticated IP policy in `limit;w=seconds` format.",
-                "schema": {
-                  "type": "string",
-                  "example": "120;w=60"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Authenticated caller lacks permission for the operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "forbidden",
-                    "message": "Insufficient permissions"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Resource not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "not_found",
-                    "message": "Resource not found"
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The request conflicts with the current state of the resource",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "conflict",
-                    "message": "settlement already in progress"
-                  }
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer"
-                },
-                "description": "Seconds to wait before retrying"
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "rate_limit_exceeded",
-                    "message": "Rate limit exceeded"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "type": "object",
-                "properties": {},
                 "additionalProperties": false
               }
             }
@@ -6792,19 +6914,7 @@
         "summary": "claim Agent Connection",
         "description": "Address-bound external runtime pairing. Any current human organization member may create and manage their personal agent connections. Organization owners and admins may manage all connections and explicitly create shared ones. An owner removed from the organization loses personal agent access, and rejoining does not revive the old connection. Organization API keys cannot manage connections. A current connected credential may disconnect only its own exact address. Claim is authorized only by its one-use invitation. Connected means a real challenge was received and a reply sent by the current bound credential was received back. Invitations expire after 15 minutes. Reconnection preserves the address and revokes previous credentials. Status responses contain no credentials. Runtime credentials allow address-scoped mail operations, organization note reads, own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-bound network contact admission.",
         "security": [],
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "required": false,
-            "description": "Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.",
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 255
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "Success",
@@ -13187,6 +13297,121 @@
           }
         }
       }
+    },
+    "/whoami": {
+      "get": {
+        "operationId": "whoami",
+        "summary": "Get current caller identity",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CallerIdentity"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "description": "Current authenticated identity. member_address is null for machine credentials or an unavailable member address."
+      }
+    },
+    "/account/member-address": {
+      "put": {
+        "operationId": "provisionMemberAddress",
+        "summary": "Provision your member email address",
+        "description": "Provision or return this authenticated human member's stable managed address in this organization. API keys, connected agents and Functions cannot provision or impersonate humans. The owner explicitly chooses the address. Existing retained mail requires confirmation; reserved identities cannot be overridden. There is no target user input. An unavailable domain never silently changes the address.",
+        "tags": [
+          "Account"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/MemberAddress"
+                        }
+                      },
+                      "required": [
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "confirm_existing_mail": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "address"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -14182,12 +14407,25 @@
             "format": "date-time",
             "description": "Earliest received_at eligible under the current membership and connection state.",
             "nullable": true
+          },
+          "member_policy_required": {
+            "type": "boolean",
+            "description": "Reserved human sender policy applies, not authorship proof. If true, allowed/pending is final and contact permission cannot bypass it. Check before contact shortcuts."
+          },
+          "sender_relation": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "member"
+            ],
+            "description": "Recipient-relative relation derived only from current exact delivered-email proof. Historical sender_member metadata does not establish this relation."
           }
         },
         "required": [
           "allowed",
           "allowed_since",
-          "pending"
+          "pending",
+          "member_policy_required"
         ]
       },
       "PublishPolicy": {
@@ -17383,6 +17621,29 @@
               "type": "string"
             },
             "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
+          },
+          "sender_member": {
+            "type": "object",
+            "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "address",
+              "user_id",
+              "name"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -17782,6 +18043,29 @@
               "type": "string"
             },
             "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
+          },
+          "sender_member": {
+            "type": "object",
+            "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "address",
+              "user_id",
+              "name"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -18168,6 +18452,29 @@
             "format": "date-time",
             "description": "received_at for inbound, created_at for outbound.",
             "nullable": true
+          },
+          "sender_member": {
+            "type": "object",
+            "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "address",
+              "user_id",
+              "name"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -18264,6 +18571,29 @@
           },
           "presence_control": {
             "$ref": "#/components/schemas/PresenceControl"
+          },
+          "sender_member": {
+            "type": "object",
+            "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "address",
+              "user_id",
+              "name"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -18663,6 +18993,29 @@
           },
           "presence_control": {
             "$ref": "#/components/schemas/PresenceControl"
+          },
+          "sender_member": {
+            "type": "object",
+            "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "address",
+              "user_id",
+              "name"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -19054,6 +19407,29 @@
         "properties": {
           "presence_control": {
             "$ref": "#/components/schemas/PresenceControl"
+          },
+          "sender_member": {
+            "type": "object",
+            "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email"
+              },
+              "user_id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "address",
+              "user_id",
+              "name"
+            ],
+            "nullable": true
           }
         }
       },
@@ -23268,6 +23644,103 @@
           "return_address"
         ],
         "additionalProperties": false
+      },
+      "MemberAddress": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "address",
+          "name"
+        ]
+      },
+      "MemberSender": {
+        "type": "object",
+        "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+        "properties": {
+          "address": {
+            "type": "string",
+            "format": "email"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "address",
+          "user_id",
+          "name"
+        ]
+      },
+      "CallerIdentity": {
+        "type": "object",
+        "properties": {
+          "org_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "auth_method": {
+            "type": "string",
+            "nullable": true
+          },
+          "key_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "member_address": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string",
+                "format": "email"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "address",
+              "name"
+            ],
+            "nullable": true
+          },
+          "member_address_suggestion": {
+            "type": "string",
+            "description": "Suggested personal address; nothing is assigned until explicitly saved.",
+            "nullable": true
+          }
+        },
+        "required": [
+          "org_id",
+          "user_id",
+          "role",
+          "request_id",
+          "auth_method",
+          "key_id",
+          "member_address",
+          "member_address_suggestion"
+        ]
       }
     }
   }

@@ -11,7 +11,6 @@ from ... import errors
 from ...models.claim_agent_connection_body import ClaimAgentConnectionBody
 from ...models.claim_agent_connection_response_200 import ClaimAgentConnectionResponse200
 from ...models.error_response import ErrorResponse
-from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,13 +18,9 @@ from typing import cast
 def _get_kwargs(
     *,
     body: ClaimAgentConnectionBody,
-    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
-    if not isinstance(idempotency_key, Unset):
-        headers["Idempotency-Key"] = idempotency_key
-
 
 
 
@@ -116,7 +111,6 @@ def sync_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: ClaimAgentConnectionBody,
-    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ClaimAgentConnectionResponse200 | ErrorResponse]:
     """ claim Agent Connection
@@ -134,7 +128,6 @@ def sync_detailed(
     bound network contact admission.
 
     Args:
-        idempotency_key (str | Unset):
         body (ClaimAgentConnectionBody):
 
     Raises:
@@ -148,7 +141,6 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
-idempotency_key=idempotency_key,
 
     )
 
@@ -162,7 +154,6 @@ def sync(
     *,
     client: AuthenticatedClient | Client,
     body: ClaimAgentConnectionBody,
-    idempotency_key: str | Unset = UNSET,
 
 ) -> ClaimAgentConnectionResponse200 | ErrorResponse | None:
     """ claim Agent Connection
@@ -180,7 +171,6 @@ def sync(
     bound network contact admission.
 
     Args:
-        idempotency_key (str | Unset):
         body (ClaimAgentConnectionBody):
 
     Raises:
@@ -195,7 +185,6 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
-idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -203,7 +192,6 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient | Client,
     body: ClaimAgentConnectionBody,
-    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ClaimAgentConnectionResponse200 | ErrorResponse]:
     """ claim Agent Connection
@@ -221,7 +209,6 @@ async def asyncio_detailed(
     bound network contact admission.
 
     Args:
-        idempotency_key (str | Unset):
         body (ClaimAgentConnectionBody):
 
     Raises:
@@ -235,7 +222,6 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
-idempotency_key=idempotency_key,
 
     )
 
@@ -249,7 +235,6 @@ async def asyncio(
     *,
     client: AuthenticatedClient | Client,
     body: ClaimAgentConnectionBody,
-    idempotency_key: str | Unset = UNSET,
 
 ) -> ClaimAgentConnectionResponse200 | ErrorResponse | None:
     """ claim Agent Connection
@@ -267,7 +252,6 @@ async def asyncio(
     bound network contact admission.
 
     Args:
-        idempotency_key (str | Unset):
         body (ClaimAgentConnectionBody):
 
     Raises:
@@ -282,6 +266,5 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
-idempotency_key=idempotency_key,
 
     )).parsed
