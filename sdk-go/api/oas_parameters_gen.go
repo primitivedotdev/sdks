@@ -4654,7 +4654,7 @@ type ListAgentConnectionsParams struct {
 	// Cursor for agent connections.
 	Cursor OptString `json:",omitempty,omitzero"`
 	// Owner for agent connections.
-	Owner OptString `json:",omitempty,omitzero"`
+	Owner OptListAgentConnectionsOwner `json:",omitempty,omitzero"`
 }
 
 func unpackListAgentConnectionsParams(packed middleware.Parameters) (params ListAgentConnectionsParams) {
@@ -4682,7 +4682,7 @@ func unpackListAgentConnectionsParams(packed middleware.Parameters) (params List
 			In:   "query",
 		}
 		if v, ok := packed[key]; ok {
-			params.Owner = v.(OptString)
+			params.Owner = v.(OptListAgentConnectionsOwner)
 		}
 	}
 	return params
@@ -4839,7 +4839,7 @@ func decodeListAgentConnectionsParams(args [0]string, argsEscaped bool, r *http.
 
 		if err := q.HasParam(cfg); err == nil {
 			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
-				var paramsDotOwnerVal string
+				var paramsDotOwnerVal ListAgentConnectionsOwner
 				if err := func() error {
 					val, err := d.DecodeValue()
 					if err != nil {
@@ -4851,7 +4851,7 @@ func decodeListAgentConnectionsParams(args [0]string, argsEscaped bool, r *http.
 						return err
 					}
 
-					paramsDotOwnerVal = c
+					paramsDotOwnerVal = ListAgentConnectionsOwner(c)
 					return nil
 				}(); err != nil {
 					return err
@@ -4859,6 +4859,21 @@ func decodeListAgentConnectionsParams(args [0]string, argsEscaped bool, r *http.
 				params.Owner.SetTo(paramsDotOwnerVal)
 				return nil
 			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Owner.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
 				return err
 			}
 		}

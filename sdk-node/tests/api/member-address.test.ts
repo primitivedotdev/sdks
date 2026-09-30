@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import type { ListAgentConnectionsData } from "@primitivedotdev/api-core";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   createAgentConnection,
   inviteAgentConnection,
@@ -12,6 +13,18 @@ const address = "person_123456789@example.test";
 const credential = ["fixture", "credential"].join("-");
 
 describe("personal address choice", () => {
+  it("keeps the owner query limited to self in the public contract and typed client", async () => {
+    expectTypeOf<
+      NonNullable<ListAgentConnectionsData["query"]>["owner"]
+    >().toEqualTypeOf<"self" | undefined>();
+    const { openapiDocument } = await import("../../src/openapi/index.js");
+    const owner = openapiDocument.paths[
+      "/agent-connections"
+    ].get.parameters.find(
+      (parameter) => "name" in parameter && parameter.name === "owner",
+    );
+    expect(owner).toMatchObject({ schema: { type: "string", enum: ["self"] } });
+  });
   it("requires explicit history confirmation and does not retry or choose another address", async () => {
     const bodies: unknown[] = [];
     const fetcher = vi.fn<typeof fetch>(async (input) => {

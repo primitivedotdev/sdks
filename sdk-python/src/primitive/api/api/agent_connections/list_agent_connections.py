@@ -9,10 +9,10 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
+from ...models.list_agent_connections_owner import ListAgentConnectionsOwner
 from ...models.list_agent_connections_response_200 import ListAgentConnectionsResponse200
 from ...types import UNSET, Unset
 from typing import cast
-from typing import Literal, cast
 
 
 
@@ -20,7 +20,7 @@ def _get_kwargs(
     *,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
-    owner: Literal['self'] | Unset = UNSET,
+    owner: ListAgentConnectionsOwner | Unset = UNSET,
 
 ) -> dict[str, Any]:
 
@@ -33,7 +33,11 @@ def _get_kwargs(
 
     params["cursor"] = cursor
 
-    params["owner"] = owner
+    json_owner: str | Unset = UNSET
+    if not isinstance(owner, Unset):
+        json_owner = owner.value
+
+    params["owner"] = json_owner
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -120,7 +124,7 @@ def sync_detailed(
     client: AuthenticatedClient,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
-    owner: Literal['self'] | Unset = UNSET,
+    owner: ListAgentConnectionsOwner | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListAgentConnectionsResponse200]:
     """ list Agent Connections
@@ -140,7 +144,7 @@ def sync_detailed(
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
-        owner (Literal['self'] | Unset):
+        owner (ListAgentConnectionsOwner | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -169,7 +173,7 @@ def sync(
     client: AuthenticatedClient,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
-    owner: Literal['self'] | Unset = UNSET,
+    owner: ListAgentConnectionsOwner | Unset = UNSET,
 
 ) -> ErrorResponse | ListAgentConnectionsResponse200 | None:
     """ list Agent Connections
@@ -189,7 +193,7 @@ def sync(
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
-        owner (Literal['self'] | Unset):
+        owner (ListAgentConnectionsOwner | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -213,7 +217,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
-    owner: Literal['self'] | Unset = UNSET,
+    owner: ListAgentConnectionsOwner | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListAgentConnectionsResponse200]:
     """ list Agent Connections
@@ -233,7 +237,7 @@ async def asyncio_detailed(
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
-        owner (Literal['self'] | Unset):
+        owner (ListAgentConnectionsOwner | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -262,7 +266,7 @@ async def asyncio(
     client: AuthenticatedClient,
     limit: int | Unset = 50,
     cursor: str | Unset = UNSET,
-    owner: Literal['self'] | Unset = UNSET,
+    owner: ListAgentConnectionsOwner | Unset = UNSET,
 
 ) -> ErrorResponse | ListAgentConnectionsResponse200 | None:
     """ list Agent Connections
@@ -282,7 +286,7 @@ async def asyncio(
     Args:
         limit (int | Unset):  Default: 50.
         cursor (str | Unset):
-        owner (Literal['self'] | Unset):
+        owner (ListAgentConnectionsOwner | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

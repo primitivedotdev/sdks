@@ -20122,6 +20122,40 @@ func (s *ListAgentConnectionsOKMeta) SetCursor(val OptNilString) {
 	s.Cursor = val
 }
 
+type ListAgentConnectionsOwner string
+
+const (
+	ListAgentConnectionsOwnerSelf ListAgentConnectionsOwner = "self"
+)
+
+// AllValues returns all ListAgentConnectionsOwner values.
+func (ListAgentConnectionsOwner) AllValues() []ListAgentConnectionsOwner {
+	return []ListAgentConnectionsOwner{
+		ListAgentConnectionsOwnerSelf,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListAgentConnectionsOwner) MarshalText() ([]byte, error) {
+	switch s {
+	case ListAgentConnectionsOwnerSelf:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListAgentConnectionsOwner) UnmarshalText(data []byte) error {
+	switch ListAgentConnectionsOwner(data) {
+	case ListAgentConnectionsOwnerSelf:
+		*s = ListAgentConnectionsOwnerSelf
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ListAgentConnectionsTooManyRequests ErrorResponseHeaders
 
 func (*ListAgentConnectionsTooManyRequests) listAgentConnectionsRes() {}
@@ -24824,6 +24858,52 @@ func (o OptListAgentConnectionsOKMeta) Get() (v ListAgentConnectionsOKMeta, ok b
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListAgentConnectionsOKMeta) Or(d ListAgentConnectionsOKMeta) ListAgentConnectionsOKMeta {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListAgentConnectionsOwner returns new OptListAgentConnectionsOwner with value set to v.
+func NewOptListAgentConnectionsOwner(v ListAgentConnectionsOwner) OptListAgentConnectionsOwner {
+	return OptListAgentConnectionsOwner{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListAgentConnectionsOwner is optional ListAgentConnectionsOwner.
+type OptListAgentConnectionsOwner struct {
+	Value ListAgentConnectionsOwner
+	Set   bool
+}
+
+// IsSet returns true if OptListAgentConnectionsOwner was set.
+func (o OptListAgentConnectionsOwner) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListAgentConnectionsOwner) Reset() {
+	var v ListAgentConnectionsOwner
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListAgentConnectionsOwner) SetTo(v ListAgentConnectionsOwner) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListAgentConnectionsOwner) Get() (v ListAgentConnectionsOwner, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListAgentConnectionsOwner) Or(d ListAgentConnectionsOwner) ListAgentConnectionsOwner {
 	if v, ok := o.Get(); ok {
 		return v
 	}

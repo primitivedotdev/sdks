@@ -12113,6 +12113,15 @@ func (s *ListAgentConnectionsOKHeaders) Validate() error {
 	return nil
 }
 
+func (s ListAgentConnectionsOwner) Validate() error {
+	switch s {
+	case "self":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *ListAgentConnectionsTooManyRequests) Validate() error {
 	alias := (*ErrorResponseHeaders)(s)
 	if err := alias.Validate(); err != nil {

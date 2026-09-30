@@ -688,7 +688,14 @@ describe("reserved human sender admission", () => {
       readPage: async () => ({ data: [membership], cursor: null }),
       readNetworkAdmission,
     });
-    return { emailId, decision, readNetworkAdmission, policy };
+    return {
+      emailId,
+      decision,
+      readNetworkAdmission,
+      policy,
+      document,
+      membership,
+    };
   }
   it.each([
     "owner",
@@ -715,6 +722,49 @@ describe("reserved human sender admission", () => {
     expect(
       await f.policy.admitResponse(sender, received, signal, f.emailId),
     ).toBeNull();
+  });
+  it.each([
+    "owner",
+    "member",
+  ] as const)("respects local mutes for verified %s senders, including queued replies", async (relation) => {
+    for (const mute of ["membership", "agent", "org"] as const) {
+      const f = memberFixture(relation);
+      const admitted = await f.policy.admitResponse(
+        sender,
+        received,
+        signal,
+        f.emailId,
+      );
+      if (!admitted) throw new Error("Expected initial member admission");
+      if (mute === "membership") {
+        Object.assign(f.membership, {
+          notify: false,
+          notify_since: null,
+          notification_generation: null,
+        });
+      } else {
+        f.document[`${mute}_policy`].version = randomUUID();
+        f.document[`${mute}_policy`].updated_at = activation;
+        f.document[`${mute}_policy`].rules = [
+          {
+            pattern: sender,
+            effect: "silence",
+            notify_since: null,
+            notification_generation: null,
+          },
+        ];
+      }
+      await expect(f.policy.recheck(admitted, signal)).rejects.toThrow(
+        "changed or expired",
+      );
+      expect(
+        await f.policy.admit(sender, received, signal, f.emailId),
+      ).toBeNull();
+      expect(
+        await f.policy.admitResponse(sender, received, signal, f.emailId),
+      ).toBeNull();
+      expect(f.readNetworkAdmission).toHaveBeenCalled();
+    }
   });
   it("does not let an explicit contact bypass a muted or revoked member sender", async () => {
     const f = memberFixture("owner");

@@ -310,6 +310,7 @@ from .invite_agent_connection_response_200_data_connection import InviteAgentCon
 from .invite_agent_connection_response_200_data_connection_ownership_kind import InviteAgentConnectionResponse200DataConnectionOwnershipKind
 from .invite_agent_connection_response_200_data_connection_status import InviteAgentConnectionResponse200DataConnectionStatus
 from .invite_agent_connection_response_200_data_invitation import InviteAgentConnectionResponse200DataInvitation
+from .list_agent_connections_owner import ListAgentConnectionsOwner
 from .list_agent_connections_response_200 import ListAgentConnectionsResponse200
 from .list_agent_connections_response_200_data_item import ListAgentConnectionsResponse200DataItem
 from .list_agent_connections_response_200_data_item_ownership_kind import ListAgentConnectionsResponse200DataItemOwnershipKind
@@ -941,6 +942,7 @@ __all__ = (
     "InviteAgentConnectionResponse200DataConnectionOwnershipKind",
     "InviteAgentConnectionResponse200DataConnectionStatus",
     "InviteAgentConnectionResponse200DataInvitation",
+    "ListAgentConnectionsOwner",
     "ListAgentConnectionsResponse200",
     "ListAgentConnectionsResponse200DataItem",
     "ListAgentConnectionsResponse200DataItemOwnershipKind",

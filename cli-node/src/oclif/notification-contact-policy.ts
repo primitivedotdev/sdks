@@ -204,6 +204,13 @@ export function createNotificationContactPolicy(options: {
     solicited = false,
   ): Promise<ContactNotificationAdmission | null> {
     const contact = admission(value, sender, receivedAt, solicited);
+    const decision = evaluateContactPolicy({
+      policy: value.policy,
+      sender,
+      receivedAt,
+      membership: value.senders.get(sender),
+      contactRequests: options.contactRequests === true,
+    });
     if (!networkReader) return contact;
     if (!emailId) throw unavailable();
     // Check every exact email before contact shortcuts. A reserved human sender
@@ -222,6 +229,10 @@ export function createNotificationContactPolicy(options: {
       if (network.allowed && !network.sender_relation) throw unavailable();
       if (network.pending) throw new NetworkAdmissionPendingError();
       if (!network.allowed) return null;
+      // Verified membership does not override an explicit local mute or its
+      // activation cutoff, including when an expected reply is dispatched.
+      if (decision.kind === "silent" && decision.source !== "default")
+        return null;
       return networkAdmission(
         value,
         sender,
@@ -234,13 +245,6 @@ export function createNotificationContactPolicy(options: {
     const scopedContact = contact ? { ...contact, emailId } : null;
     if (contact?.kind === "allowed" || contact?.kind === "response")
       return scopedContact;
-    const decision = evaluateContactPolicy({
-      policy: value.policy,
-      sender,
-      receivedAt,
-      membership: value.senders.get(sender),
-      contactRequests: options.contactRequests === true,
-    });
     if (
       decision.kind !== "request" &&
       !(decision.kind === "silent" && decision.source === "default")

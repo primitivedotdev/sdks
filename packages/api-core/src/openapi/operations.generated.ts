@@ -2008,7 +2008,9 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       {
         "description": "owner for agent connections.",
-        "enum": null,
+        "enum": [
+          "self"
+        ],
         "name": "owner",
         "required": false,
         "type": "string"

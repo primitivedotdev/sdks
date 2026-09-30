@@ -8705,7 +8705,7 @@ export type ListAgentConnectionsData = {
         /**
          * owner for agent connections.
          */
-        owner?: string;
+        owner?: 'self';
     };
     url: '/agent-connections';
 };

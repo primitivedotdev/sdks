@@ -5712,7 +5712,9 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "owner for agent connections.",
             "schema": {
               "type": "string",
-              "const": "self"
+              "enum": [
+                "self"
+              ]
             }
           }
         ],
