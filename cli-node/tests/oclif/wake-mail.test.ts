@@ -188,11 +188,53 @@ function fixture(
 
 describe("Claude mail wake", () => {
   it.each([
+    "owner",
+    "member",
+  ] as const)("clears prior %s authority when a deferred request replaces the wake email", async (relation) => {
+    const f = fixture(false, false);
+    mocks.interaction.mockResolvedValue({ step: "request" });
+    const wake = await createWakeMail({
+      configDir: "/tmp/test",
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: true,
+    });
+    const policy = mocks.policy.mock.results[0]?.value;
+    policy.admit
+      .mockResolvedValueOnce({ kind: "request" })
+      .mockResolvedValueOnce({ kind: "allowed", senderRelation: relation });
+    await wake.handler(f.delivery as never, new AbortController().signal);
+    const memberId = randomUUID();
+    const detail = mocks.getEmail.mock.results[0];
+    if (!detail) throw new Error("Expected initial email read");
+    const response = await detail.value;
+    mocks.getEmail.mockResolvedValue({
+      data: { ...response.data, data: { ...response.data.data, id: memberId } },
+    });
+    await wake.handler(
+      {
+        ...f.delivery,
+        event_id: randomUUID(),
+        body: JSON.stringify({
+          event: "email.received",
+          email: { id: memberId, smtp: { rcpt_to: ["agent@example.test"] } },
+        }),
+      } as never,
+      new AbortController().signal,
+    );
+    expect(wake.wakeId()).toBe(memberId);
+    expect(wake.senderRelation()).toBe(relation);
+    wake.completed();
+    expect(wake.wakeId()).toBe(f.emailId);
+    expect(wake.senderRelation()).toBeUndefined();
+  });
+
+  it.each([
     { failure: 503, solicited: true },
     { failure: "pending", solicited: true },
     { failure: 503, solicited: false },
     { failure: "pending", solicited: false },
-  ] as const)("handles solicited=$solicited mail independently of network $failure without admitting unrelated mail", async ({
+  ] as const)("holds solicited=$solicited mail while exact-mail proof is $failure", async ({
     failure,
     solicited,
   }) => {
@@ -218,7 +260,12 @@ describe("Claude mail wake", () => {
             ? Response.json({ success: false }, { status: 503 })
             : Response.json({
                 success: true,
-                data: { allowed: false, allowed_since: null, pending: true },
+                data: {
+                  allowed: false,
+                  allowed_since: null,
+                  pending: true,
+                  member_policy_required: true,
+                },
               });
         throw new Error("Unexpected fixture route");
       },
@@ -240,8 +287,8 @@ describe("Claude mail wake", () => {
         f.delivery as never,
         new AbortController().signal,
       );
-      expect(handled.succeeded).toBe(solicited);
-      expect(wake.wakeId()).toBe(solicited ? f.emailId : undefined);
+      expect(handled.succeeded).toBe(false);
+      expect(wake.wakeId()).toBeUndefined();
     } finally {
       await wake.close();
     }

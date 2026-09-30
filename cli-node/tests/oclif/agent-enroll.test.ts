@@ -74,6 +74,10 @@ function owner(): string {
 function server(
   options: {
     failFirstCreate?: boolean;
+    recoveredAfterFailure?: boolean;
+    continuationFailure?: boolean;
+    claimedRecovery?: boolean;
+    expectedName?: string;
     firstCreateStatus?: 400 | 401 | 403 | 409;
     domains?: string[];
     createDenials?: Array<{ status: number; code: string } | null>;
@@ -99,6 +103,7 @@ function server(
 ) {
   const creates: Array<{
     address: string;
+    requestId: string;
     auth: string;
     url: string;
   }> = [];
@@ -110,6 +115,7 @@ function server(
     allow_contact_requests: null,
     rules: [],
   };
+  const continuations: string[] = [];
   const policyWrites: Array<Record<string, unknown>> = [];
   const invitation = `${options.wrongOrigin ? "https://api.primitive.dev/v1" : stage}/agent-connections/setup#token=${["invite", "a".repeat(48)].join("_")}`;
   function policyResponse(address: string) {
@@ -206,22 +212,48 @@ function server(
         ).map((domain) => ({ domain, verified: true, is_active: true })),
       });
     }
+    if (url.endsWith("/invitation") && method === "POST") {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.deepEqual(body, { pending_only: true });
+      continuations.push(url);
+      if (options.continuationFailure)
+        throw new Error("Uncertain continuation");
+      return Response.json({
+        success: true,
+        data: {
+          connection: {
+            address: creates.at(-1)?.address,
+            name: options.expectedName ?? "Research",
+            status: "pending",
+            owner_address: "owner@example.test",
+          },
+          invitation: {
+            claim_url: invitation,
+            expires_at: new Date(clock + 10 * 60_000).toISOString(),
+          },
+        },
+      });
+    }
     if (url === `${stage}/agent-connections` && method === "POST") {
       const body = JSON.parse(
         String(
           init?.body ?? (input instanceof Request ? await input.text() : ""),
         ),
-      ) as { name: string; address: string };
+      ) as { name: string; address?: string; create_request_id: string };
       const headers = new Headers(
         init?.headers ?? (input instanceof Request ? input.headers : undefined),
       );
+      assert.equal(Object.hasOwn(body, "address"), false);
+      assert.match(body.create_request_id, /^[a-f0-9-]{36}$/);
+      const address = `${body.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@lucky-eagle.primitive-staging.email`;
       creates.push({
-        address: body.address,
+        address,
+        requestId: body.create_request_id,
         auth: headers.get("authorization") ?? "",
         url,
       });
-      options.onCreate?.(body.address, creates.length);
-      assert.equal(body.name, "Research");
+      options.onCreate?.(address, creates.length);
+      assert.equal(body.name, options.expectedName ?? "Research");
       if (options.failFirstCreate && first) {
         first = false;
         throw new Error("unavailable");
@@ -243,15 +275,21 @@ function server(
         success: true,
         data: {
           connection: {
-            address: body.address,
+            address,
             name: body.name,
             owner_address: "owner@example.test",
-            status: "pending",
+            status: options.claimedRecovery ? "connected" : "pending",
           },
-          invitation: {
-            claim_url: invitation,
-            expires_at: new Date(clock + 10 * 60_000).toISOString(),
-          },
+          ...(options.recoveredAfterFailure && creates.length > 1
+            ? { recovered: true }
+            : {}),
+          invitation:
+            options.recoveredAfterFailure && creates.length > 1
+              ? null
+              : {
+                  claim_url: invitation,
+                  expires_at: new Date(clock + 10 * 60_000).toISOString(),
+                },
         },
       });
     }
@@ -285,7 +323,7 @@ function server(
         data: [
           {
             address,
-            name: "Research",
+            name: options.expectedName ?? "Research",
             owner_address: "owner@example.test",
             owner_active: options.ownerActive ?? true,
             status,
@@ -301,6 +339,7 @@ function server(
   return {
     fetcher,
     creates,
+    continuations,
     invitation,
     policyWrites,
     policyReads: () => policyReads,
@@ -312,7 +351,7 @@ const result = {
   identity: {
     profileName: `session-${session}`,
     orgId,
-    agentAddress: `research-${session.replaceAll("-", "")}@lucky-eagle.primitive-staging.email`,
+    agentAddress: "research@lucky-eagle.primitive-staging.email",
     ownerAddress: "owner@example.test",
     apiBaseUrl: stage,
   },
@@ -323,7 +362,7 @@ const result = {
   guidance: "Receiving needs the external hook.",
 };
 
-test("owner OAuth creates one deterministic address and keeps the invitation out of state", async () => {
+test("owner OAuth creates one readable address and keeps the invitation out of state", async () => {
   const configDir = owner();
   const { fetcher, creates, invitation, policyWrites, connectionListReads } =
     server();
@@ -708,11 +747,11 @@ test.each([
   assert.equal(policyWrites.length, 1);
 });
 
-test("a lost create response is held for owner recovery without a second create", async () => {
+test("a lost create response recovers the saved request and requires explicit Continue setup", async () => {
   const configDir = owner();
-  const { fetcher, creates } = server({
+  const { fetcher, creates, continuations } = server({
     failFirstCreate: true,
-    domains: ["alpha.primitive-staging.email", "bravo.primitive-staging.email"],
+    recoveredAfterFailure: true,
   });
   const options = {
     configDir,
@@ -725,80 +764,21 @@ test("a lost create response is held for owner recovery without a second create"
     setup: (async () => result) as typeof setupAgent,
   };
   await assert.rejects(enrollAgent(options), /unknown outcome/);
-  await assert.rejects(enrollAgent(options), /may already have happened/);
-  assert.equal(creates.length, 1);
-});
-
-test("a confirmed unsendable domain advances to the next candidate before claiming", async () => {
-  const configDir = owner();
-  const profile = `session-${session}`;
-  const path = join(
-    agentProfileDirectory(configDir, profile),
-    "enrollment",
-    "state.json",
-  );
-  const journalAddresses: string[] = [];
-  const { fetcher, creates, invitation } = server({
-    domains: ["alpha.primitive-staging.email", "bravo.primitive-staging.email"],
-    createDenials: [{ status: 400, code: "connection_domain_unavailable" }],
-    onCreate: (address) => {
-      const journal = JSON.parse(readFileSync(path, "utf8")) as {
-        address: string;
-        phase: string;
-      };
-      assert.equal(journal.phase, "create_attempted");
-      assert.equal(journal.address, address);
-      journalAddresses.push(journal.address);
-    },
-  });
-  let setupCalls = 0;
-  const value = await enrollAgent({
-    configDir,
-    session,
-    name: "Research",
-    receiverMode: "external",
-    env: { CLAUDE_CODE_SESSION_ID: session },
-    fetch: fetcher,
-    now: () => clock,
-    setup: (async (params) => {
-      setupCalls++;
-      assert.equal(params.invitation, invitation);
-      assert.equal(creates.length, 2);
-      const second = creates[1];
-      assert.ok(second);
-      return {
-        ...result,
-        identity: { ...result.identity, agentAddress: second.address },
-      };
-    }) as typeof setupAgent,
-  });
-  assert.equal(value.connection.status, "connected");
-  assert.equal(setupCalls, 1);
+  await assert.rejects(enrollAgent(options), /--continue-setup/);
   assert.equal(creates.length, 2);
-  const first = creates[0];
-  const second = creates[1];
-  assert.ok(first);
-  assert.ok(second);
-  assert.notEqual(first.address, second.address);
-  assert.deepEqual(
-    journalAddresses,
-    creates.map((create) => create.address),
-  );
-  const journal = readFileSync(path, "utf8");
-  assert.equal(JSON.parse(journal).address, second.address);
-  assert.equal(JSON.parse(journal).phase, "setup_attempted");
-  assert.equal(journal.includes(invitation), false);
-  assert.equal(journal.includes("prim_oat"), false);
+  assert.equal(creates[0]?.requestId, creates[1]?.requestId);
+  assert.equal(continuations.length, 0);
+  const continued = await enrollAgent({ ...options, continueSetup: true });
+  assert.equal(continued.connection.status, "connected");
+  assert.equal(continuations.length, 1);
+  assert.equal(new Set(creates.map((row) => row.requestId)).size, 1);
 });
 
-test("all explicitly unavailable domains clear the pre-create journal", async () => {
+test("a confirmed unavailable domain clears a fresh request without client-side address retries", async () => {
   const configDir = owner();
   const { fetcher, creates } = server({
     domains: ["alpha.primitive-staging.email", "bravo.primitive-staging.email"],
-    createDenials: [
-      { status: 400, code: "connection_domain_unavailable" },
-      { status: 400, code: "connection_domain_unavailable" },
-    ],
+    createDenials: [{ status: 400, code: "connection_domain_unavailable" }],
   });
   await assert.rejects(
     enrollAgent({
@@ -812,7 +792,7 @@ test("all explicitly unavailable domains clear the pre-create journal", async ()
     }),
     /No verified managed domain is currently sendable/,
   );
-  assert.equal(creates.length, 2);
+  assert.equal(creates.length, 1);
   assert.equal(
     existsSync(
       join(
@@ -861,11 +841,7 @@ test.each([
     "state.json",
   );
   assert.equal(existsSync(path), held);
-  if (held)
-    assert.equal(
-      JSON.parse(readFileSync(path, "utf8")).address,
-      creates[0]?.address,
-    );
+  if (held) assert.equal(JSON.parse(readFileSync(path, "utf8")).address, null);
 });
 
 test.each([
@@ -913,8 +889,10 @@ test("a 409 create response stays uncertain and is not automatically retried", a
     setup: (async () => result) as typeof setupAgent,
   };
   await assert.rejects(enrollAgent(options), /unknown outcome/);
-  await assert.rejects(enrollAgent(options), /may already have happened/);
-  assert.equal(creates.length, 1);
+  const retried = await enrollAgent(options);
+  assert.equal(retried.connection.status, "connected");
+  assert.equal(creates.length, 2);
+  assert.equal(creates[0]?.requestId, creates[1]?.requestId);
 });
 
 test("a saved uncertain create remains held after time passes", async () => {
@@ -940,8 +918,12 @@ test("a saved uncertain create remains held after time passes", async () => {
     string,
     unknown
   >;
+  delete state.createRequestId;
+  delete state.continueAttempted;
   writeMailJson(path, {
     ...state,
+    version: 1,
+    address: result.identity.agentAddress,
     startedAt: new Date(clock - 11 * 60_000).toISOString(),
   });
   await assert.rejects(enrollAgent(options), /may already have happened/);
@@ -1109,4 +1091,112 @@ test("wrong session, ambient API key, and invitation origin fail before claim", 
     /invitation origin differs/,
   );
   assert.equal(creates.length, 1);
+});
+
+test("saves the new creation request before dispatch and gives new sessions a friendly default", async () => {
+  const configDir = owner();
+  const path = join(
+    agentProfileDirectory(configDir, `session-${session}`),
+    "enrollment",
+    "state.json",
+  );
+  const { fetcher, creates } = server({
+    expectedName: "Coding agent",
+    onCreate: () => {
+      const state = JSON.parse(readFileSync(path, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      assert.equal(state.version, 2);
+      assert.equal(state.address, null);
+      assert.match(String(state.createRequestId), /^[a-f0-9-]{36}$/);
+      assert.equal(state.continueAttempted, false);
+    },
+  });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => ({
+      ...result,
+      identity: {
+        ...result.identity,
+        agentAddress: "coding-agent@lucky-eagle.primitive-staging.email",
+      },
+    })) as typeof setupAgent,
+  });
+  assert.equal(
+    value.identity.agentAddress,
+    "coding-agent@lucky-eagle.primitive-staging.email",
+  );
+  assert.equal(creates.length, 1);
+  assert.equal(creates[0]?.address.includes(session), false);
+  assert.equal(
+    JSON.parse(readFileSync(path, "utf8")).createRequestId,
+    creates[0]?.requestId,
+  );
+});
+
+test("an uncertain Continue setup is durably held and cannot invalidate another invitation on rerun", async () => {
+  const configDir = owner();
+  const { fetcher, creates, continuations } = server({
+    failFirstCreate: true,
+    recoveredAfterFailure: true,
+    continuationFailure: true,
+  });
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => result) as typeof setupAgent,
+  };
+  await assert.rejects(enrollAgent(options), /unknown outcome/);
+  await assert.rejects(
+    enrollAgent({ ...options, continueSetup: true }),
+    /Continue setup has an uncertain outcome/,
+  );
+  const count = creates.length;
+  await assert.rejects(
+    enrollAgent({ ...options, continueSetup: true }),
+    /Continue setup already ran/,
+  );
+  assert.equal(creates.length, count);
+  assert.equal(continuations.length, 1);
+});
+
+test("a recovered claimed identity never gets an automatic invitation or reconnect", async () => {
+  const configDir = owner();
+  const { fetcher, continuations } = server({
+    failFirstCreate: true,
+    recoveredAfterFailure: true,
+    claimedRecovery: true,
+  });
+  let setups = 0;
+  const options = {
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external" as const,
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    setup: (async () => {
+      setups++;
+      return result;
+    }) as typeof setupAgent,
+  };
+  await assert.rejects(enrollAgent(options), /unknown outcome/);
+  await assert.rejects(
+    enrollAgent({ ...options, continueSetup: true }),
+    /credential was not changed/,
+  );
+  assert.equal(continuations.length, 0);
+  assert.equal(setups, 0);
 });

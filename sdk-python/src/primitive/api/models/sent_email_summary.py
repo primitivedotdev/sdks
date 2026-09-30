@@ -17,6 +17,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.gate_denial import GateDenial
   from ..models.presence_control_type_0 import PresenceControlType0
+  from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
 
 
 
@@ -144,6 +145,8 @@ class SentEmailSummary:
             canceled_at (datetime.datetime | None | Unset): When a scheduled send was canceled. Null unless the row
                 reached the `canceled` status.
             presence_control (None | PresenceControlType0 | Unset):
+            sender_member (None | SentEmailSummarySenderMemberType0 | Unset): Verified human authorship, projected only
+                within the member organization. Historical attribution is not current sending or owner authority.
      """
 
     id: UUID
@@ -178,6 +181,7 @@ class SentEmailSummary:
     scheduled_at: datetime.datetime | None | Unset = UNSET
     canceled_at: datetime.datetime | None | Unset = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
+    sender_member: None | SentEmailSummarySenderMemberType0 | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -187,6 +191,7 @@ class SentEmailSummary:
     def to_dict(self) -> dict[str, Any]:
         from ..models.gate_denial import GateDenial
         from ..models.presence_control_type_0 import PresenceControlType0
+        from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
         id = str(self.id)
 
         status = self.status.value
@@ -350,6 +355,14 @@ class SentEmailSummary:
         else:
             presence_control = self.presence_control
 
+        sender_member: dict[str, Any] | None | Unset
+        if isinstance(self.sender_member, Unset):
+            sender_member = UNSET
+        elif isinstance(self.sender_member, SentEmailSummarySenderMemberType0):
+            sender_member = self.sender_member.to_dict()
+        else:
+            sender_member = self.sender_member
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -407,6 +420,8 @@ class SentEmailSummary:
             field_dict["canceled_at"] = canceled_at
         if presence_control is not UNSET:
             field_dict["presence_control"] = presence_control
+        if sender_member is not UNSET:
+            field_dict["sender_member"] = sender_member
 
         return field_dict
 
@@ -416,6 +431,7 @@ class SentEmailSummary:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.gate_denial import GateDenial
         from ..models.presence_control_type_0 import PresenceControlType0
+        from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -731,6 +747,26 @@ class SentEmailSummary:
         presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
 
 
+        def _parse_sender_member(data: object) -> None | SentEmailSummarySenderMemberType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                sender_member_type_0 = SentEmailSummarySenderMemberType0.from_dict(data)
+
+
+
+                return sender_member_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SentEmailSummarySenderMemberType0 | Unset, data)
+
+        sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
+
+
         sent_email_summary = cls(
             id=id,
             status=status,
@@ -764,6 +800,7 @@ class SentEmailSummary:
             scheduled_at=scheduled_at,
             canceled_at=canceled_at,
             presence_control=presence_control,
+            sender_member=sender_member,
         )
 
 

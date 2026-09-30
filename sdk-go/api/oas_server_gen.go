@@ -169,7 +169,9 @@ type Handler interface {
 	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
 	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-	//  and recipient-bound network contact admission.
+	//  and recipient-bound network contact admission. Save create_request_id before dispatch to recover
+	// an interrupted creation. Recovery returns the original current connection with recovered:true and
+	// invitation:null; it never replays a secret or rotates credentials.
 	//
 	// POST /agent-connections
 	CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
@@ -945,7 +947,9 @@ type Handler interface {
 	// Reconnection preserves the address and revokes previous credentials. Status responses contain no
 	// credentials. Runtime credentials allow address-scoped mail operations, organization note reads,
 	// own-address note writes, exact-address self-disconnect, network discovery when can_view is enabled,
-	//  and recipient-bound network contact admission.
+	//  and recipient-bound network contact admission. pending_only protects an already claimed
+	// credential. An ambiguous invitation response must not be retried automatically; invitation secrets
+	// are never replayed.
 	//
 	// POST /agent-connections/{address}/invitation
 	InviteAgentConnection(ctx context.Context, req *InviteAgentConnectionReq, params InviteAgentConnectionParams) (InviteAgentConnectionRes, error)
@@ -1225,6 +1229,16 @@ type Handler interface {
 	//
 	// POST /cli/login/poll
 	PollCliLogin(ctx context.Context, req *PollCliLoginInput) (PollCliLoginRes, error)
+	// ProvisionMemberAddress implements provisionMemberAddress operation.
+	//
+	// Provision or return this authenticated human member's stable managed address in this organization.
+	// API keys, connected agents and Functions cannot provision or impersonate humans. The owner
+	// explicitly chooses the address. Existing retained mail requires confirmation; reserved identities
+	// cannot be overridden. There is no target user input. An unavailable domain never silently changes
+	// the address.
+	//
+	// PUT /account/member-address
+	ProvisionMemberAddress(ctx context.Context, req *ProvisionMemberAddressReq) (ProvisionMemberAddressRes, error)
 	// PublishAgent implements publishAgent operation.
 	//
 	// Publish an agent into a registry.
@@ -1873,6 +1887,13 @@ type Handler interface {
 	//
 	// POST /domains/{id}/verify
 	VerifyDomain(ctx context.Context, params VerifyDomainParams) (VerifyDomainRes, error)
+	// Whoami implements whoami operation.
+	//
+	// Current authenticated identity. member_address is null for machine credentials or an unavailable
+	// member address.
+	//
+	// GET /whoami
+	Whoami(ctx context.Context) (WhoamiRes, error)
 }
 
 // Server implements http server based on OpenAPI v3 specification and

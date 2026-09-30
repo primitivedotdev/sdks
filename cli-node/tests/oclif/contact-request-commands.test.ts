@@ -136,6 +136,13 @@ function fixture() {
         ).toBeTruthy();
         return ok(state.recovered);
       }
+      if (path === "/v1/agent-networks/default/contact-admission")
+        return ok({
+          allowed: false,
+          allowed_since: null,
+          pending: false,
+          member_policy_required: false,
+        });
       if (path === `/v1/agent-contact-policy/${recipient}`)
         return ok(state.policy);
       if (path === `/v1/agent-contacts/${recipient}`) return ok(state.rows);

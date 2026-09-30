@@ -176,6 +176,14 @@ export type AgentNetworkContactAdmission = {
      * Earliest received_at eligible under the current membership and connection state.
      */
     allowed_since: string | null;
+    /**
+     * Reserved human sender policy applies, not authorship proof. If true, allowed/pending is final and contact permission cannot bypass it. Check before contact shortcuts.
+     */
+    member_policy_required: boolean;
+    /**
+     * Recipient-relative relation derived only from current exact delivered-email proof. Historical sender_member metadata does not establish this relation.
+     */
+    sender_relation?: 'owner' | 'member';
 };
 
 /**
@@ -1795,6 +1803,14 @@ export type EmailSummary = {
      *
      */
     automated_reasons: Array<string>;
+    /**
+     * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
+     */
+    sender_member?: {
+        address: string;
+        user_id: string;
+        name: string | null;
+    } | null;
 };
 
 export type EmailSearchHighlights = {
@@ -2110,6 +2126,14 @@ export type EmailDetail = {
      *
      */
     automated_reasons: Array<string>;
+    /**
+     * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
+     */
+    sender_member?: {
+        address: string;
+        user_id: string;
+        name: string | null;
+    } | null;
 };
 
 export type EmailDetailReply = {
@@ -2329,6 +2353,14 @@ export type ThreadMessage = {
      * received_at for inbound, created_at for outbound.
      */
     timestamp?: string | null;
+    /**
+     * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
+     */
+    sender_member?: {
+        address: string;
+        user_id: string;
+        name: string | null;
+    } | null;
 };
 
 /**
@@ -2402,6 +2434,14 @@ export type ConversationMessage = {
      */
     timestamp?: string | null;
     presence_control?: PresenceControl;
+    /**
+     * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
+     */
+    sender_member?: {
+        address: string;
+        user_id: string;
+        name: string | null;
+    } | null;
 };
 
 export type SendMailAttachment = {
@@ -2811,6 +2851,14 @@ export type SentEmailSummary = {
      */
     canceled_at?: string | null;
     presence_control?: PresenceControl;
+    /**
+     * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
+     */
+    sender_member?: {
+        address: string;
+        user_id: string;
+        name: string | null;
+    } | null;
 };
 
 /**
@@ -3022,6 +3070,14 @@ export type SentEmailDetail = SentEmailSummary & {
     attachments_download_available?: boolean;
 } & {
     presence_control?: PresenceControl;
+    /**
+     * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
+     */
+    sender_member?: {
+        address: string;
+        user_id: string;
+        name: string | null;
+    } | null;
 };
 
 /**
@@ -4949,6 +5005,37 @@ export type PresenceProfile = {
     return_address: string;
 };
 
+export type MemberAddress = {
+    address: string;
+    name: string | null;
+};
+
+/**
+ * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
+ */
+export type MemberSender = {
+    address: string;
+    user_id: string;
+    name: string | null;
+};
+
+export type CallerIdentity = {
+    org_id: string;
+    user_id: string;
+    role: string;
+    request_id: string;
+    auth_method: string | null;
+    key_id: string | null;
+    member_address: {
+        address: string;
+        name: string | null;
+    } | null;
+    /**
+     * Suggested personal address; nothing is assigned until explicitly saved.
+     */
+    member_address_suggestion: string | null;
+};
+
 /**
  * The agent's email address, URL-encoded in the path.
  */
@@ -6198,6 +6285,10 @@ export type ListEmailsData = {
          *
          */
         automated?: 'true' | 'false';
+        /**
+         * Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with existing filters and cursors; does not search message text.
+         */
+        recipient?: string;
     };
     url: '/emails';
 };
@@ -8611,6 +8702,10 @@ export type ListAgentConnectionsData = {
          * cursor for agent connections.
          */
         cursor?: string;
+        /**
+         * owner for agent connections.
+         */
+        owner?: 'self';
     };
     url: '/agent-connections';
 };
@@ -8680,10 +8775,14 @@ export type CreateAgentConnectionData = {
         address?: string;
         owner_address?: string;
         ownership_kind?: 'personal' | 'shared';
+        /**
+         * Stable request UUID saved before creating this agent. Replay recovers the original current connection without returning or rotating an invitation.
+         */
+        create_request_id?: string;
     };
     headers?: {
         /**
-         * Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+         * Optional compatibility header. This operation does not guarantee response replay or safe retries through this header. Use the operation's documented recovery flow after an uncertain response.
          */
         'Idempotency-Key'?: string;
     };
@@ -8747,6 +8846,24 @@ export type CreateAgentConnectionResponses = {
                 claim_url: string;
                 expires_at: string;
             };
+        } | {
+            connection: {
+                address: string;
+                name: string;
+                owner_address: string;
+                status: 'pending' | 'claimed' | 'connected' | 'revoked';
+                created_at: string;
+                updated_at: string;
+                claimed_at: string | null;
+                verified_at: string | null;
+                last_seen_at: string | null;
+                ownership_kind: 'personal' | 'shared' | 'legacy_unknown';
+                owner_user_id: string | null;
+                owner_active: boolean | null;
+                presence?: AgentPresence;
+            };
+            recovered: boolean;
+            invitation: unknown;
         };
     };
 };
@@ -8755,11 +8872,14 @@ export type CreateAgentConnectionResponse = CreateAgentConnectionResponses[keyof
 
 export type InviteAgentConnectionData = {
     body: {
-        [key: string]: never;
+        /**
+         * Issue setup only while this exact connection is pending. A claimed, connected or revoked connection returns connection_already_claimed without changing its credential.
+         */
+        pending_only?: boolean;
     };
     headers?: {
         /**
-         * Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+         * Optional compatibility header. This operation does not guarantee response replay or safe retries through this header. Use the operation's documented recovery flow after an uncertain response.
          */
         'Idempotency-Key'?: string;
     };
@@ -8971,7 +9091,7 @@ export type ClaimAgentConnectionData = {
     };
     headers?: {
         /**
-         * Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+         * Optional compatibility header. This operation does not guarantee response replay or safe retries through this header. Use the operation's documented recovery flow after an uncertain response.
          */
         'Idempotency-Key'?: string;
     };
@@ -12538,3 +12658,72 @@ export type PutAgentContactPolicyResponses = {
 };
 
 export type PutAgentContactPolicyResponse = PutAgentContactPolicyResponses[keyof PutAgentContactPolicyResponses];
+
+export type WhoamiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/whoami';
+};
+
+export type WhoamiErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type WhoamiError = WhoamiErrors[keyof WhoamiErrors];
+
+export type WhoamiResponses = {
+    /**
+     * Success
+     */
+    200: SuccessEnvelope & {
+        data: CallerIdentity;
+    };
+};
+
+export type WhoamiResponse = WhoamiResponses[keyof WhoamiResponses];
+
+export type ProvisionMemberAddressData = {
+    body: {
+        address: string;
+        confirm_existing_mail?: boolean;
+    };
+    path?: never;
+    query?: never;
+    url: '/account/member-address';
+};
+
+export type ProvisionMemberAddressErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * The request conflicts with the current state of the resource
+     */
+    409: ErrorResponse;
+};
+
+export type ProvisionMemberAddressError = ProvisionMemberAddressErrors[keyof ProvisionMemberAddressErrors];
+
+export type ProvisionMemberAddressResponses = {
+    /**
+     * Success
+     */
+    200: SuccessEnvelope & {
+        data: MemberAddress;
+    };
+};
+
+export type ProvisionMemberAddressResponse = ProvisionMemberAddressResponses[keyof ProvisionMemberAddressResponses];

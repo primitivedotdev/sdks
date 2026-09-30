@@ -133,7 +133,8 @@ def sync_detailed(
     preserves the address and revokes previous credentials. Status responses contain no credentials.
     Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    bound network contact admission. pending_only protects an already claimed credential. An ambiguous
+    invitation response must not be retried automatically; invitation secrets are never replayed.
 
     Args:
         address (str):
@@ -182,7 +183,8 @@ def sync(
     preserves the address and revokes previous credentials. Status responses contain no credentials.
     Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    bound network contact admission. pending_only protects an already claimed credential. An ambiguous
+    invitation response must not be retried automatically; invitation secrets are never replayed.
 
     Args:
         address (str):
@@ -226,7 +228,8 @@ async def asyncio_detailed(
     preserves the address and revokes previous credentials. Status responses contain no credentials.
     Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    bound network contact admission. pending_only protects an already claimed credential. An ambiguous
+    invitation response must not be retried automatically; invitation secrets are never replayed.
 
     Args:
         address (str):
@@ -275,7 +278,8 @@ async def asyncio(
     preserves the address and revokes previous credentials. Status responses contain no credentials.
     Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    bound network contact admission. pending_only protects an already claimed credential. An ambiguous
+    invitation response must not be retried automatically; invitation secrets are never replayed.
 
     Args:
         address (str):

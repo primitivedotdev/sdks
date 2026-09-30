@@ -131,7 +131,9 @@ def sync_detailed(
     preserves the address and revokes previous credentials. Status responses contain no credentials.
     Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    bound network contact admission. Save create_request_id before dispatch to recover an interrupted
+    creation. Recovery returns the original current connection with recovered:true and invitation:null;
+    it never replays a secret or rotates credentials.
 
     Args:
         idempotency_key (str | Unset):
@@ -177,7 +179,9 @@ def sync(
     preserves the address and revokes previous credentials. Status responses contain no credentials.
     Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    bound network contact admission. Save create_request_id before dispatch to recover an interrupted
+    creation. Recovery returns the original current connection with recovered:true and invitation:null;
+    it never replays a secret or rotates credentials.
 
     Args:
         idempotency_key (str | Unset):
@@ -218,7 +222,9 @@ async def asyncio_detailed(
     preserves the address and revokes previous credentials. Status responses contain no credentials.
     Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    bound network contact admission. Save create_request_id before dispatch to recover an interrupted
+    creation. Recovery returns the original current connection with recovered:true and invitation:null;
+    it never replays a secret or rotates credentials.
 
     Args:
         idempotency_key (str | Unset):
@@ -264,7 +270,9 @@ async def asyncio(
     preserves the address and revokes previous credentials. Status responses contain no credentials.
     Runtime credentials allow address-scoped mail operations, organization note reads, own-address note
     writes, exact-address self-disconnect, network discovery when can_view is enabled, and recipient-
-    bound network contact admission.
+    bound network contact admission. Save create_request_id before dispatch to recover an interrupted
+    creation. Recovery returns the original current connection with recovered:true and invitation:null;
+    it never replays a secret or rotates credentials.
 
     Args:
         idempotency_key (str | Unset):

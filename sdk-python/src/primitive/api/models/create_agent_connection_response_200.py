@@ -11,7 +11,8 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.create_agent_connection_response_200_data import CreateAgentConnectionResponse200Data
+  from ..models.create_agent_connection_response_200_data_type_0 import CreateAgentConnectionResponse200DataType0
+  from ..models.create_agent_connection_response_200_data_type_1 import CreateAgentConnectionResponse200DataType1
 
 
 
@@ -26,11 +27,11 @@ class CreateAgentConnectionResponse200:
     """
         Attributes:
             success (bool):
-            data (CreateAgentConnectionResponse200Data):
+            data (CreateAgentConnectionResponse200DataType0 | CreateAgentConnectionResponse200DataType1):
      """
 
     success: bool
-    data: CreateAgentConnectionResponse200Data
+    data: CreateAgentConnectionResponse200DataType0 | CreateAgentConnectionResponse200DataType1
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,10 +39,16 @@ class CreateAgentConnectionResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_agent_connection_response_200_data import CreateAgentConnectionResponse200Data
+        from ..models.create_agent_connection_response_200_data_type_0 import CreateAgentConnectionResponse200DataType0
+        from ..models.create_agent_connection_response_200_data_type_1 import CreateAgentConnectionResponse200DataType1
         success = self.success
 
-        data = self.data.to_dict()
+        data: dict[str, Any]
+        if isinstance(self.data, CreateAgentConnectionResponse200DataType0):
+            data = self.data.to_dict()
+        else:
+            data = self.data.to_dict()
+
 
 
         field_dict: dict[str, Any] = {}
@@ -57,13 +64,31 @@ class CreateAgentConnectionResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_agent_connection_response_200_data import CreateAgentConnectionResponse200Data
+        from ..models.create_agent_connection_response_200_data_type_0 import CreateAgentConnectionResponse200DataType0
+        from ..models.create_agent_connection_response_200_data_type_1 import CreateAgentConnectionResponse200DataType1
         d = dict(src_dict)
         success = d.pop("success")
 
-        data = CreateAgentConnectionResponse200Data.from_dict(d.pop("data"))
+        def _parse_data(data: object) -> CreateAgentConnectionResponse200DataType0 | CreateAgentConnectionResponse200DataType1:
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                data_type_0 = CreateAgentConnectionResponse200DataType0.from_dict(data)
 
 
+
+                return data_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            if not isinstance(data, dict):
+                raise TypeError()
+            data_type_1 = CreateAgentConnectionResponse200DataType1.from_dict(data)
+
+
+
+            return data_type_1
+
+        data = _parse_data(d.pop("data"))
 
 
         create_agent_connection_response_200 = cls(

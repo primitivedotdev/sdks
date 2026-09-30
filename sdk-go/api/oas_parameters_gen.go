@@ -441,9 +441,8 @@ func decodeCheckDomainDnsParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // ClaimAgentConnectionParams is parameters of claimAgentConnection operation.
 type ClaimAgentConnectionParams struct {
-	// Optional client-supplied idempotency key. Retrying a request with the same key returns the
-	// original result instead of performing the action a second time; if omitted the server derives one
-	// from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+	// Optional compatibility header. This operation does not guarantee response replay or safe retries
+	// through this header. Use the operation's documented recovery flow after an uncertain response.
 	IdempotencyKey OptString `json:",omitempty,omitzero"`
 }
 
@@ -599,9 +598,8 @@ func decodeCompleteWebhookEventParams(args [1]string, argsEscaped bool, r *http.
 
 // CreateAgentConnectionParams is parameters of createAgentConnection operation.
 type CreateAgentConnectionParams struct {
-	// Optional client-supplied idempotency key. Retrying a request with the same key returns the
-	// original result instead of performing the action a second time; if omitted the server derives one
-	// from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+	// Optional compatibility header. This operation does not guarantee response replay or safe retries
+	// through this header. Use the operation's documented recovery flow after an uncertain response.
 	IdempotencyKey OptString `json:",omitempty,omitzero"`
 }
 
@@ -4749,9 +4747,8 @@ func decodeInstallTemplateParams(args [1]string, argsEscaped bool, r *http.Reque
 type InviteAgentConnectionParams struct {
 	// Address for agent connections.
 	Address string
-	// Optional client-supplied idempotency key. Retrying a request with the same key returns the
-	// original result instead of performing the action a second time; if omitted the server derives one
-	// from the canonical payload hash. Safe to retry network failures without duplicating side effects.
+	// Optional compatibility header. This operation does not guarantee response replay or safe retries
+	// through this header. Use the operation's documented recovery flow after an uncertain response.
 	IdempotencyKey OptString `json:",omitempty,omitzero"`
 }
 
@@ -4917,6 +4914,8 @@ type ListAgentConnectionsParams struct {
 	Limit OptInt `json:",omitempty,omitzero"`
 	// Cursor for agent connections.
 	Cursor OptString `json:",omitempty,omitzero"`
+	// Owner for agent connections.
+	Owner OptListAgentConnectionsOwner `json:",omitempty,omitzero"`
 }
 
 func unpackListAgentConnectionsParams(packed middleware.Parameters) (params ListAgentConnectionsParams) {
@@ -4936,6 +4935,15 @@ func unpackListAgentConnectionsParams(packed middleware.Parameters) (params List
 		}
 		if v, ok := packed[key]; ok {
 			params.Cursor = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "owner",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Owner = v.(OptListAgentConnectionsOwner)
 		}
 	}
 	return params
@@ -5078,6 +5086,62 @@ func decodeListAgentConnectionsParams(args [0]string, argsEscaped bool, r *http.
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "cursor",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: owner.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "owner",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotOwnerVal ListAgentConnectionsOwner
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotOwnerVal = ListAgentConnectionsOwner(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Owner.SetTo(paramsDotOwnerVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Owner.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "owner",
 			In:   "query",
 			Err:  err,
 		}
@@ -6472,6 +6536,9 @@ type ListEmailsParams struct {
 	// older mail may lack them. This is loop and noise protection, not
 	// sender authentication.
 	Automated OptListEmailsAutomated `json:",omitempty,omitzero"`
+	// Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with
+	// existing filters and cursors; does not search message text.
+	Recipient OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsParams) {
@@ -6572,6 +6639,15 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 		}
 		if v, ok := packed[key]; ok {
 			params.Automated = v.(OptListEmailsAutomated)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "recipient",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Recipient = v.(OptString)
 		}
 	}
 	return params
@@ -7180,6 +7256,74 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "automated",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: recipient.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "recipient",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotRecipientVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotRecipientVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Recipient.SetTo(paramsDotRecipientVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Recipient.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     320,
+							MaxLengthSet:  true,
+							Email:         true,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "recipient",
 			In:   "query",
 			Err:  err,
 		}

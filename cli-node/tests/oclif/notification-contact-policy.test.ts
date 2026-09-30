@@ -80,10 +80,12 @@ describe("contact notification policy", () => {
       allowed: boolean;
       allowed_since: string | null;
       pending: boolean;
+      member_policy_required: boolean;
     } = {
       allowed: true,
       allowed_since: activation,
       pending: false,
+      member_policy_required: false,
     };
     const readNetworkAdmission = vi.fn(async () => decision);
     const document = emptyContactPolicy(recipient);
@@ -96,7 +98,9 @@ describe("contact notification policy", () => {
     expect(
       await policy.admit(sender, "2026-09-01T09:59:59.999Z", signal, inboundId),
     ).toBeNull();
-    expect(await policy.admit(sender, received, signal)).toBeNull();
+    await expect(policy.admit(sender, received, signal)).rejects.toThrow(
+      "unavailable",
+    );
     expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
     const admitted = await policy.admit(sender, received, signal, inboundId);
     expect(admitted).toMatchObject({
@@ -107,11 +111,21 @@ describe("contact notification policy", () => {
     });
     if (!admitted) throw new Error("Expected network admission");
     (await policy.recheck(admitted, signal))();
-    decision = { allowed: false, allowed_since: null, pending: false };
+    decision = {
+      allowed: false,
+      allowed_since: null,
+      pending: false,
+      member_policy_required: false,
+    };
     await expect(policy.recheck(admitted, signal)).rejects.toThrow(
       "changed or expired",
     );
-    decision = { allowed: true, allowed_since: received, pending: false };
+    decision = {
+      allowed: true,
+      allowed_since: received,
+      pending: false,
+      member_policy_required: false,
+    };
     await expect(policy.recheck(admitted, signal)).rejects.toThrow(
       "changed or expired",
     );
@@ -127,6 +141,7 @@ describe("contact notification policy", () => {
       allowed: true,
       allowed_since: activation,
       pending: false,
+      member_policy_required: false,
     }));
     const document = emptyContactPolicy(recipient);
     const policy = createNotificationContactPolicy({
@@ -147,7 +162,7 @@ describe("contact notification policy", () => {
     expect(
       await policy.admit(sender, received, signal, randomUUID()),
     ).toBeNull();
-    expect(readNetworkAdmission).not.toHaveBeenCalled();
+    expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
   });
 
   it("leaves an exact inbound email pending until delivery evidence settles", async () => {
@@ -156,6 +171,7 @@ describe("contact notification policy", () => {
       allowed: false,
       allowed_since: null as string | null,
       pending: true,
+      member_policy_required: false,
     };
     const readNetworkAdmission = vi.fn(async () => decision);
     const policy = createNotificationContactPolicy({
@@ -167,7 +183,12 @@ describe("contact notification policy", () => {
     await expect(
       policy.admit(sender, received, signal, inboundId),
     ).rejects.toBeInstanceOf(NetworkAdmissionPendingError);
-    decision = { allowed: true, allowed_since: activation, pending: false };
+    decision = {
+      allowed: true,
+      allowed_since: activation,
+      pending: false,
+      member_policy_required: false,
+    };
     expect(
       await policy.admit(sender, received, signal, inboundId),
     ).toMatchObject({ kind: "allowed", source: "network", emailId: inboundId });
@@ -562,7 +583,7 @@ it("does not fall back to exact membership when the policy read is unavailable",
 });
 
 describe("independent network and contact admission", () => {
-  it("keeps owner-enabled contact request intake when the network lookup fails", async () => {
+  it("holds contact requests when exact-mail proof is unavailable", async () => {
     const f = requestFixture();
     const readNetworkAdmission = vi.fn(async () => {
       throw new ContactPolicyReadRetryError();
@@ -574,17 +595,9 @@ describe("independent network and contact admission", () => {
       readNetworkAdmission,
       contactRequests: true,
     });
-    const admission = await policy.admit(
-      sender,
-      received,
-      signal,
-      randomUUID(),
-    );
-    expect(admission).toMatchObject({ kind: "request" });
-    expect(admission?.source).toBeUndefined();
-    expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
-    if (!admission) throw new Error("Expected contact request admission");
-    (await policy.recheck(admission, signal))();
+    await expect(
+      policy.admit(sender, received, signal, randomUUID()),
+    ).rejects.toBeInstanceOf(ContactPolicyReadRetryError);
     expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
   });
 
@@ -613,6 +626,7 @@ describe("independent network and contact admission", () => {
         allowed: true,
         allowed_since: activation,
         pending: false,
+        member_policy_required: false,
       }),
     });
     expect(
@@ -637,6 +651,7 @@ describe("independent network and contact admission", () => {
       allowed: false,
       allowed_since: null,
       pending: false,
+      member_policy_required: false,
     }));
     const readPolicy = vi.fn(async () => emptyContactPolicy(recipient));
     const policy = createNotificationContactPolicy({
@@ -651,5 +666,177 @@ describe("independent network and contact admission", () => {
     ).toBeNull();
     expect(readNetworkAdmission).toHaveBeenCalledTimes(1);
     expect(readPolicy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("reserved human sender admission", () => {
+  function memberFixture(relation: "owner" | "member" = "member") {
+    const emailId = randomUUID();
+    const decision = {
+      allowed: true,
+      allowed_since: activation as string | null,
+      pending: false,
+      member_policy_required: true,
+      sender_relation: relation,
+    };
+    const readNetworkAdmission = vi.fn(async () => decision);
+    const document = emptyContactPolicy(recipient);
+    const membership = row();
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => document,
+      readPage: async () => ({ data: [membership], cursor: null }),
+      readNetworkAdmission,
+    });
+    return {
+      emailId,
+      decision,
+      readNetworkAdmission,
+      policy,
+      document,
+      membership,
+    };
+  }
+  it.each([
+    "owner",
+    "member",
+  ] as const)("carries verified %s authority and rechecks it before dispatch", async (relation) => {
+    const f = memberFixture(relation);
+    const admitted = await f.policy.admit(sender, received, signal, f.emailId);
+    expect(admitted).toMatchObject({
+      kind: "allowed",
+      source: "network",
+      senderRelation: relation,
+      emailId: f.emailId,
+    });
+    if (!admitted) throw new Error("Expected member admission");
+    (await f.policy.recheck(admitted, signal))();
+    f.decision.allowed = false;
+    f.decision.allowed_since = null;
+    await expect(f.policy.recheck(admitted, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+    expect(
+      await f.policy.admit(sender, received, signal, f.emailId),
+    ).toBeNull();
+    expect(
+      await f.policy.admitResponse(sender, received, signal, f.emailId),
+    ).toBeNull();
+  });
+  it.each([
+    "owner",
+    "member",
+  ] as const)("respects local mutes for verified %s senders, including queued replies", async (relation) => {
+    for (const mute of ["membership", "agent", "org"] as const) {
+      const f = memberFixture(relation);
+      const admitted = await f.policy.admitResponse(
+        sender,
+        received,
+        signal,
+        f.emailId,
+      );
+      if (!admitted) throw new Error("Expected initial member admission");
+      if (mute === "membership") {
+        Object.assign(f.membership, {
+          notify: false,
+          notify_since: null,
+          notification_generation: null,
+        });
+      } else {
+        f.document[`${mute}_policy`].version = randomUUID();
+        f.document[`${mute}_policy`].updated_at = activation;
+        f.document[`${mute}_policy`].rules = [
+          {
+            pattern: sender,
+            effect: "silence",
+            notify_since: null,
+            notification_generation: null,
+          },
+        ];
+      }
+      await expect(f.policy.recheck(admitted, signal)).rejects.toThrow(
+        "changed or expired",
+      );
+      expect(
+        await f.policy.admit(sender, received, signal, f.emailId),
+      ).toBeNull();
+      expect(
+        await f.policy.admitResponse(sender, received, signal, f.emailId),
+      ).toBeNull();
+      expect(f.readNetworkAdmission).toHaveBeenCalled();
+    }
+  });
+  it("does not let an explicit contact bypass a muted or revoked member sender", async () => {
+    const f = memberFixture("owner");
+    f.decision.allowed = false;
+    f.decision.allowed_since = null;
+    expect(
+      await f.policy.admit(sender, received, signal, f.emailId),
+    ).toBeNull();
+    expect(
+      await f.policy.admitResponse(sender, received, signal, f.emailId),
+    ).toBeNull();
+    expect(f.readNetworkAdmission).toHaveBeenCalledTimes(2);
+  });
+  it("refuses authority changes while the notification is queued", async () => {
+    const f = memberFixture("owner");
+    const admitted = await f.policy.admitResponse(
+      sender,
+      received,
+      signal,
+      f.emailId,
+    );
+    if (!admitted) throw new Error("Expected owner reply");
+    f.decision.sender_relation = "member";
+    await expect(f.policy.recheck(admitted, signal)).rejects.toThrow(
+      "changed or expired",
+    );
+  });
+  it.each([
+    {},
+    { member_policy_required: true },
+    { member_policy_required: false, sender_relation: "owner" },
+  ])("refuses malformed authority even for an approved contact: %j", async (extra) => {
+    const policy = createNotificationContactPolicy({
+      recipient,
+      readPolicy: async () => emptyContactPolicy(recipient),
+      readPage: async () => ({ data: [row()], cursor: null }),
+      readNetworkAdmission: async () =>
+        ({
+          allowed: true,
+          allowed_since: activation,
+          pending: false,
+          ...extra,
+        }) as never,
+    });
+    await expect(
+      policy.admit(sender, received, signal, randomUUID()),
+    ).rejects.toThrow("unavailable");
+  });
+  it("holds a pending reserved sender instead of taking the approved-contact shortcut", async () => {
+    const f = memberFixture();
+    f.decision.allowed = false;
+    f.decision.allowed_since = null;
+    f.decision.pending = true;
+    await expect(
+      f.policy.admit(sender, received, signal, f.emailId),
+    ).rejects.toBeInstanceOf(NetworkAdmissionPendingError);
+  });
+  it("keeps ordinary external contact and solicited reply behavior after exact-mail classification", async () => {
+    const f = memberFixture();
+    f.decision.member_policy_required = false;
+    delete (f.decision as Partial<typeof f.decision>).sender_relation;
+    const allowed = await f.policy.admit(sender, received, signal, f.emailId);
+    expect(allowed).toMatchObject({ kind: "allowed", emailId: f.emailId });
+    expect(allowed?.senderRelation).toBeUndefined();
+    const reply = await f.policy.admitResponse(
+      sender,
+      received,
+      signal,
+      f.emailId,
+    );
+    expect(reply).toMatchObject({ kind: "response", emailId: f.emailId });
+    if (!reply) throw new Error("Expected ordinary reply");
+    (await f.policy.recheck(reply, signal))();
   });
 });

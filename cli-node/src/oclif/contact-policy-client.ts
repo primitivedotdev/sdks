@@ -70,8 +70,6 @@ export function apiContactPolicy(
             throwOnError: false,
           });
           signal.throwIfAborted();
-          if ([403, 404, 422].includes(result.response?.status ?? 0))
-            return { allowed: false, allowed_since: null, pending: false };
           if (
             result.error ||
             result.data?.success !== true ||
@@ -82,6 +80,13 @@ export function apiContactPolicy(
           if (
             typeof decision.allowed !== "boolean" ||
             typeof decision.pending !== "boolean" ||
+            typeof decision.member_policy_required !== "boolean" ||
+            (decision.member_policy_required &&
+              decision.allowed &&
+              !decision.sender_relation) ||
+            (decision.sender_relation !== undefined &&
+              (!decision.member_policy_required ||
+                !["owner", "member"].includes(decision.sender_relation))) ||
             (decision.pending && decision.allowed) ||
             (decision.pending && decision.allowed_since !== null) ||
             (decision.allowed && typeof decision.allowed_since !== "string") ||

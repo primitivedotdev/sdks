@@ -63,13 +63,17 @@ def test_public_connection_create_serializes_explicit_ownership() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
         assert request.url.path == "/agent-connections"
+        assert request.headers["Idempotency-Key"] == "compatibility-key"
         assert json.loads(request.content) == {
             "name": "Agent",
             "ownership_kind": "personal",
         }
         return httpx.Response(
             400,
-            json={"success": False, "error": {"code": "validation_error", "message": "Invalid request"}},
+            json={
+                "success": False,
+                "error": {"code": "validation_error", "message": "Invalid request"},
+            },
         )
 
     with AuthenticatedClient(
@@ -79,9 +83,57 @@ def test_public_connection_create_serializes_explicit_ownership() -> None:
     ) as client:
         result = create_agent_connection.sync(
             client=client,
+            idempotency_key="compatibility-key",
             body=CreateAgentConnectionBody(
                 name="Agent",
                 ownership_kind=CreateAgentConnectionBodyOwnershipKind.PERSONAL,
             ),
         )
     assert result is not None
+
+
+def test_recovered_connection_response_keeps_null_invitation() -> None:
+    from primitive.api.models.create_agent_connection_response_200 import (
+        CreateAgentConnectionResponse200,
+    )
+    from primitive.api.models.create_agent_connection_response_200_data_type_1 import (
+        CreateAgentConnectionResponse200DataType1,
+    )
+
+    connection = {
+        "address": "agent@example.test",
+        "name": "Agent",
+        "owner_address": "owner@example.test",
+        "status": "claimed",
+        "created_at": "2026-09-29T00:00:00Z",
+        "updated_at": "2026-09-29T00:00:00Z",
+        "claimed_at": None,
+        "verified_at": None,
+        "last_seen_at": None,
+        "ownership_kind": "personal",
+        "owner_user_id": "user-1",
+        "owner_active": True,
+    }
+    payload = {
+        "success": True,
+        "data": {"connection": connection, "recovered": True, "invitation": None},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        return httpx.Response(200, json=payload)
+
+    with AuthenticatedClient(
+        base_url="https://example.test",
+        token="test-token",
+        httpx_args={"transport": httpx.MockTransport(handler)},
+    ) as client:
+        result = create_agent_connection.sync(
+            client=client, body=CreateAgentConnectionBody(name="Agent")
+        )
+    assert isinstance(result, CreateAgentConnectionResponse200)
+    assert isinstance(result.data, CreateAgentConnectionResponse200DataType1)
+    assert result.data.recovered is True
+    assert result.data.invitation is None
+    assert result.data.connection.address == "agent@example.test"
+    assert result.to_dict()["data"]["invitation"] is None

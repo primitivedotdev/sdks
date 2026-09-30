@@ -134,3 +134,27 @@ it("agent connect --resume retries only failed hook installation", async () => {
     sessionId: session,
   });
 });
+
+it("agent enroll parses the exact pending-only continuation flag without changing session identity", async () => {
+  vi.spyOn(AgentEnrollCommand.prototype, "log").mockImplementation(
+    () => undefined,
+  );
+  mocks.enrollAgent.mockResolvedValue({
+    identity: {
+      profileName: `session-${session}`,
+      agentAddress: "enrolled@example.com",
+    },
+    connection: { status: "connected" },
+    verification: { state: "reply_submitted" },
+    receiving: { state: "healthy" },
+    contactRequestPolicy: "not_requested",
+  });
+  await AgentEnrollCommand.run(
+    ["--session", session, "--name", "Research", "--continue-setup", "--json"],
+    { root },
+  );
+  expect(mocks.enrollAgent).toHaveBeenCalledWith(
+    expect.objectContaining({ session, name: "Research", continueSetup: true }),
+  );
+  expect(mocks.installClaudeWakeHook).not.toHaveBeenCalled();
+});

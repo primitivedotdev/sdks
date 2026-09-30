@@ -380,6 +380,7 @@ export async function runSharedNotificationListen(
           sender,
           detail.received_at,
           signal,
+          detail.id,
         );
       if (status && admission?.kind === "request") return true;
       if (
@@ -418,6 +419,7 @@ export async function runSharedNotificationListen(
                 requested.peer,
                 detail.received_at,
                 signal,
+                detail.id,
               );
           }
         }
@@ -437,6 +439,7 @@ export async function runSharedNotificationListen(
             followed.peer,
             detail.received_at,
             signal,
+            detail.id,
           );
       }
       if (admissionRetry && admission?.kind !== "response")
@@ -527,6 +530,9 @@ export async function runSharedNotificationListen(
                 {
                   sender: admission.sender,
                   contactRequest: admission.kind === "request",
+                  ...(admission.senderRelation
+                    ? { senderRelation: admission.senderRelation }
+                    : {}),
                   recheck: async (nextSignal) => {
                     const allowed = await contactPolicy.recheck(
                       admission,

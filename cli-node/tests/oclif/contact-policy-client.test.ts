@@ -150,10 +150,10 @@ function fixture(operation: string, failure: number | string) {
   };
 }
 
-describe("network route refusal preserves independent reply admission", () => {
+describe("exact-mail proof failures hold all dispatch", () => {
   it.each([
     403, 404, 422,
-  ])("denies network wake on %s without terminating a solicited reply", async (status) => {
+  ])("holds unsolicited and solicited mail on %s", async (status) => {
     const requests = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         const path = new URL(new Request(input, init).url).pathname;
@@ -183,17 +183,21 @@ describe("network route refusal preserves independent reply admission", () => {
     });
     const policy = apiContactPolicy(api.client, recipient);
     const signal = new AbortController().signal;
-    expect(
-      await policy.admit(
+    await expect(
+      policy.admit(
         sender,
         receivedAt,
         signal,
         "11111111-1111-4111-8111-111111111111",
       ),
-    ).toBeNull();
-    const reply = await policy.admitResponse(sender, receivedAt, signal);
-    expect(reply).toMatchObject({ kind: "response", sender });
-    if (!reply) throw new Error("Expected independently authorized response");
-    (await policy.recheck(reply, signal))();
+    ).rejects.toThrow("could not be read");
+    await expect(
+      policy.admitResponse(
+        sender,
+        receivedAt,
+        signal,
+        "11111111-1111-4111-8111-111111111111",
+      ),
+    ).rejects.toThrow("could not be read");
   });
 });

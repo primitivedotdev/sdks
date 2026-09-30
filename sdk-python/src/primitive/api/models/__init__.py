@@ -18,6 +18,7 @@ from .agent_contact_policy_override import AgentContactPolicyOverride
 from .agent_network import AgentNetwork
 from .agent_network_contact_admission import AgentNetworkContactAdmission
 from .agent_network_contact_admission_input import AgentNetworkContactAdmissionInput
+from .agent_network_contact_admission_sender_relation import AgentNetworkContactAdmissionSenderRelation
 from .agent_network_member import AgentNetworkMember
 from .agent_network_member_owner_type_0 import AgentNetworkMemberOwnerType0
 from .agent_network_member_ownership_kind import AgentNetworkMemberOwnershipKind
@@ -33,6 +34,8 @@ from .agent_signup_verify_result_auth_method import AgentSignupVerifyResultAuthM
 from .agent_signup_verify_result_token_type import AgentSignupVerifyResultTokenType
 from .await_reply_response_200 import AwaitReplyResponse200
 from .await_reply_result import AwaitReplyResult
+from .caller_identity import CallerIdentity
+from .caller_identity_member_address_type_0 import CallerIdentityMemberAddressType0
 from .cancel_sent_email_response_200 import CancelSentEmailResponse200
 from .check_default_network_contact_admission_response_200 import CheckDefaultNetworkContactAdmissionResponse200
 from .check_domain_dns_response_200 import CheckDomainDnsResponse200
@@ -79,6 +82,7 @@ from .conversation import Conversation
 from .conversation_message import ConversationMessage
 from .conversation_message_direction import ConversationMessageDirection
 from .conversation_message_role import ConversationMessageRole
+from .conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
 from .create_agent_account_input import CreateAgentAccountInput
 from .create_agent_account_response_200 import CreateAgentAccountResponse200
 from .create_agent_claim_link_input import CreateAgentClaimLinkInput
@@ -86,11 +90,15 @@ from .create_agent_claim_link_response_200 import CreateAgentClaimLinkResponse20
 from .create_agent_connection_body import CreateAgentConnectionBody
 from .create_agent_connection_body_ownership_kind import CreateAgentConnectionBodyOwnershipKind
 from .create_agent_connection_response_200 import CreateAgentConnectionResponse200
-from .create_agent_connection_response_200_data import CreateAgentConnectionResponse200Data
-from .create_agent_connection_response_200_data_connection import CreateAgentConnectionResponse200DataConnection
-from .create_agent_connection_response_200_data_connection_ownership_kind import CreateAgentConnectionResponse200DataConnectionOwnershipKind
-from .create_agent_connection_response_200_data_connection_status import CreateAgentConnectionResponse200DataConnectionStatus
-from .create_agent_connection_response_200_data_invitation import CreateAgentConnectionResponse200DataInvitation
+from .create_agent_connection_response_200_data_type_0 import CreateAgentConnectionResponse200DataType0
+from .create_agent_connection_response_200_data_type_0_connection import CreateAgentConnectionResponse200DataType0Connection
+from .create_agent_connection_response_200_data_type_0_connection_ownership_kind import CreateAgentConnectionResponse200DataType0ConnectionOwnershipKind
+from .create_agent_connection_response_200_data_type_0_connection_status import CreateAgentConnectionResponse200DataType0ConnectionStatus
+from .create_agent_connection_response_200_data_type_0_invitation import CreateAgentConnectionResponse200DataType0Invitation
+from .create_agent_connection_response_200_data_type_1 import CreateAgentConnectionResponse200DataType1
+from .create_agent_connection_response_200_data_type_1_connection import CreateAgentConnectionResponse200DataType1Connection
+from .create_agent_connection_response_200_data_type_1_connection_ownership_kind import CreateAgentConnectionResponse200DataType1ConnectionOwnershipKind
+from .create_agent_connection_response_200_data_type_1_connection_status import CreateAgentConnectionResponse200DataType1ConnectionStatus
 from .create_challenge_input import CreateChallengeInput
 from .create_challenge_input_network import CreateChallengeInputNetwork
 from .create_challenge_response_201 import CreateChallengeResponse201
@@ -191,6 +199,7 @@ from .email_detail import EmailDetail
 from .email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
 from .email_detail_awaiting import EmailDetailAwaiting
 from .email_detail_reply import EmailDetailReply
+from .email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
 from .email_search_facet_bucket import EmailSearchFacetBucket
 from .email_search_facets import EmailSearchFacets
 from .email_search_facets_has_attachment import EmailSearchFacetsHasAttachment
@@ -202,6 +211,7 @@ from .email_status import EmailStatus
 from .email_summary import EmailSummary
 from .email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
 from .email_summary_awaiting import EmailSummaryAwaiting
+from .email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
 from .email_webhook_status_type_1 import EmailWebhookStatusType1
 from .email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from .email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
@@ -300,6 +310,7 @@ from .invite_agent_connection_response_200_data_connection import InviteAgentCon
 from .invite_agent_connection_response_200_data_connection_ownership_kind import InviteAgentConnectionResponse200DataConnectionOwnershipKind
 from .invite_agent_connection_response_200_data_connection_status import InviteAgentConnectionResponse200DataConnectionStatus
 from .invite_agent_connection_response_200_data_invitation import InviteAgentConnectionResponse200DataInvitation
+from .list_agent_connections_owner import ListAgentConnectionsOwner
 from .list_agent_connections_response_200 import ListAgentConnectionsResponse200
 from .list_agent_connections_response_200_data_item import ListAgentConnectionsResponse200DataItem
 from .list_agent_connections_response_200_data_item_ownership_kind import ListAgentConnectionsResponse200DataItemOwnershipKind
@@ -341,6 +352,8 @@ from .list_templates_response_200 import ListTemplatesResponse200
 from .list_wake_authorizations_response_200 import ListWakeAuthorizationsResponse200
 from .list_wake_dispatches_response_200 import ListWakeDispatchesResponse200
 from .list_wake_schedules_response_200 import ListWakeSchedulesResponse200
+from .member_address import MemberAddress
+from .member_sender import MemberSender
 from .memory_json_value_type_5 import MemoryJsonValueType5
 from .memory_record import MemoryRecord
 from .memory_record_with_value import MemoryRecordWithValue
@@ -368,6 +381,8 @@ from .poll_cli_login_response_200 import PollCliLoginResponse200
 from .presence_control_type_0 import PresenceControlType0
 from .presence_control_type_0_status import PresenceControlType0Status
 from .presence_profile import PresenceProfile
+from .provision_member_address_body import ProvisionMemberAddressBody
+from .provision_member_address_response_200 import ProvisionMemberAddressResponse200
 from .publish_agent_input import PublishAgentInput
 from .publish_agent_response_200 import PublishAgentResponse200
 from .publish_agent_response_201 import PublishAgentResponse201
@@ -480,9 +495,11 @@ from .send_permission_your_domain_type import SendPermissionYourDomainType
 from .send_permissions_meta import SendPermissionsMeta
 from .sent_email_detail import SentEmailDetail
 from .sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
+from .sent_email_detail_sender_member_type_0 import SentEmailDetailSenderMemberType0
 from .sent_email_reschedule_input import SentEmailRescheduleInput
 from .sent_email_status import SentEmailStatus
 from .sent_email_summary import SentEmailSummary
+from .sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
 from .set_function_route_response_200 import SetFunctionRouteResponse200
 from .set_function_secret_input import SetFunctionSecretInput
 from .set_function_secret_response_200 import SetFunctionSecretResponse200
@@ -546,6 +563,7 @@ from .test_result import TestResult
 from .thread import Thread
 from .thread_message import ThreadMessage
 from .thread_message_direction import ThreadMessageDirection
+from .thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
 from .unpublish_agent_response_200 import UnpublishAgentResponse200
 from .unpublish_agent_response_200_data import UnpublishAgentResponse200Data
 from .unset_function_route_response_200 import UnsetFunctionRouteResponse200
@@ -591,6 +609,7 @@ from .wake_dispatch import WakeDispatch
 from .wake_schedule import WakeSchedule
 from .wake_schedule_args import WakeScheduleArgs
 from .webhook_secret import WebhookSecret
+from .whoami_response_200 import WhoamiResponse200
 from .x402_challenge import X402Challenge
 from .x402_challenge_network import X402ChallengeNetwork
 from .x402_challenge_status import X402ChallengeStatus
@@ -631,6 +650,7 @@ __all__ = (
     "AgentNetwork",
     "AgentNetworkContactAdmission",
     "AgentNetworkContactAdmissionInput",
+    "AgentNetworkContactAdmissionSenderRelation",
     "AgentNetworkMember",
     "AgentNetworkMemberOwnershipKind",
     "AgentNetworkMemberOwnerType0",
@@ -646,6 +666,8 @@ __all__ = (
     "AgentSignupVerifyResultTokenType",
     "AwaitReplyResponse200",
     "AwaitReplyResult",
+    "CallerIdentity",
+    "CallerIdentityMemberAddressType0",
     "CancelSentEmailResponse200",
     "CheckDefaultNetworkContactAdmissionResponse200",
     "CheckDomainDnsResponse200",
@@ -692,6 +714,7 @@ __all__ = (
     "ConversationMessage",
     "ConversationMessageDirection",
     "ConversationMessageRole",
+    "ConversationMessageSenderMemberType0",
     "CreateAgentAccountInput",
     "CreateAgentAccountResponse200",
     "CreateAgentClaimLinkInput",
@@ -699,11 +722,15 @@ __all__ = (
     "CreateAgentConnectionBody",
     "CreateAgentConnectionBodyOwnershipKind",
     "CreateAgentConnectionResponse200",
-    "CreateAgentConnectionResponse200Data",
-    "CreateAgentConnectionResponse200DataConnection",
-    "CreateAgentConnectionResponse200DataConnectionOwnershipKind",
-    "CreateAgentConnectionResponse200DataConnectionStatus",
-    "CreateAgentConnectionResponse200DataInvitation",
+    "CreateAgentConnectionResponse200DataType0",
+    "CreateAgentConnectionResponse200DataType0Connection",
+    "CreateAgentConnectionResponse200DataType0ConnectionOwnershipKind",
+    "CreateAgentConnectionResponse200DataType0ConnectionStatus",
+    "CreateAgentConnectionResponse200DataType0Invitation",
+    "CreateAgentConnectionResponse200DataType1",
+    "CreateAgentConnectionResponse200DataType1Connection",
+    "CreateAgentConnectionResponse200DataType1ConnectionOwnershipKind",
+    "CreateAgentConnectionResponse200DataType1ConnectionStatus",
     "CreateChallengeInput",
     "CreateChallengeInputNetwork",
     "CreateChallengeResponse201",
@@ -804,6 +831,7 @@ __all__ = (
     "EmailDetailAutomationHeadersType0",
     "EmailDetailAwaiting",
     "EmailDetailReply",
+    "EmailDetailSenderMemberType0",
     "EmailSearchFacetBucket",
     "EmailSearchFacets",
     "EmailSearchFacetsHasAttachment",
@@ -815,6 +843,7 @@ __all__ = (
     "EmailSummary",
     "EmailSummaryAutomationHeadersType0",
     "EmailSummaryAwaiting",
+    "EmailSummarySenderMemberType0",
     "EmailWebhookStatusType1",
     "EmailWebhookStatusType2Type1",
     "EmailWebhookStatusType3Type1",
@@ -913,6 +942,7 @@ __all__ = (
     "InviteAgentConnectionResponse200DataConnectionOwnershipKind",
     "InviteAgentConnectionResponse200DataConnectionStatus",
     "InviteAgentConnectionResponse200DataInvitation",
+    "ListAgentConnectionsOwner",
     "ListAgentConnectionsResponse200",
     "ListAgentConnectionsResponse200DataItem",
     "ListAgentConnectionsResponse200DataItemOwnershipKind",
@@ -954,6 +984,8 @@ __all__ = (
     "ListWakeAuthorizationsResponse200",
     "ListWakeDispatchesResponse200",
     "ListWakeSchedulesResponse200",
+    "MemberAddress",
+    "MemberSender",
     "MemoryJsonValueType5",
     "MemoryRecord",
     "MemoryRecordWithValue",
@@ -981,6 +1013,8 @@ __all__ = (
     "PresenceControlType0",
     "PresenceControlType0Status",
     "PresenceProfile",
+    "ProvisionMemberAddressBody",
+    "ProvisionMemberAddressResponse200",
     "PublishAgentInput",
     "PublishAgentResponse200",
     "PublishAgentResponse201",
@@ -1093,9 +1127,11 @@ __all__ = (
     "SendPermissionYourDomainType",
     "SentEmailDetail",
     "SentEmailDetailAttachmentsItem",
+    "SentEmailDetailSenderMemberType0",
     "SentEmailRescheduleInput",
     "SentEmailStatus",
     "SentEmailSummary",
+    "SentEmailSummarySenderMemberType0",
     "SetFunctionRouteResponse200",
     "SetFunctionSecretInput",
     "SetFunctionSecretResponse200",
@@ -1159,6 +1195,7 @@ __all__ = (
     "Thread",
     "ThreadMessage",
     "ThreadMessageDirection",
+    "ThreadMessageSenderMemberType0",
     "UnpublishAgentResponse200",
     "UnpublishAgentResponse200Data",
     "UnsetFunctionRouteResponse200",
@@ -1204,6 +1241,7 @@ __all__ = (
     "WakeSchedule",
     "WakeScheduleArgs",
     "WebhookSecret",
+    "WhoamiResponse200",
     "X402Challenge",
     "X402ChallengeNetwork",
     "X402ChallengeStatus",

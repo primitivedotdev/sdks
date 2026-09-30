@@ -154,9 +154,13 @@ async function enablePeer(
   peer: string,
   reason?: string,
 ): Promise<void> {
+  // Consent changes inspect stored policy, not an invented delivered email.
+  // Receiving still rechecks each exact email through member/network admission.
   const policy = apiContactPolicy(
     context.apiClient.client,
     context.identity.agentAddress,
+    false,
+    false,
   );
   const current = await policy.refresh(signal());
   const membership = current.senders.get(peer);

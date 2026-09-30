@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
+import { createServer } from "node:http";
 
 const runFile = promisify(execFile);
 const binary = resolve(process.argv[2] ?? "cli-node/bin/run.js");
@@ -34,6 +35,8 @@ try {
   assert.equal(help.exit, 0);
   assert.match(help.stdout, /--session/);
   assert.match(help.stdout, /--receiver/);
+  assert.match(help.stdout, /--continue-setup/);
+  assert.match(help.stdout, /still pending/);
   assert.match(help.stdout, /connection list\s+for confirmed\s+pairing/);
   assert.match(help.stdout, /install a fail-open Stop hook/);
 
@@ -45,6 +48,55 @@ try {
   const absent = await invoke(["agent", "enroll", "--session", session, "--receiver", "external"]);
   assert.notEqual(absent.exit, 0);
   assert.match(absent.stderr, /saved member OAuth login|Sign in/);
+
+  const continuing = await invoke(["agent", "enroll", "--session", session, "--continue-setup", "--json"]);
+  assert.notEqual(continuing.exit, 0);
+  assert.match(continuing.stderr, /saved member OAuth login|Sign in/);
+  assert.doesNotMatch(continuing.stderr, /Nonexistent flags/);
+
+  const accountParent = await invoke(["account"]);
+  assert.equal(accountParent.exit, 0);
+  assert.match(accountParent.stdout, /account whoami/);
+  assert.match(accountParent.stdout, /account provision-member-address/);
+  const authRequests = [];
+  const authServer = createServer(async (request, response) => {
+    let raw = "";
+    for await (const chunk of request) raw += chunk;
+    authRequests.push({method:request.method, url:request.url, authorization:request.headers.authorization, body:raw ? JSON.parse(raw) : null});
+    response.writeHead(401, {"Content-Type":"application/json"});
+    response.end(JSON.stringify({success:false,error:{code:"unauthorized",message:"Invalid or missing API key"}}));
+  });
+  await new Promise(resolve => authServer.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${authServer.address().port}/v1`;
+  try {
+  for (const command of ["whoami", "provision-member-address"]) {
+    const accountHelp = await invoke(["account", command, "--help"]);
+    assert.equal(accountHelp.exit, 0);
+    assert.match(accountHelp.stdout, new RegExp(`account ${command}`));
+    const choice = command === "provision-member-address" ? ["--address", "person_123456789@example.test", "--confirm-existing-mail"] : [];
+    if (command === "provision-member-address") {
+      assert.match(accountHelp.stdout, /--address/);
+      assert.match(accountHelp.stdout, /--confirm-existing-mail/);
+      const bareProvision = await invoke(["account", command, "--api-base-url", origin]);
+      assert.notEqual(bareProvision.exit, 0);
+      assert.match(bareProvision.stderr, /address|body|payload/i);
+    }
+    const noLogin = await invoke(["account", command, ...choice, "--api-base-url", origin]);
+    assert.notEqual(noLogin.exit, 0);
+    assert.match(noLogin.stderr, /No API key|Sign in|sign in|credentials|Invalid or missing API key/);
+  }
+
+  assert.deepEqual(authRequests.map(({method,url})=>({method,url})), [
+    {method:"GET",url:"/v1/whoami"}, {method:"PUT",url:"/v1/account/member-address"}]);
+  assert.ok(authRequests.every(request=>request.authorization===undefined));
+  assert.deepEqual(authRequests[1].body, {address:"person_123456789@example.test",confirm_existing_mail:true});
+  } finally { await new Promise(resolve => authServer.close(resolve)); }
+  const createHelp = await invoke(["agent-connections", "create-agent-connection", "--help"]);
+  assert.equal(createHelp.exit, 0);
+  assert.match(createHelp.stdout, /--create-request-id/);
+  const inviteHelp = await invoke(["agent-connections", "invite-agent-connection", "--help"]);
+  assert.equal(inviteHelp.exit, 0);
+  assert.match(inviteHelp.stdout, /--pending-only/);
 
   const connectHelp = await invoke(["agent", "connect", "--help"]);
   assert.equal(connectHelp.exit, 0);

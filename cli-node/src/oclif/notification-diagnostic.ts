@@ -133,6 +133,7 @@ export async function explainNotification(options: {
       requested.peer,
       detail.received_at,
       signal,
+      detail.id,
     );
   }
   if (
@@ -148,6 +149,7 @@ export async function explainNotification(options: {
       followed.peer,
       detail.received_at,
       signal,
+      detail.id,
     );
   return {
     emailId,

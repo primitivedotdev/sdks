@@ -21,17 +21,27 @@ T = TypeVar("T", bound="InviteAgentConnectionBody")
 @_attrs_define
 class InviteAgentConnectionBody:
     """
+        Attributes:
+            pending_only (bool | Unset): Issue setup only while this exact connection is pending. A claimed, connected or
+                revoked connection returns connection_already_claimed without changing its credential.
      """
 
+    pending_only: bool | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
+        pending_only = self.pending_only
+
 
         field_dict: dict[str, Any] = {}
 
+        field_dict.update({
+        })
+        if pending_only is not UNSET:
+            field_dict["pending_only"] = pending_only
 
         return field_dict
 
@@ -39,7 +49,11 @@ class InviteAgentConnectionBody:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        d = dict(src_dict)
+        pending_only = d.pop("pending_only", UNSET)
+
         invite_agent_connection_body = cls(
+            pending_only=pending_only,
         )
 
         return invite_agent_connection_body

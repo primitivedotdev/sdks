@@ -16,6 +16,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
   from ..models.presence_control_type_0 import PresenceControlType0
 
 
@@ -45,6 +46,8 @@ class ConversationMessage:
             subject (None | str | Unset):
             timestamp (datetime.datetime | None | Unset): received_at for inbound, created_at for outbound.
             presence_control (None | PresenceControlType0 | Unset):
+            sender_member (ConversationMessageSenderMemberType0 | None | Unset): Verified human authorship, projected only
+                within the member organization. Historical attribution is not current sending or owner authority.
      """
 
     role: ConversationMessageRole
@@ -57,6 +60,7 @@ class ConversationMessage:
     subject: None | str | Unset = UNSET
     timestamp: datetime.datetime | None | Unset = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
+    sender_member: ConversationMessageSenderMemberType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -64,6 +68,7 @@ class ConversationMessage:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
         from ..models.presence_control_type_0 import PresenceControlType0
         role = self.role.value
 
@@ -113,6 +118,14 @@ class ConversationMessage:
         else:
             presence_control = self.presence_control
 
+        sender_member: dict[str, Any] | None | Unset
+        if isinstance(self.sender_member, Unset):
+            sender_member = UNSET
+        elif isinstance(self.sender_member, ConversationMessageSenderMemberType0):
+            sender_member = self.sender_member.to_dict()
+        else:
+            sender_member = self.sender_member
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -134,6 +147,8 @@ class ConversationMessage:
             field_dict["timestamp"] = timestamp
         if presence_control is not UNSET:
             field_dict["presence_control"] = presence_control
+        if sender_member is not UNSET:
+            field_dict["sender_member"] = sender_member
 
         return field_dict
 
@@ -141,6 +156,7 @@ class ConversationMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
         from ..models.presence_control_type_0 import PresenceControlType0
         d = dict(src_dict)
         role = ConversationMessageRole(d.pop("role"))
@@ -240,6 +256,26 @@ class ConversationMessage:
         presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
 
 
+        def _parse_sender_member(data: object) -> ConversationMessageSenderMemberType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                sender_member_type_0 = ConversationMessageSenderMemberType0.from_dict(data)
+
+
+
+                return sender_member_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ConversationMessageSenderMemberType0 | None | Unset, data)
+
+        sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
+
+
         conversation_message = cls(
             role=role,
             direction=direction,
@@ -251,6 +287,7 @@ class ConversationMessage:
             subject=subject,
             timestamp=timestamp,
             presence_control=presence_control,
+            sender_member=sender_member,
         )
 
 

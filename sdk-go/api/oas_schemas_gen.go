@@ -1000,6 +1000,12 @@ type AgentNetworkContactAdmission struct {
 	Pending bool `json:"pending"`
 	// Earliest received_at eligible under the current membership and connection state.
 	AllowedSince NilDateTime `json:"allowed_since"`
+	// Reserved human sender policy applies, not authorship proof. If true, allowed/pending is final and
+	// contact permission cannot bypass it. Check before contact shortcuts.
+	MemberPolicyRequired bool `json:"member_policy_required"`
+	// Recipient-relative relation derived only from current exact delivered-email proof. Historical
+	// sender_member metadata does not establish this relation.
+	SenderRelation OptAgentNetworkContactAdmissionSenderRelation `json:"sender_relation"`
 }
 
 // GetAllowed returns the value of Allowed.
@@ -1017,6 +1023,16 @@ func (s *AgentNetworkContactAdmission) GetAllowedSince() NilDateTime {
 	return s.AllowedSince
 }
 
+// GetMemberPolicyRequired returns the value of MemberPolicyRequired.
+func (s *AgentNetworkContactAdmission) GetMemberPolicyRequired() bool {
+	return s.MemberPolicyRequired
+}
+
+// GetSenderRelation returns the value of SenderRelation.
+func (s *AgentNetworkContactAdmission) GetSenderRelation() OptAgentNetworkContactAdmissionSenderRelation {
+	return s.SenderRelation
+}
+
 // SetAllowed sets the value of Allowed.
 func (s *AgentNetworkContactAdmission) SetAllowed(val bool) {
 	s.Allowed = val
@@ -1030,6 +1046,16 @@ func (s *AgentNetworkContactAdmission) SetPending(val bool) {
 // SetAllowedSince sets the value of AllowedSince.
 func (s *AgentNetworkContactAdmission) SetAllowedSince(val NilDateTime) {
 	s.AllowedSince = val
+}
+
+// SetMemberPolicyRequired sets the value of MemberPolicyRequired.
+func (s *AgentNetworkContactAdmission) SetMemberPolicyRequired(val bool) {
+	s.MemberPolicyRequired = val
+}
+
+// SetSenderRelation sets the value of SenderRelation.
+func (s *AgentNetworkContactAdmission) SetSenderRelation(val OptAgentNetworkContactAdmissionSenderRelation) {
+	s.SenderRelation = val
 }
 
 // Check only a received email already stored for the bound recipient. The server verifies its sender
@@ -1058,6 +1084,49 @@ func (s *AgentNetworkContactAdmissionInput) SetEmailID(val uuid.UUID) {
 // SetSenderAddress sets the value of SenderAddress.
 func (s *AgentNetworkContactAdmissionInput) SetSenderAddress(val string) {
 	s.SenderAddress = val
+}
+
+// Recipient-relative relation derived only from current exact delivered-email proof. Historical
+// sender_member metadata does not establish this relation.
+type AgentNetworkContactAdmissionSenderRelation string
+
+const (
+	AgentNetworkContactAdmissionSenderRelationOwner  AgentNetworkContactAdmissionSenderRelation = "owner"
+	AgentNetworkContactAdmissionSenderRelationMember AgentNetworkContactAdmissionSenderRelation = "member"
+)
+
+// AllValues returns all AgentNetworkContactAdmissionSenderRelation values.
+func (AgentNetworkContactAdmissionSenderRelation) AllValues() []AgentNetworkContactAdmissionSenderRelation {
+	return []AgentNetworkContactAdmissionSenderRelation{
+		AgentNetworkContactAdmissionSenderRelationOwner,
+		AgentNetworkContactAdmissionSenderRelationMember,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AgentNetworkContactAdmissionSenderRelation) MarshalText() ([]byte, error) {
+	switch s {
+	case AgentNetworkContactAdmissionSenderRelationOwner:
+		return []byte(s), nil
+	case AgentNetworkContactAdmissionSenderRelationMember:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AgentNetworkContactAdmissionSenderRelation) UnmarshalText(data []byte) error {
+	switch AgentNetworkContactAdmissionSenderRelation(data) {
+	case AgentNetworkContactAdmissionSenderRelationOwner:
+		*s = AgentNetworkContactAdmissionSenderRelationOwner
+		return nil
+	case AgentNetworkContactAdmissionSenderRelationMember:
+		*s = AgentNetworkContactAdmissionSenderRelationMember
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // One address in the default organization network, visible to the current requester.
@@ -2036,6 +2105,124 @@ func (s *BearerAuth) SetToken(val string) {
 // SetRoles sets the value of Roles.
 func (s *BearerAuth) SetRoles(val []string) {
 	s.Roles = val
+}
+
+// Ref: #/components/schemas/CallerIdentity
+type CallerIdentity struct {
+	OrgID         string                         `json:"org_id"`
+	UserID        string                         `json:"user_id"`
+	Role          string                         `json:"role"`
+	RequestID     string                         `json:"request_id"`
+	AuthMethod    NilString                      `json:"auth_method"`
+	KeyID         NilString                      `json:"key_id"`
+	MemberAddress NilCallerIdentityMemberAddress `json:"member_address"`
+	// Suggested personal address; nothing is assigned until explicitly saved.
+	MemberAddressSuggestion NilString `json:"member_address_suggestion"`
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *CallerIdentity) GetOrgID() string {
+	return s.OrgID
+}
+
+// GetUserID returns the value of UserID.
+func (s *CallerIdentity) GetUserID() string {
+	return s.UserID
+}
+
+// GetRole returns the value of Role.
+func (s *CallerIdentity) GetRole() string {
+	return s.Role
+}
+
+// GetRequestID returns the value of RequestID.
+func (s *CallerIdentity) GetRequestID() string {
+	return s.RequestID
+}
+
+// GetAuthMethod returns the value of AuthMethod.
+func (s *CallerIdentity) GetAuthMethod() NilString {
+	return s.AuthMethod
+}
+
+// GetKeyID returns the value of KeyID.
+func (s *CallerIdentity) GetKeyID() NilString {
+	return s.KeyID
+}
+
+// GetMemberAddress returns the value of MemberAddress.
+func (s *CallerIdentity) GetMemberAddress() NilCallerIdentityMemberAddress {
+	return s.MemberAddress
+}
+
+// GetMemberAddressSuggestion returns the value of MemberAddressSuggestion.
+func (s *CallerIdentity) GetMemberAddressSuggestion() NilString {
+	return s.MemberAddressSuggestion
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *CallerIdentity) SetOrgID(val string) {
+	s.OrgID = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *CallerIdentity) SetUserID(val string) {
+	s.UserID = val
+}
+
+// SetRole sets the value of Role.
+func (s *CallerIdentity) SetRole(val string) {
+	s.Role = val
+}
+
+// SetRequestID sets the value of RequestID.
+func (s *CallerIdentity) SetRequestID(val string) {
+	s.RequestID = val
+}
+
+// SetAuthMethod sets the value of AuthMethod.
+func (s *CallerIdentity) SetAuthMethod(val NilString) {
+	s.AuthMethod = val
+}
+
+// SetKeyID sets the value of KeyID.
+func (s *CallerIdentity) SetKeyID(val NilString) {
+	s.KeyID = val
+}
+
+// SetMemberAddress sets the value of MemberAddress.
+func (s *CallerIdentity) SetMemberAddress(val NilCallerIdentityMemberAddress) {
+	s.MemberAddress = val
+}
+
+// SetMemberAddressSuggestion sets the value of MemberAddressSuggestion.
+func (s *CallerIdentity) SetMemberAddressSuggestion(val NilString) {
+	s.MemberAddressSuggestion = val
+}
+
+type CallerIdentityMemberAddress struct {
+	Address string    `json:"address"`
+	Name    NilString `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *CallerIdentityMemberAddress) GetAddress() string {
+	return s.Address
+}
+
+// GetName returns the value of Name.
+func (s *CallerIdentityMemberAddress) GetName() NilString {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *CallerIdentityMemberAddress) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetName sets the value of Name.
+func (s *CallerIdentityMemberAddress) SetName(val NilString) {
+	s.Name = val
 }
 
 type CancelSentEmailBadRequest ErrorResponse
@@ -4667,6 +4854,9 @@ type ConversationMessage struct {
 	// Received_at for inbound, created_at for outbound.
 	Timestamp       OptNilDateTime                           `json:"timestamp"`
 	PresenceControl OptNilConversationMessagePresenceControl `json:"presence_control"`
+	// Verified human authorship, projected only within the member organization. Historical attribution
+	// is not current sending or owner authority.
+	SenderMember OptNilConversationMessageSenderMember `json:"sender_member"`
 }
 
 // GetRole returns the value of Role.
@@ -4719,6 +4909,11 @@ func (s *ConversationMessage) GetPresenceControl() OptNilConversationMessagePres
 	return s.PresenceControl
 }
 
+// GetSenderMember returns the value of SenderMember.
+func (s *ConversationMessage) GetSenderMember() OptNilConversationMessageSenderMember {
+	return s.SenderMember
+}
+
 // SetRole sets the value of Role.
 func (s *ConversationMessage) SetRole(val ConversationMessageRole) {
 	s.Role = val
@@ -4767,6 +4962,11 @@ func (s *ConversationMessage) SetTimestamp(val OptNilDateTime) {
 // SetPresenceControl sets the value of PresenceControl.
 func (s *ConversationMessage) SetPresenceControl(val OptNilConversationMessagePresenceControl) {
 	s.PresenceControl = val
+}
+
+// SetSenderMember sets the value of SenderMember.
+func (s *ConversationMessage) SetSenderMember(val OptNilConversationMessageSenderMember) {
+	s.SenderMember = val
 }
 
 // `inbound` for a received email (`/emails/{id}`), `outbound`
@@ -4927,6 +5127,44 @@ func (s *ConversationMessageRole) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Verified human authorship, projected only within the member organization. Historical attribution
+// is not current sending or owner authority.
+type ConversationMessageSenderMember struct {
+	Address string    `json:"address"`
+	UserID  string    `json:"user_id"`
+	Name    NilString `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *ConversationMessageSenderMember) GetAddress() string {
+	return s.Address
+}
+
+// GetUserID returns the value of UserID.
+func (s *ConversationMessageSenderMember) GetUserID() string {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *ConversationMessageSenderMember) GetName() NilString {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *ConversationMessageSenderMember) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *ConversationMessageSenderMember) SetUserID(val string) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *ConversationMessageSenderMember) SetName(val NilString) {
+	s.Name = val
 }
 
 // Ref: #/components/schemas/CreateAgentAccountInput
@@ -5136,202 +5374,270 @@ func (s *CreateAgentConnectionOK) SetData(val CreateAgentConnectionOKData) {
 	s.Data = val
 }
 
+// CreateAgentConnectionOKData represents sum type.
 type CreateAgentConnectionOKData struct {
-	Connection CreateAgentConnectionOKDataConnection `json:"connection"`
-	Invitation CreateAgentConnectionOKDataInvitation `json:"invitation"`
+	Type                         CreateAgentConnectionOKDataType // switch on this field
+	CreateAgentConnectionOKData0 CreateAgentConnectionOKData0
+	CreateAgentConnectionOKData1 CreateAgentConnectionOKData1
+}
+
+// CreateAgentConnectionOKDataType is oneOf type of CreateAgentConnectionOKData.
+type CreateAgentConnectionOKDataType string
+
+// Possible values for CreateAgentConnectionOKDataType.
+const (
+	CreateAgentConnectionOKData0CreateAgentConnectionOKData CreateAgentConnectionOKDataType = "CreateAgentConnectionOKData0"
+	CreateAgentConnectionOKData1CreateAgentConnectionOKData CreateAgentConnectionOKDataType = "CreateAgentConnectionOKData1"
+)
+
+// IsCreateAgentConnectionOKData0 reports whether CreateAgentConnectionOKData is CreateAgentConnectionOKData0.
+func (s CreateAgentConnectionOKData) IsCreateAgentConnectionOKData0() bool {
+	return s.Type == CreateAgentConnectionOKData0CreateAgentConnectionOKData
+}
+
+// IsCreateAgentConnectionOKData1 reports whether CreateAgentConnectionOKData is CreateAgentConnectionOKData1.
+func (s CreateAgentConnectionOKData) IsCreateAgentConnectionOKData1() bool {
+	return s.Type == CreateAgentConnectionOKData1CreateAgentConnectionOKData
+}
+
+// SetCreateAgentConnectionOKData0 sets CreateAgentConnectionOKData to CreateAgentConnectionOKData0.
+func (s *CreateAgentConnectionOKData) SetCreateAgentConnectionOKData0(v CreateAgentConnectionOKData0) {
+	s.Type = CreateAgentConnectionOKData0CreateAgentConnectionOKData
+	s.CreateAgentConnectionOKData0 = v
+}
+
+// GetCreateAgentConnectionOKData0 returns CreateAgentConnectionOKData0 and true boolean if CreateAgentConnectionOKData is CreateAgentConnectionOKData0.
+func (s CreateAgentConnectionOKData) GetCreateAgentConnectionOKData0() (v CreateAgentConnectionOKData0, ok bool) {
+	if !s.IsCreateAgentConnectionOKData0() {
+		return v, false
+	}
+	return s.CreateAgentConnectionOKData0, true
+}
+
+// NewCreateAgentConnectionOKData0CreateAgentConnectionOKData returns new CreateAgentConnectionOKData from CreateAgentConnectionOKData0.
+func NewCreateAgentConnectionOKData0CreateAgentConnectionOKData(v CreateAgentConnectionOKData0) CreateAgentConnectionOKData {
+	var s CreateAgentConnectionOKData
+	s.SetCreateAgentConnectionOKData0(v)
+	return s
+}
+
+// SetCreateAgentConnectionOKData1 sets CreateAgentConnectionOKData to CreateAgentConnectionOKData1.
+func (s *CreateAgentConnectionOKData) SetCreateAgentConnectionOKData1(v CreateAgentConnectionOKData1) {
+	s.Type = CreateAgentConnectionOKData1CreateAgentConnectionOKData
+	s.CreateAgentConnectionOKData1 = v
+}
+
+// GetCreateAgentConnectionOKData1 returns CreateAgentConnectionOKData1 and true boolean if CreateAgentConnectionOKData is CreateAgentConnectionOKData1.
+func (s CreateAgentConnectionOKData) GetCreateAgentConnectionOKData1() (v CreateAgentConnectionOKData1, ok bool) {
+	if !s.IsCreateAgentConnectionOKData1() {
+		return v, false
+	}
+	return s.CreateAgentConnectionOKData1, true
+}
+
+// NewCreateAgentConnectionOKData1CreateAgentConnectionOKData returns new CreateAgentConnectionOKData from CreateAgentConnectionOKData1.
+func NewCreateAgentConnectionOKData1CreateAgentConnectionOKData(v CreateAgentConnectionOKData1) CreateAgentConnectionOKData {
+	var s CreateAgentConnectionOKData
+	s.SetCreateAgentConnectionOKData1(v)
+	return s
+}
+
+type CreateAgentConnectionOKData0 struct {
+	Connection CreateAgentConnectionOKData0Connection `json:"connection"`
+	Invitation CreateAgentConnectionOKData0Invitation `json:"invitation"`
 }
 
 // GetConnection returns the value of Connection.
-func (s *CreateAgentConnectionOKData) GetConnection() CreateAgentConnectionOKDataConnection {
+func (s *CreateAgentConnectionOKData0) GetConnection() CreateAgentConnectionOKData0Connection {
 	return s.Connection
 }
 
 // GetInvitation returns the value of Invitation.
-func (s *CreateAgentConnectionOKData) GetInvitation() CreateAgentConnectionOKDataInvitation {
+func (s *CreateAgentConnectionOKData0) GetInvitation() CreateAgentConnectionOKData0Invitation {
 	return s.Invitation
 }
 
 // SetConnection sets the value of Connection.
-func (s *CreateAgentConnectionOKData) SetConnection(val CreateAgentConnectionOKDataConnection) {
+func (s *CreateAgentConnectionOKData0) SetConnection(val CreateAgentConnectionOKData0Connection) {
 	s.Connection = val
 }
 
 // SetInvitation sets the value of Invitation.
-func (s *CreateAgentConnectionOKData) SetInvitation(val CreateAgentConnectionOKDataInvitation) {
+func (s *CreateAgentConnectionOKData0) SetInvitation(val CreateAgentConnectionOKData0Invitation) {
 	s.Invitation = val
 }
 
-type CreateAgentConnectionOKDataConnection struct {
-	Address       string                                              `json:"address"`
-	Name          string                                              `json:"name"`
-	OwnerAddress  string                                              `json:"owner_address"`
-	Status        CreateAgentConnectionOKDataConnectionStatus         `json:"status"`
-	CreatedAt     time.Time                                           `json:"created_at"`
-	UpdatedAt     time.Time                                           `json:"updated_at"`
-	ClaimedAt     NilDateTime                                         `json:"claimed_at"`
-	VerifiedAt    NilDateTime                                         `json:"verified_at"`
-	LastSeenAt    NilDateTime                                         `json:"last_seen_at"`
-	OwnershipKind CreateAgentConnectionOKDataConnectionOwnershipKind  `json:"ownership_kind"`
-	OwnerUserID   NilString                                           `json:"owner_user_id"`
-	OwnerActive   NilBool                                             `json:"owner_active"`
-	Presence      OptNilCreateAgentConnectionOKDataConnectionPresence `json:"presence"`
+type CreateAgentConnectionOKData0Connection struct {
+	Address       string                                               `json:"address"`
+	Name          string                                               `json:"name"`
+	OwnerAddress  string                                               `json:"owner_address"`
+	Status        CreateAgentConnectionOKData0ConnectionStatus         `json:"status"`
+	CreatedAt     time.Time                                            `json:"created_at"`
+	UpdatedAt     time.Time                                            `json:"updated_at"`
+	ClaimedAt     NilDateTime                                          `json:"claimed_at"`
+	VerifiedAt    NilDateTime                                          `json:"verified_at"`
+	LastSeenAt    NilDateTime                                          `json:"last_seen_at"`
+	OwnershipKind CreateAgentConnectionOKData0ConnectionOwnershipKind  `json:"ownership_kind"`
+	OwnerUserID   NilString                                            `json:"owner_user_id"`
+	OwnerActive   NilBool                                              `json:"owner_active"`
+	Presence      OptNilCreateAgentConnectionOKData0ConnectionPresence `json:"presence"`
 }
 
 // GetAddress returns the value of Address.
-func (s *CreateAgentConnectionOKDataConnection) GetAddress() string {
+func (s *CreateAgentConnectionOKData0Connection) GetAddress() string {
 	return s.Address
 }
 
 // GetName returns the value of Name.
-func (s *CreateAgentConnectionOKDataConnection) GetName() string {
+func (s *CreateAgentConnectionOKData0Connection) GetName() string {
 	return s.Name
 }
 
 // GetOwnerAddress returns the value of OwnerAddress.
-func (s *CreateAgentConnectionOKDataConnection) GetOwnerAddress() string {
+func (s *CreateAgentConnectionOKData0Connection) GetOwnerAddress() string {
 	return s.OwnerAddress
 }
 
 // GetStatus returns the value of Status.
-func (s *CreateAgentConnectionOKDataConnection) GetStatus() CreateAgentConnectionOKDataConnectionStatus {
+func (s *CreateAgentConnectionOKData0Connection) GetStatus() CreateAgentConnectionOKData0ConnectionStatus {
 	return s.Status
 }
 
 // GetCreatedAt returns the value of CreatedAt.
-func (s *CreateAgentConnectionOKDataConnection) GetCreatedAt() time.Time {
+func (s *CreateAgentConnectionOKData0Connection) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
 // GetUpdatedAt returns the value of UpdatedAt.
-func (s *CreateAgentConnectionOKDataConnection) GetUpdatedAt() time.Time {
+func (s *CreateAgentConnectionOKData0Connection) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
 // GetClaimedAt returns the value of ClaimedAt.
-func (s *CreateAgentConnectionOKDataConnection) GetClaimedAt() NilDateTime {
+func (s *CreateAgentConnectionOKData0Connection) GetClaimedAt() NilDateTime {
 	return s.ClaimedAt
 }
 
 // GetVerifiedAt returns the value of VerifiedAt.
-func (s *CreateAgentConnectionOKDataConnection) GetVerifiedAt() NilDateTime {
+func (s *CreateAgentConnectionOKData0Connection) GetVerifiedAt() NilDateTime {
 	return s.VerifiedAt
 }
 
 // GetLastSeenAt returns the value of LastSeenAt.
-func (s *CreateAgentConnectionOKDataConnection) GetLastSeenAt() NilDateTime {
+func (s *CreateAgentConnectionOKData0Connection) GetLastSeenAt() NilDateTime {
 	return s.LastSeenAt
 }
 
 // GetOwnershipKind returns the value of OwnershipKind.
-func (s *CreateAgentConnectionOKDataConnection) GetOwnershipKind() CreateAgentConnectionOKDataConnectionOwnershipKind {
+func (s *CreateAgentConnectionOKData0Connection) GetOwnershipKind() CreateAgentConnectionOKData0ConnectionOwnershipKind {
 	return s.OwnershipKind
 }
 
 // GetOwnerUserID returns the value of OwnerUserID.
-func (s *CreateAgentConnectionOKDataConnection) GetOwnerUserID() NilString {
+func (s *CreateAgentConnectionOKData0Connection) GetOwnerUserID() NilString {
 	return s.OwnerUserID
 }
 
 // GetOwnerActive returns the value of OwnerActive.
-func (s *CreateAgentConnectionOKDataConnection) GetOwnerActive() NilBool {
+func (s *CreateAgentConnectionOKData0Connection) GetOwnerActive() NilBool {
 	return s.OwnerActive
 }
 
 // GetPresence returns the value of Presence.
-func (s *CreateAgentConnectionOKDataConnection) GetPresence() OptNilCreateAgentConnectionOKDataConnectionPresence {
+func (s *CreateAgentConnectionOKData0Connection) GetPresence() OptNilCreateAgentConnectionOKData0ConnectionPresence {
 	return s.Presence
 }
 
 // SetAddress sets the value of Address.
-func (s *CreateAgentConnectionOKDataConnection) SetAddress(val string) {
+func (s *CreateAgentConnectionOKData0Connection) SetAddress(val string) {
 	s.Address = val
 }
 
 // SetName sets the value of Name.
-func (s *CreateAgentConnectionOKDataConnection) SetName(val string) {
+func (s *CreateAgentConnectionOKData0Connection) SetName(val string) {
 	s.Name = val
 }
 
 // SetOwnerAddress sets the value of OwnerAddress.
-func (s *CreateAgentConnectionOKDataConnection) SetOwnerAddress(val string) {
+func (s *CreateAgentConnectionOKData0Connection) SetOwnerAddress(val string) {
 	s.OwnerAddress = val
 }
 
 // SetStatus sets the value of Status.
-func (s *CreateAgentConnectionOKDataConnection) SetStatus(val CreateAgentConnectionOKDataConnectionStatus) {
+func (s *CreateAgentConnectionOKData0Connection) SetStatus(val CreateAgentConnectionOKData0ConnectionStatus) {
 	s.Status = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
-func (s *CreateAgentConnectionOKDataConnection) SetCreatedAt(val time.Time) {
+func (s *CreateAgentConnectionOKData0Connection) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
 // SetUpdatedAt sets the value of UpdatedAt.
-func (s *CreateAgentConnectionOKDataConnection) SetUpdatedAt(val time.Time) {
+func (s *CreateAgentConnectionOKData0Connection) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
 // SetClaimedAt sets the value of ClaimedAt.
-func (s *CreateAgentConnectionOKDataConnection) SetClaimedAt(val NilDateTime) {
+func (s *CreateAgentConnectionOKData0Connection) SetClaimedAt(val NilDateTime) {
 	s.ClaimedAt = val
 }
 
 // SetVerifiedAt sets the value of VerifiedAt.
-func (s *CreateAgentConnectionOKDataConnection) SetVerifiedAt(val NilDateTime) {
+func (s *CreateAgentConnectionOKData0Connection) SetVerifiedAt(val NilDateTime) {
 	s.VerifiedAt = val
 }
 
 // SetLastSeenAt sets the value of LastSeenAt.
-func (s *CreateAgentConnectionOKDataConnection) SetLastSeenAt(val NilDateTime) {
+func (s *CreateAgentConnectionOKData0Connection) SetLastSeenAt(val NilDateTime) {
 	s.LastSeenAt = val
 }
 
 // SetOwnershipKind sets the value of OwnershipKind.
-func (s *CreateAgentConnectionOKDataConnection) SetOwnershipKind(val CreateAgentConnectionOKDataConnectionOwnershipKind) {
+func (s *CreateAgentConnectionOKData0Connection) SetOwnershipKind(val CreateAgentConnectionOKData0ConnectionOwnershipKind) {
 	s.OwnershipKind = val
 }
 
 // SetOwnerUserID sets the value of OwnerUserID.
-func (s *CreateAgentConnectionOKDataConnection) SetOwnerUserID(val NilString) {
+func (s *CreateAgentConnectionOKData0Connection) SetOwnerUserID(val NilString) {
 	s.OwnerUserID = val
 }
 
 // SetOwnerActive sets the value of OwnerActive.
-func (s *CreateAgentConnectionOKDataConnection) SetOwnerActive(val NilBool) {
+func (s *CreateAgentConnectionOKData0Connection) SetOwnerActive(val NilBool) {
 	s.OwnerActive = val
 }
 
 // SetPresence sets the value of Presence.
-func (s *CreateAgentConnectionOKDataConnection) SetPresence(val OptNilCreateAgentConnectionOKDataConnectionPresence) {
+func (s *CreateAgentConnectionOKData0Connection) SetPresence(val OptNilCreateAgentConnectionOKData0ConnectionPresence) {
 	s.Presence = val
 }
 
-type CreateAgentConnectionOKDataConnectionOwnershipKind string
+type CreateAgentConnectionOKData0ConnectionOwnershipKind string
 
 const (
-	CreateAgentConnectionOKDataConnectionOwnershipKindPersonal      CreateAgentConnectionOKDataConnectionOwnershipKind = "personal"
-	CreateAgentConnectionOKDataConnectionOwnershipKindShared        CreateAgentConnectionOKDataConnectionOwnershipKind = "shared"
-	CreateAgentConnectionOKDataConnectionOwnershipKindLegacyUnknown CreateAgentConnectionOKDataConnectionOwnershipKind = "legacy_unknown"
+	CreateAgentConnectionOKData0ConnectionOwnershipKindPersonal      CreateAgentConnectionOKData0ConnectionOwnershipKind = "personal"
+	CreateAgentConnectionOKData0ConnectionOwnershipKindShared        CreateAgentConnectionOKData0ConnectionOwnershipKind = "shared"
+	CreateAgentConnectionOKData0ConnectionOwnershipKindLegacyUnknown CreateAgentConnectionOKData0ConnectionOwnershipKind = "legacy_unknown"
 )
 
-// AllValues returns all CreateAgentConnectionOKDataConnectionOwnershipKind values.
-func (CreateAgentConnectionOKDataConnectionOwnershipKind) AllValues() []CreateAgentConnectionOKDataConnectionOwnershipKind {
-	return []CreateAgentConnectionOKDataConnectionOwnershipKind{
-		CreateAgentConnectionOKDataConnectionOwnershipKindPersonal,
-		CreateAgentConnectionOKDataConnectionOwnershipKindShared,
-		CreateAgentConnectionOKDataConnectionOwnershipKindLegacyUnknown,
+// AllValues returns all CreateAgentConnectionOKData0ConnectionOwnershipKind values.
+func (CreateAgentConnectionOKData0ConnectionOwnershipKind) AllValues() []CreateAgentConnectionOKData0ConnectionOwnershipKind {
+	return []CreateAgentConnectionOKData0ConnectionOwnershipKind{
+		CreateAgentConnectionOKData0ConnectionOwnershipKindPersonal,
+		CreateAgentConnectionOKData0ConnectionOwnershipKindShared,
+		CreateAgentConnectionOKData0ConnectionOwnershipKindLegacyUnknown,
 	}
 }
 
 // MarshalText implements encoding.TextMarshaler.
-func (s CreateAgentConnectionOKDataConnectionOwnershipKind) MarshalText() ([]byte, error) {
+func (s CreateAgentConnectionOKData0ConnectionOwnershipKind) MarshalText() ([]byte, error) {
 	switch s {
-	case CreateAgentConnectionOKDataConnectionOwnershipKindPersonal:
+	case CreateAgentConnectionOKData0ConnectionOwnershipKindPersonal:
 		return []byte(s), nil
-	case CreateAgentConnectionOKDataConnectionOwnershipKindShared:
+	case CreateAgentConnectionOKData0ConnectionOwnershipKindShared:
 		return []byte(s), nil
-	case CreateAgentConnectionOKDataConnectionOwnershipKindLegacyUnknown:
+	case CreateAgentConnectionOKData0ConnectionOwnershipKindLegacyUnknown:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -5339,87 +5645,87 @@ func (s CreateAgentConnectionOKDataConnectionOwnershipKind) MarshalText() ([]byt
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (s *CreateAgentConnectionOKDataConnectionOwnershipKind) UnmarshalText(data []byte) error {
-	switch CreateAgentConnectionOKDataConnectionOwnershipKind(data) {
-	case CreateAgentConnectionOKDataConnectionOwnershipKindPersonal:
-		*s = CreateAgentConnectionOKDataConnectionOwnershipKindPersonal
+func (s *CreateAgentConnectionOKData0ConnectionOwnershipKind) UnmarshalText(data []byte) error {
+	switch CreateAgentConnectionOKData0ConnectionOwnershipKind(data) {
+	case CreateAgentConnectionOKData0ConnectionOwnershipKindPersonal:
+		*s = CreateAgentConnectionOKData0ConnectionOwnershipKindPersonal
 		return nil
-	case CreateAgentConnectionOKDataConnectionOwnershipKindShared:
-		*s = CreateAgentConnectionOKDataConnectionOwnershipKindShared
+	case CreateAgentConnectionOKData0ConnectionOwnershipKindShared:
+		*s = CreateAgentConnectionOKData0ConnectionOwnershipKindShared
 		return nil
-	case CreateAgentConnectionOKDataConnectionOwnershipKindLegacyUnknown:
-		*s = CreateAgentConnectionOKDataConnectionOwnershipKindLegacyUnknown
+	case CreateAgentConnectionOKData0ConnectionOwnershipKindLegacyUnknown:
+		*s = CreateAgentConnectionOKData0ConnectionOwnershipKindLegacyUnknown
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
-type CreateAgentConnectionOKDataConnectionPresence struct {
+type CreateAgentConnectionOKData0ConnectionPresence struct {
 	LastCheckedAt time.Time `json:"last_checked_at"`
 	ExpiresAt     time.Time `json:"expires_at"`
 	ValidForMs    int       `json:"valid_for_ms"`
 }
 
 // GetLastCheckedAt returns the value of LastCheckedAt.
-func (s *CreateAgentConnectionOKDataConnectionPresence) GetLastCheckedAt() time.Time {
+func (s *CreateAgentConnectionOKData0ConnectionPresence) GetLastCheckedAt() time.Time {
 	return s.LastCheckedAt
 }
 
 // GetExpiresAt returns the value of ExpiresAt.
-func (s *CreateAgentConnectionOKDataConnectionPresence) GetExpiresAt() time.Time {
+func (s *CreateAgentConnectionOKData0ConnectionPresence) GetExpiresAt() time.Time {
 	return s.ExpiresAt
 }
 
 // GetValidForMs returns the value of ValidForMs.
-func (s *CreateAgentConnectionOKDataConnectionPresence) GetValidForMs() int {
+func (s *CreateAgentConnectionOKData0ConnectionPresence) GetValidForMs() int {
 	return s.ValidForMs
 }
 
 // SetLastCheckedAt sets the value of LastCheckedAt.
-func (s *CreateAgentConnectionOKDataConnectionPresence) SetLastCheckedAt(val time.Time) {
+func (s *CreateAgentConnectionOKData0ConnectionPresence) SetLastCheckedAt(val time.Time) {
 	s.LastCheckedAt = val
 }
 
 // SetExpiresAt sets the value of ExpiresAt.
-func (s *CreateAgentConnectionOKDataConnectionPresence) SetExpiresAt(val time.Time) {
+func (s *CreateAgentConnectionOKData0ConnectionPresence) SetExpiresAt(val time.Time) {
 	s.ExpiresAt = val
 }
 
 // SetValidForMs sets the value of ValidForMs.
-func (s *CreateAgentConnectionOKDataConnectionPresence) SetValidForMs(val int) {
+func (s *CreateAgentConnectionOKData0ConnectionPresence) SetValidForMs(val int) {
 	s.ValidForMs = val
 }
 
-type CreateAgentConnectionOKDataConnectionStatus string
+type CreateAgentConnectionOKData0ConnectionStatus string
 
 const (
-	CreateAgentConnectionOKDataConnectionStatusPending   CreateAgentConnectionOKDataConnectionStatus = "pending"
-	CreateAgentConnectionOKDataConnectionStatusClaimed   CreateAgentConnectionOKDataConnectionStatus = "claimed"
-	CreateAgentConnectionOKDataConnectionStatusConnected CreateAgentConnectionOKDataConnectionStatus = "connected"
-	CreateAgentConnectionOKDataConnectionStatusRevoked   CreateAgentConnectionOKDataConnectionStatus = "revoked"
+	CreateAgentConnectionOKData0ConnectionStatusPending   CreateAgentConnectionOKData0ConnectionStatus = "pending"
+	CreateAgentConnectionOKData0ConnectionStatusClaimed   CreateAgentConnectionOKData0ConnectionStatus = "claimed"
+	CreateAgentConnectionOKData0ConnectionStatusConnected CreateAgentConnectionOKData0ConnectionStatus = "connected"
+	CreateAgentConnectionOKData0ConnectionStatusRevoked   CreateAgentConnectionOKData0ConnectionStatus = "revoked"
 )
 
-// AllValues returns all CreateAgentConnectionOKDataConnectionStatus values.
-func (CreateAgentConnectionOKDataConnectionStatus) AllValues() []CreateAgentConnectionOKDataConnectionStatus {
-	return []CreateAgentConnectionOKDataConnectionStatus{
-		CreateAgentConnectionOKDataConnectionStatusPending,
-		CreateAgentConnectionOKDataConnectionStatusClaimed,
-		CreateAgentConnectionOKDataConnectionStatusConnected,
-		CreateAgentConnectionOKDataConnectionStatusRevoked,
+// AllValues returns all CreateAgentConnectionOKData0ConnectionStatus values.
+func (CreateAgentConnectionOKData0ConnectionStatus) AllValues() []CreateAgentConnectionOKData0ConnectionStatus {
+	return []CreateAgentConnectionOKData0ConnectionStatus{
+		CreateAgentConnectionOKData0ConnectionStatusPending,
+		CreateAgentConnectionOKData0ConnectionStatusClaimed,
+		CreateAgentConnectionOKData0ConnectionStatusConnected,
+		CreateAgentConnectionOKData0ConnectionStatusRevoked,
 	}
 }
 
 // MarshalText implements encoding.TextMarshaler.
-func (s CreateAgentConnectionOKDataConnectionStatus) MarshalText() ([]byte, error) {
+func (s CreateAgentConnectionOKData0ConnectionStatus) MarshalText() ([]byte, error) {
 	switch s {
-	case CreateAgentConnectionOKDataConnectionStatusPending:
+	case CreateAgentConnectionOKData0ConnectionStatusPending:
 		return []byte(s), nil
-	case CreateAgentConnectionOKDataConnectionStatusClaimed:
+	case CreateAgentConnectionOKData0ConnectionStatusClaimed:
 		return []byte(s), nil
-	case CreateAgentConnectionOKDataConnectionStatusConnected:
+	case CreateAgentConnectionOKData0ConnectionStatusConnected:
 		return []byte(s), nil
-	case CreateAgentConnectionOKDataConnectionStatusRevoked:
+	case CreateAgentConnectionOKData0ConnectionStatusRevoked:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -5427,48 +5733,369 @@ func (s CreateAgentConnectionOKDataConnectionStatus) MarshalText() ([]byte, erro
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (s *CreateAgentConnectionOKDataConnectionStatus) UnmarshalText(data []byte) error {
-	switch CreateAgentConnectionOKDataConnectionStatus(data) {
-	case CreateAgentConnectionOKDataConnectionStatusPending:
-		*s = CreateAgentConnectionOKDataConnectionStatusPending
+func (s *CreateAgentConnectionOKData0ConnectionStatus) UnmarshalText(data []byte) error {
+	switch CreateAgentConnectionOKData0ConnectionStatus(data) {
+	case CreateAgentConnectionOKData0ConnectionStatusPending:
+		*s = CreateAgentConnectionOKData0ConnectionStatusPending
 		return nil
-	case CreateAgentConnectionOKDataConnectionStatusClaimed:
-		*s = CreateAgentConnectionOKDataConnectionStatusClaimed
+	case CreateAgentConnectionOKData0ConnectionStatusClaimed:
+		*s = CreateAgentConnectionOKData0ConnectionStatusClaimed
 		return nil
-	case CreateAgentConnectionOKDataConnectionStatusConnected:
-		*s = CreateAgentConnectionOKDataConnectionStatusConnected
+	case CreateAgentConnectionOKData0ConnectionStatusConnected:
+		*s = CreateAgentConnectionOKData0ConnectionStatusConnected
 		return nil
-	case CreateAgentConnectionOKDataConnectionStatusRevoked:
-		*s = CreateAgentConnectionOKDataConnectionStatusRevoked
+	case CreateAgentConnectionOKData0ConnectionStatusRevoked:
+		*s = CreateAgentConnectionOKData0ConnectionStatusRevoked
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
 }
 
-type CreateAgentConnectionOKDataInvitation struct {
+type CreateAgentConnectionOKData0Invitation struct {
 	ClaimURL  url.URL   `json:"claim_url"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
 // GetClaimURL returns the value of ClaimURL.
-func (s *CreateAgentConnectionOKDataInvitation) GetClaimURL() url.URL {
+func (s *CreateAgentConnectionOKData0Invitation) GetClaimURL() url.URL {
 	return s.ClaimURL
 }
 
 // GetExpiresAt returns the value of ExpiresAt.
-func (s *CreateAgentConnectionOKDataInvitation) GetExpiresAt() time.Time {
+func (s *CreateAgentConnectionOKData0Invitation) GetExpiresAt() time.Time {
 	return s.ExpiresAt
 }
 
 // SetClaimURL sets the value of ClaimURL.
-func (s *CreateAgentConnectionOKDataInvitation) SetClaimURL(val url.URL) {
+func (s *CreateAgentConnectionOKData0Invitation) SetClaimURL(val url.URL) {
 	s.ClaimURL = val
 }
 
 // SetExpiresAt sets the value of ExpiresAt.
-func (s *CreateAgentConnectionOKDataInvitation) SetExpiresAt(val time.Time) {
+func (s *CreateAgentConnectionOKData0Invitation) SetExpiresAt(val time.Time) {
 	s.ExpiresAt = val
+}
+
+type CreateAgentConnectionOKData1 struct {
+	Connection CreateAgentConnectionOKData1Connection `json:"connection"`
+	Recovered  bool                                   `json:"recovered"`
+	Invitation struct{}                               `json:"invitation"`
+}
+
+// GetConnection returns the value of Connection.
+func (s *CreateAgentConnectionOKData1) GetConnection() CreateAgentConnectionOKData1Connection {
+	return s.Connection
+}
+
+// GetRecovered returns the value of Recovered.
+func (s *CreateAgentConnectionOKData1) GetRecovered() bool {
+	return s.Recovered
+}
+
+// GetInvitation returns the value of Invitation.
+func (s *CreateAgentConnectionOKData1) GetInvitation() struct{} {
+	return s.Invitation
+}
+
+// SetConnection sets the value of Connection.
+func (s *CreateAgentConnectionOKData1) SetConnection(val CreateAgentConnectionOKData1Connection) {
+	s.Connection = val
+}
+
+// SetRecovered sets the value of Recovered.
+func (s *CreateAgentConnectionOKData1) SetRecovered(val bool) {
+	s.Recovered = val
+}
+
+// SetInvitation sets the value of Invitation.
+func (s *CreateAgentConnectionOKData1) SetInvitation(val struct{}) {
+	s.Invitation = val
+}
+
+type CreateAgentConnectionOKData1Connection struct {
+	Address       string                                               `json:"address"`
+	Name          string                                               `json:"name"`
+	OwnerAddress  string                                               `json:"owner_address"`
+	Status        CreateAgentConnectionOKData1ConnectionStatus         `json:"status"`
+	CreatedAt     time.Time                                            `json:"created_at"`
+	UpdatedAt     time.Time                                            `json:"updated_at"`
+	ClaimedAt     NilDateTime                                          `json:"claimed_at"`
+	VerifiedAt    NilDateTime                                          `json:"verified_at"`
+	LastSeenAt    NilDateTime                                          `json:"last_seen_at"`
+	OwnershipKind CreateAgentConnectionOKData1ConnectionOwnershipKind  `json:"ownership_kind"`
+	OwnerUserID   NilString                                            `json:"owner_user_id"`
+	OwnerActive   NilBool                                              `json:"owner_active"`
+	Presence      OptNilCreateAgentConnectionOKData1ConnectionPresence `json:"presence"`
+}
+
+// GetAddress returns the value of Address.
+func (s *CreateAgentConnectionOKData1Connection) GetAddress() string {
+	return s.Address
+}
+
+// GetName returns the value of Name.
+func (s *CreateAgentConnectionOKData1Connection) GetName() string {
+	return s.Name
+}
+
+// GetOwnerAddress returns the value of OwnerAddress.
+func (s *CreateAgentConnectionOKData1Connection) GetOwnerAddress() string {
+	return s.OwnerAddress
+}
+
+// GetStatus returns the value of Status.
+func (s *CreateAgentConnectionOKData1Connection) GetStatus() CreateAgentConnectionOKData1ConnectionStatus {
+	return s.Status
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *CreateAgentConnectionOKData1Connection) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *CreateAgentConnectionOKData1Connection) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// GetClaimedAt returns the value of ClaimedAt.
+func (s *CreateAgentConnectionOKData1Connection) GetClaimedAt() NilDateTime {
+	return s.ClaimedAt
+}
+
+// GetVerifiedAt returns the value of VerifiedAt.
+func (s *CreateAgentConnectionOKData1Connection) GetVerifiedAt() NilDateTime {
+	return s.VerifiedAt
+}
+
+// GetLastSeenAt returns the value of LastSeenAt.
+func (s *CreateAgentConnectionOKData1Connection) GetLastSeenAt() NilDateTime {
+	return s.LastSeenAt
+}
+
+// GetOwnershipKind returns the value of OwnershipKind.
+func (s *CreateAgentConnectionOKData1Connection) GetOwnershipKind() CreateAgentConnectionOKData1ConnectionOwnershipKind {
+	return s.OwnershipKind
+}
+
+// GetOwnerUserID returns the value of OwnerUserID.
+func (s *CreateAgentConnectionOKData1Connection) GetOwnerUserID() NilString {
+	return s.OwnerUserID
+}
+
+// GetOwnerActive returns the value of OwnerActive.
+func (s *CreateAgentConnectionOKData1Connection) GetOwnerActive() NilBool {
+	return s.OwnerActive
+}
+
+// GetPresence returns the value of Presence.
+func (s *CreateAgentConnectionOKData1Connection) GetPresence() OptNilCreateAgentConnectionOKData1ConnectionPresence {
+	return s.Presence
+}
+
+// SetAddress sets the value of Address.
+func (s *CreateAgentConnectionOKData1Connection) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetName sets the value of Name.
+func (s *CreateAgentConnectionOKData1Connection) SetName(val string) {
+	s.Name = val
+}
+
+// SetOwnerAddress sets the value of OwnerAddress.
+func (s *CreateAgentConnectionOKData1Connection) SetOwnerAddress(val string) {
+	s.OwnerAddress = val
+}
+
+// SetStatus sets the value of Status.
+func (s *CreateAgentConnectionOKData1Connection) SetStatus(val CreateAgentConnectionOKData1ConnectionStatus) {
+	s.Status = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *CreateAgentConnectionOKData1Connection) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *CreateAgentConnectionOKData1Connection) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// SetClaimedAt sets the value of ClaimedAt.
+func (s *CreateAgentConnectionOKData1Connection) SetClaimedAt(val NilDateTime) {
+	s.ClaimedAt = val
+}
+
+// SetVerifiedAt sets the value of VerifiedAt.
+func (s *CreateAgentConnectionOKData1Connection) SetVerifiedAt(val NilDateTime) {
+	s.VerifiedAt = val
+}
+
+// SetLastSeenAt sets the value of LastSeenAt.
+func (s *CreateAgentConnectionOKData1Connection) SetLastSeenAt(val NilDateTime) {
+	s.LastSeenAt = val
+}
+
+// SetOwnershipKind sets the value of OwnershipKind.
+func (s *CreateAgentConnectionOKData1Connection) SetOwnershipKind(val CreateAgentConnectionOKData1ConnectionOwnershipKind) {
+	s.OwnershipKind = val
+}
+
+// SetOwnerUserID sets the value of OwnerUserID.
+func (s *CreateAgentConnectionOKData1Connection) SetOwnerUserID(val NilString) {
+	s.OwnerUserID = val
+}
+
+// SetOwnerActive sets the value of OwnerActive.
+func (s *CreateAgentConnectionOKData1Connection) SetOwnerActive(val NilBool) {
+	s.OwnerActive = val
+}
+
+// SetPresence sets the value of Presence.
+func (s *CreateAgentConnectionOKData1Connection) SetPresence(val OptNilCreateAgentConnectionOKData1ConnectionPresence) {
+	s.Presence = val
+}
+
+type CreateAgentConnectionOKData1ConnectionOwnershipKind string
+
+const (
+	CreateAgentConnectionOKData1ConnectionOwnershipKindPersonal      CreateAgentConnectionOKData1ConnectionOwnershipKind = "personal"
+	CreateAgentConnectionOKData1ConnectionOwnershipKindShared        CreateAgentConnectionOKData1ConnectionOwnershipKind = "shared"
+	CreateAgentConnectionOKData1ConnectionOwnershipKindLegacyUnknown CreateAgentConnectionOKData1ConnectionOwnershipKind = "legacy_unknown"
+)
+
+// AllValues returns all CreateAgentConnectionOKData1ConnectionOwnershipKind values.
+func (CreateAgentConnectionOKData1ConnectionOwnershipKind) AllValues() []CreateAgentConnectionOKData1ConnectionOwnershipKind {
+	return []CreateAgentConnectionOKData1ConnectionOwnershipKind{
+		CreateAgentConnectionOKData1ConnectionOwnershipKindPersonal,
+		CreateAgentConnectionOKData1ConnectionOwnershipKindShared,
+		CreateAgentConnectionOKData1ConnectionOwnershipKindLegacyUnknown,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateAgentConnectionOKData1ConnectionOwnershipKind) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateAgentConnectionOKData1ConnectionOwnershipKindPersonal:
+		return []byte(s), nil
+	case CreateAgentConnectionOKData1ConnectionOwnershipKindShared:
+		return []byte(s), nil
+	case CreateAgentConnectionOKData1ConnectionOwnershipKindLegacyUnknown:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateAgentConnectionOKData1ConnectionOwnershipKind) UnmarshalText(data []byte) error {
+	switch CreateAgentConnectionOKData1ConnectionOwnershipKind(data) {
+	case CreateAgentConnectionOKData1ConnectionOwnershipKindPersonal:
+		*s = CreateAgentConnectionOKData1ConnectionOwnershipKindPersonal
+		return nil
+	case CreateAgentConnectionOKData1ConnectionOwnershipKindShared:
+		*s = CreateAgentConnectionOKData1ConnectionOwnershipKindShared
+		return nil
+	case CreateAgentConnectionOKData1ConnectionOwnershipKindLegacyUnknown:
+		*s = CreateAgentConnectionOKData1ConnectionOwnershipKindLegacyUnknown
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type CreateAgentConnectionOKData1ConnectionPresence struct {
+	LastCheckedAt time.Time `json:"last_checked_at"`
+	ExpiresAt     time.Time `json:"expires_at"`
+	ValidForMs    int       `json:"valid_for_ms"`
+}
+
+// GetLastCheckedAt returns the value of LastCheckedAt.
+func (s *CreateAgentConnectionOKData1ConnectionPresence) GetLastCheckedAt() time.Time {
+	return s.LastCheckedAt
+}
+
+// GetExpiresAt returns the value of ExpiresAt.
+func (s *CreateAgentConnectionOKData1ConnectionPresence) GetExpiresAt() time.Time {
+	return s.ExpiresAt
+}
+
+// GetValidForMs returns the value of ValidForMs.
+func (s *CreateAgentConnectionOKData1ConnectionPresence) GetValidForMs() int {
+	return s.ValidForMs
+}
+
+// SetLastCheckedAt sets the value of LastCheckedAt.
+func (s *CreateAgentConnectionOKData1ConnectionPresence) SetLastCheckedAt(val time.Time) {
+	s.LastCheckedAt = val
+}
+
+// SetExpiresAt sets the value of ExpiresAt.
+func (s *CreateAgentConnectionOKData1ConnectionPresence) SetExpiresAt(val time.Time) {
+	s.ExpiresAt = val
+}
+
+// SetValidForMs sets the value of ValidForMs.
+func (s *CreateAgentConnectionOKData1ConnectionPresence) SetValidForMs(val int) {
+	s.ValidForMs = val
+}
+
+type CreateAgentConnectionOKData1ConnectionStatus string
+
+const (
+	CreateAgentConnectionOKData1ConnectionStatusPending   CreateAgentConnectionOKData1ConnectionStatus = "pending"
+	CreateAgentConnectionOKData1ConnectionStatusClaimed   CreateAgentConnectionOKData1ConnectionStatus = "claimed"
+	CreateAgentConnectionOKData1ConnectionStatusConnected CreateAgentConnectionOKData1ConnectionStatus = "connected"
+	CreateAgentConnectionOKData1ConnectionStatusRevoked   CreateAgentConnectionOKData1ConnectionStatus = "revoked"
+)
+
+// AllValues returns all CreateAgentConnectionOKData1ConnectionStatus values.
+func (CreateAgentConnectionOKData1ConnectionStatus) AllValues() []CreateAgentConnectionOKData1ConnectionStatus {
+	return []CreateAgentConnectionOKData1ConnectionStatus{
+		CreateAgentConnectionOKData1ConnectionStatusPending,
+		CreateAgentConnectionOKData1ConnectionStatusClaimed,
+		CreateAgentConnectionOKData1ConnectionStatusConnected,
+		CreateAgentConnectionOKData1ConnectionStatusRevoked,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s CreateAgentConnectionOKData1ConnectionStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case CreateAgentConnectionOKData1ConnectionStatusPending:
+		return []byte(s), nil
+	case CreateAgentConnectionOKData1ConnectionStatusClaimed:
+		return []byte(s), nil
+	case CreateAgentConnectionOKData1ConnectionStatusConnected:
+		return []byte(s), nil
+	case CreateAgentConnectionOKData1ConnectionStatusRevoked:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *CreateAgentConnectionOKData1ConnectionStatus) UnmarshalText(data []byte) error {
+	switch CreateAgentConnectionOKData1ConnectionStatus(data) {
+	case CreateAgentConnectionOKData1ConnectionStatusPending:
+		*s = CreateAgentConnectionOKData1ConnectionStatusPending
+		return nil
+	case CreateAgentConnectionOKData1ConnectionStatusClaimed:
+		*s = CreateAgentConnectionOKData1ConnectionStatusClaimed
+		return nil
+	case CreateAgentConnectionOKData1ConnectionStatusConnected:
+		*s = CreateAgentConnectionOKData1ConnectionStatusConnected
+		return nil
+	case CreateAgentConnectionOKData1ConnectionStatusRevoked:
+		*s = CreateAgentConnectionOKData1ConnectionStatusRevoked
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // CreateAgentConnectionOKHeaders wraps CreateAgentConnectionOK with response headers.
@@ -5548,6 +6175,9 @@ type CreateAgentConnectionReq struct {
 	Address       OptString                                `json:"address"`
 	OwnerAddress  OptString                                `json:"owner_address"`
 	OwnershipKind OptCreateAgentConnectionReqOwnershipKind `json:"ownership_kind"`
+	// Stable request UUID saved before creating this agent. Replay recovers the original current
+	// connection without returning or rotating an invitation.
+	CreateRequestID OptUUID `json:"create_request_id"`
 }
 
 // GetName returns the value of Name.
@@ -5570,6 +6200,11 @@ func (s *CreateAgentConnectionReq) GetOwnershipKind() OptCreateAgentConnectionRe
 	return s.OwnershipKind
 }
 
+// GetCreateRequestID returns the value of CreateRequestID.
+func (s *CreateAgentConnectionReq) GetCreateRequestID() OptUUID {
+	return s.CreateRequestID
+}
+
 // SetName sets the value of Name.
 func (s *CreateAgentConnectionReq) SetName(val string) {
 	s.Name = val
@@ -5588,6 +6223,11 @@ func (s *CreateAgentConnectionReq) SetOwnerAddress(val OptString) {
 // SetOwnershipKind sets the value of OwnershipKind.
 func (s *CreateAgentConnectionReq) SetOwnershipKind(val OptCreateAgentConnectionReqOwnershipKind) {
 	s.OwnershipKind = val
+}
+
+// SetCreateRequestID sets the value of CreateRequestID.
+func (s *CreateAgentConnectionReq) SetCreateRequestID(val OptUUID) {
+	s.CreateRequestID = val
 }
 
 type CreateAgentConnectionReqOwnershipKind string
@@ -10541,6 +11181,9 @@ type EmailDetail struct {
 	// `failed_recipients`, `report`. Treat an unfamiliar value as a
 	// reason added after your client was built.
 	AutomatedReasons []string `json:"automated_reasons"`
+	// Verified human authorship, projected only within the member organization. Historical attribution
+	// is not current sending or owner authority.
+	SenderMember OptNilEmailDetailSenderMember `json:"sender_member"`
 }
 
 // GetID returns the value of ID.
@@ -10768,6 +11411,11 @@ func (s *EmailDetail) GetAutomatedReasons() []string {
 	return s.AutomatedReasons
 }
 
+// GetSenderMember returns the value of SenderMember.
+func (s *EmailDetail) GetSenderMember() OptNilEmailDetailSenderMember {
+	return s.SenderMember
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -10991,6 +11639,11 @@ func (s *EmailDetail) SetAutomated(val bool) {
 // SetAutomatedReasons sets the value of AutomatedReasons.
 func (s *EmailDetail) SetAutomatedReasons(val []string) {
 	s.AutomatedReasons = val
+}
+
+// SetSenderMember sets the value of SenderMember.
+func (s *EmailDetail) SetSenderMember(val OptNilEmailDetailSenderMember) {
+	s.SenderMember = val
 }
 
 // What the message declared about being automated, verbatim:
@@ -11268,6 +11921,44 @@ func (s *EmailDetailReply) SetCreatedAt(val time.Time) {
 // SetQueueID sets the value of QueueID.
 func (s *EmailDetailReply) SetQueueID(val OptNilString) {
 	s.QueueID = val
+}
+
+// Verified human authorship, projected only within the member organization. Historical attribution
+// is not current sending or owner authority.
+type EmailDetailSenderMember struct {
+	Address string    `json:"address"`
+	UserID  string    `json:"user_id"`
+	Name    NilString `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *EmailDetailSenderMember) GetAddress() string {
+	return s.Address
+}
+
+// GetUserID returns the value of UserID.
+func (s *EmailDetailSenderMember) GetUserID() string {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *EmailDetailSenderMember) GetName() NilString {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *EmailDetailSenderMember) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *EmailDetailSenderMember) SetUserID(val string) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailDetailSenderMember) SetName(val NilString) {
+	s.Name = val
 }
 
 // Ref: #/components/schemas/EmailSearchFacetBucket
@@ -11604,6 +12295,9 @@ type EmailSearchResult struct {
 	// `failed_recipients`, `report`. Treat an unfamiliar value as a
 	// reason added after your client was built.
 	AutomatedReasons []string `json:"automated_reasons"`
+	// Verified human authorship, projected only within the member organization. Historical attribution
+	// is not current sending or owner authority.
+	SenderMember OptNilEmailSearchResultSenderMember `json:"sender_member"`
 	// Number of parsed attachments on the email.
 	AttachmentCount int `json:"attachment_count"`
 	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
@@ -11726,6 +12420,11 @@ func (s *EmailSearchResult) GetAutomated() bool {
 // GetAutomatedReasons returns the value of AutomatedReasons.
 func (s *EmailSearchResult) GetAutomatedReasons() []string {
 	return s.AutomatedReasons
+}
+
+// GetSenderMember returns the value of SenderMember.
+func (s *EmailSearchResult) GetSenderMember() OptNilEmailSearchResultSenderMember {
+	return s.SenderMember
 }
 
 // GetAttachmentCount returns the value of AttachmentCount.
@@ -11861,6 +12560,11 @@ func (s *EmailSearchResult) SetAutomated(val bool) {
 // SetAutomatedReasons sets the value of AutomatedReasons.
 func (s *EmailSearchResult) SetAutomatedReasons(val []string) {
 	s.AutomatedReasons = val
+}
+
+// SetSenderMember sets the value of SenderMember.
+func (s *EmailSearchResult) SetSenderMember(val OptNilEmailSearchResultSenderMember) {
+	s.SenderMember = val
 }
 
 // SetAttachmentCount sets the value of AttachmentCount.
@@ -12087,6 +12791,44 @@ func (s *EmailSearchResultPresenceControlStatus) UnmarshalText(data []byte) erro
 	}
 }
 
+// Verified human authorship, projected only within the member organization. Historical attribution
+// is not current sending or owner authority.
+type EmailSearchResultSenderMember struct {
+	Address string    `json:"address"`
+	UserID  string    `json:"user_id"`
+	Name    NilString `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *EmailSearchResultSenderMember) GetAddress() string {
+	return s.Address
+}
+
+// GetUserID returns the value of UserID.
+func (s *EmailSearchResultSenderMember) GetUserID() string {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *EmailSearchResultSenderMember) GetName() NilString {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *EmailSearchResultSenderMember) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *EmailSearchResultSenderMember) SetUserID(val string) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailSearchResultSenderMember) SetName(val NilString) {
+	s.Name = val
+}
+
 // Lifecycle status of an INBOUND email (a row in the `emails`
 // table). Distinct from `SentEmailStatus`, which describes
 // the OUTBOUND lifecycle (the `sent_emails` table) and uses
@@ -12261,6 +13003,9 @@ type EmailSummary struct {
 	// `failed_recipients`, `report`. Treat an unfamiliar value as a
 	// reason added after your client was built.
 	AutomatedReasons []string `json:"automated_reasons"`
+	// Verified human authorship, projected only within the member organization. Historical attribution
+	// is not current sending or owner authority.
+	SenderMember OptNilEmailSummarySenderMember `json:"sender_member"`
 }
 
 // GetID returns the value of ID.
@@ -12378,6 +13123,11 @@ func (s *EmailSummary) GetAutomatedReasons() []string {
 	return s.AutomatedReasons
 }
 
+// GetSenderMember returns the value of SenderMember.
+func (s *EmailSummary) GetSenderMember() OptNilEmailSummarySenderMember {
+	return s.SenderMember
+}
+
 // SetID sets the value of ID.
 func (s *EmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -12491,6 +13241,11 @@ func (s *EmailSummary) SetAutomated(val bool) {
 // SetAutomatedReasons sets the value of AutomatedReasons.
 func (s *EmailSummary) SetAutomatedReasons(val []string) {
 	s.AutomatedReasons = val
+}
+
+// SetSenderMember sets the value of SenderMember.
+func (s *EmailSummary) SetSenderMember(val OptNilEmailSummarySenderMember) {
+	s.SenderMember = val
 }
 
 // What the message declared about being automated, verbatim:
@@ -12695,6 +13450,44 @@ func (s *EmailSummaryPresenceControlStatus) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Verified human authorship, projected only within the member organization. Historical attribution
+// is not current sending or owner authority.
+type EmailSummarySenderMember struct {
+	Address string    `json:"address"`
+	UserID  string    `json:"user_id"`
+	Name    NilString `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *EmailSummarySenderMember) GetAddress() string {
+	return s.Address
+}
+
+// GetUserID returns the value of UserID.
+func (s *EmailSummarySenderMember) GetUserID() string {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *EmailSummarySenderMember) GetName() NilString {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *EmailSummarySenderMember) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *EmailSummarySenderMember) SetUserID(val string) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *EmailSummarySenderMember) SetName(val NilString) {
+	s.Name = val
 }
 
 // Webhook-delivery state for an inbound email. Tracks a
@@ -18871,7 +19664,21 @@ func (s *InviteAgentConnectionOKHeaders) SetResponse(val InviteAgentConnectionOK
 
 func (*InviteAgentConnectionOKHeaders) inviteAgentConnectionRes() {}
 
-type InviteAgentConnectionReq struct{}
+type InviteAgentConnectionReq struct {
+	// Issue setup only while this exact connection is pending. A claimed, connected or revoked
+	// connection returns connection_already_claimed without changing its credential.
+	PendingOnly OptBool `json:"pending_only"`
+}
+
+// GetPendingOnly returns the value of PendingOnly.
+func (s *InviteAgentConnectionReq) GetPendingOnly() OptBool {
+	return s.PendingOnly
+}
+
+// SetPendingOnly sets the value of PendingOnly.
+func (s *InviteAgentConnectionReq) SetPendingOnly(val OptBool) {
+	s.PendingOnly = val
+}
 
 type InviteAgentConnectionTooManyRequests ErrorResponseHeaders
 
@@ -19313,6 +20120,40 @@ func (s *ListAgentConnectionsOKMeta) SetLimit(val OptInt) {
 // SetCursor sets the value of Cursor.
 func (s *ListAgentConnectionsOKMeta) SetCursor(val OptNilString) {
 	s.Cursor = val
+}
+
+type ListAgentConnectionsOwner string
+
+const (
+	ListAgentConnectionsOwnerSelf ListAgentConnectionsOwner = "self"
+)
+
+// AllValues returns all ListAgentConnectionsOwner values.
+func (ListAgentConnectionsOwner) AllValues() []ListAgentConnectionsOwner {
+	return []ListAgentConnectionsOwner{
+		ListAgentConnectionsOwnerSelf,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListAgentConnectionsOwner) MarshalText() ([]byte, error) {
+	switch s {
+	case ListAgentConnectionsOwnerSelf:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListAgentConnectionsOwner) UnmarshalText(data []byte) error {
+	switch ListAgentConnectionsOwner(data) {
+	case ListAgentConnectionsOwnerSelf:
+		*s = ListAgentConnectionsOwnerSelf
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type ListAgentConnectionsTooManyRequests ErrorResponseHeaders
@@ -20804,6 +21645,32 @@ func (s *ListWakeSchedulesOK) SetData(val []WakeSchedule) {
 
 func (*ListWakeSchedulesOK) listWakeSchedulesRes() {}
 
+// Ref: #/components/schemas/MemberAddress
+type MemberAddress struct {
+	Address string    `json:"address"`
+	Name    NilString `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *MemberAddress) GetAddress() string {
+	return s.Address
+}
+
+// GetName returns the value of Name.
+func (s *MemberAddress) GetName() NilString {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *MemberAddress) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetName sets the value of Name.
+func (s *MemberAddress) SetName(val NilString) {
+	s.Name = val
+}
+
 // JSON value accepted by Primitive Memories. The server accepts strings,
 // numbers, booleans, null, arrays, and objects, validates nested values,
 // and rejects values that do not serialize as JSON.
@@ -21715,6 +22582,51 @@ func (o NilBool) Or(d bool) bool {
 	return d
 }
 
+// NewNilCallerIdentityMemberAddress returns new NilCallerIdentityMemberAddress with value set to v.
+func NewNilCallerIdentityMemberAddress(v CallerIdentityMemberAddress) NilCallerIdentityMemberAddress {
+	return NilCallerIdentityMemberAddress{
+		Value: v,
+	}
+}
+
+// NilCallerIdentityMemberAddress is nullable CallerIdentityMemberAddress.
+type NilCallerIdentityMemberAddress struct {
+	Value CallerIdentityMemberAddress
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilCallerIdentityMemberAddress) SetTo(v CallerIdentityMemberAddress) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilCallerIdentityMemberAddress) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *NilCallerIdentityMemberAddress) SetToNull() {
+	o.Null = true
+	var v CallerIdentityMemberAddress
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilCallerIdentityMemberAddress) Get() (v CallerIdentityMemberAddress, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilCallerIdentityMemberAddress) Or(d CallerIdentityMemberAddress) CallerIdentityMemberAddress {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilCreditBalanceBudget returns new NilCreditBalanceBudget with value set to v.
 func NewNilCreditBalanceBudget(v CreditBalanceBudget) NilCreditBalanceBudget {
 	return NilCreditBalanceBudget{
@@ -22571,6 +23483,52 @@ func (o NilUUID) Or(d uuid.UUID) uuid.UUID {
 }
 
 type NumericString string
+
+// NewOptAgentNetworkContactAdmissionSenderRelation returns new OptAgentNetworkContactAdmissionSenderRelation with value set to v.
+func NewOptAgentNetworkContactAdmissionSenderRelation(v AgentNetworkContactAdmissionSenderRelation) OptAgentNetworkContactAdmissionSenderRelation {
+	return OptAgentNetworkContactAdmissionSenderRelation{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptAgentNetworkContactAdmissionSenderRelation is optional AgentNetworkContactAdmissionSenderRelation.
+type OptAgentNetworkContactAdmissionSenderRelation struct {
+	Value AgentNetworkContactAdmissionSenderRelation
+	Set   bool
+}
+
+// IsSet returns true if OptAgentNetworkContactAdmissionSenderRelation was set.
+func (o OptAgentNetworkContactAdmissionSenderRelation) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptAgentNetworkContactAdmissionSenderRelation) Reset() {
+	var v AgentNetworkContactAdmissionSenderRelation
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptAgentNetworkContactAdmissionSenderRelation) SetTo(v AgentNetworkContactAdmissionSenderRelation) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptAgentNetworkContactAdmissionSenderRelation) Get() (v AgentNetworkContactAdmissionSenderRelation, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptAgentNetworkContactAdmissionSenderRelation) Or(d AgentNetworkContactAdmissionSenderRelation) AgentNetworkContactAdmissionSenderRelation {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
 
 // NewOptBool returns new OptBool with value set to v.
 func NewOptBool(v bool) OptBool {
@@ -23906,6 +24864,52 @@ func (o OptListAgentConnectionsOKMeta) Or(d ListAgentConnectionsOKMeta) ListAgen
 	return d
 }
 
+// NewOptListAgentConnectionsOwner returns new OptListAgentConnectionsOwner with value set to v.
+func NewOptListAgentConnectionsOwner(v ListAgentConnectionsOwner) OptListAgentConnectionsOwner {
+	return OptListAgentConnectionsOwner{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListAgentConnectionsOwner is optional ListAgentConnectionsOwner.
+type OptListAgentConnectionsOwner struct {
+	Value ListAgentConnectionsOwner
+	Set   bool
+}
+
+// IsSet returns true if OptListAgentConnectionsOwner was set.
+func (o OptListAgentConnectionsOwner) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListAgentConnectionsOwner) Reset() {
+	var v ListAgentConnectionsOwner
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListAgentConnectionsOwner) SetTo(v ListAgentConnectionsOwner) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListAgentConnectionsOwner) Get() (v ListAgentConnectionsOwner, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListAgentConnectionsOwner) Or(d ListAgentConnectionsOwner) ListAgentConnectionsOwner {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptListDeliveriesStatus returns new OptListDeliveriesStatus with value set to v.
 func NewOptListDeliveriesStatus(v ListDeliveriesStatus) OptListDeliveriesStatus {
 	return OptListDeliveriesStatus{
@@ -24497,52 +25501,52 @@ func (o OptNilConversationMessagePresenceControl) Or(d ConversationMessagePresen
 	return d
 }
 
-// NewOptNilCreateAgentConnectionOKDataConnectionPresence returns new OptNilCreateAgentConnectionOKDataConnectionPresence with value set to v.
-func NewOptNilCreateAgentConnectionOKDataConnectionPresence(v CreateAgentConnectionOKDataConnectionPresence) OptNilCreateAgentConnectionOKDataConnectionPresence {
-	return OptNilCreateAgentConnectionOKDataConnectionPresence{
+// NewOptNilConversationMessageSenderMember returns new OptNilConversationMessageSenderMember with value set to v.
+func NewOptNilConversationMessageSenderMember(v ConversationMessageSenderMember) OptNilConversationMessageSenderMember {
+	return OptNilConversationMessageSenderMember{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptNilCreateAgentConnectionOKDataConnectionPresence is optional nullable CreateAgentConnectionOKDataConnectionPresence.
-type OptNilCreateAgentConnectionOKDataConnectionPresence struct {
-	Value CreateAgentConnectionOKDataConnectionPresence
+// OptNilConversationMessageSenderMember is optional nullable ConversationMessageSenderMember.
+type OptNilConversationMessageSenderMember struct {
+	Value ConversationMessageSenderMember
 	Set   bool
 	Null  bool
 }
 
-// IsSet returns true if OptNilCreateAgentConnectionOKDataConnectionPresence was set.
-func (o OptNilCreateAgentConnectionOKDataConnectionPresence) IsSet() bool { return o.Set }
+// IsSet returns true if OptNilConversationMessageSenderMember was set.
+func (o OptNilConversationMessageSenderMember) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptNilCreateAgentConnectionOKDataConnectionPresence) Reset() {
-	var v CreateAgentConnectionOKDataConnectionPresence
+func (o *OptNilConversationMessageSenderMember) Reset() {
+	var v ConversationMessageSenderMember
 	o.Value = v
 	o.Set = false
 	o.Null = false
 }
 
 // SetTo sets value to v.
-func (o *OptNilCreateAgentConnectionOKDataConnectionPresence) SetTo(v CreateAgentConnectionOKDataConnectionPresence) {
+func (o *OptNilConversationMessageSenderMember) SetTo(v ConversationMessageSenderMember) {
 	o.Set = true
 	o.Null = false
 	o.Value = v
 }
 
 // IsNull returns true if value is Null.
-func (o OptNilCreateAgentConnectionOKDataConnectionPresence) IsNull() bool { return o.Null }
+func (o OptNilConversationMessageSenderMember) IsNull() bool { return o.Null }
 
 // SetToNull sets value to null.
-func (o *OptNilCreateAgentConnectionOKDataConnectionPresence) SetToNull() {
+func (o *OptNilConversationMessageSenderMember) SetToNull() {
 	o.Set = true
 	o.Null = true
-	var v CreateAgentConnectionOKDataConnectionPresence
+	var v ConversationMessageSenderMember
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptNilCreateAgentConnectionOKDataConnectionPresence) Get() (v CreateAgentConnectionOKDataConnectionPresence, ok bool) {
+func (o OptNilConversationMessageSenderMember) Get() (v ConversationMessageSenderMember, ok bool) {
 	if o.Null {
 		return v, false
 	}
@@ -24553,7 +25557,133 @@ func (o OptNilCreateAgentConnectionOKDataConnectionPresence) Get() (v CreateAgen
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptNilCreateAgentConnectionOKDataConnectionPresence) Or(d CreateAgentConnectionOKDataConnectionPresence) CreateAgentConnectionOKDataConnectionPresence {
+func (o OptNilConversationMessageSenderMember) Or(d ConversationMessageSenderMember) ConversationMessageSenderMember {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilCreateAgentConnectionOKData0ConnectionPresence returns new OptNilCreateAgentConnectionOKData0ConnectionPresence with value set to v.
+func NewOptNilCreateAgentConnectionOKData0ConnectionPresence(v CreateAgentConnectionOKData0ConnectionPresence) OptNilCreateAgentConnectionOKData0ConnectionPresence {
+	return OptNilCreateAgentConnectionOKData0ConnectionPresence{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilCreateAgentConnectionOKData0ConnectionPresence is optional nullable CreateAgentConnectionOKData0ConnectionPresence.
+type OptNilCreateAgentConnectionOKData0ConnectionPresence struct {
+	Value CreateAgentConnectionOKData0ConnectionPresence
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilCreateAgentConnectionOKData0ConnectionPresence was set.
+func (o OptNilCreateAgentConnectionOKData0ConnectionPresence) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilCreateAgentConnectionOKData0ConnectionPresence) Reset() {
+	var v CreateAgentConnectionOKData0ConnectionPresence
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilCreateAgentConnectionOKData0ConnectionPresence) SetTo(v CreateAgentConnectionOKData0ConnectionPresence) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilCreateAgentConnectionOKData0ConnectionPresence) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilCreateAgentConnectionOKData0ConnectionPresence) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v CreateAgentConnectionOKData0ConnectionPresence
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilCreateAgentConnectionOKData0ConnectionPresence) Get() (v CreateAgentConnectionOKData0ConnectionPresence, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilCreateAgentConnectionOKData0ConnectionPresence) Or(d CreateAgentConnectionOKData0ConnectionPresence) CreateAgentConnectionOKData0ConnectionPresence {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilCreateAgentConnectionOKData1ConnectionPresence returns new OptNilCreateAgentConnectionOKData1ConnectionPresence with value set to v.
+func NewOptNilCreateAgentConnectionOKData1ConnectionPresence(v CreateAgentConnectionOKData1ConnectionPresence) OptNilCreateAgentConnectionOKData1ConnectionPresence {
+	return OptNilCreateAgentConnectionOKData1ConnectionPresence{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilCreateAgentConnectionOKData1ConnectionPresence is optional nullable CreateAgentConnectionOKData1ConnectionPresence.
+type OptNilCreateAgentConnectionOKData1ConnectionPresence struct {
+	Value CreateAgentConnectionOKData1ConnectionPresence
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilCreateAgentConnectionOKData1ConnectionPresence was set.
+func (o OptNilCreateAgentConnectionOKData1ConnectionPresence) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilCreateAgentConnectionOKData1ConnectionPresence) Reset() {
+	var v CreateAgentConnectionOKData1ConnectionPresence
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilCreateAgentConnectionOKData1ConnectionPresence) SetTo(v CreateAgentConnectionOKData1ConnectionPresence) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilCreateAgentConnectionOKData1ConnectionPresence) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilCreateAgentConnectionOKData1ConnectionPresence) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v CreateAgentConnectionOKData1ConnectionPresence
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilCreateAgentConnectionOKData1ConnectionPresence) Get() (v CreateAgentConnectionOKData1ConnectionPresence, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilCreateAgentConnectionOKData1ConnectionPresence) Or(d CreateAgentConnectionOKData1ConnectionPresence) CreateAgentConnectionOKData1ConnectionPresence {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -24938,6 +26068,69 @@ func (o OptNilEmailDetailPresenceControl) Or(d EmailDetailPresenceControl) Email
 	return d
 }
 
+// NewOptNilEmailDetailSenderMember returns new OptNilEmailDetailSenderMember with value set to v.
+func NewOptNilEmailDetailSenderMember(v EmailDetailSenderMember) OptNilEmailDetailSenderMember {
+	return OptNilEmailDetailSenderMember{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailDetailSenderMember is optional nullable EmailDetailSenderMember.
+type OptNilEmailDetailSenderMember struct {
+	Value EmailDetailSenderMember
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailDetailSenderMember was set.
+func (o OptNilEmailDetailSenderMember) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailDetailSenderMember) Reset() {
+	var v EmailDetailSenderMember
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailDetailSenderMember) SetTo(v EmailDetailSenderMember) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailDetailSenderMember) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailDetailSenderMember) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailDetailSenderMember
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailDetailSenderMember) Get() (v EmailDetailSenderMember, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailDetailSenderMember) Or(d EmailDetailSenderMember) EmailDetailSenderMember {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilEmailSearchResultAutomationHeaders returns new OptNilEmailSearchResultAutomationHeaders with value set to v.
 func NewOptNilEmailSearchResultAutomationHeaders(v EmailSearchResultAutomationHeaders) OptNilEmailSearchResultAutomationHeaders {
 	return OptNilEmailSearchResultAutomationHeaders{
@@ -25064,6 +26257,69 @@ func (o OptNilEmailSearchResultPresenceControl) Or(d EmailSearchResultPresenceCo
 	return d
 }
 
+// NewOptNilEmailSearchResultSenderMember returns new OptNilEmailSearchResultSenderMember with value set to v.
+func NewOptNilEmailSearchResultSenderMember(v EmailSearchResultSenderMember) OptNilEmailSearchResultSenderMember {
+	return OptNilEmailSearchResultSenderMember{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSearchResultSenderMember is optional nullable EmailSearchResultSenderMember.
+type OptNilEmailSearchResultSenderMember struct {
+	Value EmailSearchResultSenderMember
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSearchResultSenderMember was set.
+func (o OptNilEmailSearchResultSenderMember) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSearchResultSenderMember) Reset() {
+	var v EmailSearchResultSenderMember
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSearchResultSenderMember) SetTo(v EmailSearchResultSenderMember) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSearchResultSenderMember) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSearchResultSenderMember) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSearchResultSenderMember
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSearchResultSenderMember) Get() (v EmailSearchResultSenderMember, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSearchResultSenderMember) Or(d EmailSearchResultSenderMember) EmailSearchResultSenderMember {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilEmailSummaryAutomationHeaders returns new OptNilEmailSummaryAutomationHeaders with value set to v.
 func NewOptNilEmailSummaryAutomationHeaders(v EmailSummaryAutomationHeaders) OptNilEmailSummaryAutomationHeaders {
 	return OptNilEmailSummaryAutomationHeaders{
@@ -25184,6 +26440,69 @@ func (o OptNilEmailSummaryPresenceControl) Get() (v EmailSummaryPresenceControl,
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailSummaryPresenceControl) Or(d EmailSummaryPresenceControl) EmailSummaryPresenceControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailSummarySenderMember returns new OptNilEmailSummarySenderMember with value set to v.
+func NewOptNilEmailSummarySenderMember(v EmailSummarySenderMember) OptNilEmailSummarySenderMember {
+	return OptNilEmailSummarySenderMember{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSummarySenderMember is optional nullable EmailSummarySenderMember.
+type OptNilEmailSummarySenderMember struct {
+	Value EmailSummarySenderMember
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSummarySenderMember was set.
+func (o OptNilEmailSummarySenderMember) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSummarySenderMember) Reset() {
+	var v EmailSummarySenderMember
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSummarySenderMember) SetTo(v EmailSummarySenderMember) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSummarySenderMember) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSummarySenderMember) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSummarySenderMember
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSummarySenderMember) Get() (v EmailSummarySenderMember, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSummarySenderMember) Or(d EmailSummarySenderMember) EmailSummarySenderMember {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -25883,6 +27202,69 @@ func (o OptNilSentEmailDetailPresenceControl) Or(d SentEmailDetailPresenceContro
 	return d
 }
 
+// NewOptNilSentEmailDetailSenderMember returns new OptNilSentEmailDetailSenderMember with value set to v.
+func NewOptNilSentEmailDetailSenderMember(v SentEmailDetailSenderMember) OptNilSentEmailDetailSenderMember {
+	return OptNilSentEmailDetailSenderMember{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilSentEmailDetailSenderMember is optional nullable SentEmailDetailSenderMember.
+type OptNilSentEmailDetailSenderMember struct {
+	Value SentEmailDetailSenderMember
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilSentEmailDetailSenderMember was set.
+func (o OptNilSentEmailDetailSenderMember) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilSentEmailDetailSenderMember) Reset() {
+	var v SentEmailDetailSenderMember
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilSentEmailDetailSenderMember) SetTo(v SentEmailDetailSenderMember) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilSentEmailDetailSenderMember) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilSentEmailDetailSenderMember) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v SentEmailDetailSenderMember
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilSentEmailDetailSenderMember) Get() (v SentEmailDetailSenderMember, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilSentEmailDetailSenderMember) Or(d SentEmailDetailSenderMember) SentEmailDetailSenderMember {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilSentEmailSummaryPresenceControl returns new OptNilSentEmailSummaryPresenceControl with value set to v.
 func NewOptNilSentEmailSummaryPresenceControl(v SentEmailSummaryPresenceControl) OptNilSentEmailSummaryPresenceControl {
 	return OptNilSentEmailSummaryPresenceControl{
@@ -25940,6 +27322,69 @@ func (o OptNilSentEmailSummaryPresenceControl) Get() (v SentEmailSummaryPresence
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilSentEmailSummaryPresenceControl) Or(d SentEmailSummaryPresenceControl) SentEmailSummaryPresenceControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilSentEmailSummarySenderMember returns new OptNilSentEmailSummarySenderMember with value set to v.
+func NewOptNilSentEmailSummarySenderMember(v SentEmailSummarySenderMember) OptNilSentEmailSummarySenderMember {
+	return OptNilSentEmailSummarySenderMember{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilSentEmailSummarySenderMember is optional nullable SentEmailSummarySenderMember.
+type OptNilSentEmailSummarySenderMember struct {
+	Value SentEmailSummarySenderMember
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilSentEmailSummarySenderMember was set.
+func (o OptNilSentEmailSummarySenderMember) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilSentEmailSummarySenderMember) Reset() {
+	var v SentEmailSummarySenderMember
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilSentEmailSummarySenderMember) SetTo(v SentEmailSummarySenderMember) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilSentEmailSummarySenderMember) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilSentEmailSummarySenderMember) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v SentEmailSummarySenderMember
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilSentEmailSummarySenderMember) Get() (v SentEmailSummarySenderMember, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilSentEmailSummarySenderMember) Or(d SentEmailSummarySenderMember) SentEmailSummarySenderMember {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -26066,6 +27511,69 @@ func (o OptNilStringArray) Get() (v []string, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilStringArray) Or(d []string) []string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilThreadMessageSenderMember returns new OptNilThreadMessageSenderMember with value set to v.
+func NewOptNilThreadMessageSenderMember(v ThreadMessageSenderMember) OptNilThreadMessageSenderMember {
+	return OptNilThreadMessageSenderMember{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilThreadMessageSenderMember is optional nullable ThreadMessageSenderMember.
+type OptNilThreadMessageSenderMember struct {
+	Value ThreadMessageSenderMember
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilThreadMessageSenderMember was set.
+func (o OptNilThreadMessageSenderMember) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilThreadMessageSenderMember) Reset() {
+	var v ThreadMessageSenderMember
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilThreadMessageSenderMember) SetTo(v ThreadMessageSenderMember) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilThreadMessageSenderMember) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilThreadMessageSenderMember) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v ThreadMessageSenderMember
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilThreadMessageSenderMember) Get() (v ThreadMessageSenderMember, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilThreadMessageSenderMember) Or(d ThreadMessageSenderMember) ThreadMessageSenderMember {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -28561,6 +30069,71 @@ func (s *PresenceProfile) SetAuthenticationProfile(val string) {
 func (s *PresenceProfile) SetReturnAddress(val string) {
 	s.ReturnAddress = val
 }
+
+type ProvisionMemberAddressConflict ErrorResponse
+
+func (*ProvisionMemberAddressConflict) provisionMemberAddressRes() {}
+
+type ProvisionMemberAddressForbidden ErrorResponse
+
+func (*ProvisionMemberAddressForbidden) provisionMemberAddressRes() {}
+
+// Merged schema.
+type ProvisionMemberAddressOK struct {
+	Success bool          `json:"success"`
+	Data    MemberAddress `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ProvisionMemberAddressOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ProvisionMemberAddressOK) GetData() MemberAddress {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ProvisionMemberAddressOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ProvisionMemberAddressOK) SetData(val MemberAddress) {
+	s.Data = val
+}
+
+func (*ProvisionMemberAddressOK) provisionMemberAddressRes() {}
+
+type ProvisionMemberAddressReq struct {
+	Address             string  `json:"address"`
+	ConfirmExistingMail OptBool `json:"confirm_existing_mail"`
+}
+
+// GetAddress returns the value of Address.
+func (s *ProvisionMemberAddressReq) GetAddress() string {
+	return s.Address
+}
+
+// GetConfirmExistingMail returns the value of ConfirmExistingMail.
+func (s *ProvisionMemberAddressReq) GetConfirmExistingMail() OptBool {
+	return s.ConfirmExistingMail
+}
+
+// SetAddress sets the value of Address.
+func (s *ProvisionMemberAddressReq) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetConfirmExistingMail sets the value of ConfirmExistingMail.
+func (s *ProvisionMemberAddressReq) SetConfirmExistingMail(val OptBool) {
+	s.ConfirmExistingMail = val
+}
+
+type ProvisionMemberAddressUnauthorized ErrorResponse
+
+func (*ProvisionMemberAddressUnauthorized) provisionMemberAddressRes() {}
 
 type PublishAgentConflict ErrorResponse
 
@@ -35271,6 +36844,9 @@ type SentEmailDetail struct {
 	// reached the `canceled` status.
 	CanceledAt      OptNilDateTime                       `json:"canceled_at"`
 	PresenceControl OptNilSentEmailDetailPresenceControl `json:"presence_control"`
+	// Verified human authorship, projected only within the member organization. Historical attribution
+	// is not current sending or owner authority.
+	SenderMember OptNilSentEmailDetailSenderMember `json:"sender_member"`
 	// Plain-text body sent on the wire. Null when the
 	// send carried only an HTML body, or when bodies have
 	// been discarded post-send (`content_discarded_at`
@@ -35457,6 +37033,11 @@ func (s *SentEmailDetail) GetCanceledAt() OptNilDateTime {
 // GetPresenceControl returns the value of PresenceControl.
 func (s *SentEmailDetail) GetPresenceControl() OptNilSentEmailDetailPresenceControl {
 	return s.PresenceControl
+}
+
+// GetSenderMember returns the value of SenderMember.
+func (s *SentEmailDetail) GetSenderMember() OptNilSentEmailDetailSenderMember {
+	return s.SenderMember
 }
 
 // GetBodyText returns the value of BodyText.
@@ -35647,6 +37228,11 @@ func (s *SentEmailDetail) SetCanceledAt(val OptNilDateTime) {
 // SetPresenceControl sets the value of PresenceControl.
 func (s *SentEmailDetail) SetPresenceControl(val OptNilSentEmailDetailPresenceControl) {
 	s.PresenceControl = val
+}
+
+// SetSenderMember sets the value of SenderMember.
+func (s *SentEmailDetail) SetSenderMember(val OptNilSentEmailDetailSenderMember) {
+	s.SenderMember = val
 }
 
 // SetBodyText sets the value of BodyText.
@@ -35842,6 +37428,44 @@ func (s *SentEmailDetailPresenceControlStatus) UnmarshalText(data []byte) error 
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Verified human authorship, projected only within the member organization. Historical attribution
+// is not current sending or owner authority.
+type SentEmailDetailSenderMember struct {
+	Address string    `json:"address"`
+	UserID  string    `json:"user_id"`
+	Name    NilString `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *SentEmailDetailSenderMember) GetAddress() string {
+	return s.Address
+}
+
+// GetUserID returns the value of UserID.
+func (s *SentEmailDetailSenderMember) GetUserID() string {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *SentEmailDetailSenderMember) GetName() NilString {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *SentEmailDetailSenderMember) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *SentEmailDetailSenderMember) SetUserID(val string) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *SentEmailDetailSenderMember) SetName(val NilString) {
+	s.Name = val
 }
 
 // Ref: #/components/schemas/SentEmailRescheduleInput
@@ -36109,6 +37733,9 @@ type SentEmailSummary struct {
 	// reached the `canceled` status.
 	CanceledAt      OptNilDateTime                        `json:"canceled_at"`
 	PresenceControl OptNilSentEmailSummaryPresenceControl `json:"presence_control"`
+	// Verified human authorship, projected only within the member organization. Historical attribution
+	// is not current sending or owner authority.
+	SenderMember OptNilSentEmailSummarySenderMember `json:"sender_member"`
 }
 
 // GetID returns the value of ID.
@@ -36271,6 +37898,11 @@ func (s *SentEmailSummary) GetPresenceControl() OptNilSentEmailSummaryPresenceCo
 	return s.PresenceControl
 }
 
+// GetSenderMember returns the value of SenderMember.
+func (s *SentEmailSummary) GetSenderMember() OptNilSentEmailSummarySenderMember {
+	return s.SenderMember
+}
+
 // SetID sets the value of ID.
 func (s *SentEmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -36431,6 +38063,11 @@ func (s *SentEmailSummary) SetPresenceControl(val OptNilSentEmailSummaryPresence
 	s.PresenceControl = val
 }
 
+// SetSenderMember sets the value of SenderMember.
+func (s *SentEmailSummary) SetSenderMember(val OptNilSentEmailSummarySenderMember) {
+	s.SenderMember = val
+}
+
 type SentEmailSummaryPresenceControl struct {
 	Status     SentEmailSummaryPresenceControlStatus `json:"status"`
 	ValidForMs int                                   `json:"valid_for_ms"`
@@ -36502,6 +38139,44 @@ func (s *SentEmailSummaryPresenceControlStatus) UnmarshalText(data []byte) error
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Verified human authorship, projected only within the member organization. Historical attribution
+// is not current sending or owner authority.
+type SentEmailSummarySenderMember struct {
+	Address string    `json:"address"`
+	UserID  string    `json:"user_id"`
+	Name    NilString `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *SentEmailSummarySenderMember) GetAddress() string {
+	return s.Address
+}
+
+// GetUserID returns the value of UserID.
+func (s *SentEmailSummarySenderMember) GetUserID() string {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *SentEmailSummarySenderMember) GetName() NilString {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *SentEmailSummarySenderMember) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *SentEmailSummarySenderMember) SetUserID(val string) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *SentEmailSummarySenderMember) SetName(val NilString) {
+	s.Name = val
 }
 
 type SetFunctionRouteBadRequest ErrorResponse
@@ -39575,6 +41250,9 @@ type ThreadMessage struct {
 	Status OptNilString `json:"status"`
 	// Received_at for inbound, created_at for outbound.
 	Timestamp OptNilDateTime `json:"timestamp"`
+	// Verified human authorship, projected only within the member organization. Historical attribution
+	// is not current sending or owner authority.
+	SenderMember OptNilThreadMessageSenderMember `json:"sender_member"`
 }
 
 // GetDirection returns the value of Direction.
@@ -39617,6 +41295,11 @@ func (s *ThreadMessage) GetTimestamp() OptNilDateTime {
 	return s.Timestamp
 }
 
+// GetSenderMember returns the value of SenderMember.
+func (s *ThreadMessage) GetSenderMember() OptNilThreadMessageSenderMember {
+	return s.SenderMember
+}
+
 // SetDirection sets the value of Direction.
 func (s *ThreadMessage) SetDirection(val ThreadMessageDirection) {
 	s.Direction = val
@@ -39655,6 +41338,11 @@ func (s *ThreadMessage) SetStatus(val OptNilString) {
 // SetTimestamp sets the value of Timestamp.
 func (s *ThreadMessage) SetTimestamp(val OptNilDateTime) {
 	s.Timestamp = val
+}
+
+// SetSenderMember sets the value of SenderMember.
+func (s *ThreadMessage) SetSenderMember(val OptNilThreadMessageSenderMember) {
+	s.SenderMember = val
 }
 
 // `inbound` for a received email (`/emails/{id}`), `outbound`
@@ -39699,6 +41387,44 @@ func (s *ThreadMessageDirection) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Verified human authorship, projected only within the member organization. Historical attribution
+// is not current sending or owner authority.
+type ThreadMessageSenderMember struct {
+	Address string    `json:"address"`
+	UserID  string    `json:"user_id"`
+	Name    NilString `json:"name"`
+}
+
+// GetAddress returns the value of Address.
+func (s *ThreadMessageSenderMember) GetAddress() string {
+	return s.Address
+}
+
+// GetUserID returns the value of UserID.
+func (s *ThreadMessageSenderMember) GetUserID() string {
+	return s.UserID
+}
+
+// GetName returns the value of Name.
+func (s *ThreadMessageSenderMember) GetName() NilString {
+	return s.Name
+}
+
+// SetAddress sets the value of Address.
+func (s *ThreadMessageSenderMember) SetAddress(val string) {
+	s.Address = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *ThreadMessageSenderMember) SetUserID(val string) {
+	s.UserID = val
+}
+
+// SetName sets the value of Name.
+func (s *ThreadMessageSenderMember) SetName(val NilString) {
+	s.Name = val
 }
 
 type UnpublishAgentNotFound ErrorResponse
@@ -41728,6 +43454,42 @@ func (s *WebhookSecret) GetSecret() string {
 func (s *WebhookSecret) SetSecret(val string) {
 	s.Secret = val
 }
+
+type WhoamiForbidden ErrorResponse
+
+func (*WhoamiForbidden) whoamiRes() {}
+
+// Merged schema.
+type WhoamiOK struct {
+	Success bool           `json:"success"`
+	Data    CallerIdentity `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *WhoamiOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *WhoamiOK) GetData() CallerIdentity {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *WhoamiOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *WhoamiOK) SetData(val CallerIdentity) {
+	s.Data = val
+}
+
+func (*WhoamiOK) whoamiRes() {}
+
+type WhoamiUnauthorized ErrorResponse
+
+func (*WhoamiUnauthorized) whoamiRes() {}
 
 // Ref: #/components/schemas/X402Challenge
 type X402Challenge struct {

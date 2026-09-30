@@ -6,7 +6,7 @@ import { AgentConnectionSetupError } from "../connected-agent-profile.js";
 export default class AgentEnrollCommand extends Command {
   static summary = "Give this coding session an address in your organization";
   static description =
-    "On this trusted machine, use the saved member OAuth login to create one address for the exact loaded session, claim its one-use invitation privately, answer the email challenge, and poll the owner's connection list for confirmed pairing. Native receiving starts when supported. With --receiver external in the exact Claude session, install a fail-open Stop hook and resume SessionStart hook in that runtime's settings after the verification reply; idle wake remains unverified until tested with real mail. With --contact-requests, the login conditionally enables first-contact intake for this exact address after verification, preserving existing policy rules. An explicit disable or uncertain policy update is reported separately without losing pairing or receiver setup. Only an explicit pre-create domain-unavailable rejection tries the next verified managed domain. An uncertain creation or claim is held for owner recovery, never repeated automatically. Requires a verified Primitive-managed domain. This command does not accept API keys, a connection profile, or an invitation argument.";
+    "On this trusted machine, use the saved member OAuth login to create one address for the exact loaded session, claim its one-use invitation privately, answer the email challenge, and poll the owner's connection list for confirmed pairing. Native receiving starts when supported. With --receiver external in the exact Claude session, install a fail-open Stop hook and resume SessionStart hook in that runtime's settings after the verification reply; idle wake remains unverified until tested with real mail. With --contact-requests, the login conditionally enables first-contact intake for this exact address after verification, preserving existing policy rules. An explicit disable or uncertain policy update is reported separately without losing pairing or receiver setup. The server allocates a readable address. An uncertain creation resumes the same saved request; recovered results do not include another invitation. Use --continue-setup once to explicitly continue a recovered pending connection. An uncertain continuation or claim is held for owner recovery, never repeated automatically. Requires a verified Primitive-managed domain. This command does not accept API keys, a connection profile, or an invitation argument.";
   static examples = [
     "<%= config.bin %> agent enroll --session 11111111-1111-4111-8111-111111111111 --name Research --contact-requests --json",
     "<%= config.bin %> agent enroll --session 11111111-1111-4111-8111-111111111111 --receiver external --name Research --json",
@@ -17,8 +17,11 @@ export default class AgentEnrollCommand extends Command {
       description: "Exact current coding session UUID",
     }),
     name: Flags.string({
+      description: "Short agent display name; defaults to Coding agent",
+    }),
+    "continue-setup": Flags.boolean({
       description:
-        "Short agent display name; defaults to a stable session name",
+        "Explicitly issue one invitation only if the recovered agent is still pending; never reconnect a claimed agent",
     }),
     receiver: Flags.string({
       options: ["native", "external"],
@@ -42,6 +45,7 @@ export default class AgentEnrollCommand extends Command {
         name: flags.name,
         receiverMode: flags.receiver as "native" | "external" | undefined,
         contactRequests: flags["contact-requests"],
+        continueSetup: flags["continue-setup"],
       });
       const externalHook =
         flags.receiver === "external" &&

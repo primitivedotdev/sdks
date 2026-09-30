@@ -39,7 +39,7 @@ export function formatWhoamiSummary(
 
 class WhoamiCommand extends Command {
   static description =
-    `Print the account currently authenticated by saved OAuth credentials or an explicit API key. For account credentials this is a live credentials smoke test.
+    `Print the account currently authenticated by saved OAuth credentials or an explicit API key. For account credentials this is a live credentials smoke test. Use account whoami for the authenticated caller, their assigned member address and an address suggestion; account provision-member-address --address <email> saves your chosen personal address.
 
   With PRIMITIVE_AGENT_PROFILE selected, print the saved connected-agent identity offline. This does not verify live authentication, app pairing, or listener readiness. Inspect the receiver separately with listen --status --notify-session <session-id> under the same profile.
 

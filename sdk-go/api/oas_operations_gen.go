@@ -110,6 +110,7 @@ const (
 	ListWakeSchedulesOperation                   OperationName = "ListWakeSchedules"
 	PayChallengeOperation                        OperationName = "PayChallenge"
 	PollCliLoginOperation                        OperationName = "PollCliLogin"
+	ProvisionMemberAddressOperation              OperationName = "ProvisionMemberAddress"
 	PublishAgentOperation                        OperationName = "PublishAgent"
 	PullWebhookEventOperation                    OperationName = "PullWebhookEvent"
 	PutAgentContactOperation                     OperationName = "PutAgentContact"
@@ -164,4 +165,5 @@ const (
 	VerifyAgentSignupOperation                   OperationName = "VerifyAgentSignup"
 	VerifyCliSignupOperation                     OperationName = "VerifyCliSignup"
 	VerifyDomainOperation                        OperationName = "VerifyDomain"
+	WhoamiOperation                              OperationName = "Whoami"
 )
