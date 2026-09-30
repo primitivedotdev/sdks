@@ -18,9 +18,13 @@ describe("personal address choice", () => {
       NonNullable<ListAgentConnectionsData["query"]>["owner"]
     >().toEqualTypeOf<"self" | undefined>();
     const { openapiDocument } = await import("../../src/openapi/index.js");
-    const owner = openapiDocument.paths[
-      "/agent-connections"
-    ].get.parameters.find(
+    const document = openapiDocument as unknown as {
+      paths: Record<
+        string,
+        { get: { parameters: { name?: string; schema?: unknown }[] } }
+      >;
+    };
+    const owner = document.paths["/agent-connections"].get.parameters.find(
       (parameter) => "name" in parameter && parameter.name === "owner",
     );
     expect(owner).toMatchObject({ schema: { type: "string", enum: ["self"] } });

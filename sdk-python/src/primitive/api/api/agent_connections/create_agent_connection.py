@@ -11,6 +11,7 @@ from ... import errors
 from ...models.create_agent_connection_body import CreateAgentConnectionBody
 from ...models.create_agent_connection_response_200 import CreateAgentConnectionResponse200
 from ...models.error_response import ErrorResponse
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -18,9 +19,13 @@ from typing import cast
 def _get_kwargs(
     *,
     body: CreateAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
 
@@ -111,6 +116,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateAgentConnectionResponse200 | ErrorResponse]:
     """ create Agent Connection
@@ -130,6 +136,7 @@ def sync_detailed(
     it never replays a secret or rotates credentials.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateAgentConnectionBody):
 
     Raises:
@@ -143,6 +150,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -156,6 +164,7 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: CreateAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateAgentConnectionResponse200 | ErrorResponse | None:
     """ create Agent Connection
@@ -175,6 +184,7 @@ def sync(
     it never replays a secret or rotates credentials.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateAgentConnectionBody):
 
     Raises:
@@ -189,6 +199,7 @@ def sync(
     return sync_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -196,6 +207,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: CreateAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateAgentConnectionResponse200 | ErrorResponse]:
     """ create Agent Connection
@@ -215,6 +227,7 @@ async def asyncio_detailed(
     it never replays a secret or rotates credentials.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateAgentConnectionBody):
 
     Raises:
@@ -228,6 +241,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -241,6 +255,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: CreateAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> CreateAgentConnectionResponse200 | ErrorResponse | None:
     """ create Agent Connection
@@ -260,6 +275,7 @@ async def asyncio(
     it never replays a secret or rotates credentials.
 
     Args:
+        idempotency_key (str | Unset):
         body (CreateAgentConnectionBody):
 
     Raises:
@@ -274,5 +290,6 @@ async def asyncio(
     return (await asyncio_detailed(
         client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

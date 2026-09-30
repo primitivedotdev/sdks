@@ -188,6 +188,48 @@ function fixture(
 
 describe("Claude mail wake", () => {
   it.each([
+    "owner",
+    "member",
+  ] as const)("clears prior %s authority when a deferred request replaces the wake email", async (relation) => {
+    const f = fixture(false, false);
+    mocks.interaction.mockResolvedValue({ step: "request" });
+    const wake = await createWakeMail({
+      configDir: "/tmp/test",
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: true,
+    });
+    const policy = mocks.policy.mock.results[0]?.value;
+    policy.admit
+      .mockResolvedValueOnce({ kind: "request" })
+      .mockResolvedValueOnce({ kind: "allowed", senderRelation: relation });
+    await wake.handler(f.delivery as never, new AbortController().signal);
+    const memberId = randomUUID();
+    const detail = mocks.getEmail.mock.results[0];
+    if (!detail) throw new Error("Expected initial email read");
+    const response = await detail.value;
+    mocks.getEmail.mockResolvedValue({
+      data: { ...response.data, data: { ...response.data.data, id: memberId } },
+    });
+    await wake.handler(
+      {
+        ...f.delivery,
+        event_id: randomUUID(),
+        body: JSON.stringify({
+          event: "email.received",
+          email: { id: memberId, smtp: { rcpt_to: ["agent@example.test"] } },
+        }),
+      } as never,
+      new AbortController().signal,
+    );
+    expect(wake.wakeId()).toBe(memberId);
+    expect(wake.senderRelation()).toBe(relation);
+    wake.completed();
+    expect(wake.wakeId()).toBe(f.emailId);
+    expect(wake.senderRelation()).toBeUndefined();
+  });
+
+  it.each([
     { failure: 503, solicited: true },
     { failure: "pending", solicited: true },
     { failure: 503, solicited: false },

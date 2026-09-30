@@ -4228,7 +4228,17 @@ paths:
         invitation:null; it never replays a secret or rotates credentials.
       security:
         - BearerAuth: []
-      parameters: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Optional compatibility header. This operation does not guarantee
+            response replay or safe retries through this header. Use the operation's
+            documented recovery flow after an uncertain response.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
       responses:
         "200":
           description: Success
@@ -4888,6 +4898,16 @@ paths:
             maxLength: 254
             format: email
             pattern: ^(?!\.)(?!.*\.\.)([A-Za-z0-9_'+\-\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Optional compatibility header. This operation does not guarantee
+            response replay or safe retries through this header. Use the operation's
+            documented recovery flow after an uncertain response.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
       responses:
         "200":
           description: Success
@@ -5572,7 +5592,17 @@ paths:
         note writes, exact-address self-disconnect, network discovery when
         can_view is enabled, and recipient-bound network contact admission.
       security: []
-      parameters: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: Optional compatibility header. This operation does not guarantee
+            response replay or safe retries through this header. Use the operation's
+            documented recovery flow after an uncertain response.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
       responses:
         "200":
           description: Success

@@ -417,7 +417,11 @@ describe("COMMANDS / manifest coverage", () => {
         { post: { parameters?: unknown[] } }
       >;
       const parameters = paths[path].post.parameters;
-      expect(JSON.stringify(parameters ?? [])).not.toContain("Idempotency-Key");
+      expect(JSON.stringify(parameters ?? [])).toContain("Idempotency-Key");
+      expect(JSON.stringify(parameters ?? [])).toContain("does not guarantee");
+      expect(JSON.stringify(parameters ?? [])).not.toContain(
+        "returns the original result",
+      );
     }
   });
   it("registers exact-profile disconnect separately from owner-only removal", () => {

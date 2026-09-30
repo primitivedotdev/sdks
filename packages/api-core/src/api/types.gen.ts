@@ -8780,6 +8780,12 @@ export type CreateAgentConnectionData = {
          */
         create_request_id?: string;
     };
+    headers?: {
+        /**
+         * Optional compatibility header. This operation does not guarantee response replay or safe retries through this header. Use the operation's documented recovery flow after an uncertain response.
+         */
+        'Idempotency-Key'?: string;
+    };
     path?: never;
     query?: never;
     url: '/agent-connections';
@@ -8870,6 +8876,12 @@ export type InviteAgentConnectionData = {
          * Issue setup only while this exact connection is pending. A claimed, connected or revoked connection returns connection_already_claimed without changing its credential.
          */
         pending_only?: boolean;
+    };
+    headers?: {
+        /**
+         * Optional compatibility header. This operation does not guarantee response replay or safe retries through this header. Use the operation's documented recovery flow after an uncertain response.
+         */
+        'Idempotency-Key'?: string;
     };
     path: {
         /**
@@ -9076,6 +9088,12 @@ export type ClaimAgentConnectionData = {
     body: {
         token: string;
         capabilities?: Array<string>;
+    };
+    headers?: {
+        /**
+         * Optional compatibility header. This operation does not guarantee response replay or safe retries through this header. Use the operation's documented recovery flow after an uncertain response.
+         */
+        'Idempotency-Key'?: string;
     };
     path?: never;
     query?: never;

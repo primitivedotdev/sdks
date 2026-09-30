@@ -134,7 +134,7 @@ type Invoker interface {
 	//  and recipient-bound network contact admission.
 	//
 	// POST /agent-connections/claim
-	ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq) (ClaimAgentConnectionRes, error)
+	ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error)
 	// CliLogout invokes cliLogout operation.
 	//
 	// Revokes the OAuth grant used to authenticate the request. API-key
@@ -194,7 +194,7 @@ type Invoker interface {
 	// invitation:null; it never replays a secret or rotates credentials.
 	//
 	// POST /agent-connections
-	CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq) (CreateAgentConnectionRes, error)
+	CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
 	// CreateChallenge invokes createChallenge operation.
 	//
 	// Create an x402 payment challenge (the payee side of a payment). The
@@ -2857,12 +2857,12 @@ func (c *Client) sendCheckDomainDns(ctx context.Context, params CheckDomainDnsPa
 //	and recipient-bound network contact admission.
 //
 // POST /agent-connections/claim
-func (c *Client) ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq) (ClaimAgentConnectionRes, error) {
-	res, err := c.sendClaimAgentConnection(ctx, request)
+func (c *Client) ClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error) {
+	res, err := c.sendClaimAgentConnection(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq) (res ClaimAgentConnectionRes, err error) {
+func (c *Client) sendClaimAgentConnection(ctx context.Context, request *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (res ClaimAgentConnectionRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("claimAgentConnection"),
 		semconv.HTTPRequestMethodKey.String("POST"),
@@ -2910,6 +2910,23 @@ func (c *Client) sendClaimAgentConnection(ctx context.Context, request *ClaimAge
 	}
 	if err := encodeClaimAgentConnectionRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
 	}
 
 	stage = "SendRequest"
@@ -3392,12 +3409,12 @@ func (c *Client) sendCreateAgentClaimLink(ctx context.Context, request *CreateAg
 // invitation:null; it never replays a secret or rotates credentials.
 //
 // POST /agent-connections
-func (c *Client) CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq) (CreateAgentConnectionRes, error) {
-	res, err := c.sendCreateAgentConnection(ctx, request)
+func (c *Client) CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error) {
+	res, err := c.sendCreateAgentConnection(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq) (res CreateAgentConnectionRes, err error) {
+func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (res CreateAgentConnectionRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAgentConnection"),
 		semconv.HTTPRequestMethodKey.String("POST"),
@@ -3445,6 +3462,23 @@ func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateA
 	}
 	if err := encodeCreateAgentConnectionRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
 	}
 
 	{
@@ -11688,6 +11722,23 @@ func (c *Client) sendInviteAgentConnection(ctx context.Context, request *InviteA
 	}
 	if err := encodeInviteAgentConnectionRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "Idempotency-Key",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.IdempotencyKey.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
 	}
 
 	{

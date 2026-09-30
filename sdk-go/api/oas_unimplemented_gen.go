@@ -141,7 +141,7 @@ func (UnimplementedHandler) CheckDomainDns(ctx context.Context, params CheckDoma
 //	and recipient-bound network contact admission.
 //
 // POST /agent-connections/claim
-func (UnimplementedHandler) ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq) (r ClaimAgentConnectionRes, _ error) {
+func (UnimplementedHandler) ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (r ClaimAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -218,7 +218,7 @@ func (UnimplementedHandler) CreateAgentClaimLink(ctx context.Context, req *Creat
 // invitation:null; it never replays a secret or rotates credentials.
 //
 // POST /agent-connections
-func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq) (r CreateAgentConnectionRes, _ error) {
+func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq, params CreateAgentConnectionParams) (r CreateAgentConnectionRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

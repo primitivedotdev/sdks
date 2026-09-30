@@ -1423,6 +1423,16 @@ func (s *Server) handleClaimAgentConnectionRequest(args [0]string, argsEscaped b
 			ID:   "claimAgentConnection",
 		}
 	)
+	params, err := decodeClaimAgentConnectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
 
 	var rawBody []byte
 	request, rawBody, close, err := s.decodeClaimAgentConnectionRequest(r)
@@ -1450,13 +1460,18 @@ func (s *Server) handleClaimAgentConnectionRequest(args [0]string, argsEscaped b
 			OperationID:      "claimAgentConnection",
 			Body:             request,
 			RawBody:          rawBody,
-			Params:           middleware.Parameters{},
-			Raw:              r,
+			Params: middleware.Parameters{
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
 		}
 
 		type (
 			Request  = *ClaimAgentConnectionReq
-			Params   = struct{}
+			Params   = ClaimAgentConnectionParams
 			Response = ClaimAgentConnectionRes
 		)
 		response, err = middleware.HookMiddleware[
@@ -1466,14 +1481,14 @@ func (s *Server) handleClaimAgentConnectionRequest(args [0]string, argsEscaped b
 		](
 			m,
 			mreq,
-			nil,
+			unpackClaimAgentConnectionParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ClaimAgentConnection(ctx, request)
+				response, err = s.h.ClaimAgentConnection(ctx, request, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.ClaimAgentConnection(ctx, request)
+		response, err = s.h.ClaimAgentConnection(ctx, request, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -2361,6 +2376,16 @@ func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped 
 			return
 		}
 	}
+	params, err := decodeCreateAgentConnectionParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
 
 	var rawBody []byte
 	request, rawBody, close, err := s.decodeCreateAgentConnectionRequest(r)
@@ -2388,13 +2413,18 @@ func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped 
 			OperationID:      "createAgentConnection",
 			Body:             request,
 			RawBody:          rawBody,
-			Params:           middleware.Parameters{},
-			Raw:              r,
+			Params: middleware.Parameters{
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
+			},
+			Raw: r,
 		}
 
 		type (
 			Request  = *CreateAgentConnectionReq
-			Params   = struct{}
+			Params   = CreateAgentConnectionParams
 			Response = CreateAgentConnectionRes
 		)
 		response, err = middleware.HookMiddleware[
@@ -2404,14 +2434,14 @@ func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped 
 		](
 			m,
 			mreq,
-			nil,
+			unpackCreateAgentConnectionParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateAgentConnection(ctx, request)
+				response, err = s.h.CreateAgentConnection(ctx, request, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.CreateAgentConnection(ctx, request)
+		response, err = s.h.CreateAgentConnection(ctx, request, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -14484,6 +14514,10 @@ func (s *Server) handleInviteAgentConnectionRequest(args [1]string, argsEscaped 
 					Name: "address",
 					In:   "path",
 				}: params.Address,
+				{
+					Name: "Idempotency-Key",
+					In:   "header",
+				}: params.IdempotencyKey,
 			},
 			Raw: r,
 		}

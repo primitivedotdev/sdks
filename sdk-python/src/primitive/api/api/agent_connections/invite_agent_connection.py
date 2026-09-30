@@ -11,6 +11,7 @@ from ... import errors
 from ...models.error_response import ErrorResponse
 from ...models.invite_agent_connection_body import InviteAgentConnectionBody
 from ...models.invite_agent_connection_response_200 import InviteAgentConnectionResponse200
+from ...types import UNSET, Unset
 from typing import cast
 
 
@@ -19,9 +20,13 @@ def _get_kwargs(
     address: str,
     *,
     body: InviteAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
+    if not isinstance(idempotency_key, Unset):
+        headers["Idempotency-Key"] = idempotency_key
+
 
 
 
@@ -113,6 +118,7 @@ def sync_detailed(
     *,
     client: AuthenticatedClient,
     body: InviteAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InviteAgentConnectionResponse200]:
     """ invite Agent Connection
@@ -132,6 +138,7 @@ def sync_detailed(
 
     Args:
         address (str):
+        idempotency_key (str | Unset):
         body (InviteAgentConnectionBody):
 
     Raises:
@@ -146,6 +153,7 @@ def sync_detailed(
     kwargs = _get_kwargs(
         address=address,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -160,6 +168,7 @@ def sync(
     *,
     client: AuthenticatedClient,
     body: InviteAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InviteAgentConnectionResponse200 | None:
     """ invite Agent Connection
@@ -179,6 +188,7 @@ def sync(
 
     Args:
         address (str):
+        idempotency_key (str | Unset):
         body (InviteAgentConnectionBody):
 
     Raises:
@@ -194,6 +204,7 @@ def sync(
         address=address,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     ).parsed
 
@@ -202,6 +213,7 @@ async def asyncio_detailed(
     *,
     client: AuthenticatedClient,
     body: InviteAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | InviteAgentConnectionResponse200]:
     """ invite Agent Connection
@@ -221,6 +233,7 @@ async def asyncio_detailed(
 
     Args:
         address (str):
+        idempotency_key (str | Unset):
         body (InviteAgentConnectionBody):
 
     Raises:
@@ -235,6 +248,7 @@ async def asyncio_detailed(
     kwargs = _get_kwargs(
         address=address,
 body=body,
+idempotency_key=idempotency_key,
 
     )
 
@@ -249,6 +263,7 @@ async def asyncio(
     *,
     client: AuthenticatedClient,
     body: InviteAgentConnectionBody,
+    idempotency_key: str | Unset = UNSET,
 
 ) -> ErrorResponse | InviteAgentConnectionResponse200 | None:
     """ invite Agent Connection
@@ -268,6 +283,7 @@ async def asyncio(
 
     Args:
         address (str):
+        idempotency_key (str | Unset):
         body (InviteAgentConnectionBody):
 
     Raises:
@@ -283,5 +299,6 @@ async def asyncio(
         address=address,
 client=client,
 body=body,
+idempotency_key=idempotency_key,
 
     )).parsed

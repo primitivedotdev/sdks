@@ -114,7 +114,7 @@ type Handler interface {
 	//  and recipient-bound network contact admission.
 	//
 	// POST /agent-connections/claim
-	ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq) (ClaimAgentConnectionRes, error)
+	ClaimAgentConnection(ctx context.Context, req *ClaimAgentConnectionReq, params ClaimAgentConnectionParams) (ClaimAgentConnectionRes, error)
 	// CliLogout implements cliLogout operation.
 	//
 	// Revokes the OAuth grant used to authenticate the request. API-key
@@ -174,7 +174,7 @@ type Handler interface {
 	// invitation:null; it never replays a secret or rotates credentials.
 	//
 	// POST /agent-connections
-	CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq) (CreateAgentConnectionRes, error)
+	CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
 	// CreateChallenge implements createChallenge operation.
 	//
 	// Create an x402 payment challenge (the payee side of a payment). The

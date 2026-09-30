@@ -138,7 +138,10 @@ export async function createWakeMail(options: {
       },
       request.decidedSenders,
     );
-    if (reserve === "reserved") wakeId = request.emailId;
+    if (reserve === "reserved") {
+      wakeId = request.emailId;
+      senderRelation = undefined;
+    }
   }
   const handler: ListenHandler = async (delivery, signal) => {
     try {
