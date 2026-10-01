@@ -47,8 +47,9 @@ export function buildWorkingClaim(params: {
  * Interpret a stored AGENT_WORKING value. This is the one parser every
  * reader uses (`agent working get`, the brief). A JSON claim (stored as an
  * object, or as text holding that object) with a strict ISO 8601 expiry is
- * active or expired; other text is a legacy value shown as-is with no
- * expiry; anything else is no claim.
+ * active or expired; other plain text is a legacy value shown as-is with
+ * no expiry; anything else, including a malformed structured claim, is no
+ * claim.
  */
 export function readWorkingClaim(
   value: unknown,
@@ -78,22 +79,16 @@ export function readWorkingClaim(
         };
     }
   }
-  // Plain text is a legacy claim. An object counts only when it names a
-  // claim; anything else (numbers, objects without a claim) is no claim.
-  if (typeof value === "string" && value.trim() !== "")
-    return { state: "legacy", claim: value, until: null };
+  // Plain text is a legacy claim. A structured value that is not a valid
+  // claim (a missing, zoneless or unparseable expiry, or no claim text) is
+  // no claim: showing it without its expiry would let it look current
+  // forever.
   if (
-    structured &&
-    typeof structured === "object" &&
-    !Array.isArray(structured) &&
-    typeof (structured as Record<string, unknown>).claim === "string" &&
-    ((structured as Record<string, unknown>).claim as string).trim() !== ""
+    typeof value === "string" &&
+    value.trim() !== "" &&
+    !(structured && typeof structured === "object")
   )
-    return {
-      state: "legacy",
-      claim: typeof value === "string" ? value : JSON.stringify(value),
-      until: null,
-    };
+    return { state: "legacy", claim: value, until: null };
   return { state: "none", claim: null, until: null };
 }
 

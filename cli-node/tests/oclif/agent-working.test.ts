@@ -140,9 +140,15 @@ describe("working claim values", () => {
       claim: "Researching the topic",
       until: null,
     });
+    // A malformed structured claim is no claim, never a claim without expiry.
     expect(readWorkingClaim({ claim: "a", until: "soon" }, NOW).state).toBe(
-      "legacy",
+      "none",
     );
+    expect(readWorkingClaim({ claim: "a" }, NOW).state).toBe("none");
+    expect(
+      readWorkingClaim(JSON.stringify({ claim: "a", until: "soon" }), NOW)
+        .state,
+    ).toBe("none");
     expect(readWorkingClaim(null, NOW).state).toBe("none");
     expect(readWorkingClaim("", NOW).state).toBe("none");
   });

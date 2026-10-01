@@ -212,10 +212,11 @@ describe("work claims", () => {
         view.state === "expired" ? "none" : view.state,
       );
     }
-    // A zoneless expiry is not trusted as an active claim by either reader.
+    // A zoneless expiry is not trusted by either reader, and the claim is
+    // not shown at all rather than shown without an expiry.
     expect(
-      parseWorkClaim({ claim: "a", until: "2999-01-01T00:00:00" }, now)?.legacy,
-    ).toBe(true);
+      parseWorkClaim({ claim: "a", until: "2999-01-01T00:00:00" }, now),
+    ).toBeNull();
   });
 
   it("shows a legacy plain-text claim as-is on one line", () => {
