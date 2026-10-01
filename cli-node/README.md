@@ -304,9 +304,17 @@ primitive sent get --idempotency-key <key> --json
 ```
 
 It prints the newest send with that key. When nothing matches it exits 1 with
-error code `not_found`: the request did not create a send record, and retrying
-with the same `--idempotency-key` is safe because the API returns the original
-send instead of sending twice.
+error code `not_found`. That means no record is visible yet, not that the attempt
+created nothing: a send can still be in flight, or its record can have been
+deleted while the key stays reserved. If you retry, retry with the same
+`--idempotency-key`, never a new one.
+
+A key the CLI derives itself covers the request content and the current
+five-minute window, the same window the API uses when a request carries no key.
+An identical send inside that window is deduplicated, a deliberate repeat later
+still goes out, and different replies to the same email are separate sends. To
+retry an uncertain send after the window, pass the key it reported with
+`--idempotency-key`.
 
 Without `--json`, `send` and `reply` keep printing the send record on stdout exactly
 as before and add a one-line stderr summary such as `Reply sent (queued for

@@ -428,6 +428,48 @@ describe("email brief", () => {
     expect(
       requests.some((url) => url.pathname === `/v1/emails/${signalId}`),
     ).toBe(false);
+    // A spoofed From must not surface that address's work claim.
+    expect(brief.envelope.work_claim).toBeNull();
+    expect(
+      requests.some((url) => url.pathname.includes("/address-notes/")),
+    ).toBe(false);
+  });
+
+  it("does not let a stalled claim lookup hold the brief", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const routes = baseRoutes();
+      const claimPath = `/v1/address-notes/${encodeURIComponent(sender)}/AGENT_WORKING`;
+      const client = new PrimitiveApiClient({
+        apiKey: "fixture",
+        apiBaseUrl: "https://example.test/v1",
+        fetch: async (input, init) => {
+          const request = new Request(input, init);
+          const path = new URL(request.url).pathname;
+          if (path === claimPath)
+            return new Promise<Response>((_resolve, reject) => {
+              request.signal.addEventListener("abort", () =>
+                reject(request.signal.reason),
+              );
+            });
+          const route = routes[path];
+          return route
+            ? route()
+            : Response.json({ success: false }, { status: 404 });
+        },
+      });
+      const pending = buildEmailBrief({
+        client: client.client,
+        detail: detail(emailId) as never,
+        signal: new AbortController().signal,
+      });
+      await vi.advanceTimersByTimeAsync(6000);
+      const brief = await pending;
+      expect(brief.envelope.work_claim).toBeNull();
+      expect(brief.envelope.email_id).toBe(emailId);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("renders the envelope first and fences the sender's text as untrusted", async () => {

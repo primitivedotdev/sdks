@@ -98,8 +98,10 @@ vi.mock("../../src/oclif/scoped-chat.js", async (original) => ({
 
 import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import {
+  PENDING_MAIL_LIMIT,
   pendingMailPath,
   readPendingMail,
+  recordPendingMail,
 } from "../../src/oclif/pending-mail.js";
 import { muteThread } from "../../src/oclif/thread-mutes.js";
 import { createWakeMail } from "../../src/oclif/wake-mail.js";
@@ -837,6 +839,36 @@ describe("Claude wake metadata, mutes and pending notices", () => {
     );
     expect(handled).toMatchObject({ succeeded: false });
     expect(wake.wakeId()).toBeUndefined();
+    await wake.close();
+  });
+
+  it("leaves mail unacknowledged when the session's notice list is full", async () => {
+    const f = setup();
+    for (let n = 0; n < PENDING_MAIL_LIMIT; n++)
+      await recordPendingMail(configDir, "work", f.sessionId, {
+        kind: "mail",
+        email_id: randomUUID(),
+        received_at: "2026-10-01T00:00:00.000Z",
+        sender: "peer@example.test",
+        thread_id: null,
+        in_thread: false,
+        newer: null,
+      });
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    const handled = await wake.handler(
+      f.delivery as never,
+      new AbortController().signal,
+    );
+    expect(handled).toMatchObject({ succeeded: false });
+    expect(wake.wakeId()).toBeUndefined();
+    expect(readPendingMail(configDir, "work", f.sessionId)).toHaveLength(
+      PENDING_MAIL_LIMIT,
+    );
     await wake.close();
   });
 

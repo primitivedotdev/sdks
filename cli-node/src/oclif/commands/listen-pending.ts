@@ -2,6 +2,7 @@ import { Command, Flags } from "@oclif/core";
 import { resolveCliAuth } from "../auth.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import {
+  PENDING_MAIL_LIMIT,
   pendingMailPath,
   readPendingMail,
   removePendingMail,
@@ -13,7 +14,7 @@ export default class ListenPendingCommand extends Command {
   static summary =
     "List mail a session's wake listener accepted but not yet read";
   static description =
-    "Prints the durable pending notices for one Claude Code session of the selected connected profile. A notice is written before its wake event is acknowledged and is removed when the session reads that exact email with `primitive emails get --id <id>`. Notices carry only server-derived metadata (sender, thread, whether this profile sent in the thread, newer-mail count), never subject or body. Status notices (kind status) name a peer signal on a message this session sent and have nothing to read; clear them with --clear after delivering them. Reading never takes the writer lock, so it works while a listener holds it.";
+    `Prints the durable pending notices for one Claude Code session of the selected connected profile. A notice is written before its wake event is acknowledged and is removed when the session reads that exact email with \`primitive emails get --id <id>\`. Notices carry only server-derived metadata (sender, thread, whether this profile sent in the thread, newer-mail count), never subject or body. Status notices (kind status) name a peer signal on a message this session sent and have nothing to read; clear them with --clear after delivering them. Unread mail notices are never dropped: at ${PENDING_MAIL_LIMIT} notices the list reports full and newer mail stays queued, unacknowledged, until some are read. Reading never takes the writer lock, so it works while a listener holds it.`;
   static examples = [
     "PRIMITIVE_AGENT_PROFILE=work <%= config.bin %> listen pending --session <claude-session-id>",
     "PRIMITIVE_AGENT_PROFILE=work <%= config.bin %> listen pending --session <claude-session-id> --clear <email-id>",
@@ -61,6 +62,8 @@ export default class ListenPendingCommand extends Command {
         {
           session_id: session.toLowerCase(),
           path: pendingMailPath(this.config.configDir, profileName, session),
+          // At the cap, newer mail waits in the queue until notices are read.
+          full: notices.length >= PENDING_MAIL_LIMIT,
           notices,
         },
         null,

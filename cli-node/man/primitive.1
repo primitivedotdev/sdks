@@ -344,9 +344,10 @@ envelope from these commands carries
 .BR idempotency_key ,
 including on an uncertain outcome. Reconcile with
 .BR "primitive sent get --idempotency-key KEY" ;
-when it reports not_found, retrying with the same
-.B --idempotency-key
-is safe.
+not_found means no record is visible yet, not that nothing was created, so
+retry only with the same
+.BR --idempotency-key ,
+never a new one.
 .SH ENVIRONMENT
 .TP
 .B PRIMITIVE_API_KEY

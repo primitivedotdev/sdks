@@ -104,20 +104,32 @@ export function parseWorkClaim(
     : { claim, until: null, legacy: true };
 }
 
+/** Longest the brief waits for the sender's work claim. */
+const CLAIM_LOOKUP_TIMEOUT_MS = 5000;
+
 async function readWorkClaim(
   client: Client,
   sender: string,
+  signal: AbortSignal,
 ): Promise<WorkClaim | null> {
+  const timeout = new AbortController();
+  const timer = setTimeout(
+    () => timeout.abort(new Error("The work claim lookup timed out.")),
+    CLAIM_LOOKUP_TIMEOUT_MS,
+  );
   try {
     const note = (await runAddressNotesRequest(client, {
       action: "get",
       address: sender,
       name: WORK_CLAIM_NOTE,
+      signal: AbortSignal.any([signal, timeout.signal]),
     })) as { value?: unknown };
     return parseWorkClaim(note.value);
   } catch {
     // Absent, private, or unreadable claims are simply not shown.
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -259,7 +271,12 @@ export async function buildEmailBrief(input: {
     threadId
       ? readThreadContext(client, threadId, detail.id, signal)
       : Promise.resolve(null),
-    readWorkClaim(client, sender),
+    // A claim is shown only for an authenticated sender: the From address
+    // of unauthenticated mail could name a teammate whose claim would then
+    // appear in the trusted envelope.
+    trust.trusted
+      ? readWorkClaim(client, sender, signal)
+      : Promise.resolve(null),
   ]);
   const [relationship, peerSignal] = await Promise.all([
     relationshipFor({

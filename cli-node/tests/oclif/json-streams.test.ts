@@ -660,6 +660,33 @@ describe("send and reply envelopes", () => {
     expect(keys[2]).not.toBe(keys[0]);
   });
 
+  it("derives keys per five-minute window, like the API's own key", async () => {
+    const { deriveSendIdempotencyKey, DERIVED_IDEMPOTENCY_WINDOW_MS } =
+      await import("../../src/oclif/send-outcome.js");
+    const body = { to: "alice@example.com", body_text: "status ok" };
+    const start = 10 * DERIVED_IDEMPOTENCY_WINDOW_MS;
+    // A retry inside the window is the same send.
+    expect(deriveSendIdempotencyKey("send", body, start)).toBe(
+      deriveSendIdempotencyKey("send", body, start + 60_000),
+    );
+    // A deliberate repeat in a later window is a new send.
+    expect(deriveSendIdempotencyKey("send", body, start)).not.toBe(
+      deriveSendIdempotencyKey(
+        "send",
+        body,
+        start + DERIVED_IDEMPOTENCY_WINDOW_MS,
+      ),
+    );
+    // Different replies to one email are separate sends, as without a key.
+    const reply = (body_text: string) =>
+      deriveSendIdempotencyKey(
+        "reply",
+        { body_text, in_reply_to_email_id: "email-1" },
+        start,
+      );
+    expect(reply("first")).not.toBe(reply("second"));
+  });
+
   it("rejects an invalid --idempotency-key before sending", async () => {
     const result = await runMerged("send", [
       "--to",
@@ -787,9 +814,13 @@ describe("sent get --idempotency-key", () => {
       error: { code: string; message: string };
     };
     expect(document.error.code).toBe("not_found");
+    // Absence is not proof: no promise that a retry is safe, and never a
+    // suggestion to use a new key.
+    expect(document.error.message).toContain("No visible sent email");
     expect(document.error.message).toContain(
-      "Retrying with the same --idempotency-key is safe",
+      "retry with this same --idempotency-key, never a new one",
     );
+    expect(document.error.message).not.toMatch(/is safe|did not create/);
   });
 
   it("still gets a send by --id", async () => {

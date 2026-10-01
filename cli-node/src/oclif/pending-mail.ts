@@ -181,7 +181,24 @@ function write(
   });
 }
 
-/** Add or refresh one notice. Deduplicated by email id; oldest dropped beyond the cap. */
+/**
+ * The notice list is full of unread mail. Nothing is dropped: the caller
+ * leaves the event unacknowledged, so the mail stays queued and is
+ * recorded once the session reads some of its notices.
+ */
+export class PendingMailFullError extends Error {
+  constructor() {
+    super(
+      `This session already has ${PENDING_MAIL_LIMIT} unread pending notices. Read some with primitive emails get --id <id>; newer mail stays queued until then.`,
+    );
+  }
+}
+
+/**
+ * Add or refresh one notice, deduplicated by email id. Unread mail is never
+ * evicted: at the cap the oldest status notice makes room, and with none
+ * left the write fails with PendingMailFullError.
+ */
 export async function recordPendingMail(
   configDir: string,
   profileName: string,
@@ -202,7 +219,16 @@ export async function recordPendingMail(
         (existing) => existing.email_id !== row.email_id,
       ),
       row,
-    ].slice(-PENDING_MAIL_LIMIT);
+    ];
+    while (next.length > PENDING_MAIL_LIMIT) {
+      // A status notice is a peer signal with nothing to read; it is the
+      // only kind that may make room.
+      const status = next.findIndex(
+        (existing) => existing !== row && existing.kind === "status",
+      );
+      if (status === -1) throw new PendingMailFullError();
+      next.splice(status, 1);
+    }
     write(configDir, profileName, session, next);
     return next;
   });

@@ -29,7 +29,7 @@ export function idempotencyKeyNotFoundError(key: string): {
 } {
   return {
     code: "not_found",
-    message: `No sent email has idempotency key ${key}. If the command that used this key reported an uncertain outcome, the request did not create a send record. Retrying with the same --idempotency-key is safe: the API returns the original send instead of sending twice.`,
+    message: `No visible sent email has idempotency key ${key} yet. That does not prove the attempt created nothing: a send can still be in flight, or its record can have been deleted while the key stays reserved. If you retry, retry with this same --idempotency-key, never a new one, so the API can recognise the earlier attempt.`,
   };
 }
 
@@ -65,9 +65,10 @@ export default class SentGetCommand extends Command {
   envelope as idempotency_key, including when the outcome is uncertain.
   The CLI filters sent history by that key on the server and prints the
   newest matching send. When nothing matches, it exits 1 with error code
-  not_found: the request did not create a send record, and retrying with
-  the same --idempotency-key is safe because the API returns the original
-  send instead of sending twice.
+  not_found. That means no record is visible yet, not that the attempt
+  created nothing: a send can still be in flight, or its record can have
+  been deleted while the key stays reserved. If you retry, retry with the
+  same --idempotency-key, never a new one.
 
   Without --json, stdout is the sent email record (or the full response
   envelope with --envelope). With --json, stdout is exactly one JSON

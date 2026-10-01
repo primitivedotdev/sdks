@@ -154,6 +154,9 @@ describe("working claim values", () => {
     expect(readWorkingClaim({ task: "checkout refactor" }, NOW).state).toBe(
       "legacy",
     );
+    // Empty JSON values are no claim, stored as values or as text.
+    for (const empty of [{}, [], "{}", "[]", " [ ] "])
+      expect(readWorkingClaim(empty, NOW).state).toBe("none");
     expect(
       readWorkingClaim(JSON.stringify({ claim: "a", until: "soon" }), NOW)
         .state,

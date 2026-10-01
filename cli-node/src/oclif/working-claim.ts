@@ -88,7 +88,12 @@ export function readWorkingClaim(
     typeof structured === "object" &&
     !Array.isArray(structured) &&
     ("claim" in structured || "until" in structured);
-  if (!claimShaped) {
+  // An empty object or list says nothing about work, so it is no claim.
+  const empty =
+    !!structured &&
+    typeof structured === "object" &&
+    Object.keys(structured).length === 0;
+  if (!claimShaped && !empty) {
     if (typeof value === "string" && value.trim() !== "")
       return { state: "legacy", claim: value, until: null };
     if (value && typeof value === "object")

@@ -351,7 +351,7 @@ export type SendCommandFollowUpKind =
 export const IDEMPOTENCY_KEY_PATTERN = /^[\x21-\x7E]{1,255}$/;
 
 export const IDEMPOTENCY_KEY_FLAG_DESCRIPTION =
-  "Idempotency key for this send (1 to 255 printable ASCII characters). Retrying with the same key returns the original send instead of sending twice. Defaults to a key derived from the request content, so an identical retry is deduplicated. Look a send up later with `primitive sent get --idempotency-key <key>`.";
+  "Idempotency key for this send (1 to 255 printable ASCII characters). Retrying with the same key returns the original send instead of sending twice. Defaults to a key derived from the request content and the current five-minute window, so an identical retry within that window is deduplicated and a deliberate repeat later still sends. To retry an uncertain send after that, pass the key it reported. Look a send up later with `primitive sent get --idempotency-key <key>`.";
 
 export function assertValidIdempotencyKey(key: string): string {
   if (!IDEMPOTENCY_KEY_PATTERN.test(key)) {
@@ -387,15 +387,27 @@ function canonicalJson(value: unknown): string {
 }
 
 /**
+ * How long a derived key stays the same. It matches the window the API
+ * uses for the key it derives itself when a request carries none, so an
+ * identical send repeated inside this window is deduplicated and a
+ * deliberate repeat later (a digest, a heartbeat, the same short reply
+ * on another day) still goes out, exactly as without a key. An explicit
+ * --idempotency-key never expires.
+ */
+export const DERIVED_IDEMPOTENCY_WINDOW_MS = 5 * 60 * 1000;
+
+/**
  * The idempotency key a send uses when the caller passes none. It is a
- * hash of what is sent (and, for a reply, of the email replied to), so
- * an identical retry is deduplicated exactly as before, while the CLI
- * knows the key before the request starts. That lets an uncertain
- * outcome still report the key to reconcile with.
+ * hash of what is sent (and, for a reply, of the email replied to) and
+ * of the current five-minute window, so dedup matches what the API did
+ * before the CLI sent a key, while the CLI knows the key before the
+ * request starts. That lets an uncertain outcome still report the key to
+ * reconcile with, and to retry under with --idempotency-key.
  */
 export function deriveSendIdempotencyKey(
   kind: "chat" | "reply" | "send",
   request: Record<string, unknown>,
+  now: number = Date.now(),
 ): string {
   const content = Object.fromEntries(
     Object.entries(request).filter(
@@ -404,6 +416,7 @@ export function deriveSendIdempotencyKey(
   );
   const digest = createHash("sha256")
     .update(canonicalJson(content))
+    .update(`:t${Math.floor(now / DERIVED_IDEMPOTENCY_WINDOW_MS)}`)
     .digest("hex");
   return `primitive-${kind}-${digest}`;
 }

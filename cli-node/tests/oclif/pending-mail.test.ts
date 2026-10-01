@@ -16,6 +16,7 @@ import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import {
   clearReadPendingMail,
   PENDING_MAIL_LIMIT,
+  PendingMailFullError,
   type PendingMailNotice,
   pendingMailPath,
   readPendingMail,
@@ -144,13 +145,37 @@ describe("pending mail notices", () => {
     ]);
   });
 
-  it("drops the oldest notices beyond the cap", async () => {
-    for (let n = 1; n <= PENDING_MAIL_LIMIT + 5; n++)
+  it("never evicts unread mail at the cap and refuses the write instead", async () => {
+    for (let n = 1; n <= PENDING_MAIL_LIMIT; n++)
+      await recordPendingMail(configDir, profile, session, mail(n));
+    await expect(
+      recordPendingMail(
+        configDir,
+        profile,
+        session,
+        mail(PENDING_MAIL_LIMIT + 1),
+      ),
+    ).rejects.toBeInstanceOf(PendingMailFullError);
+    const rows = readPendingMail(configDir, profile, session);
+    expect(rows).toHaveLength(PENDING_MAIL_LIMIT);
+    expect(rows[0]?.email_id).toBe(id(1));
+    // Refreshing a notice already listed still works when full.
+    await recordPendingMail(configDir, profile, session, mail(1));
+  });
+
+  it("lets a status notice make room at the cap", async () => {
+    await recordPendingMail(configDir, profile, session, {
+      ...mail(1),
+      kind: "status",
+      in_thread: true,
+      ref_sent_email_id: id(900),
+    });
+    for (let n = 2; n <= PENDING_MAIL_LIMIT + 1; n++)
       await recordPendingMail(configDir, profile, session, mail(n));
     const rows = readPendingMail(configDir, profile, session);
     expect(rows).toHaveLength(PENDING_MAIL_LIMIT);
-    expect(rows[0]?.email_id).toBe(id(6));
-    expect(rows.at(-1)?.email_id).toBe(id(PENDING_MAIL_LIMIT + 5));
+    expect(rows.every((row) => row.kind !== "status")).toBe(true);
+    expect(rows[0]?.email_id).toBe(id(2));
   });
 
   it("removes exact ids and deletes the file when empty", async () => {
