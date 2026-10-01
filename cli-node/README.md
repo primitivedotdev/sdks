@@ -255,6 +255,7 @@ primitive reply --id <inbound-email-id> --body "See attached" --attachment ./rep
 primitive chat reply "See attached" --attachment ./report.pdf
 primitive emails list
 primitive emails get --id <inbound-email-id>
+primitive emails get --id <inbound-email-id> --brief
 primitive sent list
 primitive sent delete --id <sent-email-id>
 primitive domains list
@@ -725,10 +726,52 @@ primitive listen --once --wake --hook-session --events email.received --timeout 
 
 The installed hook checks CLI capability first and exits without blocking the
 session if the command is unavailable. It selects the `session-<uuid>` profile,
-receives on WebSocket, and exits 2 with only the received email ID so Claude
-can wake. It exits 0 after an idle timeout or in an unpaired session. Keep the
-interactive Claude session open;
-receipt content remains external input. For a supported native coding session,
+receives on WebSocket, and exits 2 with one wake line so Claude can wake. It
+exits 0 after an idle timeout or in an unpaired session. Keep the interactive
+Claude session open; receipt content remains external input.
+
+The wake line carries only metadata the server or local listener state
+provides, never the subject or body:
+
+```text
+Primitive mail arrived: <email-id> from=<sender> relationship=<owner|member|agent|contact|other> thread=<thread-id|none> in_thread=<yes|no> attachments=<yes|no> newer=<n>. Read with primitive emails get --id <email-id> --brief. <authority sentence>
+```
+
+`relationship` comes from server admission and verification: `owner` and
+`member` from verified organization membership, `agent` from connected-agent
+verification or agent network admission, `contact` from an explicit contact
+allowance. `in_thread` says whether this profile has sent in the thread.
+`newer` appears only when the API reports newer inbound mail in the thread. A
+sender address outside a plain character set is shown as `from=unavailable`.
+Codex notifications carry the same fields in their JSON line.
+
+`primitive emails get --id <id> --brief` prints a trusted envelope first
+(sender, relationship, verification, thread, whether you have sent in it,
+newer messages and their senders when the API reports them, attachments, the
+sender's active `AGENT_WORKING` claim, and the sender's latest read, ack or
+working signal on your last message in the thread), then the sender's subject
+and `body_text`, fenced and labelled untrusted. With `--json` it prints one
+object with `envelope`, `subject` and `body_text`.
+
+Before a wake event is acknowledged, the listener records a pending notice for
+the session in
+`<config>/agent-connections/profiles/<profile>/pending-mail-<session>.json`.
+Reading the email with `primitive emails get --id <id>` (with or without
+`--brief`) removes it. `primitive listen pending --session <uuid>` lists the
+notices, and `--clear <email-id>` removes one.
+
+To stop wakes for an unrelated conversation, mute its thread:
+
+```sh
+primitive threads mute --id <thread-id>
+primitive threads muted
+primitive threads unmute --id <thread-id>
+```
+
+Inside a Claude Code or Codex session a mute applies to that session only;
+outside one, or with `--all-sessions`, it applies to every session on the
+profile. Mutes are stored locally beside the profile. Mail in a muted thread is
+still received and readable; its delivery event is completed without a wake. For a supported native coding session,
 use `--receiver native`; `primitive listen --status --notify-session <uuid>`
 reports receiving health separately from email verification. Test an actual
 idle wake before claiming unattended delivery.

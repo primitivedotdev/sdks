@@ -34,10 +34,17 @@ import {
   readConversationStatusContent,
 } from "./notify-session-content.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import { recordPendingMail, removePendingMail } from "./pending-mail.js";
 import { openPresenceControls } from "./presence-control.js";
 import { isPlainChatReply, scopedChatSenderTrust } from "./scoped-chat.js";
 import { sharedMailScope } from "./shared-mail-receiver.js";
 import { openSharedMailStore } from "./shared-mail-state.js";
+import { isThreadMuted } from "./thread-mutes.js";
+import {
+  describeWake,
+  type WakeContext,
+  wakeRelationship,
+} from "./wake-context.js";
 
 /** A hook receives only an ID, never email-authored text or a synthetic user turn. */
 export async function createWakeMail(options: {
@@ -80,6 +87,7 @@ export async function createWakeMail(options: {
   const readPart = notificationPartReader(async () => apiClient.client);
   let wakeId: string | undefined;
   let senderRelation: "owner" | "member" | undefined;
+  let wakeContext: WakeContext | undefined;
   let statusEvent: ConversationStatus | undefined;
   let pendingRequest:
     | {
@@ -87,8 +95,10 @@ export async function createWakeMail(options: {
         emailId: string;
         eventId: string;
         decidedSenders: string[];
+        context: WakeContext;
       }
     | undefined;
+  const profileName = identity?.profileName;
   const outcome = (accepted: boolean) => ({
     succeeded: accepted,
     outcome: { mode: "sdk" as const, accepted, duration_ms: 0 },
@@ -141,6 +151,65 @@ export async function createWakeMail(options: {
     if (reserve === "reserved") {
       wakeId = request.emailId;
       senderRelation = undefined;
+      wakeContext = request.context;
+    } else if (profileName && options.sessionId) {
+      // The notice was written before acknowledgement; withdraw it when the
+      // request was not admitted. Failure leaves a harmless stale notice.
+      removePendingMail(options.configDir, profileName, options.sessionId, [
+        request.emailId,
+      ]).catch(() => undefined);
+    }
+  }
+  function muted(threadId: string | null | undefined): boolean {
+    if (!profileName) return false;
+    try {
+      return isThreadMuted(
+        options.configDir,
+        profileName,
+        threadId,
+        options.sessionKey,
+      );
+    } catch {
+      // Unreadable mute state never suppresses mail.
+      return false;
+    }
+  }
+  /** Durable notice for this session, written before the event is acknowledged. */
+  async function recordNotice(
+    detail: EmailDetail,
+    notice:
+      | { kind: "mail"; context: WakeContext }
+      | { kind: "status"; status: ConversationStatus },
+  ) {
+    if (!profileName || !options.sessionId) return;
+    try {
+      await recordPendingMail(
+        options.configDir,
+        profileName,
+        options.sessionId,
+        notice.kind === "mail"
+          ? {
+              kind: "mail",
+              email_id: detail.id,
+              received_at: detail.received_at,
+              sender: notice.context.sender,
+              thread_id: notice.context.threadId,
+              in_thread: notice.context.inThread,
+              newer: notice.context.newer ?? null,
+            }
+          : {
+              kind: "status",
+              email_id: detail.id,
+              received_at: detail.received_at,
+              sender: notice.status.peer,
+              thread_id: detail.thread_id ?? null,
+              in_thread: true,
+              newer: null,
+              ref_sent_email_id: notice.status.sentEmailId,
+            },
+      );
+    } catch {
+      // The wake itself still reaches the session through the hook output.
     }
   }
   const handler: ListenHandler = async (delivery, signal) => {
@@ -232,6 +301,9 @@ export async function createWakeMail(options: {
       const trust = scopedChatSenderTrust(detail, sender);
       if (trust.retryable) return outcome(false);
       if (!trust.trusted) return outcome(true);
+      // An explicitly muted thread never wakes this session. The event is
+      // still completed so it is not redelivered.
+      if (muted(detail.thread_id)) return outcome(true);
       const requested = detail.reply_to_sent_email_id
         ? await store.findWaitByParent(detail.reply_to_sent_email_id)
         : null;
@@ -320,8 +392,10 @@ export async function createWakeMail(options: {
             },
             status,
           )
-        )
+        ) {
+          await recordNotice(detail, { kind: "status", status });
           statusEvent = status;
+        }
         return outcome(true);
       }
       if (
@@ -433,16 +507,32 @@ export async function createWakeMail(options: {
           detail,
         );
       }
+      const context = await describeWake({
+        client: apiClient.client,
+        detail,
+        self: recipient,
+        relationship: wakeRelationship({
+          senderRelation: admission.senderRelation,
+          connectedAgentVerified: detail.sender_connected_agent_verified,
+          network: admission.source === "network",
+          contact: admission.kind === "allowed",
+        }),
+        localInThread: Boolean(requested || followed),
+        signal,
+      });
+      await recordNotice(detail, { kind: "mail", context });
       if (admission.kind === "request")
         pendingRequest = {
           sender,
           emailId: detail.id,
           eventId: eventId,
           decidedSenders: [...policy.members()],
+          context,
         };
       else {
         wakeId = detail.id;
         senderRelation = admission.senderRelation;
+        wakeContext = context;
       }
       return outcome(true);
     } catch (error) {
@@ -458,6 +548,7 @@ export async function createWakeMail(options: {
     handler,
     wakeId: () => wakeId,
     senderRelation: () => senderRelation,
+    context: () => wakeContext,
     status: () => statusEvent,
     completed: completePending,
     receiving: (ready: boolean) => {

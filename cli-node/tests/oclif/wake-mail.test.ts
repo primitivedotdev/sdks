@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getEmail: vi.fn(),
@@ -16,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   plain: vi.fn(),
   follow: vi.fn(),
   writeFollow: vi.fn(),
+  client: {} as Record<string, unknown>,
+  profileName: undefined as string | undefined,
 }));
 
 vi.mock("@primitivedotdev/api-core", async (original) => ({
@@ -30,9 +35,12 @@ vi.mock("@primitivedotdev/sdk/webhook", async (original) => ({
 }));
 vi.mock("../../src/oclif/api-client.js", () => ({
   createAuthenticatedCliApiClient: async () => ({
-    apiClient: { client: {} },
+    apiClient: { client: mocks.client },
     auth: {
-      connectedAgent: { agentAddress: "agent@example.test" },
+      connectedAgent: {
+        agentAddress: "agent@example.test",
+        profileName: mocks.profileName,
+      },
       apiKey: "test-key",
       apiBaseUrl: "https://example.test/v1",
     },
@@ -88,6 +96,12 @@ vi.mock("../../src/oclif/scoped-chat.js", async (original) => ({
   isPlainChatReply: mocks.plain,
 }));
 
+import { acquireListenLock } from "../../src/oclif/listen-state.js";
+import {
+  pendingMailPath,
+  readPendingMail,
+} from "../../src/oclif/pending-mail.js";
+import { muteThread } from "../../src/oclif/thread-mutes.js";
 import { createWakeMail } from "../../src/oclif/wake-mail.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
@@ -637,5 +651,221 @@ describe("Claude mail wake", () => {
     followed.completed();
     expect(followed.wakeId()).toBe(later.emailId);
     expect(followed.status()).toBeUndefined();
+  });
+});
+
+describe("Claude wake metadata, mutes and pending notices", () => {
+  const thread = "44444444-4444-4444-8444-444444444444";
+  let configDir: string;
+
+  function setup(threadBody: Record<string, unknown> = {}) {
+    const f = fixture(false, false, "chat");
+    configDir = mkdtempSync(join(tmpdir(), "primitive-wake-notice-"));
+    mkdirSync(join(configDir, "agent-connections", "profiles", "work"), {
+      recursive: true,
+      mode: 0o700,
+    });
+    mocks.profileName = "work";
+    const get = vi.fn(async (_options: Record<string, unknown>) => ({
+      data: {
+        success: true,
+        data: {
+          id: thread,
+          message_count: 2,
+          created_at: "2026-10-01T00:00:00.000Z",
+          messages: [
+            {
+              direction: "outbound",
+              id: randomUUID(),
+              from: "agent@example.test",
+            },
+            { direction: "inbound", id: f.emailId, from: "peer@example.test" },
+          ],
+          ...threadBody,
+        },
+      },
+    }));
+    mocks.client = { get };
+    const read = mocks.getEmail.getMockImplementation();
+    mocks.getEmail.mockImplementation(async (...args: unknown[]) => {
+      const response = await read?.(...args);
+      return {
+        data: {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            thread_id: thread,
+            sender_connected_agent_verified: false,
+          },
+        },
+      };
+    });
+    const policy = {
+      admit: vi.fn().mockResolvedValue({ kind: "allowed", source: "network" }),
+      admitResponse: vi.fn().mockResolvedValue(null),
+      recheck: vi.fn().mockResolvedValue(() => {}),
+      members: () => [],
+    };
+    mocks.policy.mockReturnValue(policy);
+    return { ...f, get, policy };
+  }
+
+  afterEach(() => {
+    mocks.profileName = undefined;
+    mocks.client = {};
+    if (configDir) rmSync(configDir, { recursive: true, force: true });
+  });
+
+  it("carries server-derived metadata and journals the notice before acknowledging", async () => {
+    const f = setup({
+      newer_inbound_count: 2,
+      newer_inbound: [],
+    });
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    const lock = join(
+      configDir,
+      "agent-connections",
+      "profiles",
+      "work",
+      ".pending-mail-lock",
+    );
+    const release = acquireListenLock(lock, "shared-mail-state");
+    let acknowledged = false;
+    const handled = wake
+      .handler(f.delivery as never, new AbortController().signal)
+      .then((result) => {
+        acknowledged = true;
+        return result;
+      });
+    try {
+      // The handler's result is what acknowledges the event. It must not
+      // resolve while the durable notice cannot be written yet.
+      await new Promise((done) => setTimeout(done, 100));
+      expect(acknowledged).toBe(false);
+    } finally {
+      release();
+    }
+    expect(await handled).toMatchObject({ succeeded: true });
+    expect(f.get.mock.calls[0]?.[0]).toMatchObject({
+      url: "/threads/{id}",
+      path: { id: thread },
+      query: { after: f.emailId },
+    });
+    expect(wake.wakeId()).toBe(f.emailId);
+    expect(wake.context()).toEqual({
+      sender: "peer@example.test",
+      relationship: "agent",
+      threadId: thread,
+      inThread: true,
+      attachments: false,
+      newer: 2,
+    });
+    expect(readPendingMail(configDir, "work", f.sessionId)).toEqual([
+      {
+        kind: "mail",
+        email_id: f.emailId,
+        received_at: expect.any(String),
+        sender: "peer@example.test",
+        thread_id: thread,
+        in_thread: true,
+        newer: 2,
+      },
+    ]);
+    await wake.close();
+  });
+
+  it("writes null newer when the API does not report it", async () => {
+    const f = setup();
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    await wake.handler(f.delivery as never, new AbortController().signal);
+    expect(wake.context()?.newer).toBeUndefined();
+    expect(readPendingMail(configDir, "work", f.sessionId)[0]?.newer).toBe(
+      null,
+    );
+    await wake.close();
+  });
+
+  it("completes mail in a muted thread without waking or journaling", async () => {
+    const f = setup();
+    await muteThread(configDir, "work", thread, `claude:${f.sessionId}`);
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    const handled = await wake.handler(
+      f.delivery as never,
+      new AbortController().signal,
+    );
+    expect(handled).toMatchObject({ succeeded: true });
+    expect(wake.wakeId()).toBeUndefined();
+    expect(f.policy.admit).not.toHaveBeenCalled();
+    expect(existsSync(pendingMailPath(configDir, "work", f.sessionId))).toBe(
+      false,
+    );
+    await wake.close();
+  });
+
+  it("still wakes when the thread is muted only for another session", async () => {
+    const f = setup();
+    await muteThread(configDir, "work", thread, `claude:${randomUUID()}`);
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    await wake.handler(f.delivery as never, new AbortController().signal);
+    expect(wake.wakeId()).toBe(f.emailId);
+    await wake.close();
+  });
+
+  it("journals a status wake with its referenced send before acknowledging", async () => {
+    const f = fixture(true, true, "chat");
+    configDir = mkdtempSync(join(tmpdir(), "primitive-wake-notice-"));
+    mkdirSync(join(configDir, "agent-connections", "profiles", "work"), {
+      recursive: true,
+      mode: 0o700,
+    });
+    mocks.profileName = "work";
+    mocks.statusContent.mockResolvedValue({
+      kind: "read",
+      subjectMessageId: "<sent@example.test>",
+      interactionDomain: "example.test",
+    });
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    expect(
+      await wake.handler(f.delivery as never, new AbortController().signal),
+    ).toMatchObject({ succeeded: true });
+    expect(wake.status()).toMatchObject({ kind: "read" });
+    expect(readPendingMail(configDir, "work", f.sessionId)).toEqual([
+      {
+        kind: "status",
+        email_id: f.emailId,
+        received_at: expect.any(String),
+        sender: "peer@example.test",
+        thread_id: null,
+        in_thread: true,
+        newer: null,
+        ref_sent_email_id: f.parentId,
+      },
+    ]);
+    await wake.close();
   });
 });

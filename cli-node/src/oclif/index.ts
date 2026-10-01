@@ -40,6 +40,7 @@ import {
 } from "./commands/credits.js";
 import DoctorCommand from "./commands/doctor.js";
 import DomainsZoneFileCommand from "./commands/domains-zone-file.js";
+import { createEmailsGetCommand } from "./commands/emails-get.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
 import EmailsWatchCommand from "./commands/emails-watch.js";
@@ -59,6 +60,7 @@ import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
 import ListenCommand from "./commands/listen.js";
 import ListenInitCommand from "./commands/listen-init.js";
+import ListenPendingCommand from "./commands/listen-pending.js";
 import LogoutCommand from "./commands/logout.js";
 import {
   MemoriesDeleteCommand,
@@ -125,6 +127,11 @@ import SignupCommand, {
   SignupResendCommand,
   SignupStatusCommand,
 } from "./commands/signup.js";
+import {
+  ThreadsMuteCommand,
+  ThreadsMutedCommand,
+  ThreadsUnmuteCommand,
+} from "./commands/threads-mute.js";
 import WakeAuthorizationsCreateCommand from "./commands/wake-authorizations-create.js";
 import WakeAuthorizationsDeleteCommand from "./commands/wake-authorizations-delete.js";
 import WakeAuthorizationsListCommand from "./commands/wake-authorizations-list.js";
@@ -512,6 +519,13 @@ const generatedCommands = Object.fromEntries(
     ]),
 );
 
+// `emails get` keeps the generated output and adds --brief plus clearing of
+// the session's pending wake notice for the email it read.
+const emailsGetCommand = createEmailsGetCommand(
+  generatedCommands["emails:get-email"] as typeof Command,
+);
+generatedCommands["emails:get-email"] = emailsGetCommand;
+
 const generatedCommandAliases = Object.fromEntries(
   Object.entries(CANONICAL_OPERATION_ALIASES).map(([alias, target]) => {
     const command = generatedCommands[target];
@@ -672,6 +686,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   // One listener route owns events, receiver status and exact-email routing diagnostics.
   listen: ListenCommand,
   "listen:init": ListenInitCommand,
+  // Durable notices for mail a Claude wake accepted but the session has not
+  // read yet; cleared by `emails get --id <id>`.
+  "listen:pending": ListenPendingCommand,
+  // Local per-session (or profile-wide) thread mutes for wakes.
+  "threads:mute": ThreadsMuteCommand,
+  "threads:unmute": ThreadsUnmuteCommand,
+  "threads:muted": ThreadsMutedCommand,
   "inbox:status": InboxStatusCommand,
   "inbox:get-inbox-status": InboxStatusCommand,
   // `functions:init` scaffolds a deployable Function project so a

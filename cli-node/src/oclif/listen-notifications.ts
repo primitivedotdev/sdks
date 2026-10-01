@@ -48,6 +48,8 @@ import {
   type SharedMailStore,
 } from "./shared-mail-state.js";
 import { ensureSharedMailSubscription } from "./shared-mail-transport.js";
+import { isThreadMuted } from "./thread-mutes.js";
+import { describeWake, wakeRelationship } from "./wake-context.js";
 
 /** Notification delivery consumes the shared ID journal, never a second remote lease. */
 export async function runSharedNotificationListen(
@@ -109,6 +111,27 @@ export async function runSharedNotificationListen(
     scope,
     signal,
     readPart,
+    describe: async (detail, authorization, nextSignal) => {
+      try {
+        return await describeWake({
+          client: auth.apiClient.client,
+          detail,
+          self: detail.to_email.trim().toLowerCase(),
+          relationship: wakeRelationship({
+            senderRelation: authorization?.senderRelation,
+            connectedAgentVerified: detail.sender_connected_agent_verified,
+            network: authorization?.network,
+            // Explicit --sender approval or a contact-policy allowance.
+            contact: !authorization?.contactRequest,
+          }),
+          localInThread: false,
+          signal: nextSignal,
+        });
+      } catch {
+        nextSignal.throwIfAborted();
+        return undefined;
+      }
+    },
   });
   let receiver: Awaited<ReturnType<typeof openSharedMailReceiver>> | undefined;
   let processed = 0;
@@ -116,6 +139,21 @@ export async function runSharedNotificationListen(
   const settled = new Set<string>();
   const deferredUntil = new Map<string, number>();
   const sessionKey = `codex:${notify.threadId.toLowerCase()}`;
+  const profileName = auth.auth.connectedAgent?.profileName;
+  const muted = (threadId: string | null | undefined) => {
+    if (!profileName) return false;
+    try {
+      return isThreadMuted(
+        options.configDir,
+        profileName,
+        threadId,
+        sessionKey,
+      );
+    } catch {
+      // Unreadable mute state never suppresses mail.
+      return false;
+    }
+  };
   const controls = new Set<string>();
   const presence = openPresenceControls({
     configDir: options.configDir,
@@ -474,6 +512,12 @@ export async function runSharedNotificationListen(
       const claim = await store.claimForNotification(row.emailId, sessionKey);
       if (claim.status === "held") return false;
       if (claim.status === "already_observed") return true;
+      // An explicitly muted thread never notifies this session. Record the
+      // skip so the event completes and is not redelivered.
+      if (muted(detail.thread_id)) {
+        await store.skipNotification(row.emailId, sessionKey);
+        return true;
+      }
       if (
         status &&
         !(await conversationStatusDue(
@@ -530,6 +574,7 @@ export async function runSharedNotificationListen(
                 {
                   sender: admission.sender,
                   contactRequest: admission.kind === "request",
+                  network: admission.source === "network",
                   ...(admission.senderRelation
                     ? { senderRelation: admission.senderRelation }
                     : {}),
