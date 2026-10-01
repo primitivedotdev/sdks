@@ -12,6 +12,7 @@ import {
 import { scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   bareAddress,
+  displayAddress,
   latestOwnOutbound,
   readThreadContext,
   sentInThread,
@@ -20,6 +21,7 @@ import {
   type WakeRelationship,
   wakeRelationship,
 } from "./wake-context.js";
+import { readWorkingClaim } from "./working-claim.js";
 
 type Client = PrimitiveApiClient["client"];
 
@@ -85,38 +87,21 @@ function singleLine(value: string, max: number): string {
 }
 
 /**
- * Interpret an AGENT_WORKING note value. JSON `{claim, until}` (as an object
- * or a JSON string) is hidden once `until` has passed; any other string is a
- * legacy claim shown as-is with no expiry.
+ * The sender's work claim for the brief, read with the same parser as
+ * `agent working get` and flattened to one bounded line. Expired and absent
+ * claims are not shown.
  */
 export function parseWorkClaim(
   value: unknown,
   now = Date.now(),
 ): WorkClaim | null {
-  let parsed: unknown = value;
-  if (typeof value === "string") {
-    try {
-      parsed = JSON.parse(value);
-    } catch {
-      parsed = undefined;
-    }
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      const text = singleLine(value, CLAIM_MAX);
-      return text ? { claim: text, until: null, legacy: true } : null;
-    }
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
-    return null;
-  const row = parsed as Record<string, unknown>;
-  if (typeof row.claim !== "string") return null;
-  const claim = singleLine(row.claim, CLAIM_MAX);
+  const view = readWorkingClaim(value, now);
+  if (view.state !== "active" && view.state !== "legacy") return null;
+  const claim = singleLine(view.claim, CLAIM_MAX);
   if (!claim) return null;
-  if (row.until === undefined || row.until === null)
-    return { claim, until: null, legacy: false };
-  if (typeof row.until !== "string") return null;
-  const until = Date.parse(row.until);
-  if (!Number.isFinite(until) || until <= now) return null;
-  return { claim, until: new Date(until).toISOString(), legacy: false };
+  return view.state === "active"
+    ? { claim, until: view.until, legacy: false }
+    : { claim, until: null, legacy: true };
 }
 
 async function readWorkClaim(
@@ -295,7 +280,7 @@ export async function buildEmailBrief(input: {
     envelope: {
       email_id: detail.id,
       received_at: detail.received_at,
-      from: sender,
+      from: displayAddress(sender),
       to: self,
       relationship,
       verification: {
@@ -313,7 +298,10 @@ export async function buildEmailBrief(input: {
           ? null
           : {
               count: thread.newerInboundCount,
-              messages: thread.newerInbound ?? [],
+              messages: (thread.newerInbound ?? []).map((message) => ({
+                ...message,
+                from: displayAddress(bareAddress(message.from) ?? ""),
+              })),
             },
       work_claim: claim,
       peer_signal: peerSignal,

@@ -253,7 +253,12 @@ export class AgentWorkingClearCommand extends Command {
             });
             method = "deleted";
           } catch (deleteError) {
-            if (!isNotFound(deleteError)) throw error;
+            if (!isNotFound(deleteError)) {
+              // Report both: why the claim could not be expired, then why
+              // the fallback delete failed too.
+              writeErrorWithHints(extractErrorPayload(error.payload));
+              throw deleteError;
+            }
             method = "deleted";
           }
         }

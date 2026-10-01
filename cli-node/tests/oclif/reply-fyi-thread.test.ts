@@ -439,6 +439,19 @@ describe("reply --thread", () => {
     expect(mocks.replyToEmail).not.toHaveBeenCalled();
   });
 
+  it.each([
+    [[{ direction: "outbound", id: "sent-9" }]],
+    [[{ direction: "inbound", id: "email-1" }]],
+  ])("refuses a truncated thread without latest_inbound_id: %j", async (messages) => {
+    mocks.getThread.mockResolvedValue({
+      data: { data: { id: "thread-1", message_count: 250, messages } },
+    });
+    await expect(
+      run(ReplyCommand, ["--thread", "thread-1", "--body", "x"]),
+    ).rejects.toThrow(/more messages than the API listed/);
+    expect(mocks.replyToEmail).not.toHaveBeenCalled();
+  });
+
   it("refuses when the thread cannot be read", async () => {
     mocks.getThread.mockResolvedValue({
       error: { error: { code: "not_found" } },

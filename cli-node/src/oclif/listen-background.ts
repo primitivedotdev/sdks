@@ -350,7 +350,10 @@ export function backgroundListenStatus(
   const supervisor = readSupervisor(paths.supervisor);
   if (!supervisor) return worker;
   const ownership = owner(supervisor);
-  const fresh = Date.now() - supervisor.updatedAt < STALE_AFTER_MS;
+  // A heartbeat dated in the future (clock change, corrupt state) is not
+  // evidence of a live supervisor.
+  const age = Date.now() - supervisor.updatedAt;
+  const fresh = age >= 0 && age < STALE_AFTER_MS;
   const active =
     supervisor.phase === "starting" || supervisor.phase === "running";
   const reason =
@@ -791,6 +794,28 @@ export async function runBackgroundListenSupervisor(): Promise<void> {
   }
 }
 
+/** Ask one worker generation to stop and wait briefly until it has. */
+async function stopOrphanedWorker(
+  paths: ReturnType<typeof files>,
+  token: string,
+): Promise<boolean> {
+  writeMailJson(paths.stop, { token });
+  const deadline = Date.now() + 5000;
+  for (;;) {
+    const current = readState(paths.state);
+    if (
+      !current ||
+      current.token !== token ||
+      current.phase === "stopped" ||
+      current.phase === "failed" ||
+      owner(current) === "gone"
+    )
+      return true;
+    if (Date.now() >= deadline) return false;
+    await delay(50);
+  }
+}
+
 /** Spawn the same CLI entrypoint. Overrides travel only in the child's environment. */
 export async function startBackgroundListen(
   options: BackgroundListenTarget & {
@@ -853,7 +878,14 @@ export async function startBackgroundListen(
         throw new ListenStateError(
           "Stop the existing listener before changing receiving options.",
         );
-      return { started: false, status: current };
+      // A supervisor record that is no longer running means this worker
+      // lost its restart protection. Stop it and start a supervised one
+      // rather than reuse it.
+      if (!priorSupervisor) return { started: false, status: current };
+      if (!(await stopOrphanedWorker(paths, prior.token)))
+        throw new ListenStateError(
+          "The existing background listener lost its supervisor and did not stop. Stop it, then start again.",
+        );
     }
     const token = randomUUID();
     const env: NodeJS.ProcessEnv = {

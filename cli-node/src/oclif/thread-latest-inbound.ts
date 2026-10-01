@@ -19,7 +19,8 @@ type ThreadMessageView = {
 /**
  * Find the newest inbound email in a thread. Uses the thread's
  * `latest_inbound_id` when the API returns it and otherwise picks the
- * newest inbound entry from the thread's message list.
+ * newest inbound entry from the thread's message list, refusing when that
+ * list is incomplete.
  */
 export async function resolveLatestInboundInThread(params: {
   client: ThreadClient;
@@ -46,6 +47,7 @@ export async function resolveLatestInboundInThread(params: {
   }
   const thread = result.data.data as {
     latest_inbound_id?: unknown;
+    message_count?: unknown;
     messages?: unknown;
   };
   if (
@@ -64,6 +66,15 @@ export async function resolveLatestInboundInThread(params: {
   const messages = Array.isArray(thread.messages)
     ? (thread.messages as ThreadMessageView[])
     : [];
+  // A capped message list cannot prove which inbound email is newest, or
+  // that there is none, so refuse rather than answer an older message.
+  if (
+    typeof thread.message_count === "number" &&
+    thread.message_count > messages.length
+  )
+    throw new ThreadResolutionError(
+      `Thread ${params.threadId} has more messages than the API listed and no latest_inbound_id, so its newest inbound email cannot be identified. No reply was sent; reply with --id <email-id>.`,
+    );
   let latest: { id: string; at: number } | null = null;
   for (const message of messages) {
     if (message.direction !== "inbound" || typeof message.id !== "string")

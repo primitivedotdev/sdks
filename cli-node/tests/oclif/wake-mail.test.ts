@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getEmail: vi.fn(),
@@ -814,6 +814,29 @@ describe("Claude wake metadata, mutes and pending notices", () => {
     expect(existsSync(pendingMailPath(configDir, "work", f.sessionId))).toBe(
       false,
     );
+    await wake.close();
+  });
+
+  it("leaves mail unacknowledged when its pending notice cannot be written", async () => {
+    const f = setup();
+    // A read-only profile directory makes the notice write fail.
+    const profileDir = join(configDir, "agent-connections", "profiles", "work");
+    chmodSync(profileDir, 0o500);
+    onTestFinished(() => {
+      if (existsSync(profileDir)) chmodSync(profileDir, 0o700);
+    });
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    const handled = await wake.handler(
+      f.delivery as never,
+      new AbortController().signal,
+    );
+    expect(handled).toMatchObject({ succeeded: false });
+    expect(wake.wakeId()).toBeUndefined();
     await wake.close();
   });
 

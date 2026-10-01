@@ -240,8 +240,10 @@ export function pendingMailSessions(
 }
 
 /**
- * Clear one email after the session read it: from the named session's file,
- * or from every session file of the profile when no session is known.
+ * Clear one email after a session read it, from that session's file only.
+ * A read with no known runtime session (a terminal or script) clears
+ * nothing: it is not evidence that any session has seen the email, and each
+ * session keeps its notice until it reads the email itself.
  */
 export async function clearReadPendingMail(
   configDir: string,
@@ -249,10 +251,10 @@ export async function clearReadPendingMail(
   session: string | null,
   emailId: string,
 ): Promise<void> {
-  const existing = pendingMailSessions(configDir, profileName);
-  const sessions = session
-    ? existing.filter((id) => id === sessionId(session))
-    : existing;
+  if (!session) return;
+  const sessions = pendingMailSessions(configDir, profileName).filter(
+    (id) => id === sessionId(session),
+  );
   for (const id of sessions)
     await removePendingMail(configDir, profileName, id, [emailId]);
 }

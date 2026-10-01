@@ -156,13 +156,17 @@ export async function unmuteThread(
   profileName: string,
   threadId: string,
   sessionKey: string | null,
+  options: { allScopes?: boolean } = {},
 ): Promise<{ removed: boolean; remaining: ThreadMute[] }> {
   const id = mailId(threadId);
   const scope = session(sessionKey);
   let removed = false;
   const next = await update(configDir, profileName, (mutes) =>
     mutes.filter((row) => {
-      const match = row.thread_id === id && row.session === scope;
+      // allScopes drops every local mute for the thread: the profile-wide
+      // one and those of individual sessions.
+      const match =
+        row.thread_id === id && (options.allScopes || row.session === scope);
       if (match) removed = true;
       return !match;
     }),

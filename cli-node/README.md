@@ -862,7 +862,8 @@ Before a wake event is acknowledged, the listener records a pending notice for
 the session in
 `<config>/agent-connections/profiles/<profile>/pending-mail-<session>.json`.
 Reading the email with `primitive emails get --id <id>` (with or without
-`--brief`) removes it. `primitive listen pending --session <uuid>` lists the
+`--brief`) inside that session removes it; a read outside any Claude Code or
+Codex session leaves every session's notice in place. `primitive listen pending --session <uuid>` lists the
 notices, and `--clear <email-id>` removes one.
 
 To stop wakes for an unrelated conversation, mute its thread:

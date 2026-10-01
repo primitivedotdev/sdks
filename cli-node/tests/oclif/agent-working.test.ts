@@ -322,23 +322,40 @@ describe("agent working commands", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
-  it("clear reports the refused write when the delete is refused too", async () => {
-    const forbidden = {
+  it("clear reports both the refused write and the delete's own failure", async () => {
+    const refused = {
+      status: 409,
+      body: {
+        success: false,
+        error: { code: "version_conflict", message: "Write conflict" },
+      },
+    };
+    const deleteRefused = {
       status: 403,
-      body: { success: false, error: { code: "forbidden", message: "No" } },
+      body: {
+        success: false,
+        error: { code: "forbidden", message: "Delete not allowed" },
+      },
     };
     fixture(
       ok(note({ claim: "composer", until: "2099-01-01T00:00:00Z" }, "7")),
-      forbidden,
-      forbidden,
+      refused,
+      deleteRefused,
     );
     captureLog(AgentWorkingClearCommand);
-    const stderr = vi
-      .spyOn(process.stderr, "write")
-      .mockImplementation(() => true);
+    const written: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      written.push(String(chunk));
+      return true;
+    });
     await AgentWorkingClearCommand.run([], { root });
     expect(process.exitCode).toBe(1);
-    expect(stderr).toHaveBeenCalled();
+    const stderr = written.join("");
+    expect(stderr).toContain("Write conflict");
+    expect(stderr).toContain("Delete not allowed");
+    expect(stderr.indexOf("Write conflict")).toBeLessThan(
+      stderr.indexOf("Delete not allowed"),
+    );
   });
 
   it("clear writes nothing when the claim already expired", async () => {

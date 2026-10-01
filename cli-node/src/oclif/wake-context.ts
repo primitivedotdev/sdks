@@ -244,11 +244,18 @@ export function serverMuted(detail: unknown): boolean {
   );
 }
 
+/**
+ * An address fit to print as trusted metadata, or `unavailable`. The
+ * sender's address is parsed from a header the sender wrote, so anything
+ * outside a plain charset (quotes, spaces, line breaks) is withheld.
+ */
+export function displayAddress(value: string): string {
+  return WAKE_ADDRESS.test(value) ? value : "unavailable";
+}
+
 /** The metadata clause of a wake line. Addresses outside a plain charset are withheld. */
 export function formatWakeContext(context: WakeContext): string {
-  const sender = WAKE_ADDRESS.test(context.sender)
-    ? context.sender
-    : "unavailable";
+  const sender = displayAddress(context.sender);
   const thread =
     context.threadId && UUID.test(context.threadId)
       ? context.threadId.toLowerCase()

@@ -11,10 +11,18 @@ const mocks = vi.hoisted(() => ({
   receive: vi.fn(),
   complete: vi.fn(),
   close: vi.fn(),
+  connectionOptions: [] as Record<string, unknown>[],
 }));
 vi.mock("@primitivedotdev/sdk/api", async (original) => ({
   ...(await original<typeof import("@primitivedotdev/sdk/api")>()),
   EventConnection: class {
+    constructor(
+      _client: unknown,
+      _id: unknown,
+      options: Record<string, unknown>,
+    ) {
+      mocks.connectionOptions.push(options);
+    }
     open = mocks.open;
     receive = mocks.receive;
     complete = mocks.complete;
@@ -108,7 +116,10 @@ function fixture() {
   };
   return { options, events, endpoint, offer, controller };
 }
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  mocks.connectionOptions = [];
+});
 describe("shared inbound transport", () => {
   it("publishes authenticated readiness and persists ingress before completing delivery", async () => {
     const { options, events } = fixture();
@@ -227,6 +238,44 @@ describe("shared inbound transport", () => {
     expect(mocks.complete).not.toHaveBeenCalled();
     expect(mocks.close).toHaveBeenCalledOnce();
   });
+  it("counts server queue answers as mail checks, not pings or opening", async () => {
+    const { options, events, controller } = fixture();
+    mocks.open.mockImplementation(async () => {
+      events.push("authenticated-ready");
+      // The connection takes no ping callback, so a ping cannot count.
+      expect(mocks.connectionOptions[0]).not.toHaveProperty("onHeartbeat");
+    });
+    let receives = 0;
+    mocks.receive.mockImplementation(async () => {
+      receives += 1;
+      if (receives > 1) {
+        controller.abort();
+        throw new DOMException("stopped", "AbortError");
+      }
+      events.push("receive");
+      return {
+        backlog: 0,
+        gap_count: 0,
+        last_gap_reason: null,
+        delivery: null,
+      };
+    });
+    await runSharedMailTransport({
+      ...options,
+      checked: async () => {
+        events.push("checked");
+      },
+    }).catch(() => undefined);
+    // Opening the stream is not a check; the empty offer that follows is.
+    expect(events.slice(0, 4)).toEqual([
+      "subscription",
+      "authenticated-ready",
+      "publish-ready",
+      "receive",
+    ]);
+    expect(events).toContain("checked");
+  });
+
   it("refuses an out-of-scope endpoint before opening a stream", async () => {
     const { options, endpoint } = fixture();
     endpoint.recipient = "other@sender.example";

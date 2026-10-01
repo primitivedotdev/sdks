@@ -165,7 +165,7 @@ describe("pending mail notices", () => {
     );
   });
 
-  it("clears a read email from the named session only, or from every session", async () => {
+  it("clears a read email from the named session only, never without one", async () => {
     await recordPendingMail(configDir, profile, session, mail(1));
     await recordPendingMail(configDir, profile, session, mail(2));
     await recordPendingMail(configDir, profile, otherSession, mail(1));
@@ -174,12 +174,16 @@ describe("pending mail notices", () => {
     expect(readPendingMail(configDir, profile, otherSession)).toEqual([
       mail(1),
     ]);
+    // A read outside any session leaves every session's notice in place.
     await recordPendingMail(configDir, profile, session, mail(1));
     await clearReadPendingMail(configDir, profile, null, id(1));
-    expect(readPendingMail(configDir, profile, session)).toEqual([mail(2)]);
-    expect(existsSync(pendingMailPath(configDir, profile, otherSession))).toBe(
-      false,
-    );
+    expect(readPendingMail(configDir, profile, session)).toEqual([
+      mail(2),
+      mail(1),
+    ]);
+    expect(readPendingMail(configDir, profile, otherSession)).toEqual([
+      mail(1),
+    ]);
   });
 
   it("reads a corrupt file as empty without moving it, and a writer sets it aside", async () => {

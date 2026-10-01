@@ -181,8 +181,8 @@ export async function createWakeMail(options: {
     notice:
       | { kind: "mail"; context: WakeContext }
       | { kind: "status"; status: ConversationStatus },
-  ) {
-    if (!profileName || !options.sessionId) return;
+  ): Promise<boolean> {
+    if (!profileName || !options.sessionId) return true;
     try {
       await recordPendingMail(
         options.configDir,
@@ -209,8 +209,9 @@ export async function createWakeMail(options: {
               ref_sent_email_id: notice.status.sentEmailId,
             },
       );
+      return true;
     } catch {
-      // The wake itself still reaches the session through the hook output.
+      return false;
     }
   }
   const handler: ListenHandler = async (delivery, signal) => {
@@ -395,6 +396,10 @@ export async function createWakeMail(options: {
             status,
           )
         ) {
+          // The status is already reserved, so a redelivery would be
+          // deduplicated and never retry the notice. Its wake still reaches
+          // the session from this run; the notice is only the replay copy
+          // for a missed hook, so a failed write does not hold the event.
           await recordNotice(detail, { kind: "status", status });
           statusEvent = status;
         }
@@ -522,7 +527,11 @@ export async function createWakeMail(options: {
         localInThread: Boolean(requested || followed),
         signal,
       });
-      await recordNotice(detail, { kind: "mail", context });
+      // A mail notice is written before the event is acknowledged. If it
+      // cannot be written, the event is left unacknowledged and redelivered,
+      // so a missed hook can never lose the mail; this run wakes nothing.
+      if (!(await recordNotice(detail, { kind: "mail", context })))
+        return outcome(false);
       if (admission.kind === "request")
         pendingRequest = {
           sender,

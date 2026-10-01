@@ -194,6 +194,22 @@ describe("threads mute commands", () => {
     expect(isThreadMuted(configDir, "work", otherThread, claude)).toBe(true);
   });
 
+  it("removes session mutes too when unmuting for all sessions", async () => {
+    await muteThread(configDir, "work", thread, claude);
+    await muteThread(configDir, "work", thread, codex);
+    await muteThread(configDir, "work", thread, null);
+    await muteThread(configDir, "work", otherThread, claude);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const output = capture();
+    await ThreadsUnmuteCommand.run(["--id", thread, "--all-sessions"], {
+      root,
+    });
+    expect(output()).toMatchObject({ removed: true, muted: false });
+    expect(isThreadMuted(configDir, "work", thread, claude)).toBe(false);
+    expect(isThreadMuted(configDir, "work", thread, codex)).toBe(false);
+    expect(isThreadMuted(configDir, "work", otherThread, claude)).toBe(true);
+  });
+
   it("reports a profile-wide mute that still applies after a session unmute", async () => {
     await muteThread(configDir, "work", thread, null);
     vi.stubEnv("CLAUDE_CODE_SESSION_ID", claude.slice(7));

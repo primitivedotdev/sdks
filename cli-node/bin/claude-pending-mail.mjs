@@ -271,53 +271,43 @@ async function main() {
   const lock = join(directory, `pending-mail-${sessionId}.lock`);
   if (!tryLock(lock)) return;
   try {
-    let notices = readPendingMail(configDir, profile, sessionId);
-    if (notices.length) {
-      const due = duePendingMail(configDir, profile, sessionId, notices);
-      context(due);
-      clearDeliveredStatus(
-        cli,
-        configDir,
-        profile,
-        sessionId,
-        due.slice(0, 10),
+    // A pending notice never stops the mail check: new mail keeps being
+    // fetched while an earlier notice waits to be read.
+    if (pollDue(configDir, profile, sessionId)) {
+      const env = {
+        ...process.env,
+        PRIMITIVE_CONFIG_DIR: configDir,
+        PRIMITIVE_AGENT_PROFILE: profile,
+        PRIMITIVE_HOOK_AGENT_ADDRESS: address.toLowerCase(),
+      };
+      delete env.PRIMITIVE_API_KEY;
+      delete env.PRIMITIVE_KEY;
+      spawnSync(
+        process.execPath,
+        [
+          cli,
+          "listen",
+          "--once",
+          "--wake",
+          "--hook-session",
+          "--events",
+          "email.received",
+          "--timeout",
+          "2",
+        ],
+        {
+          input: JSON.stringify({
+            hook_event_name: "Stop",
+            session_id: sessionId,
+          }),
+          encoding: "utf8",
+          env,
+          timeout: 8_000,
+          maxBuffer: 16_384,
+        },
       );
-      return;
     }
-    if (!pollDue(configDir, profile, sessionId)) return;
-    const env = {
-      ...process.env,
-      PRIMITIVE_CONFIG_DIR: configDir,
-      PRIMITIVE_AGENT_PROFILE: profile,
-      PRIMITIVE_HOOK_AGENT_ADDRESS: address.toLowerCase(),
-    };
-    delete env.PRIMITIVE_API_KEY;
-    delete env.PRIMITIVE_KEY;
-    spawnSync(
-      process.execPath,
-      [
-        cli,
-        "listen",
-        "--once",
-        "--wake",
-        "--hook-session",
-        "--events",
-        "email.received",
-        "--timeout",
-        "2",
-      ],
-      {
-        input: JSON.stringify({
-          hook_event_name: "Stop",
-          session_id: sessionId,
-        }),
-        encoding: "utf8",
-        env,
-        timeout: 8_000,
-        maxBuffer: 16_384,
-      },
-    );
-    notices = readPendingMail(configDir, profile, sessionId);
+    const notices = readPendingMail(configDir, profile, sessionId);
     if (notices.length) {
       const due = duePendingMail(configDir, profile, sessionId, notices);
       context(due);

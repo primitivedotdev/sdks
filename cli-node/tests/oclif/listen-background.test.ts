@@ -37,6 +37,7 @@ import {
   ListenStateError,
   listenProcessIdentity,
 } from "../../src/oclif/listen-state.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 vi.mock("../../src/oclif/listen-state.js", async (original) => {
@@ -390,6 +391,44 @@ describe("listener lifecycle state", () => {
       healthy: false,
       reason: "exited",
     });
+  });
+
+  function writeSupervisor(token: string, phase: string, updatedAt: number) {
+    writeMailJson(join(stateFile(), "..", "supervisor.json"), {
+      version: 1,
+      token,
+      pid: process.pid,
+      identity: listenProcessIdentity(process.pid),
+      phase,
+      updatedAt,
+      failureCode: null,
+    });
+  }
+
+  it("does not treat a supervisor heartbeat dated in the future as fresh", async () => {
+    const f = running(undefined, undefined, { detached: true });
+    await vi.waitFor(() => expect(saved().phase).toBe("receiving"));
+    writeSupervisor(f.token, "running", Date.now() + 60_000);
+    expect(backgroundListenStatus(target)).toMatchObject({
+      healthy: false,
+      reason: "stale",
+    });
+    writeSupervisor(f.token, "running", Date.now());
+    expect(backgroundListenStatus(target)).toMatchObject({ healthy: true });
+  });
+
+  it("replaces a worker whose supervisor has failed instead of reusing it", async () => {
+    const f = running(undefined, undefined, { detached: true });
+    await vi.waitFor(() => expect(saved().phase).toBe("receiving"));
+    writeSupervisor(f.token, "failed", Date.now());
+    const exits = join(directory, "exits.mjs");
+    writeFileSync(exits, "process.exit(0);");
+    // The orphan is stopped, then a fresh supervised start is attempted
+    // (this fixture entrypoint exits before becoming ready).
+    await expect(
+      startBackgroundListen({ ...target, argv: [exits] }),
+    ).rejects.toThrow("did not become ready");
+    await f.done;
   });
 
   it("retains a live legacy macOS worker and stops only its private generation", async () => {

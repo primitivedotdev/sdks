@@ -230,15 +230,20 @@ export class ThreadsUnmuteCommand extends Command {
     const session = flags["session-only"]
       ? requireSession(this)
       : muteSession(flags["all-sessions"]);
+    // Without a session scope, every local mute on the profile goes.
     const { removed, remaining } = await unmuteThread(
       this.config.configDir,
       profile,
       id,
       session,
+      { allScopes: session === null },
     );
-    const stillMuted = remaining.filter(
-      (mute) => mute.session === null || mute.session === session,
-    );
+    const stillMuted =
+      session === null
+        ? remaining
+        : remaining.filter(
+            (mute) => mute.session === null || mute.session === session,
+          );
     this.log(
       JSON.stringify(
         {

@@ -163,3 +163,34 @@ test("Stop replays an unread exact-session notice before opening the listener", 
   assert.match(result.stderr, new RegExp(email));
   assert.match(result.stderr, /sender=peer@example.com/);
 });
+
+test("PostToolUse still checks for new mail while an earlier notice is unread", () => {
+  const fixtureData = fixture();
+  const older = "44444444-4444-4444-8444-444444444444";
+  writeFileSync(
+    join(fixtureData.profileDir, `pending-mail-${session}.json`),
+    JSON.stringify({
+      version: 1,
+      session_id: session,
+      notices: [
+        {
+          email_id: older,
+          received_at: new Date().toISOString(),
+          sender: "peer@example.com",
+          thread_id: null,
+          in_thread: false,
+          newer: null,
+        },
+      ],
+    }),
+  );
+  const result = fixtureData.run();
+  assert.equal(result.status, 0, result.stderr);
+  // The one-shot listener ran despite the unread notice.
+  const call = JSON.parse(readFileSync(fixtureData.calls, "utf8"));
+  assert.equal(call.args[0], "listen");
+  // The mail it found is delivered.
+  const context = JSON.parse(result.stdout).hookSpecificOutput
+    .additionalContext;
+  assert.match(context, new RegExp(email));
+});

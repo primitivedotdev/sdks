@@ -49,7 +49,7 @@ import {
 } from "./shared-mail-state.js";
 import { ensureSharedMailSubscription } from "./shared-mail-transport.js";
 import { isThreadMuted } from "./thread-mutes.js";
-import { describeWake, wakeRelationship } from "./wake-context.js";
+import { describeWake, serverMuted, wakeRelationship } from "./wake-context.js";
 
 /** Notification delivery consumes the shared ID journal, never a second remote lease. */
 export async function runSharedNotificationListen(
@@ -512,9 +512,10 @@ export async function runSharedNotificationListen(
       const claim = await store.claimForNotification(row.emailId, sessionKey);
       if (claim.status === "held") return false;
       if (claim.status === "already_observed") return true;
-      // An explicitly muted thread never notifies this session. Record the
+      // An explicitly muted thread never notifies this session, whether the
+      // mute is local or the server reports it for this address. Record the
       // skip so the event completes and is not redelivered.
-      if (muted(detail.thread_id)) {
+      if (muted(detail.thread_id) || serverMuted(detail)) {
         await store.skipNotification(row.emailId, sessionKey);
         return true;
       }

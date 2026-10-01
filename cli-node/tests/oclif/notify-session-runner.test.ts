@@ -1577,6 +1577,19 @@ describe("thread mutes in session notifications", () => {
     });
   });
 
+  it("completes mail the server reports as muted without notifying", async () => {
+    const f = setup();
+    f.detail.thread_id = randomUUID();
+    (f.detail as unknown as Record<string, unknown>).collaboration = {
+      muted: true,
+    };
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+      route: { kind: "notification", state: "skipped" },
+    });
+  });
+
   it("still notifies when only another session muted the thread", async () => {
     const f = setup();
     const thread = randomUUID();
