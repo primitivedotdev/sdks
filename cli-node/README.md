@@ -252,6 +252,8 @@ Use task-oriented commands for normal workflows:
 primitive send --to alice@example.com --body "Hello"
 primitive reply --id <inbound-email-id> --body "Thanks"
 primitive reply --id <inbound-email-id> --body "See attached" --attachment ./report.pdf
+primitive reply --thread <thread-id> --body "Answering the latest message"
+primitive reply --id <inbound-email-id> --fyi --body "Merged. No action needed."
 primitive chat reply "See attached" --attachment ./report.pdf
 primitive emails list
 primitive emails get --id <inbound-email-id>
@@ -296,6 +298,37 @@ delivery, id X). Do not resend.` Before sending, `primitive reply` (and
 that went out. The warning never blocks the send; if the lookup fails, the reply is
 still sent and stderr says the check was skipped. `--json` includes the replies as
 `prior_replies`.
+
+### Replying to the latest message in a thread
+
+`primitive reply --thread <thread-id>` answers the newest inbound email in the
+thread instead of a specific one, so an older message is never answered while
+newer ones wait. It uses the thread's `latest_inbound_id` when the API returns
+it and otherwise the newest inbound entry in the thread's message list. Without
+`--json`, stderr names the email that was answered; with `--json`, the envelope
+carries `reply_target: { thread_id, email_id, resolved_by }`. `--id` and
+`--thread` are mutually exclusive.
+
+### Informational replies
+
+`primitive reply --fyi` sends a reply that needs no answer. It goes out as an
+ordinary threaded reply carrying an `ack` signal (status `received`, see
+[optional email signals](../docs/signal-emails.md)) whose note is the
+plain-text body:
+
+```text
+Received your message.
+
+<your body>
+```
+
+Receivers that classify signal content treat it as informational and do not
+wake for it. `--fyi` takes plain text only: no HTML or attachments, at most 2000
+characters, and trailing whitespace is dropped. With no body the reply is the
+bare acknowledgement. It is refused when the email being answered is itself a
+signal or interaction, so two agents cannot keep acknowledging each other.
+`primitive send --fyi --in-reply-to <message-id>` sends the same kind of
+acknowledgement for a message identified by its Message-Id.
 
 ## Remove mailbox history
 
@@ -614,6 +647,29 @@ version once and writes conditionally, or creates with `if_absent` when missing.
 Use `--if-version <version>` or `--if-absent` to provide the condition directly.
 `delete` likewise reads the current version once unless `--if-version` is
 provided. Conflicts are never retried automatically.
+
+### Work claims
+
+A work claim says what an agent is changing right now, so peers can check it
+before editing a shared file. It is one short line naming the task and the
+files or areas being changed, stored with an expiry in the `AGENT_WORKING`
+address note as JSON `{"claim": "...", "until": "<ISO time>"}`. Claims are
+advisory, not locks.
+
+```sh
+primitive agent working set "phone composer: apps/mobile/src/message-composer.tsx"
+primitive agent working set "billing export: src/billing/" --until 2026-10-01T18:00:00Z
+primitive agent working get --address peer@example.com
+primitive agent working clear
+```
+
+Set a claim when work starts and clear it when work ends. Without `--until`, a
+claim expires 4 hours after it is set. `get` prints the claim and its expiry, or
+`none` when there is no claim or it has expired; a plain-text value written
+without an expiry is shown as-is. `--json` prints `{ address, state, claim,
+until }` where `state` is `active`, `legacy` or `none`. Address rules and
+visibility follow `agent notes`: new claims are private to the organization and
+an update keeps the note's visibility unless `--public` or `--private` is given.
 
 Automatic runtime configuration and notification history backfill are not
 provided. Reply waits use targeted recovery for their

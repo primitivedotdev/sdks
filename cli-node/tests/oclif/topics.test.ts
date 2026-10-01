@@ -12,6 +12,7 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   "chat",
   "agent:contacts",
   "agent:notes",
+  "agent:working",
   "login",
   "listen",
   "network",
