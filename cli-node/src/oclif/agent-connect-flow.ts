@@ -66,6 +66,25 @@ function readPendingAgentInfo(path: string): string | null {
   return null;
 }
 
+function savedReceiverMode(
+  configDir: string,
+  profileName: string,
+): "native" | "external" | null {
+  try {
+    const saved = readMailJson(
+      join(agentProfileDirectory(configDir, profileName), "setup.json"),
+    );
+    if (!saved || typeof saved !== "object" || Array.isArray(saved))
+      return null;
+    // Setups saved before receiver modes existed were native.
+    return (saved as { receiverMode?: unknown }).receiverMode === "external"
+      ? "external"
+      : "native";
+  } catch {
+    return null;
+  }
+}
+
 /** Best effort: a lost pending note only means --name/--info must be passed again. */
 function savePendingAgentInfo(path: string, value: string): void {
   try {
@@ -242,15 +261,25 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       "--session requires the exact loaded session UUID.",
     );
   const runtime = detectAgentRuntime(options.session, env);
-  const receiver =
-    options.receiver ?? (runtime === "claude" ? "external" : "native");
-  if (receiver === "external" && env.CLAUDE_CODE_SESSION_ID !== options.session)
-    throw new AgentConnectionSetupError(
-      "External receiving requires this exact Claude session ID. No invitation was claimed.",
-    );
   const profileName = agentProfileName(
     options.profileName ?? defaultAgentProfileName(options.session),
   );
+  // A resumed setup keeps the receiver it was started with; only a new setup
+  // takes the runtime's default.
+  const receiver =
+    options.receiver ??
+    (options.resume
+      ? savedReceiverMode(options.configDir, profileName)
+      : null) ??
+    (runtime === "claude" ? "external" : "native");
+  if (
+    receiver === "external" &&
+    env.CLAUDE_CODE_SESSION_ID?.trim().toLowerCase() !==
+      options.session.toLowerCase()
+  )
+    throw new AgentConnectionSetupError(
+      "External receiving requires this exact Claude session ID. No invitation was claimed.",
+    );
   const agentInfo = agentInfoValue(options.name, options.info);
   const skipped: Skip[] = [];
 
@@ -309,6 +338,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
         profileName: result.identity.profileName,
         agentAddress: result.identity.agentAddress,
         sessionId: options.session,
+        env: env as NodeJS.ProcessEnv,
       });
     else skipped.push({ step: "receiver", reason: "pending_verification" });
   }
@@ -368,11 +398,21 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     receiver === "external"
       ? externalHook === "installed_unverified"
       : result.receiving.state === "healthy";
-  const invocation = options.invocation ?? "primitive";
-  const resumeCommand = result.resumeCommand.replace(
-    /^primitive /,
-    `${invocation} `,
-  );
+  // Every choice that changes what a resume touches is repeated, so following
+  // the command never reverses a skill opt-out, a project install or the
+  // receiver. Note text is never printed; a pending note is kept privately.
+  const resumeCommand = [
+    options.invocation ?? "primitive",
+    "agent connect",
+    `--profile ${result.identity.profileName}`,
+    `--session ${options.session}`,
+    `--receiver ${receiver}`,
+    "--resume",
+    ...(options.contactRequests ? ["--contact-requests"] : []),
+    ...(options.skill === false ? ["--no-skill"] : []),
+    ...(options.project ? ["--project"] : []),
+    "--json",
+  ].join(" ");
   return {
     status:
       verified && receiverReady ? ("connected" as const) : ("pending" as const),

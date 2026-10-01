@@ -319,6 +319,31 @@ describe("skill install", () => {
     expect(install().state).toBe("unchanged");
     expect(existsSync(fresh)).toBe(true);
   });
+  it("keeps installed helper dependencies when the lockfile is unchanged", () => {
+    const { install, target } = setup();
+    install();
+    mkdirSync(join(target, "node_modules", "dep"), { recursive: true });
+    writeFileSync(join(target, "node_modules", "dep", "index.js"), "kept");
+    writeFileSync(join(target, "SKILL.md"), "older");
+    const result = install();
+    expect(result).toMatchObject({ state: "updated", dependencies: "kept" });
+    expect(
+      readFileSync(join(target, "node_modules", "dep", "index.js"), "utf8"),
+    ).toBe("kept");
+    expect(leftovers(target)).toEqual([]);
+  });
+  it("asks for a dependency reinstall when the lockfile changed", () => {
+    const { install, target } = setup();
+    install();
+    mkdirSync(join(target, "node_modules"), { recursive: true });
+    writeFileSync(join(target, "package-lock.json"), "{}");
+    const result = install();
+    expect(result).toMatchObject({
+      state: "updated",
+      dependencies: "reinstall_needed",
+    });
+    expect(existsSync(join(target, "node_modules"))).toBe(false);
+  });
   it("reports other copies of the skill without deleting them", () => {
     const { install, target } = setup();
     const root = resolve(target, "..");

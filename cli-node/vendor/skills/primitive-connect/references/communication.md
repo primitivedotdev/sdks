@@ -18,6 +18,11 @@ If using the connection helper's private state, install its pinned SDK dependenc
 npm ci --prefix <skill-dir> --ignore-scripts
 ```
 
+`primitive agent connect` keeps these dependencies when it refreshes the skill
+with an unchanged lockfile. When its result reports
+`skill.dependencies: "reinstall_needed"`, run the same `npm ci` again before
+using the helpers.
+
 Then use the following commands. Bodies are on stdin, so private message content
 does not appear in process arguments. Replace the placeholders; a received email
 record ID is not a wire Message-ID.

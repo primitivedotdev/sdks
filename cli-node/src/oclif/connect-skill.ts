@@ -159,7 +159,27 @@ export type ConnectSkillInstall = {
   recovered?: boolean;
   /** A symlink at the skill path was replaced by a real directory. */
   replacedLink?: boolean;
+  /** Installed helper dependencies were kept, or must be reinstalled. */
+  dependencies?: "kept" | "reinstall_needed";
 };
+
+/** The installed copy's dependency manifests match the bundle's. */
+function sameDependencies(
+  target: string,
+  bundle: BundledConnectSkill,
+): boolean {
+  return ["package.json", "package-lock.json"].every((file) => {
+    let installed: string | undefined;
+    try {
+      installed = createHash("sha256")
+        .update(readFileSync(join(target, file)))
+        .digest("hex");
+    } catch {
+      installed = undefined;
+    }
+    return installed === bundle.files[file];
+  });
+}
 
 /** Leftovers younger than this may belong to a refresh still in progress. */
 const STALE_LEFTOVER_MS = 60_000;
@@ -305,13 +325,33 @@ export function installConnectSkill(options: {
     }
     if (connectSkillVersion(hashFiles(staging)) !== options.bundle.version)
       throw new Error("Copied skill files do not match the bundle.");
-    if (link !== null) unlinkSync(target);
-    else if (existing) renameSync(target, retired);
+    // Helper dependencies an agent installed with npm ci survive a refresh
+    // when the lockfile is unchanged; otherwise the result says to reinstall.
+    const installedDeps = join(target, "node_modules");
+    const stagedDeps = join(staging, "node_modules");
+    let dependencies: "kept" | "reinstall_needed" | undefined;
+    if (link === null && existing?.isDirectory() && existsSync(installedDeps)) {
+      if (sameDependencies(target, options.bundle)) {
+        renameSync(installedDeps, stagedDeps);
+        dependencies = "kept";
+      } else dependencies = "reinstall_needed";
+    }
+    try {
+      if (link !== null) unlinkSync(target);
+      else if (existing) renameSync(target, retired);
+    } catch (error) {
+      if (dependencies === "kept") renameSync(stagedDeps, installedDeps);
+      throw error;
+    }
     try {
       renameSync(staging, target);
     } catch (error) {
       if (link !== null) symlinkSync(link, target);
-      else if (existing && existsSync(retired)) renameSync(retired, target);
+      else if (existing && existsSync(retired)) {
+        if (dependencies === "kept")
+          renameSync(stagedDeps, join(retired, "node_modules"));
+        renameSync(retired, target);
+      }
       throw error;
     }
     rmSync(retired, { recursive: true, force: true });
@@ -321,6 +361,7 @@ export function installConnectSkill(options: {
       ...(previous && previous !== options.bundle.version
         ? { previousVersion: previous }
         : {}),
+      ...(dependencies ? { dependencies } : {}),
       ...notes,
       ...copies(),
     };

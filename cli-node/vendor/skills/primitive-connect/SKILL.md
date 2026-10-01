@@ -240,7 +240,10 @@ AGENT_INFO note described below, and use network peers for discovery.
 Claude's `externalHook: installed_unverified` from either command means the CLI
 added a fail-open Stop hook and a resume SessionStart hook to the existing
 settings; verify an actual idle mail wake before promising later delivery. The
-hooks check installed CLI support each time and do not wake on errors.
+hooks check installed CLI support each time and do not wake on errors. Hooks
+installed through npx run the CLI from npm's npx cache. If they stop waking
+this session after that cache was cleared, run the setup's `resumeCommand`; it
+reinstalls them without claiming again.
 
 The one command saves the connection in the profile `session-<session>`, unique
 to this coding session. Pass `--profile` only to keep an existing naming

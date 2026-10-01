@@ -183,6 +183,7 @@ describe("one-command agent connect", () => {
       profileName: identity.profileName,
       agentAddress: identity.agentAddress,
       sessionId: session,
+      env: { CLAUDE_CODE_SESSION_ID: session },
     });
     expect(dependencies.awaitMailCheck).not.toHaveBeenCalled();
     expect(output).toMatchObject({
@@ -298,7 +299,7 @@ describe("one-command agent connect", () => {
       ],
     });
     expect(output.resumeCommand).toBe(
-      `npx -y primitive@latest agent connect --profile session-${session} --session ${session} --resume --json`,
+      `npx -y primitive@latest agent connect --profile session-${session} --session ${session} --receiver native --resume --json`,
     );
   });
 
@@ -598,5 +599,63 @@ describe("review follow-ups", () => {
     });
     const output = await runAgentConnect({ ...options, dependencies });
     expect(output.skipped).toContainEqual({ step: "skill", reason: "EACCES" });
+  });
+
+  it("repeats every choice that a resume would otherwise change, never note text", async () => {
+    const { options } = fixture(
+      {
+        skill: false,
+        project: true,
+        contactRequests: true,
+        name: "Private name",
+        env: { CLAUDE_CODE_SESSION_ID: session },
+      },
+      setupResult({
+        verification: { state: "challenge_pending" },
+        receiving: "not_started",
+      }),
+    );
+    const output = await runAgentConnect(options);
+    expect(output.resumeCommand).toBe(
+      `primitive agent connect --profile session-${session} --session ${session} --receiver external --resume --contact-requests --no-skill --project --json`,
+    );
+    expect(output.resumeCommand).not.toContain("Private name");
+  });
+
+  it("accepts a Claude session whose UUID differs only in case", async () => {
+    const { options, dependencies } = fixture(
+      {
+        session: session.toUpperCase(),
+        env: { CLAUDE_CODE_SESSION_ID: session },
+      },
+      setupResult({ receiving: "external_setup_required" }),
+    );
+    const output = await runAgentConnect(options);
+    expect(output.runtime).toBe("claude");
+    expect(dependencies.setupAgent.mock.calls[0]?.[0].receiverMode).toBe(
+      "external",
+    );
+  });
+
+  it("resumes a native setup in Claude Code with its saved receiver", async () => {
+    for (const saved of [{ receiverMode: "native" }, {}]) {
+      const { options, configDir, dependencies } = fixture({
+        resume: true,
+        env: { CLAUDE_CODE_SESSION_ID: session },
+      });
+      writeMailJson(
+        join(
+          agentProfileDirectory(configDir, `session-${session}`),
+          "setup.json",
+        ),
+        { session, ...saved },
+      );
+      const output = await runAgentConnect(options);
+      expect(dependencies.setupAgent.mock.calls[0]?.[0].receiverMode).toBe(
+        "native",
+      );
+      expect(output.receiving.mode).toBe("native");
+      expect(output.resumeCommand).toContain("--receiver native");
+    }
   });
 });
