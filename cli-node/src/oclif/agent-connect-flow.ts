@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import {
@@ -19,10 +20,16 @@ import {
 } from "./connect-skill.js";
 import {
   AgentConnectionSetupError,
+  agentProfileDirectory,
   agentProfileName,
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import {
+  readMailJson,
+  removeMailFile,
+  writeMailJson,
+} from "./shared-mail-files.js";
 
 /** What this CLI version can do in one `agent connect --session` call. */
 export const AGENT_CONNECT_CAPABILITIES = [
@@ -39,6 +46,42 @@ export const AGENT_INFO_NOTE = "AGENT_INFO";
 const MAX_NAME_LENGTH = 80;
 const MAX_INFO_LENGTH = 1000;
 const MAIL_CHECK_WAIT_MS = 20_000;
+const PENDING_AGENT_INFO_FILE = "agent-info-pending.json";
+
+function readPendingAgentInfo(path: string): string | null {
+  try {
+    const saved = readMailJson(path);
+    if (
+      saved &&
+      typeof saved === "object" &&
+      !Array.isArray(saved) &&
+      (saved as { version?: unknown }).version === 1
+    ) {
+      const value = (saved as { value?: unknown }).value;
+      if (typeof value === "string" && value.length > 0) return value;
+    }
+  } catch {
+    /* An unreadable pending note is treated as absent. */
+  }
+  return null;
+}
+
+/** Best effort: a lost pending note only means --name/--info must be passed again. */
+function savePendingAgentInfo(path: string, value: string): void {
+  try {
+    writeMailJson(path, { version: 1, value });
+  } catch {
+    /* The result still reports the note as not written. */
+  }
+}
+
+function clearPendingAgentInfo(path: string): void {
+  try {
+    removeMailFile(path);
+  } catch {
+    /* Nothing was saved, or the profile directory is unavailable. */
+  }
+}
 
 type SetupResult = Awaited<ReturnType<typeof setupAgent>>;
 
@@ -59,7 +102,8 @@ export type AgentConnectFlowDependencies = {
   installClaudeWakeHook: typeof installClaudeWakeHook;
   installSkill(runtime: AgentRuntime): ConnectSkillInstall;
   seedAgentInfo(profileName: string, value: string): Promise<AgentInfoSeed>;
-  awaitMailCheck(profileName: string): Promise<MailCheck>;
+  /** A check counts only when recorded at or after `since` (epoch ms). */
+  awaitMailCheck(profileName: string, since: number): Promise<MailCheck>;
 };
 
 export type AgentConnectFlowOptions = {
@@ -156,7 +200,7 @@ function defaults(
         return "failed";
       }
     },
-    async awaitMailCheck(profileName) {
+    async awaitMailCheck(profileName, since) {
       const deadline =
         Date.now() + (options.mailCheckWaitMs ?? MAIL_CHECK_WAIT_MS);
       for (;;) {
@@ -165,7 +209,9 @@ function defaults(
           status.status === "configured"
             ? status.receiving.lastSuccessfulMailCheckAt
             : null;
-        if (at) return { state: "confirmed", lastSuccessfulMailCheckAt: at };
+        // A reused receiver may hold a check from before this setup began.
+        if (at && Date.parse(at) >= since)
+          return { state: "confirmed", lastSuccessfulMailCheckAt: at };
         if (Date.now() >= deadline)
           return { state: "pending", lastSuccessfulMailCheckAt: null };
         await delay(250);
@@ -238,8 +284,10 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       };
     }
   }
-  if (skill.state === "skipped")
-    skipped.push({ step: "skill", reason: skill.reason ?? "skipped" });
+  if (skill.state === "skipped" || skill.state === "failed")
+    skipped.push({ step: "skill", reason: skill.reason ?? skill.state });
+
+  const startedAt = Date.now();
 
   const result: SetupResult = await dependencies.setupAgent({
     configDir: options.configDir,
@@ -268,7 +316,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
   let mailCheck: MailCheck | null = null;
   if (receiver === "native") {
     if (result.receiving.state === "healthy") {
-      mailCheck = await dependencies.awaitMailCheck(profileName);
+      mailCheck = await dependencies.awaitMailCheck(profileName, startedAt);
       if (mailCheck.state === "pending")
         skipped.push({ step: "mail_check", reason: "not_yet_observed" });
     } else
@@ -278,14 +326,26 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       });
   }
 
+  // A requested note survives a paused setup privately, so the printed
+  // resume command never carries its text.
+  const pendingPath = join(
+    agentProfileDirectory(options.configDir, profileName),
+    PENDING_AGENT_INFO_FILE,
+  );
+  const noteValue = agentInfo ?? readPendingAgentInfo(pendingPath);
   let agentInfoState: AgentInfoSeed = "not_requested";
-  if (agentInfo === null)
+  if (noteValue === null)
     skipped.push({ step: "agent_info", reason: "not_requested" });
   else if (!verified) {
     agentInfoState = "pending_verification";
+    savePendingAgentInfo(pendingPath, noteValue);
     skipped.push({ step: "agent_info", reason: "pending_verification" });
   } else {
-    agentInfoState = await dependencies.seedAgentInfo(profileName, agentInfo);
+    agentInfoState = await dependencies.seedAgentInfo(profileName, noteValue);
+    if (agentInfoState === "failed") {
+      savePendingAgentInfo(pendingPath, noteValue);
+      skipped.push({ step: "agent_info", reason: "failed" });
+    } else clearPendingAgentInfo(pendingPath);
     if (agentInfoState === "already_present")
       skipped.push({ step: "agent_info", reason: "already_present" });
   }

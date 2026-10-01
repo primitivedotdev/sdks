@@ -7,8 +7,10 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -277,6 +279,45 @@ describe("skill install", () => {
     expect(lstatSync(target).isSymbolicLink()).toBe(false);
     expect(files(target)).toEqual(Object.keys(bundle.files));
     expect(readFileSync(join(shared, "SKILL.md"), "utf8")).toContain("old");
+  });
+  it("replaces a symlink even when it points at the same version", () => {
+    const { bundle, install, target } = setup();
+    const shared = temp("connect-skill-same-");
+    execFileSync("cp", ["-R", `${bundle.directory}/.`, shared]);
+    mkdirSync(resolve(target, ".."), { recursive: true });
+    symlinkSync(shared, target);
+    const result = install();
+    expect(result).toMatchObject({ state: "updated", replacedLink: true });
+    expect(result).not.toHaveProperty("previousVersion");
+    expect(lstatSync(target).isSymbolicLink()).toBe(false);
+    expect(install().state).toBe("unchanged");
+  });
+  it("puts back a copy left aside by an interrupted refresh, then refreshes it", () => {
+    const { bundle, install, target } = setup();
+    install();
+    writeFileSync(join(target, "SKILL.md"), "older");
+    const root = resolve(target, "..");
+    const retired = join(root, `.${CONNECT_SKILL_NAME}.retired-old`);
+    const staging = join(root, `.${CONNECT_SKILL_NAME}.staging-old`);
+    renameSync(target, retired);
+    mkdirSync(staging);
+    const past = new Date(Date.now() - 120_000);
+    utimesSync(retired, past, past);
+    utimesSync(staging, past, past);
+    const result = install();
+    expect(result).toMatchObject({ state: "updated", recovered: true });
+    expect(result.previousVersion).toBeDefined();
+    expect(files(target)).toEqual(Object.keys(bundle.files));
+    expect(leftovers(target)).toEqual([]);
+  });
+  it("leaves fresh leftovers that may belong to a refresh in progress", () => {
+    const { install, target } = setup();
+    install();
+    const root = resolve(target, "..");
+    const fresh = join(root, `.${CONNECT_SKILL_NAME}.staging-live`);
+    mkdirSync(fresh);
+    expect(install().state).toBe("unchanged");
+    expect(existsSync(fresh)).toBe(true);
   });
   it("reports other copies of the skill without deleting them", () => {
     const { install, target } = setup();

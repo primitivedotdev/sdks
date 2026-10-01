@@ -155,7 +155,68 @@ export type ConnectSkillInstall = {
   reason?: string;
   /** Other directories in the same skills folder that declare this skill name. */
   otherCopies?: string[];
+  /** A copy left by an interrupted refresh was moved back into place first. */
+  recovered?: boolean;
+  /** A symlink at the skill path was replaced by a real directory. */
+  replacedLink?: boolean;
 };
+
+/** Leftovers younger than this may belong to a refresh still in progress. */
+const STALE_LEFTOVER_MS = 60_000;
+
+/**
+ * A refresh moves the old copy aside just before moving the new one in. If a
+ * process stopped between those renames, put the old copy back so the skill
+ * path is never left empty, and remove abandoned staging and retired copies.
+ */
+function recoverInterruptedInstall(root: string, target: string): boolean {
+  let entries: string[];
+  try {
+    entries = readdirSync(root);
+  } catch {
+    return false;
+  }
+  const stale = (name: string) => {
+    try {
+      return (
+        Date.now() - lstatSync(join(root, name)).mtimeMs > STALE_LEFTOVER_MS
+      );
+    } catch {
+      return false;
+    }
+  };
+  const retired = entries
+    .filter((name) => name.startsWith(`.${CONNECT_SKILL_NAME}.retired-`))
+    .filter(stale)
+    .sort(
+      (a, b) =>
+        lstatSync(join(root, b)).mtimeMs - lstatSync(join(root, a)).mtimeMs,
+    );
+  let recovered = false;
+  let missing = false;
+  try {
+    lstatSync(target);
+  } catch {
+    missing = true;
+  }
+  if (missing && retired[0]) {
+    try {
+      renameSync(join(root, retired[0]), target);
+      recovered = true;
+      retired.shift();
+    } catch {
+      /* Leave it for the next run; installing fresh still restores the path. */
+    }
+  }
+  for (const name of [
+    ...retired,
+    ...entries
+      .filter((entry) => entry.startsWith(`.${CONNECT_SKILL_NAME}.staging-`))
+      .filter(stale),
+  ])
+    rmSync(join(root, name), { recursive: true, force: true });
+  return recovered;
+}
 
 function declaresConnectSkill(directory: string): boolean {
   try {
@@ -216,6 +277,8 @@ export function installConnectSkill(options: {
     const found = otherCopies(target);
     return found.length ? { otherCopies: found } : {};
   };
+  const root = dirname(target);
+  const recovered = recoverInterruptedInstall(root, target);
   let existing: ReturnType<typeof lstatSync> | null = null;
   try {
     existing = lstatSync(target);
@@ -223,10 +286,15 @@ export function installConnectSkill(options: {
     existing = null;
   }
   const previous = existing ? installedVersion(target) : null;
-  if (previous === options.bundle.version)
-    return { ...base, state: "unchanged", ...copies() };
+  // A symlinked copy can change independently of this CLI, so it is always
+  // replaced by a real directory, even when its current content matches.
   const link = existing?.isSymbolicLink() ? readlinkSync(target) : null;
-  const root = dirname(target);
+  const notes = {
+    ...(recovered ? { recovered: true } : {}),
+    ...(link !== null ? { replacedLink: true } : {}),
+  };
+  if (link === null && previous === options.bundle.version)
+    return { ...base, state: "unchanged", ...notes, ...copies() };
   const staging = join(root, `.${CONNECT_SKILL_NAME}.staging-${randomUUID()}`);
   const retired = join(root, `.${CONNECT_SKILL_NAME}.retired-${randomUUID()}`);
   try {
@@ -250,7 +318,10 @@ export function installConnectSkill(options: {
     return {
       ...base,
       state: existing ? "updated" : "installed",
-      ...(previous ? { previousVersion: previous } : {}),
+      ...(previous && previous !== options.bundle.version
+        ? { previousVersion: previous }
+        : {}),
+      ...notes,
       ...copies(),
     };
   } catch (error) {
@@ -260,6 +331,7 @@ export function installConnectSkill(options: {
       state: "failed",
       reason:
         (error as NodeJS.ErrnoException | null)?.code ?? "skill_install_failed",
+      ...notes,
       ...copies(),
     };
   }

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -129,6 +129,7 @@ describe("one-command agent connect", () => {
     });
     expect(dependencies.awaitMailCheck).toHaveBeenCalledWith(
       `session-${session}`,
+      expect.any(Number),
     );
     expect(dependencies.seedAgentInfo).toHaveBeenCalledWith(
       `session-${session}`,
@@ -486,27 +487,116 @@ describe("default steps", () => {
       },
     );
     const scope = notificationScope(apiBaseUrl, credential);
-    const checkedAt = "2026-10-01T21:12:00.000Z";
-    writeMailJson(
-      join(
-        configDir,
-        "shared-mail",
-        createHash("sha256").update(scope).digest("hex"),
-        "owner.json",
-      ),
-      {
-        generation: randomUUID(),
-        pid: process.pid,
-        identity: "listener",
-        ready: true,
-        gapCount: 0,
-        lastGapReason: null,
-        lastMailCheckAt: checkedAt,
+    const recordCheck = (lastMailCheckAt: string) =>
+      writeMailJson(
+        join(
+          configDir,
+          "shared-mail",
+          createHash("sha256").update(scope).digest("hex"),
+          "owner.json",
+        ),
+        {
+          generation: randomUUID(),
+          pid: process.pid,
+          identity: "listener",
+          ready: true,
+          gapCount: 0,
+          lastGapReason: null,
+          lastMailCheckAt,
+        },
+      );
+    // A reused receiver's check from before this setup does not count.
+    recordCheck("2020-01-01T00:00:00.000Z");
+    expect((await runAgentConnect(withoutDefault)).receiving).toMatchObject({
+      mailCheck: "pending",
+      lastSuccessfulMailCheckAt: null,
+    });
+    // A check recorded while setup runs does.
+    let checkedAt = "";
+    const setup = vi.fn<AgentConnectFlowDependencies["setupAgent"]>(
+      async () => {
+        checkedAt = new Date().toISOString();
+        recordCheck(checkedAt);
+        return setupResult();
       },
     );
-    expect((await runAgentConnect(withoutDefault)).receiving).toMatchObject({
+    const confirmed = await runAgentConnect({
+      ...withoutDefault,
+      dependencies: { ...withoutDefault.dependencies, setupAgent: setup },
+    });
+    expect(confirmed.receiving).toMatchObject({
       mailCheck: "confirmed",
       lastSuccessfulMailCheckAt: checkedAt,
     });
+  });
+});
+
+describe("review follow-ups", () => {
+  it("keeps a requested AGENT_INFO note privately across a paused setup and writes it on resume", async () => {
+    const paused = fixture(
+      { name: "Research", info: "Reviews code" },
+      setupResult({
+        verification: { state: "challenge_pending" },
+        receiving: "not_started",
+      }),
+    );
+    const first = await runAgentConnect(paused.options);
+    expect(first.agentInfo).toBe("pending_verification");
+    expect(first.resumeCommand).not.toContain("Research");
+    expect(paused.dependencies.seedAgentInfo).not.toHaveBeenCalled();
+    const pending = join(
+      agentProfileDirectory(paused.configDir, `session-${session}`),
+      "agent-info-pending.json",
+    );
+    expect(statSync(pending).mode & 0o077).toBe(0);
+
+    paused.dependencies.setupAgent.mockResolvedValue(setupResult());
+    paused.dependencies.seedAgentInfo.mockResolvedValueOnce("failed");
+    const failed = await runAgentConnect({
+      ...paused.options,
+      name: undefined,
+      info: undefined,
+      resume: true,
+    });
+    expect(failed.agentInfo).toBe("failed");
+    expect(failed.skipped).toContainEqual({
+      step: "agent_info",
+      reason: "failed",
+    });
+    expect(existsSync(pending)).toBe(true);
+
+    const resumed = await runAgentConnect({
+      ...paused.options,
+      name: undefined,
+      info: undefined,
+      resume: true,
+    });
+    expect(paused.dependencies.seedAgentInfo).toHaveBeenLastCalledWith(
+      `session-${session}`,
+      "Research: Reviews code",
+    );
+    expect(resumed.agentInfo).toBe("created");
+    expect(existsSync(pending)).toBe(false);
+
+    const later = await runAgentConnect({
+      ...paused.options,
+      name: undefined,
+      info: undefined,
+      resume: true,
+    });
+    expect(later.agentInfo).toBe("not_requested");
+  });
+
+  it("lists a failed skill install in skipped", async () => {
+    const { options, dependencies } = fixture();
+    dependencies.installSkill.mockReturnValue({
+      state: "failed",
+      runtime: "codex",
+      path: "/skills/codex/primitive-connect",
+      version: "0123456789abcdef",
+      reason: "EACCES",
+    });
+    const output = await runAgentConnect({ ...options, dependencies });
+    expect(output.skipped).toContainEqual({ step: "skill", reason: "EACCES" });
   });
 });
