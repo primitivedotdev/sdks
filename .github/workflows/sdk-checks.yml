@@ -140,6 +140,20 @@ jobs:
       - name: Run cli checks
         run: make cli-check
 
+      - name: Read the bundled skill's source commit
+        id: skill-source
+        run: printf 'commit=%s\n' "$(node -p "require('./cli-node/vendor/skills/primitive-connect.source.json').commit")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: primitivedotdev/skills
+          ref: ${{ steps.skill-source.outputs.commit }}
+          path: skills-source
+          persist-credentials: false
+
+      - name: Check the bundled skill matches its source commit
+        run: node cli-node/scripts/vendor-connect-skill.mjs --from skills-source --check
+
       - name: Build cli package
         run: make cli-build
 

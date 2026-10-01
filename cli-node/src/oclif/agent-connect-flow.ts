@@ -1,0 +1,347 @@
+import { setTimeout as delay } from "node:timers/promises";
+import { PrimitiveApiClient } from "@primitivedotdev/api-core";
+import {
+  AddressNotesApiError,
+  runAddressNotesRequest,
+} from "./address-notes.js";
+import { agentConnectionStatus } from "./agent-connect.js";
+import { setupAgent } from "./agent-setup.js";
+import {
+  type ClaudeWakeHookResult,
+  installClaudeWakeHook,
+} from "./claude-wake-install.js";
+import {
+  type AgentRuntime,
+  type ConnectSkillInstall,
+  detectAgentRuntime,
+  installConnectSkill,
+  readBundledConnectSkill,
+} from "./connect-skill.js";
+import {
+  AgentConnectionSetupError,
+  agentProfileName,
+  loadConnectedAgentProfile,
+} from "./connected-agent-profile.js";
+import { SESSION_UUID } from "./notify-session-native.js";
+
+/** What this CLI version can do in one `agent connect --session` call. */
+export const AGENT_CONNECT_CAPABILITIES = [
+  "invitation_claim_from_stdin",
+  "verification_reply",
+  "native_background_receiver",
+  "claude_external_hooks",
+  "bundled_skill_install",
+  "agent_info_seed",
+  "resume",
+] as const;
+
+export const AGENT_INFO_NOTE = "AGENT_INFO";
+const MAX_NAME_LENGTH = 80;
+const MAX_INFO_LENGTH = 1000;
+const MAIL_CHECK_WAIT_MS = 20_000;
+
+type SetupResult = Awaited<ReturnType<typeof setupAgent>>;
+
+export type AgentInfoSeed =
+  | "created"
+  | "already_present"
+  | "not_requested"
+  | "pending_verification"
+  | "failed";
+
+export type MailCheck = {
+  state: "confirmed" | "pending";
+  lastSuccessfulMailCheckAt: string | null;
+};
+
+export type AgentConnectFlowDependencies = {
+  setupAgent: typeof setupAgent;
+  installClaudeWakeHook: typeof installClaudeWakeHook;
+  installSkill(runtime: AgentRuntime): ConnectSkillInstall;
+  seedAgentInfo(profileName: string, value: string): Promise<AgentInfoSeed>;
+  awaitMailCheck(profileName: string): Promise<MailCheck>;
+};
+
+export type AgentConnectFlowOptions = {
+  configDir: string;
+  packageRoot: string;
+  cliVersion: string;
+  cliPath: string;
+  /** How the agent invoked this CLI, used in the resume command. */
+  invocation?: string;
+  session: string;
+  profileName?: string;
+  receiver?: "native" | "external";
+  resume?: boolean;
+  contactRequests?: boolean;
+  name?: string;
+  info?: string;
+  skill?: boolean;
+  project?: boolean;
+  cwd?: string;
+  env?: Record<string, string | undefined>;
+  readInvitation(): Promise<string>;
+  /** Bounded wait for the listener's first mail check. */
+  mailCheckWaitMs?: number;
+  dependencies?: Partial<AgentConnectFlowDependencies>;
+};
+
+export function defaultAgentProfileName(session: string): string {
+  return `session-${session.toLowerCase()}`;
+}
+
+/** A short private role note; never a transcript or secret. */
+export function agentInfoValue(
+  name: string | undefined,
+  info: string | undefined,
+): string | null {
+  const clean = (value: string | undefined, max: number, label: string) => {
+    if (value === undefined) return undefined;
+    const trimmed = value.trim();
+    if (
+      !trimmed ||
+      trimmed.length > max ||
+      [...trimmed].some((character) => {
+        const code = character.charCodeAt(0);
+        return (code < 32 && character !== "\n") || code === 127;
+      })
+    )
+      throw new AgentConnectionSetupError(
+        `--${label} must be 1-${max} characters without control characters.`,
+      );
+    return trimmed;
+  };
+  const cleanName = clean(name, MAX_NAME_LENGTH, "name");
+  const cleanInfo = clean(info, MAX_INFO_LENGTH, "info");
+  if (cleanName && cleanInfo) return `${cleanName}: ${cleanInfo}`;
+  return cleanName ?? cleanInfo ?? null;
+}
+
+function defaults(
+  options: AgentConnectFlowOptions,
+): AgentConnectFlowDependencies {
+  return {
+    setupAgent,
+    installClaudeWakeHook,
+    installSkill(runtime) {
+      const bundle = readBundledConnectSkill(options.packageRoot);
+      return installConnectSkill({
+        bundle,
+        runtime,
+        project: options.project,
+        cwd: options.cwd,
+        env: options.env,
+      });
+    },
+    async seedAgentInfo(profileName, value) {
+      const profile = loadConnectedAgentProfile(options.configDir, profileName);
+      if (!profile) return "failed";
+      const client = new PrimitiveApiClient({
+        apiKey: profile.api_key,
+        apiBaseUrl: profile.api_base_url,
+      });
+      try {
+        await runAddressNotesRequest(client.client, {
+          action: "set",
+          address: profile.agent_address,
+          name: AGENT_INFO_NOTE,
+          value,
+          visibility: "private",
+          ifAbsent: true,
+        });
+        return "created";
+      } catch (error) {
+        if (error instanceof AddressNotesApiError && error.status === 409)
+          return "already_present";
+        return "failed";
+      }
+    },
+    async awaitMailCheck(profileName) {
+      const deadline =
+        Date.now() + (options.mailCheckWaitMs ?? MAIL_CHECK_WAIT_MS);
+      for (;;) {
+        const status = agentConnectionStatus(options.configDir, profileName);
+        const at =
+          status.status === "configured"
+            ? status.receiving.lastSuccessfulMailCheckAt
+            : null;
+        if (at) return { state: "confirmed", lastSuccessfulMailCheckAt: at };
+        if (Date.now() >= deadline)
+          return { state: "pending", lastSuccessfulMailCheckAt: null };
+        await delay(250);
+      }
+    },
+  };
+}
+
+type Skip = { step: string; reason: string };
+
+/**
+ * One call: self check, install the matching skill, claim and verify, start
+ * receiving, seed AGENT_INFO, and report everything as one result. Every step
+ * after the claim is safe to repeat with --resume.
+ */
+export async function runAgentConnect(options: AgentConnectFlowOptions) {
+  const env = options.env ?? process.env;
+  const dependencies = {
+    ...defaults(options),
+    ...Object.fromEntries(
+      Object.entries(options.dependencies ?? {}).filter(
+        ([, value]) => value !== undefined,
+      ),
+    ),
+  } as AgentConnectFlowDependencies;
+  if (!SESSION_UUID.test(options.session))
+    throw new AgentConnectionSetupError(
+      "--session requires the exact loaded session UUID.",
+    );
+  const runtime = detectAgentRuntime(options.session, env);
+  const receiver =
+    options.receiver ?? (runtime === "claude" ? "external" : "native");
+  if (receiver === "external" && env.CLAUDE_CODE_SESSION_ID !== options.session)
+    throw new AgentConnectionSetupError(
+      "External receiving requires this exact Claude session ID. No invitation was claimed.",
+    );
+  const profileName = agentProfileName(
+    options.profileName ?? defaultAgentProfileName(options.session),
+  );
+  const agentInfo = agentInfoValue(options.name, options.info);
+  const skipped: Skip[] = [];
+
+  let skill: ConnectSkillInstall;
+  if (options.skill === false) {
+    skill = {
+      state: "skipped",
+      runtime,
+      path: null,
+      version: null,
+      reason: "not_requested",
+    };
+  } else if (!runtime) {
+    skill = {
+      state: "skipped",
+      runtime: null,
+      path: null,
+      version: null,
+      reason: "runtime_unknown",
+    };
+  } else {
+    try {
+      skill = dependencies.installSkill(runtime);
+    } catch {
+      skill = {
+        state: "failed",
+        runtime,
+        path: null,
+        version: null,
+        reason: "bundled_skill_unavailable",
+      };
+    }
+  }
+  if (skill.state === "skipped")
+    skipped.push({ step: "skill", reason: skill.reason ?? "skipped" });
+
+  const result: SetupResult = await dependencies.setupAgent({
+    configDir: options.configDir,
+    profileName,
+    session: options.session,
+    receiverMode: receiver,
+    resume: options.resume,
+    contactRequests: options.contactRequests,
+    ...(options.resume ? {} : { invitation: await options.readInvitation() }),
+  });
+  const verified = result.verification.state === "reply_submitted";
+
+  let externalHook: ClaudeWakeHookResult | null = null;
+  if (receiver === "external") {
+    if (verified)
+      externalHook = dependencies.installClaudeWakeHook({
+        cliPath: options.cliPath,
+        configDir: options.configDir,
+        profileName: result.identity.profileName,
+        agentAddress: result.identity.agentAddress,
+        sessionId: options.session,
+      });
+    else skipped.push({ step: "receiver", reason: "pending_verification" });
+  }
+
+  let mailCheck: MailCheck | null = null;
+  if (receiver === "native") {
+    if (result.receiving.state === "healthy") {
+      mailCheck = await dependencies.awaitMailCheck(profileName);
+      if (mailCheck.state === "pending")
+        skipped.push({ step: "mail_check", reason: "not_yet_observed" });
+    } else
+      skipped.push({
+        step: "receiver",
+        reason: verified ? "not_ready" : "pending_verification",
+      });
+  }
+
+  let agentInfoState: AgentInfoSeed = "not_requested";
+  if (agentInfo === null)
+    skipped.push({ step: "agent_info", reason: "not_requested" });
+  else if (!verified) {
+    agentInfoState = "pending_verification";
+    skipped.push({ step: "agent_info", reason: "pending_verification" });
+  } else {
+    agentInfoState = await dependencies.seedAgentInfo(profileName, agentInfo);
+    if (agentInfoState === "already_present")
+      skipped.push({ step: "agent_info", reason: "already_present" });
+  }
+
+  const receiving =
+    receiver === "external"
+      ? {
+          ...result.receiving,
+          mode: "external" as const,
+          hook: externalHook,
+        }
+      : {
+          ...result.receiving,
+          mode: "native" as const,
+          mailCheck: mailCheck?.state ?? "not_started",
+          lastSuccessfulMailCheckAt:
+            mailCheck?.lastSuccessfulMailCheckAt ?? null,
+        };
+  const receiverReady =
+    receiver === "external"
+      ? externalHook === "installed_unverified"
+      : result.receiving.state === "healthy";
+  const invocation = options.invocation ?? "primitive";
+  const resumeCommand = result.resumeCommand.replace(
+    /^primitive /,
+    `${invocation} `,
+  );
+  return {
+    status:
+      verified && receiverReady ? ("connected" as const) : ("pending" as const),
+    address: result.identity.agentAddress,
+    orgId: result.identity.orgId,
+    ownerAddress: result.identity.ownerAddress,
+    profile: result.identity.profileName,
+    sessionId: options.session,
+    runtime,
+    cli: {
+      version: options.cliVersion,
+      capabilities: [...AGENT_CONNECT_CAPABILITIES],
+    },
+    skill,
+    verification: result.verification,
+    receiving,
+    ...(result.ownerNotifications
+      ? { ownerNotifications: result.ownerNotifications }
+      : {}),
+    agentInfo: agentInfoState,
+    skipped,
+    selectProfile: `PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}`,
+    resumeCommand,
+    guidance: result.guidance,
+    identity: result.identity,
+    externalHook,
+  };
+}
+
+export type AgentConnectFlowResult = Awaited<
+  ReturnType<typeof runAgentConnect>
+>;

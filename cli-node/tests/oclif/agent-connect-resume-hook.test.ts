@@ -1,5 +1,8 @@
-import { resolve } from "node:path";
-import { afterEach, expect, it, vi } from "vitest";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { afterAll, afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const session = "11111111-1111-4111-8111-111111111111";
 const mocks = vi.hoisted(() => ({
@@ -22,15 +25,46 @@ vi.mock("../../src/oclif/agent-enroll.js", () => ({
 vi.mock("../../src/oclif/claude-wake-install.js", () => ({
   installClaudeWakeHook: mocks.installClaudeWakeHook,
 }));
+// Install from a bundle built by the real build step into scratch space, so
+// this suite never depends on (or writes from) a local dist build.
+vi.mock("../../src/oclif/connect-skill.js", async (original) => {
+  const actual =
+    await original<typeof import("../../src/oclif/connect-skill.js")>();
+  return {
+    ...actual,
+    readBundledConnectSkill: () => actual.readBundledConnectSkill(bundleRoot),
+  };
+});
 
 import AgentConnectCommand from "../../src/oclif/commands/agent-connect.js";
 import AgentEnrollCommand from "../../src/oclif/commands/agent-enroll.js";
 
 const root = resolve(import.meta.dirname, "../..");
+const bundleRoot = mkdtempSync(join(tmpdir(), "connect-command-bundle-"));
+execFileSync(
+  process.execPath,
+  [
+    join(root, "scripts", "bundle-skills.mjs"),
+    "--out",
+    join(bundleRoot, "dist"),
+  ],
+  { stdio: "ignore" },
+);
+afterAll(() => rmSync(bundleRoot, { recursive: true, force: true }));
+let home: string;
+beforeEach(() => {
+  home = mkdtempSync(join(tmpdir(), "connect-command-home-"));
+  process.env.CLAUDE_CONFIG_DIR = join(home, "claude");
+  process.env.CODEX_HOME = join(home, "codex");
+});
 afterEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
   delete process.env.CLAUDE_CODE_SESSION_ID;
+  delete process.env.CODEX_THREAD_ID;
+  delete process.env.CLAUDE_CONFIG_DIR;
+  delete process.env.CODEX_HOME;
+  rmSync(home, { recursive: true, force: true });
   process.exitCode = undefined;
 });
 
@@ -157,4 +191,109 @@ it("agent enroll parses the exact pending-only continuation flag without changin
     expect.objectContaining({ session, name: "Research", continueSetup: true }),
   );
   expect(mocks.installClaudeWakeHook).not.toHaveBeenCalled();
+});
+
+it("agent connect --session runs the whole flow with a default profile and one JSON result", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  process.env.CODEX_THREAD_ID = session;
+  const invitation =
+    "https://api.primitive.dev/v1/agent-connections/setup#token=secret";
+  mocks.readAgentInvitation.mockResolvedValue(invitation);
+  mocks.setupAgent.mockResolvedValue({
+    identity: {
+      profileName: `session-${session}`,
+      agentAddress: "codex@example.com",
+      orgId: "22222222-2222-4222-8222-222222222222",
+      ownerAddress: "owner@example.com",
+      apiBaseUrl: "https://api.primitive.dev/v1",
+    },
+    sessionId: session,
+    verification: { state: "reply_submitted", deliveryStatus: "queued" },
+    receiving: { state: "not_ready" },
+    ownerNotifications: "enabled",
+    resumeCommand: `primitive agent connect --profile session-${session} --session ${session} --resume --json`,
+    guidance: "Receiving health is reported separately.",
+  });
+  await AgentConnectCommand.run(["--session", session, "--json"], { root });
+  expect(outputs).toHaveLength(1);
+  const output = JSON.parse(outputs[0] ?? "");
+  expect(mocks.setupAgent).toHaveBeenCalledWith(
+    expect.objectContaining({
+      profileName: `session-${session}`,
+      session,
+      receiverMode: "native",
+      invitation,
+    }),
+  );
+  expect(output).toMatchObject({
+    status: "pending",
+    address: "codex@example.com",
+    runtime: "codex",
+    skill: {
+      state: "installed",
+      runtime: "codex",
+      path: join(home, "codex", "skills", "primitive-connect"),
+    },
+    receiving: { mode: "native", state: "not_ready" },
+    skipped: expect.arrayContaining([
+      { step: "receiver", reason: "not_ready" },
+    ]),
+  });
+  expect(outputs[0]).not.toContain("secret");
+  expect(
+    readFileSync(
+      join(home, "codex", "skills", "primitive-connect", "SKILL.md"),
+      "utf8",
+    ),
+  ).toContain("## Connect in one command");
+  expect(process.exitCode).toBe(2);
+  process.exitCode = undefined;
+
+  outputs.length = 0;
+  await AgentConnectCommand.run(
+    ["--session", session, "--resume", "--no-skill", "--json"],
+    { root },
+  );
+  expect(JSON.parse(outputs[0] ?? "").skill).toMatchObject({
+    state: "skipped",
+    reason: "not_requested",
+  });
+  expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
+});
+
+it("agent connect requires --profile without --session and for --status", async () => {
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
+    () => undefined,
+  );
+  await expect(AgentConnectCommand.run([], { root })).rejects.toThrow(
+    /Pass --session/,
+  );
+  await expect(AgentConnectCommand.run(["--status"], { root })).rejects.toThrow(
+    /--profile with --status/,
+  );
+  expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
+  expect(existsSync(join(home, "codex"))).toBe(false);
+});
+
+it("agent connect points a paused npx setup back at npx", async () => {
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
+    () => undefined,
+  );
+  const entry = process.argv[1];
+  process.argv[1] =
+    "/home/user/.npm/_npx/abc/node_modules/primitive/bin/run.js";
+  mocks.readAgentInvitation.mockResolvedValue("invitation");
+  mocks.setupAgent.mockRejectedValue(new Error("network"));
+  try {
+    await expect(
+      AgentConnectCommand.run(["--session", session, "--no-skill"], { root }),
+    ).rejects.toThrow(
+      `run npx -y primitive@latest agent connect --profile session-${session} --session ${session} --resume --json`,
+    );
+  } finally {
+    process.argv[1] = entry ?? "";
+  }
 });

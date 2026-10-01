@@ -65,6 +65,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	inbox_next_smoke_script="$$(pwd)/scripts/smoke-inbox-next.mjs" && \
 	signal_smoke_script="$$(pwd)/scripts/smoke-signals.mjs" && \
 	agent_enroll_smoke_script="$$(pwd)/scripts/smoke-agent-enroll.mjs" && \
+	agent_connect_smoke_script="$$(pwd)/scripts/smoke-agent-connect.mjs" && \
 	claude_wake_smoke_script="$$(pwd)/scripts/smoke-claude-wake.mjs" && \
 	presence_controls_smoke_script="$$(pwd)/scripts/smoke-presence-controls.mjs" && \
 	agent_notes_smoke_script="$$(pwd)/scripts/smoke-agent-notes.mjs" && \
@@ -102,6 +103,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	"$$bin" emails latest --help | grep -q -- "--awaiting" && \
 	node "$$connected_agent_smoke_script" "$$bin" && \
 	node "$$agent_enroll_smoke_script" "$$bin" && \
+	node "$$agent_connect_smoke_script" "$$bin" && \
 	node "$$claude_wake_smoke_script" "$$bin" && \
 	node "$$presence_controls_smoke_script" "$$bin" && \
 	node "$$agent_notes_smoke_script" "$$bin" && \

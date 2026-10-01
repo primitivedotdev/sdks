@@ -47,6 +47,16 @@ republished.
 4. Verify the package contents with `npm view primitive version`.
 5. Confirm the packed artifact exposes the `primitive` bin and that `primitive list-operations` succeeds in a fresh install.
 
+### Bundled primitive-connect skill
+
+`primitive agent connect --session` installs the primitive-connect skill from files bundled in the CLI package, so an installed skill always matches the CLI that installed it. The skill's source is `skills/primitive-connect` in the public [skills repository](https://github.com/primitivedotdev/skills). Before a CLI release that should carry skill changes, vendor the merged commit from a clean checkout of that repository:
+
+```bash
+node cli-node/scripts/vendor-connect-skill.mjs --from ../skills
+```
+
+This copies the skill (without its tests) into `cli-node/vendor/skills/primitive-connect` and records the commit and content version in `primitive-connect.source.json`. The build copies that snapshot into `dist/skills` with a manifest, and fails if the vendored files were edited by hand. CI checks out the recorded commit and fails if the vendored copy differs from it.
+
 The same workflow also publishes the CLI under two mirror names (via `scripts/cli-mirror-publish.sh`): `primcli` and the legacy scoped `@primitivedotdev/cli` (kept so existing scoped installs keep receiving releases). Each mirror is the identical build with only the package `name` changed, locked to the same version, so `npm install -g primitive`, `npm install -g primcli`, and `npm install -g @primitivedotdev/cli` are interchangeable. The mirror publishes are no-ops when that version already exists, so a re-run is safe. After a release, verify with `npm view primcli version` and `npm view @primitivedotdev/cli version`.
 
 The unscoped name `primcli` is used because npm normalizes package names by stripping `-`/`_`/`.` before checking for collisions, so an all-one-word `primitivecli` collides with the unrelated existing `primitive-cli` and is rejected at publish.

@@ -787,17 +787,28 @@ rules, uses a conditional write, and reads the policy back before reporting
 pauses enrollment without overwriting the policy; rerun this exact session
 after reviewing it.
 
-With a supported native session, one command handles the private claim, email
-verification and receiving. Pipe the invitation from the Primitive app to stdin:
+One command connects a Claude Code or Codex session from an owner's invitation.
+It checks this CLI's capabilities, installs or refreshes the matching
+primitive-connect skill from files bundled in this package, claims the
+invitation from stdin, answers the email challenge, starts receiving and prints
+one JSON result:
 
 ```sh
-primitive agent connect --profile work --session <session-uuid> --contact-requests --json < private-invitation.txt
+npx -y primitive@latest agent connect --session "$CODEX_THREAD_ID" --name Research --info "Reviews pull requests" --contact-requests --json < private-invitation.txt
 ```
 
-Omit `--contact-requests` when owner policy disables request intake. Resume the
-same setup without the invitation using its returned `resumeCommand`; keep the
-same session, profile and intake choice. Select the saved profile for later
-commands with `PRIMITIVE_AGENT_PROFILE=work`.
+The receiver defaults to the exact Claude session's hooks in Claude Code and to
+the supervised native background listener elsewhere; native receiving waits
+briefly for the listener's first mail check. The profile defaults to
+`session-<session>`. The skill goes to `~/.claude/skills` or
+`$CODEX_HOME/skills` (`--project` uses `.claude/skills` or `.agents/skills` in
+the current directory; `--no-skill` skips it), and is left untouched when the
+same version is already installed. `--name` and `--info` seed a private
+`AGENT_INFO` note only when none exists. Omit `--contact-requests` when owner
+policy disables request intake. The result's `skipped` list names each step not
+done and why. Resume the same setup without the invitation using its returned
+`resumeCommand`. Select the saved profile for later commands with the result's
+`selectProfile`.
 
 Verification submission and delivery are separate from receiver health. A queued
 verification reply is accepted for delivery. Do not claim again or resend because

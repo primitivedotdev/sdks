@@ -4,15 +4,26 @@ import {
   connectAgent,
   readAgentInvitation,
 } from "../agent-connect.js";
-import { setupAgent } from "../agent-setup.js";
-import { installClaudeWakeHook } from "../claude-wake-install.js";
+import {
+  defaultAgentProfileName,
+  runAgentConnect,
+} from "../agent-connect-flow.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
+
+/** npx runs the CLI from its cache; resume through npx too so the command works without a global install. */
+function invocation(entry: string | undefined): string {
+  return entry && /[\\/]_npx[\\/]/.test(entry)
+    ? "npx -y primitive@latest"
+    : "primitive";
+}
 
 export default class AgentConnectCommand extends Command {
   static description =
-    "Claim an owner's private setup invitation from piped stdin and save a separate connected-agent profile. Add --session to answer one authenticated setup challenge and enable owner notifications. The default receiver preflights and starts a native session listener; --receiver external requires the exact Claude session and installs a fail-open Stop hook and resume SessionStart hook after the verification reply. A real idle mail event must still verify wake. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. Verification reply submission is separate from delivery and receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --status --json to inspect saved identity and local receiver health offline.";
+    "Connect this coding session to Primitive in one call. With --session, the command checks this CLI's capabilities, installs or refreshes the matching primitive-connect skill for the detected runtime (Claude Code or Codex) from files bundled in this CLI, claims the owner's private setup invitation from piped stdin, answers one authenticated setup challenge, enables owner notifications, starts receiving, seeds a private AGENT_INFO note from --name and --info when absent, and prints one JSON result. The receiver defaults to external hooks in Claude Code and the native background listener elsewhere. Native receiving starts or reuses a supervised background listener and waits briefly for its first successful mail check; external receiving installs the exact Claude session's fail-open Stop hook and resume SessionStart hook after the verification reply; a real idle mail event must still verify wake. The profile defaults to session-<session>. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. Verification reply submission is separate from delivery and receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --profile with --status --json to inspect saved identity and local receiver health offline.";
   static summary = "Connect and verify an agent address";
   static examples = [
+    '<%= config.bin %> agent connect --session "$CODEX_THREAD_ID" --name Research --info "Reviews pull requests" --json < private-invitation.txt',
+    '<%= config.bin %> agent connect --session "$CLAUDE_CODE_SESSION_ID" --contact-requests --json < private-invitation.txt',
     "<%= config.bin %> agent connect --profile work --session 11111111-1111-4111-8111-111111111111 --contact-requests --json < private-invitation.txt",
     "<%= config.bin %> agent connect --profile work --session 11111111-1111-4111-8111-111111111111 --contact-requests --resume --json",
     "<%= config.bin %> agent connect --profile work --session 11111111-1111-4111-8111-111111111111 --receiver external --contact-requests --json < private-invitation.txt",
@@ -22,9 +33,8 @@ export default class AgentConnectCommand extends Command {
   ];
   static flags = {
     profile: Flags.string({
-      required: true,
       description:
-        "Local agent profile name; existing OAuth login is preserved",
+        "Local agent profile name; defaults to session-<session> with --session. Existing OAuth login is preserved",
     }),
     session: Flags.string({
       description:
@@ -33,7 +43,7 @@ export default class AgentConnectCommand extends Command {
     }),
     receiver: Flags.string({
       description:
-        "Native starts a supported session receiver; external installs the exact Claude session's fail-open Stop hook and resume SessionStart hook",
+        "Native starts a supported session receiver; external installs the exact Claude session's fail-open Stop hook and resume SessionStart hook. Defaults to external in Claude Code and native elsewhere",
       options: ["native", "external"],
       dependsOn: ["session"],
     }),
@@ -49,6 +59,27 @@ export default class AgentConnectCommand extends Command {
       dependsOn: ["session"],
       exclusive: ["status"],
     }),
+    name: Flags.string({
+      description:
+        "Short agent name for a private AGENT_INFO note, written only when the note is absent",
+      dependsOn: ["session"],
+    }),
+    info: Flags.string({
+      description:
+        "Short role and capability description for a private AGENT_INFO note, written only when the note is absent",
+      dependsOn: ["session"],
+    }),
+    skill: Flags.boolean({
+      description:
+        "Install or refresh the primitive-connect skill bundled with this CLI for the detected runtime",
+      default: true,
+      allowNo: true,
+    }),
+    project: Flags.boolean({
+      description:
+        "Install the skill into this project (.claude/skills or .agents/skills) instead of the user skills folder",
+      dependsOn: ["session"],
+    }),
     status: Flags.boolean({
       description:
         "Read saved identity and local receiver health offline without reading stdin",
@@ -62,6 +93,8 @@ export default class AgentConnectCommand extends Command {
     const { flags } = await this.parse(AgentConnectCommand);
     try {
       if (flags.status) {
+        if (!flags.profile)
+          throw new AgentConnectionSetupError("Pass --profile with --status.");
         const result = agentConnectionStatus(
           this.config.configDir,
           flags.profile,
@@ -76,71 +109,56 @@ export default class AgentConnectCommand extends Command {
         return;
       }
       if (flags.session) {
-        if (
-          flags.receiver === "external" &&
-          process.env.CLAUDE_CODE_SESSION_ID !== flags.session
-        )
-          throw new AgentConnectionSetupError(
-            "External receiving requires this exact Claude session ID. No invitation was claimed.",
-          );
-        const result = await setupAgent({
+        const output = await runAgentConnect({
           configDir: this.config.configDir,
-          profileName: flags.profile,
+          packageRoot: this.config.root,
+          cliVersion: this.config.version,
+          cliPath: process.argv[1] ?? "",
+          invocation: invocation(process.argv[1]),
           session: flags.session,
-          receiverMode: flags.receiver as "native" | "external",
+          profileName: flags.profile,
+          receiver: flags.receiver as "native" | "external" | undefined,
           resume: flags.resume,
           contactRequests: flags["contact-requests"],
-          ...(flags.resume
-            ? {}
-            : {
-                invitation: await readAgentInvitation(
-                  process.stdin,
-                  process.stdin.isTTY,
-                ),
-              }),
+          name: flags.name,
+          info: flags.info,
+          skill: flags.skill,
+          project: flags.project,
+          readInvitation: () =>
+            readAgentInvitation(process.stdin, process.stdin.isTTY),
         });
-        const externalHook =
-          flags.receiver === "external" &&
-          result.verification.state === "reply_submitted"
-            ? installClaudeWakeHook({
-                cliPath: process.argv[1] ?? "",
-                configDir: this.config.configDir,
-                profileName: result.identity.profileName,
-                agentAddress: result.identity.agentAddress,
-                sessionId: flags.session,
-              })
-            : null;
-        const output = { ...result, externalHook };
+        const external = output.receiving.mode === "external";
         if (flags.json) this.log(JSON.stringify(output));
         else {
           this.log(
-            `Agent ${result.identity.agentAddress}: verification ${result.verification.state}; receiving ${result.receiving.state}.`,
+            `Agent ${output.address}: verification ${output.verification.state}; receiving ${output.receiving.state}; skill ${output.skill.state}.`,
           );
-          this.log(
-            `Select it with PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}.`,
-          );
-          if (result.ownerNotifications === "silenced")
+          this.log(`Select it with ${output.selectProfile}.`);
+          if (output.ownerNotifications === "silenced")
             this.log(
               "Owner notifications remain silenced by the existing preference or policy.",
             );
-          if (result.receiving.state === "external_setup_required")
+          if (external && output.verification.state === "reply_submitted")
             this.log(
-              externalHook === "installed_unverified"
+              output.externalHook === "installed_unverified"
                 ? "External receive hook installed. Idle wake still needs a live mail check."
                 : "External receive hook is unavailable. Pairing may complete, but this session will not wake automatically.",
             );
-          if (result.receiving.state === "not_ready")
-            this.log(`Resume: ${result.resumeCommand}`);
+          if (output.status !== "connected")
+            this.log(`Resume: ${output.resumeCommand}`);
         }
         if (
-          externalHook === "unavailable" ||
-          (flags.receiver !== "external" &&
-            result.receiving.state !== "healthy") ||
-          result.verification.state !== "reply_submitted"
+          (external && output.externalHook !== "installed_unverified") ||
+          (!external && output.receiving.state !== "healthy") ||
+          output.verification.state !== "reply_submitted"
         )
           process.exitCode = 2;
         return;
       }
+      if (!flags.profile)
+        throw new AgentConnectionSetupError(
+          "Pass --session to connect this session, or --profile for a claim-only or status check.",
+        );
       const result = await connectAgent({
         configDir: this.config.configDir,
         profileName: flags.profile,
@@ -165,7 +183,7 @@ export default class AgentConnectCommand extends Command {
         error instanceof AgentConnectionSetupError
           ? error.message
           : flags.session
-            ? `Setup paused. Preserve the private profile and run primitive agent connect --profile ${flags.profile} --session ${flags.session}${flags.receiver === "external" ? " --receiver external" : ""} --resume${flags["contact-requests"] ? " --contact-requests" : ""} --json. Do not manually resend verification or reclaim the invitation.`
+            ? `Setup paused. Preserve the private profile and run ${invocation(process.argv[1])} agent connect --profile ${flags.profile ?? defaultAgentProfileName(flags.session)} --session ${flags.session}${flags.receiver ? ` --receiver ${flags.receiver}` : ""} --resume${flags["contact-requests"] ? " --contact-requests" : ""} --json. Do not manually resend verification or reclaim the invitation.`
             : "Agent setup did not complete. Preserve the private profile and request a fresh owner invitation if a claim may have been submitted.",
         { exit: 1 },
       );
