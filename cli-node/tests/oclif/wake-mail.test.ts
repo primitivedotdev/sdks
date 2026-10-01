@@ -299,6 +299,7 @@ describe("Claude mail wake", () => {
     "pending",
   ])("keeps %s controls out of model routing while ordinary mail still wakes", async (status) => {
     const f = fixture(true, true, "chat");
+    const ordinaryId = randomUUID();
     const ordinary = await mocks.getEmail();
     mocks.getEmail
       .mockResolvedValueOnce({
@@ -311,7 +312,13 @@ describe("Claude mail wake", () => {
           },
         },
       })
-      .mockResolvedValue(ordinary);
+      .mockResolvedValue({
+        ...ordinary,
+        data: {
+          ...ordinary.data,
+          data: { ...ordinary.data.data, id: ordinaryId },
+        },
+      });
     const wake = await createWakeMail({
       configDir: "/tmp/test",
       sessionKey: `claude:${f.sessionId}`,
@@ -333,9 +340,22 @@ describe("Claude mail wake", () => {
       expect(mocks.policy.mock.results[0]?.value.admit).not.toHaveBeenCalled();
       expect(mocks.routine).not.toHaveBeenCalled();
       expect(mocks.statusContent).not.toHaveBeenCalled();
-      await wake.handler(f.delivery as never, new AbortController().signal);
+      await wake.handler(
+        {
+          ...f.delivery,
+          event_id: randomUUID(),
+          body: JSON.stringify({
+            event: "email.received",
+            email: {
+              id: ordinaryId,
+              smtp: { rcpt_to: ["agent@example.test"] },
+            },
+          }),
+        } as never,
+        new AbortController().signal,
+      );
       wake.completed();
-      expect(wake.wakeId()).toBe(f.emailId);
+      expect(wake.wakeId()).toBe(ordinaryId);
     } finally {
       await wake.close();
     }

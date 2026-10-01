@@ -165,7 +165,9 @@ function fixture() {
     eligible: async () => state.eligible,
     monotonic: () => state.mono,
   };
-  function receiver(extra: Partial<typeof options> = {}) {
+  function receiver(
+    extra: Partial<Parameters<typeof openPresenceControls>[0]> = {},
+  ) {
     const result = openPresenceControls({ ...options, ...extra });
     receivers.push(result);
     return result;
@@ -408,6 +410,30 @@ describe("deterministic presence control", () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(onOrdinary).toHaveBeenCalledOnce();
     expect(onOrdinary.mock.calls[0]?.[1]).toBe(eventId);
+  });
+
+  it.each([
+    { validForMs: 300_000, replies: 1 },
+    { validForMs: 0, replies: 0 },
+  ])("settles a deferred control as verified with $validForMs ms remaining without ordinary routing", async ({
+    validForMs,
+    replies,
+  }) => {
+    const f = fixture();
+    f.state.detail.presence_control.status = "pending";
+    const eventId = randomUUID();
+    const first = f.receiver();
+    expect(await first.handle(f.detail, eventId)).toBe("pending");
+    await first.close();
+
+    const onOrdinary = vi.fn(async () => true);
+    const resumed = f.receiver({ onOrdinary });
+    f.state.detail.presence_control.status = "verified";
+    f.state.detail.presence_control.valid_for_ms = validForMs;
+    expect(await resumed.handle(f.detail, eventId)).toBe("quiet");
+    expect(f.state.sends).toHaveLength(replies);
+    expect(onOrdinary).not.toHaveBeenCalled();
+    expect(resumed.knownControl(f.detail.id)).toBe(true);
   });
 
   it("never admits a deferred ID when an API downgrade removes its pending projection", async () => {

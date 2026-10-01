@@ -416,6 +416,8 @@ describe("shared notification listener integration", () => {
     expect(await runListen(f.options)).toBe(1);
     expect(f.changed).toHaveBeenCalledOnce();
     expect(f.handleDetail).toHaveBeenCalledOnce();
+    expect(f.handleDetail.mock.calls[0]?.[0].id).toBe(f.detail.id);
+    expect(f.options.handler).not.toHaveBeenCalled();
     expect(f.close).toHaveBeenCalledOnce();
     expect(f.closeReceiver).toHaveBeenCalledOnce();
   });
