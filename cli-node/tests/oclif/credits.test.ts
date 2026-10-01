@@ -294,7 +294,11 @@ describe("credits redeem", () => {
       "--json",
     ]);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('"code": "credit_code_invalid"');
+    // --json keeps stderr empty; the refusal is in the one stdout document.
+    expect(result.stderr).toBe("");
+    expect(JSON.stringify(JSON.parse(result.stdout))).toContain(
+      '"code":"credit_code_invalid"',
+    );
   });
 
   it("rejects a blank code or an overlong key before calling the API", async () => {

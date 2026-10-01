@@ -750,7 +750,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   if (!operation.binaryResponse) {
     flags.json = Flags.boolean({
       description:
-        "Accepted for consistency with task-focused commands. Generated API commands already print JSON by default.",
+        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. The document is the full response envelope (data plus meta, including meta.cursor). Notes such as empty-result hints go in summary, other notices in warnings[], and a failure adds error and exit_code. Without --json, stdout is the data payload only and notices go to stderr.",
     });
     flags.envelope = Flags.boolean({
       description:
@@ -861,6 +861,23 @@ export function operationOutputPayload(
   includeEnvelope: boolean,
 ): unknown {
   return includeEnvelope ? (envelope ?? null) : (envelope?.data ?? null);
+}
+
+/**
+ * The `--json` document for a generated command: the full response
+ * envelope, so pagination metadata travels with the data, plus any
+ * notes the command would otherwise print on stderr.
+ */
+export function operationJsonDocument(
+  envelope: OperationResponseEnvelope,
+  summary: readonly string[] = [],
+): Record<string, unknown> {
+  const document: Record<string, unknown> =
+    envelope !== null && typeof envelope === "object"
+      ? { ...envelope }
+      : { data: null };
+  if (summary.length > 0) document.summary = summary.join("\n");
+  return document;
 }
 
 export function isIncompleteDomainVerification(
@@ -1224,10 +1241,14 @@ export function createOperationCommand(
             return;
           }
         }
+        // With --json the cursor is already in the printed envelope's
+        // meta.cursor, and stderr stays empty so a merged stream parses.
+        const jsonOutput = parsedFlags.json === true;
         const cursor = envelope?.meta?.cursor;
-        if (cursor) {
+        if (cursor && !jsonOutput) {
           process.stderr.write(`next cursor: ${cursor}\n`);
         }
+        const summary: string[] = [];
 
         // Empty-result hint. When a list-style operation returns
         // an empty array, emit an operation-specific note to
@@ -1239,7 +1260,8 @@ export function createOperationCommand(
         // delivery log or no endpoints configured at all.
         if (Array.isArray(envelope?.data) && envelope.data.length === 0) {
           const hint = EMPTY_RESULT_HINTS[operation.sdkName];
-          if (hint) process.stderr.write(`${hint}\n`);
+          if (hint && jsonOutput) summary.push(hint);
+          else if (hint) process.stderr.write(`${hint}\n`);
         }
 
         // Idempotent-replay banner. Send-mail (and any future
@@ -1283,7 +1305,9 @@ export function createOperationCommand(
 
         this.log(
           JSON.stringify(
-            operationOutputPayload(envelope, parsedFlags.envelope === true),
+            jsonOutput
+              ? operationJsonDocument(envelope, summary)
+              : operationOutputPayload(envelope, parsedFlags.envelope === true),
             null,
             2,
           ),

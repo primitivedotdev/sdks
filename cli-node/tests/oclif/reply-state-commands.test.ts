@@ -188,8 +188,11 @@ describe("emails latest --awaiting", () => {
       "--json",
     ]);
     expect(result.exitCode).toBe(1);
-    expect(result.stdout).toBe("");
-    expect(result.stderr).toContain("without the `awaiting`");
+    // --json still fails loudly, inside the one stdout document.
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout).error.message).toContain(
+      "without the `awaiting`",
+    );
   });
 });
 

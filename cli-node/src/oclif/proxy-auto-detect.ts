@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { jsonOutputRequested } from "./json-output.js";
 
 // Auto-detect proxy environment variables at CLI startup so users
 // behind a corporate proxy don't have to prefix every command with
@@ -103,7 +104,8 @@ export function restartWithProxyEnvIfNeeded(
       throw new Error("process.exit returned unexpectedly");
     });
 
-  if (!hintPrinted) {
+  // With --json the restart stays silent so stderr is empty.
+  if (!hintPrinted && !jsonOutputRequested(argv.slice(2))) {
     hintPrinted = true;
     const names = detectedVars.join("/");
     stderr.write(

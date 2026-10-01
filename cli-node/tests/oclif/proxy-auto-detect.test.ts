@@ -71,7 +71,7 @@ describe("restartWithProxyEnvIfNeeded", () => {
 
     expect(() =>
       restartWithProxyEnvIfNeeded({
-        argv: ["/usr/bin/node", "/app/bin/run.js", "whoami", "--json"],
+        argv: ["/usr/bin/node", "/app/bin/run.js", "whoami"],
         env,
         execArgv: ["--enable-source-maps"],
         execPath: "/usr/local/bin/node",
@@ -83,7 +83,7 @@ describe("restartWithProxyEnvIfNeeded", () => {
 
     expect(spawn).toHaveBeenCalledWith(
       "/usr/local/bin/node",
-      ["--enable-source-maps", "/app/bin/run.js", "whoami", "--json"],
+      ["--enable-source-maps", "/app/bin/run.js", "whoami"],
       {
         env: {
           ...env,
@@ -96,6 +96,34 @@ describe("restartWithProxyEnvIfNeeded", () => {
     expect(stderr.writes).toHaveLength(1);
     expect(stderr.writes[0]).toContain("HTTPS_PROXY");
     expect(stderr.writes[0]).toContain("restarting with NODE_USE_ENV_PROXY=1");
+  });
+
+  it("restarts silently under --json so stderr stays empty", () => {
+    _resetHintLatchForTest();
+    const stderr = makeStderr();
+    const exit = (() => {
+      throw new Error("process exit");
+    }) as typeof process.exit;
+    const spawn = vi.fn(() => ({
+      output: [],
+      pid: 123,
+      signal: null,
+      status: 0,
+      stderr: null,
+      stdout: null,
+    })) as unknown as typeof spawnSync;
+
+    expect(() =>
+      restartWithProxyEnvIfNeeded({
+        argv: ["/usr/bin/node", "/app/bin/run.js", "whoami", "--json"],
+        env: { HTTPS_PROXY: "http://corp-proxy:8080" },
+        exit,
+        spawn,
+        stderr,
+      }),
+    ).toThrow("process exit");
+    expect(spawn).toHaveBeenCalledOnce();
+    expect(stderr.writes).toEqual([]);
   });
 
   it("detects uppercase and lowercase proxy env vars", () => {
