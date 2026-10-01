@@ -419,6 +419,7 @@ describe("deterministic presence control", () => {
     validForMs,
     replies,
   }) => {
+    vi.useFakeTimers();
     const f = fixture();
     f.state.detail.presence_control.status = "pending";
     const eventId = randomUUID();
@@ -426,11 +427,19 @@ describe("deterministic presence control", () => {
     expect(await first.handle(f.detail, eventId)).toBe("pending");
     await first.close();
 
+    const scope = readdirSync(join(f.configDir, "presence"))[0] as string;
+    const pendingDirectory = join(f.configDir, "presence", scope, "pending");
+    expect(readdirSync(pendingDirectory)).toContain(`${f.detail.id}.json`);
+
     const onOrdinary = vi.fn(async () => true);
-    const resumed = f.receiver({ onOrdinary });
+    const resumed = f.receiver({ onOrdinary, retryMs: 100 });
     f.state.detail.presence_control.status = "verified";
     f.state.detail.presence_control.valid_for_ms = validForMs;
-    expect(await resumed.handle(f.detail, eventId)).toBe("quiet");
+    f.state.mono = 100;
+    await vi.advanceTimersByTimeAsync(100);
+    expect(f.state.reads).toBe(1);
+    expect(readdirSync(pendingDirectory)).toEqual([]);
+    expect(resumed.nextRetry(f.detail.id)).toBeUndefined();
     expect(f.state.sends).toHaveLength(replies);
     expect(onOrdinary).not.toHaveBeenCalled();
     expect(resumed.knownControl(f.detail.id)).toBe(true);
