@@ -361,9 +361,10 @@ and stderr stays empty. Output merged with `2>&1` therefore still parses:
 - A failure adds `error` and `exit_code`. If the command printed no document of
   its own, the CLI prints `{ "error": ..., "exit_code": ... }`.
 - Generated API commands (`primitive sent list`, `primitive emails list`, ...)
-  print the full response envelope with `--json`: `data`, plus `meta.cursor` for
-  the next page, and empty-result hints in `summary`. Without `--json` they keep
-  printing only the data payload and write `next cursor: <cursor>` to stderr.
+  keep printing only the data payload with `--json`, the same stdout as
+  without it, but do not write the `next cursor: <cursor>` line to stderr. To
+  page, add `--envelope`: it prints the full response envelope, with
+  `meta.cursor` for the next page and empty-result hints in `summary`.
 - Commands whose `--json` output is a bare array keep that shape.
 - `primitive listen` streams JSONL and is not covered by this rule.
 

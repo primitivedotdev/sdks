@@ -483,7 +483,7 @@ describe("generated commands with --json", () => {
       (operation) =>
         [`${operation.tagCommand}:${operation.command}`, operation] as const,
     ),
-  )("%s succeeds with the envelope, cursor included, and empty stderr", async (id, operation) => {
+  )("%s keeps the data payload as one document with empty stderr", async (id, operation) => {
     responder = () =>
       jsonResponse(200, {
         success: true,
@@ -492,20 +492,34 @@ describe("generated commands with --json", () => {
       });
     const result = await runMerged(id, operationArgv(operation));
     expect(result.stderr).toBe("");
-    const document = parseOne(result.merged) as Record<string, unknown>;
+    const document = parseOne(result.merged);
     expect(result.exitCode, JSON.stringify(document)).toBe(0);
-    expect(document.meta).toMatchObject({ cursor: "cursor-2" });
-    expect(document.data).toEqual([]);
+    // The same stdout shape as without --json: the bare data payload.
+    expect(document).toEqual([]);
+    const enveloped = await runMerged(id, [
+      ...operationArgv(operation),
+      "--envelope",
+    ]);
+    expect(enveloped.stderr).toBe("");
+    expect(enveloped.exitCode).toBe(0);
+    expect(parseOne(enveloped.merged)).toMatchObject({
+      data: [],
+      meta: { cursor: "cursor-2" },
+    });
   });
 
-  it("puts the list cursor in meta.cursor and the empty hint in summary", async () => {
+  it("drops the cursor line under --json and keeps it in --envelope", async () => {
     responder = () =>
       jsonResponse(200, {
         success: true,
         data: [],
         meta: { cursor: "cursor-2" },
       });
-    const result = await runMerged("emails:list", ["--json"]);
+    const bare = await runMerged("emails:list", ["--json"]);
+    expect(bare.exitCode).toBe(0);
+    expect(bare.stderr).toBe("");
+    expect(parseOne(bare.merged)).toEqual([]);
+    const result = await runMerged("emails:list", ["--json", "--envelope"]);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     const document = parseOne(result.merged) as Record<string, unknown>;

@@ -31,14 +31,16 @@ array; a failure adds
 .B error
 and
 .BR exit_code .
-Generated API commands print the full response envelope, with the pagination
-cursor in
-.BR meta.cursor .
-Without
-.BR --json ,
-they keep printing only the data payload and write
+Generated API commands keep their usual stdout shape with
+.BR --json :
+the data payload only. They do not print the
 .B next cursor:
-to stderr.
+line then; add
+.B --envelope
+to get the full response envelope, with the pagination cursor in
+.B meta.cursor
+and empty-result hints in
+.BR summary .
 .B primitive listen
 streams JSONL and is not covered by this rule.
 .SH LOCAL WEBHOOK EVENTS

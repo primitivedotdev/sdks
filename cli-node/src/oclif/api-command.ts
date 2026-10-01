@@ -750,7 +750,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   if (!operation.binaryResponse) {
     flags.json = Flags.boolean({
       description:
-        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. The document is the full response envelope (data plus meta, including meta.cursor). Notes such as empty-result hints go in summary, other notices in warnings[], and a failure adds error and exit_code. Without --json, stdout is the data payload only and notices go to stderr.",
+        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. Stdout keeps its usual shape: the data payload, or with --envelope the full response envelope (data plus meta, including meta.cursor, and empty-result hints in summary). The next-cursor line is not printed; use --envelope to page. A failure prints the error with exit_code. Without --json, the cursor and notices go to stderr.",
     });
     flags.envelope = Flags.boolean({
       description:
@@ -1241,9 +1241,11 @@ export function createOperationCommand(
             return;
           }
         }
-        // With --json the cursor is already in the printed envelope's
-        // meta.cursor, and stderr stays empty so a merged stream parses.
+        // With --json stdout keeps its usual shape (the data payload, or
+        // the full envelope with --envelope, where meta.cursor travels) and
+        // stderr stays empty, so a merged stream parses as one document.
         const jsonOutput = parsedFlags.json === true;
+        const withEnvelope = parsedFlags.envelope === true;
         const cursor = envelope?.meta?.cursor;
         if (cursor && !jsonOutput) {
           process.stderr.write(`next cursor: ${cursor}\n`);
@@ -1260,8 +1262,11 @@ export function createOperationCommand(
         // delivery log or no endpoints configured at all.
         if (Array.isArray(envelope?.data) && envelope.data.length === 0) {
           const hint = EMPTY_RESULT_HINTS[operation.sdkName];
-          if (hint && jsonOutput) summary.push(hint);
-          else if (hint) process.stderr.write(`${hint}\n`);
+          // Under --json the hint rides in the envelope's summary when
+          // one is printed; a bare data payload has nowhere to carry it.
+          if (hint && jsonOutput) {
+            if (withEnvelope) summary.push(hint);
+          } else if (hint) process.stderr.write(`${hint}\n`);
         }
 
         // Idempotent-replay banner. Send-mail (and any future
@@ -1305,9 +1310,9 @@ export function createOperationCommand(
 
         this.log(
           JSON.stringify(
-            jsonOutput
+            jsonOutput && withEnvelope
               ? operationJsonDocument(envelope, summary)
-              : operationOutputPayload(envelope, parsedFlags.envelope === true),
+              : operationOutputPayload(envelope, withEnvelope),
             null,
             2,
           ),
