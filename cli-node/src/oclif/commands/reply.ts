@@ -18,6 +18,7 @@ import {
 } from "../fyi-message.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
+import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
   assertValidIdempotencyKey,
   buildThrownSendFailureEnvelope,
@@ -235,6 +236,10 @@ class ReplyCommand extends Command {
           apiBaseUrl: flags["api-base-url"],
           configDir: this.config.configDir,
         });
+      warnIfSharedProfile({
+        configDir: this.config.configDir,
+        connectedAgent: auth.connectedAgent,
+      });
       const attachments = readAttachmentFiles(flags.attachment);
       const receivingSince = new Date().toISOString();
 

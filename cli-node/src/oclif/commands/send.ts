@@ -16,6 +16,7 @@ import {
 } from "../fyi-message.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
+import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
   assertValidIdempotencyKey,
   buildThrownSendFailureEnvelope,
@@ -262,6 +263,10 @@ class SendCommand extends Command {
           apiBaseUrl: flags["api-base-url"],
           configDir: this.config.configDir,
         });
+      warnIfSharedProfile({
+        configDir: this.config.configDir,
+        connectedAgent: auth.connectedAgent,
+      });
 
       const authFailureContext = {
         auth,

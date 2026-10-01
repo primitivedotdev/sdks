@@ -6,7 +6,10 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { saveConnectedAgentProfile } from "../../src/oclif/connected-agent-profile.js";
+import {
+  agentProfileDirectory,
+  saveConnectedAgentProfile,
+} from "../../src/oclif/connected-agent-profile.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 import {
   composeJsonDocument,
@@ -18,6 +21,7 @@ import {
   readPendingMail,
   recordPendingMail,
 } from "../../src/oclif/pending-mail.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const API_BASE_URL = "https://api.json-streams.test/v1";
@@ -1215,6 +1219,67 @@ describe("collaboration commands with --json", () => {
     expect(expectOneDocument(viaId).idempotency_key).toBe(
       document.idempotency_key,
     );
+  });
+
+  it("send, reply and chat warn in warnings[] when another session's profile is used", async () => {
+    writeMailJson(
+      join(
+        agentProfileDirectory(
+          process.env.PRIMITIVE_CONFIG_DIR as string,
+          "work",
+        ),
+        "setup.json",
+      ),
+      { session },
+    );
+    const warning = `Warning: This profile belongs to another session (${session.slice(0, 8)}); sending as ${self}.`;
+    const sendOk: Responder = (url, init) =>
+      url.pathname.endsWith("/send-mail")
+        ? jsonResponse(200, {
+            success: true,
+            data: sentRecord({
+              client_idempotency_key: new Headers(init?.headers).get(
+                "Idempotency-Key",
+              ),
+            }),
+          })
+        : mailApi(url, init);
+    responder = sendOk;
+    const sendArgs = [
+      "--to",
+      peer,
+      "--from",
+      self,
+      "--body",
+      "hello",
+      "--json",
+    ];
+
+    // No runtime session: no warning.
+    const none = expectOneDocument(await runMerged("send", sendArgs));
+    expect(none.warnings ?? []).not.toContain(warning);
+
+    // The profile's own session: no warning.
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    const own = expectOneDocument(await runMerged("send", sendArgs));
+    expect(own.warnings ?? []).not.toContain(warning);
+
+    // Another session: a warning, and the send still goes out.
+    process.env.CLAUDE_CODE_SESSION_ID = "99999999-9999-4999-8999-999999999999";
+    const sent = await runMerged("send", sendArgs);
+    const sentDocument = expectOneDocument(sent);
+    expect(sent.exitCode).toBe(0);
+    expect(sentDocument).toMatchObject({ outcome: "sent" });
+    expect(sentDocument.warnings).toContain(warning);
+    const replied = expectOneDocument(
+      await runMerged("reply", ["--id", emailId, "--body", "ok", "--json"]),
+    );
+    expect(replied.warnings).toContain(warning);
+    responder = notFound;
+    const chatted = expectOneDocument(
+      await runMerged("chat", [peer, "hello", "--json"]),
+    );
+    expect(chatted.warnings).toContain(warning);
   });
 
   it("send --fyi reports a stable key", async () => {

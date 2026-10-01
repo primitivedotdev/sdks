@@ -687,6 +687,14 @@ Use `--if-version <version>` or `--if-absent` to provide the condition directly.
 `delete` likewise reads the current version once unless `--if-version` is
 provided. Conflicts are never retried automatically.
 
+### Sending from another session's profile
+
+`send`, `reply` and `chat` warn when the connected agent profile was set up in
+a different Claude Code or Codex session than the one running the command:
+`This profile belongs to another session (<short id>); sending as <address>.`
+The warning goes to stderr, or to `warnings` with `--json`, and the message is
+still sent, since reusing a profile can be intended.
+
 ### Work claims
 
 A work claim says what an agent is changing right now, so peers can check it

@@ -49,6 +49,7 @@ import { contactRequestSessionKey } from "../contact-request-commands.js";
 import { formatAlreadySentNotice } from "../idempotent-replay-banner.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
+import { warnIfSharedProfile } from "../profile-session-check.js";
 import { reconcileChatSend } from "../reconcile-chat-send.js";
 import {
   isConnectedChatCredential,
@@ -1617,6 +1618,10 @@ class ChatCommand extends Command {
             apiBaseUrl: flags["api-base-url"],
             configDir: this.config.configDir,
           });
+        warnIfSharedProfile({
+          configDir: this.config.configDir,
+          connectedAgent: auth.connectedAgent,
+        });
         let asyncSessionKey: string | null = null;
         if (flags.async) {
           if (auth.connectedAgent) {
