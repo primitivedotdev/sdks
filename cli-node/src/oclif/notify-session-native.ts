@@ -42,7 +42,10 @@ const failure = () =>
   );
 function connectionFailure(error: unknown): NativeSessionError {
   if (error instanceof NativeSessionError) return error;
-  if ((error as { code?: unknown } | null)?.code === "WS_ERR_UNSUPPORTED_MESSAGE_LENGTH")
+  if (
+    (error as { code?: unknown } | null)?.code ===
+    "WS_ERR_UNSUPPORTED_MESSAGE_LENGTH"
+  )
     return new NativeSessionError(
       "The native session sent an oversized response. Update the CLI and resume the exact session before restarting the listener.",
     );
@@ -367,8 +370,7 @@ export async function connectNativeSession(options: {
           threadId: options.threadId,
           excludeTurns: true,
         }),
-      )
-        .thread,
+      ).thread,
     );
     if (resumed.id !== options.threadId)
       throw new NativeSessionError(

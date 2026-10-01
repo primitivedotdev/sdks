@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -6,6 +6,7 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { saveConnectedAgentProfile } from "../../src/oclif/connected-agent-profile.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 import {
   composeJsonDocument,
@@ -13,6 +14,10 @@ import {
   STREAMING_JSON_COMMAND_IDS,
   stripAnsi,
 } from "../../src/oclif/json-output.js";
+import {
+  readPendingMail,
+  recordPendingMail,
+} from "../../src/oclif/pending-mail.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const API_BASE_URL = "https://api.json-streams.test/v1";
@@ -30,7 +35,11 @@ type RunResult = {
   stdout: string;
 };
 
-type Responder = (url: URL, init: RequestInit | undefined) => Response;
+type Responder = (
+  url: URL,
+  init: RequestInit | undefined,
+  request?: { body: string | undefined; method: string },
+) => Response;
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -46,7 +55,12 @@ const serverError: Responder = () =>
   });
 
 let responder: Responder = serverError;
-let fetchCalls: Array<{ init: RequestInit | undefined; url: URL }> = [];
+let fetchCalls: Array<{
+  body: string | undefined;
+  init: RequestInit | undefined;
+  method: string;
+  url: URL;
+}> = [];
 
 // Run a command the way the installed CLI does (through the registry) and
 // record stdout and stderr both separately and interleaved, as `2>&1` would.
@@ -191,8 +205,14 @@ beforeEach(() => {
       const request = input instanceof Request ? input : undefined;
       const effectiveInit =
         init ?? (request ? { headers: request.headers } : undefined);
-      fetchCalls.push({ init: effectiveInit, url });
-      return responder(url, effectiveInit);
+      const method = (init?.method ?? request?.method ?? "GET").toUpperCase();
+      const body = request
+        ? await request.clone().text()
+        : typeof init?.body === "string"
+          ? init.body
+          : undefined;
+      fetchCalls.push({ body, init: effectiveInit, method, url });
+      return responder(url, effectiveInit, { body, method });
     }),
   );
 });
@@ -774,5 +794,408 @@ describe("sent get --idempotency-key", () => {
     ]);
     expect(both.exitCode).toBe(2);
     expect(both.stderr).toBe("");
+  });
+});
+
+// Commands added for agent collaboration. Each prints exactly one JSON
+// document with --json and leaves stderr empty, on success and on a
+// rejected argument.
+describe("collaboration commands with --json", () => {
+  const emailId = "22222222-2222-4222-8222-222222222222";
+  const latestId = "66666666-6666-4666-8666-666666666666";
+  const threadId = "44444444-4444-4444-8444-444444444444";
+  const session = "11111111-1111-4111-8111-111111111111";
+  const self = "agent@example.com";
+  const peer = "peer@example.com";
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../../test-fixtures/webhook/valid-email-received.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ).email;
+
+  function detail(id: string) {
+    return {
+      id,
+      recipient: self,
+      to_email: self,
+      from_email: peer,
+      from_header: peer,
+      sender: peer,
+      status: "completed",
+      domain: "example.com",
+      message_id: `<${id}@example.com>`,
+      subject: "Status",
+      body_text: "Where are we?",
+      parsed: { ...fixture.parsed, attachments: [] },
+      auth: fixture.auth,
+      received_at: "2026-10-01T10:00:00.000Z",
+      created_at: "2026-10-01T10:00:00.000Z",
+      webhook_attempt_count: 0,
+      thread_id: threadId,
+      sender_connected_agent_verified: true,
+      replies: [],
+      reply_count: 0,
+      last_replied_at: null,
+    };
+  }
+
+  const notFound = () =>
+    jsonResponse(404, {
+      success: false,
+      error: { code: "not_found", message: "Not found" },
+    });
+
+  // Reads of emails and the thread succeed; replies echo the key they were
+  // sent with; anything else is not found.
+  const mailApi: Responder = (url, init, request) => {
+    const path = url.pathname.replace(/^\/v1/, "");
+    const method = request?.method ?? "GET";
+    const email = path.match(/^\/emails\/([^/]+)$/);
+    if (method === "GET" && email) {
+      return jsonResponse(200, { success: true, data: detail(email[1]) });
+    }
+    if (method === "GET" && path === `/threads/${threadId}`) {
+      return jsonResponse(200, {
+        success: true,
+        data: {
+          id: threadId,
+          message_count: 2,
+          created_at: "2026-10-01T00:00:00.000Z",
+          latest_inbound_id: latestId,
+          messages: [
+            { direction: "inbound", id: emailId, from: peer },
+            { direction: "inbound", id: latestId, from: peer },
+          ],
+        },
+      });
+    }
+    const reply = path.match(/^\/emails\/([^/]+)\/reply$/);
+    if (method === "POST" && reply) {
+      const key = new Headers(init?.headers).get("Idempotency-Key");
+      return jsonResponse(200, {
+        success: true,
+        data: sentRecord({
+          id: `sent-${reply[1]}`,
+          client_idempotency_key: key,
+        }),
+      });
+    }
+    return notFound();
+  };
+
+  function expectOneDocument(result: RunResult): Record<string, unknown> {
+    expect(result.stderr).toBe("");
+    const document = parseOne(result.merged);
+    expect(parseOne(result.stdout)).toEqual(document);
+    return document as Record<string, unknown>;
+  }
+
+  beforeEach(() => {
+    const configDir = process.env.PRIMITIVE_CONFIG_DIR as string;
+    saveConnectedAgentProfile(configDir, "work", {
+      version: 1,
+      auth_method: "agent_connection",
+      api_key: ["pconn", "fixture", "json"].join("_"),
+      api_base_url: "https://api.primitive-staging-1.com/v1",
+      org_id: "33333333-3333-4333-8333-333333333333",
+      agent_address: self,
+      owner_address: "owner@example.com",
+      invitation_hash: "a".repeat(64),
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    delete process.env.PRIMITIVE_API_KEY;
+    delete process.env.PRIMITIVE_API_BASE_URL;
+    process.env.PRIMITIVE_AGENT_PROFILE = "work";
+  });
+
+  it("emails get --brief prints the envelope as one document", async () => {
+    responder = mailApi;
+    const result = await runMerged("emails:get", [
+      "--id",
+      emailId,
+      "--brief",
+      "--json",
+    ]);
+    const document = expectOneDocument(result);
+    expect(result.exitCode, JSON.stringify(document)).toBe(0);
+    expect(Object.keys(document).sort()).toEqual([
+      "body_text",
+      "envelope",
+      "subject",
+    ]);
+    expect(document.envelope).toMatchObject({
+      email_id: emailId,
+      thread_id: threadId,
+    });
+  });
+
+  it("emails get --brief reports a failed read as one document", async () => {
+    responder = notFound;
+    const result = await runMerged("emails:get", [
+      "--id",
+      emailId,
+      "--brief",
+      "--json",
+    ]);
+    expect(result.exitCode).not.toBe(0);
+    expect(expectOneDocument(result)).toMatchObject({
+      error: expect.anything(),
+    });
+  });
+
+  it("threads mute, muted and unmute each print one document", async () => {
+    const muted = await runMerged("threads:mute", ["--id", threadId, "--json"]);
+    expect(muted.exitCode).toBe(0);
+    expect(expectOneDocument(muted)).toMatchObject({
+      thread_id: threadId,
+      muted: true,
+      already_muted: false,
+    });
+    const listed = await runMerged("threads:muted", ["--json"]);
+    expect(listed.exitCode).toBe(0);
+    expect(expectOneDocument(listed)).toEqual([
+      expect.objectContaining({ thread_id: threadId }),
+    ]);
+    const unmuted = await runMerged("threads:unmute", [
+      "--id",
+      threadId,
+      "--json",
+    ]);
+    expect(unmuted.exitCode).toBe(0);
+    expect(expectOneDocument(unmuted)).toMatchObject({
+      thread_id: threadId,
+      removed: true,
+      muted: false,
+    });
+    const invalid = await runMerged("threads:mute", [
+      "--id",
+      "not-a-thread",
+      "--json",
+    ]);
+    expect(invalid.exitCode).not.toBe(0);
+    expect(expectOneDocument(invalid)).toMatchObject({
+      error: { message: expect.stringContaining("thread UUID") },
+    });
+  });
+
+  it("agent working set, get and clear each print one document", async () => {
+    const until = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const note = (value: unknown) => ({
+      address: self,
+      name: "AGENT_WORKING",
+      value,
+      visibility: "private",
+      version: "1",
+      created_at: "2026-10-01T00:00:00Z",
+      updated_at: "2026-10-01T00:00:00Z",
+    });
+    let stored: unknown = null;
+    responder = (url, _init, request) => {
+      if (!url.pathname.includes("/address-notes/")) return notFound();
+      switch (request?.method) {
+        case "PUT":
+          stored = (JSON.parse(request.body ?? "{}") as { value: unknown })
+            .value;
+          return jsonResponse(200, { success: true, data: note(stored) });
+        case "DELETE":
+          if (stored === null) return notFound();
+          stored = null;
+          return jsonResponse(200, { success: true, data: { deleted: true } });
+        default:
+          return stored === null
+            ? notFound()
+            : jsonResponse(200, { success: true, data: note(stored) });
+      }
+    };
+    const set = await runMerged("agent:working:set", [
+      "billing export: src/billing/",
+      "--until",
+      until,
+      "--json",
+    ]);
+    expect(set.exitCode).toBe(0);
+    expect(expectOneDocument(set)).toMatchObject({
+      address: self,
+      state: "active",
+      claim: "billing export: src/billing/",
+    });
+    const got = await runMerged("agent:working:get", ["--json"]);
+    expect(got.exitCode).toBe(0);
+    expect(expectOneDocument(got)).toMatchObject({
+      state: "active",
+      claim: "billing export: src/billing/",
+    });
+    const cleared = await runMerged("agent:working:clear", ["--json"]);
+    expect(cleared.exitCode).toBe(0);
+    expect(expectOneDocument(cleared)).toEqual({
+      address: self,
+      cleared: true,
+    });
+    const none = await runMerged("agent:working:get", ["--json"]);
+    expect(none.exitCode).toBe(0);
+    expect(expectOneDocument(none)).toMatchObject({
+      state: "none",
+      claim: null,
+    });
+  });
+
+  it("listen pending lists and clears notices as one document", async () => {
+    await recordPendingMail(
+      process.env.PRIMITIVE_CONFIG_DIR as string,
+      "work",
+      session,
+      {
+        kind: "mail",
+        email_id: emailId,
+        received_at: "2026-10-01T10:00:00.000Z",
+        sender: peer,
+        thread_id: threadId,
+        in_thread: false,
+        newer: null,
+      },
+    );
+    const listed = await runMerged("listen:pending", [
+      "--session",
+      session,
+      "--json",
+    ]);
+    expect(listed.exitCode).toBe(0);
+    expect(expectOneDocument(listed)).toMatchObject({
+      session_id: session,
+      notices: [expect.objectContaining({ email_id: emailId })],
+    });
+    const cleared = await runMerged("listen:pending", [
+      "--session",
+      session,
+      "--clear",
+      emailId,
+      "--json",
+    ]);
+    expect(cleared.exitCode).toBe(0);
+    expect(expectOneDocument(cleared)).toMatchObject({ notices: [] });
+    expect(
+      readPendingMail(
+        process.env.PRIMITIVE_CONFIG_DIR as string,
+        "work",
+        session,
+      ),
+    ).toEqual([]);
+    const missing = await runMerged("listen:pending", ["--json"]);
+    expect(missing.exitCode).not.toBe(0);
+    expect(expectOneDocument(missing)).toMatchObject({
+      error: { message: expect.stringContaining("--session") },
+    });
+  });
+
+  it("reply --fyi reports a stable key and resends the same request", async () => {
+    responder = mailApi;
+    const argv = ["--id", emailId, "--fyi", "--body", "Deployed.", "--json"];
+    const first = await runMerged("reply", argv);
+    const second = await runMerged("reply", argv);
+    const documents = [first, second].map((result) => {
+      const document = expectOneDocument(result);
+      expect(result.exitCode, JSON.stringify(document)).toBe(0);
+      return document;
+    });
+    expect(documents[0]).toMatchObject({
+      outcome: "sent",
+      informational: true,
+      sent_email_id: `sent-${emailId}`,
+      idempotency_key: expect.stringMatching(/^primitive-reply-[0-9a-f]{64}$/),
+    });
+    expect(documents[1]?.idempotency_key).toBe(documents[0]?.idempotency_key);
+    const sends = fetchCalls.filter((call) =>
+      call.url.pathname.endsWith("/reply"),
+    );
+    expect(sends).toHaveLength(2);
+    expect(new Headers(sends[0]?.init?.headers).get("Idempotency-Key")).toBe(
+      documents[0]?.idempotency_key,
+    );
+    // Byte-identical retries, so the server replays rather than refusing
+    // a different payload under the same key.
+    expect(sends[1]?.body).toBe(sends[0]?.body);
+    expect(JSON.parse(sends[0]?.body ?? "{}")).toMatchObject({
+      attachments: [expect.objectContaining({ filename: "interaction.json" })],
+    });
+
+    const plain = await runMerged("reply", [
+      "--id",
+      emailId,
+      "--body",
+      "Deployed.",
+      "--json",
+    ]);
+    expect(expectOneDocument(plain).idempotency_key).not.toBe(
+      documents[0]?.idempotency_key,
+    );
+  });
+
+  it("reply --thread derives the key from the resolved email", async () => {
+    responder = mailApi;
+    const viaThread = await runMerged("reply", [
+      "--thread",
+      threadId,
+      "--body",
+      "On it.",
+      "--json",
+    ]);
+    const document = expectOneDocument(viaThread);
+    expect(viaThread.exitCode, JSON.stringify(document)).toBe(0);
+    expect(document).toMatchObject({
+      outcome: "sent",
+      sent_email_id: `sent-${latestId}`,
+      reply_target: {
+        thread_id: threadId,
+        email_id: latestId,
+        resolved_by: expect.any(String),
+      },
+    });
+    const viaId = await runMerged("reply", [
+      "--id",
+      latestId,
+      "--body",
+      "On it.",
+      "--json",
+    ]);
+    expect(expectOneDocument(viaId).idempotency_key).toBe(
+      document.idempotency_key,
+    );
+  });
+
+  it("send --fyi reports a stable key", async () => {
+    const keys: string[] = [];
+    const bodies: string[] = [];
+    responder = (url, init, request) => {
+      if (!url.pathname.endsWith("/send-mail")) return notFound();
+      const key = new Headers(init?.headers).get("Idempotency-Key") ?? "";
+      keys.push(key);
+      bodies.push(request?.body ?? "");
+      return jsonResponse(200, {
+        success: true,
+        data: sentRecord({ client_idempotency_key: key }),
+      });
+    };
+    const argv = [
+      "--to",
+      peer,
+      "--from",
+      self,
+      "--in-reply-to",
+      "<parent@example.com>",
+      "--fyi",
+      "--body",
+      "No action needed.",
+      "--json",
+    ];
+    const first = expectOneDocument(await runMerged("send", argv));
+    const second = expectOneDocument(await runMerged("send", argv));
+    expect(first.idempotency_key).toMatch(/^primitive-send-[0-9a-f]{64}$/);
+    expect(second.idempotency_key).toBe(first.idempotency_key);
+    expect(keys).toEqual([first.idempotency_key, first.idempotency_key]);
+    expect(bodies[1]).toBe(bodies[0]);
   });
 });

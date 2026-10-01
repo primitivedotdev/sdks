@@ -37,7 +37,9 @@ function ownerRecord(value: unknown): OwnerRecord {
     "ready",
     "gapCount",
     "lastGapReason",
-    ...(value && typeof value === "object" && Object.hasOwn(value, "lastMailCheckAt")
+    ...(value &&
+    typeof value === "object" &&
+    Object.hasOwn(value, "lastMailCheckAt")
       ? ["lastMailCheckAt"]
       : []),
   ]);
