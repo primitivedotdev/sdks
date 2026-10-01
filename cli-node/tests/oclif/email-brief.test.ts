@@ -203,6 +203,8 @@ describe("work claims", () => {
       { claim: "a", until: "2026-10-01T13:00:00Z" },
       { claim: "a", until: "2026-10-01T11:00:00Z" },
       "plain text",
+      '{"task":"checkout refactor"}',
+      { task: "checkout refactor" },
       42,
       null,
     ]) {

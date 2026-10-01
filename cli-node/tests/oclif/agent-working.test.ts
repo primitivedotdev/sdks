@@ -145,6 +145,15 @@ describe("working claim values", () => {
       "none",
     );
     expect(readWorkingClaim({ claim: "a" }, NOW).state).toBe("none");
+    // A legacy note that is not claim-shaped stays visible, JSON or not.
+    expect(readWorkingClaim('{"task":"checkout refactor"}', NOW)).toEqual({
+      state: "legacy",
+      claim: '{"task":"checkout refactor"}',
+      until: null,
+    });
+    expect(readWorkingClaim({ task: "checkout refactor" }, NOW).state).toBe(
+      "legacy",
+    );
     expect(
       readWorkingClaim(JSON.stringify({ claim: "a", until: "soon" }), NOW)
         .state,
@@ -362,6 +371,18 @@ describe("agent working commands", () => {
     expect(stderr.indexOf("Write conflict")).toBeLessThan(
       stderr.indexOf("Delete not allowed"),
     );
+  });
+
+  it("clear ends a JSON-shaped legacy note", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    const calls = fixture(
+      ok(note('{"task":"checkout refactor"}', "4")),
+      ok(note({}, "5")),
+    );
+    const lines = captureLog(AgentWorkingClearCommand);
+    await AgentWorkingClearCommand.run(["--json"], { root });
+    expect(calls[1]?.method).toBe("PUT");
+    expect(JSON.parse(lines[0] ?? "")).toMatchObject({ cleared: true });
   });
 
   it("clear writes nothing when the claim already expired", async () => {

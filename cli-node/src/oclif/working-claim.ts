@@ -47,9 +47,8 @@ export function buildWorkingClaim(params: {
  * Interpret a stored AGENT_WORKING value. This is the one parser every
  * reader uses (`agent working get`, the brief). A JSON claim (stored as an
  * object, or as text holding that object) with a strict ISO 8601 expiry is
- * active or expired; other plain text is a legacy value shown as-is with
- * no expiry; anything else, including a malformed structured claim, is no
- * claim.
+ * active or expired, and a malformed claim-shaped value is no claim. Any
+ * other note, text or JSON, is a legacy value shown as-is with no expiry.
  */
 export function readWorkingClaim(
   value: unknown,
@@ -79,16 +78,22 @@ export function readWorkingClaim(
         };
     }
   }
-  // Plain text is a legacy claim. A structured value that is not a valid
-  // claim (a missing, zoneless or unparseable expiry, or no claim text) is
-  // no claim: showing it without its expiry would let it look current
-  // forever.
-  if (
-    typeof value === "string" &&
-    value.trim() !== "" &&
-    !(structured && typeof structured === "object")
-  )
-    return { state: "legacy", claim: value, until: null };
+  // Only a value that is shaped like a claim (an object naming `claim` or
+  // `until`) is held to the strict format: when malformed it is no claim,
+  // since showing it without its expiry would let it look current forever.
+  // Any other note is a legacy value shown as-is, including text that
+  // happens to be JSON, so earlier work stays visible.
+  const claimShaped =
+    !!structured &&
+    typeof structured === "object" &&
+    !Array.isArray(structured) &&
+    ("claim" in structured || "until" in structured);
+  if (!claimShaped) {
+    if (typeof value === "string" && value.trim() !== "")
+      return { state: "legacy", claim: value, until: null };
+    if (value && typeof value === "object")
+      return { state: "legacy", claim: JSON.stringify(value), until: null };
+  }
   return { state: "none", claim: null, until: null };
 }
 
