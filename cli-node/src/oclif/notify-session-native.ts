@@ -350,7 +350,12 @@ export async function connectNativeSession(options: {
     // app server does not unload it when the terminal's subscription ends.
     // No turn is started and no thread configuration is overridden.
     const resumed = record(
-      record(await request("thread/resume", { threadId: options.threadId }))
+      record(
+        await request("thread/resume", {
+          threadId: options.threadId,
+          excludeTurns: true,
+        }),
+      )
         .thread,
     );
     if (resumed.id !== options.threadId)

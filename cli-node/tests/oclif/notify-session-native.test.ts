@@ -188,7 +188,7 @@ describe.skipIf(process.platform === "win32")(
       ]);
       expect(
         f.calls.find((call) => call.method === "thread/resume")?.params,
-      ).toEqual({ threadId: f.threadId });
+      ).toEqual({ threadId: f.threadId, excludeTurns: true });
       let persisted = false;
       const id = randomUUID();
       await native.queue("External event metadata", id, () => {
