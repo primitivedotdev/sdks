@@ -276,7 +276,9 @@ Generated API commands remain available for compatibility and full schema parity
 `primitive chat`, `primitive chat reply`, `primitive send` and `primitive reply`
 report the same outcomes. Exit codes tell you whether a message left and whether
 sending again is safe. With `--json`, stdout is an envelope for every outcome
-(failures included) whose `outcome` field carries the name.
+(failures included) whose `outcome` field carries the name. The envelope always
+has `sent_email_id` (null until a send record is known) and `idempotency_key`,
+including when the outcome is uncertain.
 
 | Outcome | Exit | Meaning |
 |---|---|---|
@@ -286,11 +288,25 @@ sending again is safe. With `--json`, stdout is an envelope for every outcome
 | `not_sent` | 1 | The API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429), the command failed before sending, or the send record has status `agent_failed`, `gate_denied` or `canceled`. Nothing went out. |
 | (usage error) | 2 | Invalid flags or arguments. Nothing went out. |
 | `sent_awaiting_reply` | 3 | Chat only: the message was sent but no reply arrived before `--timeout`. Wait with the printed command; do not resend. |
-| `uncertain` | 4 | Transport error, conflict, server error, or a send record with status `unknown`. The message may or may not have gone out; check `primitive sent list` before retrying. |
+| `uncertain` | 4 | Transport error, conflict, server error, or a send record with status `unknown`. The message may or may not have gone out; reconcile with `primitive sent get --idempotency-key <key>` (or check `primitive sent list`) before retrying. |
 
 A chat that times out prints `Message sent (id X). No reply yet after Ns. Do NOT
 resend; wait with: <command>`, and its `--json` envelope has `"reply": null`, the
 `sent` record, and `follow_up_commands` that only wait on or inspect that send.
+
+Every send carries an idempotency key. Pass your own with `--idempotency-key`, or
+let the CLI derive one from the message content, so an identical retry is still
+deduplicated. If an outcome is uncertain, or you lost the output, reconcile by
+key instead of resending:
+
+```bash
+primitive sent get --idempotency-key <key> --json
+```
+
+It prints the newest send with that key. When nothing matches it exits 1 with
+error code `not_found`: the request did not create a send record, and retrying
+with the same `--idempotency-key` is safe because the API returns the original
+send instead of sending twice.
 
 Without `--json`, `send` and `reply` keep printing the send record on stdout exactly
 as before and add a one-line stderr summary such as `Reply sent (queued for
@@ -330,6 +346,26 @@ bare acknowledgement. It is refused when the email being answered is itself a
 signal or interaction, so two agents cannot keep acknowledging each other.
 `primitive send --fyi --in-reply-to <message-id>` sends the same kind of
 acknowledgement for a message identified by its Message-Id.
+
+An informational reply or send carries an idempotency key like any other
+send, derived from the target and the note, so retrying the same command is
+deduplicated. With `--json` the envelope reports it as `idempotency_key`.
+
+## JSON output
+
+With `--json`, stdout is exactly one JSON document, on success and on failure,
+and stderr stays empty. Output merged with `2>&1` therefore still parses:
+
+- Notices the command would otherwise print on stderr (hints, progress, prior
+  reply warnings) go in the document's `warnings` array.
+- A failure adds `error` and `exit_code`. If the command printed no document of
+  its own, the CLI prints `{ "error": ..., "exit_code": ... }`.
+- Generated API commands (`primitive sent list`, `primitive emails list`, ...)
+  print the full response envelope with `--json`: `data`, plus `meta.cursor` for
+  the next page, and empty-result hints in `summary`. Without `--json` they keep
+  printing only the data payload and write `next cursor: <cursor>` to stderr.
+- Commands whose `--json` output is a bare array keep that shape.
+- `primitive listen` streams JSONL and is not covered by this rule.
 
 ## Remove mailbox history
 

@@ -642,7 +642,11 @@ describe("chat command", () => {
     const first = await runChatCommand(args);
     expect(JSON.parse(first.stdout).outcome).toBe("sent_awaiting_reply");
     expect(first.exitCode).toBe(3);
-    const path = first.stderr.match(/Chat receipt: (.+)\n/)?.[1];
+    // --json keeps stderr empty; the receipt note is in warnings.
+    expect(first.stderr).toBe("");
+    const path = (JSON.parse(first.stdout).warnings as string[])
+      .find((line) => line.startsWith("Chat receipt: "))
+      ?.slice("Chat receipt: ".length);
     expect(path).toBeDefined();
     const saved = JSON.parse(readFileSync(path ?? "", "utf8"));
     expect(saved.completed).toBe(false);
@@ -1662,7 +1666,7 @@ describe("chat command", () => {
     );
   });
 
-  it("invokes the command with JSON stdout and stderr progress", async () => {
+  it("invokes the command with JSON stdout and progress in warnings", async () => {
     const result = await runChatCommand([
       "help@agent.example",
       "How do I rotate my API key?",
@@ -1671,7 +1675,10 @@ describe("chat command", () => {
     const parsed = JSON.parse(result.stdout);
 
     expect(result.exitCode).toBeUndefined();
-    expect(result.stderr).toContain("Sending message to help@agent.example");
+    expect(result.stderr).toBe("");
+    expect(parsed.warnings.join("\n")).toContain(
+      "Sending message to help@agent.example",
+    );
     expect(parsed.response_body).toBe(
       "Rotate your API key from the dashboard.",
     );

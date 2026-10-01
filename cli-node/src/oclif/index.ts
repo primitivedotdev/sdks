@@ -106,6 +106,7 @@ import RoutesUpdateCommand from "./commands/routes-update.js";
 import SearchCommand from "./commands/search.js";
 import SemanticSearchCommand from "./commands/semantic-search.js";
 import SendCommand from "./commands/send.js";
+import SentGetCommand from "./commands/sent-get.js";
 import SignalCommand from "./commands/signal.js";
 import {
   LoginBrowserCommand,
@@ -150,6 +151,7 @@ import WakeSchedulesRunCommand from "./commands/wake-schedules-run.js";
 import WakeSchedulesUpdateCommand from "./commands/wake-schedules-update.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
+import { guardJsonOutputCommands } from "./json-output.js";
 import { readCompletionFunction } from "./shell-completion-script.js";
 
 class ListOperationsCommand extends Command {
@@ -453,7 +455,6 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "sending:reply": "sending:reply-to-email",
   "sending:send": "sending:send-email",
   "sent:delete": "sending:delete-sent-email",
-  "sent:get": "sending:get-sent-email",
   "sent:list": "sending:list-sent-emails",
   "threads:get": "threads:get-thread",
   "webhook-deliveries:list": "webhook-deliveries:list-deliveries",
@@ -471,6 +472,7 @@ const DESCRIBE_OPERATION_ALIASES: Record<string, string> = {
   "memories:search": "memories:search-memories",
   "memories:set": "memories:set-memory",
   reply: "sending:reply-to-email",
+  "sent:get": "sending:get-sent-email",
 };
 
 function resolveOperationAlias(id: string): string {
@@ -780,6 +782,11 @@ export const COMMANDS: Record<string, typeof Command> = {
   "credits:redeem": CreditsRedeemCommand,
   "credits:redeem-credit-code": CreditsRedeemCommand,
   "credits:balance": CreditsBalanceCommand,
+  // `sent:get` adds --idempotency-key lookup on top of the generated
+  // get-sent-email operation, so a caller holding only the key from an
+  // uncertain send can reconcile it. `sending:get` and the operation id
+  // stay generated.
+  "sent:get": SentGetCommand,
   ...generatedCommandAliases,
   ...generatedCommands,
   // `functions:logs` is the human/agent-friendly log viewer: compact
@@ -823,3 +830,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   "wake:authorizations:delete": WakeAuthorizationsDeleteCommand,
   "wake:dispatches:list": WakeDispatchesListCommand,
 };
+
+// With --json, every command except the streaming `listen` prints one JSON
+// document on stdout and nothing on stderr, so `2>&1` output still parses.
+guardJsonOutputCommands(COMMANDS);

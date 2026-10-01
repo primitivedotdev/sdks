@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { Errors } from "@oclif/core";
 import type {
   EmailDetail,
   EmailDetailReply,
@@ -55,7 +57,7 @@ export const SEND_OUTCOME_HELP = `Outcomes and exit codes, shared by chat, chat 
   - exit 1 not_sent: the API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429), the command failed before sending, or the send record has status agent_failed, gate_denied or canceled. Nothing went out.
   - exit 2: invalid flags or arguments. Nothing went out.
   - exit 3 sent_awaiting_reply: chat only. Sent, but no reply before the timeout. Wait; do not resend.
-  - exit 4 uncertain: transport error, conflict, server error, or a send record with status unknown. It may or may not have gone out. Check sent history before retrying.`;
+  - exit 4 uncertain: transport error, conflict, server error, or a send record with status unknown. It may or may not have gone out. Reconcile with primitive sent get --idempotency-key <key> (the key is in the --json envelope) before retrying.`;
 
 export function sendOutcomeExitCode(outcome: SendOutcome): number {
   return SEND_OUTCOME_EXIT_CODES[outcome];
@@ -341,8 +343,91 @@ export function sentHistoryWindowStart(attemptStartedAtIso: string): string {
 }
 
 export type SendCommandFollowUpKind =
+  | "find_sent_email_by_idempotency_key"
   | "inspect_sent_email"
   | "list_recent_sent_emails";
+
+/** Header rule for Idempotency-Key: 1 to 255 printable ASCII characters. */
+export const IDEMPOTENCY_KEY_PATTERN = /^[\x21-\x7E]{1,255}$/;
+
+export const IDEMPOTENCY_KEY_FLAG_DESCRIPTION =
+  "Idempotency key for this send (1 to 255 printable ASCII characters). Retrying with the same key returns the original send instead of sending twice. Defaults to a key derived from the request content, so an identical retry is deduplicated. Look a send up later with `primitive sent get --idempotency-key <key>`.";
+
+export function assertValidIdempotencyKey(key: string): string {
+  if (!IDEMPOTENCY_KEY_PATTERN.test(key)) {
+    throw new Errors.CLIError(
+      "--idempotency-key must be 1 to 255 printable ASCII characters with no spaces.",
+      { exit: 2 },
+    );
+  }
+  return key;
+}
+
+// Fields that change how long the CLI waits, not what is sent. They
+// stay out of the derived key, so a retry that adds --wait is still
+// recognised as the same send.
+const NON_CONTENT_SEND_FIELDS: ReadonlySet<string> = new Set([
+  "wait",
+  "wait_timeout_ms",
+]);
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalJson(item ?? null)).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, item]) => item !== undefined)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+    return `{${entries
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
+/**
+ * The idempotency key a send uses when the caller passes none. It is a
+ * hash of what is sent (and, for a reply, of the email replied to), so
+ * an identical retry is deduplicated exactly as before, while the CLI
+ * knows the key before the request starts. That lets an uncertain
+ * outcome still report the key to reconcile with.
+ */
+export function deriveSendIdempotencyKey(
+  kind: "chat" | "reply" | "send",
+  request: Record<string, unknown>,
+): string {
+  const content = Object.fromEntries(
+    Object.entries(request).filter(
+      ([key]) => !NON_CONTENT_SEND_FIELDS.has(key),
+    ),
+  );
+  const digest = createHash("sha256")
+    .update(canonicalJson(content))
+    .digest("hex");
+  return `primitive-${kind}-${digest}`;
+}
+
+/**
+ * Identity fields every send, reply and chat `--json` envelope carries,
+ * whatever the outcome. `sent_email_id` is null until a send record is
+ * known; `idempotency_key` is known before the request starts, so an
+ * uncertain outcome can be reconciled with
+ * `primitive sent get --idempotency-key <key>`.
+ */
+export function sendIdentityFields(params: {
+  idempotencyKey: string | null | undefined;
+  sent:
+    | Pick<SendMailResult, "client_idempotency_key" | "id">
+    | null
+    | undefined;
+}): { sent_email_id: string | null; idempotency_key: string | null } {
+  return {
+    sent_email_id: params.sent?.id ?? null,
+    idempotency_key:
+      params.idempotencyKey ?? params.sent?.client_idempotency_key ?? null,
+  };
+}
 
 /**
  * Commands that inspect an existing send. None of them send again:
@@ -350,10 +435,30 @@ export type SendCommandFollowUpKind =
  */
 export function buildSendCommandFollowUps(params: {
   attemptStartedAtIso: string;
+  idempotencyKey?: string | null;
   outcome: SendOutcome;
   sentId: string | null;
 }): FollowUpCommand<SendCommandFollowUpKind>[] {
   const commands: FollowUpCommand<SendCommandFollowUpKind>[] = [];
+  if (
+    params.sentId === null &&
+    params.outcome === "uncertain" &&
+    params.idempotencyKey
+  ) {
+    commands.push(
+      buildFollowUpCommand(
+        "find_sent_email_by_idempotency_key",
+        "Look up this attempt by its idempotency key before retrying",
+        [
+          "primitive",
+          "sent",
+          "get",
+          "--idempotency-key",
+          params.idempotencyKey,
+        ],
+      ),
+    );
+  }
   if (params.sentId !== null) {
     commands.push(
       buildFollowUpCommand(
@@ -385,6 +490,8 @@ export type SendCommandEnvelope = {
   outcome: SendOutcome;
   exit_code: number;
   outcome_message: string;
+  sent_email_id: string | null;
+  idempotency_key: string | null;
   sent: SendMailResult | null;
   http_status: number | null;
   error: unknown;
@@ -397,11 +504,12 @@ export type SendCommandEnvelope = {
  * commands always printed (the SendMailResult, or `null`), so
  * existing `| jq` pipelines keep working; the outcome is on stderr
  * and in the exit code. With `--json` stdout is always an envelope,
- * whatever the outcome.
+ * whatever the outcome, and the summary is only its outcome_message.
  */
 export function reportSendCommandResult(params: {
   attemptStartedAtIso: string;
   extraEnvelopeFields?: Record<string, unknown>;
+  idempotencyKey?: string | null;
   json: boolean;
   log: (line: string) => void;
   noun: "Message" | "Reply";
@@ -424,7 +532,7 @@ export function reportSendCommandResult(params: {
       failure === "already_sent"
         ? formatDeletedEarlierSendNotice()
         : formatSendFailureSummary(params.noun, failure, httpStatus);
-    params.writeStderr(`${outcomeMessage}\n`);
+    if (!params.json) params.writeStderr(`${outcomeMessage}\n`);
   } else {
     sent =
       (params.result.data as { data?: SendMailResult } | undefined)?.data ??
@@ -442,7 +550,7 @@ export function reportSendCommandResult(params: {
             ? formatAlreadySentNotice(sent)
             : formatSentSummary(params.noun, sent);
     }
-    params.writeStderr(`${outcomeMessage}\n`);
+    if (!params.json) params.writeStderr(`${outcomeMessage}\n`);
   }
 
   if (params.json) {
@@ -450,11 +558,13 @@ export function reportSendCommandResult(params: {
       outcome,
       exit_code: sendOutcomeExitCode(outcome),
       outcome_message: outcomeMessage,
+      ...sendIdentityFields({ idempotencyKey: params.idempotencyKey, sent }),
       sent,
       http_status: httpStatus ?? null,
       error: serializeErrorPayload(errorPayload),
       follow_up_commands: buildSendCommandFollowUps({
         attemptStartedAtIso: params.attemptStartedAtIso,
+        idempotencyKey: params.idempotencyKey,
         outcome,
         sentId: sent?.id ?? null,
       }),
@@ -487,8 +597,10 @@ export function serializeErrorPayload(payload: unknown): unknown {
  * outcome is unknown.
  */
 export function buildThrownSendFailureEnvelope(params: {
+  attemptStartedAtIso?: string | null;
   error: unknown;
   extraEnvelopeFields?: Record<string, unknown>;
+  idempotencyKey?: string | null;
   noun: "Message" | "Reply";
   requestStarted: boolean;
 }): SendCommandEnvelope & Record<string, unknown> {
@@ -503,10 +615,22 @@ export function buildThrownSendFailureEnvelope(params: {
       ? sendOutcomeExitCode("uncertain")
       : thrownErrorExitCode(params.error),
     outcome_message: formatSendFailureSummary(params.noun, outcome, undefined),
+    ...sendIdentityFields({
+      idempotencyKey: params.idempotencyKey,
+      sent: null,
+    }),
     sent: null,
     http_status: null,
     error: { message },
-    follow_up_commands: [],
+    follow_up_commands:
+      params.requestStarted && params.attemptStartedAtIso
+        ? buildSendCommandFollowUps({
+            attemptStartedAtIso: params.attemptStartedAtIso,
+            idempotencyKey: params.idempotencyKey,
+            outcome,
+            sentId: null,
+          })
+        : [],
     ...params.extraEnvelopeFields,
   };
 }

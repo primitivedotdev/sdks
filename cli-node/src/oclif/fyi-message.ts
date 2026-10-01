@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { EmailDetail } from "@primitivedotdev/api-core";
 import { prepareSignalEmail } from "@primitivedotdev/sdk/interactions";
 
@@ -18,6 +18,28 @@ export type FyiMessageContent = {
 };
 
 export class FyiMessageError extends Error {}
+
+/**
+ * Return a UUID source that yields the same sequence of distinct,
+ * well-formed version 4 UUIDs for the same seed. Seeding the signal's
+ * interaction and step ids with the request's idempotency key makes a
+ * retried informational message byte-identical, so the retry replays
+ * the original send instead of being refused as a different payload
+ * under the same key.
+ */
+export function uuidsFromSeed(seed: string): () => string {
+  let counter = 0;
+  return () => {
+    const bytes = createHash("sha256")
+      .update(`${seed}\u0000${counter++}`)
+      .digest()
+      .subarray(0, 16);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = bytes.toString("hex");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  };
+}
 
 /**
  * Accept a bare mailbox or a `Name <mailbox>` header value and return the
