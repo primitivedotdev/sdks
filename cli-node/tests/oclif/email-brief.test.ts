@@ -8,7 +8,20 @@ const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
   statusContent: vi.fn(),
   profileName: "work" as string | undefined,
+  admission: null as null | Record<string, unknown>,
 }));
+
+vi.mock("../../src/oclif/contact-policy-client.js", async (original) => {
+  const actual =
+    await original<typeof import("../../src/oclif/contact-policy-client.js")>();
+  return {
+    ...actual,
+    apiContactPolicy: (...args: Parameters<typeof actual.apiContactPolicy>) =>
+      mocks.admission
+        ? { admit: async () => mocks.admission }
+        : actual.apiContactPolicy(...args),
+  };
+});
 
 vi.mock("../../src/oclif/api-client.js", () => ({
   createAuthenticatedCliApiClient: mocks.createAuthenticatedCliApiClient,
@@ -154,6 +167,7 @@ const baseRoutes = (extra: Record<string, unknown> = {}): Routes => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.profileName = "work";
+  mocks.admission = null;
   mocks.statusContent.mockResolvedValue(null);
   vi.stubEnv("CLAUDE_CODE_SESSION_ID", undefined);
   vi.stubEnv("CODEX_THREAD_ID", undefined);
@@ -305,6 +319,47 @@ describe("email brief", () => {
       signal: new AbortController().signal,
     });
     expect(spoofed.envelope.relationship).toBe("other");
+  });
+
+  it("keeps the server's explicit other over contradictory local facts", async () => {
+    const { client } = api(baseRoutes());
+    // Locally the sender looks like a verified agent.
+    const verified = await buildEmailBrief({
+      client: client.client,
+      detail: detail(emailId, {
+        sender_connected_agent_verified: true,
+        collaboration: { sender_relationship: "other" },
+      }) as never,
+      signal: new AbortController().signal,
+    });
+    expect(verified.envelope.relationship).toBe("other");
+    // Local admission says network agent, then contact.
+    for (const admission of [
+      { kind: "allowed", source: "network" },
+      { kind: "allowed", source: "contact" },
+    ]) {
+      mocks.admission = admission;
+      const brief = await buildEmailBrief({
+        client: client.client,
+        detail: detail(emailId, {
+          collaboration: { sender_relationship: "other" },
+        }) as never,
+        connected: { agentAddress: self, ownerAddress: "owner@example.com" },
+        signal: new AbortController().signal,
+      });
+      expect(brief.envelope.relationship).toBe("other");
+    }
+    // Without the server field the local admission decides.
+    mocks.admission = { kind: "allowed", source: "contact" };
+    const local = await buildEmailBrief({
+      client: client.client,
+      detail: detail(emailId, {
+        sender_connected_agent_verified: false,
+      }) as never,
+      connected: { agentAddress: self, ownerAddress: "owner@example.com" },
+      signal: new AbortController().signal,
+    });
+    expect(local.envelope.relationship).toBe("contact");
   });
 
   it("labels an unauthenticated sender and skips the signal lookup", async () => {

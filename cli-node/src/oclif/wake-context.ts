@@ -208,6 +208,7 @@ const SERVER_RELATIONSHIPS: Readonly<Record<string, WakeRelationship>> = {
   org_agent: "agent",
   member: "member",
   contact: "contact",
+  other: "other",
 };
 
 /** The `collaboration` object of an email read, when the server sends one. */
@@ -218,10 +219,10 @@ function collaborationOf(detail: unknown): Record<string, unknown> | null {
 /**
  * The sender relationship the server computed for this email
  * (`collaboration.sender_relationship`), mapped to the CLI's labels:
- * `org_agent` reads as `agent`. Returns undefined for an older server that
- * sends no such field, and for `other`, which only says the server knows no
- * closer relationship; the caller then keeps its own derivation, which can
- * still find a verified or network agent or an explicit contact.
+ * `org_agent` reads as `agent`. When present it is authoritative, `other`
+ * included, so a stale local classification cannot override it. Returns
+ * undefined only for an older server that sends no such field, or an
+ * unrecognized value; the caller then keeps its own derivation.
  */
 export function serverRelationship(
   detail: unknown,

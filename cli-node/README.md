@@ -876,8 +876,9 @@ thread is still received and readable; its delivery event is completed without
 a wake.
 
 When an email read carries the server's `collaboration.sender_relationship`,
-the wake line and `--brief` use it for an authenticated sender (`org_agent`
-reads as `agent`); otherwise the CLI derives the relationship itself. For a supported native coding session,
+the wake line and `--brief` use it for an authenticated sender, `other`
+included (`org_agent` reads as `agent`); only when the field is absent or
+unrecognized does the CLI derive the relationship itself. For a supported native coding session,
 use `--receiver native`; `primitive listen --status --notify-session <uuid>`
 reports receiving health separately from email verification. Test an actual
 idle wake before claiming unattended delivery.

@@ -112,10 +112,10 @@ describe("wake metadata", () => {
     expect(
       serverRelationship(withCollaboration({ sender_relationship: "contact" })),
     ).toBe("contact");
-    // "other" and unknown values leave the CLI's own derivation in charge.
     expect(
       serverRelationship(withCollaboration({ sender_relationship: "other" })),
-    ).toBeUndefined();
+    ).toBe("other");
+    // Unknown values and an absent field leave the CLI's derivation in charge.
     expect(
       serverRelationship(withCollaboration({ sender_relationship: "boss" })),
     ).toBeUndefined();
@@ -264,5 +264,33 @@ describe("thread context", () => {
       signal,
     });
     expect(owned.relationship).toBe("agent");
+    // Contradictory facts: local admission says contact or network agent,
+    // the server says other. The server wins.
+    for (const local of ["contact", "agent"] as const) {
+      const contradicted = await describeWake({
+        client: down.client,
+        detail: {
+          ...detail,
+          collaboration: { sender_relationship: "other" },
+        } as unknown as EmailDetail,
+        self,
+        relationship: local,
+        localInThread: false,
+        signal,
+      });
+      expect(contradicted.relationship).toBe("other");
+    }
+    const absent = await describeWake({
+      client: down.client,
+      detail: {
+        ...detail,
+        collaboration: { sender_relationship: "unknown" },
+      } as unknown as EmailDetail,
+      self,
+      relationship: "contact",
+      localInThread: false,
+      signal,
+    });
+    expect(absent.relationship).toBe("contact");
   });
 });
