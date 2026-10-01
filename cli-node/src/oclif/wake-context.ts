@@ -203,6 +203,46 @@ export function wakeRelationship(input: {
   return "other";
 }
 
+const SERVER_RELATIONSHIPS: Readonly<Record<string, WakeRelationship>> = {
+  owner: "owner",
+  org_agent: "agent",
+  member: "member",
+  contact: "contact",
+};
+
+/** The `collaboration` object of an email read, when the server sends one. */
+function collaborationOf(detail: unknown): Record<string, unknown> | null {
+  return record(record(detail)?.collaboration);
+}
+
+/**
+ * The sender relationship the server computed for this email
+ * (`collaboration.sender_relationship`), mapped to the CLI's labels:
+ * `org_agent` reads as `agent`. Returns undefined for an older server that
+ * sends no such field, and for `other`, which only says the server knows no
+ * closer relationship; the caller then keeps its own derivation, which can
+ * still find a verified or network agent or an explicit contact.
+ */
+export function serverRelationship(
+  detail: unknown,
+): WakeRelationship | undefined {
+  const value = collaborationOf(detail)?.sender_relationship;
+  return typeof value === "string" && Object.hasOwn(SERVER_RELATIONSHIPS, value)
+    ? SERVER_RELATIONSHIPS[value]
+    : undefined;
+}
+
+/**
+ * True when the server reports this email's thread as muted for the
+ * receiving address (`collaboration.muted`, or `muted` on the email). An
+ * older server sends neither and nothing is muted by it.
+ */
+export function serverMuted(detail: unknown): boolean {
+  return (
+    collaborationOf(detail)?.muted === true || record(detail)?.muted === true
+  );
+}
+
 /** The metadata clause of a wake line. Addresses outside a plain charset are withheld. */
 export function formatWakeContext(context: WakeContext): string {
   const sender = WAKE_ADDRESS.test(context.sender)
@@ -240,7 +280,7 @@ export async function describeWake(input: {
     : null;
   return {
     sender: detail.from_email.trim().toLowerCase(),
-    relationship: input.relationship,
+    relationship: serverRelationship(detail) ?? input.relationship,
     threadId,
     inThread: input.localInThread || sentInThread(thread, input.self) === true,
     attachments: hasAttachments(detail),

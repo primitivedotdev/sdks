@@ -42,6 +42,7 @@ import { openSharedMailStore } from "./shared-mail-state.js";
 import { isThreadMuted } from "./thread-mutes.js";
 import {
   describeWake,
+  serverMuted,
   type WakeContext,
   wakeRelationship,
 } from "./wake-context.js";
@@ -301,9 +302,10 @@ export async function createWakeMail(options: {
       const trust = scopedChatSenderTrust(detail, sender);
       if (trust.retryable) return outcome(false);
       if (!trust.trusted) return outcome(true);
-      // An explicitly muted thread never wakes this session. The event is
-      // still completed so it is not redelivered.
-      if (muted(detail.thread_id)) return outcome(true);
+      // An explicitly muted thread never wakes this session, whether the
+      // mute is local or the server reports it for this address. The event
+      // is still completed so it is not redelivered.
+      if (muted(detail.thread_id) || serverMuted(detail)) return outcome(true);
       const requested = detail.reply_to_sent_email_id
         ? await store.findWaitByParent(detail.reply_to_sent_email_id)
         : null;

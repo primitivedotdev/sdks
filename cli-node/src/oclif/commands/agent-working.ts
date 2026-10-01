@@ -15,6 +15,7 @@ import {
 } from "../api-command.js";
 import {
   buildWorkingClaim,
+  CLAIM_MAX_LENGTH,
   formatWorkingClaim,
   readWorkingClaim,
   WORKING_NOTE_NAME,
@@ -210,28 +211,68 @@ export class AgentWorkingGetCommand extends Command {
 export class AgentWorkingClearCommand extends Command {
   static summary = "Clear this agent's work claim";
   static description =
-    `Delete the ${WORKING_NOTE_NAME} claim when work ends. Succeeds when there is no claim to clear.`;
+    `End the ${WORKING_NOTE_NAME} claim when work ends. The claim is rewritten with its expiry set to now, so it reads as none from then on; this works for connected agents, which may write their own notes but not delete them. If that write is refused, the note is deleted instead when the credential allows it. Succeeds when there is no active claim to clear.`;
   static examples = ["<%= config.bin %> agent working clear"];
   static flags = { ...commonFlags, address: writeAddressFlag };
   async run(): Promise<void> {
     const { flags } = await this.parse(AgentWorkingClearCommand);
     await run(this, flags, true, async ({ client, address }) => {
-      let cleared = true;
+      let current: { value: unknown; version: string } | null = null;
       try {
-        await runAddressNotesRequest(client, {
-          action: "delete",
+        current = (await runAddressNotesRequest(client, {
+          action: "get",
           address,
           name: WORKING_NOTE_NAME,
-        });
+        })) as { value: unknown; version: string };
       } catch (error) {
         if (!isNotFound(error)) throw error;
-        cleared = false;
       }
-      if (flags.json) this.log(JSON.stringify({ address, cleared }, null, 2));
+      const view = current ? readWorkingClaim(current.value) : null;
+      let method: "expired" | "deleted" | null = null;
+      if (current && (view?.state === "active" || view?.state === "legacy")) {
+        try {
+          await runAddressNotesRequest(client, {
+            action: "set",
+            address,
+            name: WORKING_NOTE_NAME,
+            value: {
+              claim: endedClaimText(view.claim),
+              until: new Date().toISOString(),
+            },
+            ifVersion: current.version,
+          });
+          method = "expired";
+        } catch (error) {
+          if (!(error instanceof AddressNotesApiError)) throw error;
+          try {
+            await runAddressNotesRequest(client, {
+              action: "delete",
+              address,
+              name: WORKING_NOTE_NAME,
+              ifVersion: current.version,
+            });
+            method = "deleted";
+          } catch (deleteError) {
+            if (!isNotFound(deleteError)) throw error;
+            method = "deleted";
+          }
+        }
+      }
+      const cleared = method !== null;
+      if (flags.json)
+        this.log(JSON.stringify({ address, cleared, method }, null, 2));
       else
         this.log(
           cleared ? "Working claim cleared." : "No working claim to clear.",
         );
     });
   }
+}
+
+/** The ended claim keeps its text when that is still a valid one-line claim. */
+function endedClaimText(claim: string): string {
+  const text = claim.trim();
+  return text !== "" && !/[\r\n]/.test(text) && text.length <= CLAIM_MAX_LENGTH
+    ? text
+    : "cleared";
 }

@@ -285,6 +285,28 @@ describe("email brief", () => {
     expect(brief.envelope.relationship).toBe("other");
   });
 
+  it("prefers the server's sender relationship for an authenticated sender", async () => {
+    const { client } = api(baseRoutes());
+    const brief = await buildEmailBrief({
+      client: client.client,
+      detail: detail(emailId, {
+        sender_connected_agent_verified: false,
+        collaboration: { sender_relationship: "member" },
+      }) as never,
+      signal: new AbortController().signal,
+    });
+    expect(brief.envelope.relationship).toBe("member");
+    const spoofed = await buildEmailBrief({
+      client: client.client,
+      detail: detail(emailId, {
+        auth: { ...fixture.auth, dmarc: "fail", dmarcDkimAligned: false },
+        collaboration: { sender_relationship: "owner" },
+      }) as never,
+      signal: new AbortController().signal,
+    });
+    expect(spoofed.envelope.relationship).toBe("other");
+  });
+
   it("labels an unauthenticated sender and skips the signal lookup", async () => {
     const { client, requests } = api(baseRoutes());
     const brief = await buildEmailBrief({

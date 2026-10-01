@@ -265,13 +265,94 @@ describe("agent working commands", () => {
     });
   });
 
-  it("clear deletes the note at its current version", async () => {
-    const calls = fixture(ok(note("x", "7")), ok({ deleted: true }));
+  it("clear rewrites the claim as expired at its current version", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    const calls = fixture(
+      ok(note({ claim: "composer", until: "2099-01-01T00:00:00Z" }, "7")),
+      ok(note({}, "8")),
+    );
     const lines = captureLog(AgentWorkingClearCommand);
     await AgentWorkingClearCommand.run([], { root });
-    expect(calls[1]?.method).toBe("DELETE");
-    expect(calls[1]?.url.searchParams.get("if_version")).toBe("7");
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.method).toBe("PUT");
+    expect(calls[1]?.body).toEqual({
+      value: { claim: "composer", until: new Date(NOW).toISOString() },
+      if_version: "7",
+    });
+    const written = (calls[1]?.body as { value: unknown }).value;
+    expect(readWorkingClaim(written, NOW).state).toBe("expired");
     expect(lines).toEqual(["Working claim cleared."]);
+  });
+
+  it("clear ends a legacy plain-text claim the same way", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    const calls = fixture(ok(note("Researching", "2")), ok(note({}, "3")));
+    const lines = captureLog(AgentWorkingClearCommand);
+    await AgentWorkingClearCommand.run(["--json"], { root });
+    expect(calls[1]?.body).toEqual({
+      value: { claim: "Researching", until: new Date(NOW).toISOString() },
+      if_version: "2",
+    });
+    expect(JSON.parse(lines[0] ?? "")).toEqual({
+      address: own,
+      cleared: true,
+      method: "expired",
+    });
+  });
+
+  it("clear falls back to deleting when the write is refused", async () => {
+    const forbidden = {
+      status: 403,
+      body: { success: false, error: { code: "forbidden", message: "No" } },
+    };
+    const calls = fixture(
+      ok(note({ claim: "composer", until: "2099-01-01T00:00:00Z" }, "7")),
+      forbidden,
+      ok({ deleted: true }),
+    );
+    const lines = captureLog(AgentWorkingClearCommand);
+    await AgentWorkingClearCommand.run(["--json"], { root });
+    expect(calls.map((call) => call.method)).toEqual(["GET", "PUT", "DELETE"]);
+    expect(calls[2]?.url.searchParams.get("if_version")).toBe("7");
+    expect(JSON.parse(lines[0] ?? "")).toEqual({
+      address: own,
+      cleared: true,
+      method: "deleted",
+    });
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it("clear reports the refused write when the delete is refused too", async () => {
+    const forbidden = {
+      status: 403,
+      body: { success: false, error: { code: "forbidden", message: "No" } },
+    };
+    fixture(
+      ok(note({ claim: "composer", until: "2099-01-01T00:00:00Z" }, "7")),
+      forbidden,
+      forbidden,
+    );
+    captureLog(AgentWorkingClearCommand);
+    const stderr = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    await AgentWorkingClearCommand.run([], { root });
+    expect(process.exitCode).toBe(1);
+    expect(stderr).toHaveBeenCalled();
+  });
+
+  it("clear writes nothing when the claim already expired", async () => {
+    const calls = fixture(
+      ok(note({ claim: "old", until: "2000-01-01T00:00:00Z" })),
+    );
+    const lines = captureLog(AgentWorkingClearCommand);
+    await AgentWorkingClearCommand.run(["--json"], { root });
+    expect(calls).toHaveLength(1);
+    expect(JSON.parse(lines[0] ?? "")).toEqual({
+      address: own,
+      cleared: false,
+      method: null,
+    });
   });
 
   it("clear succeeds when there is no claim", async () => {
@@ -281,6 +362,7 @@ describe("agent working commands", () => {
     expect(JSON.parse(lines[0] ?? "")).toEqual({
       address: own,
       cleared: false,
+      method: null,
     });
     expect(process.exitCode).toBeUndefined();
   });

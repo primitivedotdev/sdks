@@ -3,7 +3,41 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ profileName: "work" as string | undefined }));
+const mocks = vi.hoisted(() => ({
+  profileName: "work" as string | undefined,
+  requests: [] as { method: string; path: string }[],
+  // Default: a server that predates thread mutes.
+  respond: (_method: string, path: string): Response =>
+    Response.json(
+      {
+        success: false,
+        error: {
+          code: "not_found",
+          message: `${_method} ${path} is not served yet.`,
+        },
+      },
+      { status: 404 },
+    ),
+}));
+vi.mock("../../src/oclif/api-client.js", async () => {
+  const { PrimitiveApiClient } = await import("@primitivedotdev/api-core");
+  return {
+    createAuthenticatedCliApiClient: async () => ({
+      apiClient: new PrimitiveApiClient({
+        apiKey: "fixture",
+        apiBaseUrl: "https://api.example.test/v1",
+        fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+          const request = new Request(input, init);
+          const path = new URL(request.url).pathname;
+          mocks.requests.push({ method: request.method, path });
+          return mocks.respond(request.method, path);
+        },
+      }),
+      auth: {},
+      baseUrlOverridden: false,
+    }),
+  };
+});
 vi.mock("../../src/oclif/auth.js", async (original) => ({
   ...(await original<typeof import("../../src/oclif/auth.js")>()),
   resolveCliAuth: () => ({
@@ -40,6 +74,18 @@ beforeEach(() => {
     mode: 0o700,
   });
   mocks.profileName = "work";
+  mocks.requests = [];
+  mocks.respond = (method, path) =>
+    Response.json(
+      {
+        success: false,
+        error: {
+          code: "not_found",
+          message: `${method} ${path} is not served yet.`,
+        },
+      },
+      { status: 404 },
+    );
   vi.stubEnv("CLAUDE_CODE_SESSION_ID", undefined);
   vi.stubEnv("CODEX_THREAD_ID", undefined);
   vi.stubEnv("CODEX_SESSION_ID", undefined);
@@ -158,6 +204,124 @@ describe("threads mute commands", () => {
       muted: true,
       still_muted_by: ["all sessions"],
     });
+  });
+
+  it("mutes for the address on a server that keeps thread mutes", async () => {
+    vi.stubEnv("CLAUDE_CODE_SESSION_ID", claude.slice(7));
+    const serverMutes = new Map<string, string>();
+    mocks.respond = (method, path) => {
+      if (method === "GET" && path === "/v1/threads/muted")
+        return Response.json({
+          success: true,
+          data: [...serverMutes].map(([thread_id, muted_at]) => ({
+            thread_id,
+            address: "agent@example.com",
+            muted: true,
+            muted_at,
+          })),
+          meta: { cursor: null },
+        });
+      const match = path.match(/^\/v1\/threads\/([^/]+)\/mute$/);
+      if (match?.[1] === otherThread)
+        return Response.json(
+          {
+            success: false,
+            error: { code: "not_found", message: "Thread not found" },
+          },
+          { status: 404 },
+        );
+      if (match && method === "PUT") {
+        serverMutes.set(match[1], "2026-10-01T00:00:00.000Z");
+        return Response.json({
+          success: true,
+          data: {
+            thread_id: match[1],
+            address: "agent@example.com",
+            muted: true,
+            muted_at: "2026-10-01T00:00:00.000Z",
+          },
+        });
+      }
+      if (match && method === "DELETE") {
+        serverMutes.delete(match[1]);
+        return Response.json({
+          success: true,
+          data: {
+            thread_id: match[1],
+            address: "agent@example.com",
+            muted: false,
+            muted_at: null,
+          },
+        });
+      }
+      return Response.json({ success: false }, { status: 500 });
+    };
+    let output = capture();
+    await ThreadsMuteCommand.run(["--id", thread], { root });
+    expect(output()).toEqual({
+      thread_id: thread,
+      muted: true,
+      scope: "address",
+      stored: "server",
+      address: "agent@example.com",
+      muted_at: "2026-10-01T00:00:00.000Z",
+    });
+    // A server mute writes no local state.
+    expect(readThreadMutes(configDir, "work")).toEqual([]);
+    vi.restoreAllMocks();
+    output = capture();
+    await ThreadsMuteCommand.run(["--id", thread, "--session-only"], { root });
+    expect(output()).toMatchObject({ stored: "local", scope: claude });
+    vi.restoreAllMocks();
+    output = capture();
+    await ThreadsMutedCommand.run([], { root });
+    expect(output()).toEqual([
+      expect.objectContaining({ thread_id: thread, stored: "server" }),
+      expect.objectContaining({ thread_id: thread, stored: "local" }),
+    ]);
+    vi.restoreAllMocks();
+    output = capture();
+    await ThreadsUnmuteCommand.run(["--id", thread], { root });
+    expect(output()).toMatchObject({
+      removed: true,
+      server: "unmuted",
+      muted: false,
+    });
+    expect(serverMutes.size).toBe(0);
+    expect(mocks.requests.map((r) => r.method)).toEqual([
+      "PUT",
+      "GET",
+      "DELETE",
+    ]);
+
+    // A thread the server does not know is an error, not a local mute.
+    vi.restoreAllMocks();
+    capture();
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await ThreadsMuteCommand.run(["--id", otherThread], { root });
+    expect(process.exitCode).toBe(1);
+    process.exitCode = undefined;
+    expect(isThreadMuted(configDir, "work", otherThread, claude)).toBe(false);
+  });
+
+  it("falls back to a local mute and says so on an older server", async () => {
+    const stderr: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      stderr.push(String(chunk));
+      return true;
+    });
+    const output = capture();
+    await ThreadsMuteCommand.run(["--id", thread], { root });
+    expect(output()).toMatchObject({ stored: "local", scope: "all sessions" });
+    expect(stderr.join("")).toContain("stored locally");
+  });
+
+  it("--session-only needs a runtime session and skips the server", async () => {
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await expect(
+      ThreadsMuteCommand.run(["--id", thread, "--session-only"], { root }),
+    ).rejects.toThrow(/needs a Claude Code or Codex session/);
+    expect(mocks.requests).toEqual([]);
   });
 
   it("requires a connected profile and a thread UUID", async () => {

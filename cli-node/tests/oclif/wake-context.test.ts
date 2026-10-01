@@ -10,6 +10,8 @@ import {
   latestOwnOutbound,
   readThreadContext,
   sentInThread,
+  serverMuted,
+  serverRelationship,
   wakeRelationship,
 } from "../../src/oclif/wake-context.js";
 
@@ -92,6 +94,36 @@ describe("wake metadata", () => {
     expect(wakeRelationship({ network: true, contact: true })).toBe("agent");
     expect(wakeRelationship({ contact: true })).toBe("contact");
     expect(wakeRelationship({})).toBe("other");
+  });
+
+  it("reads the server's sender relationship and mute when present", () => {
+    const withCollaboration = (collaboration: unknown) => ({ collaboration });
+    expect(
+      serverRelationship(withCollaboration({ sender_relationship: "owner" })),
+    ).toBe("owner");
+    expect(
+      serverRelationship(
+        withCollaboration({ sender_relationship: "org_agent" }),
+      ),
+    ).toBe("agent");
+    expect(
+      serverRelationship(withCollaboration({ sender_relationship: "member" })),
+    ).toBe("member");
+    expect(
+      serverRelationship(withCollaboration({ sender_relationship: "contact" })),
+    ).toBe("contact");
+    // "other" and unknown values leave the CLI's own derivation in charge.
+    expect(
+      serverRelationship(withCollaboration({ sender_relationship: "other" })),
+    ).toBeUndefined();
+    expect(
+      serverRelationship(withCollaboration({ sender_relationship: "boss" })),
+    ).toBeUndefined();
+    expect(serverRelationship({})).toBeUndefined();
+    expect(serverMuted(withCollaboration({ muted: true }))).toBe(true);
+    expect(serverMuted({ muted: true })).toBe(true);
+    expect(serverMuted(withCollaboration({ muted: false }))).toBe(false);
+    expect(serverMuted({})).toBe(false);
   });
 
   it("parses bare and display-name addresses", () => {
@@ -220,5 +252,17 @@ describe("thread context", () => {
     });
     expect(fallback.inThread).toBe(true);
     expect(fallback.newer).toBeUndefined();
+    const owned = await describeWake({
+      client: down.client,
+      detail: {
+        ...detail,
+        collaboration: { sender_relationship: "org_agent" },
+      } as unknown as EmailDetail,
+      self,
+      relationship: "other",
+      localInThread: false,
+      signal,
+    });
+    expect(owned.relationship).toBe("agent");
   });
 });

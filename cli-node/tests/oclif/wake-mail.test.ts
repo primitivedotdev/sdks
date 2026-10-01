@@ -817,6 +817,39 @@ describe("Claude wake metadata, mutes and pending notices", () => {
     await wake.close();
   });
 
+  it("completes mail the server reports as muted without waking", async () => {
+    const f = setup();
+    const read = mocks.getEmail.getMockImplementation();
+    mocks.getEmail.mockImplementation(async (...args: unknown[]) => {
+      const response = await read?.(...args);
+      return {
+        data: {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            collaboration: { muted: true, sender_relationship: "contact" },
+          },
+        },
+      };
+    });
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    const handled = await wake.handler(
+      f.delivery as never,
+      new AbortController().signal,
+    );
+    expect(handled).toMatchObject({ succeeded: true });
+    expect(wake.wakeId()).toBeUndefined();
+    expect(existsSync(pendingMailPath(configDir, "work", f.sessionId))).toBe(
+      false,
+    );
+    await wake.close();
+  });
+
   it("still wakes when the thread is muted only for another session", async () => {
     const f = setup();
     await muteThread(configDir, "work", thread, `claude:${randomUUID()}`);

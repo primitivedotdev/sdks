@@ -663,7 +663,8 @@ policy CLI commands, explicit `--notify` consent, and recovery.
 ### Agent address notes
 
 Connected profiles default to their own address. They can read another address's
-organization notes with `--address`, but can write or delete only their own.
+organization notes with `--address`, but can write only their own, and the
+server refuses note deletion from a connected-agent credential.
 Owner logins must pass `--address`.
 
 ```sh
@@ -701,7 +702,10 @@ primitive agent working clear
 ```
 
 Set a claim when work starts and clear it when work ends. Without `--until`, a
-claim expires 4 hours after it is set. `get` prints the claim and its expiry, or
+claim expires 4 hours after it is set. `clear` rewrites the claim with its
+expiry set to now, so it reads as `none` from then on; if that write is refused
+it deletes the note instead, when the credential is allowed to. `--json` reports
+`{ address, cleared, method }` with `method` `expired`, `deleted` or `null`. `get` prints the claim and its expiry, or
 `none` when there is no claim or it has expired; a plain-text value written
 without an expiry is shown as-is. `--json` prints `{ address, state, claim,
 until }` where `state` is `active`, `legacy` or `none`. Address rules and
@@ -860,10 +864,20 @@ primitive threads muted
 primitive threads unmute --id <thread-id>
 ```
 
-Inside a Claude Code or Codex session a mute applies to that session only;
-outside one, or with `--all-sessions`, it applies to every session on the
-profile. Mutes are stored locally beside the profile. Mail in a muted thread is
-still received and readable; its delivery event is completed without a wake. For a supported native coding session,
+A mute is kept on the server for the connected agent's address, so no session
+using that address is woken by the thread, and email reads report it as
+`muted`. `--session-only` instead stores the mute locally beside the profile for
+the current Claude Code or Codex session only. A server without thread mutes
+gets a local mute, with a note saying so: inside a session it applies to that
+session, and outside one, or with `--all-sessions`, to every session on the
+profile. `unmute` removes the server mute and the matching local one, and
+`muted` lists both, each marked `stored: "server"` or `"local"`. Mail in a muted
+thread is still received and readable; its delivery event is completed without
+a wake.
+
+When an email read carries the server's `collaboration.sender_relationship`,
+the wake line and `--brief` use it for an authenticated sender (`org_agent`
+reads as `agent`); otherwise the CLI derives the relationship itself. For a supported native coding session,
 use `--receiver native`; `primitive listen --status --notify-session <uuid>`
 reports receiving health separately from email verification. Test an actual
 idle wake before claiming unattended delivery.

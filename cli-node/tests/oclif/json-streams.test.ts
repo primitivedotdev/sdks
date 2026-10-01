@@ -948,12 +948,17 @@ describe("collaboration commands with --json", () => {
   });
 
   it("threads mute, muted and unmute each print one document", async () => {
+    responder = notFound;
     const muted = await runMerged("threads:mute", ["--id", threadId, "--json"]);
     expect(muted.exitCode).toBe(0);
+    // The API answers 404 for the mute route, as a server without thread
+    // mutes does, so the mute is local and the note is a warning.
     expect(expectOneDocument(muted)).toMatchObject({
       thread_id: threadId,
       muted: true,
       already_muted: false,
+      stored: "local",
+      warnings: [expect.stringContaining("stored locally")],
     });
     const listed = await runMerged("threads:muted", ["--json"]);
     expect(listed.exitCode).toBe(0);
@@ -982,6 +987,35 @@ describe("collaboration commands with --json", () => {
     });
   });
 
+  it("threads mute uses the server when it keeps mutes", async () => {
+    responder = (url, _init, request) => {
+      if (
+        request?.method === "PUT" &&
+        url.pathname === `/v1/threads/${threadId}/mute`
+      )
+        return jsonResponse(200, {
+          success: true,
+          data: {
+            thread_id: threadId,
+            address: self,
+            muted: true,
+            muted_at: "2026-10-01T00:00:00.000Z",
+          },
+        });
+      return notFound();
+    };
+    const muted = await runMerged("threads:mute", ["--id", threadId, "--json"]);
+    expect(muted.exitCode).toBe(0);
+    expect(expectOneDocument(muted)).toEqual({
+      thread_id: threadId,
+      muted: true,
+      scope: "address",
+      stored: "server",
+      address: self,
+      muted_at: "2026-10-01T00:00:00.000Z",
+    });
+  });
+
   it("agent working set, get and clear each print one document", async () => {
     const until = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     const note = (value: unknown) => ({
@@ -1002,9 +1036,11 @@ describe("collaboration commands with --json", () => {
             .value;
           return jsonResponse(200, { success: true, data: note(stored) });
         case "DELETE":
-          if (stored === null) return notFound();
-          stored = null;
-          return jsonResponse(200, { success: true, data: { deleted: true } });
+          // Connected agents may not delete notes; clear must not need to.
+          return jsonResponse(403, {
+            success: false,
+            error: { code: "forbidden", message: "Not allowed" },
+          });
         default:
           return stored === null
             ? notFound()
@@ -1034,6 +1070,7 @@ describe("collaboration commands with --json", () => {
     expect(expectOneDocument(cleared)).toEqual({
       address: self,
       cleared: true,
+      method: "expired",
     });
     const none = await runMerged("agent:working:get", ["--json"]);
     expect(none.exitCode).toBe(0);

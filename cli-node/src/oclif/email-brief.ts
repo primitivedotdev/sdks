@@ -15,6 +15,7 @@ import {
   latestOwnOutbound,
   readThreadContext,
   sentInThread,
+  serverRelationship,
   type ThreadContext,
   type WakeRelationship,
   wakeRelationship,
@@ -215,6 +216,8 @@ async function relationshipFor(input: {
 }): Promise<WakeRelationship> {
   const { detail, sender } = input;
   if (!input.trusted) return "other";
+  const fromServer = serverRelationship(detail);
+  if (fromServer) return fromServer;
   if (input.connected) {
     try {
       const admission = await apiContactPolicy(
