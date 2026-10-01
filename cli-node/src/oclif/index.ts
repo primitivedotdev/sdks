@@ -18,6 +18,11 @@ import {
   AgentNotesSetCommand,
 } from "./commands/agent-notes.js";
 import AgentUpgradeCommand from "./commands/agent-upgrade.js";
+import {
+  AgentWorkingClearCommand,
+  AgentWorkingGetCommand,
+  AgentWorkingSetCommand,
+} from "./commands/agent-working.js";
 import ChatCommand, { ChatReplyCommand } from "./commands/chat.js";
 import {
   ConfigCommand,
@@ -560,6 +565,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   "agent:notes:get": AgentNotesGetCommand,
   "agent:notes:set": AgentNotesSetCommand,
   "agent:notes:delete": AgentNotesDeleteCommand,
+  "agent:working:set": AgentWorkingSetCommand,
+  "agent:working:get": AgentWorkingGetCommand,
+  "agent:working:clear": AgentWorkingClearCommand,
   network: NetworkCommand,
   "network:list": NetworkListCommand,
   "network:members": NetworkMembersCommand,

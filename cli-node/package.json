@@ -145,6 +145,9 @@
       },
       "agent:notes": {
         "description": "Read and maintain organization address notes. Connected profiles default to their own address and can write only their own notes. Use agent notes list|get|set|delete; new notes are private, and updates preserve visibility unless explicitly changed. Commands return JSON by default."
+      },
+      "agent:working": {
+        "description": "Short, expiring work claims stored in the AGENT_WORKING address note. Set a claim when work starts, clear it when work ends, and check a peer's claim with get --address before editing a shared file. Claims are advisory, not locks."
       }
     },
     "topicSeparator": " "
