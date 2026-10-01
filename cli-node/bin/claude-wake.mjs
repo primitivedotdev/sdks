@@ -1,5 +1,10 @@
 import { spawn, spawnSync } from "node:child_process";
-import { duePendingMail, formatPendingMail, readPendingMail } from "./claude-pending-mail.mjs";
+import {
+  clearDeliveredStatus,
+  duePendingMail,
+  formatPendingMail,
+  readPendingMail,
+} from "./claude-pending-mail.mjs";
 
 const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -35,9 +40,7 @@ async function readHookInput() {
     return JSON.stringify({
       hook_event_name: value.hook_event_name,
       session_id: value.session_id.toLowerCase(),
-      ...(value.hook_event_name === "SessionStart"
-        ? { source: "resume" }
-        : {}),
+      ...(value.hook_event_name === "SessionStart" ? { source: "resume" } : {}),
     });
   } catch {
     return null;
@@ -184,6 +187,13 @@ try {
         process.stderr.write(formatPendingMail(notice));
       if (pending.length > 10)
         process.stderr.write(`${pending.length - 10} more pending messages.\n`);
+      clearDeliveredStatus(
+        cli,
+        configDir,
+        profileName,
+        session,
+        pending.slice(0, 10),
+      );
       process.exitCode = 2;
     } else {
       await listen(input);
