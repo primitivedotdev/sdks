@@ -15,6 +15,7 @@ import {
 import { openContactRequestNotices } from "../../src/oclif/contact-request-state.js";
 import { followEmailConversation } from "../../src/oclif/conversation-follow.js";
 import type { ConversationStatus } from "../../src/oclif/conversation-status.js";
+import { muteThread } from "../../src/oclif/thread-mutes.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 const { authenticate, prepare, receive } = vi.hoisted(() => ({
@@ -1555,5 +1556,51 @@ describe("locally solicited notification replies", () => {
     ]);
     expect(await runListen(f.options)).toBe(1);
     expect(f.handleDetail).not.toHaveBeenCalled();
+  });
+});
+
+describe("thread mutes in session notifications", () => {
+  it("completes mail in a thread muted for this session without notifying it", async () => {
+    const f = setup();
+    const thread = randomUUID();
+    f.detail.thread_id = thread;
+    await muteThread(
+      f.options.configDir,
+      "test",
+      thread,
+      `codex:${f.options.notifySession.threadId}`,
+    );
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+      route: { kind: "notification", state: "skipped" },
+    });
+  });
+
+  it("completes mail the server reports as muted without notifying", async () => {
+    const f = setup();
+    f.detail.thread_id = randomUUID();
+    (f.detail as unknown as Record<string, unknown>).collaboration = {
+      muted: true,
+    };
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).not.toHaveBeenCalled();
+    expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+      route: { kind: "notification", state: "skipped" },
+    });
+  });
+
+  it("still notifies when only another session muted the thread", async () => {
+    const f = setup();
+    const thread = randomUUID();
+    f.detail.thread_id = thread;
+    await muteThread(
+      f.options.configDir,
+      "test",
+      thread,
+      `codex:${randomUUID()}`,
+    );
+    expect(await runListen(f.options)).toBe(1);
+    expect(f.handleDetail).toHaveBeenCalledOnce();
   });
 });

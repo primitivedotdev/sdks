@@ -37,6 +37,7 @@ import {
   ListenStateError,
   listenProcessIdentity,
 } from "../../src/oclif/listen-state.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 vi.mock("../../src/oclif/listen-state.js", async (original) => {
@@ -146,6 +147,11 @@ function childFiles() {
     child,
     `
     import { backgroundListenToken, runBackgroundListen } from './listen-background.js';
+    if (process.env.PRIMITIVE_LISTEN_SUPERVISOR === '1') {
+      const { runBackgroundListenSupervisor } = await import('./listen-background.js');
+      await runBackgroundListenSupervisor();
+      process.exit(0);
+    }
     import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
     let policyModule;
     if (process.env.TEST_LISTEN_MODE === 'policy-retry' || process.env.TEST_EXPECT_AUTH) {
@@ -385,6 +391,44 @@ describe("listener lifecycle state", () => {
       healthy: false,
       reason: "exited",
     });
+  });
+
+  function writeSupervisor(token: string, phase: string, updatedAt: number) {
+    writeMailJson(join(stateFile(), "..", "supervisor.json"), {
+      version: 1,
+      token,
+      pid: process.pid,
+      identity: listenProcessIdentity(process.pid),
+      phase,
+      updatedAt,
+      failureCode: null,
+    });
+  }
+
+  it("does not treat a supervisor heartbeat dated in the future as fresh", async () => {
+    const f = running(undefined, undefined, { detached: true });
+    await vi.waitFor(() => expect(saved().phase).toBe("receiving"));
+    writeSupervisor(f.token, "running", Date.now() + 60_000);
+    expect(backgroundListenStatus(target)).toMatchObject({
+      healthy: false,
+      reason: "stale",
+    });
+    writeSupervisor(f.token, "running", Date.now());
+    expect(backgroundListenStatus(target)).toMatchObject({ healthy: true });
+  });
+
+  it("replaces a worker whose supervisor has failed instead of reusing it", async () => {
+    const f = running(undefined, undefined, { detached: true });
+    await vi.waitFor(() => expect(saved().phase).toBe("receiving"));
+    writeSupervisor(f.token, "failed", Date.now());
+    const exits = join(directory, "exits.mjs");
+    writeFileSync(exits, "process.exit(0);");
+    // The orphan is stopped, then a fresh supervised start is attempted
+    // (this fixture entrypoint exits before becoming ready).
+    await expect(
+      startBackgroundListen({ ...target, argv: [exits] }),
+    ).rejects.toThrow("did not become ready");
+    await f.done;
   });
 
   it("retains a live legacy macOS worker and stops only its private generation", async () => {
@@ -810,6 +854,77 @@ describe("detached synthetic listener processes", () => {
     );
     expect((await stopBackgroundListen(target)).phase).toBe("stopped");
   }, 15_000);
+
+  it.skipIf(process.platform === "win32")(
+    "restarts a worker that exits unexpectedly and stops the supervisor explicitly",
+    async () => {
+      const child = childFiles();
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        env: { TEST_LISTEN_TARGET: JSON.stringify(target) },
+        startupTimeoutMs: 5000,
+      });
+      const firstPid = result.status.pid;
+      expect(result.status.supervisorPid).toBeGreaterThan(0);
+      expect(firstPid).toBeGreaterThan(0);
+      process.kill(firstPid as number, "SIGKILL");
+      await vi.waitFor(
+        () => {
+          const current = backgroundListenStatus(target);
+          expect(current).toMatchObject({ phase: "receiving", healthy: true });
+          expect(current.pid).not.toBe(firstPid);
+        },
+        { timeout: 5000 },
+      );
+      expect((await stopBackgroundListen(target)).reason).toBe("stopped");
+      const stoppedPid = backgroundListenStatus(target).pid;
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      expect(backgroundListenStatus(target).pid).toBe(stoppedPid);
+    },
+    12_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "stops after five unexpected exits within ten minutes",
+    async () => {
+      const child = childFiles();
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        env: { TEST_LISTEN_TARGET: JSON.stringify(target) },
+        startupTimeoutMs: 5000,
+      });
+      let pid = result.status.pid as number;
+      for (let exit = 1; exit <= 5; exit++) {
+        process.kill(pid, "SIGKILL");
+        if (exit < 5) {
+          await vi.waitFor(
+            () => {
+              const current = backgroundListenStatus(target);
+              expect(current).toMatchObject({
+                phase: "receiving",
+                healthy: true,
+              });
+              expect(current.pid).not.toBe(pid);
+            },
+            { timeout: 10_000 },
+          );
+          pid = backgroundListenStatus(target).pid as number;
+        }
+      }
+      await vi.waitFor(
+        () =>
+          expect(backgroundListenStatus(target)).toMatchObject({
+            phase: "failed",
+            healthy: false,
+            failureCode: "restart-budget-exhausted",
+          }),
+        { timeout: 5000 },
+      );
+    },
+    30_000,
+  );
 
   it("rejects a profile replaced during child startup before it can create another receiver", async () => {
     const child = childFiles();

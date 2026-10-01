@@ -49,6 +49,7 @@ import { contactRequestSessionKey } from "../contact-request-commands.js";
 import { formatAlreadySentNotice } from "../idempotent-replay-banner.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
+import { warnIfSharedProfile } from "../profile-session-check.js";
 import { reconcileChatSend } from "../reconcile-chat-send.js";
 import {
   isConnectedChatCredential,
@@ -59,6 +60,7 @@ import {
   apiResultHttpStatus,
   buildFollowUpCommand,
   classifySendError,
+  deriveSendIdempotencyKey,
   type FollowUpCommand,
   formatDeletedEarlierSendNotice,
   formatPriorRepliesWarning,
@@ -67,6 +69,7 @@ import {
   priorRepliesThatWentOut,
   SEND_OUTCOME_HELP,
   type SendOutcome,
+  sendIdentityFields,
   sendOutcomeExitCode,
   sentHistoryWindowStart,
   serializeErrorPayload,
@@ -151,6 +154,7 @@ type ChatFollowUpCommandKind =
   | "continue_active_chat"
   | "continue_chat"
   | "continue_chat_explicit"
+  | "find_sent_email_by_idempotency_key"
   | "inspect_inbox"
   | "inspect_reply"
   | "inspect_sent_email"
@@ -706,6 +710,11 @@ type ChatEnvelopeOutcomeFields = {
   outcome: SendOutcome;
   exit_code: number;
   outcome_message: string;
+  // The send record's id once known, and the idempotency key the send
+  // used, so an uncertain outcome can be reconciled with
+  // `primitive sent get --idempotency-key <key>`.
+  sent_email_id: string | null;
+  idempotency_key: string | null;
   follow_up_commands: ChatFollowUpCommand[];
   prior_replies: EmailDetailReply[] | null;
   http_status: number | null;
@@ -753,6 +762,7 @@ export function buildChatJsonEnvelope(
     outcome,
     exit_code: sendOutcomeExitCode(outcome),
     outcome_message: formatChatRepliedMessage(context, outcome),
+    ...sendIdentityFields({ idempotencyKey: null, sent: context.sent }),
     sent: context.sent,
     reply: context.reply,
     local_chat_id: context.localChatId ?? null,
@@ -789,6 +799,7 @@ export function buildChatAwaitingReplyEnvelope(
     outcome: options.outcome,
     exit_code: sendOutcomeExitCode(options.outcome),
     outcome_message: formatChatAwaitingReplyMessage(context, options),
+    ...sendIdentityFields({ idempotencyKey: null, sent: context.sent }),
     sent: context.sent,
     reply: null,
     local_chat_id: null,
@@ -908,6 +919,7 @@ export function buildChatSendFailureEnvelope(params: {
   error: unknown;
   exitCode?: number;
   httpStatus?: number;
+  idempotencyKey?: string | null;
   noun: "Message" | "Reply";
   outcome: "already_sent" | "not_sent" | "uncertain";
   outcomeMessage?: string;
@@ -926,6 +938,25 @@ export function buildChatSendFailureEnvelope(params: {
         "--id",
         sent.id,
       ]),
+    );
+  }
+  if (
+    params.outcome === "uncertain" &&
+    sent === null &&
+    params.idempotencyKey
+  ) {
+    followUps.push(
+      buildCommand(
+        "find_sent_email_by_idempotency_key",
+        "Look up this attempt by its idempotency key before retrying",
+        [
+          "primitive",
+          "sent",
+          "get",
+          "--idempotency-key",
+          params.idempotencyKey,
+        ],
+      ),
     );
   }
   if (params.outcome === "uncertain" && params.sentHistorySince !== undefined) {
@@ -955,6 +986,7 @@ export function buildChatSendFailureEnvelope(params: {
             params.outcome,
             params.httpStatus,
           )),
+    ...sendIdentityFields({ idempotencyKey: params.idempotencyKey, sent }),
     sent,
     reply: null,
     local_chat_id: null,
@@ -1365,7 +1397,7 @@ class ChatCommand extends Command {
     }),
     json: Flags.boolean({
       description:
-        "Emit a structured JSON envelope { outcome, exit_code, outcome_message, sent, reply, response_body, response_body_format, match, follow_up_commands, prior_replies } on stdout instead of the human-readable transcript. Printed for every outcome; reply is null when no reply arrived.",
+        "Emit one JSON envelope { outcome, exit_code, outcome_message, sent_email_id, idempotency_key, sent, reply, response_body, response_body_format, match, follow_up_commands, prior_replies, warnings } on stdout instead of the human-readable transcript, with nothing on stderr. Printed for every outcome; reply is null when no reply arrived. Reconcile an uncertain send with `primitive sent get --idempotency-key <key>`.",
     }),
     quiet: Flags.boolean({
       description:
@@ -1419,12 +1451,14 @@ class ChatCommand extends Command {
       context: ChatOutputContext;
       outcome: "already_sent" | "replied";
     } | null;
+    idempotencyKey: string | null;
     outcomeReported: boolean;
     phase: "pre_send" | "sending" | "sent";
     priorReplies: EmailDetailReply[] | null;
     sendStartedAtIso: string | null;
   } = {
     baseContext: null,
+    idempotencyKey: null,
     replied: null,
     outcomeReported: false,
     phase: "pre_send",
@@ -1478,6 +1512,7 @@ class ChatCommand extends Command {
               error: { message: detail },
               exitCode:
                 outcome === "not_sent" ? thrownErrorExitCode(error) : undefined,
+              idempotencyKey: this.chatProgress.idempotencyKey,
               noun,
               outcome,
               outcomeMessage:
@@ -1583,6 +1618,10 @@ class ChatCommand extends Command {
             apiBaseUrl: flags["api-base-url"],
             configDir: this.config.configDir,
           });
+        warnIfSharedProfile({
+          configDir: this.config.configDir,
+          connectedAgent: auth.connectedAgent,
+        });
         let asyncSessionKey: string | null = null;
         if (flags.async) {
           if (auth.connectedAgent) {
@@ -1746,6 +1785,34 @@ class ChatCommand extends Command {
             releaseState();
           }
         }
+        const replyBody = {
+          body_text: message,
+          from,
+          ...(attachments !== undefined ? { attachments } : {}),
+        };
+        const sendBody = {
+          from,
+          to: args.recipient,
+          subject,
+          body_text: message,
+          ...(flags["in-reply-to"] !== undefined
+            ? { in_reply_to: flags["in-reply-to"] }
+            : {}),
+          ...(attachments !== undefined ? { attachments } : {}),
+        };
+        // A connected receipt carries its own random key. Otherwise the
+        // key is derived from the content, exactly as `send` and `reply`
+        // derive theirs, so an identical retry is still deduplicated and
+        // the key is known even when the outcome is uncertain.
+        const derivedIdempotencyKey =
+          parentReply !== undefined
+            ? deriveSendIdempotencyKey("reply", {
+                ...replyBody,
+                in_reply_to_email_id: parentReply.id,
+              })
+            : deriveSendIdempotencyKey("send", sendBody);
+        if (!isConnectedChatCredential(auth.apiKey))
+          this.chatProgress.idempotencyKey = derivedIdempotencyKey;
         const receipt = beginChatReceipt(
           this.config.configDir,
           scope,
@@ -1753,6 +1820,8 @@ class ChatCommand extends Command {
           { connected: isConnectedChatCredential(auth.apiKey) },
         );
         const sentAtIso = receipt.data.sent_at;
+        if (receipt.data.idempotency_key)
+          this.chatProgress.idempotencyKey = receipt.data.idempotency_key;
         const restoreReceiptProgress = () => {
           this.chatProgress.sendStartedAtIso = sentAtIso;
           if (receipt.data.sent) {
@@ -1903,40 +1972,28 @@ class ChatCommand extends Command {
             await connectedWait.uncertain();
           }
         }
+        const idempotencyKey =
+          receipt.data.sent?.client_idempotency_key ??
+          receipt.data.idempotency_key ??
+          derivedIdempotencyKey;
+        this.chatProgress.idempotencyKey = idempotencyKey;
         const sendResult =
           receipt.data.sent !== null
             ? { data: { data: receipt.data.sent }, error: undefined }
             : parentReply !== undefined
               ? await replyToEmail({
-                  body: {
-                    body_text: message,
-                    from,
-                    ...(attachments !== undefined ? { attachments } : {}),
-                  },
+                  body: replyBody,
                   client: apiClient.client,
                   signal: connectedWait?.receiver.signal,
-                  headers: receipt.data.idempotency_key
-                    ? { "Idempotency-Key": receipt.data.idempotency_key }
-                    : undefined,
+                  headers: { "Idempotency-Key": idempotencyKey },
                   path: { id: parentReply.id },
                   responseStyle: "fields",
                 })
               : await sendEmail({
-                  body: {
-                    from,
-                    to: args.recipient,
-                    subject,
-                    body_text: message,
-                    ...(flags["in-reply-to"] !== undefined
-                      ? { in_reply_to: flags["in-reply-to"] }
-                      : {}),
-                    ...(attachments !== undefined ? { attachments } : {}),
-                  },
+                  body: sendBody,
                   client: apiClient.client,
                   signal: connectedWait?.receiver.signal,
-                  headers: receipt.data.idempotency_key
-                    ? { "Idempotency-Key": receipt.data.idempotency_key }
-                    : undefined,
+                  headers: { "Idempotency-Key": idempotencyKey },
                   responseStyle: "fields",
                 });
 
@@ -2045,6 +2102,7 @@ class ChatCommand extends Command {
             outcome,
             exit_code: sendOutcomeExitCode(outcome),
             outcome_message: message,
+            ...sendIdentityFields({ idempotencyKey: null, sent }),
             sent,
             reply: null,
             local_chat_id: null,
@@ -2311,6 +2369,7 @@ class ChatCommand extends Command {
     );
     const envelope = buildChatSendFailureEnvelope({
       error: null,
+      idempotencyKey: this.chatProgress.idempotencyKey,
       noun: params.noun,
       outcome: params.outcome,
       outcomeMessage: formatSendRecordFailureSummary(
@@ -2364,6 +2423,7 @@ class ChatCommand extends Command {
     const envelope = buildChatSendFailureEnvelope({
       error: errorPayload,
       httpStatus,
+      idempotencyKey: this.chatProgress.idempotencyKey,
       noun: params.noun,
       outcome,
       outcomeMessage:
@@ -2447,7 +2507,7 @@ export class ChatReplyCommand extends Command {
     }),
     json: Flags.boolean({
       description:
-        "Emit a structured JSON envelope { outcome, exit_code, outcome_message, sent, reply, response_body, response_body_format, match, follow_up_commands, prior_replies } on stdout instead of the human-readable transcript. Printed for every outcome; reply is null when no reply arrived.",
+        "Emit one JSON envelope { outcome, exit_code, outcome_message, sent_email_id, idempotency_key, sent, reply, response_body, response_body_format, match, follow_up_commands, prior_replies, warnings } on stdout instead of the human-readable transcript, with nothing on stderr. Printed for every outcome; reply is null when no reply arrived. Reconcile an uncertain send with `primitive sent get --idempotency-key <key>`.",
     }),
     quiet: Flags.boolean({
       description:

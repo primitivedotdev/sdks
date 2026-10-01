@@ -255,7 +255,9 @@ try {
   const lenient = await run(["inbox", "next", "--json"]);
   assert.equal(lenient.code, 1);
   assert.equal(JSON.parse(lenient.stdout).error.code, "reply_state_unsupported");
-  assert.match(lenient.stderr, /does not support reply state yet/);
+  // With --json the notice travels in the one JSON document; stderr stays empty.
+  assert.match(lenient.stdout, /does not support reply state yet/);
+  assert.equal(lenient.stderr, "");
   const lenientList = await run(["emails", "list", "--awaiting", "you"]);
   assert.equal(lenientList.code, 1);
   assert.equal(lenientList.stdout, "");
@@ -277,7 +279,8 @@ try {
   const noAutomated = await run(["inbox", "next", "--json"]);
   assert.equal(noAutomated.code, 1);
   assert.equal(JSON.parse(noAutomated.stdout).error.code, "automated_filter_unsupported");
-  assert.match(noAutomated.stderr, /rejected the `automated` filter/);
+  assert.match(noAutomated.stdout, /rejected the `automated` filter/);
+  assert.equal(noAutomated.stderr, "");
   const noAutomatedIncluded = await run(["inbox", "next", "--include-automated", "--json"]);
   assert.equal(noAutomatedIncluded.code, 0, noAutomatedIncluded.stderr);
   assert.equal(JSON.parse(noAutomatedIncluded.stdout).automated, null);

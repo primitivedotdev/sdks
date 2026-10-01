@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "vitest";
 import {
+  claudeWakeHookStatus,
   installClaudeWakeHook,
   uninstallClaudeWakeHook,
 } from "../../src/oclif/claude-wake-install.js";
@@ -33,6 +34,7 @@ function fixture() {
   const cliPath = join(bin, "run.js");
   writeFileSync(cliPath, "", { mode: 0o600 });
   writeFileSync(join(bin, "claude-wake.mjs"), "", { mode: 0o600 });
+  writeFileSync(join(bin, "claude-pending-mail.mjs"), "", { mode: 0o600 });
   return { root, claudeDir, configDir, cliPath };
 }
 
@@ -84,6 +86,7 @@ test("external hook installer preserves other settings and replaces only its own
   assert.deepEqual(settings.hooks.Stop[1], original.hooks.Stop[1]);
   assert.equal(settings.hooks.Stop.length, 3);
   assert.equal(settings.hooks.SessionStart.length, 2);
+  assert.equal(settings.hooks.PostToolUse.length, 1);
   assert.equal(settings.hooks.SessionStart[1].matcher, "resume");
   const hook = settings.hooks.Stop[2].hooks[0];
   assert.deepEqual(settings.hooks.SessionStart[1].hooks[0], hook);
@@ -98,6 +101,33 @@ test("external hook installer preserves other settings and replaces only its own
     sessionA,
     "primitive-agent-wake-v1",
   ]);
+  assert.deepEqual(settings.hooks.PostToolUse[0].hooks[0].args, [
+    realpathSync(join(dirname(cliPath), "claude-pending-mail.mjs")),
+    realpathSync(cliPath),
+    configDir,
+    "session-a",
+    "a@example.com",
+    sessionA,
+    "primitive-pending-mail-v1",
+  ]);
+  assert.deepEqual(claudeWakeHookStatus(options), {
+    installed: true,
+    lastFiredAt: null,
+    liveness: "unknown",
+  });
+  const firedAt = "2026-10-01T15:00:00.000Z";
+  writeMailJson(
+    join(
+      agentProfileDirectory(configDir, "session-a"),
+      `pending-mail-${sessionA}.fired.json`,
+    ),
+    { version: 1, at: firedAt },
+  );
+  assert.deepEqual(claudeWakeHookStatus(options), {
+    installed: true,
+    lastFiredAt: firedAt,
+    liveness: "unknown",
+  });
 });
 
 test("external hook installer leaves malformed existing settings untouched", () => {
@@ -134,6 +164,10 @@ test("external hook installer leaves malformed existing settings untouched", () 
   );
   assert.equal(
     JSON.parse(readFileSync(settingsPath, "utf8")).hooks.SessionStart.length,
+    1,
+  );
+  assert.equal(
+    JSON.parse(readFileSync(settingsPath, "utf8")).hooks.PostToolUse.length,
     1,
   );
 });
@@ -225,6 +259,7 @@ test("external hook installer keeps sibling hooks and entry metadata", () => {
   const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
   assert.equal(settings.hooks.Stop.length, 2);
   assert.equal(settings.hooks.SessionStart.length, 2);
+  assert.equal(settings.hooks.PostToolUse.length, 1);
   assert.deepEqual(settings.hooks.SessionStart[0], {
     matcher: "resume",
     custom: "keep",
@@ -298,6 +333,7 @@ test("two exact Claude sessions retain separate hooks and reinstallation changes
   );
   assert.equal(settings.hooks.Stop.length, 2);
   assert.equal(settings.hooks.SessionStart.length, 2);
+  assert.equal(settings.hooks.PostToolUse.length, 2);
   assert.deepEqual(
     settings.hooks.Stop.map(
       (entry: { hooks: Array<{ args: string[] }> }) => entry.hooks[0].args[5],
@@ -356,6 +392,7 @@ test("uninstall removes only the exact profile and session and is idempotent", (
   settings = JSON.parse(once);
   assert.equal(settings.hooks.Stop.length, 1);
   assert.equal(settings.hooks.SessionStart.length, 1);
+  assert.equal(settings.hooks.PostToolUse.length, 1);
   assert.equal(settings.hooks.Stop[0].hooks[0].args[5], sessionB);
   assert.equal(settings.hooks.SessionStart[0].hooks[0].args[5], sessionB);
   assert.equal(uninstallClaudeWakeHook(second), true);
@@ -502,6 +539,7 @@ test("legacy generic hook stays available while new sessions gain pinned hooks",
   );
   assert.equal(settings.hooks.Stop.length, 3);
   assert.equal(settings.hooks.SessionStart.length, 1);
+  assert.equal(settings.hooks.PostToolUse.length, 1);
   assert.equal(settings.hooks.Stop[0].hooks[0].args.length, 4);
   assert.equal(settings.hooks.Stop[1].hooks[0].args[3], oldProfile);
   assert.equal(settings.hooks.Stop[2].hooks[0].args[5], sessionA);

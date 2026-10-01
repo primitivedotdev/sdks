@@ -15,6 +15,8 @@ export type AddressNotesRequest = {
   visibility?: "private" | "public";
   ifAbsent?: boolean;
   ifVersion?: string;
+  /** Aborts a read; only `get` uses it. */
+  signal?: AbortSignal;
 };
 
 export class AddressNotesApiError extends Error {
@@ -110,6 +112,7 @@ async function getNote(
   client: Client,
   address: string,
   name: string,
+  signal?: AbortSignal,
 ): Promise<Note> {
   const data = await result<unknown>(
     client.get({
@@ -117,6 +120,7 @@ async function getNote(
       url: "/address-notes/{address}/{name}",
       path: { address, name },
       responseStyle: "fields",
+      ...(signal ? { signal } : {}),
     }),
   );
   return note(data, address, name);
@@ -166,7 +170,8 @@ export async function runAddressNotesRequest(
   }
 
   const name = addressNoteName(request.name ?? "");
-  if (request.action === "get") return getNote(client, address, name);
+  if (request.action === "get")
+    return getNote(client, address, name, request.signal);
 
   if (request.ifAbsent && request.ifVersion !== undefined)
     throw new Error("Use either --if-absent or --if-version.");

@@ -20,6 +20,29 @@ Most commands print human-readable output by default. Commands that expose JSON 
 .B --json
 flag or use generated operation output that can be piped into tools such as
 .BR jq (1).
+.PP
+With
+.BR --json ,
+stdout is exactly one JSON document, on success and on failure, and stderr
+stays empty, so output merged with 2>&1 still parses. Notices the command
+would print on stderr go in the document's
+.B warnings
+array; a failure adds
+.B error
+and
+.BR exit_code .
+Generated API commands keep their usual stdout shape with
+.BR --json :
+the data payload only. They do not print the
+.B next cursor:
+line then; add
+.B --envelope
+to get the full response envelope, with the pagination cursor in
+.B meta.cursor
+and empty-result hints in
+.BR summary .
+.B primitive listen
+streams JSONL and is not covered by this rule.
 .SH LOCAL WEBHOOK EVENTS
 .PP
 .B primitive listen
@@ -312,6 +335,19 @@ chat sent the message but no reply arrived before the timeout. Wait; do not rese
 .B 4
 .BR uncertain :
 transport error, conflict, server error, or a send record with status unknown. The message may have gone out; check sent history before retrying.
+.PP
+Every
+.B --json
+envelope from these commands carries
+.B sent_email_id
+(null until a send record is known) and
+.BR idempotency_key ,
+including on an uncertain outcome. Reconcile with
+.BR "primitive sent get --idempotency-key KEY" ;
+not_found means no record is visible yet, not that nothing was created, so
+retry only with the same
+.BR --idempotency-key ,
+never a new one.
 .SH ENVIRONMENT
 .TP
 .B PRIMITIVE_API_KEY

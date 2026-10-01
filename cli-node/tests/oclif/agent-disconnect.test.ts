@@ -103,6 +103,7 @@ describe("connected agent self-disconnect", () => {
     const cliPath = join(bin, "run.js");
     writeFileSync(cliPath, "");
     writeFileSync(join(bin, "claude-wake.mjs"), "");
+    writeFileSync(join(bin, "claude-pending-mail.mjs"), "");
     saved(directory, "work", true);
     const otherSession = "33333333-3333-4333-8333-333333333333";
     const env = { CLAUDE_CONFIG_DIR: claudeDir };
@@ -139,6 +140,8 @@ describe("connected agent self-disconnect", () => {
     );
     expect(settings.hooks.Stop).toHaveLength(1);
     expect(settings.hooks.Stop[0].hooks[0].args[5]).toBe(otherSession);
+    expect(settings.hooks.PostToolUse).toHaveLength(1);
+    expect(settings.hooks.PostToolUse[0].hooks[0].args[5]).toBe(otherSession);
   });
 
   it("revokes only the selected profile at its pinned origin and preserves evidence", async () => {

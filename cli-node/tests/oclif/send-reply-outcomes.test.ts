@@ -28,8 +28,15 @@ vi.mock("../../src/oclif/conversation-follow.js", () => ({
   followEmailConversation: mocks.followEmailConversation,
 }));
 
-import ReplyCommand from "../../src/oclif/commands/reply.js";
-import SendCommand from "../../src/oclif/commands/send.js";
+import { COMMANDS } from "../../src/oclif/index.js";
+
+// Run through the production registry, which applies the --json output
+// guard every installed command gets.
+type Runnable = {
+  run(argv: string[], options: { root: string }): Promise<unknown>;
+};
+const ReplyCommand = COMMANDS.reply as unknown as Runnable;
+const SendCommand = COMMANDS.send as unknown as Runnable;
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 
@@ -239,6 +246,8 @@ describe("reply outcomes", () => {
       exit_code: 0,
       outcome_message:
         "Reply sent (queued for delivery, id sent-1). Do not resend.",
+      sent_email_id: "sent-1",
+      idempotency_key: expect.stringMatching(/^primitive-reply-[0-9a-f]{64}$/),
       sent: sendResult(),
       http_status: null,
       error: null,
@@ -277,7 +286,9 @@ describe("reply outcomes", () => {
     expect(mocks.getEmail).toHaveBeenCalledWith(
       expect.objectContaining({ path: { id: "email-1" } }),
     );
-    expect(result.stderr).toContain(
+    // --json moves the warning from stderr into the envelope.
+    expect(result.stderr).toBe("");
+    expect(envelope.warnings).toContain(
       "This email already has 1 outgoing email, most recently at 2026-09-01T11:00:00.000Z (sent id sent-prior). These may include activity updates and do not prove a completed answer. Sending this reply.",
     );
     expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
@@ -319,7 +330,8 @@ describe("reply outcomes", () => {
     const result = await run("reply", replyArgs("--json"));
     const envelope = JSON.parse(result.stdout);
 
-    expect(result.stderr).toContain(
+    expect(result.stderr).toBe("");
+    expect(envelope.warnings).toContain(
       "Could not check whether you already replied to email email-1 (the email lookup returned HTTP 503). Prior-reply check skipped; sending the reply anyway.",
     );
     expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
@@ -376,10 +388,10 @@ describe("reply outcomes", () => {
       outcome: "not_sent",
       exit_code: 1,
       sent: { id: "sent-1", status: "gate_denied" },
+      outcome_message:
+        "Reply not sent: the earlier identical attempt (sent id sent-1) has status gate_denied. Nothing went out; fix the problem before retrying.",
     });
-    expect(result.stderr).toBe(
-      "Reply not sent: the earlier identical attempt (sent id sent-1) has status gate_denied. Nothing went out; fix the problem before retrying.\n",
-    );
+    expect(result.stderr).toBe("");
   });
 
   it("reports not_sent with exit 1 for a definitive rejection", async () => {
@@ -414,8 +426,9 @@ describe("reply outcomes", () => {
       sent: null,
       follow_up_commands: [],
     });
-    expect(result.stderr).toContain("(HTTP 410 sent_email_deleted)");
-    expect(result.stderr).toContain("Nothing new was sent.");
+    expect(result.stderr).toBe("");
+    expect(envelope.outcome_message).toContain("(HTTP 410 sent_email_deleted)");
+    expect(envelope.outcome_message).toContain("Nothing new was sent.");
   });
 
   it("reports uncertain with exit 4 for a server error", async () => {
@@ -426,10 +439,23 @@ describe("reply outcomes", () => {
 
     expect(result.exitCode).toBe(4);
     expect(envelope.outcome).toBe("uncertain");
-    expect(envelope.follow_up_commands[0]).toMatchObject({
-      kind: "list_recent_sent_emails",
-    });
-    expect(result.stderr).toContain(
+    expect(envelope.sent_email_id).toBeNull();
+    expect(envelope.idempotency_key).toMatch(/^primitive-reply-[0-9a-f]{64}$/);
+    expect(envelope.follow_up_commands).toEqual([
+      expect.objectContaining({
+        kind: "find_sent_email_by_idempotency_key",
+        argv: [
+          "primitive",
+          "sent",
+          "get",
+          "--idempotency-key",
+          envelope.idempotency_key,
+        ],
+      }),
+      expect.objectContaining({ kind: "list_recent_sent_emails" }),
+    ]);
+    expect(result.stderr).toBe("");
+    expect(envelope.outcome_message).toContain(
       "Reply send outcome uncertain (HTTP 502): it may or may not have gone out.",
     );
   });
@@ -486,8 +512,9 @@ describe("send outcomes", () => {
 
     expect(result.exitCode).toBeUndefined();
     expect(envelope).toMatchObject({ outcome: "already_sent", exit_code: 0 });
-    expect(result.stderr).toContain("Nothing new was sent.");
-    expect(result.stderr).not.toMatch(/vary|fresh copy/i);
+    expect(result.stderr).toBe("");
+    expect(envelope.outcome_message).toContain("Nothing new was sent.");
+    expect(result.stdout).not.toMatch(/vary|fresh copy/i);
   });
 
   it.each([
@@ -559,7 +586,8 @@ describe("send outcomes", () => {
     expect(
       envelope.follow_up_commands.map((c: { kind: string }) => c.kind),
     ).toEqual(["inspect_sent_email", "list_recent_sent_emails"]);
-    expect(result.stderr).toContain("may or may not have gone out");
+    expect(result.stderr).toBe("");
+    expect(envelope.outcome_message).toContain("may or may not have gone out");
   });
 
   it("reports uncertain when the API accepts the send but returns no record", async () => {

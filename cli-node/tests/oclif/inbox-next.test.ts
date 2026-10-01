@@ -973,7 +973,10 @@ describe("inbox next command", () => {
     const json = JSON.parse(result.stdout);
     expect(json.outcome).toBe("error");
     expect(json.error.code).toBe("reply_state_unsupported");
-    expect(result.stderr).toContain("does not support reply state yet");
+    expect(result.stderr).toBe("");
+    expect(json.warnings.join("\n")).toContain(
+      "does not support reply state yet",
+    );
 
     inbox.mode = "old-strict";
     const strict = await runCommand([]);
@@ -1000,7 +1003,10 @@ describe("inbox next command", () => {
     const json = JSON.parse(result.stdout);
     expect(json.outcome).toBe("empty");
     expect(json.automated_awaiting).toBeNull();
-    expect(result.stderr).toContain("Could not count automated mail");
+    expect(result.stderr).toBe("");
+    expect(json.warnings.join("\n")).toContain(
+      "Could not count automated mail",
+    );
   });
 
   it("exits 1 with automated_filter_unsupported against a server without the filter", async () => {
@@ -1011,7 +1017,8 @@ describe("inbox next command", () => {
     const json = JSON.parse(result.stdout);
     expect(json.outcome).toBe("error");
     expect(json.error.code).toBe("automated_filter_unsupported");
-    expect(result.stderr).toContain(
+    expect(result.stderr).toBe("");
+    expect(json.warnings.join("\n")).toContain(
       "does not support the `automated` filter yet",
     );
 
@@ -1053,7 +1060,7 @@ describe("inbox next command", () => {
       code: "unauthorized",
       message: "Invalid API key",
     });
-    expect(result.stderr).toContain("unauthorized");
+    expect(result.stderr).toBe("");
   });
 
   it("--wait takes the baseline first, then returns mail that arrives", async () => {

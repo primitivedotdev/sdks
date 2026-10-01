@@ -554,13 +554,31 @@ describe("chat send outcomes", () => {
       exit_code: 4,
       http_status: status ?? null,
       sent: null,
+      sent_email_id: null,
+      idempotency_key: expect.stringMatching(/^primitive-send-[0-9a-f]{64}$/),
     });
     expect(envelope.follow_up_commands).toEqual([
+      expect.objectContaining({
+        kind: "find_sent_email_by_idempotency_key",
+        argv: [
+          "primitive",
+          "sent",
+          "get",
+          "--idempotency-key",
+          envelope.idempotency_key,
+        ],
+      }),
       expect.objectContaining({
         kind: "list_recent_sent_emails",
         argv: expect.arrayContaining(["primitive", "sent", "list"]),
       }),
     ]);
+    // The key the envelope reports is the one the request carried.
+    expect(mocks.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: { "Idempotency-Key": envelope.idempotency_key },
+      }),
+    );
     expectNoResendCommand(envelope);
     expect(result.stderr).toContain("may or may not have gone out");
   });
@@ -854,7 +872,12 @@ describe("chat send outcomes", () => {
 
     expect(retry.exitCode).toBe(4);
     expect(envelope.outcome).toBe("uncertain");
+    // The retry reports the same content-derived key as the first attempt.
+    expect(envelope.idempotency_key).toBe(first.idempotency_key);
     expect(envelope.follow_up_commands).toEqual([
+      expect.objectContaining({
+        kind: "find_sent_email_by_idempotency_key",
+      }),
       expect.objectContaining({
         kind: "list_recent_sent_emails",
         argv: firstHistory.argv,

@@ -145,7 +145,7 @@ try {
   const wrongSession='22222222-2222-4222-8222-222222222222';
   const asyncEnv={PRIMITIVE_AGENT_PROFILE:'work',CODEX_SESSION_ID:wrongSession,CODEX_THREAD_ID:wrongSession};
   const unbound=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:asyncEnv,exit:1});
-  assert.match(unbound.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
+  assert.match(unbound.stdout.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);assert.equal(unbound.stderr,'','--json keeps stderr empty');
   assert.equal(await readFile(trace,'utf8').catch(()=>''),'','an unbound profile must not attempt any API call');
   await writeFile(join(config,'agent-connections','profiles','work','setup.json'),JSON.stringify({
     version:1,session,receiverMode:'external',invitationHash:profile.invitation_hash,since:stamp,contactRequests:false,
@@ -165,13 +165,13 @@ try {
   await mkdir(otherProfile,{recursive:true,mode:0o700});
   await writeFile(join(otherProfile,'connection.json'),JSON.stringify(profile),{mode:0o600});
   const differentProfile=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:{PRIMITIVE_AGENT_PROFILE:'other',CLAUDE_CODE_SESSION_ID:session},exit:1});
-  assert.match(differentProfile.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
+  assert.match(differentProfile.stdout.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);assert.equal(differentProfile.stderr,'','--json keeps stderr empty');
   assert.equal(await readFile(trace,'utf8').catch(()=>''),'','another selected profile must not reuse the verified setup');
   const mixedRuntime=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:{PRIMITIVE_AGENT_PROFILE:'work',CLAUDE_CODE_SESSION_ID:session,CODEX_SESSION_ID:wrongSession},exit:1});
-  assert.match(mixedRuntime.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
+  assert.match(mixedRuntime.stdout.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);assert.equal(mixedRuntime.stderr,'','--json keeps stderr empty');
   assert.equal(await readFile(trace,'utf8').catch(()=>''),'','mixed runtime identities must not attempt any API call');
   const mismatched=await run(['chat',peer,'hello','--async','--json'],{preload:tracePreload,env:asyncEnv,exit:1});
-  assert.match(mismatched.stderr.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);
+  assert.match(mismatched.stdout.replace(/›/g,' ').replace(/\s+/g,' '),/exact current coding session/);assert.equal(mismatched.stderr,'','--json keeps stderr empty');
   assert.equal(await readFile(trace,'utf8').catch(()=>''),'','another session must not attempt any API call');
   assert.equal(hits,before,'wrong-session async chat must not send email');
   console.log('Built CLI: connected commands, exact-session async refusal without network, contact notification flags, and offline status pass. No external network or real email.');

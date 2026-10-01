@@ -97,8 +97,11 @@ try {
   ] } });
   result = await cli([...replyArgs, "--json"]);
   assert.equal(result.code, 0, result.stderr);
-  assert.match(result.stderr, /1 outgoing email, most recently at 2026-09-01T11:00:00\.000Z \(sent id sent-prior\)/);
-  assert.match(result.stderr, /may include activity updates and do not prove a completed answer/);
+  // With --json the prior-reply warning is in the envelope's warnings and
+  // stderr stays empty, so a merged stream still parses.
+  assert.equal(result.stderr, "");
+  assert.match(JSON.parse(result.stdout).warnings.join("\n"), /1 outgoing email, most recently at 2026-09-01T11:00:00\.000Z \(sent id sent-prior\)/);
+  assert.match(JSON.parse(result.stdout).warnings.join("\n"), /may include activity updates and do not prove a completed answer/);
   assert.equal(posts(), 1, "The prior-reply warning must not block the send");
   let envelope = JSON.parse(result.stdout);
   assert.equal(envelope.outcome, "sent");
@@ -111,15 +114,17 @@ try {
   ] } });
   result = await cli([...replyArgs, "--json"]);
   assert.equal(result.code, 0, result.stderr);
-  assert.match(result.stderr, /3 outgoing emails/);
-  assert.doesNotMatch(result.stderr, /already replied|3 answers/);
+  assert.equal(result.stderr, "");
+  assert.match(JSON.parse(result.stdout).warnings.join("\n"), /3 outgoing emails/);
+  assert.doesNotMatch(result.stdout, /already replied|3 answers/);
   assert.equal(requests.filter((entry) => entry.method === "GET").length, 1, "Warning must not fetch every prior reply to classify it");
   assert.equal(posts(), 1, "Activity history must not block the final reply");
 
   reset({ inboundStatus: 503 });
   result = await cli([...replyArgs, "--json"]);
   assert.equal(result.code, 0, result.stderr);
-  assert.match(result.stderr, /Could not check whether you already replied to email inbound-1 \(the email lookup returned HTTP 503\)\. Prior-reply check skipped; sending the reply anyway\./);
+  assert.equal(result.stderr, "");
+  assert.match(JSON.parse(result.stdout).warnings.join("\n"), /Could not check whether you already replied to email inbound-1 \(the email lookup returned HTTP 503\)\. Prior-reply check skipped; sending the reply anyway\./);
   assert.equal(posts(), 1, "A failed prior-reply lookup must not block the send");
   envelope = JSON.parse(result.stdout);
   assert.equal(envelope.prior_replies, null);
@@ -132,7 +137,8 @@ try {
   result = await cli([...sendArgs, "--json"]);
   assert.equal(result.code, 0, result.stderr);
   assert.equal(JSON.parse(result.stdout).outcome, "already_sent");
-  assert.doesNotMatch(result.stderr, /vary|fresh copy|Idempotency-Key/i);
+  assert.equal(result.stderr, "");
+  assert.doesNotMatch(result.stdout, /vary|fresh copy/i);
 
   reset({ sendStatus: 422 });
   result = await cli([...sendArgs, "--json"]);
@@ -150,7 +156,9 @@ try {
   assert.equal(result.code, 4);
   envelope = JSON.parse(result.stdout);
   assert.equal(envelope.outcome, "uncertain");
-  assert.equal(envelope.follow_up_commands[0].kind, "list_recent_sent_emails");
+  // The first follow-up reconciles by the key the send carried.
+  assert.equal(envelope.follow_up_commands[0].kind, "find_sent_email_by_idempotency_key");
+  assert.match(envelope.idempotency_key, /^primitive-send-[0-9a-f]{64}$/);
 
   reset();
   result = await cli(sendArgs);

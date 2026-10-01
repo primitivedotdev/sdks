@@ -9,25 +9,41 @@ import {
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
 import { followEmailConversation } from "../conversation-follow.js";
+import {
+  buildFyiMessageContent,
+  carriesInteraction,
+  FYI_FLAG_DESCRIPTION,
+  FyiMessageError,
+  uuidsFromSeed,
+} from "../fyi-message.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
+import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
+  assertValidIdempotencyKey,
   buildThrownSendFailureEnvelope,
   checkPriorReplies,
+  deriveSendIdempotencyKey,
   formatPriorRepliesCheckSkipped,
   formatPriorRepliesWarning,
   formatSendFailureSummary,
+  IDEMPOTENCY_KEY_FLAG_DESCRIPTION,
   type PriorRepliesCheck,
   reportSendCommandResult,
   SEND_OUTCOME_HELP,
   sendOutcomeExitCode,
 } from "../send-outcome.js";
 import { sharedMailScope } from "../shared-mail-receiver.js";
+import {
+  type LatestInboundResolution,
+  resolveLatestInboundInThread,
+  ThreadResolutionError,
+} from "../thread-latest-inbound.js";
 
 class ReplyCommand extends Command {
   static description = `Reply to an inbound email.
 
-  The API derives recipients, the Re: subject, and threading headers from the inbound email id. Use \`primitive send --in-reply-to <message-id>\` only when you need to thread against a raw Message-Id instead of an inbound email stored by Primitive.
+  The API derives recipients, the Re: subject, and threading headers from the inbound email id. Pass --thread <thread-id> instead of --id to answer the newest inbound email in a thread, so a reply never answers an older message while newer ones wait. Use \`primitive send --in-reply-to <message-id>\` only when you need to thread against a raw Message-Id instead of an inbound email stored by Primitive.
 
   Before sending, the CLI looks up the inbound email and warns on stderr
   when prior outgoing emails reference it. These may include activity
@@ -40,10 +56,20 @@ class ReplyCommand extends Command {
   Stdout is the send record as JSON. A one-line outcome summary goes to
   stderr ("Reply sent (queued for delivery, id X). Do not resend."). A
   queued status means the reply was accepted and is on its way; it is
-  not a failure. --json replaces stdout with an envelope { outcome,
-  exit_code, outcome_message, sent, http_status, error,
-  follow_up_commands, prior_replies, prior_replies_check } for every
-  outcome, including failures.
+  not a failure. --json replaces stdout with one envelope { outcome,
+  exit_code, outcome_message, sent_email_id, idempotency_key, sent,
+  http_status, error, follow_up_commands, prior_replies,
+  prior_replies_check } for every outcome, including failures, and
+  moves stderr notices into its warnings array, so output merged with
+  2>&1 still parses. If the outcome is uncertain, reconcile with
+  \`primitive sent get --idempotency-key <key>\` before retrying.
+
+  --fyi sends the reply as an informational acknowledgement: an ack
+  signal (status received) whose note is the plain-text body.
+  Receivers classify it as informational and do not wake for it. Use
+  it for replies that need no answer. It takes plain text only (no
+  HTML or attachments, at most 2000 characters) and is refused when
+  the email being answered is itself a signal or interaction.
 
   ${SEND_OUTCOME_HELP}`;
 
@@ -55,6 +81,8 @@ class ReplyCommand extends Command {
     "<%= config.bin %> reply --id <inbound-email-id> --body 'See attached.' --attachment ./report.pdf",
     "<%= config.bin %> reply --id <inbound-email-id> --html '<p>Thanks, got it.</p>' --wait",
     "<%= config.bin %> reply --id <inbound-email-id> --from 'Support <support@example.com>' --body 'Thanks!'",
+    "<%= config.bin %> reply --thread <thread-id> --body 'Answering the latest message.'",
+    "<%= config.bin %> reply --id <inbound-email-id> --fyi --body 'Done, merged. No action needed.'",
   ];
 
   static flags = {
@@ -70,12 +98,22 @@ class ReplyCommand extends Command {
       hidden: true,
     }),
     id: Flags.string({
-      description: "Inbound email id to reply to.",
-      required: true,
+      description:
+        "Inbound email id to reply to. Exactly one of --id or --thread is required.",
+      exactlyOne: ["id", "thread"],
+    }),
+    thread: Flags.string({
+      description:
+        "Thread id. Replies to the newest inbound email in the thread. Exactly one of --id or --thread is required.",
+      exactlyOne: ["id", "thread"],
+    }),
+    fyi: Flags.boolean({
+      description: FYI_FLAG_DESCRIPTION,
+      exclusive: ["html", "html-file", "html-stdin", "attachment"],
     }),
     body: Flags.string({
       description:
-        "Plain-text reply body. Either --body or --html (or both) is required.",
+        "Plain-text reply body. Either --body or --html (or both) is required, except with --fyi.",
     }),
     "body-file": Flags.string({
       description:
@@ -111,16 +149,22 @@ class ReplyCommand extends Command {
       description:
         "Block until the receiving MTA returns an outcome. Without --wait, the call returns once Primitive has accepted the reply for delivery.",
     }),
+    "idempotency-key": Flags.string({
+      description: IDEMPOTENCY_KEY_FLAG_DESCRIPTION,
+    }),
     json: Flags.boolean({
       description:
-        "Emit an outcome envelope { outcome, exit_code, outcome_message, sent, http_status, error, follow_up_commands, prior_replies, prior_replies_check } on stdout for every outcome, including failures. Without --json, stdout is the send record as before.",
+        "Emit one outcome envelope { outcome, exit_code, outcome_message, sent_email_id, idempotency_key, sent, http_status, error, follow_up_commands, prior_replies, prior_replies_check } on stdout for every outcome, including failures, with nothing on stderr. Without --json, stdout is the send record as before.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
   };
 
+  private attemptStartedAtIso: string | null = null;
+  private idempotencyKey: string | null = null;
   private priorRepliesCheck: PriorRepliesCheck | null = null;
+  private replyTarget: LatestInboundResolution | null = null;
   private sendRequestStarted = false;
 
   async run(): Promise<void> {
@@ -134,10 +178,13 @@ class ReplyCommand extends Command {
         this.log(
           JSON.stringify(
             buildThrownSendFailureEnvelope({
+              attemptStartedAtIso: this.attemptStartedAtIso,
               error,
-              extraEnvelopeFields: priorRepliesEnvelopeFields(
-                this.priorRepliesCheck,
-              ),
+              idempotencyKey: this.idempotencyKey,
+              extraEnvelopeFields: {
+                ...priorRepliesEnvelopeFields(this.priorRepliesCheck),
+                ...replyTargetEnvelopeFields(flags, this.replyTarget),
+              },
               noun: "Reply",
               requestStarted: this.sendRequestStarted,
             }),
@@ -160,16 +207,26 @@ class ReplyCommand extends Command {
   private async sendReply(
     flags: Interfaces.InferredFlags<typeof ReplyCommand.flags>,
   ): Promise<void> {
-    const bodies = resolveMessageBodies({
-      body: flags.body,
-      bodyFile: flags["body-file"],
-      bodyStdin: flags["body-stdin"],
-      html: flags.html,
-      htmlFile: flags["html-file"],
-      htmlStdin: flags["html-stdin"],
-    });
+    const fyiWithoutBody =
+      flags.fyi &&
+      flags.body === undefined &&
+      flags["body-file"] === undefined &&
+      !flags["body-stdin"];
+    const bodies = fyiWithoutBody
+      ? { kind: "ok" as const, body: undefined, html: undefined }
+      : resolveMessageBodies({
+          body: flags.body,
+          bodyFile: flags["body-file"],
+          bodyStdin: flags["body-stdin"],
+          html: flags.html,
+          htmlFile: flags["html-file"],
+          htmlStdin: flags["html-stdin"],
+        });
     if (bodies.kind === "error") {
       throw new Errors.CLIError(bodies.message);
+    }
+    if (flags["idempotency-key"] !== undefined) {
+      this.idempotencyKey = assertValidIdempotencyKey(flags["idempotency-key"]);
     }
 
     await runWithTiming(flags.time, async () => {
@@ -179,20 +236,45 @@ class ReplyCommand extends Command {
           apiBaseUrl: flags["api-base-url"],
           configDir: this.config.configDir,
         });
+      warnIfSharedProfile({
+        configDir: this.config.configDir,
+        connectedAgent: auth.connectedAgent,
+      });
       const attachments = readAttachmentFiles(flags.attachment);
       const receivingSince = new Date().toISOString();
+
+      let emailId: string;
+      if (flags.thread !== undefined) {
+        try {
+          this.replyTarget = await resolveLatestInboundInThread({
+            client: apiClient.client,
+            threadId: flags.thread,
+          });
+        } catch (error) {
+          if (error instanceof ThreadResolutionError)
+            throw new Errors.CLIError(error.message);
+          throw error;
+        }
+        emailId = this.replyTarget.emailId;
+        if (!flags.json)
+          process.stderr.write(
+            `Replying to ${emailId}, the newest inbound email in thread ${flags.thread}.\n`,
+          );
+      } else {
+        emailId = flags.id as string;
+      }
 
       // Advisory only: a reply the caller already sent is worth a loud
       // warning, but the caller may mean to follow up, so never block.
       const priorRepliesCheck = await checkPriorReplies({
         client: apiClient.client,
-        emailId: flags.id,
+        emailId,
       });
       this.priorRepliesCheck = priorRepliesCheck;
       const priorRepliesMessage =
         priorRepliesCheck.status === "checked"
           ? formatPriorRepliesWarning(priorRepliesCheck.prior)
-          : formatPriorRepliesCheckSkipped(flags.id, priorRepliesCheck.reason);
+          : formatPriorRepliesCheckSkipped(emailId, priorRepliesCheck.reason);
       if (priorRepliesMessage !== null) {
         process.stderr.write(`${priorRepliesMessage}\n`);
       }
@@ -202,7 +284,7 @@ class ReplyCommand extends Command {
         if (
           priorRepliesCheck.status !== "checked" ||
           !priorRepliesCheck.detail ||
-          priorRepliesCheck.detail.id !== flags.id
+          priorRepliesCheck.detail.id !== emailId
         )
           throw new Errors.CLIError(
             "Conversation receiving could not be established because this email could not be read. No reply was sent; retry after the lookup succeeds.",
@@ -220,18 +302,84 @@ class ReplyCommand extends Command {
         );
       }
 
+      const plainContent: {
+        body_text?: string;
+        body_html?: string;
+        attachments?: typeof attachments;
+      } = {
+        ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
+        ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
+        ...(attachments !== undefined ? { attachments } : {}),
+      };
+      // The key is derived once the target is known (after --thread has
+      // resolved it), so it names the email actually answered. An --fyi
+      // key is derived from what the caller asked for, and the signal's
+      // ids are then derived from the key, so a retry sends the same
+      // request under the same key and is deduplicated.
+      const idempotencyKey =
+        this.idempotencyKey ??
+        deriveSendIdempotencyKey(
+          "reply",
+          flags.fyi
+            ? {
+                fyi: true,
+                ...(bodies.body !== undefined
+                  ? { body_text: bodies.body.trimEnd() }
+                  : {}),
+                ...(flags.from !== undefined ? { from: flags.from } : {}),
+                in_reply_to_email_id: emailId,
+              }
+            : {
+                ...plainContent,
+                ...(flags.from !== undefined ? { from: flags.from } : {}),
+                in_reply_to_email_id: emailId,
+              },
+        );
+      this.idempotencyKey = idempotencyKey;
+
+      let content: typeof plainContent = plainContent;
+      if (flags.fyi) {
+        const parent =
+          priorRepliesCheck.status === "checked" &&
+          priorRepliesCheck.detail?.id === emailId
+            ? priorRepliesCheck.detail
+            : null;
+        if (!parent)
+          throw new Errors.CLIError(
+            "--fyi needs to read the email being answered, and that lookup failed. No reply was sent; retry after the lookup succeeds.",
+          );
+        if (carriesInteraction(parent))
+          throw new Errors.CLIError(
+            "The email being answered is a signal or interaction. --fyi replies to it are refused so acknowledgements cannot loop. No reply was sent.",
+          );
+        try {
+          content = buildFyiMessageContent({
+            parentMessageId: parent.message_id,
+            senderAddress: flags.from ?? parent.recipient,
+            recipientAddress: parent.from_email,
+            note: bodies.body,
+            uuid: uuidsFromSeed(idempotencyKey),
+          });
+        } catch (error) {
+          if (error instanceof FyiMessageError)
+            throw new Errors.CLIError(error.message);
+          throw error;
+        }
+      }
+
+      const replyBody = {
+        ...content,
+        ...(flags.from !== undefined ? { from: flags.from } : {}),
+        ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
+      };
       const attemptStartedAtIso = new Date().toISOString();
+      this.attemptStartedAtIso = attemptStartedAtIso;
       this.sendRequestStarted = true;
       const result = await replyToEmail({
-        body: {
-          ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
-          ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
-          ...(flags.from !== undefined ? { from: flags.from } : {}),
-          ...(attachments !== undefined ? { attachments } : {}),
-          ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
-        },
+        body: replyBody,
         client: apiClient.client,
-        path: { id: flags.id },
+        headers: { "Idempotency-Key": idempotencyKey },
+        path: { id: emailId },
         responseStyle: "fields",
       });
 
@@ -241,7 +389,11 @@ class ReplyCommand extends Command {
       // is summarised on stderr and in the exit code.
       const outcome = reportSendCommandResult({
         attemptStartedAtIso,
-        extraEnvelopeFields: priorRepliesEnvelopeFields(priorRepliesCheck),
+        idempotencyKey,
+        extraEnvelopeFields: {
+          ...priorRepliesEnvelopeFields(priorRepliesCheck),
+          ...replyTargetEnvelopeFields(flags, this.replyTarget),
+        },
         json: flags.json,
         log: (line) => this.log(line),
         noun: "Reply",
@@ -280,6 +432,29 @@ function priorRepliesEnvelopeFields(
         prior_replies: null,
         prior_replies_check: { status: "skipped", reason: check.reason },
       };
+}
+
+/**
+ * With --thread or --fyi the envelope says which email was answered and
+ * how, so a caller that only kept the JSON can still tell. Plain --id
+ * replies keep their existing envelope shape.
+ */
+function replyTargetEnvelopeFields(
+  flags: { thread?: string; fyi?: boolean },
+  target: LatestInboundResolution | null,
+): Record<string, unknown> {
+  return {
+    ...(flags.thread !== undefined
+      ? {
+          reply_target: {
+            thread_id: flags.thread,
+            email_id: target?.emailId ?? null,
+            resolved_by: target?.resolvedBy ?? null,
+          },
+        }
+      : {}),
+    ...(flags.fyi ? { informational: true } : {}),
+  };
 }
 
 export default ReplyCommand;

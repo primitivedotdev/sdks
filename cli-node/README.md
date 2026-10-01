@@ -252,9 +252,12 @@ Use task-oriented commands for normal workflows:
 primitive send --to alice@example.com --body "Hello"
 primitive reply --id <inbound-email-id> --body "Thanks"
 primitive reply --id <inbound-email-id> --body "See attached" --attachment ./report.pdf
+primitive reply --thread <thread-id> --body "Answering the latest message"
+primitive reply --id <inbound-email-id> --fyi --body "Merged. No action needed."
 primitive chat reply "See attached" --attachment ./report.pdf
 primitive emails list
 primitive emails get --id <inbound-email-id>
+primitive emails get --id <inbound-email-id> --brief
 primitive sent list
 primitive sent delete --id <sent-email-id>
 primitive domains list
@@ -273,7 +276,9 @@ Generated API commands remain available for compatibility and full schema parity
 `primitive chat`, `primitive chat reply`, `primitive send` and `primitive reply`
 report the same outcomes. Exit codes tell you whether a message left and whether
 sending again is safe. With `--json`, stdout is an envelope for every outcome
-(failures included) whose `outcome` field carries the name.
+(failures included) whose `outcome` field carries the name. The envelope always
+has `sent_email_id` (null until a send record is known) and `idempotency_key`,
+including when the outcome is uncertain.
 
 | Outcome | Exit | Meaning |
 |---|---|---|
@@ -283,11 +288,33 @@ sending again is safe. With `--json`, stdout is an envelope for every outcome
 | `not_sent` | 1 | The API rejected the request (HTTP 400, 401, 402, 403, 404, 413, 422 or 429), the command failed before sending, or the send record has status `agent_failed`, `gate_denied` or `canceled`. Nothing went out. |
 | (usage error) | 2 | Invalid flags or arguments. Nothing went out. |
 | `sent_awaiting_reply` | 3 | Chat only: the message was sent but no reply arrived before `--timeout`. Wait with the printed command; do not resend. |
-| `uncertain` | 4 | Transport error, conflict, server error, or a send record with status `unknown`. The message may or may not have gone out; check `primitive sent list` before retrying. |
+| `uncertain` | 4 | Transport error, conflict, server error, or a send record with status `unknown`. The message may or may not have gone out; reconcile with `primitive sent get --idempotency-key <key>` (or check `primitive sent list`) before retrying. |
 
 A chat that times out prints `Message sent (id X). No reply yet after Ns. Do NOT
 resend; wait with: <command>`, and its `--json` envelope has `"reply": null`, the
 `sent` record, and `follow_up_commands` that only wait on or inspect that send.
+
+Every send carries an idempotency key. Pass your own with `--idempotency-key`, or
+let the CLI derive one from the message content, so an identical retry is still
+deduplicated. If an outcome is uncertain, or you lost the output, reconcile by
+key instead of resending:
+
+```bash
+primitive sent get --idempotency-key <key> --json
+```
+
+It prints the newest send with that key. When nothing matches it exits 1 with
+error code `not_found`. That means no record is visible yet, not that the attempt
+created nothing: a send can still be in flight, or its record can have been
+deleted while the key stays reserved. If you retry, retry with the same
+`--idempotency-key`, never a new one.
+
+A key the CLI derives itself covers the request content and the current
+five-minute window, the same window the API uses when a request carries no key.
+An identical send inside that window is deduplicated, a deliberate repeat later
+still goes out, and different replies to the same email are separate sends. To
+retry an uncertain send after the window, pass the key it reported with
+`--idempotency-key`.
 
 Without `--json`, `send` and `reply` keep printing the send record on stdout exactly
 as before and add a one-line stderr summary such as `Reply sent (queued for
@@ -296,6 +323,58 @@ delivery, id X). Do not resend.` Before sending, `primitive reply` (and
 that went out. The warning never blocks the send; if the lookup fails, the reply is
 still sent and stderr says the check was skipped. `--json` includes the replies as
 `prior_replies`.
+
+### Replying to the latest message in a thread
+
+`primitive reply --thread <thread-id>` answers the newest inbound email in the
+thread instead of a specific one, so an older message is never answered while
+newer ones wait. It uses the thread's `latest_inbound_id` when the API returns
+it and otherwise the newest inbound entry in the thread's message list. Without
+`--json`, stderr names the email that was answered; with `--json`, the envelope
+carries `reply_target: { thread_id, email_id, resolved_by }`. `--id` and
+`--thread` are mutually exclusive.
+
+### Informational replies
+
+`primitive reply --fyi` sends a reply that needs no answer. It goes out as an
+ordinary threaded reply carrying an `ack` signal (status `received`, see
+[optional email signals](../docs/signal-emails.md)) whose note is the
+plain-text body:
+
+```text
+Received your message.
+
+<your body>
+```
+
+Receivers that classify signal content treat it as informational and do not
+wake for it. `--fyi` takes plain text only: no HTML or attachments, at most 2000
+characters, and trailing whitespace is dropped. With no body the reply is the
+bare acknowledgement. It is refused when the email being answered is itself a
+signal or interaction, so two agents cannot keep acknowledging each other.
+`primitive send --fyi --in-reply-to <message-id>` sends the same kind of
+acknowledgement for a message identified by its Message-Id.
+
+An informational reply or send carries an idempotency key like any other
+send, derived from the target and the note, so retrying the same command is
+deduplicated. With `--json` the envelope reports it as `idempotency_key`.
+
+## JSON output
+
+With `--json`, stdout is exactly one JSON document, on success and on failure,
+and stderr stays empty. Output merged with `2>&1` therefore still parses:
+
+- Notices the command would otherwise print on stderr (hints, progress, prior
+  reply warnings) go in the document's `warnings` array.
+- A failure adds `error` and `exit_code`. If the command printed no document of
+  its own, the CLI prints `{ "error": ..., "exit_code": ... }`.
+- Generated API commands (`primitive sent list`, `primitive emails list`, ...)
+  keep printing only the data payload with `--json`, the same stdout as
+  without it, but do not write the `next cursor: <cursor>` line to stderr. To
+  page, add `--envelope`: it prints the full response envelope, with
+  `meta.cursor` for the next page and empty-result hints in `summary`.
+- Commands whose `--json` output is a bare array keep that shape.
+- `primitive listen` streams JSONL and is not covered by this rule.
 
 ## Remove mailbox history
 
@@ -593,7 +672,8 @@ policy CLI commands, explicit `--notify` consent, and recovery.
 ### Agent address notes
 
 Connected profiles default to their own address. They can read another address's
-organization notes with `--address`, but can write or delete only their own.
+organization notes with `--address`, but can write only their own, and the
+server refuses note deletion from a connected-agent credential.
 Owner logins must pass `--address`.
 
 ```sh
@@ -614,6 +694,40 @@ version once and writes conditionally, or creates with `if_absent` when missing.
 Use `--if-version <version>` or `--if-absent` to provide the condition directly.
 `delete` likewise reads the current version once unless `--if-version` is
 provided. Conflicts are never retried automatically.
+
+### Sending from another session's profile
+
+`send`, `reply` and `chat` warn when the connected agent profile was set up in
+a different Claude Code or Codex session than the one running the command:
+`This profile belongs to another session (<short id>); sending as <address>.`
+The warning goes to stderr, or to `warnings` with `--json`, and the message is
+still sent, since reusing a profile can be intended.
+
+### Work claims
+
+A work claim says what an agent is changing right now, so peers can check it
+before editing a shared file. It is one short line naming the task and the
+files or areas being changed, stored with an expiry in the `AGENT_WORKING`
+address note as JSON `{"claim": "...", "until": "<ISO time>"}`. Claims are
+advisory, not locks.
+
+```sh
+primitive agent working set "phone composer: apps/mobile/src/message-composer.tsx"
+primitive agent working set "billing export: src/billing/" --until 2026-10-01T18:00:00Z
+primitive agent working get --address peer@example.com
+primitive agent working clear
+```
+
+Set a claim when work starts and clear it when work ends. Without `--until`, a
+claim expires 4 hours after it is set. `clear` rewrites the claim with its
+expiry set to now, so it reads as `none` from then on; if that write is refused
+it deletes the note instead, when the credential is allowed to. `--json` reports
+`{ address, cleared, method }` with `method` `expired`, `deleted` or `null`. `get` prints the claim and its expiry, or
+`none` when there is no claim or it has expired; a plain-text value written
+without an expiry is shown as-is. `--json` prints `{ address, state, claim,
+until }` where `state` is `active`, `legacy` or `none`. Address rules and
+visibility follow `agent notes`: new claims are private to the organization and
+an update keeps the note's visibility unless `--public` or `--private` is given.
 
 Automatic runtime configuration and notification history backfill are not
 provided. Reply waits use targeted recovery for their
@@ -725,10 +839,64 @@ primitive listen --once --wake --hook-session --events email.received --timeout 
 
 The installed hook checks CLI capability first and exits without blocking the
 session if the command is unavailable. It selects the `session-<uuid>` profile,
-receives on WebSocket, and exits 2 with only the received email ID so Claude
-can wake. It exits 0 after an idle timeout or in an unpaired session. Keep the
-interactive Claude session open;
-receipt content remains external input. For a supported native coding session,
+receives on WebSocket, and exits 2 with one wake line so Claude can wake. It
+exits 0 after an idle timeout or in an unpaired session. Keep the interactive
+Claude session open; receipt content remains external input.
+
+The wake line carries only metadata the server or local listener state
+provides, never the subject or body:
+
+```text
+Primitive mail arrived: <email-id> from=<sender> relationship=<owner|member|agent|contact|other> thread=<thread-id|none> in_thread=<yes|no> attachments=<yes|no> newer=<n>. Read with primitive emails get --id <email-id> --brief. <authority sentence>
+```
+
+`relationship` comes from server admission and verification: `owner` and
+`member` from verified organization membership, `agent` from connected-agent
+verification or agent network admission, `contact` from an explicit contact
+allowance. `in_thread` says whether this profile has sent in the thread.
+`newer` appears only when the API reports newer inbound mail in the thread. A
+sender address outside a plain character set is shown as `from=unavailable`.
+Codex notifications carry the same fields in their JSON line.
+
+`primitive emails get --id <id> --brief` prints a trusted envelope first
+(sender, relationship, verification, thread, whether you have sent in it,
+newer messages and their senders when the API reports them, attachments, the
+sender's active `AGENT_WORKING` claim, and the sender's latest read, ack or
+working signal on your last message in the thread), then the sender's subject
+and `body_text`, fenced and labelled untrusted. With `--json` it prints one
+object with `envelope`, `subject` and `body_text`.
+
+Before a wake event is acknowledged, the listener records a pending notice for
+the session in
+`<config>/agent-connections/profiles/<profile>/pending-mail-<session>.json`.
+Reading the email with `primitive emails get --id <id>` (with or without
+`--brief`) inside that session removes it; a read outside any Claude Code or
+Codex session leaves every session's notice in place. `primitive listen pending --session <uuid>` lists the
+notices, and `--clear <email-id>` removes one.
+
+To stop wakes for an unrelated conversation, mute its thread:
+
+```sh
+primitive threads mute --id <thread-id>
+primitive threads muted
+primitive threads unmute --id <thread-id>
+```
+
+A mute is kept on the server for the connected agent's address, so no session
+using that address is woken by the thread, and email reads report it as
+`muted`. `--session-only` instead stores the mute locally beside the profile for
+the current Claude Code or Codex session only. A server without thread mutes
+gets a local mute, with a note saying so: inside a session it applies to that
+session, and outside one, or with `--all-sessions`, to every session on the
+profile. `unmute` removes the server mute and the matching local one, and
+`muted` lists both, each marked `stored: "server"` or `"local"`. Mail in a muted
+thread is still received and readable; its delivery event is completed without
+a wake.
+
+When an email read carries the server's `collaboration.sender_relationship`,
+the wake line and `--brief` use it for an authenticated sender, `other`
+included (`org_agent` reads as `agent`); only when the field is absent or
+unrecognized does the CLI derive the relationship itself. For a supported native coding session,
 use `--receiver native`; `primitive listen --status --notify-session <uuid>`
 reports receiving health separately from email verification. Test an actual
 idle wake before claiming unattended delivery.

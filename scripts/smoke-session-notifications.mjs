@@ -94,7 +94,7 @@ async function startNativeServer() {
     }
     else if (message.method === "thread/read") result = { thread: { id: sessionId, cwd: directory, canAcceptDirectInput: true } };
     else if (message.method === "thread/resume") {
-      assert.deepEqual(message.params, { threadId: sessionId });
+      assert.deepEqual(message.params, { threadId: sessionId, excludeTurns: true });
       assert.equal(nativeLoaded, true, "The receiver must not resume an unloaded thread");
       result = { thread: { id: sessionId } };
     }

@@ -159,6 +159,7 @@ export class EventConnection {
       transport?: "websocket" | "poll";
       webSocketFactory?: EventSocketFactory;
       onStatus?: (status: EventOffer) => void;
+      onHeartbeat?: () => void;
     } = {},
   ) {}
 
@@ -242,6 +243,11 @@ export class EventConnection {
       }
       if (frame.type === "ping") {
         socket.send(JSON.stringify({ type: "pong" }));
+        try {
+          this.options.onHeartbeat?.();
+        } catch (error) {
+          this.fail(error);
+        }
         return;
       }
       if (frame.type === "status") {

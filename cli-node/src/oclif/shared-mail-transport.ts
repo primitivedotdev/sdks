@@ -11,6 +11,7 @@ export interface SharedMailTransportOptions {
   recipient: string;
   signal: AbortSignal;
   ready(): Promise<void>;
+  checked?(): Promise<void>;
   status(value: {
     ready?: boolean;
     gapCount?: number;
@@ -125,10 +126,20 @@ export async function runSharedMailTransport(
     ensureSharedMailSubscription({ ...options, signal }),
   );
   let statusWork = Promise.resolve();
+  const publishChecked = () => {
+    const checked = options.checked;
+    if (!checked) return;
+    statusWork = statusWork.then(() => checked());
+    void statusWork.catch((error: unknown) => failed.abort(error));
+  };
+  // A mail check is a server answer about this subscription's queue: an
+  // offer (empty or not) or a status frame. Opening the stream and pings
+  // only show the connection is alive, so they do not count.
   const publishStatus = (value: {
     gap_count: number;
     last_gap_reason: string | null;
   }) => {
+    publishChecked();
     statusWork = statusWork.then(() =>
       options.status({
         gapCount: value.gap_count,
@@ -140,9 +151,7 @@ export async function runSharedMailTransport(
   const stream = new EventConnection(
     options.apiClient.client,
     created.endpointId,
-    {
-      onStatus: publishStatus,
-    },
+    { onStatus: publishStatus },
   );
   const ensureOpen = async () => {
     if (connected) return;

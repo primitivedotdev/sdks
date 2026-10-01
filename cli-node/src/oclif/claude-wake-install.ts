@@ -23,6 +23,8 @@ import { mailAddress, readMailJson } from "./shared-mail-files.js";
 
 const HOOK_MARKER = "primitive-agent-wake-v1";
 const WAKE_EVENTS = ["Stop", "SessionStart"] as const;
+const PENDING_MARKER = "primitive-pending-mail-v1";
+const PENDING_EVENT = "PostToolUse";
 
 type RecordValue = Record<string, unknown>;
 
@@ -33,6 +35,83 @@ function record(value: unknown): value is RecordValue {
 }
 
 export type ClaudeWakeHookResult = "installed_unverified" | "unavailable";
+
+export function claudeWakeHookStatus(options: {
+  configDir: string;
+  profileName: string;
+  agentAddress: string;
+  sessionId: string;
+  env?: NodeJS.ProcessEnv;
+}): { installed: boolean; lastFiredAt: string | null; liveness: "unknown" } {
+  const unavailable = {
+    installed: false,
+    lastFiredAt: null,
+    liveness: "unknown" as const,
+  };
+  try {
+    const configDir = resolve(options.configDir);
+    const profileName = agentProfileName(options.profileName);
+    const agentAddress = mailAddress(options.agentAddress);
+    if (!SESSION_UUID.test(options.sessionId)) return unavailable;
+    const sessionId = options.sessionId.toLowerCase();
+    const claudeDir = resolve(
+      options.env?.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
+    );
+    const settings = readMailJson(join(claudeDir, "settings.json"));
+    if (!record(settings) || !record(settings.hooks)) return unavailable;
+    const hooks = settings.hooks;
+    const owns = (event: string, script: string, marker: string) => {
+      const entries = hooks[event];
+      return (
+        Array.isArray(entries) &&
+        entries.some(
+          (entry) =>
+            record(entry) &&
+            Array.isArray(entry.hooks) &&
+            entry.hooks.some((candidate: unknown) => {
+              if (!record(candidate) || !Array.isArray(candidate.args))
+                return false;
+              const args = candidate.args;
+              const offset = 2;
+              return (
+                candidate.type === "command" &&
+                candidate.command === process.execPath &&
+                args.length === 7 &&
+                typeof args[0] === "string" &&
+                basename(args[0]) === script &&
+                args[offset] === configDir &&
+                args[offset + 1] === profileName &&
+                args[offset + 2] === agentAddress &&
+                args[offset + 3] === sessionId &&
+                args[offset + 4] === marker
+              );
+            }),
+        )
+      );
+    };
+    const installed =
+      owns("Stop", "claude-wake.mjs", HOOK_MARKER) &&
+      owns("SessionStart", "claude-wake.mjs", HOOK_MARKER) &&
+      owns(PENDING_EVENT, "claude-pending-mail.mjs", PENDING_MARKER);
+    let lastFiredAt: string | null = null;
+    const fired = readMailJson(
+      join(
+        agentProfileDirectory(configDir, profileName),
+        `pending-mail-${sessionId}.fired.json`,
+      ),
+    );
+    if (
+      record(fired) &&
+      fired.version === 1 &&
+      typeof fired.at === "string" &&
+      Number.isFinite(Date.parse(fired.at))
+    )
+      lastFiredAt = fired.at;
+    return { installed, lastFiredAt, liveness: "unknown" };
+  } catch {
+    return unavailable;
+  }
+}
 
 function editClaudeSettings(
   claudeDir: string,
@@ -104,6 +183,9 @@ export function installClaudeWakeHook(options: {
   try {
     const cliPath = realpathSync(options.cliPath);
     const wrapperPath = realpathSync(join(dirname(cliPath), "claude-wake.mjs"));
+    const pendingPath = realpathSync(
+      join(dirname(cliPath), "claude-pending-mail.mjs"),
+    );
     const configDir = resolve(options.configDir);
     const profileName = agentProfileName(options.profileName);
     const agentAddress = mailAddress(options.agentAddress);
@@ -119,6 +201,8 @@ export function installClaudeWakeHook(options: {
       for (const event of WAKE_EVENTS)
         if (!Array.isArray(hooks[event] ?? []))
           throw new Error(`Invalid ${event} hooks`);
+      if (!Array.isArray(hooks[PENDING_EVENT] ?? []))
+        throw new Error(`Invalid ${PENDING_EVENT} hooks`);
       const hook = {
         type: "command",
         command: process.execPath,
@@ -134,6 +218,31 @@ export function installClaudeWakeHook(options: {
         asyncRewake: true,
         timeout: 604800,
       };
+      const pendingHook = {
+        type: "command",
+        command: process.execPath,
+        args: [
+          pendingPath,
+          cliPath,
+          configDir,
+          profileName,
+          agentAddress,
+          sessionId,
+          PENDING_MARKER,
+        ],
+        timeout: 10,
+      };
+      const isOwnPendingHook = (candidate: unknown) =>
+        record(candidate) &&
+        candidate.type === "command" &&
+        candidate.command === process.execPath &&
+        Array.isArray(candidate.args) &&
+        candidate.args.length === 7 &&
+        candidate.args[0] === pendingPath &&
+        candidate.args[1] === cliPath &&
+        candidate.args[2] === configDir &&
+        candidate.args[5] === sessionId &&
+        candidate.args[6] === PENDING_MARKER;
       const isOwnHook = (candidate: unknown) => {
         if (!record(candidate) || !Array.isArray(candidate.args)) return false;
         if (
@@ -182,6 +291,18 @@ export function installClaudeWakeHook(options: {
             : { hooks: [hook] },
         ];
       }
+      const pendingEntries = hooks[PENDING_EVENT] as unknown[] | undefined;
+      nextHooks[PENDING_EVENT] = [
+        ...(pendingEntries ?? []).flatMap((entry) => {
+          if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
+          const siblings = entry.hooks.filter(
+            (candidate) => !isOwnPendingHook(candidate),
+          );
+          if (siblings.length === entry.hooks.length) return [entry];
+          return siblings.length ? [{ ...entry, hooks: siblings }] : [];
+        }),
+        { hooks: [pendingHook] },
+      ];
       return {
         ...settings,
         hooks: nextHooks,
@@ -218,6 +339,8 @@ export function uninstallClaudeWakeHook(options: {
       for (const event of WAKE_EVENTS)
         if (!Array.isArray(hooks[event] ?? []))
           throw new Error(`Invalid ${event} hooks`);
+      if (!Array.isArray(hooks[PENDING_EVENT] ?? []))
+        throw new Error(`Invalid ${PENDING_EVENT} hooks`);
       const legacySessionMatches = () => {
         try {
           const setup = readMailJson(
@@ -249,6 +372,22 @@ export function uninstallClaudeWakeHook(options: {
               legacySessionMatches()))
         );
       };
+      const isOwnPendingHook = (candidate: unknown) => {
+        if (!record(candidate) || !Array.isArray(candidate.args)) return false;
+        const args = candidate.args;
+        return (
+          candidate.type === "command" &&
+          typeof candidate.command === "string" &&
+          typeof args[0] === "string" &&
+          basename(args[0]) === "claude-pending-mail.mjs" &&
+          args[2] === configDir &&
+          args[3] === profileName &&
+          args[4] === agentAddress &&
+          args[5] === sessionId &&
+          args[6] === PENDING_MARKER &&
+          args.length === 7
+        );
+      };
       let removed = false;
       const nextHooks: RecordValue = { ...hooks };
       for (const event of WAKE_EVENTS) {
@@ -263,6 +402,16 @@ export function uninstallClaudeWakeHook(options: {
           return siblings.length ? [{ ...entry, hooks: siblings }] : [];
         });
       }
+      const pendingEntries = hooks[PENDING_EVENT] as unknown[] | undefined;
+      nextHooks[PENDING_EVENT] = (pendingEntries ?? []).flatMap((entry) => {
+        if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
+        const siblings = entry.hooks.filter(
+          (candidate) => !isOwnPendingHook(candidate),
+        );
+        if (siblings.length === entry.hooks.length) return [entry];
+        removed = true;
+        return siblings.length ? [{ ...entry, hooks: siblings }] : [];
+      });
       return removed ? { ...settings, hooks: nextHooks } : null;
     });
   } catch {

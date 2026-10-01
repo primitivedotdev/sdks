@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Readable } from "node:stream";
@@ -303,5 +303,88 @@ it("a contending Stop hook exits without consuming or releasing the winning list
   } finally {
     winner.release();
     rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+function wrapperMailPattern(): RegExp {
+  const source = readFileSync(resolve(root, "bin/claude-wake.mjs"), "utf8");
+  const literal = /\/(\^Primitive mail arrived: .*?\$)\/\.exec\(/s.exec(source);
+  if (!literal?.[1]) throw new Error("wake pattern not found");
+  return new RegExp(literal[1]);
+}
+
+it.each([
+  {
+    relation: "owner" as const,
+    context: {
+      sender: "owner@example.com",
+      relationship: "owner" as const,
+      threadId: "55555555-5555-4555-8555-555555555555",
+      inThread: true,
+      attachments: false,
+      newer: 3,
+    },
+    metadata:
+      "from=owner@example.com relationship=owner thread=55555555-5555-4555-8555-555555555555 in_thread=yes attachments=no newer=3",
+  },
+  {
+    relation: undefined,
+    context: {
+      sender: "Weird Sender <x@example.com>",
+      relationship: "other" as const,
+      threadId: null,
+      inThread: false,
+      attachments: true,
+    },
+    metadata:
+      "from=unavailable relationship=other thread=none in_thread=no attachments=yes",
+  },
+])("prints a metadata wake the Claude wrapper forwards ($metadata)", async ({
+  relation,
+  context,
+  metadata,
+}) => {
+  const previousExit = process.exitCode;
+  const stderr: string[] = [];
+  const stdin = Readable.from([JSON.stringify(stopInput)]);
+  vi.spyOn(process, "stdin", "get").mockReturnValue(
+    stdin as typeof process.stdin,
+  );
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    stderr.push(String(chunk));
+    return true;
+  });
+  mocks.readMailJson.mockReturnValue({
+    session,
+    receiverMode: "external",
+    phase: "sent",
+    receipt: { status: "delivered" },
+  });
+  const emailId = "66666666-6666-4666-8666-666666666666";
+  mocks.createWakeMail.mockResolvedValue({
+    handler: vi.fn(),
+    close: vi.fn(),
+    receiving: vi.fn(),
+    completed: vi.fn(),
+    wakeId: () => emailId,
+    senderRelation: () => relation,
+    context: () => context,
+    status: () => undefined,
+  });
+  mocks.runListen.mockResolvedValue(undefined);
+  try {
+    await ListenCommand.run(
+      ["--once", "--wake", "--hook-session", "--events", "email.received"],
+      { root },
+    );
+    const output = stderr.join("");
+    expect(output).toContain(
+      `Primitive mail arrived: ${emailId} ${metadata}. Read with primitive emails get --id ${emailId} --brief. `,
+    );
+    expect(output).not.toMatch(/subject|body/i);
+    expect(wrapperMailPattern().test(output)).toBe(true);
+    expect(process.exitCode).toBe(2);
+  } finally {
+    process.exitCode = previousExit;
   }
 });

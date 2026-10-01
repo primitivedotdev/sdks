@@ -241,7 +241,9 @@ try {
   const replayEnvelope = JSON.parse(replayResult.stdout);
   assert.equal(replayEnvelope.outcome, "already_sent");
   assert.equal(replayEnvelope.reply, null);
-  assert.match(replayResult.stderr, /Already sent: this exact message went out earlier \(sent id [^,]+, status delivered\)\. Nothing new was sent\./);
+  // With --json the notice is in the one JSON document; stderr stays empty.
+  assert.equal(replayResult.stderr, "");
+  assert.match(replayResult.stdout, /Already sent: this exact message went out earlier \(sent id [^,]+, status delivered\)\. Nothing new was sent\./);
   assert.doesNotMatch(`${replayResult.stdout}\n${replayResult.stderr}`, /vary|fresh send|fresh copy/i);
   await waitForAcknowledgedReceipt(replayed.posts[0].sent.id);
   replayed.repliesReady = true;

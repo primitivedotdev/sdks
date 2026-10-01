@@ -43,6 +43,21 @@ const failure = () =>
 function connectionFailure(error: unknown): NativeSessionError {
   if (error instanceof NativeSessionError) return error;
   if (
+    (error as { code?: unknown } | null)?.code ===
+    "WS_ERR_UNSUPPORTED_MESSAGE_LENGTH"
+  )
+    return new NativeSessionError(
+      "The native session sent an oversized response. Update the CLI and resume the exact session before restarting the listener.",
+    );
+  const message = (error as { message?: unknown } | null)?.message;
+  if (
+    typeof message === "string" &&
+    /^Unexpected server response: (401|403)$/.test(message)
+  )
+    return new NativeSessionError(
+      "The native session rejected the listener connection. Check local session access before restarting the listener.",
+    );
+  if (
     [
       "ENOENT",
       "ECONNREFUSED",
@@ -350,8 +365,12 @@ export async function connectNativeSession(options: {
     // app server does not unload it when the terminal's subscription ends.
     // No turn is started and no thread configuration is overridden.
     const resumed = record(
-      record(await request("thread/resume", { threadId: options.threadId }))
-        .thread,
+      record(
+        await request("thread/resume", {
+          threadId: options.threadId,
+          excludeTurns: true,
+        }),
+      ).thread,
     );
     if (resumed.id !== options.threadId)
       throw new NativeSessionError(

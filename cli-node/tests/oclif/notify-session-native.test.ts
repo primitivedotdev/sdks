@@ -85,6 +85,7 @@ async function fixture() {
     changeCwdAfterResume: false,
     disableDirectAfterResume: false,
     resumeError: null as { code: number; message: string } | null,
+    oversizedRead: false,
     dropOutput: false,
     turnError: null as { code: number; message: string } | null,
     turn: { id: randomUUID(), items: [], status: "inProgress" } as unknown,
@@ -106,6 +107,15 @@ async function fixture() {
       }
       if (call.method === "thread/resume" && state.resumeError) {
         socket.send(JSON.stringify({ id: call.id, error: state.resumeError }));
+        return;
+      }
+      if (call.method === "thread/read" && state.oversizedRead) {
+        socket.send(
+          JSON.stringify({
+            id: call.id,
+            result: { thread: { padding: "x".repeat(9 * 1024 * 1024) } },
+          }),
+        );
         return;
       }
       const result =
@@ -188,7 +198,7 @@ describe.skipIf(process.platform === "win32")(
       ]);
       expect(
         f.calls.find((call) => call.method === "thread/resume")?.params,
-      ).toEqual({ threadId: f.threadId });
+      ).toEqual({ threadId: f.threadId, excludeTurns: true });
       let persisted = false;
       const id = randomUUID();
       await native.queue("External event metadata", id, () => {
@@ -322,6 +332,15 @@ describe.skipIf(process.platform === "win32")(
           ].includes(call.method),
         ),
       ).toBe(true);
+    });
+    it("reports an oversized native response without claiming a socket permission failure", async () => {
+      const f = await fixture();
+      f.state.oversizedRead = true;
+      await expect(f.connect()).rejects.toMatchObject({
+        message: expect.stringContaining("oversized response"),
+        submitted: false,
+      });
+      expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
     });
     it.each([
       "wrong-thread",

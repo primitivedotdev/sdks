@@ -8,11 +8,21 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import {
+  buildFyiMessageContent,
+  FYI_FLAG_DESCRIPTION,
+  FyiMessageError,
+  uuidsFromSeed,
+} from "../fyi-message.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
+import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
+  assertValidIdempotencyKey,
   buildThrownSendFailureEnvelope,
+  deriveSendIdempotencyKey,
   formatSendFailureSummary,
+  IDEMPOTENCY_KEY_FLAG_DESCRIPTION,
   reportSendCommandResult,
   SEND_OUTCOME_HELP,
   sendOutcomeExitCode,
@@ -58,6 +68,9 @@ class SendCommand extends Command {
   --from defaults to agent@<your-first-verified-outbound-domain> when omitted.
   --subject defaults to the first line of the body when omitted.
   --attachment attaches a file; repeat it to attach multiple files.
+  --fyi (with --in-reply-to) sends an informational acknowledgement of
+  that message that receivers do not wake for. To answer an inbound
+  email you received, prefer \`primitive reply --id <id> --fyi\`.
 
   For the full flag set (custom message-id threading on the wire,
   references arrays, etc.), use \`primitive sending send\`.
@@ -65,9 +78,12 @@ class SendCommand extends Command {
   Stdout is the send record as JSON. A one-line outcome summary goes to
   stderr ("Message sent (queued for delivery, id X). Do not resend.").
   A queued status means the message was accepted and is on its way;
-  it is not a failure. --json replaces stdout with an envelope
-  { outcome, exit_code, outcome_message, sent, http_status, error,
-  follow_up_commands } for every outcome, including failures.
+  it is not a failure. --json replaces stdout with one envelope
+  { outcome, exit_code, outcome_message, sent_email_id, idempotency_key,
+  sent, http_status, error, follow_up_commands } for every outcome,
+  including failures, and leaves stderr empty, so output merged with
+  2>&1 still parses. If the outcome is uncertain, reconcile with
+  \`primitive sent get --idempotency-key <key>\` before retrying.
 
   ${SEND_OUTCOME_HELP}`;
 
@@ -81,6 +97,7 @@ class SendCommand extends Command {
     "<%= config.bin %> send --to alice@example.com --html '<p>Hello!</p>'",
     "<%= config.bin %> send --to alice@example.com --cc bob@example.com --bcc audit@example.com --body 'Loop bob in; audit copy stays hidden.'",
     "<%= config.bin %> send --to alice@example.com --body 'Confirmed' --wait",
+    "<%= config.bin %> send --to alice@example.com --in-reply-to '<parent@example.com>' --fyi --body 'Deployed. No action needed.'",
     "<%= config.bin %> send --to inbox@your-managed-domain.primitive.email --body 'self-loop smoke test' --wait  # any *.primitive.email address routes back to the sending account; useful for proving outbound + inbound work end-to-end",
   ];
 
@@ -151,6 +168,11 @@ class SendCommand extends Command {
       description:
         "Message-Id of the parent email when threading a reply on the wire. For replying to an inbound message you received, prefer `primitive reply --id <inbound-id>`.",
     }),
+    fyi: Flags.boolean({
+      description: `${FYI_FLAG_DESCRIPTION} Requires --in-reply-to, the Message-Id being acknowledged.`,
+      dependsOn: ["in-reply-to"],
+      exclusive: ["html", "html-file", "html-stdin", "attachment"],
+    }),
     wait: Flags.boolean({
       description:
         "Block until the receiving MTA returns an outcome. Without --wait, the call returns once Primitive has accepted the message for delivery.",
@@ -159,15 +181,20 @@ class SendCommand extends Command {
       description:
         "Maximum time to wait when --wait is set. Defaults to 30000ms.",
     }),
+    "idempotency-key": Flags.string({
+      description: IDEMPOTENCY_KEY_FLAG_DESCRIPTION,
+    }),
     json: Flags.boolean({
       description:
-        "Emit an outcome envelope { outcome, exit_code, outcome_message, sent, http_status, error, follow_up_commands } on stdout for every outcome, including failures. Without --json, stdout is the send record as before.",
+        "Emit one outcome envelope { outcome, exit_code, outcome_message, sent_email_id, idempotency_key, sent, http_status, error, follow_up_commands } on stdout for every outcome, including failures, with nothing on stderr. Without --json, stdout is the send record as before.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
   };
 
+  private attemptStartedAtIso: string | null = null;
+  private idempotencyKey: string | null = null;
   private sendRequestStarted = false;
 
   async run(): Promise<void> {
@@ -181,7 +208,9 @@ class SendCommand extends Command {
         this.log(
           JSON.stringify(
             buildThrownSendFailureEnvelope({
+              attemptStartedAtIso: this.attemptStartedAtIso,
               error,
+              idempotencyKey: this.idempotencyKey,
               noun: "Message",
               requestStarted: this.sendRequestStarted,
             }),
@@ -204,16 +233,26 @@ class SendCommand extends Command {
   private async sendMessage(
     flags: Interfaces.InferredFlags<typeof SendCommand.flags>,
   ): Promise<void> {
-    const bodies = resolveMessageBodies({
-      body: flags.body,
-      bodyFile: flags["body-file"],
-      bodyStdin: flags["body-stdin"],
-      html: flags.html,
-      htmlFile: flags["html-file"],
-      htmlStdin: flags["html-stdin"],
-    });
+    const fyiWithoutBody =
+      flags.fyi &&
+      flags.body === undefined &&
+      flags["body-file"] === undefined &&
+      !flags["body-stdin"];
+    const bodies = fyiWithoutBody
+      ? { kind: "ok" as const, body: undefined, html: undefined }
+      : resolveMessageBodies({
+          body: flags.body,
+          bodyFile: flags["body-file"],
+          bodyStdin: flags["body-stdin"],
+          html: flags.html,
+          htmlFile: flags["html-file"],
+          htmlStdin: flags["html-stdin"],
+        });
     if (bodies.kind === "error") {
       throw new Errors.CLIError(bodies.message);
+    }
+    if (flags["idempotency-key"] !== undefined) {
+      this.idempotencyKey = assertValidIdempotencyKey(flags["idempotency-key"]);
     }
     const attachments = readAttachmentFiles(flags.attachment);
 
@@ -224,6 +263,10 @@ class SendCommand extends Command {
           apiBaseUrl: flags["api-base-url"],
           configDir: this.config.configDir,
         });
+      warnIfSharedProfile({
+        configDir: this.config.configDir,
+        connectedAgent: auth.connectedAgent,
+      });
 
       const authFailureContext = {
         auth,
@@ -234,29 +277,87 @@ class SendCommand extends Command {
         flags.from ??
         (await pickDefaultFromAddress(apiClient, authFailureContext));
       const subject =
-        flags.subject ?? (bodies.body ? deriveSubject(bodies.body) : "Message");
+        flags.subject ??
+        (bodies.body
+          ? deriveSubject(bodies.body)
+          : flags.fyi
+            ? "Re: Your message"
+            : "Message");
+      const plainContent: {
+        body_text?: string;
+        body_html?: string;
+        attachments?: typeof attachments;
+      } = {
+        ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
+        ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
+        ...(attachments !== undefined ? { attachments } : {}),
+      };
+      const envelope = {
+        from,
+        to: flags.to,
+        ...(flags.cc !== undefined ? { cc: flags.cc } : {}),
+        ...(flags.bcc !== undefined ? { bcc: flags.bcc } : {}),
+        subject,
+      };
+      const threading = {
+        ...(flags["in-reply-to"] !== undefined
+          ? { in_reply_to: flags["in-reply-to"] }
+          : {}),
+        ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
+        ...(flags["wait-timeout-ms"] !== undefined
+          ? { wait_timeout_ms: flags["wait-timeout-ms"] }
+          : {}),
+      };
+      // An --fyi key is derived from what the caller asked for, and the
+      // signal's ids are then derived from the key, so a retry sends the
+      // same request under the same key and is deduplicated.
+      const idempotencyKey =
+        this.idempotencyKey ??
+        deriveSendIdempotencyKey(
+          "send",
+          flags.fyi
+            ? {
+                ...envelope,
+                fyi: true,
+                ...(bodies.body !== undefined
+                  ? { body_text: bodies.body.trimEnd() }
+                  : {}),
+                ...threading,
+              }
+            : { ...envelope, ...plainContent, ...threading },
+        );
+      this.idempotencyKey = idempotencyKey;
+
+      let content: typeof plainContent = plainContent;
+      if (flags.fyi) {
+        try {
+          content = buildFyiMessageContent({
+            parentMessageId: flags["in-reply-to"],
+            senderAddress: from,
+            recipientAddress: flags.to,
+            note: bodies.body,
+            uuid: uuidsFromSeed(idempotencyKey),
+          });
+        } catch (error) {
+          if (error instanceof FyiMessageError)
+            throw new Errors.CLIError(
+              error.message.replace(
+                "the email finishes processing",
+                "you have the parent Message-Id",
+              ),
+            );
+          throw error;
+        }
+      }
+      const body = { ...envelope, ...content, ...threading };
 
       const attemptStartedAtIso = new Date().toISOString();
+      this.attemptStartedAtIso = attemptStartedAtIso;
       this.sendRequestStarted = true;
       const result = await sendEmail({
-        body: {
-          from,
-          to: flags.to,
-          ...(flags.cc !== undefined ? { cc: flags.cc } : {}),
-          ...(flags.bcc !== undefined ? { bcc: flags.bcc } : {}),
-          subject,
-          ...(bodies.body !== undefined ? { body_text: bodies.body } : {}),
-          ...(bodies.html !== undefined ? { body_html: bodies.html } : {}),
-          ...(attachments !== undefined ? { attachments } : {}),
-          ...(flags["in-reply-to"] !== undefined
-            ? { in_reply_to: flags["in-reply-to"] }
-            : {}),
-          ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
-          ...(flags["wait-timeout-ms"] !== undefined
-            ? { wait_timeout_ms: flags["wait-timeout-ms"] }
-            : {}),
-        },
+        body,
         client: apiClient.client,
+        headers: { "Idempotency-Key": idempotencyKey },
         responseStyle: "fields",
       });
 
@@ -266,6 +367,7 @@ class SendCommand extends Command {
       // is summarised on stderr and in the exit code.
       const outcome = reportSendCommandResult({
         attemptStartedAtIso,
+        idempotencyKey,
         json: flags.json,
         log: (line) => this.log(line),
         noun: "Message",

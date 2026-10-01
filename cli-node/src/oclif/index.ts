@@ -18,6 +18,11 @@ import {
   AgentNotesSetCommand,
 } from "./commands/agent-notes.js";
 import AgentUpgradeCommand from "./commands/agent-upgrade.js";
+import {
+  AgentWorkingClearCommand,
+  AgentWorkingGetCommand,
+  AgentWorkingSetCommand,
+} from "./commands/agent-working.js";
 import ChatCommand, { ChatReplyCommand } from "./commands/chat.js";
 import {
   ConfigCommand,
@@ -40,6 +45,7 @@ import {
 } from "./commands/credits.js";
 import DoctorCommand from "./commands/doctor.js";
 import DomainsZoneFileCommand from "./commands/domains-zone-file.js";
+import { createEmailsGetCommand } from "./commands/emails-get.js";
 import EmailsLatestCommand from "./commands/emails-latest.js";
 import EmailsWaitCommand from "./commands/emails-wait.js";
 import EmailsWatchCommand from "./commands/emails-watch.js";
@@ -59,6 +65,7 @@ import InboxSetupCommand from "./commands/inbox-setup.js";
 import InboxStatusCommand from "./commands/inbox-status.js";
 import ListenCommand from "./commands/listen.js";
 import ListenInitCommand from "./commands/listen-init.js";
+import ListenPendingCommand from "./commands/listen-pending.js";
 import LogoutCommand from "./commands/logout.js";
 import {
   MemoriesDeleteCommand,
@@ -99,6 +106,7 @@ import RoutesUpdateCommand from "./commands/routes-update.js";
 import SearchCommand from "./commands/search.js";
 import SemanticSearchCommand from "./commands/semantic-search.js";
 import SendCommand from "./commands/send.js";
+import SentGetCommand from "./commands/sent-get.js";
 import SignalCommand from "./commands/signal.js";
 import {
   LoginBrowserCommand,
@@ -125,6 +133,11 @@ import SignupCommand, {
   SignupResendCommand,
   SignupStatusCommand,
 } from "./commands/signup.js";
+import {
+  ThreadsMuteCommand,
+  ThreadsMutedCommand,
+  ThreadsUnmuteCommand,
+} from "./commands/threads-mute.js";
 import WakeAuthorizationsCreateCommand from "./commands/wake-authorizations-create.js";
 import WakeAuthorizationsDeleteCommand from "./commands/wake-authorizations-delete.js";
 import WakeAuthorizationsListCommand from "./commands/wake-authorizations-list.js";
@@ -138,6 +151,7 @@ import WakeSchedulesRunCommand from "./commands/wake-schedules-run.js";
 import WakeSchedulesUpdateCommand from "./commands/wake-schedules-update.js";
 import WhoamiCommand from "./commands/whoami.js";
 import { renderFishCompletion } from "./fish-completion.js";
+import { guardJsonOutputCommands } from "./json-output.js";
 import { readCompletionFunction } from "./shell-completion-script.js";
 
 class ListOperationsCommand extends Command {
@@ -441,7 +455,6 @@ export const CANONICAL_OPERATION_ALIASES: Record<string, string> = {
   "sending:reply": "sending:reply-to-email",
   "sending:send": "sending:send-email",
   "sent:delete": "sending:delete-sent-email",
-  "sent:get": "sending:get-sent-email",
   "sent:list": "sending:list-sent-emails",
   "threads:get": "threads:get-thread",
   "webhook-deliveries:list": "webhook-deliveries:list-deliveries",
@@ -459,6 +472,7 @@ const DESCRIBE_OPERATION_ALIASES: Record<string, string> = {
   "memories:search": "memories:search-memories",
   "memories:set": "memories:set-memory",
   reply: "sending:reply-to-email",
+  "sent:get": "sending:get-sent-email",
 };
 
 function resolveOperationAlias(id: string): string {
@@ -512,6 +526,13 @@ const generatedCommands = Object.fromEntries(
     ]),
 );
 
+// `emails get` keeps the generated output and adds --brief plus clearing of
+// the session's pending wake notice for the email it read.
+const emailsGetCommand = createEmailsGetCommand(
+  generatedCommands["emails:get-email"] as typeof Command,
+);
+generatedCommands["emails:get-email"] = emailsGetCommand;
+
 const generatedCommandAliases = Object.fromEntries(
   Object.entries(CANONICAL_OPERATION_ALIASES).map(([alias, target]) => {
     const command = generatedCommands[target];
@@ -546,6 +567,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   "agent:notes:get": AgentNotesGetCommand,
   "agent:notes:set": AgentNotesSetCommand,
   "agent:notes:delete": AgentNotesDeleteCommand,
+  "agent:working:set": AgentWorkingSetCommand,
+  "agent:working:get": AgentWorkingGetCommand,
+  "agent:working:clear": AgentWorkingClearCommand,
   network: NetworkCommand,
   "network:list": NetworkListCommand,
   "network:members": NetworkMembersCommand,
@@ -672,6 +696,13 @@ export const COMMANDS: Record<string, typeof Command> = {
   // One listener route owns events, receiver status and exact-email routing diagnostics.
   listen: ListenCommand,
   "listen:init": ListenInitCommand,
+  // Durable notices for mail a Claude wake accepted but the session has not
+  // read yet; cleared by `emails get --id <id>`.
+  "listen:pending": ListenPendingCommand,
+  // Local per-session (or profile-wide) thread mutes for wakes.
+  "threads:mute": ThreadsMuteCommand,
+  "threads:unmute": ThreadsUnmuteCommand,
+  "threads:muted": ThreadsMutedCommand,
   "inbox:status": InboxStatusCommand,
   "inbox:get-inbox-status": InboxStatusCommand,
   // `functions:init` scaffolds a deployable Function project so a
@@ -751,6 +782,11 @@ export const COMMANDS: Record<string, typeof Command> = {
   "credits:redeem": CreditsRedeemCommand,
   "credits:redeem-credit-code": CreditsRedeemCommand,
   "credits:balance": CreditsBalanceCommand,
+  // `sent:get` adds --idempotency-key lookup on top of the generated
+  // get-sent-email operation, so a caller holding only the key from an
+  // uncertain send can reconcile it. `sending:get` and the operation id
+  // stay generated.
+  "sent:get": SentGetCommand,
   ...generatedCommandAliases,
   ...generatedCommands,
   // `functions:logs` is the human/agent-friendly log viewer: compact
@@ -794,3 +830,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   "wake:authorizations:delete": WakeAuthorizationsDeleteCommand,
   "wake:dispatches:list": WakeDispatchesListCommand,
 };
+
+// With --json, every command except the streaming `listen` prints one JSON
+// document on stdout and nothing on stderr, so `2>&1` output still parses.
+guardJsonOutputCommands(COMMANDS);
