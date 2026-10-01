@@ -12,6 +12,7 @@ import {
   mailLockBusy,
   mailObject,
   mailString,
+  mailTime,
   readMailJson,
   removeMailFile,
   writeMailJson,
@@ -25,6 +26,7 @@ type OwnerRecord = {
   ready: boolean;
   gapCount: number;
   lastGapReason: string | null;
+  lastMailCheckAt: string | null;
 };
 export type SharedMailOwner = OwnerRecord & { alive: boolean };
 function ownerRecord(value: unknown): OwnerRecord {
@@ -35,6 +37,9 @@ function ownerRecord(value: unknown): OwnerRecord {
     "ready",
     "gapCount",
     "lastGapReason",
+    ...(value && typeof value === "object" && Object.hasOwn(value, "lastMailCheckAt")
+      ? ["lastMailCheckAt"]
+      : []),
   ]);
   if (
     typeof o.pid !== "number" ||
@@ -54,6 +59,10 @@ function ownerRecord(value: unknown): OwnerRecord {
     gapCount: o.gapCount,
     lastGapReason:
       o.lastGapReason === null ? null : mailString(o.lastGapReason, 100),
+    lastMailCheckAt:
+      o.lastMailCheckAt === undefined || o.lastMailCheckAt === null
+        ? null
+        : mailTime(o.lastMailCheckAt),
   };
 }
 export function readSharedMailOwner(
@@ -94,6 +103,7 @@ export function tryOwnSharedMail(store: Pick<SharedMailStore, "directory">) {
     ready: false,
     gapCount: 0,
     lastGapReason: null,
+    lastMailCheckAt: null,
   };
   let closed = false;
   try {
@@ -106,6 +116,7 @@ export function tryOwnSharedMail(store: Pick<SharedMailStore, "directory">) {
     ready?: boolean;
     gapCount?: number;
     lastGapReason?: string | null;
+    lastMailCheckAt?: string | null;
   }) => {
     if (closed) throw invalidSharedMail();
     const existing = readMailJson(path);
@@ -127,6 +138,9 @@ export function tryOwnSharedMail(store: Pick<SharedMailStore, "directory">) {
       markStatus({ ...status, ready: true });
     },
     markStatus,
+    markChecked() {
+      markStatus({ lastMailCheckAt: new Date().toISOString() });
+    },
     close() {
       if (closed) return;
       closed = true;

@@ -11,6 +11,7 @@ export interface SharedMailTransportOptions {
   recipient: string;
   signal: AbortSignal;
   ready(): Promise<void>;
+  checked?(): Promise<void>;
   status(value: {
     ready?: boolean;
     gapCount?: number;
@@ -125,6 +126,12 @@ export async function runSharedMailTransport(
     ensureSharedMailSubscription({ ...options, signal }),
   );
   let statusWork = Promise.resolve();
+  const publishChecked = () => {
+    const checked = options.checked;
+    if (!checked) return;
+    statusWork = statusWork.then(() => checked());
+    void statusWork.catch((error: unknown) => failed.abort(error));
+  };
   const publishStatus = (value: {
     gap_count: number;
     last_gap_reason: string | null;
@@ -142,12 +149,14 @@ export async function runSharedMailTransport(
     created.endpointId,
     {
       onStatus: publishStatus,
+      onHeartbeat: publishChecked,
     },
   );
   const ensureOpen = async () => {
     if (connected) return;
     await stream.open(signal);
     await statusWork;
+    await options.checked?.();
     await options.ready();
     connected = true;
   };
@@ -158,6 +167,7 @@ export async function runSharedMailTransport(
         await ensureOpen();
         return stream.receive(signal);
       });
+      publishChecked();
       publishStatus(offer);
       await statusWork;
       const delivery = offer.delivery;

@@ -10,7 +10,7 @@ import { AgentConnectionSetupError } from "../connected-agent-profile.js";
 
 export default class AgentConnectCommand extends Command {
   static description =
-    "Claim an owner's private setup invitation from piped stdin and save a separate connected-agent profile. Add --session to answer one authenticated setup challenge and enable owner notifications. The default receiver preflights and starts a native session listener; --receiver external requires the exact Claude session and installs a fail-open Stop hook and resume SessionStart hook after the verification reply. A real idle mail event must still verify wake. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. Verification reply submission is separate from delivery and receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --status --json to inspect saved identity offline.";
+    "Claim an owner's private setup invitation from piped stdin and save a separate connected-agent profile. Add --session to answer one authenticated setup challenge and enable owner notifications. The default receiver preflights and starts a native session listener; --receiver external requires the exact Claude session and installs a fail-open Stop hook and resume SessionStart hook after the verification reply. A real idle mail event must still verify wake. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. Verification reply submission is separate from delivery and receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --status --json to inspect saved identity and local receiver health offline.";
   static summary = "Connect and verify an agent address";
   static examples = [
     "<%= config.bin %> agent connect --profile work --session 11111111-1111-4111-8111-111111111111 --contact-requests --json < private-invitation.txt",
@@ -51,7 +51,7 @@ export default class AgentConnectCommand extends Command {
     }),
     status: Flags.boolean({
       description:
-        "Read saved identity metadata offline without reading stdin or verifying receiving readiness",
+        "Read saved identity and local receiver health offline without reading stdin",
     }),
     json: Flags.boolean({
       description:
@@ -70,7 +70,7 @@ export default class AgentConnectCommand extends Command {
         else
           this.log(
             result.status === "configured"
-              ? `Agent profile ${flags.profile} is configured for ${result.identity.agentAddress}. Receiving readiness is not verified by this offline check.`
+              ? `Agent profile ${flags.profile} is configured for ${result.identity.agentAddress}. Local receiving: ${result.receiving.state}${result.receiving.reason ? ` (${result.receiving.reason})` : ""}.`
               : `Agent profile ${flags.profile} is not configured.`,
           );
         return;

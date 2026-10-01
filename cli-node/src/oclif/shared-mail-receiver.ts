@@ -81,6 +81,9 @@ export async function openSharedMailReceiver(options: {
       ready: async () => {
         owner.markReady();
       },
+      checked: async () => {
+        owner.markChecked();
+      },
       status: async (status) => {
         owner.markStatus(status);
       },

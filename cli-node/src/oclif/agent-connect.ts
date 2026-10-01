@@ -14,6 +14,10 @@ import {
   saveConnectedAgentProfile,
 } from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
+import { backgroundListenStatus } from "./listen-background.js";
+import { notificationScope } from "./notify-session.js";
+import { SESSION_UUID } from "./notify-session-native.js";
+import { readSharedMailOwner } from "./shared-mail-watch.js";
 import {
   privateMailDirectory,
   readMailJson,
@@ -35,10 +39,79 @@ export type AgentConnectResult = {
 export function agentConnectionStatus(configDir: string, profileName: string) {
   agentProfileName(profileName);
   const profile = loadConnectedAgentProfile(configDir, profileName);
+  const setup = profile
+    ? readMailJson(join(agentProfileDirectory(configDir, profileName), "setup.json"))
+    : null;
+  const saved =
+    setup && typeof setup === "object" && !Array.isArray(setup)
+      ? (setup as Record<string, unknown>)
+      : null;
+  const session =
+    saved &&
+    typeof saved.session === "string" &&
+    SESSION_UUID.test(saved.session)
+      ? saved.session
+      : null;
+  const mode =
+    saved && saved.receiverMode === "external"
+      ? "external"
+      : "native";
+  const receiving =
+    profile && session && mode === "native"
+      ? (() => {
+          const scope = notificationScope(profile.api_base_url, profile.api_key);
+          const listener = backgroundListenStatus({
+            configDir,
+            scope,
+            threadId: session,
+          });
+          const sharedDirectory = join(
+            configDir,
+            "shared-mail",
+            createHash("sha256").update(scope).digest("hex"),
+          );
+          const mailOwner = readSharedMailOwner({ directory: sharedDirectory });
+          return {
+            mode,
+            sessionId: session,
+            state: listener.healthy
+              ? listener.phase === "receiving"
+                ? "running"
+                : "degraded"
+              : listener.reason === "absent"
+                ? "unknown"
+                : "down",
+            reason: listener.reason ?? listener.failureCode,
+            lastSuccessfulMailCheckAt: mailOwner?.lastMailCheckAt ?? null,
+            liveness:
+              listener.healthy && listener.phase === "receiving"
+                ? "live"
+                : "unknown",
+            listener,
+          };
+        })()
+      : profile && session
+        ? {
+            mode,
+            sessionId: session,
+            state: "unknown",
+            reason: "hook_liveness_unverified",
+            lastSuccessfulMailCheckAt: null,
+            liveness: "unknown",
+          }
+        : {
+            mode: "unknown",
+            sessionId: null,
+            state: "unknown",
+            reason: "session_not_configured",
+            lastSuccessfulMailCheckAt: null,
+            liveness: "unknown",
+          };
   return profile
     ? {
         status: "configured" as const,
         identity: connectedAgentIdentity(profileName, profile),
+        receiving,
       }
     : { status: "not_configured" as const, profileName };
 }

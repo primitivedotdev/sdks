@@ -60,12 +60,14 @@ describe("shared mail stream ownership and local change hints", () => {
       alive: true,
     });
     first.markReady();
+    first.markChecked();
     first.markStatus({ gapCount: 2, lastGapReason: "retention_expired" });
     expect(readSharedMailOwner(store)).toMatchObject({
       ready: true,
       gapCount: 2,
       lastGapReason: "retention_expired",
     });
+    expect(Date.parse(readSharedMailOwner(store)?.lastMailCheckAt ?? "")).not.toBeNaN();
     first.markStatus({ ready: false });
     expect(readSharedMailOwner(store)?.ready).toBe(false);
     first.close();

@@ -29,6 +29,7 @@ import {
   loadConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 import { pickDefaultFromAddress } from "../../src/oclif/outbound-defaults.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const token = ["invitation", "a".repeat(48)].join("_");
 const credential = ["pconn", "b".repeat(48)].join("_");
@@ -86,6 +87,22 @@ describe("connected-agent setup", () => {
     expect(JSON.stringify(status)).not.toContain(credential);
     expect(JSON.stringify(status)).not.toContain(token);
     expect(fetch).toHaveBeenCalledTimes(1);
+    expect(status.receiving).toMatchObject({
+      state: "unknown",
+      reason: "session_not_configured",
+      liveness: "unknown",
+    });
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "work"), "setup.json"),
+      { session: orgId, receiverMode: "native" },
+    );
+    expect(agentConnectionStatus(configDir, "work").receiving).toMatchObject({
+      mode: "native",
+      state: "unknown",
+      reason: "absent",
+      liveness: "unknown",
+      lastSuccessfulMailCheckAt: null,
+    });
   });
   it("advertises presence only for session setup and persists its trusted fixed return profile", async () => {
     const result = claim();

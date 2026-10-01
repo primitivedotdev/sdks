@@ -42,6 +42,18 @@ const failure = () =>
   );
 function connectionFailure(error: unknown): NativeSessionError {
   if (error instanceof NativeSessionError) return error;
+  if ((error as { code?: unknown } | null)?.code === "WS_ERR_UNSUPPORTED_MESSAGE_LENGTH")
+    return new NativeSessionError(
+      "The native session sent an oversized response. Update the CLI and resume the exact session before restarting the listener.",
+    );
+  const message = (error as { message?: unknown } | null)?.message;
+  if (
+    typeof message === "string" &&
+    /^Unexpected server response: (401|403)$/.test(message)
+  )
+    return new NativeSessionError(
+      "The native session rejected the listener connection. Check local session access before restarting the listener.",
+    );
   if (
     [
       "ENOENT",
