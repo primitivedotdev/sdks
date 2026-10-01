@@ -270,7 +270,7 @@ native.on("connection", (socket) =>
         thread: { id: sessionId, cwd: directory, canAcceptDirectInput: true },
       };
     else if (frame.method === "thread/resume") {
-      assert.deepEqual(frame.params, { threadId: sessionId });
+      assert.deepEqual(frame.params, { threadId: sessionId, excludeTurns: true });
       result = { thread: { id: sessionId } };
     }
     else if (frame.method === "turn/start") {

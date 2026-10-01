@@ -51,8 +51,10 @@ try {
 
   const continuing = await invoke(["agent", "enroll", "--session", session, "--continue-setup", "--json"]);
   assert.notEqual(continuing.exit, 0);
-  assert.match(continuing.stderr, /saved member OAuth login|Sign in/);
-  assert.doesNotMatch(continuing.stderr, /Nonexistent flags/);
+  // With --json the refusal is in the one JSON document; stderr stays empty.
+  assert.match(continuing.stdout, /saved member OAuth login|Sign in/);
+  assert.doesNotMatch(continuing.stdout, /Nonexistent flags/);
+  assert.equal(continuing.stderr, "");
 
   const accountParent = await invoke(["account"]);
   assert.equal(accountParent.exit, 0);
@@ -106,7 +108,8 @@ try {
     "--receiver", "external", "--json",
   ]);
   assert.notEqual(mismatched.exit, 0);
-  assert.match(mismatched.stderr, /exact Claude session ID/);
+  assert.match(mismatched.stdout, /exact Claude session ID/);
+  assert.equal(mismatched.stderr, "");
 
   const connectionParent = await invoke(["agent-connections"]);
   assert.equal(connectionParent.exit, 0);

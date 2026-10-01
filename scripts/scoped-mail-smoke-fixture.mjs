@@ -257,9 +257,18 @@ export async function scopedMailFixture(binaryArgument) {
         request.method === "GET" &&
         /^\/v1\/emails\/[^/]+$/.test(url.pathname)
       ) {
-        const email = emails.get(url.pathname.split("/").at(-1));
+        const id = url.pathname.split("/").at(-1);
+        const email = emails.get(id);
         assert.ok(email);
         json(response, email);
+        // Under --json the inspection notice is held for the one JSON
+        // document, so reading the attachment-bearing reply is the causal
+        // signal instead.
+        const release = pushAfterNotice.get(id);
+        if (release) {
+          pushAfterNotice.delete(id);
+          setImmediate(release);
+        }
       } else
         throw new Error(`Forbidden request ${request.method} ${url.pathname}`);
     } catch (error) {

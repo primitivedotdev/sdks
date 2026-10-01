@@ -173,7 +173,7 @@ native.on("connection", (socket) => socket.on("message", (bytes) => {
     else if (frame.method === "thread/loaded/list") result = { data: [session], nextCursor: null };
     else if (frame.method === "thread/read") result = { thread: { id: session, cwd: root, canAcceptDirectInput: true } };
     else if (frame.method === "thread/resume") {
-      assert.deepEqual(frame.params, { threadId: session });
+      assert.deepEqual(frame.params, { threadId: session, excludeTurns: true });
       result = { thread: { id: session, cwd: root, canAcceptDirectInput: true } };
     }
     else if (frame.method === "turn/start") {

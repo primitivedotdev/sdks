@@ -17,7 +17,9 @@ try {
   assert.equal(replyHelp.code, 0);
   const missing = await f.run(["chat", f.peer, "hello", ...flags]);
   assert.notEqual(missing.code, 0);
-  assert.match(missing.stderr, /must pass --from/);
+  // With --json the refusal is in the one JSON document; stderr stays empty.
+  assert.match(missing.stdout, /must pass --from/);
+  assert.equal(missing.stderr, "");
   assert.equal(f.requests.length, 0);
   for (const args of [
     chat("hello"),
@@ -25,7 +27,7 @@ try {
     ["chat", f.peer, "--reply", "latest parent", "--from", f.owner, ...flags],
   ]) {
     const result = await f.run(args);
-    assert.equal(result.code, 0, result.stderr);
+    assert.equal(result.code, 0, result.stdout);
     const output = JSON.parse(result.stdout);
     repliedIds.push(output.reply.id);
     assert.equal(output.reply.body_text, "The answer");
@@ -35,7 +37,8 @@ try {
         command.command.includes("emails wait"),
       ),
     );
-    assert.match(result.stderr, /interaction attachment/);
+    assert.equal(result.stderr, "");
+    assert.match(result.stdout, /interaction attachment/);
   }
   const uncertainArgs = chat("uncertain send"),
     beforeUnknown = f.posts();
