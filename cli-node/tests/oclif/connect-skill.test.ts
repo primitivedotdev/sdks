@@ -349,6 +349,22 @@ describe("skill install", () => {
     ).toBe("kept");
     expect(leftovers(target)).toEqual([]);
   });
+  it("never carries recovered dependencies through a symlink", () => {
+    const { bundle, install, target } = setup();
+    const root = resolve(target, "..");
+    mkdirSync(root, { recursive: true });
+    const shared = temp("connect-skill-linked-");
+    execFileSync("cp", ["-R", `${bundle.directory}/.`, shared]);
+    symlinkSync(shared, target);
+    const retired = join(root, `.${CONNECT_SKILL_NAME}.retired-old`);
+    execFileSync("cp", ["-R", `${bundle.directory}/.`, retired]);
+    mkdirSync(join(retired, "node_modules"));
+    const past = new Date(Date.now() - 120_000);
+    utimesSync(retired, past, past);
+    expect(install()).toMatchObject({ state: "updated", replacedLink: true });
+    expect(existsSync(join(shared, "node_modules"))).toBe(false);
+    expect(leftovers(target)).toEqual([]);
+  });
   it("asks for a dependency reinstall when the lockfile changed", () => {
     const { install, target } = setup();
     install();

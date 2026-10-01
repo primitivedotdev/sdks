@@ -226,10 +226,17 @@ function recoverInterruptedInstall(root: string, target: string): boolean {
   }
   // A refresh interrupted after its new copy was in place leaves the helper
   // dependencies in the retired copy; carry them over when they still match.
+  // Never through a symlink: its target is not ours to change.
+  let realDirectory = false;
+  try {
+    realDirectory = lstatSync(target).isDirectory();
+  } catch {
+    realDirectory = false;
+  }
   for (const name of retired) {
     const deps = join(root, name, "node_modules");
     if (
-      !missing &&
+      realDirectory &&
       existsSync(deps) &&
       !existsSync(join(target, "node_modules")) &&
       sameDependencies(join(root, name), target)
