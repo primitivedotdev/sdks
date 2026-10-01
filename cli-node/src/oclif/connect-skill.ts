@@ -163,22 +163,18 @@ export type ConnectSkillInstall = {
   dependencies?: "kept" | "reinstall_needed";
 };
 
-/** The installed copy's dependency manifests match the bundle's. */
-function sameDependencies(
-  target: string,
-  bundle: BundledConnectSkill,
-): boolean {
-  return ["package.json", "package-lock.json"].every((file) => {
-    let installed: string | undefined;
+/** Two skill copies declare the same helper dependencies. */
+function sameDependencies(a: string, b: string): boolean {
+  const digest = (path: string) => {
     try {
-      installed = createHash("sha256")
-        .update(readFileSync(join(target, file)))
-        .digest("hex");
+      return createHash("sha256").update(readFileSync(path)).digest("hex");
     } catch {
-      installed = undefined;
+      return null;
     }
-    return installed === bundle.files[file];
-  });
+  };
+  return ["package.json", "package-lock.json"].every(
+    (file) => digest(join(a, file)) === digest(join(b, file)),
+  );
 }
 
 /** Leftovers younger than this may belong to a refresh still in progress. */
@@ -226,6 +222,23 @@ function recoverInterruptedInstall(root: string, target: string): boolean {
       retired.shift();
     } catch {
       /* Leave it for the next run; installing fresh still restores the path. */
+    }
+  }
+  // A refresh interrupted after its new copy was in place leaves the helper
+  // dependencies in the retired copy; carry them over when they still match.
+  for (const name of retired) {
+    const deps = join(root, name, "node_modules");
+    if (
+      !missing &&
+      existsSync(deps) &&
+      !existsSync(join(target, "node_modules")) &&
+      sameDependencies(join(root, name), target)
+    ) {
+      try {
+        renameSync(deps, join(target, "node_modules"));
+      } catch {
+        /* Reinstalling with npm ci restores them. */
+      }
     }
   }
   for (const name of [
@@ -327,32 +340,33 @@ export function installConnectSkill(options: {
       throw new Error("Copied skill files do not match the bundle.");
     // Helper dependencies an agent installed with npm ci survive a refresh
     // when the lockfile is unchanged; otherwise the result says to reinstall.
-    const installedDeps = join(target, "node_modules");
-    const stagedDeps = join(staging, "node_modules");
+    // They only ever live inside a complete copy (the old one until the new
+    // one is in place), so an interruption at any point leaves them
+    // recoverable by the next run.
     let dependencies: "kept" | "reinstall_needed" | undefined;
-    if (link === null && existing?.isDirectory() && existsSync(installedDeps)) {
-      if (sameDependencies(target, options.bundle)) {
-        renameSync(installedDeps, stagedDeps);
-        dependencies = "kept";
-      } else dependencies = "reinstall_needed";
-    }
-    try {
-      if (link !== null) unlinkSync(target);
-      else if (existing) renameSync(target, retired);
-    } catch (error) {
-      if (dependencies === "kept") renameSync(stagedDeps, installedDeps);
-      throw error;
-    }
+    if (
+      link === null &&
+      existing?.isDirectory() &&
+      existsSync(join(target, "node_modules"))
+    )
+      dependencies = sameDependencies(target, staging)
+        ? "kept"
+        : "reinstall_needed";
+    if (link !== null) unlinkSync(target);
+    else if (existing) renameSync(target, retired);
     try {
       renameSync(staging, target);
     } catch (error) {
       if (link !== null) symlinkSync(link, target);
-      else if (existing && existsSync(retired)) {
-        if (dependencies === "kept")
-          renameSync(stagedDeps, join(retired, "node_modules"));
-        renameSync(retired, target);
-      }
+      else if (existing && existsSync(retired)) renameSync(retired, target);
       throw error;
+    }
+    if (dependencies === "kept") {
+      try {
+        renameSync(join(retired, "node_modules"), join(target, "node_modules"));
+      } catch {
+        dependencies = "reinstall_needed";
+      }
     }
     rmSync(retired, { recursive: true, force: true });
     return {

@@ -332,6 +332,23 @@ describe("skill install", () => {
     ).toBe("kept");
     expect(leftovers(target)).toEqual([]);
   });
+  it("recovers helper dependencies left in the old copy by an interrupted refresh", () => {
+    const { install, target } = setup();
+    install();
+    const root = resolve(target, "..");
+    const retired = join(root, `.${CONNECT_SKILL_NAME}.retired-old`);
+    execFileSync("cp", ["-R", target, retired]);
+    writeFileSync(join(retired, "SKILL.md"), "older");
+    mkdirSync(join(retired, "node_modules", "dep"), { recursive: true });
+    writeFileSync(join(retired, "node_modules", "dep", "index.js"), "kept");
+    const past = new Date(Date.now() - 120_000);
+    utimesSync(retired, past, past);
+    expect(install().state).toBe("unchanged");
+    expect(
+      readFileSync(join(target, "node_modules", "dep", "index.js"), "utf8"),
+    ).toBe("kept");
+    expect(leftovers(target)).toEqual([]);
+  });
   it("asks for a dependency reinstall when the lockfile changed", () => {
     const { install, target } = setup();
     install();
