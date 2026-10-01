@@ -153,7 +153,7 @@
     "topicSeparator": " "
   },
   "scripts": {
-    "build": "pnpm --filter @primitivedotdev/sdk build && tsdown && node scripts/assert-bundled.mjs",
+    "build": "pnpm --filter @primitivedotdev/sdk build && tsdown && node scripts/assert-bundled.mjs && node scripts/bundle-skills.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
