@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
@@ -193,4 +199,56 @@ test("PostToolUse still checks for new mail while an earlier notice is unread", 
   const context = JSON.parse(result.stdout).hookSpecificOutput
     .additionalContext;
   assert.match(context, new RegExp(email));
+});
+
+test("PostToolUse reads a full list, including a status notice past the mail cap", async () => {
+  const { PENDING_MAIL_LIMIT, recordPendingMail } = await import(
+    "../../src/oclif/pending-mail.js"
+  );
+  const fixtureData = fixture();
+  writeFileSync(fixtureData.cli, "process.exit(0);");
+  // The writer requires private directories.
+  for (const dir of [
+    fixtureData.configDir,
+    join(fixtureData.configDir, "agent-connections"),
+    join(fixtureData.configDir, "agent-connections", "profiles"),
+    fixtureData.profileDir,
+  ])
+    chmodSync(dir, 0o700);
+  const sender = `${"a".repeat(60)}@example-domain.com`;
+  const thread = "55555555-5555-4555-8555-555555555555";
+  const uuidFor = (n: number) =>
+    `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+  for (let n = 1; n <= PENDING_MAIL_LIMIT; n++)
+    await recordPendingMail(fixtureData.configDir, "agent", session, {
+      kind: "mail",
+      email_id: uuidFor(n),
+      received_at: new Date().toISOString(),
+      sender,
+      thread_id: thread,
+      in_thread: true,
+      newer: 9,
+    });
+  const statusId = uuidFor(999);
+  await recordPendingMail(fixtureData.configDir, "agent", session, {
+    kind: "status",
+    email_id: statusId,
+    received_at: new Date().toISOString(),
+    sender,
+    thread_id: thread,
+    in_thread: true,
+    newer: null,
+    ref_sent_email_id: uuidFor(998),
+  });
+  const { readPendingMail } = (await import(wrapper)) as {
+    readPendingMail: (
+      configDir: string,
+      profile: string,
+      sessionId: string,
+    ) => { emailId: string }[];
+  };
+  const read = readPendingMail(fixtureData.configDir, "agent", session);
+  // The file passes 16 KiB and the status notice sits past position 50.
+  assert.equal(read.length, PENDING_MAIL_LIMIT + 1);
+  assert.equal(read.at(-1)?.emailId, statusId);
 });

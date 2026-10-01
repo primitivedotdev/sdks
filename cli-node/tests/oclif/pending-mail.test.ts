@@ -16,6 +16,7 @@ import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import {
   clearReadPendingMail,
   PENDING_MAIL_LIMIT,
+  PENDING_STATUS_HEADROOM,
   PendingMailFullError,
   type PendingMailNotice,
   pendingMailPath,
@@ -163,7 +164,28 @@ describe("pending mail notices", () => {
     await recordPendingMail(configDir, profile, session, mail(1));
   });
 
-  it("lets a status notice make room at the cap", async () => {
+  it("always journals a status notice, even when unread mail is full", async () => {
+    for (let n = 1; n <= PENDING_MAIL_LIMIT; n++)
+      await recordPendingMail(configDir, profile, session, mail(n));
+    const status = (n: number) => ({
+      ...mail(n),
+      kind: "status" as const,
+      in_thread: true,
+      ref_sent_email_id: id(900),
+    });
+    for (let n = 1; n <= PENDING_STATUS_HEADROOM + 2; n++)
+      await recordPendingMail(configDir, profile, session, status(500 + n));
+    const rows = readPendingMail(configDir, profile, session);
+    expect(rows).toHaveLength(PENDING_MAIL_LIMIT + PENDING_STATUS_HEADROOM);
+    // Every unread mail notice is kept; the oldest status notices gave way.
+    expect(rows.filter((row) => row.kind !== "status")).toHaveLength(
+      PENDING_MAIL_LIMIT,
+    );
+    expect(rows.at(-1)?.email_id).toBe(id(500 + PENDING_STATUS_HEADROOM + 2));
+    expect(rows.some((row) => row.email_id === id(501))).toBe(false);
+  });
+
+  it("does not count status notices against the mail cap", async () => {
     await recordPendingMail(configDir, profile, session, {
       ...mail(1),
       kind: "status",
@@ -173,9 +195,16 @@ describe("pending mail notices", () => {
     for (let n = 2; n <= PENDING_MAIL_LIMIT + 1; n++)
       await recordPendingMail(configDir, profile, session, mail(n));
     const rows = readPendingMail(configDir, profile, session);
-    expect(rows).toHaveLength(PENDING_MAIL_LIMIT);
-    expect(rows.every((row) => row.kind !== "status")).toBe(true);
-    expect(rows[0]?.email_id).toBe(id(2));
+    expect(rows).toHaveLength(PENDING_MAIL_LIMIT + 1);
+    expect(rows[0]?.kind).toBe("status");
+    await expect(
+      recordPendingMail(
+        configDir,
+        profile,
+        session,
+        mail(PENDING_MAIL_LIMIT + 2),
+      ),
+    ).rejects.toBeInstanceOf(PendingMailFullError);
   });
 
   it("removes exact ids and deletes the file when empty", async () => {

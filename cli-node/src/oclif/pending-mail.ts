@@ -38,6 +38,12 @@ export type PendingMailNotice = {
 };
 
 export const PENDING_MAIL_LIMIT = 50;
+/**
+ * Extra room kept for status notices, so a status notice can always be
+ * journaled even when unread mail fills PENDING_MAIL_LIMIT. Beyond it the
+ * oldest status notice gives way, never mail.
+ */
+export const PENDING_STATUS_HEADROOM = 10;
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 const FILE =
   /^pending-mail-([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\.json$/;
@@ -196,8 +202,9 @@ export class PendingMailFullError extends Error {
 
 /**
  * Add or refresh one notice, deduplicated by email id. Unread mail is never
- * evicted: at the cap the oldest status notice makes room, and with none
- * left the write fails with PendingMailFullError.
+ * evicted: a mail notice past PENDING_MAIL_LIMIT fails with
+ * PendingMailFullError. A status notice always fits, using the headroom
+ * above that cap and replacing the oldest status notice when it is full.
  */
 export async function recordPendingMail(
   configDir: string,
@@ -220,9 +227,17 @@ export async function recordPendingMail(
       ),
       row,
     ];
-    while (next.length > PENDING_MAIL_LIMIT) {
-      // A status notice is a peer signal with nothing to read; it is the
-      // only kind that may make room.
+    // Unread mail is capped and never evicted; a new mail notice past the
+    // cap is refused so its event stays queued.
+    if (
+      row.kind !== "status" &&
+      next.filter((existing) => existing.kind !== "status").length >
+        PENDING_MAIL_LIMIT
+    )
+      throw new PendingMailFullError();
+    // Status notices use the headroom above the mail cap, so one can always
+    // be journaled; past it the oldest other status notice gives way.
+    while (next.length > PENDING_MAIL_LIMIT + PENDING_STATUS_HEADROOM) {
       const status = next.findIndex(
         (existing) => existing !== row && existing.kind === "status",
       );

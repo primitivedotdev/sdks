@@ -29,7 +29,8 @@ function profileDirectory(configDir, profile) {
 function readJson(path) {
   try {
     const stat = lstatSync(path);
-    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16_384)
+    // A full pending list (mail cap plus status headroom) can pass 16 KiB.
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 65_536)
       return null;
     return JSON.parse(readFileSync(path, "utf8"));
   } catch {
@@ -66,7 +67,8 @@ export function readPendingMail(configDir, profile, sessionId) {
     !Array.isArray(state.notices)
   )
     return [];
-  return state.notices.slice(0, 50).flatMap((notice) => {
+  // The writer keeps at most 50 unread mail notices plus 10 status ones.
+  return state.notices.slice(0, 60).flatMap((notice) => {
     if (
       !uuid.test(notice?.email_id ?? "") ||
       !addressPattern.test(notice?.sender ?? "") ||
