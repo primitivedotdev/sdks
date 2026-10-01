@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import { duePendingMail, formatPendingMail, readPendingMail } from "./claude-pending-mail.mjs";
 
 const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -167,8 +168,27 @@ try {
       legacyProfile ||
       JSON.parse(input).session_id === expectedSession) &&
     supportsWake()
-  )
-    await listen(input);
+  ) {
+    const session = JSON.parse(input).session_id;
+    const pending =
+      profileName && !legacy && !legacyProfile
+        ? duePendingMail(
+            configDir,
+            profileName,
+            session,
+            readPendingMail(configDir, profileName, session),
+          )
+        : [];
+    if (pending.length) {
+      for (const notice of pending.slice(0, 10))
+        process.stderr.write(formatPendingMail(notice));
+      if (pending.length > 10)
+        process.stderr.write(`${pending.length - 10} more pending messages.\n`);
+      process.exitCode = 2;
+    } else {
+      await listen(input);
+    }
+  }
 } catch {
   process.exitCode = 0;
 }
