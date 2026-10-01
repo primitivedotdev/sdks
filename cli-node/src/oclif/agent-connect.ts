@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+import { claudeWakeHookStatus } from "./claude-wake-install.js";
 import {
   AgentConnectionSetupError,
   agentProfileDirectory,
@@ -13,16 +14,16 @@ import {
   parseConnectedAgentProfile,
   saveConnectedAgentProfile,
 } from "./connected-agent-profile.js";
-import { acquireListenLock } from "./listen-state.js";
 import { backgroundListenStatus } from "./listen-background.js";
+import { acquireListenLock } from "./listen-state.js";
 import { notificationScope } from "./notify-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
-import { readSharedMailOwner } from "./shared-mail-watch.js";
 import {
   privateMailDirectory,
   readMailJson,
   writeMailJson,
 } from "./shared-mail-files.js";
+import { readSharedMailOwner } from "./shared-mail-watch.js";
 
 const MAX_INVITATION_BYTES = 4096;
 const MAX_RESPONSE_BYTES = 32_768;
@@ -40,7 +41,9 @@ export function agentConnectionStatus(configDir: string, profileName: string) {
   agentProfileName(profileName);
   const profile = loadConnectedAgentProfile(configDir, profileName);
   const setup = profile
-    ? readMailJson(join(agentProfileDirectory(configDir, profileName), "setup.json"))
+    ? readMailJson(
+        join(agentProfileDirectory(configDir, profileName), "setup.json"),
+      )
     : null;
   const saved =
     setup && typeof setup === "object" && !Array.isArray(setup)
@@ -53,13 +56,14 @@ export function agentConnectionStatus(configDir: string, profileName: string) {
       ? saved.session
       : null;
   const mode =
-    saved && saved.receiverMode === "external"
-      ? "external"
-      : "native";
+    saved && saved.receiverMode === "external" ? "external" : "native";
   const receiving =
     profile && session && mode === "native"
       ? (() => {
-          const scope = notificationScope(profile.api_base_url, profile.api_key);
+          const scope = notificationScope(
+            profile.api_base_url,
+            profile.api_key,
+          );
           const listener = backgroundListenStatus({
             configDir,
             scope,
@@ -78,9 +82,11 @@ export function agentConnectionStatus(configDir: string, profileName: string) {
               ? listener.phase === "receiving"
                 ? "running"
                 : "degraded"
-              : listener.reason === "absent"
-                ? "unknown"
-                : "down",
+              : listener.reason === "restarting"
+                ? "degraded"
+                : listener.reason === "absent"
+                  ? "unknown"
+                  : "down",
             reason: listener.reason ?? listener.failureCode,
             lastSuccessfulMailCheckAt: mailOwner?.lastMailCheckAt ?? null,
             liveness:
@@ -98,6 +104,12 @@ export function agentConnectionStatus(configDir: string, profileName: string) {
             reason: "hook_liveness_unverified",
             lastSuccessfulMailCheckAt: null,
             liveness: "unknown",
+            hook: claudeWakeHookStatus({
+              configDir,
+              profileName,
+              agentAddress: profile.agent_address,
+              sessionId: session,
+            }),
           }
         : {
             mode: "unknown",
