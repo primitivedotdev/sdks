@@ -23,7 +23,13 @@ import {
 export const BACKGROUND_LISTEN_TOKEN_ENV = "PRIMITIVE_LISTEN_BACKGROUND_TOKEN";
 export const BACKGROUND_LISTEN_TARGET_ENV =
   "PRIMITIVE_LISTEN_BACKGROUND_TARGET";
+const SUPERVISOR_ENV = "PRIMITIVE_LISTEN_SUPERVISOR";
+const SUPERVISOR_ARGV_ENV = "PRIMITIVE_LISTEN_SUPERVISOR_ARGV";
+const SUPERVISOR_WORKER_ENV = "PRIMITIVE_LISTEN_SUPERVISOR_WORKER";
 const STALE_AFTER_MS = 15_000;
+const RESTART_WINDOW_MS = 10 * 60_000;
+const HEALTHY_RESET_MS = 10 * 60_000;
+const MAX_FAILURES = 5;
 const phases = [
   "starting",
   "receiving",
@@ -37,6 +43,7 @@ const failureCodes = [
   "notification-outcome-unknown",
   "connection-changed",
   "receiving-failed",
+  "restart-budget-exhausted",
 ] as const;
 export type BackgroundListenFailureCode = (typeof failureCodes)[number];
 
@@ -56,6 +63,8 @@ function failureGuidance(code: BackgroundListenFailureCode): string {
       return "The selected connection changed. Check the intended profile and API origin before starting the listener again.";
     case "receiving-failed":
       return "Inspect listener status and run the same command without --background for details.";
+    case "restart-budget-exhausted":
+      return "The listener repeatedly exited. Inspect listener status before starting it again.";
   }
 }
 export type BackgroundListenTarget = {
@@ -74,6 +83,15 @@ type State = {
   failureCode: BackgroundListenFailureCode | null;
   updatedAt: number;
 };
+type SupervisorState = {
+  version: 1;
+  token: string;
+  pid: number;
+  identity: string;
+  phase: "starting" | "running" | "stopped" | "failed";
+  updatedAt: number;
+  failureCode: BackgroundListenFailureCode | null;
+};
 export type BackgroundListenStatus = {
   phase: BackgroundListenPhase | null;
   pid: number | null;
@@ -87,8 +105,11 @@ export type BackgroundListenStatus = {
     | "exited"
     | "stopped"
     | "failed"
+    | "restarting"
     | null;
   updatedAt: number | null;
+  supervisorPid?: number | null;
+  supervisorUpdatedAt?: number | null;
 };
 
 export function backgroundListenToken(
@@ -186,6 +207,42 @@ function files(target: BackgroundListenTarget, create = false) {
     directory,
     state: join(directory, "state.json"),
     stop: join(directory, "stop.json"),
+    supervisor: join(directory, "supervisor.json"),
+  };
+}
+
+function readSupervisor(path: string): SupervisorState | null {
+  const value = readMailJson(path, 2048);
+  if (value === null) return null;
+  const row = mailObject(value, [
+    "version",
+    "token",
+    "pid",
+    "identity",
+    "phase",
+    "updatedAt",
+    "failureCode",
+  ]);
+  if (
+    row.version !== 1 ||
+    !Number.isSafeInteger(row.pid) ||
+    Number(row.pid) < 1 ||
+    !["starting", "running", "stopped", "failed"].includes(String(row.phase)) ||
+    !Number.isSafeInteger(row.updatedAt) ||
+    Number(row.updatedAt) < 0 ||
+    (row.failureCode !== null && knownFailureCode(row.failureCode) === null)
+  )
+    throw new ListenStateError(
+      "Background supervisor state is invalid. Preserve it before retrying.",
+    );
+  return {
+    version: 1,
+    token: mailId(row.token),
+    pid: Number(row.pid),
+    identity: mailString(row.identity),
+    phase: row.phase as SupervisorState["phase"],
+    updatedAt: Number(row.updatedAt),
+    failureCode: knownFailureCode(row.failureCode),
   };
 }
 
@@ -236,7 +293,9 @@ function readState(path: string): State | null {
   };
 }
 
-function owner(state: State): "verified" | "gone" | "unknown" {
+function owner(
+  state: Pick<State, "pid" | "identity">,
+): "verified" | "gone" | "unknown" {
   const current = listenProcessIdentity(state.pid);
   const matches = compareListenProcessIdentity(state.identity, current);
   if (matches !== null) return matches ? "verified" : "gone";
@@ -286,7 +345,42 @@ function status(state: State | null): BackgroundListenStatus {
 export function backgroundListenStatus(
   target: BackgroundListenTarget,
 ): BackgroundListenStatus {
-  return status(readState(files(target).state));
+  const paths = files(target);
+  const worker = status(readState(paths.state));
+  const supervisor = readSupervisor(paths.supervisor);
+  if (!supervisor) return worker;
+  const ownership = owner(supervisor);
+  const fresh = Date.now() - supervisor.updatedAt < STALE_AFTER_MS;
+  const active =
+    supervisor.phase === "starting" || supervisor.phase === "running";
+  const reason =
+    supervisor.phase === "failed"
+      ? "failed"
+      : supervisor.phase === "stopped"
+        ? "stopped"
+        : ownership === "gone"
+          ? "exited"
+          : ownership === "unknown"
+            ? "unverifiable"
+            : !fresh
+              ? "stale"
+              : worker.healthy
+                ? null
+                : "restarting";
+  return {
+    ...worker,
+    phase:
+      supervisor.phase === "failed"
+        ? "failed"
+        : reason === "restarting"
+          ? "reconnecting"
+          : worker.phase,
+    healthy: active && reason === null,
+    reason,
+    failureCode: supervisor.failureCode ?? worker.failureCode,
+    supervisorPid: supervisor.pid,
+    supervisorUpdatedAt: supervisor.updatedAt,
+  };
 }
 
 function stopToken(path: string): string | null {
@@ -302,36 +396,65 @@ export async function stopBackgroundListen(
 ): Promise<BackgroundListenStatus> {
   const paths = files(target);
   const state = readState(paths.state);
-  if (!state) return status(null);
-  if (expectedToken !== undefined && mailId(expectedToken) !== state.token)
+  const supervisor = readSupervisor(paths.supervisor);
+  if (!state && !supervisor) return status(null);
+  const token = supervisor?.token ?? state?.token;
+  if (!token) return status(null);
+  if (expectedToken !== undefined && mailId(expectedToken) !== token)
     throw new ListenStateError(
       "Background listener ownership changed; no stop was requested.",
     );
   if (
-    state.phase === "stopped" ||
-    state.phase === "failed" ||
-    owner(state) === "gone"
+    state &&
+    !supervisor &&
+    (state.phase === "stopped" ||
+      state.phase === "failed" ||
+      owner(state) === "gone")
   )
     return status(state);
   // An old macOS record cannot prove liveness after clock correction or an
   // upgrade. Its private generation token can still ask only that worker to
   // stop. Never signal its PID or call the unconfirmed request a stopped worker.
-  if (owner(state) !== "verified" && !state.identity.startsWith("darwin:"))
+  if (supervisor && owner(supervisor) === "unknown")
+    throw new ListenStateError(
+      "Background supervisor ownership cannot be verified; no stop was requested.",
+    );
+  if (
+    !supervisor &&
+    state &&
+    owner(state) !== "verified" &&
+    !state.identity.startsWith("darwin:")
+  )
     throw new ListenStateError(
       "Background listener ownership cannot be verified; no stop was requested.",
     );
-  writeMailJson(paths.stop, { token: state.token });
+  writeMailJson(paths.stop, { token });
   const deadline = Date.now() + 5000;
   for (;;) {
     const current = readState(paths.state);
-    if (!current || current.token !== state.token) return status(current);
+    const currentSupervisor = readSupervisor(paths.supervisor);
     if (
-      current.phase === "stopped" ||
-      current.phase === "failed" ||
-      owner(current) === "gone"
+      currentSupervisor?.token === token &&
+      currentSupervisor.phase === "stopped"
     )
-      return status(current);
-    if (Date.now() >= deadline) return status(current);
+      return backgroundListenStatus(target);
+    if (
+      currentSupervisor?.token === token &&
+      currentSupervisor.phase === "failed"
+    )
+      return backgroundListenStatus(target);
+    if (current && current.token !== token)
+      return backgroundListenStatus(target);
+    if (!current && !currentSupervisor) return backgroundListenStatus(target);
+    if (
+      !supervisor &&
+      current &&
+      (current.phase === "stopped" ||
+        current.phase === "failed" ||
+        owner(current) === "gone")
+    )
+      return backgroundListenStatus(target);
+    if (Date.now() >= deadline) return backgroundListenStatus(target);
     await delay(50);
   }
 }
@@ -486,7 +609,11 @@ export async function runBackgroundListen(
     process.off("SIGTERM", cancel);
     process.off("SIGINT", cancel);
     try {
-      if (stopToken(paths.stop) === token) removeMailFile(paths.stop);
+      if (
+        process.env[SUPERVISOR_WORKER_ENV] !== token &&
+        stopToken(paths.stop) === token
+      )
+        removeMailFile(paths.stop);
     } catch (error) {
       failure ??= { error };
     }
@@ -497,6 +624,171 @@ export async function runBackgroundListen(
     }
   }
   if (failure) throw failure.error;
+}
+
+/** Supervise one exact listener generation until a stop or the restart budget is exhausted. */
+export async function runBackgroundListenSupervisor(): Promise<void> {
+  const token = mailId(process.env[BACKGROUND_LISTEN_TOKEN_ENV]);
+  const expected = mailObject(
+    JSON.parse(process.env[BACKGROUND_LISTEN_TARGET_ENV] ?? ""),
+    ["scope", "threadId", "configDir", "configuration"],
+  );
+  const target: BackgroundListenTarget = {
+    scope: mailString(expected.scope),
+    threadId: mailId(expected.threadId),
+    configDir: mailString(expected.configDir, 4096),
+  };
+  if (realpathSync(target.configDir) !== target.configDir)
+    throw new ListenStateError("Background supervisor target changed.");
+  const argvValue: unknown = JSON.parse(process.env[SUPERVISOR_ARGV_ENV] ?? "");
+  if (
+    !Array.isArray(argvValue) ||
+    argvValue.length < 1 ||
+    argvValue.some((part) => typeof part !== "string" || part.length > 4096)
+  )
+    throw new ListenStateError("Background supervisor command is invalid.");
+  const argv = argvValue as string[];
+  const paths = files(target, true);
+  const release = acquireListenLock(paths.directory, "background-supervisor");
+  const identity = listenProcessIdentity(process.pid);
+  if (!identity) {
+    release();
+    throw new ListenStateError(
+      "Supervisor process ownership cannot be verified.",
+    );
+  }
+  const record: SupervisorState = {
+    version: 1,
+    token,
+    pid: process.pid,
+    identity,
+    phase: "starting",
+    updatedAt: Date.now(),
+    failureCode: null,
+  };
+  const publish = () => {
+    const prior = readSupervisor(paths.supervisor);
+    if (
+      prior &&
+      prior.token !== token &&
+      owner(prior) !== "gone" &&
+      prior.phase !== "stopped" &&
+      prior.phase !== "failed"
+    )
+      throw new ListenStateError("Another supervisor owns this listener.");
+    record.updatedAt = Date.now();
+    writeMailJson(paths.supervisor, record);
+  };
+  let child: ReturnType<typeof spawn> | undefined;
+  let stopped = false;
+  const cancel = () => {
+    stopped = true;
+    writeMailJson(paths.stop, { token });
+    child?.kill("SIGTERM");
+  };
+  process.on("SIGTERM", cancel);
+  process.on("SIGINT", cancel);
+  const heartbeat = setInterval(() => {
+    try {
+      if (stopToken(paths.stop) === token) {
+        stopped = true;
+        child?.kill("SIGTERM");
+      }
+      publish();
+    } catch {
+      cancel();
+    }
+  }, 1000);
+  const failures: number[] = [];
+  try {
+    publish();
+    while (!stopped) {
+      if (stopToken(paths.stop) === token) break;
+      const env: NodeJS.ProcessEnv = {
+        ...process.env,
+        [SUPERVISOR_WORKER_ENV]: token,
+      };
+      delete env[SUPERVISOR_ENV];
+      delete env[SUPERVISOR_ARGV_ENV];
+      child = spawn(process.execPath, argv, {
+        env,
+        windowsHide: true,
+        stdio: ["ignore", "ignore", "ignore", "ipc"],
+      });
+      let readyAt: number | null = null;
+      child.on("message", (message: unknown) => {
+        if (!message || typeof message !== "object") return;
+        const row = message as Record<string, unknown>;
+        if (row.type !== "primitive-listen-state" || row.token !== token)
+          return;
+        if (row.phase === "receiving" && readyAt === null) readyAt = Date.now();
+        try {
+          if (process.connected) process.send?.(message, () => {});
+        } catch {
+          /* Parent may have exited. */
+        }
+      });
+      record.phase = "running";
+      publish();
+      await new Promise<void>((resolve) => {
+        child?.once("exit", () => resolve());
+        child?.once("error", () => resolve());
+      });
+      child = undefined;
+      if (stopped || stopToken(paths.stop) === token) break;
+      const worker = readState(paths.state);
+      if (
+        worker?.token === token &&
+        worker.phase === "failed" &&
+        ["notification-outcome-unknown", "connection-changed"].includes(
+          worker.failureCode ?? "",
+        )
+      ) {
+        record.phase = "failed";
+        record.failureCode = worker.failureCode;
+        publish();
+        return;
+      }
+      const now = Date.now();
+      if (readyAt !== null && now - readyAt >= HEALTHY_RESET_MS)
+        failures.length = 0;
+      failures.push(now);
+      while (failures.length && (failures[0] ?? now) < now - RESTART_WINDOW_MS)
+        failures.shift();
+      if (failures.length >= MAX_FAILURES) {
+        record.phase = "failed";
+        record.failureCode = "restart-budget-exhausted";
+        publish();
+        return;
+      }
+      record.phase = "starting";
+      publish();
+      const backoff = Math.min(1000 * 2 ** (failures.length - 1), 30_000);
+      const end = Date.now() + backoff;
+      while (!stopped && Date.now() < end && stopToken(paths.stop) !== token)
+        await delay(Math.min(200, end - Date.now()));
+    }
+    record.phase = "stopped";
+    publish();
+  } catch (error) {
+    record.phase = "failed";
+    record.failureCode = "receiving-failed";
+    try {
+      publish();
+    } catch {
+      /* Preserve the first failure. */
+    }
+    throw error;
+  } finally {
+    clearInterval(heartbeat);
+    process.off("SIGTERM", cancel);
+    process.off("SIGINT", cancel);
+    child?.kill("SIGTERM");
+    if (stopToken(paths.stop) === token) removeMailFile(paths.stop);
+    if (record.phase === "stopped" && readState(paths.state) === null)
+      removeMailFile(paths.supervisor);
+    release();
+  }
 }
 
 /** Spawn the same CLI entrypoint. Overrides travel only in the child's environment. */
@@ -525,6 +817,23 @@ export async function startBackgroundListen(
   }
   try {
     const prior = readState(paths.state);
+    const priorSupervisor = readSupervisor(paths.supervisor);
+    if (
+      priorSupervisor &&
+      ["starting", "running"].includes(priorSupervisor.phase) &&
+      owner(priorSupervisor) !== "gone"
+    ) {
+      const current = backgroundListenStatus(options);
+      if (!current.healthy)
+        throw new ListenStateError(
+          "Existing supervisor ownership is stale or unverifiable. Inspect status before restarting.",
+        );
+      if (prior?.configuration !== configuration)
+        throw new ListenStateError(
+          "Stop the existing listener before changing receiving options.",
+        );
+      return { started: false, status: current };
+    }
     if (
       prior &&
       prior.phase !== "stopped" &&
@@ -575,7 +884,9 @@ export async function startBackgroundListen(
     }
     if (!argv.length)
       throw new ListenStateError("The CLI entrypoint is required.");
-    const child = spawn(process.execPath, argv, {
+    env[SUPERVISOR_ENV] = "1";
+    env[SUPERVISOR_ARGV_ENV] = JSON.stringify(argv);
+    const child = spawn(process.execPath, [argv[0] ?? ""], {
       env,
       detached: true,
       windowsHide: true,
@@ -633,16 +944,18 @@ export async function startBackgroundListen(
         if (options.signal?.aborted) abort();
       });
       const current = readState(paths.state);
+      const supervisor = readSupervisor(paths.supervisor);
       if (
         current?.token !== token ||
+        supervisor?.token !== token ||
         current.configuration !== configuration ||
         !current.detached ||
-        !status(current).healthy
+        !backgroundListenStatus(options).healthy
       )
         throw new ListenStateError(
           "Background listener ownership changed during startup.",
         );
-      return { started: true, status: status(current) };
+      return { started: true, status: backgroundListenStatus(options) };
     } catch {
       // The token also reaches a child that has not written its first state yet.
       writeMailJson(paths.stop, { token });
