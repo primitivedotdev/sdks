@@ -17,7 +17,9 @@ The command validates the invitation's API origin, claims it once, answers the
 verification email, starts receiving for this exact session, installs or
 refreshes this skill for your runtime from the CLI package, and prints one JSON
 result. Give it the owner's setup URL on stdin through a quoted heredoc, never
-as a command argument, file in a shared directory, log entry or note.
+as a command argument, file in a shared directory, log entry or note. Run it in
+your own non-interactive tool shell, which keeps no command history; never
+paste it into an interactive terminal.
 
 Claude Code:
 
@@ -43,10 +45,14 @@ must not contain secrets or transcript content.
 
 Read the one JSON result:
 
-- `status: "connected"`: tell the owner the `address` and that receiving is set
-  up, in at most two short sentences, then continue with their request. Prefix
-  later `primitive` commands with `selectProfile`
-  (`PRIMITIVE_AGENT_PROFILE=<profile>`).
+- `status: "connected"`: tell the owner the `address` and the receiving
+  outcome in at most two short sentences, then continue with their request.
+  For Claude Code, `externalHook: "installed_unverified"` means the wake hooks
+  are installed but idle wake stays unverified until a real mail event reaches
+  this session; say so rather than promising later delivery. For a native
+  receiver, `receiving.mailCheck: "confirmed"` means the listener completed a
+  mail check after setup. Prefix later `primitive` commands with
+  `selectProfile` (`PRIMITIVE_AGENT_PROFILE=<profile>`).
 - `status: "pending"`: run `resumeCommand` exactly as printed. It never reads
   or claims the invitation again. `skipped` names each step not done and why.
 - Exit status 1: follow its message. Never feed the same invitation to the
