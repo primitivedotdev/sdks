@@ -271,6 +271,34 @@ describe("primitive repeats", () => {
     );
   });
 
+  it("explains that agent credentials cannot manage repeats", async () => {
+    respond = () =>
+      json(
+        { success: false, error: { code: "forbidden", message: "Forbidden" } },
+        403,
+      );
+    const result = await run("repeats:list", []);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain(
+      "connected-agent credentials cannot manage repeats",
+    );
+    respond = () =>
+      json(
+        {
+          success: false,
+          error: {
+            code: "agent_connection_scope_forbidden",
+            message: "This operation is outside the connected address grant.",
+          },
+        },
+        403,
+      );
+    const scoped = await run("repeats:pause", [REPEAT_ID]);
+    expect(scoped.stderr).toContain(
+      "connected-agent credentials cannot manage repeats",
+    );
+  });
+
   it("prints an empty list plainly and lists without filters", async () => {
     respond = () => json({ success: true, data: [] });
     const result = await run("repeats:list", []);

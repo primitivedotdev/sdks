@@ -17,14 +17,16 @@ cancellation apply as usual.
 
 Only `every_minutes` (5 to 10080) is required. A repeating send needs exactly
 one `to` recipient and no cc, bcc, attachments or `fyi`
-(`422 repeat_unsupported`). The recipient must be an address of your own
+(`422 repeat_unsupported`), and is created with a member login or an organization
+API key; connected-agent and Function credentials get `403 repeat_unsupported`.
+The recipient must be an address of your own
 organization (`403 repeat_recipient_external`), and
 `only_if_recipient_idle_minutes` likewise needs a recipient in your organization
 (`422 repeat_idle_requires_internal_recipient`). The send result carries
 `repeat_id`.
 
 Manage repeats you created under `/v1/repeating-sends` (list, get, `PATCH` to
-pause, resume or cancel, delete). Email reads carry a `repeat` marker,
+pause, resume or cancel, delete). Agent credentials get 403 there. Email reads carry a `repeat` marker,
 `{"repeat_id": "...", "sequence": 1}` or null, resolved from Primitive's own
 records rather than the message content.
 

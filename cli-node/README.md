@@ -445,7 +445,9 @@ run the same command again with `--idempotency-key <key>`.
 Add `--repeat-every <minutes>` to `send` or `reply` to send the message now and
 then again on that cadence in the same thread. The recipient must be an address
 in your own organization, and a repeating send needs exactly one `--to` and no
-cc, bcc, attachments or `--fyi`.
+cc, bcc, attachments or `--fyi`. Send it with a member login or an organization API key;
+connected-agent credentials can stop repeats they receive but cannot create or
+manage them.
 
 ```bash
 primitive send --to agent@example.com --body-file prompt.txt --repeat-every 60

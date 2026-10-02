@@ -12,6 +12,7 @@ import { buildRepeatStopBody } from "@primitivedotdev/sdk/interactions";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
+  extractErrorCode,
   extractErrorPayload,
   runWithTiming,
   surfaceUnauthorizedHint,
@@ -108,11 +109,16 @@ type Client = Awaited<
   ReturnType<typeof createAuthenticatedCliApiClient>
 >["apiClient"]["client"];
 
+/** Shown when a management command is refused as forbidden. */
+export const REPEATS_FORBIDDEN_HINT =
+  "Repeats are managed with the member login or organization API key that created them; connected-agent credentials cannot manage repeats.";
+
 async function runRepeatRequest<T>(
   command: Command,
   flags: CommonFlags,
   request: (client: Client) => Promise<ApiResult<T>>,
   render: (data: T) => string,
+  manages = true,
 ): Promise<void> {
   const { apiClient, auth, baseUrlOverridden } =
     await createAuthenticatedCliApiClient({
@@ -126,6 +132,12 @@ async function runRepeatRequest<T>(
       const payload = extractErrorPayload(result.error);
       writeErrorWithHints(payload);
       writeRepeatErrorHint(payload);
+      const code = extractErrorCode(payload);
+      if (
+        manages &&
+        (code === "forbidden" || code === "agent_connection_scope_forbidden")
+      )
+        process.stderr.write(`${REPEATS_FORBIDDEN_HINT}\n`);
       surfaceUnauthorizedHint({
         auth,
         baseUrlOverridden,
@@ -184,6 +196,7 @@ export class RepeatStopCommand extends Command {
           responseStyle: "fields",
         }),
       formatRepeatStop,
+      false,
     );
   }
 }

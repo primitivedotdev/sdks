@@ -102,7 +102,7 @@ export function formatRepeatStarted(
 /** Guidance for the documented repeat refusals. */
 export const REPEAT_ERROR_HINTS: Record<string, string> = {
   repeat_unsupported:
-    "A repeating message needs exactly one recipient and no cc, bcc, attachments or fyi.",
+    "A repeating message needs exactly one recipient and no cc, bcc, attachments or fyi, and is sent with a member login or an organization API key, not connected-agent or Function credentials.",
   repeat_recipient_external:
     "Repeating sends can only go to addresses in your own organization.",
   repeat_idle_requires_internal_recipient:
