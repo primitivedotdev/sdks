@@ -53,10 +53,6 @@ type CreateAgentConnectionRes interface {
 	createAgentConnectionRes()
 }
 
-type CreateAgentMessageScheduleRes interface {
-	createAgentMessageScheduleRes()
-}
-
 type CreateChallengeRes interface {
 	createChallengeRes()
 }
@@ -113,10 +109,6 @@ type DeleteAgentContactRes interface {
 	deleteAgentContactRes()
 }
 
-type DeleteAgentMessageScheduleRes interface {
-	deleteAgentMessageScheduleRes()
-}
-
 type DeleteContactRes interface {
 	deleteContactRes()
 }
@@ -155,6 +147,10 @@ type DeleteOrgSecretRes interface {
 
 type DeleteRegistryRes interface {
 	deleteRegistryRes()
+}
+
+type DeleteRepeatingSendRes interface {
+	deleteRepeatingSendRes()
 }
 
 type DeleteRouteRes interface {
@@ -203,10 +199,6 @@ type GetAccountRes interface {
 
 type GetAgentContactPolicyRes interface {
 	getAgentContactPolicyRes()
-}
-
-type GetAgentMessageScheduleRes interface {
-	getAgentMessageScheduleRes()
 }
 
 type GetAgentRes interface {
@@ -273,6 +265,10 @@ type GetRegistryRes interface {
 	getRegistryRes()
 }
 
+type GetRepeatingSendRes interface {
+	getRepeatingSendRes()
+}
+
 type GetSendPermissionsRes interface {
 	getSendPermissionsRes()
 }
@@ -323,10 +319,6 @@ type ListAgentConnectionsRes interface {
 
 type ListAgentContactsRes interface {
 	listAgentContactsRes()
-}
-
-type ListAgentMessageSchedulesRes interface {
-	listAgentMessageSchedulesRes()
 }
 
 type ListAgentNetworksRes interface {
@@ -395,6 +387,10 @@ type ListRegistriesRes interface {
 
 type ListRegistryRequestsRes interface {
 	listRegistryRequestsRes()
+}
+
+type ListRepeatingSendsRes interface {
+	listRepeatingSendsRes()
 }
 
 type ListRoutesRes interface {
@@ -569,8 +565,8 @@ type StartCliSignupRes interface {
 	startCliSignupRes()
 }
 
-type StopAgentMessageScheduleRes interface {
-	stopAgentMessageScheduleRes()
+type StopRepeatingSendRes interface {
+	stopRepeatingSendRes()
 }
 
 type TestEndpointRes interface {
@@ -597,10 +593,6 @@ type UpdateAccountRes interface {
 	updateAccountRes()
 }
 
-type UpdateAgentMessageScheduleRes interface {
-	updateAgentMessageScheduleRes()
-}
-
 type UpdateDefaultNetworkMemberRes interface {
 	updateDefaultNetworkMemberRes()
 }
@@ -623,6 +615,10 @@ type UpdateFunctionRes interface {
 
 type UpdateRegistryRes interface {
 	updateRegistryRes()
+}
+
+type UpdateRepeatingSendRes interface {
+	updateRepeatingSendRes()
 }
 
 type UpdateRouteRes interface {

@@ -18,6 +18,12 @@ import { resolveMessageBodies } from "../message-body-sources.js";
 import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
+  formatRepeatStarted,
+  repeatFlags,
+  repeatFromFlags,
+  writeRepeatErrorHint,
+} from "../repeat-flags.js";
+import {
   assertValidIdempotencyKey,
   buildThrownSendFailureEnvelope,
   deriveSendIdempotencyKey,
@@ -191,6 +197,7 @@ class SendCommand extends Command {
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
+    ...repeatFlags(["fyi", "attachment", "cc", "bcc"]),
   };
 
   private attemptStartedAtIso: string | null = null;
@@ -255,6 +262,7 @@ class SendCommand extends Command {
       this.idempotencyKey = assertValidIdempotencyKey(flags["idempotency-key"]);
     }
     const attachments = readAttachmentFiles(flags.attachment);
+    const repeat = repeatFromFlags(flags);
 
     await runWithTiming(flags.time, async () => {
       const { apiClient, auth, baseUrlOverridden } =
@@ -307,6 +315,7 @@ class SendCommand extends Command {
         ...(flags["wait-timeout-ms"] !== undefined
           ? { wait_timeout_ms: flags["wait-timeout-ms"] }
           : {}),
+        ...(repeat !== undefined ? { repeat } : {}),
       };
       // An --fyi key is derived from what the caller asked for, and the
       // signal's ids are then derived from the key, so a retry sends the
@@ -373,6 +382,7 @@ class SendCommand extends Command {
         noun: "Message",
         onApiError: (errorPayload) => {
           writeErrorWithHints(errorPayload);
+          writeRepeatErrorHint(errorPayload);
           surfaceUnauthorizedHint({
             ...authFailureContext,
             payload: errorPayload,
@@ -383,6 +393,8 @@ class SendCommand extends Command {
           process.stderr.write(chunk);
         },
       });
+      const repeatLine = formatRepeatStarted(result, repeat);
+      if (repeatLine) process.stderr.write(`${repeatLine}\n`);
       const exitCode = sendOutcomeExitCode(outcome);
       if (exitCode !== 0) process.exitCode = exitCode;
     });

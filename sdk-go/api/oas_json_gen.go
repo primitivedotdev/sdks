@@ -2458,665 +2458,6 @@ func (s *AgentContactPolicyOverride) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
-func (s *AgentMessageSchedule) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *AgentMessageSchedule) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("id")
-		json.EncodeUUID(e, s.ID)
-	}
-	{
-		if s.OrgID.Set {
-			e.FieldStart("org_id")
-			s.OrgID.Encode(e)
-		}
-	}
-	{
-		if s.UserID.Set {
-			e.FieldStart("user_id")
-			s.UserID.Encode(e)
-		}
-	}
-	{
-		if s.FromAddress.Set {
-			e.FieldStart("from_address")
-			s.FromAddress.Encode(e)
-		}
-	}
-	{
-		e.FieldStart("agent_address")
-		e.Str(s.AgentAddress)
-	}
-	{
-		if s.Subject.Set {
-			e.FieldStart("subject")
-			s.Subject.Encode(e)
-		}
-	}
-	{
-		e.FieldStart("body_text")
-		e.Str(s.BodyText)
-	}
-	{
-		e.FieldStart("interval_minutes")
-		e.Int(s.IntervalMinutes)
-	}
-	{
-		e.FieldStart("idle_minutes")
-		s.IdleMinutes.Encode(e)
-	}
-	{
-		e.FieldStart("agent_can_stop")
-		e.Bool(s.AgentCanStop)
-	}
-	{
-		e.FieldStart("status")
-		s.Status.Encode(e)
-	}
-	{
-		if s.NextRunAt.Set {
-			e.FieldStart("next_run_at")
-			s.NextRunAt.Encode(e, json.EncodeDateTime)
-		}
-	}
-	{
-		if s.LastSentAt.Set {
-			e.FieldStart("last_sent_at")
-			s.LastSentAt.Encode(e, json.EncodeDateTime)
-		}
-	}
-	{
-		if s.LastSentEmailID.Set {
-			e.FieldStart("last_sent_email_id")
-			s.LastSentEmailID.Encode(e)
-		}
-	}
-	{
-		if s.RootMessageID.Set {
-			e.FieldStart("root_message_id")
-			s.RootMessageID.Encode(e)
-		}
-	}
-	{
-		if s.SentCount.Set {
-			e.FieldStart("sent_count")
-			s.SentCount.Encode(e)
-		}
-	}
-	{
-		if s.StoppedAt.Set {
-			e.FieldStart("stopped_at")
-			s.StoppedAt.Encode(e, json.EncodeDateTime)
-		}
-	}
-	{
-		if s.StopReason.Set {
-			e.FieldStart("stop_reason")
-			s.StopReason.Encode(e)
-		}
-	}
-	{
-		if s.CreatedAt.Set {
-			e.FieldStart("created_at")
-			s.CreatedAt.Encode(e, json.EncodeDateTime)
-		}
-	}
-	{
-		if s.UpdatedAt.Set {
-			e.FieldStart("updated_at")
-			s.UpdatedAt.Encode(e, json.EncodeDateTime)
-		}
-	}
-}
-
-var jsonFieldsNameOfAgentMessageSchedule = [20]string{
-	0:  "id",
-	1:  "org_id",
-	2:  "user_id",
-	3:  "from_address",
-	4:  "agent_address",
-	5:  "subject",
-	6:  "body_text",
-	7:  "interval_minutes",
-	8:  "idle_minutes",
-	9:  "agent_can_stop",
-	10: "status",
-	11: "next_run_at",
-	12: "last_sent_at",
-	13: "last_sent_email_id",
-	14: "root_message_id",
-	15: "sent_count",
-	16: "stopped_at",
-	17: "stop_reason",
-	18: "created_at",
-	19: "updated_at",
-}
-
-// Decode decodes AgentMessageSchedule from json.
-func (s *AgentMessageSchedule) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode AgentMessageSchedule to nil")
-	}
-	var requiredBitSet [3]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "id":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.ID = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"id\"")
-			}
-		case "org_id":
-			if err := func() error {
-				s.OrgID.Reset()
-				if err := s.OrgID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"org_id\"")
-			}
-		case "user_id":
-			if err := func() error {
-				s.UserID.Reset()
-				if err := s.UserID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"user_id\"")
-			}
-		case "from_address":
-			if err := func() error {
-				s.FromAddress.Reset()
-				if err := s.FromAddress.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"from_address\"")
-			}
-		case "agent_address":
-			requiredBitSet[0] |= 1 << 4
-			if err := func() error {
-				v, err := d.Str()
-				s.AgentAddress = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"agent_address\"")
-			}
-		case "subject":
-			if err := func() error {
-				s.Subject.Reset()
-				if err := s.Subject.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"subject\"")
-			}
-		case "body_text":
-			requiredBitSet[0] |= 1 << 6
-			if err := func() error {
-				v, err := d.Str()
-				s.BodyText = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"body_text\"")
-			}
-		case "interval_minutes":
-			requiredBitSet[0] |= 1 << 7
-			if err := func() error {
-				v, err := d.Int()
-				s.IntervalMinutes = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"interval_minutes\"")
-			}
-		case "idle_minutes":
-			requiredBitSet[1] |= 1 << 0
-			if err := func() error {
-				if err := s.IdleMinutes.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"idle_minutes\"")
-			}
-		case "agent_can_stop":
-			requiredBitSet[1] |= 1 << 1
-			if err := func() error {
-				v, err := d.Bool()
-				s.AgentCanStop = bool(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"agent_can_stop\"")
-			}
-		case "status":
-			requiredBitSet[1] |= 1 << 2
-			if err := func() error {
-				if err := s.Status.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"status\"")
-			}
-		case "next_run_at":
-			if err := func() error {
-				s.NextRunAt.Reset()
-				if err := s.NextRunAt.Decode(d, json.DecodeDateTime); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"next_run_at\"")
-			}
-		case "last_sent_at":
-			if err := func() error {
-				s.LastSentAt.Reset()
-				if err := s.LastSentAt.Decode(d, json.DecodeDateTime); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"last_sent_at\"")
-			}
-		case "last_sent_email_id":
-			if err := func() error {
-				s.LastSentEmailID.Reset()
-				if err := s.LastSentEmailID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"last_sent_email_id\"")
-			}
-		case "root_message_id":
-			if err := func() error {
-				s.RootMessageID.Reset()
-				if err := s.RootMessageID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"root_message_id\"")
-			}
-		case "sent_count":
-			if err := func() error {
-				s.SentCount.Reset()
-				if err := s.SentCount.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"sent_count\"")
-			}
-		case "stopped_at":
-			if err := func() error {
-				s.StoppedAt.Reset()
-				if err := s.StoppedAt.Decode(d, json.DecodeDateTime); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"stopped_at\"")
-			}
-		case "stop_reason":
-			if err := func() error {
-				s.StopReason.Reset()
-				if err := s.StopReason.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"stop_reason\"")
-			}
-		case "created_at":
-			if err := func() error {
-				s.CreatedAt.Reset()
-				if err := s.CreatedAt.Decode(d, json.DecodeDateTime); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"created_at\"")
-			}
-		case "updated_at":
-			if err := func() error {
-				s.UpdatedAt.Reset()
-				if err := s.UpdatedAt.Decode(d, json.DecodeDateTime); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"updated_at\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode AgentMessageSchedule")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [3]uint8{
-		0b11010001,
-		0b00000111,
-		0b00000000,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfAgentMessageSchedule) {
-					name = jsonFieldsNameOfAgentMessageSchedule[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *AgentMessageSchedule) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *AgentMessageSchedule) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes AgentMessageScheduleStatus as json.
-func (s AgentMessageScheduleStatus) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes AgentMessageScheduleStatus from json.
-func (s *AgentMessageScheduleStatus) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode AgentMessageScheduleStatus to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch AgentMessageScheduleStatus(v) {
-	case AgentMessageScheduleStatusActive:
-		*s = AgentMessageScheduleStatusActive
-	case AgentMessageScheduleStatusPaused:
-		*s = AgentMessageScheduleStatusPaused
-	case AgentMessageScheduleStatusStoppedByAgent:
-		*s = AgentMessageScheduleStatusStoppedByAgent
-	case AgentMessageScheduleStatusStoppedByOwner:
-		*s = AgentMessageScheduleStatusStoppedByOwner
-	default:
-		*s = AgentMessageScheduleStatus(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s AgentMessageScheduleStatus) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *AgentMessageScheduleStatus) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *AgentMessageScheduleStop) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *AgentMessageScheduleStop) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("schedule_id")
-		json.EncodeUUID(e, s.ScheduleID)
-	}
-	{
-		e.FieldStart("status")
-		s.Status.Encode(e)
-	}
-	{
-		e.FieldStart("stopped_at")
-		json.EncodeDateTime(e, s.StoppedAt)
-	}
-	{
-		e.FieldStart("stop_reason")
-		s.StopReason.Encode(e)
-	}
-	{
-		if s.ReplySentEmailID.Set {
-			e.FieldStart("reply_sent_email_id")
-			s.ReplySentEmailID.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfAgentMessageScheduleStop = [5]string{
-	0: "schedule_id",
-	1: "status",
-	2: "stopped_at",
-	3: "stop_reason",
-	4: "reply_sent_email_id",
-}
-
-// Decode decodes AgentMessageScheduleStop from json.
-func (s *AgentMessageScheduleStop) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode AgentMessageScheduleStop to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "schedule_id":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.ScheduleID = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"schedule_id\"")
-			}
-		case "status":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				if err := s.Status.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"status\"")
-			}
-		case "stopped_at":
-			requiredBitSet[0] |= 1 << 2
-			if err := func() error {
-				v, err := json.DecodeDateTime(d)
-				s.StoppedAt = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"stopped_at\"")
-			}
-		case "stop_reason":
-			requiredBitSet[0] |= 1 << 3
-			if err := func() error {
-				if err := s.StopReason.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"stop_reason\"")
-			}
-		case "reply_sent_email_id":
-			if err := func() error {
-				s.ReplySentEmailID.Reset()
-				if err := s.ReplySentEmailID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"reply_sent_email_id\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode AgentMessageScheduleStop")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00001111,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfAgentMessageScheduleStop) {
-					name = jsonFieldsNameOfAgentMessageScheduleStop[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *AgentMessageScheduleStop) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *AgentMessageScheduleStop) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes AgentMessageScheduleStopStatus as json.
-func (s AgentMessageScheduleStopStatus) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes AgentMessageScheduleStopStatus from json.
-func (s *AgentMessageScheduleStopStatus) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode AgentMessageScheduleStopStatus to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch AgentMessageScheduleStopStatus(v) {
-	case AgentMessageScheduleStopStatusStoppedByAgent:
-		*s = AgentMessageScheduleStopStatusStoppedByAgent
-	default:
-		*s = AgentMessageScheduleStopStatus(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s AgentMessageScheduleStopStatus) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *AgentMessageScheduleStopStatus) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
 func (s *AgentNetwork) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -12560,6 +11901,12 @@ func (s *ConversationMessage) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Repeat.Set {
+			e.FieldStart("repeat")
+			s.Repeat.Encode(e)
+		}
+	}
+	{
 		if s.SenderMember.Set {
 			e.FieldStart("sender_member")
 			s.SenderMember.Encode(e)
@@ -12567,7 +11914,7 @@ func (s *ConversationMessage) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfConversationMessage = [11]string{
+var jsonFieldsNameOfConversationMessage = [12]string{
 	0:  "role",
 	1:  "direction",
 	2:  "id",
@@ -12578,7 +11925,8 @@ var jsonFieldsNameOfConversationMessage = [11]string{
 	7:  "text",
 	8:  "timestamp",
 	9:  "presence_control",
-	10: "sender_member",
+	10: "repeat",
+	11: "sender_member",
 }
 
 // Decode decodes ConversationMessage from json.
@@ -12693,6 +12041,16 @@ func (s *ConversationMessage) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"presence_control\"")
+			}
+		case "repeat":
+			if err := func() error {
+				s.Repeat.Reset()
+				if err := s.Repeat.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat\"")
 			}
 		case "sender_member":
 			if err := func() error {
@@ -12950,6 +12308,119 @@ func (s ConversationMessagePresenceControlStatus) MarshalJSON() ([]byte, error) 
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ConversationMessagePresenceControlStatus) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ConversationMessageRepeat) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ConversationMessageRepeat) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("repeat_id")
+		json.EncodeUUID(e, s.RepeatID)
+	}
+	{
+		e.FieldStart("sequence")
+		e.Int(s.Sequence)
+	}
+}
+
+var jsonFieldsNameOfConversationMessageRepeat = [2]string{
+	0: "repeat_id",
+	1: "sequence",
+}
+
+// Decode decodes ConversationMessageRepeat from json.
+func (s *ConversationMessageRepeat) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ConversationMessageRepeat to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "repeat_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.RepeatID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat_id\"")
+			}
+		case "sequence":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Sequence = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sequence\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ConversationMessageRepeat")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfConversationMessageRepeat) {
+					name = jsonFieldsNameOfConversationMessageRepeat[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ConversationMessageRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ConversationMessageRepeat) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -15570,489 +15041,6 @@ func (s CreateAgentConnectionReqOwnershipKind) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CreateAgentConnectionReqOwnershipKind) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes CreateAgentMessageScheduleBadRequest as json.
-func (s *CreateAgentMessageScheduleBadRequest) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes CreateAgentMessageScheduleBadRequest from json.
-func (s *CreateAgentMessageScheduleBadRequest) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateAgentMessageScheduleBadRequest to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = CreateAgentMessageScheduleBadRequest(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateAgentMessageScheduleBadRequest) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateAgentMessageScheduleBadRequest) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes CreateAgentMessageScheduleConflict as json.
-func (s *CreateAgentMessageScheduleConflict) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes CreateAgentMessageScheduleConflict from json.
-func (s *CreateAgentMessageScheduleConflict) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateAgentMessageScheduleConflict to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = CreateAgentMessageScheduleConflict(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateAgentMessageScheduleConflict) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateAgentMessageScheduleConflict) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *CreateAgentMessageScheduleCreated) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *CreateAgentMessageScheduleCreated) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("success")
-		e.Bool(true)
-	}
-	{
-		e.FieldStart("data")
-		s.Data.Encode(e)
-	}
-}
-
-var jsonFieldsNameOfCreateAgentMessageScheduleCreated = [2]string{
-	0: "success",
-	1: "data",
-}
-
-// Decode decodes CreateAgentMessageScheduleCreated from json.
-func (s *CreateAgentMessageScheduleCreated) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateAgentMessageScheduleCreated to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "success":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := d.Bool()
-				s.Success = bool(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"success\"")
-			}
-		case "data":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				if err := s.Data.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"data\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode CreateAgentMessageScheduleCreated")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00000011,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfCreateAgentMessageScheduleCreated) {
-					name = jsonFieldsNameOfCreateAgentMessageScheduleCreated[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateAgentMessageScheduleCreated) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateAgentMessageScheduleCreated) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes CreateAgentMessageScheduleForbidden as json.
-func (s *CreateAgentMessageScheduleForbidden) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes CreateAgentMessageScheduleForbidden from json.
-func (s *CreateAgentMessageScheduleForbidden) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateAgentMessageScheduleForbidden to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = CreateAgentMessageScheduleForbidden(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateAgentMessageScheduleForbidden) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateAgentMessageScheduleForbidden) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *CreateAgentMessageScheduleInput) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *CreateAgentMessageScheduleInput) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("agent_address")
-		e.Str(s.AgentAddress)
-	}
-	{
-		e.FieldStart("body_text")
-		e.Str(s.BodyText)
-	}
-	{
-		if s.Subject.Set {
-			e.FieldStart("subject")
-			s.Subject.Encode(e)
-		}
-	}
-	{
-		e.FieldStart("interval_minutes")
-		e.Int(s.IntervalMinutes)
-	}
-	{
-		if s.IdleMinutes.Set {
-			e.FieldStart("idle_minutes")
-			s.IdleMinutes.Encode(e)
-		}
-	}
-	{
-		if s.AgentCanStop.Set {
-			e.FieldStart("agent_can_stop")
-			s.AgentCanStop.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfCreateAgentMessageScheduleInput = [6]string{
-	0: "agent_address",
-	1: "body_text",
-	2: "subject",
-	3: "interval_minutes",
-	4: "idle_minutes",
-	5: "agent_can_stop",
-}
-
-// Decode decodes CreateAgentMessageScheduleInput from json.
-func (s *CreateAgentMessageScheduleInput) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateAgentMessageScheduleInput to nil")
-	}
-	var requiredBitSet [1]uint8
-	s.setDefaults()
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "agent_address":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := d.Str()
-				s.AgentAddress = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"agent_address\"")
-			}
-		case "body_text":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				v, err := d.Str()
-				s.BodyText = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"body_text\"")
-			}
-		case "subject":
-			if err := func() error {
-				s.Subject.Reset()
-				if err := s.Subject.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"subject\"")
-			}
-		case "interval_minutes":
-			requiredBitSet[0] |= 1 << 3
-			if err := func() error {
-				v, err := d.Int()
-				s.IntervalMinutes = int(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"interval_minutes\"")
-			}
-		case "idle_minutes":
-			if err := func() error {
-				s.IdleMinutes.Reset()
-				if err := s.IdleMinutes.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"idle_minutes\"")
-			}
-		case "agent_can_stop":
-			if err := func() error {
-				s.AgentCanStop.Reset()
-				if err := s.AgentCanStop.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"agent_can_stop\"")
-			}
-		default:
-			return errors.Errorf("unexpected field %q", k)
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode CreateAgentMessageScheduleInput")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00001011,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfCreateAgentMessageScheduleInput) {
-					name = jsonFieldsNameOfCreateAgentMessageScheduleInput[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateAgentMessageScheduleInput) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateAgentMessageScheduleInput) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes CreateAgentMessageScheduleUnauthorized as json.
-func (s *CreateAgentMessageScheduleUnauthorized) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes CreateAgentMessageScheduleUnauthorized from json.
-func (s *CreateAgentMessageScheduleUnauthorized) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateAgentMessageScheduleUnauthorized to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = CreateAgentMessageScheduleUnauthorized(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateAgentMessageScheduleUnauthorized) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateAgentMessageScheduleUnauthorized) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes CreateAgentMessageScheduleUnprocessableEntity as json.
-func (s *CreateAgentMessageScheduleUnprocessableEntity) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes CreateAgentMessageScheduleUnprocessableEntity from json.
-func (s *CreateAgentMessageScheduleUnprocessableEntity) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode CreateAgentMessageScheduleUnprocessableEntity to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = CreateAgentMessageScheduleUnprocessableEntity(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *CreateAgentMessageScheduleUnprocessableEntity) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *CreateAgentMessageScheduleUnprocessableEntity) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -23878,120 +22866,6 @@ func (s *DeleteAgentContactUnauthorized) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes DeleteAgentMessageScheduleForbidden as json.
-func (s *DeleteAgentMessageScheduleForbidden) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes DeleteAgentMessageScheduleForbidden from json.
-func (s *DeleteAgentMessageScheduleForbidden) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode DeleteAgentMessageScheduleForbidden to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = DeleteAgentMessageScheduleForbidden(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *DeleteAgentMessageScheduleForbidden) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *DeleteAgentMessageScheduleForbidden) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes DeleteAgentMessageScheduleNotFound as json.
-func (s *DeleteAgentMessageScheduleNotFound) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes DeleteAgentMessageScheduleNotFound from json.
-func (s *DeleteAgentMessageScheduleNotFound) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode DeleteAgentMessageScheduleNotFound to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = DeleteAgentMessageScheduleNotFound(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *DeleteAgentMessageScheduleNotFound) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *DeleteAgentMessageScheduleNotFound) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes DeleteAgentMessageScheduleUnauthorized as json.
-func (s *DeleteAgentMessageScheduleUnauthorized) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes DeleteAgentMessageScheduleUnauthorized from json.
-func (s *DeleteAgentMessageScheduleUnauthorized) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode DeleteAgentMessageScheduleUnauthorized to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = DeleteAgentMessageScheduleUnauthorized(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *DeleteAgentMessageScheduleUnauthorized) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *DeleteAgentMessageScheduleUnauthorized) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes DeleteContactBadRequest as json.
 func (s *DeleteContactBadRequest) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -25688,6 +24562,82 @@ func (s *DeleteRegistryUnauthorized) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *DeleteRegistryUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeleteRepeatingSendNotFound as json.
+func (s *DeleteRepeatingSendNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeleteRepeatingSendNotFound from json.
+func (s *DeleteRepeatingSendNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeleteRepeatingSendNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeleteRepeatingSendNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeleteRepeatingSendNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeleteRepeatingSendNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeleteRepeatingSendUnauthorized as json.
+func (s *DeleteRepeatingSendUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeleteRepeatingSendUnauthorized from json.
+func (s *DeleteRepeatingSendUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeleteRepeatingSendUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeleteRepeatingSendUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeleteRepeatingSendUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeleteRepeatingSendUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -31147,6 +30097,12 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
+		if s.Repeat.Set {
+			e.FieldStart("repeat")
+			s.Repeat.Encode(e)
+		}
+	}
+	{
 		if s.SenderMember.Set {
 			e.FieldStart("sender_member")
 			s.SenderMember.Encode(e)
@@ -31154,7 +30110,7 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailDetail = [46]string{
+var jsonFieldsNameOfEmailDetail = [47]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -31200,7 +30156,8 @@ var jsonFieldsNameOfEmailDetail = [46]string{
 	42: "awaiting",
 	43: "automated",
 	44: "automated_reasons",
-	45: "sender_member",
+	45: "repeat",
+	46: "sender_member",
 }
 
 // Decode decodes EmailDetail from json.
@@ -31704,6 +30661,16 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"automated_reasons\"")
 			}
+		case "repeat":
+			if err := func() error {
+				s.Repeat.Reset()
+				if err := s.Repeat.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat\"")
+			}
 		case "sender_member":
 			if err := func() error {
 				s.SenderMember.Reset()
@@ -32155,6 +31122,119 @@ func (s EmailDetailPresenceControlStatus) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EmailDetailPresenceControlStatus) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailDetailRepeat) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailDetailRepeat) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("repeat_id")
+		json.EncodeUUID(e, s.RepeatID)
+	}
+	{
+		e.FieldStart("sequence")
+		e.Int(s.Sequence)
+	}
+}
+
+var jsonFieldsNameOfEmailDetailRepeat = [2]string{
+	0: "repeat_id",
+	1: "sequence",
+}
+
+// Decode decodes EmailDetailRepeat from json.
+func (s *EmailDetailRepeat) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailDetailRepeat to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "repeat_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.RepeatID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat_id\"")
+			}
+		case "sequence":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Sequence = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sequence\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailDetailRepeat")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailDetailRepeat) {
+					name = jsonFieldsNameOfEmailDetailRepeat[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailDetailRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailDetailRepeat) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -33330,6 +32410,12 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
+		if s.Repeat.Set {
+			e.FieldStart("repeat")
+			s.Repeat.Encode(e)
+		}
+	}
+	{
 		if s.SenderMember.Set {
 			e.FieldStart("sender_member")
 			s.SenderMember.Encode(e)
@@ -33357,7 +32443,7 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailSearchResult = [28]string{
+var jsonFieldsNameOfEmailSearchResult = [29]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -33381,11 +32467,12 @@ var jsonFieldsNameOfEmailSearchResult = [28]string{
 	20: "awaiting",
 	21: "automated",
 	22: "automated_reasons",
-	23: "sender_member",
-	24: "attachment_count",
-	25: "from_known_address",
-	26: "score",
-	27: "highlights",
+	23: "repeat",
+	24: "sender_member",
+	25: "attachment_count",
+	26: "from_known_address",
+	27: "score",
+	28: "highlights",
 }
 
 // Decode decodes EmailSearchResult from json.
@@ -33655,6 +32742,16 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"automated_reasons\"")
 			}
+		case "repeat":
+			if err := func() error {
+				s.Repeat.Reset()
+				if err := s.Repeat.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat\"")
+			}
 		case "sender_member":
 			if err := func() error {
 				s.SenderMember.Reset()
@@ -33666,7 +32763,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"sender_member\"")
 			}
 		case "attachment_count":
-			requiredBitSet[3] |= 1 << 0
+			requiredBitSet[3] |= 1 << 1
 			if err := func() error {
 				v, err := d.Int()
 				s.AttachmentCount = int(v)
@@ -33678,7 +32775,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"attachment_count\"")
 			}
 		case "from_known_address":
-			requiredBitSet[3] |= 1 << 1
+			requiredBitSet[3] |= 1 << 2
 			if err := func() error {
 				v, err := d.Bool()
 				s.FromKnownAddress = bool(v)
@@ -33722,7 +32819,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 		0b01110001,
 		0b01001101,
 		0b01111100,
-		0b00000011,
+		0b00000110,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -34153,6 +33250,119 @@ func (s *EmailSearchResultPresenceControlStatus) UnmarshalJSON(data []byte) erro
 }
 
 // Encode implements json.Marshaler.
+func (s *EmailSearchResultRepeat) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailSearchResultRepeat) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("repeat_id")
+		json.EncodeUUID(e, s.RepeatID)
+	}
+	{
+		e.FieldStart("sequence")
+		e.Int(s.Sequence)
+	}
+}
+
+var jsonFieldsNameOfEmailSearchResultRepeat = [2]string{
+	0: "repeat_id",
+	1: "sequence",
+}
+
+// Decode decodes EmailSearchResultRepeat from json.
+func (s *EmailSearchResultRepeat) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailSearchResultRepeat to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "repeat_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.RepeatID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat_id\"")
+			}
+		case "sequence":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Sequence = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sequence\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailSearchResultRepeat")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailSearchResultRepeat) {
+					name = jsonFieldsNameOfEmailSearchResultRepeat[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailSearchResultRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailSearchResultRepeat) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *EmailSearchResultSenderMember) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -34450,6 +33660,12 @@ func (s *EmailSummary) encodeFields(e *jx.Encoder) {
 		e.ArrEnd()
 	}
 	{
+		if s.Repeat.Set {
+			e.FieldStart("repeat")
+			s.Repeat.Encode(e)
+		}
+	}
+	{
 		if s.SenderMember.Set {
 			e.FieldStart("sender_member")
 			s.SenderMember.Encode(e)
@@ -34457,7 +33673,7 @@ func (s *EmailSummary) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailSummary = [24]string{
+var jsonFieldsNameOfEmailSummary = [25]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -34481,7 +33697,8 @@ var jsonFieldsNameOfEmailSummary = [24]string{
 	20: "awaiting",
 	21: "automated",
 	22: "automated_reasons",
-	23: "sender_member",
+	23: "repeat",
+	24: "sender_member",
 }
 
 // Decode decodes EmailSummary from json.
@@ -34489,7 +33706,7 @@ func (s *EmailSummary) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode EmailSummary to nil")
 	}
-	var requiredBitSet [3]uint8
+	var requiredBitSet [4]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -34751,6 +33968,16 @@ func (s *EmailSummary) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"automated_reasons\"")
 			}
+		case "repeat":
+			if err := func() error {
+				s.Repeat.Reset()
+				if err := s.Repeat.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat\"")
+			}
 		case "sender_member":
 			if err := func() error {
 				s.SenderMember.Reset()
@@ -34770,10 +33997,11 @@ func (s *EmailSummary) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [3]uint8{
+	for i, mask := range [4]uint8{
 		0b01110001,
 		0b01001101,
 		0b01111100,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -35199,6 +34427,119 @@ func (s EmailSummaryPresenceControlStatus) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EmailSummaryPresenceControlStatus) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *EmailSummaryRepeat) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *EmailSummaryRepeat) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("repeat_id")
+		json.EncodeUUID(e, s.RepeatID)
+	}
+	{
+		e.FieldStart("sequence")
+		e.Int(s.Sequence)
+	}
+}
+
+var jsonFieldsNameOfEmailSummaryRepeat = [2]string{
+	0: "repeat_id",
+	1: "sequence",
+}
+
+// Decode decodes EmailSummaryRepeat from json.
+func (s *EmailSummaryRepeat) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailSummaryRepeat to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "repeat_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.RepeatID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat_id\"")
+			}
+		case "sequence":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Sequence = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sequence\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode EmailSummaryRepeat")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfEmailSummaryRepeat) {
+					name = jsonFieldsNameOfEmailSummaryRepeat[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *EmailSummaryRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailSummaryRepeat) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -42351,231 +41692,6 @@ func (s *GetAgentContactPolicyUnauthorized) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes GetAgentMessageScheduleForbidden as json.
-func (s *GetAgentMessageScheduleForbidden) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes GetAgentMessageScheduleForbidden from json.
-func (s *GetAgentMessageScheduleForbidden) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode GetAgentMessageScheduleForbidden to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = GetAgentMessageScheduleForbidden(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *GetAgentMessageScheduleForbidden) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *GetAgentMessageScheduleForbidden) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes GetAgentMessageScheduleNotFound as json.
-func (s *GetAgentMessageScheduleNotFound) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes GetAgentMessageScheduleNotFound from json.
-func (s *GetAgentMessageScheduleNotFound) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode GetAgentMessageScheduleNotFound to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = GetAgentMessageScheduleNotFound(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *GetAgentMessageScheduleNotFound) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *GetAgentMessageScheduleNotFound) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *GetAgentMessageScheduleOK) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *GetAgentMessageScheduleOK) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("success")
-		e.Bool(true)
-	}
-	{
-		e.FieldStart("data")
-		s.Data.Encode(e)
-	}
-}
-
-var jsonFieldsNameOfGetAgentMessageScheduleOK = [2]string{
-	0: "success",
-	1: "data",
-}
-
-// Decode decodes GetAgentMessageScheduleOK from json.
-func (s *GetAgentMessageScheduleOK) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode GetAgentMessageScheduleOK to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "success":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := d.Bool()
-				s.Success = bool(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"success\"")
-			}
-		case "data":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				if err := s.Data.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"data\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode GetAgentMessageScheduleOK")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00000011,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfGetAgentMessageScheduleOK) {
-					name = jsonFieldsNameOfGetAgentMessageScheduleOK[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *GetAgentMessageScheduleOK) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *GetAgentMessageScheduleOK) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes GetAgentMessageScheduleUnauthorized as json.
-func (s *GetAgentMessageScheduleUnauthorized) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes GetAgentMessageScheduleUnauthorized from json.
-func (s *GetAgentMessageScheduleUnauthorized) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode GetAgentMessageScheduleUnauthorized to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = GetAgentMessageScheduleUnauthorized(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *GetAgentMessageScheduleUnauthorized) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *GetAgentMessageScheduleUnauthorized) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode implements json.Marshaler.
 func (s *GetAgentOK) Encode(e *jx.Encoder) {
 	e.ObjStart()
@@ -45992,6 +45108,193 @@ func (s *GetRegistryOK) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *GetRegistryOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetRepeatingSendNotFound as json.
+func (s *GetRepeatingSendNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetRepeatingSendNotFound from json.
+func (s *GetRepeatingSendNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetRepeatingSendNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetRepeatingSendNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetRepeatingSendNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetRepeatingSendNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *GetRepeatingSendOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *GetRepeatingSendOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfGetRepeatingSendOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes GetRepeatingSendOK from json.
+func (s *GetRepeatingSendOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetRepeatingSendOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode GetRepeatingSendOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfGetRepeatingSendOK) {
+					name = jsonFieldsNameOfGetRepeatingSendOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetRepeatingSendOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetRepeatingSendOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetRepeatingSendUnauthorized as json.
+func (s *GetRepeatingSendUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetRepeatingSendUnauthorized from json.
+func (s *GetRepeatingSendUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetRepeatingSendUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetRepeatingSendUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetRepeatingSendUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetRepeatingSendUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -52174,205 +51477,6 @@ func (s *ListAgentContactsUnauthorized) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes ListAgentMessageSchedulesForbidden as json.
-func (s *ListAgentMessageSchedulesForbidden) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes ListAgentMessageSchedulesForbidden from json.
-func (s *ListAgentMessageSchedulesForbidden) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode ListAgentMessageSchedulesForbidden to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = ListAgentMessageSchedulesForbidden(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *ListAgentMessageSchedulesForbidden) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ListAgentMessageSchedulesForbidden) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *ListAgentMessageSchedulesOK) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *ListAgentMessageSchedulesOK) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("success")
-		e.Bool(true)
-	}
-	{
-		e.FieldStart("data")
-		e.ArrStart()
-		for _, elem := range s.Data {
-			elem.Encode(e)
-		}
-		e.ArrEnd()
-	}
-}
-
-var jsonFieldsNameOfListAgentMessageSchedulesOK = [2]string{
-	0: "success",
-	1: "data",
-}
-
-// Decode decodes ListAgentMessageSchedulesOK from json.
-func (s *ListAgentMessageSchedulesOK) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode ListAgentMessageSchedulesOK to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "success":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := d.Bool()
-				s.Success = bool(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"success\"")
-			}
-		case "data":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				s.Data = make([]AgentMessageSchedule, 0)
-				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem AgentMessageSchedule
-					if err := elem.Decode(d); err != nil {
-						return err
-					}
-					s.Data = append(s.Data, elem)
-					return nil
-				}); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"data\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode ListAgentMessageSchedulesOK")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00000011,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfListAgentMessageSchedulesOK) {
-					name = jsonFieldsNameOfListAgentMessageSchedulesOK[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *ListAgentMessageSchedulesOK) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ListAgentMessageSchedulesOK) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes ListAgentMessageSchedulesUnauthorized as json.
-func (s *ListAgentMessageSchedulesUnauthorized) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes ListAgentMessageSchedulesUnauthorized from json.
-func (s *ListAgentMessageSchedulesUnauthorized) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode ListAgentMessageSchedulesUnauthorized to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = ListAgentMessageSchedulesUnauthorized(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *ListAgentMessageSchedulesUnauthorized) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *ListAgentMessageSchedulesUnauthorized) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes ListAgentNetworksForbidden as json.
 func (s *ListAgentNetworksForbidden) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -56269,6 +55373,205 @@ func (s *ListRegistryRequestsUnauthorized) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ListRegistryRequestsUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListRepeatingSendsForbidden as json.
+func (s *ListRepeatingSendsForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ListRepeatingSendsForbidden from json.
+func (s *ListRepeatingSendsForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListRepeatingSendsForbidden to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ListRepeatingSendsForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListRepeatingSendsForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListRepeatingSendsForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ListRepeatingSendsOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ListRepeatingSendsOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		e.ArrStart()
+		for _, elem := range s.Data {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfListRepeatingSendsOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes ListRepeatingSendsOK from json.
+func (s *ListRepeatingSendsOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListRepeatingSendsOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				s.Data = make([]RepeatingSend, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem RepeatingSend
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Data = append(s.Data, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ListRepeatingSendsOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfListRepeatingSendsOK) {
+					name = jsonFieldsNameOfListRepeatingSendsOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListRepeatingSendsOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListRepeatingSendsOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ListRepeatingSendsUnauthorized as json.
+func (s *ListRepeatingSendsUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ListRepeatingSendsUnauthorized from json.
+func (s *ListRepeatingSendsUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ListRepeatingSendsUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ListRepeatingSendsUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ListRepeatingSendsUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ListRepeatingSendsUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -60957,6 +60260,55 @@ func (s *OptNilConversationMessagePresenceControl) UnmarshalJSON(data []byte) er
 	return s.Decode(d)
 }
 
+// Encode encodes ConversationMessageRepeat as json.
+func (o OptNilConversationMessageRepeat) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ConversationMessageRepeat from json.
+func (o *OptNilConversationMessageRepeat) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilConversationMessageRepeat to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v ConversationMessageRepeat
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilConversationMessageRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilConversationMessageRepeat) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes ConversationMessageSenderMember as json.
 func (o OptNilConversationMessageSenderMember) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -61412,6 +60764,55 @@ func (s *OptNilEmailDetailPresenceControl) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes EmailDetailRepeat as json.
+func (o OptNilEmailDetailRepeat) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes EmailDetailRepeat from json.
+func (o *OptNilEmailDetailRepeat) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilEmailDetailRepeat to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v EmailDetailRepeat
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilEmailDetailRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilEmailDetailRepeat) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes EmailDetailSenderMember as json.
 func (o OptNilEmailDetailSenderMember) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -61559,6 +60960,55 @@ func (s *OptNilEmailSearchResultPresenceControl) UnmarshalJSON(data []byte) erro
 	return s.Decode(d)
 }
 
+// Encode encodes EmailSearchResultRepeat as json.
+func (o OptNilEmailSearchResultRepeat) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes EmailSearchResultRepeat from json.
+func (o *OptNilEmailSearchResultRepeat) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilEmailSearchResultRepeat to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v EmailSearchResultRepeat
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilEmailSearchResultRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilEmailSearchResultRepeat) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes EmailSearchResultSenderMember as json.
 func (o OptNilEmailSearchResultSenderMember) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -61702,6 +61152,55 @@ func (s OptNilEmailSummaryPresenceControl) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptNilEmailSummaryPresenceControl) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailSummaryRepeat as json.
+func (o OptNilEmailSummaryRepeat) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes EmailSummaryRepeat from json.
+func (o *OptNilEmailSummaryRepeat) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilEmailSummaryRepeat to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v EmailSummaryRepeat
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilEmailSummaryRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilEmailSummaryRepeat) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -62311,6 +61810,55 @@ func (s *OptNilSentEmailDetailPresenceControl) UnmarshalJSON(data []byte) error 
 	return s.Decode(d)
 }
 
+// Encode encodes SentEmailDetailRepeat as json.
+func (o OptNilSentEmailDetailRepeat) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SentEmailDetailRepeat from json.
+func (o *OptNilSentEmailDetailRepeat) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilSentEmailDetailRepeat to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v SentEmailDetailRepeat
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilSentEmailDetailRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilSentEmailDetailRepeat) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes SentEmailDetailSenderMember as json.
 func (o OptNilSentEmailDetailSenderMember) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -62405,6 +61953,55 @@ func (s OptNilSentEmailSummaryPresenceControl) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptNilSentEmailSummaryPresenceControl) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SentEmailSummaryRepeat as json.
+func (o OptNilSentEmailSummaryRepeat) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SentEmailSummaryRepeat from json.
+func (o *OptNilSentEmailSummaryRepeat) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilSentEmailSummaryRepeat to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v SentEmailSummaryRepeat
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilSentEmailSummaryRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilSentEmailSummaryRepeat) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -62568,6 +62165,55 @@ func (s OptNilStringArray) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptNilStringArray) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ThreadMessageRepeat as json.
+func (o OptNilThreadMessageRepeat) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ThreadMessageRepeat from json.
+func (o *OptNilThreadMessageRepeat) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilThreadMessageRepeat to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v ThreadMessageRepeat
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilThreadMessageRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilThreadMessageRepeat) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -62900,6 +62546,72 @@ func (s *OptRecipientRouteMatchType) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes RepeatInput as json.
+func (o OptRepeatInput) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes RepeatInput from json.
+func (o *OptRepeatInput) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptRepeatInput to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptRepeatInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptRepeatInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes RepeatStopInput as json.
+func (o OptRepeatStopInput) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes RepeatStopInput from json.
+func (o *OptRepeatStopInput) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptRepeatStopInput to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptRepeatStopInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptRepeatStopInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes SemanticSearchInputMode as json.
 func (o OptSemanticSearchInputMode) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -63167,39 +62879,6 @@ func (s *OptStartCliSignupInputMetadata) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes StopAgentMessageScheduleInput as json.
-func (o OptStopAgentMessageScheduleInput) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	o.Value.Encode(e)
-}
-
-// Decode decodes StopAgentMessageScheduleInput from json.
-func (o *OptStopAgentMessageScheduleInput) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptStopAgentMessageScheduleInput to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptStopAgentMessageScheduleInput) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptStopAgentMessageScheduleInput) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes string as json.
 func (o OptString) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -63404,39 +63083,6 @@ func (s *OptUUID) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes UpdateAgentMessageScheduleInputStatus as json.
-func (o OptUpdateAgentMessageScheduleInputStatus) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	e.Str(string(o.Value))
-}
-
-// Decode decodes UpdateAgentMessageScheduleInputStatus from json.
-func (o *OptUpdateAgentMessageScheduleInputStatus) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptUpdateAgentMessageScheduleInputStatus to nil")
-	}
-	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
-		return err
-	}
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptUpdateAgentMessageScheduleInputStatus) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptUpdateAgentMessageScheduleInputStatus) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes UpdateEndpointInputRules as json.
 func (o OptUpdateEndpointInputRules) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -63500,6 +63146,39 @@ func (s OptUpdateFunctionInputFiles) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptUpdateFunctionInputFiles) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateRepeatingSendInputStatus as json.
+func (o OptUpdateRepeatingSendInputStatus) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes UpdateRepeatingSendInputStatus from json.
+func (o *OptUpdateRepeatingSendInputStatus) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptUpdateRepeatingSendInputStatus to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptUpdateRepeatingSendInputStatus) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptUpdateRepeatingSendInputStatus) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -74438,6 +74117,914 @@ func (s *ReorderRoutesUnauthorized) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode implements json.Marshaler.
+func (s *RepeatInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *RepeatInput) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("every_minutes")
+		e.Int(s.EveryMinutes)
+	}
+	{
+		if s.OnlyIfRecipientIdleMinutes.Set {
+			e.FieldStart("only_if_recipient_idle_minutes")
+			s.OnlyIfRecipientIdleMinutes.Encode(e)
+		}
+	}
+	{
+		if s.StoppableByRecipient.Set {
+			e.FieldStart("stoppable_by_recipient")
+			s.StoppableByRecipient.Encode(e)
+		}
+	}
+	{
+		if s.MaxSends.Set {
+			e.FieldStart("max_sends")
+			s.MaxSends.Encode(e)
+		}
+	}
+	{
+		if s.Until.Set {
+			e.FieldStart("until")
+			s.Until.Encode(e, json.EncodeDateTime)
+		}
+	}
+}
+
+var jsonFieldsNameOfRepeatInput = [5]string{
+	0: "every_minutes",
+	1: "only_if_recipient_idle_minutes",
+	2: "stoppable_by_recipient",
+	3: "max_sends",
+	4: "until",
+}
+
+// Decode decodes RepeatInput from json.
+func (s *RepeatInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RepeatInput to nil")
+	}
+	var requiredBitSet [1]uint8
+	s.setDefaults()
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "every_minutes":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Int()
+				s.EveryMinutes = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"every_minutes\"")
+			}
+		case "only_if_recipient_idle_minutes":
+			if err := func() error {
+				s.OnlyIfRecipientIdleMinutes.Reset()
+				if err := s.OnlyIfRecipientIdleMinutes.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"only_if_recipient_idle_minutes\"")
+			}
+		case "stoppable_by_recipient":
+			if err := func() error {
+				s.StoppableByRecipient.Reset()
+				if err := s.StoppableByRecipient.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stoppable_by_recipient\"")
+			}
+		case "max_sends":
+			if err := func() error {
+				s.MaxSends.Reset()
+				if err := s.MaxSends.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"max_sends\"")
+			}
+		case "until":
+			if err := func() error {
+				s.Until.Reset()
+				if err := s.Until.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"until\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RepeatInput")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfRepeatInput) {
+					name = jsonFieldsNameOfRepeatInput[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *RepeatInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RepeatInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *RepeatStopInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *RepeatStopInput) encodeFields(e *jx.Encoder) {
+	{
+		if s.Reason.Set {
+			e.FieldStart("reason")
+			s.Reason.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfRepeatStopInput = [1]string{
+	0: "reason",
+}
+
+// Decode decodes RepeatStopInput from json.
+func (s *RepeatStopInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RepeatStopInput to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "reason":
+			if err := func() error {
+				s.Reason.Reset()
+				if err := s.Reason.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reason\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RepeatStopInput")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *RepeatStopInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RepeatStopInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *RepeatingSend) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *RepeatingSend) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		json.EncodeUUID(e, s.ID)
+	}
+	{
+		if s.OrgID.Set {
+			e.FieldStart("org_id")
+			s.OrgID.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("from_address")
+		e.Str(s.FromAddress)
+	}
+	{
+		e.FieldStart("to_address")
+		e.Str(s.ToAddress)
+	}
+	{
+		if s.Subject.Set {
+			e.FieldStart("subject")
+			s.Subject.Encode(e)
+		}
+	}
+	{
+		if s.BodyText.Set {
+			e.FieldStart("body_text")
+			s.BodyText.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("every_minutes")
+		e.Int(s.EveryMinutes)
+	}
+	{
+		if s.OnlyIfRecipientIdleMinutes.Set {
+			e.FieldStart("only_if_recipient_idle_minutes")
+			s.OnlyIfRecipientIdleMinutes.Encode(e)
+		}
+	}
+	{
+		e.FieldStart("stoppable_by_recipient")
+		e.Bool(s.StoppableByRecipient)
+	}
+	{
+		if s.MaxSends.Set {
+			e.FieldStart("max_sends")
+			s.MaxSends.Encode(e)
+		}
+	}
+	{
+		if s.Until.Set {
+			e.FieldStart("until")
+			s.Until.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		e.FieldStart("status")
+		s.Status.Encode(e)
+	}
+	{
+		if s.NextRunAt.Set {
+			e.FieldStart("next_run_at")
+			s.NextRunAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		e.FieldStart("sent_count")
+		e.Int(s.SentCount)
+	}
+	{
+		if s.LastSentAt.Set {
+			e.FieldStart("last_sent_at")
+			s.LastSentAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		if s.LastSentEmailID.Set {
+			e.FieldStart("last_sent_email_id")
+			s.LastSentEmailID.Encode(e)
+		}
+	}
+	{
+		if s.RootMessageID.Set {
+			e.FieldStart("root_message_id")
+			s.RootMessageID.Encode(e)
+		}
+	}
+	{
+		if s.StoppedAt.Set {
+			e.FieldStart("stopped_at")
+			s.StoppedAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		if s.StopReason.Set {
+			e.FieldStart("stop_reason")
+			s.StopReason.Encode(e)
+		}
+	}
+	{
+		if s.CreatedAt.Set {
+			e.FieldStart("created_at")
+			s.CreatedAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		if s.UpdatedAt.Set {
+			e.FieldStart("updated_at")
+			s.UpdatedAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+}
+
+var jsonFieldsNameOfRepeatingSend = [21]string{
+	0:  "id",
+	1:  "org_id",
+	2:  "from_address",
+	3:  "to_address",
+	4:  "subject",
+	5:  "body_text",
+	6:  "every_minutes",
+	7:  "only_if_recipient_idle_minutes",
+	8:  "stoppable_by_recipient",
+	9:  "max_sends",
+	10: "until",
+	11: "status",
+	12: "next_run_at",
+	13: "sent_count",
+	14: "last_sent_at",
+	15: "last_sent_email_id",
+	16: "root_message_id",
+	17: "stopped_at",
+	18: "stop_reason",
+	19: "created_at",
+	20: "updated_at",
+}
+
+// Decode decodes RepeatingSend from json.
+func (s *RepeatingSend) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RepeatingSend to nil")
+	}
+	var requiredBitSet [3]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.ID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "org_id":
+			if err := func() error {
+				s.OrgID.Reset()
+				if err := s.OrgID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"org_id\"")
+			}
+		case "from_address":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.FromAddress = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from_address\"")
+			}
+		case "to_address":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Str()
+				s.ToAddress = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"to_address\"")
+			}
+		case "subject":
+			if err := func() error {
+				s.Subject.Reset()
+				if err := s.Subject.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"subject\"")
+			}
+		case "body_text":
+			if err := func() error {
+				s.BodyText.Reset()
+				if err := s.BodyText.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"body_text\"")
+			}
+		case "every_minutes":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				v, err := d.Int()
+				s.EveryMinutes = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"every_minutes\"")
+			}
+		case "only_if_recipient_idle_minutes":
+			if err := func() error {
+				s.OnlyIfRecipientIdleMinutes.Reset()
+				if err := s.OnlyIfRecipientIdleMinutes.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"only_if_recipient_idle_minutes\"")
+			}
+		case "stoppable_by_recipient":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.StoppableByRecipient = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stoppable_by_recipient\"")
+			}
+		case "max_sends":
+			if err := func() error {
+				s.MaxSends.Reset()
+				if err := s.MaxSends.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"max_sends\"")
+			}
+		case "until":
+			if err := func() error {
+				s.Until.Reset()
+				if err := s.Until.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"until\"")
+			}
+		case "status":
+			requiredBitSet[1] |= 1 << 3
+			if err := func() error {
+				if err := s.Status.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"status\"")
+			}
+		case "next_run_at":
+			if err := func() error {
+				s.NextRunAt.Reset()
+				if err := s.NextRunAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"next_run_at\"")
+			}
+		case "sent_count":
+			requiredBitSet[1] |= 1 << 5
+			if err := func() error {
+				v, err := d.Int()
+				s.SentCount = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sent_count\"")
+			}
+		case "last_sent_at":
+			if err := func() error {
+				s.LastSentAt.Reset()
+				if err := s.LastSentAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"last_sent_at\"")
+			}
+		case "last_sent_email_id":
+			if err := func() error {
+				s.LastSentEmailID.Reset()
+				if err := s.LastSentEmailID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"last_sent_email_id\"")
+			}
+		case "root_message_id":
+			if err := func() error {
+				s.RootMessageID.Reset()
+				if err := s.RootMessageID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"root_message_id\"")
+			}
+		case "stopped_at":
+			if err := func() error {
+				s.StoppedAt.Reset()
+				if err := s.StoppedAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stopped_at\"")
+			}
+		case "stop_reason":
+			if err := func() error {
+				s.StopReason.Reset()
+				if err := s.StopReason.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stop_reason\"")
+			}
+		case "created_at":
+			if err := func() error {
+				s.CreatedAt.Reset()
+				if err := s.CreatedAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"created_at\"")
+			}
+		case "updated_at":
+			if err := func() error {
+				s.UpdatedAt.Reset()
+				if err := s.UpdatedAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"updated_at\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RepeatingSend")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [3]uint8{
+		0b01001101,
+		0b00101001,
+		0b00000000,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfRepeatingSend) {
+					name = jsonFieldsNameOfRepeatingSend[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *RepeatingSend) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RepeatingSend) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes RepeatingSendStatus as json.
+func (s RepeatingSendStatus) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes RepeatingSendStatus from json.
+func (s *RepeatingSendStatus) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RepeatingSendStatus to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch RepeatingSendStatus(v) {
+	case RepeatingSendStatusActive:
+		*s = RepeatingSendStatusActive
+	case RepeatingSendStatusPaused:
+		*s = RepeatingSendStatusPaused
+	case RepeatingSendStatusStoppedByRecipient:
+		*s = RepeatingSendStatusStoppedByRecipient
+	case RepeatingSendStatusCanceled:
+		*s = RepeatingSendStatusCanceled
+	case RepeatingSendStatusCompleted:
+		*s = RepeatingSendStatusCompleted
+	default:
+		*s = RepeatingSendStatus(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s RepeatingSendStatus) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RepeatingSendStatus) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *RepeatingSendStop) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *RepeatingSendStop) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("repeat_id")
+		json.EncodeUUID(e, s.RepeatID)
+	}
+	{
+		e.FieldStart("status")
+		s.Status.Encode(e)
+	}
+	{
+		e.FieldStart("stopped_at")
+		json.EncodeDateTime(e, s.StoppedAt)
+	}
+	{
+		e.FieldStart("stop_reason")
+		s.StopReason.Encode(e)
+	}
+	{
+		if s.ReplySentEmailID.Set {
+			e.FieldStart("reply_sent_email_id")
+			s.ReplySentEmailID.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfRepeatingSendStop = [5]string{
+	0: "repeat_id",
+	1: "status",
+	2: "stopped_at",
+	3: "stop_reason",
+	4: "reply_sent_email_id",
+}
+
+// Decode decodes RepeatingSendStop from json.
+func (s *RepeatingSendStop) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RepeatingSendStop to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "repeat_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.RepeatID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat_id\"")
+			}
+		case "status":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Status.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"status\"")
+			}
+		case "stopped_at":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.StoppedAt = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stopped_at\"")
+			}
+		case "stop_reason":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.StopReason.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stop_reason\"")
+			}
+		case "reply_sent_email_id":
+			if err := func() error {
+				s.ReplySentEmailID.Reset()
+				if err := s.ReplySentEmailID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reply_sent_email_id\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode RepeatingSendStop")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00001111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfRepeatingSendStop) {
+					name = jsonFieldsNameOfRepeatingSendStop[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *RepeatingSendStop) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RepeatingSendStop) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes RepeatingSendStopStatus as json.
+func (s RepeatingSendStopStatus) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes RepeatingSendStopStatus from json.
+func (s *RepeatingSendStopStatus) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode RepeatingSendStopStatus to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch RepeatingSendStopStatus(v) {
+	case RepeatingSendStopStatusStoppedByRecipient:
+		*s = RepeatingSendStopStatusStoppedByRecipient
+	default:
+		*s = RepeatingSendStopStatus(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s RepeatingSendStopStatus) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *RepeatingSendStopStatus) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes ReplayDeliveryBadRequest as json.
 func (s *ReplayDeliveryBadRequest) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -75282,14 +75869,21 @@ func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 			e.ArrEnd()
 		}
 	}
+	{
+		if s.Repeat.Set {
+			e.FieldStart("repeat")
+			s.Repeat.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfReplyInput = [5]string{
+var jsonFieldsNameOfReplyInput = [6]string{
 	0: "body_text",
 	1: "body_html",
 	2: "from",
 	3: "wait",
 	4: "attachments",
+	5: "repeat",
 }
 
 // Decode decodes ReplyInput from json.
@@ -75356,6 +75950,16 @@ func (s *ReplyInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"attachments\"")
+			}
+		case "repeat":
+			if err := func() error {
+				s.Repeat.Reset()
+				if err := s.Repeat.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat\"")
 			}
 		default:
 			return errors.Errorf("unexpected field %q", k)
@@ -81730,6 +82334,12 @@ func (s *SendMailInput) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 	{
+		if s.Repeat.Set {
+			e.FieldStart("repeat")
+			s.Repeat.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("from")
 		e.Str(s.From)
 	}
@@ -81821,21 +82431,22 @@ func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSendMailInput = [14]string{
-	0:  "from",
-	1:  "to",
-	2:  "cc",
-	3:  "bcc",
-	4:  "subject",
-	5:  "body_text",
-	6:  "body_html",
-	7:  "in_reply_to",
-	8:  "references",
-	9:  "attachments",
-	10: "payload_attachments",
-	11: "wait",
-	12: "wait_timeout_ms",
-	13: "scheduled_at",
+var jsonFieldsNameOfSendMailInput = [15]string{
+	0:  "repeat",
+	1:  "from",
+	2:  "to",
+	3:  "cc",
+	4:  "bcc",
+	5:  "subject",
+	6:  "body_text",
+	7:  "body_html",
+	8:  "in_reply_to",
+	9:  "references",
+	10: "attachments",
+	11: "payload_attachments",
+	12: "wait",
+	13: "wait_timeout_ms",
+	14: "scheduled_at",
 }
 
 // Decode decodes SendMailInput from json.
@@ -81847,8 +82458,18 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
+		case "repeat":
+			if err := func() error {
+				s.Repeat.Reset()
+				if err := s.Repeat.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat\"")
+			}
 		case "from":
-			requiredBitSet[0] |= 1 << 0
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := d.Str()
 				s.From = string(v)
@@ -81860,7 +82481,7 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"from\"")
 			}
 		case "to":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				v, err := d.Str()
 				s.To = string(v)
@@ -81892,7 +82513,7 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"bcc\"")
 			}
 		case "subject":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Str()
 				s.Subject = string(v)
@@ -82026,7 +82647,7 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
-		0b00010011,
+		0b00100110,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -82354,6 +82975,12 @@ func (s *SendMailResult) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *SendMailResult) encodeFields(e *jx.Encoder) {
 	{
+		if s.RepeatID.Set {
+			e.FieldStart("repeat_id")
+			s.RepeatID.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("id")
 		e.Str(s.ID)
 	}
@@ -82427,21 +83054,22 @@ func (s *SendMailResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSendMailResult = [14]string{
-	0:  "id",
-	1:  "status",
-	2:  "from",
-	3:  "queue_id",
-	4:  "accepted",
-	5:  "rejected",
-	6:  "client_idempotency_key",
-	7:  "request_id",
-	8:  "content_hash",
-	9:  "delivery_status",
-	10: "smtp_response_code",
-	11: "smtp_response_text",
-	12: "idempotent_replay",
-	13: "scheduled_at",
+var jsonFieldsNameOfSendMailResult = [15]string{
+	0:  "repeat_id",
+	1:  "id",
+	2:  "status",
+	3:  "from",
+	4:  "queue_id",
+	5:  "accepted",
+	6:  "rejected",
+	7:  "client_idempotency_key",
+	8:  "request_id",
+	9:  "content_hash",
+	10: "delivery_status",
+	11: "smtp_response_code",
+	12: "smtp_response_text",
+	13: "idempotent_replay",
+	14: "scheduled_at",
 }
 
 // Decode decodes SendMailResult from json.
@@ -82453,8 +83081,18 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
+		case "repeat_id":
+			if err := func() error {
+				s.RepeatID.Reset()
+				if err := s.RepeatID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat_id\"")
+			}
 		case "id":
-			requiredBitSet[0] |= 1 << 0
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := d.Str()
 				s.ID = string(v)
@@ -82466,7 +83104,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"id\"")
 			}
 		case "status":
-			requiredBitSet[0] |= 1 << 1
+			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
 				if err := s.Status.Decode(d); err != nil {
 					return err
@@ -82476,7 +83114,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"status\"")
 			}
 		case "from":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 3
 			if err := func() error {
 				v, err := d.Str()
 				s.From = string(v)
@@ -82488,7 +83126,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"from\"")
 			}
 		case "queue_id":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				if err := s.QueueID.Decode(d); err != nil {
 					return err
@@ -82498,7 +83136,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"queue_id\"")
 			}
 		case "accepted":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				s.Accepted = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -82518,7 +83156,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"accepted\"")
 			}
 		case "rejected":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				s.Rejected = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -82538,7 +83176,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"rejected\"")
 			}
 		case "client_idempotency_key":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				v, err := d.Str()
 				s.ClientIdempotencyKey = string(v)
@@ -82550,7 +83188,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"client_idempotency_key\"")
 			}
 		case "request_id":
-			requiredBitSet[0] |= 1 << 7
+			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				v, err := d.Str()
 				s.RequestID = string(v)
@@ -82562,7 +83200,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"request_id\"")
 			}
 		case "content_hash":
-			requiredBitSet[1] |= 1 << 0
+			requiredBitSet[1] |= 1 << 1
 			if err := func() error {
 				v, err := d.Str()
 				s.ContentHash = string(v)
@@ -82604,7 +83242,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"smtp_response_text\"")
 			}
 		case "idempotent_replay":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				v, err := d.Bool()
 				s.IdempotentReplay = bool(v)
@@ -82635,8 +83273,8 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
-		0b11111111,
-		0b00010001,
+		0b11111110,
+		0b00100011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -83810,6 +84448,12 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Repeat.Set {
+			e.FieldStart("repeat")
+			s.Repeat.Encode(e)
+		}
+	}
+	{
 		if s.SenderMember.Set {
 			e.FieldStart("sender_member")
 			s.SenderMember.Encode(e)
@@ -83857,7 +84501,7 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSentEmailDetail = [39]string{
+var jsonFieldsNameOfSentEmailDetail = [40]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -83890,13 +84534,14 @@ var jsonFieldsNameOfSentEmailDetail = [39]string{
 	29: "scheduled_at",
 	30: "canceled_at",
 	31: "presence_control",
-	32: "sender_member",
-	33: "body_text",
-	34: "body_html",
-	35: "attachments",
-	36: "attachments_size_bytes",
-	37: "attachments_complete",
-	38: "attachments_download_available",
+	32: "repeat",
+	33: "sender_member",
+	34: "body_text",
+	35: "body_html",
+	36: "attachments",
+	37: "attachments_size_bytes",
+	38: "attachments_complete",
+	39: "attachments_download_available",
 }
 
 // Decode decodes SentEmailDetail from json.
@@ -84249,6 +84894,16 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"presence_control\"")
+			}
+		case "repeat":
+			if err := func() error {
+				s.Repeat.Reset()
+				if err := s.Repeat.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat\"")
 			}
 		case "sender_member":
 			if err := func() error {
@@ -84797,6 +85452,119 @@ func (s *SentEmailDetailPresenceControlStatus) UnmarshalJSON(data []byte) error 
 }
 
 // Encode implements json.Marshaler.
+func (s *SentEmailDetailRepeat) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SentEmailDetailRepeat) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("repeat_id")
+		json.EncodeUUID(e, s.RepeatID)
+	}
+	{
+		e.FieldStart("sequence")
+		e.Int(s.Sequence)
+	}
+}
+
+var jsonFieldsNameOfSentEmailDetailRepeat = [2]string{
+	0: "repeat_id",
+	1: "sequence",
+}
+
+// Decode decodes SentEmailDetailRepeat from json.
+func (s *SentEmailDetailRepeat) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailDetailRepeat to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "repeat_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.RepeatID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat_id\"")
+			}
+		case "sequence":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Sequence = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sequence\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SentEmailDetailRepeat")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSentEmailDetailRepeat) {
+					name = jsonFieldsNameOfSentEmailDetailRepeat[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SentEmailDetailRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailDetailRepeat) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *SentEmailDetailSenderMember) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -85256,6 +86024,12 @@ func (s *SentEmailSummary) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Repeat.Set {
+			e.FieldStart("repeat")
+			s.Repeat.Encode(e)
+		}
+	}
+	{
 		if s.SenderMember.Set {
 			e.FieldStart("sender_member")
 			s.SenderMember.Encode(e)
@@ -85263,7 +86037,7 @@ func (s *SentEmailSummary) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSentEmailSummary = [33]string{
+var jsonFieldsNameOfSentEmailSummary = [34]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -85296,7 +86070,8 @@ var jsonFieldsNameOfSentEmailSummary = [33]string{
 	29: "scheduled_at",
 	30: "canceled_at",
 	31: "presence_control",
-	32: "sender_member",
+	32: "repeat",
+	33: "sender_member",
 }
 
 // Decode decodes SentEmailSummary from json.
@@ -85650,6 +86425,16 @@ func (s *SentEmailSummary) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"presence_control\"")
 			}
+		case "repeat":
+			if err := func() error {
+				s.Repeat.Reset()
+				if err := s.Repeat.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat\"")
+			}
 		case "sender_member":
 			if err := func() error {
 				s.SenderMember.Reset()
@@ -85869,6 +86654,119 @@ func (s SentEmailSummaryPresenceControlStatus) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SentEmailSummaryPresenceControlStatus) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SentEmailSummaryRepeat) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SentEmailSummaryRepeat) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("repeat_id")
+		json.EncodeUUID(e, s.RepeatID)
+	}
+	{
+		e.FieldStart("sequence")
+		e.Int(s.Sequence)
+	}
+}
+
+var jsonFieldsNameOfSentEmailSummaryRepeat = [2]string{
+	0: "repeat_id",
+	1: "sequence",
+}
+
+// Decode decodes SentEmailSummaryRepeat from json.
+func (s *SentEmailSummaryRepeat) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailSummaryRepeat to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "repeat_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.RepeatID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat_id\"")
+			}
+		case "sequence":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Sequence = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sequence\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SentEmailSummaryRepeat")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSentEmailSummaryRepeat) {
+					name = jsonFieldsNameOfSentEmailSummaryRepeat[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SentEmailSummaryRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailSummaryRepeat) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -89606,17 +90504,17 @@ func (s *StartCliSignupInputMetadata) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes StopAgentMessageScheduleBadRequest as json.
-func (s *StopAgentMessageScheduleBadRequest) Encode(e *jx.Encoder) {
+// Encode encodes StopRepeatingSendBadRequest as json.
+func (s *StopRepeatingSendBadRequest) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
 
 	unwrapped.Encode(e)
 }
 
-// Decode decodes StopAgentMessageScheduleBadRequest from json.
-func (s *StopAgentMessageScheduleBadRequest) Decode(d *jx.Decoder) error {
+// Decode decodes StopRepeatingSendBadRequest from json.
+func (s *StopRepeatingSendBadRequest) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode StopAgentMessageScheduleBadRequest to nil")
+		return errors.New("invalid: unable to decode StopRepeatingSendBadRequest to nil")
 	}
 	var unwrapped ErrorResponse
 	if err := func() error {
@@ -89627,34 +90525,34 @@ func (s *StopAgentMessageScheduleBadRequest) Decode(d *jx.Decoder) error {
 	}(); err != nil {
 		return errors.Wrap(err, "alias")
 	}
-	*s = StopAgentMessageScheduleBadRequest(unwrapped)
+	*s = StopRepeatingSendBadRequest(unwrapped)
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s *StopAgentMessageScheduleBadRequest) MarshalJSON() ([]byte, error) {
+func (s *StopRepeatingSendBadRequest) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *StopAgentMessageScheduleBadRequest) UnmarshalJSON(data []byte) error {
+func (s *StopRepeatingSendBadRequest) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
 
-// Encode encodes StopAgentMessageScheduleForbidden as json.
-func (s *StopAgentMessageScheduleForbidden) Encode(e *jx.Encoder) {
+// Encode encodes StopRepeatingSendForbidden as json.
+func (s *StopRepeatingSendForbidden) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
 
 	unwrapped.Encode(e)
 }
 
-// Decode decodes StopAgentMessageScheduleForbidden from json.
-func (s *StopAgentMessageScheduleForbidden) Decode(d *jx.Decoder) error {
+// Decode decodes StopRepeatingSendForbidden from json.
+func (s *StopRepeatingSendForbidden) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode StopAgentMessageScheduleForbidden to nil")
+		return errors.New("invalid: unable to decode StopRepeatingSendForbidden to nil")
 	}
 	var unwrapped ErrorResponse
 	if err := func() error {
@@ -89665,133 +90563,70 @@ func (s *StopAgentMessageScheduleForbidden) Decode(d *jx.Decoder) error {
 	}(); err != nil {
 		return errors.Wrap(err, "alias")
 	}
-	*s = StopAgentMessageScheduleForbidden(unwrapped)
+	*s = StopRepeatingSendForbidden(unwrapped)
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s *StopAgentMessageScheduleForbidden) MarshalJSON() ([]byte, error) {
+func (s *StopRepeatingSendForbidden) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *StopAgentMessageScheduleForbidden) UnmarshalJSON(data []byte) error {
+func (s *StopRepeatingSendForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes StopRepeatingSendNotFound as json.
+func (s *StopRepeatingSendNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes StopRepeatingSendNotFound from json.
+func (s *StopRepeatingSendNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode StopRepeatingSendNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = StopRepeatingSendNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *StopRepeatingSendNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *StopRepeatingSendNotFound) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
 
 // Encode implements json.Marshaler.
-func (s *StopAgentMessageScheduleInput) Encode(e *jx.Encoder) {
+func (s *StopRepeatingSendOK) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
 	e.ObjEnd()
 }
 
 // encodeFields encodes fields.
-func (s *StopAgentMessageScheduleInput) encodeFields(e *jx.Encoder) {
-	{
-		if s.Reason.Set {
-			e.FieldStart("reason")
-			s.Reason.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfStopAgentMessageScheduleInput = [1]string{
-	0: "reason",
-}
-
-// Decode decodes StopAgentMessageScheduleInput from json.
-func (s *StopAgentMessageScheduleInput) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode StopAgentMessageScheduleInput to nil")
-	}
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "reason":
-			if err := func() error {
-				s.Reason.Reset()
-				if err := s.Reason.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"reason\"")
-			}
-		default:
-			return errors.Errorf("unexpected field %q", k)
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode StopAgentMessageScheduleInput")
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *StopAgentMessageScheduleInput) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *StopAgentMessageScheduleInput) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes StopAgentMessageScheduleNotFound as json.
-func (s *StopAgentMessageScheduleNotFound) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes StopAgentMessageScheduleNotFound from json.
-func (s *StopAgentMessageScheduleNotFound) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode StopAgentMessageScheduleNotFound to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = StopAgentMessageScheduleNotFound(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *StopAgentMessageScheduleNotFound) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *StopAgentMessageScheduleNotFound) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *StopAgentMessageScheduleOK) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *StopAgentMessageScheduleOK) encodeFields(e *jx.Encoder) {
+func (s *StopRepeatingSendOK) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("success")
 		e.Bool(true)
@@ -89802,15 +90637,15 @@ func (s *StopAgentMessageScheduleOK) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfStopAgentMessageScheduleOK = [2]string{
+var jsonFieldsNameOfStopRepeatingSendOK = [2]string{
 	0: "success",
 	1: "data",
 }
 
-// Decode decodes StopAgentMessageScheduleOK from json.
-func (s *StopAgentMessageScheduleOK) Decode(d *jx.Decoder) error {
+// Decode decodes StopRepeatingSendOK from json.
+func (s *StopRepeatingSendOK) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode StopAgentMessageScheduleOK to nil")
+		return errors.New("invalid: unable to decode StopRepeatingSendOK to nil")
 	}
 	var requiredBitSet [1]uint8
 
@@ -89843,7 +90678,7 @@ func (s *StopAgentMessageScheduleOK) Decode(d *jx.Decoder) error {
 		}
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "decode StopAgentMessageScheduleOK")
+		return errors.Wrap(err, "decode StopRepeatingSendOK")
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
@@ -89860,8 +90695,8 @@ func (s *StopAgentMessageScheduleOK) Decode(d *jx.Decoder) error {
 				bitIdx := bits.TrailingZeros8(result)
 				fieldIdx := i*8 + bitIdx
 				var name string
-				if fieldIdx < len(jsonFieldsNameOfStopAgentMessageScheduleOK) {
-					name = jsonFieldsNameOfStopAgentMessageScheduleOK[fieldIdx]
+				if fieldIdx < len(jsonFieldsNameOfStopRepeatingSendOK) {
+					name = jsonFieldsNameOfStopRepeatingSendOK[fieldIdx]
 				} else {
 					name = strconv.Itoa(fieldIdx)
 				}
@@ -89882,29 +90717,29 @@ func (s *StopAgentMessageScheduleOK) Decode(d *jx.Decoder) error {
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s *StopAgentMessageScheduleOK) MarshalJSON() ([]byte, error) {
+func (s *StopRepeatingSendOK) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *StopAgentMessageScheduleOK) UnmarshalJSON(data []byte) error {
+func (s *StopRepeatingSendOK) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
 
-// Encode encodes StopAgentMessageScheduleUnauthorized as json.
-func (s *StopAgentMessageScheduleUnauthorized) Encode(e *jx.Encoder) {
+// Encode encodes StopRepeatingSendUnauthorized as json.
+func (s *StopRepeatingSendUnauthorized) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
 
 	unwrapped.Encode(e)
 }
 
-// Decode decodes StopAgentMessageScheduleUnauthorized from json.
-func (s *StopAgentMessageScheduleUnauthorized) Decode(d *jx.Decoder) error {
+// Decode decodes StopRepeatingSendUnauthorized from json.
+func (s *StopRepeatingSendUnauthorized) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode StopAgentMessageScheduleUnauthorized to nil")
+		return errors.New("invalid: unable to decode StopRepeatingSendUnauthorized to nil")
 	}
 	var unwrapped ErrorResponse
 	if err := func() error {
@@ -89915,34 +90750,34 @@ func (s *StopAgentMessageScheduleUnauthorized) Decode(d *jx.Decoder) error {
 	}(); err != nil {
 		return errors.Wrap(err, "alias")
 	}
-	*s = StopAgentMessageScheduleUnauthorized(unwrapped)
+	*s = StopRepeatingSendUnauthorized(unwrapped)
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s *StopAgentMessageScheduleUnauthorized) MarshalJSON() ([]byte, error) {
+func (s *StopRepeatingSendUnauthorized) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *StopAgentMessageScheduleUnauthorized) UnmarshalJSON(data []byte) error {
+func (s *StopRepeatingSendUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
 
-// Encode encodes StopAgentMessageScheduleUnprocessableEntity as json.
-func (s *StopAgentMessageScheduleUnprocessableEntity) Encode(e *jx.Encoder) {
+// Encode encodes StopRepeatingSendUnprocessableEntity as json.
+func (s *StopRepeatingSendUnprocessableEntity) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
 
 	unwrapped.Encode(e)
 }
 
-// Decode decodes StopAgentMessageScheduleUnprocessableEntity from json.
-func (s *StopAgentMessageScheduleUnprocessableEntity) Decode(d *jx.Decoder) error {
+// Decode decodes StopRepeatingSendUnprocessableEntity from json.
+func (s *StopRepeatingSendUnprocessableEntity) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode StopAgentMessageScheduleUnprocessableEntity to nil")
+		return errors.New("invalid: unable to decode StopRepeatingSendUnprocessableEntity to nil")
 	}
 	var unwrapped ErrorResponse
 	if err := func() error {
@@ -89953,19 +90788,19 @@ func (s *StopAgentMessageScheduleUnprocessableEntity) Decode(d *jx.Decoder) erro
 	}(); err != nil {
 		return errors.Wrap(err, "alias")
 	}
-	*s = StopAgentMessageScheduleUnprocessableEntity(unwrapped)
+	*s = StopRepeatingSendUnprocessableEntity(unwrapped)
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s *StopAgentMessageScheduleUnprocessableEntity) MarshalJSON() ([]byte, error) {
+func (s *StopRepeatingSendUnprocessableEntity) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *StopAgentMessageScheduleUnprocessableEntity) UnmarshalJSON(data []byte) error {
+func (s *StopRepeatingSendUnprocessableEntity) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -94934,6 +95769,12 @@ func (s *ThreadMessage) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Repeat.Set {
+			e.FieldStart("repeat")
+			s.Repeat.Encode(e)
+		}
+	}
+	{
 		if s.SenderMember.Set {
 			e.FieldStart("sender_member")
 			s.SenderMember.Encode(e)
@@ -94941,7 +95782,7 @@ func (s *ThreadMessage) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfThreadMessage = [9]string{
+var jsonFieldsNameOfThreadMessage = [10]string{
 	0: "direction",
 	1: "id",
 	2: "message_id",
@@ -94950,7 +95791,8 @@ var jsonFieldsNameOfThreadMessage = [9]string{
 	5: "subject",
 	6: "status",
 	7: "timestamp",
-	8: "sender_member",
+	8: "repeat",
+	9: "sender_member",
 }
 
 // Decode decodes ThreadMessage from json.
@@ -95043,6 +95885,16 @@ func (s *ThreadMessage) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"timestamp\"")
+			}
+		case "repeat":
+			if err := func() error {
+				s.Repeat.Reset()
+				if err := s.Repeat.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat\"")
 			}
 		case "sender_member":
 			if err := func() error {
@@ -95147,6 +95999,119 @@ func (s ThreadMessageDirection) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ThreadMessageDirection) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *ThreadMessageRepeat) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ThreadMessageRepeat) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("repeat_id")
+		json.EncodeUUID(e, s.RepeatID)
+	}
+	{
+		e.FieldStart("sequence")
+		e.Int(s.Sequence)
+	}
+}
+
+var jsonFieldsNameOfThreadMessageRepeat = [2]string{
+	0: "repeat_id",
+	1: "sequence",
+}
+
+// Decode decodes ThreadMessageRepeat from json.
+func (s *ThreadMessageRepeat) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ThreadMessageRepeat to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "repeat_id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.RepeatID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"repeat_id\"")
+			}
+		case "sequence":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Int()
+				s.Sequence = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sequence\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ThreadMessageRepeat")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfThreadMessageRepeat) {
+					name = jsonFieldsNameOfThreadMessageRepeat[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ThreadMessageRepeat) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ThreadMessageRepeat) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -96189,459 +97154,6 @@ func (s *UpdateAccountUnauthorized) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *UpdateAccountUnauthorized) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes UpdateAgentMessageScheduleBadRequest as json.
-func (s *UpdateAgentMessageScheduleBadRequest) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes UpdateAgentMessageScheduleBadRequest from json.
-func (s *UpdateAgentMessageScheduleBadRequest) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode UpdateAgentMessageScheduleBadRequest to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = UpdateAgentMessageScheduleBadRequest(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *UpdateAgentMessageScheduleBadRequest) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *UpdateAgentMessageScheduleBadRequest) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes UpdateAgentMessageScheduleForbidden as json.
-func (s *UpdateAgentMessageScheduleForbidden) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes UpdateAgentMessageScheduleForbidden from json.
-func (s *UpdateAgentMessageScheduleForbidden) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode UpdateAgentMessageScheduleForbidden to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = UpdateAgentMessageScheduleForbidden(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *UpdateAgentMessageScheduleForbidden) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *UpdateAgentMessageScheduleForbidden) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *UpdateAgentMessageScheduleInput) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *UpdateAgentMessageScheduleInput) encodeFields(e *jx.Encoder) {
-	{
-		if s.Status.Set {
-			e.FieldStart("status")
-			s.Status.Encode(e)
-		}
-	}
-	{
-		if s.Subject.Set {
-			e.FieldStart("subject")
-			s.Subject.Encode(e)
-		}
-	}
-	{
-		if s.BodyText.Set {
-			e.FieldStart("body_text")
-			s.BodyText.Encode(e)
-		}
-	}
-	{
-		if s.IntervalMinutes.Set {
-			e.FieldStart("interval_minutes")
-			s.IntervalMinutes.Encode(e)
-		}
-	}
-	{
-		if s.IdleMinutes.Set {
-			e.FieldStart("idle_minutes")
-			s.IdleMinutes.Encode(e)
-		}
-	}
-	{
-		if s.AgentCanStop.Set {
-			e.FieldStart("agent_can_stop")
-			s.AgentCanStop.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfUpdateAgentMessageScheduleInput = [6]string{
-	0: "status",
-	1: "subject",
-	2: "body_text",
-	3: "interval_minutes",
-	4: "idle_minutes",
-	5: "agent_can_stop",
-}
-
-// Decode decodes UpdateAgentMessageScheduleInput from json.
-func (s *UpdateAgentMessageScheduleInput) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode UpdateAgentMessageScheduleInput to nil")
-	}
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "status":
-			if err := func() error {
-				s.Status.Reset()
-				if err := s.Status.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"status\"")
-			}
-		case "subject":
-			if err := func() error {
-				s.Subject.Reset()
-				if err := s.Subject.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"subject\"")
-			}
-		case "body_text":
-			if err := func() error {
-				s.BodyText.Reset()
-				if err := s.BodyText.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"body_text\"")
-			}
-		case "interval_minutes":
-			if err := func() error {
-				s.IntervalMinutes.Reset()
-				if err := s.IntervalMinutes.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"interval_minutes\"")
-			}
-		case "idle_minutes":
-			if err := func() error {
-				s.IdleMinutes.Reset()
-				if err := s.IdleMinutes.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"idle_minutes\"")
-			}
-		case "agent_can_stop":
-			if err := func() error {
-				s.AgentCanStop.Reset()
-				if err := s.AgentCanStop.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"agent_can_stop\"")
-			}
-		default:
-			return errors.Errorf("unexpected field %q", k)
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode UpdateAgentMessageScheduleInput")
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *UpdateAgentMessageScheduleInput) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *UpdateAgentMessageScheduleInput) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes UpdateAgentMessageScheduleInputStatus as json.
-func (s UpdateAgentMessageScheduleInputStatus) Encode(e *jx.Encoder) {
-	e.Str(string(s))
-}
-
-// Decode decodes UpdateAgentMessageScheduleInputStatus from json.
-func (s *UpdateAgentMessageScheduleInputStatus) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode UpdateAgentMessageScheduleInputStatus to nil")
-	}
-	v, err := d.StrBytes()
-	if err != nil {
-		return err
-	}
-	// Try to use constant string.
-	switch UpdateAgentMessageScheduleInputStatus(v) {
-	case UpdateAgentMessageScheduleInputStatusActive:
-		*s = UpdateAgentMessageScheduleInputStatusActive
-	case UpdateAgentMessageScheduleInputStatusPaused:
-		*s = UpdateAgentMessageScheduleInputStatusPaused
-	case UpdateAgentMessageScheduleInputStatusStoppedByOwner:
-		*s = UpdateAgentMessageScheduleInputStatusStoppedByOwner
-	default:
-		*s = UpdateAgentMessageScheduleInputStatus(v)
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s UpdateAgentMessageScheduleInputStatus) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *UpdateAgentMessageScheduleInputStatus) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes UpdateAgentMessageScheduleNotFound as json.
-func (s *UpdateAgentMessageScheduleNotFound) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes UpdateAgentMessageScheduleNotFound from json.
-func (s *UpdateAgentMessageScheduleNotFound) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode UpdateAgentMessageScheduleNotFound to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = UpdateAgentMessageScheduleNotFound(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *UpdateAgentMessageScheduleNotFound) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *UpdateAgentMessageScheduleNotFound) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *UpdateAgentMessageScheduleOK) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *UpdateAgentMessageScheduleOK) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("success")
-		e.Bool(true)
-	}
-	{
-		e.FieldStart("data")
-		s.Data.Encode(e)
-	}
-}
-
-var jsonFieldsNameOfUpdateAgentMessageScheduleOK = [2]string{
-	0: "success",
-	1: "data",
-}
-
-// Decode decodes UpdateAgentMessageScheduleOK from json.
-func (s *UpdateAgentMessageScheduleOK) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode UpdateAgentMessageScheduleOK to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "success":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := d.Bool()
-				s.Success = bool(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"success\"")
-			}
-		case "data":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				if err := s.Data.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"data\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode UpdateAgentMessageScheduleOK")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00000011,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfUpdateAgentMessageScheduleOK) {
-					name = jsonFieldsNameOfUpdateAgentMessageScheduleOK[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *UpdateAgentMessageScheduleOK) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *UpdateAgentMessageScheduleOK) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes UpdateAgentMessageScheduleUnauthorized as json.
-func (s *UpdateAgentMessageScheduleUnauthorized) Encode(e *jx.Encoder) {
-	unwrapped := (*ErrorResponse)(s)
-
-	unwrapped.Encode(e)
-}
-
-// Decode decodes UpdateAgentMessageScheduleUnauthorized from json.
-func (s *UpdateAgentMessageScheduleUnauthorized) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode UpdateAgentMessageScheduleUnauthorized to nil")
-	}
-	var unwrapped ErrorResponse
-	if err := func() error {
-		if err := unwrapped.Decode(d); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return errors.Wrap(err, "alias")
-	}
-	*s = UpdateAgentMessageScheduleUnauthorized(unwrapped)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *UpdateAgentMessageScheduleUnauthorized) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *UpdateAgentMessageScheduleUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -99150,6 +99662,455 @@ func (s *UpdateRegistryUnprocessableEntity) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *UpdateRegistryUnprocessableEntity) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateRepeatingSendBadRequest as json.
+func (s *UpdateRepeatingSendBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateRepeatingSendBadRequest from json.
+func (s *UpdateRepeatingSendBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRepeatingSendBadRequest to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateRepeatingSendBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRepeatingSendBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRepeatingSendBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *UpdateRepeatingSendInput) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *UpdateRepeatingSendInput) encodeFields(e *jx.Encoder) {
+	{
+		if s.Status.Set {
+			e.FieldStart("status")
+			s.Status.Encode(e)
+		}
+	}
+	{
+		if s.EveryMinutes.Set {
+			e.FieldStart("every_minutes")
+			s.EveryMinutes.Encode(e)
+		}
+	}
+	{
+		if s.OnlyIfRecipientIdleMinutes.Set {
+			e.FieldStart("only_if_recipient_idle_minutes")
+			s.OnlyIfRecipientIdleMinutes.Encode(e)
+		}
+	}
+	{
+		if s.StoppableByRecipient.Set {
+			e.FieldStart("stoppable_by_recipient")
+			s.StoppableByRecipient.Encode(e)
+		}
+	}
+	{
+		if s.MaxSends.Set {
+			e.FieldStart("max_sends")
+			s.MaxSends.Encode(e)
+		}
+	}
+	{
+		if s.Until.Set {
+			e.FieldStart("until")
+			s.Until.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		if s.BodyText.Set {
+			e.FieldStart("body_text")
+			s.BodyText.Encode(e)
+		}
+	}
+	{
+		if s.Subject.Set {
+			e.FieldStart("subject")
+			s.Subject.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfUpdateRepeatingSendInput = [8]string{
+	0: "status",
+	1: "every_minutes",
+	2: "only_if_recipient_idle_minutes",
+	3: "stoppable_by_recipient",
+	4: "max_sends",
+	5: "until",
+	6: "body_text",
+	7: "subject",
+}
+
+// Decode decodes UpdateRepeatingSendInput from json.
+func (s *UpdateRepeatingSendInput) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRepeatingSendInput to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "status":
+			if err := func() error {
+				s.Status.Reset()
+				if err := s.Status.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"status\"")
+			}
+		case "every_minutes":
+			if err := func() error {
+				s.EveryMinutes.Reset()
+				if err := s.EveryMinutes.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"every_minutes\"")
+			}
+		case "only_if_recipient_idle_minutes":
+			if err := func() error {
+				s.OnlyIfRecipientIdleMinutes.Reset()
+				if err := s.OnlyIfRecipientIdleMinutes.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"only_if_recipient_idle_minutes\"")
+			}
+		case "stoppable_by_recipient":
+			if err := func() error {
+				s.StoppableByRecipient.Reset()
+				if err := s.StoppableByRecipient.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"stoppable_by_recipient\"")
+			}
+		case "max_sends":
+			if err := func() error {
+				s.MaxSends.Reset()
+				if err := s.MaxSends.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"max_sends\"")
+			}
+		case "until":
+			if err := func() error {
+				s.Until.Reset()
+				if err := s.Until.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"until\"")
+			}
+		case "body_text":
+			if err := func() error {
+				s.BodyText.Reset()
+				if err := s.BodyText.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"body_text\"")
+			}
+		case "subject":
+			if err := func() error {
+				s.Subject.Reset()
+				if err := s.Subject.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"subject\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode UpdateRepeatingSendInput")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRepeatingSendInput) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRepeatingSendInput) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateRepeatingSendInputStatus as json.
+func (s UpdateRepeatingSendInputStatus) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes UpdateRepeatingSendInputStatus from json.
+func (s *UpdateRepeatingSendInputStatus) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRepeatingSendInputStatus to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch UpdateRepeatingSendInputStatus(v) {
+	case UpdateRepeatingSendInputStatusActive:
+		*s = UpdateRepeatingSendInputStatusActive
+	case UpdateRepeatingSendInputStatusPaused:
+		*s = UpdateRepeatingSendInputStatusPaused
+	case UpdateRepeatingSendInputStatusCanceled:
+		*s = UpdateRepeatingSendInputStatusCanceled
+	default:
+		*s = UpdateRepeatingSendInputStatus(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s UpdateRepeatingSendInputStatus) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRepeatingSendInputStatus) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateRepeatingSendNotFound as json.
+func (s *UpdateRepeatingSendNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateRepeatingSendNotFound from json.
+func (s *UpdateRepeatingSendNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRepeatingSendNotFound to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateRepeatingSendNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRepeatingSendNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRepeatingSendNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *UpdateRepeatingSendOK) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *UpdateRepeatingSendOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("success")
+		e.Bool(true)
+	}
+	{
+		e.FieldStart("data")
+		s.Data.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfUpdateRepeatingSendOK = [2]string{
+	0: "success",
+	1: "data",
+}
+
+// Decode decodes UpdateRepeatingSendOK from json.
+func (s *UpdateRepeatingSendOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRepeatingSendOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "success":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Success = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"success\"")
+			}
+		case "data":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Data.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"data\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode UpdateRepeatingSendOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfUpdateRepeatingSendOK) {
+					name = jsonFieldsNameOfUpdateRepeatingSendOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRepeatingSendOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRepeatingSendOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateRepeatingSendUnauthorized as json.
+func (s *UpdateRepeatingSendUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateRepeatingSendUnauthorized from json.
+func (s *UpdateRepeatingSendUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateRepeatingSendUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateRepeatingSendUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateRepeatingSendUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateRepeatingSendUnauthorized) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

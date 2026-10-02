@@ -2458,199 +2458,6 @@ func (s *Server) handleCreateAgentConnectionRequest(args [0]string, argsEscaped 
 	}
 }
 
-// handleCreateAgentMessageScheduleRequest handles createAgentMessageSchedule operation.
-//
-// Schedule a recurring message from the calling member's personal
-// address to one of the org's connected agents. The first message is
-// sent on the next scheduler pass; later messages reply in the same
-// thread every `interval_minutes`. With `idle_minutes` set, a due
-// message is skipped while the agent has been active within that many
-// minutes. Member credentials only; API keys and agent keys receive
-// 403.
-//
-// POST /agent-message-schedules
-func (s *Server) handleCreateAgentMessageScheduleRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("createAgentMessageSchedule"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/agent-message-schedules"),
-	}
-	// Add attributes from config.
-	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
-
-	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), CreateAgentMessageScheduleOperation,
-		trace.WithAttributes(otelAttrs...),
-		serverSpanKind,
-	)
-	defer span.End()
-
-	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
-	ctx = contextWithLabeler(ctx, labeler)
-
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		elapsedDuration := time.Since(startTime)
-
-		attrSet := labeler.AttributeSet()
-		attrs := attrSet.ToSlice()
-		code := statusWriter.status
-		if code != 0 {
-			codeAttr := semconv.HTTPResponseStatusCode(code)
-			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
-		}
-		attrOpt := metric.WithAttributes(attrs...)
-
-		// Increment request counter.
-		s.requests.Add(ctx, 1, attrOpt)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
-	}()
-
-	var (
-		recordError = func(stage string, err error) {
-			span.RecordError(err)
-
-			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
-			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
-			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
-			// max redirects exceeded), in which case status MUST be set to Error.
-			code := statusWriter.status
-			if code < 100 || code >= 500 {
-				span.SetStatus(codes.Error, stage)
-			}
-
-			attrSet := labeler.AttributeSet()
-			attrs := attrSet.ToSlice()
-			if code != 0 {
-				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
-			}
-
-			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
-		}
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: CreateAgentMessageScheduleOperation,
-			ID:   "createAgentMessageSchedule",
-		}
-	)
-	{
-		type bitset = [1]uint8
-		var satisfied bitset
-		{
-			sctx, ok, err := s.securityBearerAuth(ctx, CreateAgentMessageScheduleOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "BearerAuth",
-					Err:              err,
-				}
-				defer recordError("Security:BearerAuth", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 0
-				ctx = sctx
-			}
-		}
-
-		if ok := func() bool {
-		nextRequirement:
-			for _, requirement := range []bitset{
-				{0b00000001},
-			} {
-				for i, mask := range requirement {
-					if satisfied[i]&mask != mask {
-						continue nextRequirement
-					}
-				}
-				return true
-			}
-			return false
-		}(); !ok {
-			err = &ogenerrors.SecurityError{
-				OperationContext: opErrContext,
-				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
-			}
-			defer recordError("Security", err)
-			s.cfg.ErrorHandler(ctx, w, r, err)
-			return
-		}
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeCreateAgentMessageScheduleRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response CreateAgentMessageScheduleRes
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    CreateAgentMessageScheduleOperation,
-			OperationSummary: "Create an agent message schedule",
-			OperationID:      "createAgentMessageSchedule",
-			Body:             request,
-			RawBody:          rawBody,
-			Params:           middleware.Parameters{},
-			Raw:              r,
-		}
-
-		type (
-			Request  = *CreateAgentMessageScheduleInput
-			Params   = struct{}
-			Response = CreateAgentMessageScheduleRes
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			nil,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateAgentMessageSchedule(ctx, request)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.CreateAgentMessageSchedule(ctx, request)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeCreateAgentMessageScheduleResponse(response, w, span); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
 // handleCreateChallengeRequest handles createChallenge operation.
 //
 // Create an x402 payment challenge (the payee side of a payment). The
@@ -5427,193 +5234,6 @@ func (s *Server) handleDeleteAgentContactRequest(args [2]string, argsEscaped boo
 	}
 }
 
-// handleDeleteAgentMessageScheduleRequest handles deleteAgentMessageSchedule operation.
-//
-// Delete a schedule. Messages already sent are not affected.
-//
-// DELETE /agent-message-schedules/{id}
-func (s *Server) handleDeleteAgentMessageScheduleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("deleteAgentMessageSchedule"),
-		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.HTTPRouteKey.String("/agent-message-schedules/{id}"),
-	}
-	// Add attributes from config.
-	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
-
-	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), DeleteAgentMessageScheduleOperation,
-		trace.WithAttributes(otelAttrs...),
-		serverSpanKind,
-	)
-	defer span.End()
-
-	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
-	ctx = contextWithLabeler(ctx, labeler)
-
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		elapsedDuration := time.Since(startTime)
-
-		attrSet := labeler.AttributeSet()
-		attrs := attrSet.ToSlice()
-		code := statusWriter.status
-		if code != 0 {
-			codeAttr := semconv.HTTPResponseStatusCode(code)
-			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
-		}
-		attrOpt := metric.WithAttributes(attrs...)
-
-		// Increment request counter.
-		s.requests.Add(ctx, 1, attrOpt)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
-	}()
-
-	var (
-		recordError = func(stage string, err error) {
-			span.RecordError(err)
-
-			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
-			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
-			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
-			// max redirects exceeded), in which case status MUST be set to Error.
-			code := statusWriter.status
-			if code < 100 || code >= 500 {
-				span.SetStatus(codes.Error, stage)
-			}
-
-			attrSet := labeler.AttributeSet()
-			attrs := attrSet.ToSlice()
-			if code != 0 {
-				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
-			}
-
-			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
-		}
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteAgentMessageScheduleOperation,
-			ID:   "deleteAgentMessageSchedule",
-		}
-	)
-	{
-		type bitset = [1]uint8
-		var satisfied bitset
-		{
-			sctx, ok, err := s.securityBearerAuth(ctx, DeleteAgentMessageScheduleOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "BearerAuth",
-					Err:              err,
-				}
-				defer recordError("Security:BearerAuth", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 0
-				ctx = sctx
-			}
-		}
-
-		if ok := func() bool {
-		nextRequirement:
-			for _, requirement := range []bitset{
-				{0b00000001},
-			} {
-				for i, mask := range requirement {
-					if satisfied[i]&mask != mask {
-						continue nextRequirement
-					}
-				}
-				return true
-			}
-			return false
-		}(); !ok {
-			err = &ogenerrors.SecurityError{
-				OperationContext: opErrContext,
-				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
-			}
-			defer recordError("Security", err)
-			s.cfg.ErrorHandler(ctx, w, r, err)
-			return
-		}
-	}
-	params, err := decodeDeleteAgentMessageScheduleParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response DeleteAgentMessageScheduleRes
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteAgentMessageScheduleOperation,
-			OperationSummary: "Delete an agent message schedule",
-			OperationID:      "deleteAgentMessageSchedule",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "id",
-					In:   "path",
-				}: params.ID,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteAgentMessageScheduleParams
-			Response = DeleteAgentMessageScheduleRes
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteAgentMessageScheduleParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteAgentMessageSchedule(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteAgentMessageSchedule(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeDeleteAgentMessageScheduleResponse(response, w, span); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
 // handleDeleteContactRequest handles deleteContact operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -7528,6 +7148,193 @@ func (s *Server) handleDeleteRegistryRequest(args [1]string, argsEscaped bool, w
 	}
 
 	if err := encodeDeleteRegistryResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleDeleteRepeatingSendRequest handles deleteRepeatingSend operation.
+//
+// Deletes the repeat and cancels its pending message. Messages already sent are not affected.
+//
+// DELETE /repeating-sends/{id}
+func (s *Server) handleDeleteRepeatingSendRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteRepeatingSend"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.HTTPRouteKey.String("/repeating-sends/{id}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), DeleteRepeatingSendOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: DeleteRepeatingSendOperation,
+			ID:   "deleteRepeatingSend",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, DeleteRepeatingSendOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeDeleteRepeatingSendParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response DeleteRepeatingSendRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    DeleteRepeatingSendOperation,
+			OperationSummary: "Delete a repeating send",
+			OperationID:      "deleteRepeatingSend",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = DeleteRepeatingSendParams
+			Response = DeleteRepeatingSendRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackDeleteRepeatingSendParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.DeleteRepeatingSend(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.DeleteRepeatingSend(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeDeleteRepeatingSendResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -10037,193 +9844,6 @@ func (s *Server) handleGetAgentContactPolicyRequest(args [1]string, argsEscaped 
 	}
 
 	if err := encodeGetAgentContactPolicyResponse(response, w, span); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetAgentMessageScheduleRequest handles getAgentMessageSchedule operation.
-//
-// Get an agent message schedule.
-//
-// GET /agent-message-schedules/{id}
-func (s *Server) handleGetAgentMessageScheduleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("getAgentMessageSchedule"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/agent-message-schedules/{id}"),
-	}
-	// Add attributes from config.
-	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
-
-	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), GetAgentMessageScheduleOperation,
-		trace.WithAttributes(otelAttrs...),
-		serverSpanKind,
-	)
-	defer span.End()
-
-	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
-	ctx = contextWithLabeler(ctx, labeler)
-
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		elapsedDuration := time.Since(startTime)
-
-		attrSet := labeler.AttributeSet()
-		attrs := attrSet.ToSlice()
-		code := statusWriter.status
-		if code != 0 {
-			codeAttr := semconv.HTTPResponseStatusCode(code)
-			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
-		}
-		attrOpt := metric.WithAttributes(attrs...)
-
-		// Increment request counter.
-		s.requests.Add(ctx, 1, attrOpt)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
-	}()
-
-	var (
-		recordError = func(stage string, err error) {
-			span.RecordError(err)
-
-			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
-			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
-			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
-			// max redirects exceeded), in which case status MUST be set to Error.
-			code := statusWriter.status
-			if code < 100 || code >= 500 {
-				span.SetStatus(codes.Error, stage)
-			}
-
-			attrSet := labeler.AttributeSet()
-			attrs := attrSet.ToSlice()
-			if code != 0 {
-				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
-			}
-
-			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
-		}
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: GetAgentMessageScheduleOperation,
-			ID:   "getAgentMessageSchedule",
-		}
-	)
-	{
-		type bitset = [1]uint8
-		var satisfied bitset
-		{
-			sctx, ok, err := s.securityBearerAuth(ctx, GetAgentMessageScheduleOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "BearerAuth",
-					Err:              err,
-				}
-				defer recordError("Security:BearerAuth", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 0
-				ctx = sctx
-			}
-		}
-
-		if ok := func() bool {
-		nextRequirement:
-			for _, requirement := range []bitset{
-				{0b00000001},
-			} {
-				for i, mask := range requirement {
-					if satisfied[i]&mask != mask {
-						continue nextRequirement
-					}
-				}
-				return true
-			}
-			return false
-		}(); !ok {
-			err = &ogenerrors.SecurityError{
-				OperationContext: opErrContext,
-				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
-			}
-			defer recordError("Security", err)
-			s.cfg.ErrorHandler(ctx, w, r, err)
-			return
-		}
-	}
-	params, err := decodeGetAgentMessageScheduleParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response GetAgentMessageScheduleRes
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    GetAgentMessageScheduleOperation,
-			OperationSummary: "Get an agent message schedule",
-			OperationID:      "getAgentMessageSchedule",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "id",
-					In:   "path",
-				}: params.ID,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = GetAgentMessageScheduleParams
-			Response = GetAgentMessageScheduleRes
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackGetAgentMessageScheduleParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetAgentMessageSchedule(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.GetAgentMessageSchedule(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetAgentMessageScheduleResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -13061,6 +12681,193 @@ func (s *Server) handleGetRegistryRequest(args [1]string, argsEscaped bool, w ht
 	}
 }
 
+// handleGetRepeatingSendRequest handles getRepeatingSend operation.
+//
+// Get a repeating send.
+//
+// GET /repeating-sends/{id}
+func (s *Server) handleGetRepeatingSendRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getRepeatingSend"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/repeating-sends/{id}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), GetRepeatingSendOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: GetRepeatingSendOperation,
+			ID:   "getRepeatingSend",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, GetRepeatingSendOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeGetRepeatingSendParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response GetRepeatingSendRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    GetRepeatingSendOperation,
+			OperationSummary: "Get a repeating send",
+			OperationID:      "getRepeatingSend",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = GetRepeatingSendParams
+			Response = GetRepeatingSendRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackGetRepeatingSendParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.GetRepeatingSend(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.GetRepeatingSend(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeGetRepeatingSendResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleGetSendPermissionsRequest handles getSendPermissions operation.
 //
 // Returns a flat list of rules describing every recipient the
@@ -15530,195 +15337,6 @@ func (s *Server) handleListAgentContactsRequest(args [1]string, argsEscaped bool
 	}
 
 	if err := encodeListAgentContactsResponse(response, w, span); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleListAgentMessageSchedulesRequest handles listAgentMessageSchedules operation.
-//
-// Returns the calling member's message schedules, newest first,
-// optionally filtered to one agent address. Member credentials only;
-// API keys and agent keys receive 403.
-//
-// GET /agent-message-schedules
-func (s *Server) handleListAgentMessageSchedulesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("listAgentMessageSchedules"),
-		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/agent-message-schedules"),
-	}
-	// Add attributes from config.
-	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
-
-	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), ListAgentMessageSchedulesOperation,
-		trace.WithAttributes(otelAttrs...),
-		serverSpanKind,
-	)
-	defer span.End()
-
-	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
-	ctx = contextWithLabeler(ctx, labeler)
-
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		elapsedDuration := time.Since(startTime)
-
-		attrSet := labeler.AttributeSet()
-		attrs := attrSet.ToSlice()
-		code := statusWriter.status
-		if code != 0 {
-			codeAttr := semconv.HTTPResponseStatusCode(code)
-			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
-		}
-		attrOpt := metric.WithAttributes(attrs...)
-
-		// Increment request counter.
-		s.requests.Add(ctx, 1, attrOpt)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
-	}()
-
-	var (
-		recordError = func(stage string, err error) {
-			span.RecordError(err)
-
-			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
-			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
-			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
-			// max redirects exceeded), in which case status MUST be set to Error.
-			code := statusWriter.status
-			if code < 100 || code >= 500 {
-				span.SetStatus(codes.Error, stage)
-			}
-
-			attrSet := labeler.AttributeSet()
-			attrs := attrSet.ToSlice()
-			if code != 0 {
-				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
-			}
-
-			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
-		}
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: ListAgentMessageSchedulesOperation,
-			ID:   "listAgentMessageSchedules",
-		}
-	)
-	{
-		type bitset = [1]uint8
-		var satisfied bitset
-		{
-			sctx, ok, err := s.securityBearerAuth(ctx, ListAgentMessageSchedulesOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "BearerAuth",
-					Err:              err,
-				}
-				defer recordError("Security:BearerAuth", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 0
-				ctx = sctx
-			}
-		}
-
-		if ok := func() bool {
-		nextRequirement:
-			for _, requirement := range []bitset{
-				{0b00000001},
-			} {
-				for i, mask := range requirement {
-					if satisfied[i]&mask != mask {
-						continue nextRequirement
-					}
-				}
-				return true
-			}
-			return false
-		}(); !ok {
-			err = &ogenerrors.SecurityError{
-				OperationContext: opErrContext,
-				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
-			}
-			defer recordError("Security", err)
-			s.cfg.ErrorHandler(ctx, w, r, err)
-			return
-		}
-	}
-	params, err := decodeListAgentMessageSchedulesParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-
-	var response ListAgentMessageSchedulesRes
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    ListAgentMessageSchedulesOperation,
-			OperationSummary: "List agent message schedules",
-			OperationID:      "listAgentMessageSchedules",
-			Body:             nil,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "agent_address",
-					In:   "query",
-				}: params.AgentAddress,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = ListAgentMessageSchedulesParams
-			Response = ListAgentMessageSchedulesRes
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackListAgentMessageSchedulesParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListAgentMessageSchedules(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.ListAgentMessageSchedules(ctx, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeListAgentMessageSchedulesResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -19066,6 +18684,200 @@ func (s *Server) handleListRegistryRequestsRequest(args [1]string, argsEscaped b
 	}
 
 	if err := encodeListRegistryRequestsResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleListRepeatingSendsRequest handles listRepeatingSends operation.
+//
+// Repeating sends you created, newest first. A member sees the repeats
+// it created; a connected agent sees the repeats its key created; repeats
+// created with an organization API key are visible to organization
+// credentials.
+//
+// GET /repeating-sends
+func (s *Server) handleListRepeatingSendsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listRepeatingSends"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/repeating-sends"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ListRepeatingSendsOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListRepeatingSendsOperation,
+			ID:   "listRepeatingSends",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ListRepeatingSendsOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeListRepeatingSendsParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response ListRepeatingSendsRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListRepeatingSendsOperation,
+			OperationSummary: "List repeating sends",
+			OperationID:      "listRepeatingSends",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "to",
+					In:   "query",
+				}: params.To,
+				{
+					Name: "status",
+					In:   "query",
+				}: params.Status,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListRepeatingSendsParams
+			Response = ListRepeatingSendsRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListRepeatingSendsParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListRepeatingSends(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListRepeatingSends(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeListRepeatingSendsResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -27380,29 +27192,30 @@ func (s *Server) handleStartCliSignupRequest(args [0]string, argsEscaped bool, w
 	}
 }
 
-// handleStopAgentMessageScheduleRequest handles stopAgentMessageSchedule operation.
+// handleStopRepeatingSendRequest handles stopRepeatingSend operation.
 //
-// Called by the receiving agent with its own connected-agent
-// credential. `id` is the agent's received copy of any message of the
-// schedule. Stops the schedule when it allows the agent to, and sends a
-// reply in the schedule's thread carrying a `schedule.stop/1`
-// interaction so the owner sees it. Calling it again on a schedule the
-// agent already stopped returns the same result without a second reply.
+// Called by the recipient of a repeating send: the connected agent's own
+// credential for an agent address, or the signed-in member whose personal
+// address it is. `id` is the caller's received copy of any message of the
+// repeat. Stops the repeat when it lets the recipient stop it, cancels the
+// pending message, and replies once in the thread with a
+// `repeat.stop/1` interaction so the sender sees it. A repeat call returns
+// the same result without a second reply.
 //
-// POST /emails/{id}/schedule-stop
-func (s *Server) handleStopAgentMessageScheduleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// POST /emails/{id}/repeat-stop
+func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("stopAgentMessageSchedule"),
+		otelogen.OperationID("stopRepeatingSend"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/emails/{id}/schedule-stop"),
+		semconv.HTTPRouteKey.String("/emails/{id}/repeat-stop"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
 
 	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), StopAgentMessageScheduleOperation,
+	ctx, span := s.cfg.Tracer.Start(r.Context(), StopRepeatingSendOperation,
 		trace.WithAttributes(otelAttrs...),
 		serverSpanKind,
 	)
@@ -27457,15 +27270,15 @@ func (s *Server) handleStopAgentMessageScheduleRequest(args [1]string, argsEscap
 		}
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: StopAgentMessageScheduleOperation,
-			ID:   "stopAgentMessageSchedule",
+			Name: StopRepeatingSendOperation,
+			ID:   "stopRepeatingSend",
 		}
 	)
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityBearerAuth(ctx, StopAgentMessageScheduleOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, StopRepeatingSendOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
@@ -27505,7 +27318,7 @@ func (s *Server) handleStopAgentMessageScheduleRequest(args [1]string, argsEscap
 			return
 		}
 	}
-	params, err := decodeStopAgentMessageScheduleParams(args, argsEscaped, r)
+	params, err := decodeStopRepeatingSendParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -27517,7 +27330,7 @@ func (s *Server) handleStopAgentMessageScheduleRequest(args [1]string, argsEscap
 	}
 
 	var rawBody []byte
-	request, rawBody, close, err := s.decodeStopAgentMessageScheduleRequest(r)
+	request, rawBody, close, err := s.decodeStopRepeatingSendRequest(r)
 	if err != nil {
 		err = &ogenerrors.DecodeRequestError{
 			OperationContext: opErrContext,
@@ -27533,13 +27346,13 @@ func (s *Server) handleStopAgentMessageScheduleRequest(args [1]string, argsEscap
 		}
 	}()
 
-	var response StopAgentMessageScheduleRes
+	var response StopRepeatingSendRes
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    StopAgentMessageScheduleOperation,
-			OperationSummary: "Stop the schedule behind a scheduled message",
-			OperationID:      "stopAgentMessageSchedule",
+			OperationName:    StopRepeatingSendOperation,
+			OperationSummary: "Stop the repeat behind a received message",
+			OperationID:      "stopRepeatingSend",
 			Body:             request,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
@@ -27552,9 +27365,9 @@ func (s *Server) handleStopAgentMessageScheduleRequest(args [1]string, argsEscap
 		}
 
 		type (
-			Request  = OptStopAgentMessageScheduleInput
-			Params   = StopAgentMessageScheduleParams
-			Response = StopAgentMessageScheduleRes
+			Request  = OptRepeatStopInput
+			Params   = StopRepeatingSendParams
+			Response = StopRepeatingSendRes
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -27563,14 +27376,14 @@ func (s *Server) handleStopAgentMessageScheduleRequest(args [1]string, argsEscap
 		](
 			m,
 			mreq,
-			unpackStopAgentMessageScheduleParams,
+			unpackStopRepeatingSendParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.StopAgentMessageSchedule(ctx, request, params)
+				response, err = s.h.StopRepeatingSend(ctx, request, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.StopAgentMessageSchedule(ctx, request, params)
+		response, err = s.h.StopRepeatingSend(ctx, request, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -27578,7 +27391,7 @@ func (s *Server) handleStopAgentMessageScheduleRequest(args [1]string, argsEscap
 		return
 	}
 
-	if err := encodeStopAgentMessageScheduleResponse(response, w, span); err != nil {
+	if err := encodeStopRepeatingSendResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -28777,213 +28590,6 @@ func (s *Server) handleUpdateAccountRequest(args [0]string, argsEscaped bool, w 
 	}
 
 	if err := encodeUpdateAccountResponse(response, w, span); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleUpdateAgentMessageScheduleRequest handles updateAgentMessageSchedule operation.
-//
-// Pause, resume, or stop a schedule, or change its subject, message,
-// cadence, inactivity condition, or whether the agent may stop it.
-// Setting `status` to `active` resumes a paused or stopped schedule and
-// sends on the next scheduler pass. A null `idle_minutes` clears the
-// inactivity condition. Member credentials only; API keys and agent
-// keys receive 403.
-//
-// PATCH /agent-message-schedules/{id}
-func (s *Server) handleUpdateAgentMessageScheduleRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("updateAgentMessageSchedule"),
-		semconv.HTTPRequestMethodKey.String("PATCH"),
-		semconv.HTTPRouteKey.String("/agent-message-schedules/{id}"),
-	}
-	// Add attributes from config.
-	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
-
-	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), UpdateAgentMessageScheduleOperation,
-		trace.WithAttributes(otelAttrs...),
-		serverSpanKind,
-	)
-	defer span.End()
-
-	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
-	ctx = contextWithLabeler(ctx, labeler)
-
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		elapsedDuration := time.Since(startTime)
-
-		attrSet := labeler.AttributeSet()
-		attrs := attrSet.ToSlice()
-		code := statusWriter.status
-		if code != 0 {
-			codeAttr := semconv.HTTPResponseStatusCode(code)
-			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
-		}
-		attrOpt := metric.WithAttributes(attrs...)
-
-		// Increment request counter.
-		s.requests.Add(ctx, 1, attrOpt)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
-	}()
-
-	var (
-		recordError = func(stage string, err error) {
-			span.RecordError(err)
-
-			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
-			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
-			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
-			// max redirects exceeded), in which case status MUST be set to Error.
-			code := statusWriter.status
-			if code < 100 || code >= 500 {
-				span.SetStatus(codes.Error, stage)
-			}
-
-			attrSet := labeler.AttributeSet()
-			attrs := attrSet.ToSlice()
-			if code != 0 {
-				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
-			}
-
-			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
-		}
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: UpdateAgentMessageScheduleOperation,
-			ID:   "updateAgentMessageSchedule",
-		}
-	)
-	{
-		type bitset = [1]uint8
-		var satisfied bitset
-		{
-			sctx, ok, err := s.securityBearerAuth(ctx, UpdateAgentMessageScheduleOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "BearerAuth",
-					Err:              err,
-				}
-				defer recordError("Security:BearerAuth", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 0
-				ctx = sctx
-			}
-		}
-
-		if ok := func() bool {
-		nextRequirement:
-			for _, requirement := range []bitset{
-				{0b00000001},
-			} {
-				for i, mask := range requirement {
-					if satisfied[i]&mask != mask {
-						continue nextRequirement
-					}
-				}
-				return true
-			}
-			return false
-		}(); !ok {
-			err = &ogenerrors.SecurityError{
-				OperationContext: opErrContext,
-				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
-			}
-			defer recordError("Security", err)
-			s.cfg.ErrorHandler(ctx, w, r, err)
-			return
-		}
-	}
-	params, err := decodeUpdateAgentMessageScheduleParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var rawBody []byte
-	request, rawBody, close, err := s.decodeUpdateAgentMessageScheduleRequest(r)
-	if err != nil {
-		err = &ogenerrors.DecodeRequestError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeRequest", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-	defer func() {
-		if err := close(); err != nil {
-			recordError("CloseRequest", err)
-		}
-	}()
-
-	var response UpdateAgentMessageScheduleRes
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    UpdateAgentMessageScheduleOperation,
-			OperationSummary: "Update an agent message schedule",
-			OperationID:      "updateAgentMessageSchedule",
-			Body:             request,
-			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "id",
-					In:   "path",
-				}: params.ID,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = *UpdateAgentMessageScheduleInput
-			Params   = UpdateAgentMessageScheduleParams
-			Response = UpdateAgentMessageScheduleRes
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackUpdateAgentMessageScheduleParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.UpdateAgentMessageSchedule(ctx, request, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.UpdateAgentMessageSchedule(ctx, request, params)
-	}
-	if err != nil {
-		defer recordError("Internal", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeUpdateAgentMessageScheduleResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -30212,6 +29818,212 @@ func (s *Server) handleUpdateRegistryRequest(args [1]string, argsEscaped bool, w
 	}
 
 	if err := encodeUpdateRegistryResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleUpdateRepeatingSendRequest handles updateRepeatingSend operation.
+//
+// Pause, resume or cancel a repeat, or change its cadence, limits,
+// message or whether the recipient may stop it. `active` resumes a paused
+// repeat or one the recipient stopped; the next message goes out within
+// about a minute. A null `only_if_recipient_idle_minutes`, `max_sends`
+// or `until` clears that limit.
+//
+// PATCH /repeating-sends/{id}
+func (s *Server) handleUpdateRepeatingSendRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateRepeatingSend"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.HTTPRouteKey.String("/repeating-sends/{id}"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), UpdateRepeatingSendOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: UpdateRepeatingSendOperation,
+			ID:   "updateRepeatingSend",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, UpdateRepeatingSendOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeUpdateRepeatingSendParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeUpdateRepeatingSendRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response UpdateRepeatingSendRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    UpdateRepeatingSendOperation,
+			OperationSummary: "Update a repeating send",
+			OperationID:      "updateRepeatingSend",
+			Body:             request,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "id",
+					In:   "path",
+				}: params.ID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = *UpdateRepeatingSendInput
+			Params   = UpdateRepeatingSendParams
+			Response = UpdateRepeatingSendRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackUpdateRepeatingSendParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.UpdateRepeatingSend(ctx, request, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.UpdateRepeatingSend(ctx, request, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeUpdateRepeatingSendResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

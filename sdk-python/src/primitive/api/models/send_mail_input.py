@@ -13,6 +13,7 @@ from typing import cast
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.repeat_input import RepeatInput
   from ..models.send_mail_attachment import SendMailAttachment
   from ..models.send_mail_payload_ref import SendMailPayloadRef
 
@@ -31,6 +32,16 @@ class SendMailInput:
             from_ (str): RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
             to (str): Recipient address. Recipient eligibility depends on your account's outbound entitlements.
             subject (str): Subject line for the outbound message
+            repeat (RepeatInput | Unset): Repeat this send every `every_minutes` in the same thread. The first
+                message goes out like any send; each later one is a scheduled send
+                that replies to the previous one, so quotas, gates and cancellation
+                apply as usual. Requires exactly one `to` recipient and no cc, bcc,
+                attachments or `fyi` (422 `repeat_unsupported`). The recipient must
+                be an address of your own organization unless the organization is
+                entitled to repeat to external recipients (403
+                `repeat_recipient_external`). `only_if_recipient_idle_minutes` needs
+                a recipient in your organization (422
+                `repeat_idle_requires_internal_recipient`).
             cc (list[str] | str | Unset): Carbon-copy recipients. Either a single address or an array of addresses. Each
                 entry must be a single address; use the array form for multiple recipients. Cc recipients are visible to
                 everyone who receives the message. The combined number of to, cc, and bcc recipients must not exceed 100.
@@ -64,6 +75,7 @@ class SendMailInput:
     from_: str
     to: str
     subject: str
+    repeat: RepeatInput | Unset = UNSET
     cc: list[str] | str | Unset = UNSET
     bcc: list[str] | str | Unset = UNSET
     body_text: str | Unset = UNSET
@@ -81,6 +93,7 @@ class SendMailInput:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.repeat_input import RepeatInput
         from ..models.send_mail_attachment import SendMailAttachment
         from ..models.send_mail_payload_ref import SendMailPayloadRef
         from_ = self.from_
@@ -88,6 +101,10 @@ class SendMailInput:
         to = self.to
 
         subject = self.subject
+
+        repeat: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.repeat, Unset):
+            repeat = self.repeat.to_dict()
 
         cc: list[str] | str | Unset
         if isinstance(self.cc, Unset):
@@ -155,6 +172,8 @@ class SendMailInput:
             "to": to,
             "subject": subject,
         })
+        if repeat is not UNSET:
+            field_dict["repeat"] = repeat
         if cc is not UNSET:
             field_dict["cc"] = cc
         if bcc is not UNSET:
@@ -184,6 +203,7 @@ class SendMailInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.repeat_input import RepeatInput
         from ..models.send_mail_attachment import SendMailAttachment
         from ..models.send_mail_payload_ref import SendMailPayloadRef
         d = dict(src_dict)
@@ -192,6 +212,16 @@ class SendMailInput:
         to = d.pop("to")
 
         subject = d.pop("subject")
+
+        _repeat = d.pop("repeat", UNSET)
+        repeat: RepeatInput | Unset
+        if isinstance(_repeat,  Unset):
+            repeat = UNSET
+        else:
+            repeat = RepeatInput.from_dict(_repeat)
+
+
+
 
         def _parse_cc(data: object) -> list[str] | str | Unset:
             if isinstance(data, Unset):
@@ -276,6 +306,7 @@ class SendMailInput:
             from_=from_,
             to=to,
             subject=subject,
+            repeat=repeat,
             cc=cc,
             bcc=bcc,
             body_text=body_text,

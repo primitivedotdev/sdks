@@ -20,6 +20,12 @@ import { currentMailSessionKey } from "../mail-session.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
+  formatRepeatStarted,
+  repeatFlags,
+  repeatFromFlags,
+  writeRepeatErrorHint,
+} from "../repeat-flags.js";
+import {
   assertValidIdempotencyKey,
   buildThrownSendFailureEnvelope,
   checkPriorReplies,
@@ -159,6 +165,7 @@ class ReplyCommand extends Command {
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
+    ...repeatFlags(["fyi", "attachment"]),
   };
 
   private attemptStartedAtIso: string | null = null;
@@ -241,6 +248,7 @@ class ReplyCommand extends Command {
         connectedAgent: auth.connectedAgent,
       });
       const attachments = readAttachmentFiles(flags.attachment);
+      const repeat = repeatFromFlags(flags);
       const receivingSince = new Date().toISOString();
 
       let emailId: string;
@@ -332,6 +340,7 @@ class ReplyCommand extends Command {
             : {
                 ...plainContent,
                 ...(flags.from !== undefined ? { from: flags.from } : {}),
+                ...(repeat !== undefined ? { repeat } : {}),
                 in_reply_to_email_id: emailId,
               },
         );
@@ -371,6 +380,7 @@ class ReplyCommand extends Command {
         ...content,
         ...(flags.from !== undefined ? { from: flags.from } : {}),
         ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
+        ...(repeat !== undefined ? { repeat } : {}),
       };
       const attemptStartedAtIso = new Date().toISOString();
       this.attemptStartedAtIso = attemptStartedAtIso;
@@ -399,6 +409,7 @@ class ReplyCommand extends Command {
         noun: "Reply",
         onApiError: (errorPayload) => {
           writeErrorWithHints(errorPayload);
+          writeRepeatErrorHint(errorPayload);
           surfaceUnauthorizedHint({
             auth,
             baseUrlOverridden,
@@ -411,6 +422,8 @@ class ReplyCommand extends Command {
           process.stderr.write(chunk);
         },
       });
+      const repeatLine = formatRepeatStarted(result, repeat);
+      if (repeatLine) process.stderr.write(`${repeatLine}\n`);
       const exitCode = sendOutcomeExitCode(outcome);
       if (exitCode !== 0) process.exitCode = exitCode;
     });

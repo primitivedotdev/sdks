@@ -222,21 +222,6 @@ func (UnimplementedHandler) CreateAgentConnection(ctx context.Context, req *Crea
 	return r, ht.ErrNotImplemented
 }
 
-// CreateAgentMessageSchedule implements createAgentMessageSchedule operation.
-//
-// Schedule a recurring message from the calling member's personal
-// address to one of the org's connected agents. The first message is
-// sent on the next scheduler pass; later messages reply in the same
-// thread every `interval_minutes`. With `idle_minutes` set, a due
-// message is skipped while the agent has been active within that many
-// minutes. Member credentials only; API keys and agent keys receive
-// 403.
-//
-// POST /agent-message-schedules
-func (UnimplementedHandler) CreateAgentMessageSchedule(ctx context.Context, req *CreateAgentMessageScheduleInput) (r CreateAgentMessageScheduleRes, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // CreateChallenge implements createChallenge operation.
 //
 // Create an x402 payment challenge (the payee side of a payment). The
@@ -464,15 +449,6 @@ func (UnimplementedHandler) DeleteAgentContact(ctx context.Context, params Delet
 	return r, ht.ErrNotImplemented
 }
 
-// DeleteAgentMessageSchedule implements deleteAgentMessageSchedule operation.
-//
-// Delete a schedule. Messages already sent are not affected.
-//
-// DELETE /agent-message-schedules/{id}
-func (UnimplementedHandler) DeleteAgentMessageSchedule(ctx context.Context, params DeleteAgentMessageScheduleParams) (r DeleteAgentMessageScheduleRes, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // DeleteContact implements deleteContact operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -588,6 +564,15 @@ func (UnimplementedHandler) DeleteOrgSecret(ctx context.Context, params DeleteOr
 //
 // DELETE /registries/{slug}
 func (UnimplementedHandler) DeleteRegistry(ctx context.Context, params DeleteRegistryParams) (r DeleteRegistryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeleteRepeatingSend implements deleteRepeatingSend operation.
+//
+// Deletes the repeat and cancels its pending message. Messages already sent are not affected.
+//
+// DELETE /repeating-sends/{id}
+func (UnimplementedHandler) DeleteRepeatingSend(ctx context.Context, params DeleteRepeatingSendParams) (r DeleteRepeatingSendRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -786,15 +771,6 @@ func (UnimplementedHandler) GetAgent(ctx context.Context, params GetAgentParams)
 //
 // GET /agent-contact-policy/{agent_address}
 func (UnimplementedHandler) GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (r GetAgentContactPolicyRes, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// GetAgentMessageSchedule implements getAgentMessageSchedule operation.
-//
-// Get an agent message schedule.
-//
-// GET /agent-message-schedules/{id}
-func (UnimplementedHandler) GetAgentMessageSchedule(ctx context.Context, params GetAgentMessageScheduleParams) (r GetAgentMessageScheduleRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1060,6 +1036,15 @@ func (UnimplementedHandler) GetRegistry(ctx context.Context, params GetRegistryP
 	return r, ht.ErrNotImplemented
 }
 
+// GetRepeatingSend implements getRepeatingSend operation.
+//
+// Get a repeating send.
+//
+// GET /repeating-sends/{id}
+func (UnimplementedHandler) GetRepeatingSend(ctx context.Context, params GetRepeatingSendParams) (r GetRepeatingSendRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetSendPermissions implements getSendPermissions operation.
 //
 // Returns a flat list of rules describing every recipient the
@@ -1274,17 +1259,6 @@ func (UnimplementedHandler) ListAgentConnections(ctx context.Context, params Lis
 //
 // GET /agent-contacts/{agent_address}
 func (UnimplementedHandler) ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (r ListAgentContactsRes, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// ListAgentMessageSchedules implements listAgentMessageSchedules operation.
-//
-// Returns the calling member's message schedules, newest first,
-// optionally filtered to one agent address. Member credentials only;
-// API keys and agent keys receive 403.
-//
-// GET /agent-message-schedules
-func (UnimplementedHandler) ListAgentMessageSchedules(ctx context.Context, params ListAgentMessageSchedulesParams) (r ListAgentMessageSchedulesRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -1503,6 +1477,18 @@ func (UnimplementedHandler) ListRegistryAgents(ctx context.Context, params ListR
 //
 // GET /registries/{slug}/requests
 func (UnimplementedHandler) ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (r ListRegistryRequestsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ListRepeatingSends implements listRepeatingSends operation.
+//
+// Repeating sends you created, newest first. A member sees the repeats
+// it created; a connected agent sees the repeats its key created; repeats
+// created with an organization API key are visible to organization
+// credentials.
+//
+// GET /repeating-sends
+func (UnimplementedHandler) ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (r ListRepeatingSendsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2177,17 +2163,18 @@ func (UnimplementedHandler) StartCliSignup(ctx context.Context, req *StartCliSig
 	return r, ht.ErrNotImplemented
 }
 
-// StopAgentMessageSchedule implements stopAgentMessageSchedule operation.
+// StopRepeatingSend implements stopRepeatingSend operation.
 //
-// Called by the receiving agent with its own connected-agent
-// credential. `id` is the agent's received copy of any message of the
-// schedule. Stops the schedule when it allows the agent to, and sends a
-// reply in the schedule's thread carrying a `schedule.stop/1`
-// interaction so the owner sees it. Calling it again on a schedule the
-// agent already stopped returns the same result without a second reply.
+// Called by the recipient of a repeating send: the connected agent's own
+// credential for an agent address, or the signed-in member whose personal
+// address it is. `id` is the caller's received copy of any message of the
+// repeat. Stops the repeat when it lets the recipient stop it, cancels the
+// pending message, and replies once in the thread with a
+// `repeat.stop/1` interaction so the sender sees it. A repeat call returns
+// the same result without a second reply.
 //
-// POST /emails/{id}/schedule-stop
-func (UnimplementedHandler) StopAgentMessageSchedule(ctx context.Context, req OptStopAgentMessageScheduleInput, params StopAgentMessageScheduleParams) (r StopAgentMessageScheduleRes, _ error) {
+// POST /emails/{id}/repeat-stop
+func (UnimplementedHandler) StopRepeatingSend(ctx context.Context, req OptRepeatStopInput, params StopRepeatingSendParams) (r StopRepeatingSendRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2287,20 +2274,6 @@ func (UnimplementedHandler) UpdateAccount(ctx context.Context, req *UpdateAccoun
 	return r, ht.ErrNotImplemented
 }
 
-// UpdateAgentMessageSchedule implements updateAgentMessageSchedule operation.
-//
-// Pause, resume, or stop a schedule, or change its subject, message,
-// cadence, inactivity condition, or whether the agent may stop it.
-// Setting `status` to `active` resumes a paused or stopped schedule and
-// sends on the next scheduler pass. A null `idle_minutes` clears the
-// inactivity condition. Member credentials only; API keys and agent
-// keys receive 403.
-//
-// PATCH /agent-message-schedules/{id}
-func (UnimplementedHandler) UpdateAgentMessageSchedule(ctx context.Context, req *UpdateAgentMessageScheduleInput, params UpdateAgentMessageScheduleParams) (r UpdateAgentMessageScheduleRes, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // UpdateDefaultNetworkMember implements updateDefaultNetworkMember operation.
 //
 // An owner or admin may update any active address. Other human members may update only their own
@@ -2368,6 +2341,19 @@ func (UnimplementedHandler) UpdateFunction(ctx context.Context, req *UpdateFunct
 //
 // PATCH /registries/{slug}
 func (UnimplementedHandler) UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (r UpdateRegistryRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateRepeatingSend implements updateRepeatingSend operation.
+//
+// Pause, resume or cancel a repeat, or change its cadence, limits,
+// message or whether the recipient may stop it. `active` resumes a paused
+// repeat or one the recipient stopped; the next message goes out within
+// about a minute. A null `only_if_recipient_idle_minutes`, `max_sends`
+// or `until` clears that limit.
+//
+// PATCH /repeating-sends/{id}
+func (UnimplementedHandler) UpdateRepeatingSend(ctx context.Context, req *UpdateRepeatingSendInput, params UpdateRepeatingSendParams) (r UpdateRepeatingSendRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

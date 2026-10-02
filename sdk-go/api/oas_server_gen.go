@@ -175,18 +175,6 @@ type Handler interface {
 	//
 	// POST /agent-connections
 	CreateAgentConnection(ctx context.Context, req *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
-	// CreateAgentMessageSchedule implements createAgentMessageSchedule operation.
-	//
-	// Schedule a recurring message from the calling member's personal
-	// address to one of the org's connected agents. The first message is
-	// sent on the next scheduler pass; later messages reply in the same
-	// thread every `interval_minutes`. With `idle_minutes` set, a due
-	// message is skipped while the agent has been active within that many
-	// minutes. Member credentials only; API keys and agent keys receive
-	// 403.
-	//
-	// POST /agent-message-schedules
-	CreateAgentMessageSchedule(ctx context.Context, req *CreateAgentMessageScheduleInput) (CreateAgentMessageScheduleRes, error)
 	// CreateChallenge implements createChallenge operation.
 	//
 	// Create an x402 payment challenge (the payee side of a payment). The
@@ -372,12 +360,6 @@ type Handler interface {
 	//
 	// DELETE /agent-contacts/{agent_address}/{contact_address}
 	DeleteAgentContact(ctx context.Context, params DeleteAgentContactParams) (DeleteAgentContactRes, error)
-	// DeleteAgentMessageSchedule implements deleteAgentMessageSchedule operation.
-	//
-	// Delete a schedule. Messages already sent are not affected.
-	//
-	// DELETE /agent-message-schedules/{id}
-	DeleteAgentMessageSchedule(ctx context.Context, params DeleteAgentMessageScheduleParams) (DeleteAgentMessageScheduleRes, error)
 	// DeleteContact implements deleteContact operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -466,6 +448,12 @@ type Handler interface {
 	//
 	// DELETE /registries/{slug}
 	DeleteRegistry(ctx context.Context, params DeleteRegistryParams) (DeleteRegistryRes, error)
+	// DeleteRepeatingSend implements deleteRepeatingSend operation.
+	//
+	// Deletes the repeat and cancels its pending message. Messages already sent are not affected.
+	//
+	// DELETE /repeating-sends/{id}
+	DeleteRepeatingSend(ctx context.Context, params DeleteRepeatingSendParams) (DeleteRepeatingSendRes, error)
 	// DeleteRoute implements deleteRoute operation.
 	//
 	// Delete a recipient route.
@@ -619,12 +607,6 @@ type Handler interface {
 	//
 	// GET /agent-contact-policy/{agent_address}
 	GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (GetAgentContactPolicyRes, error)
-	// GetAgentMessageSchedule implements getAgentMessageSchedule operation.
-	//
-	// Get an agent message schedule.
-	//
-	// GET /agent-message-schedules/{id}
-	GetAgentMessageSchedule(ctx context.Context, params GetAgentMessageScheduleParams) (GetAgentMessageScheduleRes, error)
 	// GetChallenge implements getChallenge operation.
 	//
 	// Fetch a challenge you created, to poll its `status` and settlement
@@ -836,6 +818,12 @@ type Handler interface {
 	//
 	// GET /registries/{slug}
 	GetRegistry(ctx context.Context, params GetRegistryParams) (GetRegistryRes, error)
+	// GetRepeatingSend implements getRepeatingSend operation.
+	//
+	// Get a repeating send.
+	//
+	// GET /repeating-sends/{id}
+	GetRepeatingSend(ctx context.Context, params GetRepeatingSendParams) (GetRepeatingSendRes, error)
 	// GetSendPermissions implements getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -1011,14 +999,6 @@ type Handler interface {
 	//
 	// GET /agent-contacts/{agent_address}
 	ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (ListAgentContactsRes, error)
-	// ListAgentMessageSchedules implements listAgentMessageSchedules operation.
-	//
-	// Returns the calling member's message schedules, newest first,
-	// optionally filtered to one agent address. Member credentials only;
-	// API keys and agent keys receive 403.
-	//
-	// GET /agent-message-schedules
-	ListAgentMessageSchedules(ctx context.Context, params ListAgentMessageSchedulesParams) (ListAgentMessageSchedulesRes, error)
 	// ListAgentNetworks implements listAgentNetworks operation.
 	//
 	// An organization member login or an active connected agent allowed to see the network can read
@@ -1183,6 +1163,15 @@ type Handler interface {
 	//
 	// GET /registries/{slug}/requests
 	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
+	// ListRepeatingSends implements listRepeatingSends operation.
+	//
+	// Repeating sends you created, newest first. A member sees the repeats
+	// it created; a connected agent sees the repeats its key created; repeats
+	// created with an organization API key are visible to organization
+	// credentials.
+	//
+	// GET /repeating-sends
+	ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (ListRepeatingSendsRes, error)
 	// ListRoutes implements listRoutes operation.
 	//
 	// Returns the org's recipient routing rules in evaluation order. Each rule
@@ -1713,17 +1702,18 @@ type Handler interface {
 	//
 	// POST /cli/signup/start
 	StartCliSignup(ctx context.Context, req *StartCliSignupInput) (StartCliSignupRes, error)
-	// StopAgentMessageSchedule implements stopAgentMessageSchedule operation.
+	// StopRepeatingSend implements stopRepeatingSend operation.
 	//
-	// Called by the receiving agent with its own connected-agent
-	// credential. `id` is the agent's received copy of any message of the
-	// schedule. Stops the schedule when it allows the agent to, and sends a
-	// reply in the schedule's thread carrying a `schedule.stop/1`
-	// interaction so the owner sees it. Calling it again on a schedule the
-	// agent already stopped returns the same result without a second reply.
+	// Called by the recipient of a repeating send: the connected agent's own
+	// credential for an agent address, or the signed-in member whose personal
+	// address it is. `id` is the caller's received copy of any message of the
+	// repeat. Stops the repeat when it lets the recipient stop it, cancels the
+	// pending message, and replies once in the thread with a
+	// `repeat.stop/1` interaction so the sender sees it. A repeat call returns
+	// the same result without a second reply.
 	//
-	// POST /emails/{id}/schedule-stop
-	StopAgentMessageSchedule(ctx context.Context, req OptStopAgentMessageScheduleInput, params StopAgentMessageScheduleParams) (StopAgentMessageScheduleRes, error)
+	// POST /emails/{id}/repeat-stop
+	StopRepeatingSend(ctx context.Context, req OptRepeatStopInput, params StopRepeatingSendParams) (StopRepeatingSendRes, error)
 	// TestEndpoint implements testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -1802,17 +1792,6 @@ type Handler interface {
 	//
 	// PATCH /account
 	UpdateAccount(ctx context.Context, req *UpdateAccountInput) (UpdateAccountRes, error)
-	// UpdateAgentMessageSchedule implements updateAgentMessageSchedule operation.
-	//
-	// Pause, resume, or stop a schedule, or change its subject, message,
-	// cadence, inactivity condition, or whether the agent may stop it.
-	// Setting `status` to `active` resumes a paused or stopped schedule and
-	// sends on the next scheduler pass. A null `idle_minutes` clears the
-	// inactivity condition. Member credentials only; API keys and agent
-	// keys receive 403.
-	//
-	// PATCH /agent-message-schedules/{id}
-	UpdateAgentMessageSchedule(ctx context.Context, req *UpdateAgentMessageScheduleInput, params UpdateAgentMessageScheduleParams) (UpdateAgentMessageScheduleRes, error)
 	// UpdateDefaultNetworkMember implements updateDefaultNetworkMember operation.
 	//
 	// An owner or admin may update any active address. Other human members may update only their own
@@ -1865,6 +1844,16 @@ type Handler interface {
 	//
 	// PATCH /registries/{slug}
 	UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (UpdateRegistryRes, error)
+	// UpdateRepeatingSend implements updateRepeatingSend operation.
+	//
+	// Pause, resume or cancel a repeat, or change its cadence, limits,
+	// message or whether the recipient may stop it. `active` resumes a paused
+	// repeat or one the recipient stopped; the next message goes out within
+	// about a minute. A null `only_if_recipient_idle_minutes`, `max_sends`
+	// or `until` clears that limit.
+	//
+	// PATCH /repeating-sends/{id}
+	UpdateRepeatingSend(ctx context.Context, req *UpdateRepeatingSendInput, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error)
 	// UpdateRoute implements updateRoute operation.
 	//
 	// Update a recipient route.

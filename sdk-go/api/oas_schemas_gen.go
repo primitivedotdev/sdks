@@ -929,392 +929,6 @@ func (s *AgentContactPolicyOverride) SetAllowContactRequests(val NilBool) {
 	s.AllowContactRequests = val
 }
 
-// A recurring message from an org member to a connected agent.
-// Ref: #/components/schemas/AgentMessageSchedule
-type AgentMessageSchedule struct {
-	ID    uuid.UUID `json:"id"`
-	OrgID OptUUID   `json:"org_id"`
-	// The member who owns the schedule.
-	UserID OptUUID `json:"user_id"`
-	// The member's personal address the messages are sent from.
-	FromAddress OptString `json:"from_address"`
-	// The connected agent address the messages are sent to.
-	AgentAddress    string       `json:"agent_address"`
-	Subject         OptNilString `json:"subject"`
-	BodyText        string       `json:"body_text"`
-	IntervalMinutes int          `json:"interval_minutes"`
-	// When set, a due message is skipped while the agent has been
-	// active within this many minutes. Null sends on every interval.
-	IdleMinutes NilInt `json:"idle_minutes"`
-	// Whether the agent may stop the schedule.
-	AgentCanStop    bool                       `json:"agent_can_stop"`
-	Status          AgentMessageScheduleStatus `json:"status"`
-	NextRunAt       OptNilDateTime             `json:"next_run_at"`
-	LastSentAt      OptNilDateTime             `json:"last_sent_at"`
-	LastSentEmailID OptNilString               `json:"last_sent_email_id"`
-	// Message-ID of the first message in the schedule's thread.
-	RootMessageID OptNilString   `json:"root_message_id"`
-	SentCount     OptInt         `json:"sent_count"`
-	StoppedAt     OptNilDateTime `json:"stopped_at"`
-	// Reason the agent gave when it stopped the schedule. Agent-written, untrusted text.
-	StopReason OptNilString `json:"stop_reason"`
-	CreatedAt  OptDateTime  `json:"created_at"`
-	UpdatedAt  OptDateTime  `json:"updated_at"`
-}
-
-// GetID returns the value of ID.
-func (s *AgentMessageSchedule) GetID() uuid.UUID {
-	return s.ID
-}
-
-// GetOrgID returns the value of OrgID.
-func (s *AgentMessageSchedule) GetOrgID() OptUUID {
-	return s.OrgID
-}
-
-// GetUserID returns the value of UserID.
-func (s *AgentMessageSchedule) GetUserID() OptUUID {
-	return s.UserID
-}
-
-// GetFromAddress returns the value of FromAddress.
-func (s *AgentMessageSchedule) GetFromAddress() OptString {
-	return s.FromAddress
-}
-
-// GetAgentAddress returns the value of AgentAddress.
-func (s *AgentMessageSchedule) GetAgentAddress() string {
-	return s.AgentAddress
-}
-
-// GetSubject returns the value of Subject.
-func (s *AgentMessageSchedule) GetSubject() OptNilString {
-	return s.Subject
-}
-
-// GetBodyText returns the value of BodyText.
-func (s *AgentMessageSchedule) GetBodyText() string {
-	return s.BodyText
-}
-
-// GetIntervalMinutes returns the value of IntervalMinutes.
-func (s *AgentMessageSchedule) GetIntervalMinutes() int {
-	return s.IntervalMinutes
-}
-
-// GetIdleMinutes returns the value of IdleMinutes.
-func (s *AgentMessageSchedule) GetIdleMinutes() NilInt {
-	return s.IdleMinutes
-}
-
-// GetAgentCanStop returns the value of AgentCanStop.
-func (s *AgentMessageSchedule) GetAgentCanStop() bool {
-	return s.AgentCanStop
-}
-
-// GetStatus returns the value of Status.
-func (s *AgentMessageSchedule) GetStatus() AgentMessageScheduleStatus {
-	return s.Status
-}
-
-// GetNextRunAt returns the value of NextRunAt.
-func (s *AgentMessageSchedule) GetNextRunAt() OptNilDateTime {
-	return s.NextRunAt
-}
-
-// GetLastSentAt returns the value of LastSentAt.
-func (s *AgentMessageSchedule) GetLastSentAt() OptNilDateTime {
-	return s.LastSentAt
-}
-
-// GetLastSentEmailID returns the value of LastSentEmailID.
-func (s *AgentMessageSchedule) GetLastSentEmailID() OptNilString {
-	return s.LastSentEmailID
-}
-
-// GetRootMessageID returns the value of RootMessageID.
-func (s *AgentMessageSchedule) GetRootMessageID() OptNilString {
-	return s.RootMessageID
-}
-
-// GetSentCount returns the value of SentCount.
-func (s *AgentMessageSchedule) GetSentCount() OptInt {
-	return s.SentCount
-}
-
-// GetStoppedAt returns the value of StoppedAt.
-func (s *AgentMessageSchedule) GetStoppedAt() OptNilDateTime {
-	return s.StoppedAt
-}
-
-// GetStopReason returns the value of StopReason.
-func (s *AgentMessageSchedule) GetStopReason() OptNilString {
-	return s.StopReason
-}
-
-// GetCreatedAt returns the value of CreatedAt.
-func (s *AgentMessageSchedule) GetCreatedAt() OptDateTime {
-	return s.CreatedAt
-}
-
-// GetUpdatedAt returns the value of UpdatedAt.
-func (s *AgentMessageSchedule) GetUpdatedAt() OptDateTime {
-	return s.UpdatedAt
-}
-
-// SetID sets the value of ID.
-func (s *AgentMessageSchedule) SetID(val uuid.UUID) {
-	s.ID = val
-}
-
-// SetOrgID sets the value of OrgID.
-func (s *AgentMessageSchedule) SetOrgID(val OptUUID) {
-	s.OrgID = val
-}
-
-// SetUserID sets the value of UserID.
-func (s *AgentMessageSchedule) SetUserID(val OptUUID) {
-	s.UserID = val
-}
-
-// SetFromAddress sets the value of FromAddress.
-func (s *AgentMessageSchedule) SetFromAddress(val OptString) {
-	s.FromAddress = val
-}
-
-// SetAgentAddress sets the value of AgentAddress.
-func (s *AgentMessageSchedule) SetAgentAddress(val string) {
-	s.AgentAddress = val
-}
-
-// SetSubject sets the value of Subject.
-func (s *AgentMessageSchedule) SetSubject(val OptNilString) {
-	s.Subject = val
-}
-
-// SetBodyText sets the value of BodyText.
-func (s *AgentMessageSchedule) SetBodyText(val string) {
-	s.BodyText = val
-}
-
-// SetIntervalMinutes sets the value of IntervalMinutes.
-func (s *AgentMessageSchedule) SetIntervalMinutes(val int) {
-	s.IntervalMinutes = val
-}
-
-// SetIdleMinutes sets the value of IdleMinutes.
-func (s *AgentMessageSchedule) SetIdleMinutes(val NilInt) {
-	s.IdleMinutes = val
-}
-
-// SetAgentCanStop sets the value of AgentCanStop.
-func (s *AgentMessageSchedule) SetAgentCanStop(val bool) {
-	s.AgentCanStop = val
-}
-
-// SetStatus sets the value of Status.
-func (s *AgentMessageSchedule) SetStatus(val AgentMessageScheduleStatus) {
-	s.Status = val
-}
-
-// SetNextRunAt sets the value of NextRunAt.
-func (s *AgentMessageSchedule) SetNextRunAt(val OptNilDateTime) {
-	s.NextRunAt = val
-}
-
-// SetLastSentAt sets the value of LastSentAt.
-func (s *AgentMessageSchedule) SetLastSentAt(val OptNilDateTime) {
-	s.LastSentAt = val
-}
-
-// SetLastSentEmailID sets the value of LastSentEmailID.
-func (s *AgentMessageSchedule) SetLastSentEmailID(val OptNilString) {
-	s.LastSentEmailID = val
-}
-
-// SetRootMessageID sets the value of RootMessageID.
-func (s *AgentMessageSchedule) SetRootMessageID(val OptNilString) {
-	s.RootMessageID = val
-}
-
-// SetSentCount sets the value of SentCount.
-func (s *AgentMessageSchedule) SetSentCount(val OptInt) {
-	s.SentCount = val
-}
-
-// SetStoppedAt sets the value of StoppedAt.
-func (s *AgentMessageSchedule) SetStoppedAt(val OptNilDateTime) {
-	s.StoppedAt = val
-}
-
-// SetStopReason sets the value of StopReason.
-func (s *AgentMessageSchedule) SetStopReason(val OptNilString) {
-	s.StopReason = val
-}
-
-// SetCreatedAt sets the value of CreatedAt.
-func (s *AgentMessageSchedule) SetCreatedAt(val OptDateTime) {
-	s.CreatedAt = val
-}
-
-// SetUpdatedAt sets the value of UpdatedAt.
-func (s *AgentMessageSchedule) SetUpdatedAt(val OptDateTime) {
-	s.UpdatedAt = val
-}
-
-// `active` schedules send when due. `paused` schedules keep their
-// settings and can be resumed. A stopped schedule sends nothing until
-// the owner sets it active again.
-// Ref: #/components/schemas/AgentMessageScheduleStatus
-type AgentMessageScheduleStatus string
-
-const (
-	AgentMessageScheduleStatusActive         AgentMessageScheduleStatus = "active"
-	AgentMessageScheduleStatusPaused         AgentMessageScheduleStatus = "paused"
-	AgentMessageScheduleStatusStoppedByAgent AgentMessageScheduleStatus = "stopped_by_agent"
-	AgentMessageScheduleStatusStoppedByOwner AgentMessageScheduleStatus = "stopped_by_owner"
-)
-
-// AllValues returns all AgentMessageScheduleStatus values.
-func (AgentMessageScheduleStatus) AllValues() []AgentMessageScheduleStatus {
-	return []AgentMessageScheduleStatus{
-		AgentMessageScheduleStatusActive,
-		AgentMessageScheduleStatusPaused,
-		AgentMessageScheduleStatusStoppedByAgent,
-		AgentMessageScheduleStatusStoppedByOwner,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s AgentMessageScheduleStatus) MarshalText() ([]byte, error) {
-	switch s {
-	case AgentMessageScheduleStatusActive:
-		return []byte(s), nil
-	case AgentMessageScheduleStatusPaused:
-		return []byte(s), nil
-	case AgentMessageScheduleStatusStoppedByAgent:
-		return []byte(s), nil
-	case AgentMessageScheduleStatusStoppedByOwner:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *AgentMessageScheduleStatus) UnmarshalText(data []byte) error {
-	switch AgentMessageScheduleStatus(data) {
-	case AgentMessageScheduleStatusActive:
-		*s = AgentMessageScheduleStatusActive
-		return nil
-	case AgentMessageScheduleStatusPaused:
-		*s = AgentMessageScheduleStatusPaused
-		return nil
-	case AgentMessageScheduleStatusStoppedByAgent:
-		*s = AgentMessageScheduleStatusStoppedByAgent
-		return nil
-	case AgentMessageScheduleStatusStoppedByOwner:
-		*s = AgentMessageScheduleStatusStoppedByOwner
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-// Ref: #/components/schemas/AgentMessageScheduleStop
-type AgentMessageScheduleStop struct {
-	ScheduleID uuid.UUID                      `json:"schedule_id"`
-	Status     AgentMessageScheduleStopStatus `json:"status"`
-	StoppedAt  time.Time                      `json:"stopped_at"`
-	StopReason NilString                      `json:"stop_reason"`
-	// The sent email that carried the stop to the owner, when one was sent.
-	ReplySentEmailID OptNilString `json:"reply_sent_email_id"`
-}
-
-// GetScheduleID returns the value of ScheduleID.
-func (s *AgentMessageScheduleStop) GetScheduleID() uuid.UUID {
-	return s.ScheduleID
-}
-
-// GetStatus returns the value of Status.
-func (s *AgentMessageScheduleStop) GetStatus() AgentMessageScheduleStopStatus {
-	return s.Status
-}
-
-// GetStoppedAt returns the value of StoppedAt.
-func (s *AgentMessageScheduleStop) GetStoppedAt() time.Time {
-	return s.StoppedAt
-}
-
-// GetStopReason returns the value of StopReason.
-func (s *AgentMessageScheduleStop) GetStopReason() NilString {
-	return s.StopReason
-}
-
-// GetReplySentEmailID returns the value of ReplySentEmailID.
-func (s *AgentMessageScheduleStop) GetReplySentEmailID() OptNilString {
-	return s.ReplySentEmailID
-}
-
-// SetScheduleID sets the value of ScheduleID.
-func (s *AgentMessageScheduleStop) SetScheduleID(val uuid.UUID) {
-	s.ScheduleID = val
-}
-
-// SetStatus sets the value of Status.
-func (s *AgentMessageScheduleStop) SetStatus(val AgentMessageScheduleStopStatus) {
-	s.Status = val
-}
-
-// SetStoppedAt sets the value of StoppedAt.
-func (s *AgentMessageScheduleStop) SetStoppedAt(val time.Time) {
-	s.StoppedAt = val
-}
-
-// SetStopReason sets the value of StopReason.
-func (s *AgentMessageScheduleStop) SetStopReason(val NilString) {
-	s.StopReason = val
-}
-
-// SetReplySentEmailID sets the value of ReplySentEmailID.
-func (s *AgentMessageScheduleStop) SetReplySentEmailID(val OptNilString) {
-	s.ReplySentEmailID = val
-}
-
-type AgentMessageScheduleStopStatus string
-
-const (
-	AgentMessageScheduleStopStatusStoppedByAgent AgentMessageScheduleStopStatus = "stopped_by_agent"
-)
-
-// AllValues returns all AgentMessageScheduleStopStatus values.
-func (AgentMessageScheduleStopStatus) AllValues() []AgentMessageScheduleStopStatus {
-	return []AgentMessageScheduleStopStatus{
-		AgentMessageScheduleStopStatusStoppedByAgent,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s AgentMessageScheduleStopStatus) MarshalText() ([]byte, error) {
-	switch s {
-	case AgentMessageScheduleStopStatusStoppedByAgent:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *AgentMessageScheduleStopStatus) UnmarshalText(data []byte) error {
-	switch AgentMessageScheduleStopStatus(data) {
-	case AgentMessageScheduleStopStatusStoppedByAgent:
-		*s = AgentMessageScheduleStopStatusStoppedByAgent
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
 // An organization-owned network. The default network cannot be deleted.
 // Ref: #/components/schemas/AgentNetwork
 type AgentNetwork struct {
@@ -5240,6 +4854,10 @@ type ConversationMessage struct {
 	// Received_at for inbound, created_at for outbound.
 	Timestamp       OptNilDateTime                           `json:"timestamp"`
 	PresenceControl OptNilConversationMessagePresenceControl `json:"presence_control"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilConversationMessageRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilConversationMessageSenderMember `json:"sender_member"`
@@ -5295,6 +4913,11 @@ func (s *ConversationMessage) GetPresenceControl() OptNilConversationMessagePres
 	return s.PresenceControl
 }
 
+// GetRepeat returns the value of Repeat.
+func (s *ConversationMessage) GetRepeat() OptNilConversationMessageRepeat {
+	return s.Repeat
+}
+
 // GetSenderMember returns the value of SenderMember.
 func (s *ConversationMessage) GetSenderMember() OptNilConversationMessageSenderMember {
 	return s.SenderMember
@@ -5348,6 +4971,11 @@ func (s *ConversationMessage) SetTimestamp(val OptNilDateTime) {
 // SetPresenceControl sets the value of PresenceControl.
 func (s *ConversationMessage) SetPresenceControl(val OptNilConversationMessagePresenceControl) {
 	s.PresenceControl = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *ConversationMessage) SetRepeat(val OptNilConversationMessageRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -5469,6 +5097,34 @@ func (s *ConversationMessagePresenceControlStatus) UnmarshalText(data []byte) er
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type ConversationMessageRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *ConversationMessageRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *ConversationMessageRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *ConversationMessageRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *ConversationMessageRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Chat role derived from `direction`: `user` for inbound
@@ -6664,129 +6320,6 @@ func (*CreateAgentConnectionTooManyRequests) createAgentConnectionRes() {}
 type CreateAgentConnectionUnauthorized ErrorResponseHeaders
 
 func (*CreateAgentConnectionUnauthorized) createAgentConnectionRes() {}
-
-type CreateAgentMessageScheduleBadRequest ErrorResponse
-
-func (*CreateAgentMessageScheduleBadRequest) createAgentMessageScheduleRes() {}
-
-type CreateAgentMessageScheduleConflict ErrorResponse
-
-func (*CreateAgentMessageScheduleConflict) createAgentMessageScheduleRes() {}
-
-// Merged schema.
-type CreateAgentMessageScheduleCreated struct {
-	Success bool                 `json:"success"`
-	Data    AgentMessageSchedule `json:"data"`
-}
-
-// GetSuccess returns the value of Success.
-func (s *CreateAgentMessageScheduleCreated) GetSuccess() bool {
-	return s.Success
-}
-
-// GetData returns the value of Data.
-func (s *CreateAgentMessageScheduleCreated) GetData() AgentMessageSchedule {
-	return s.Data
-}
-
-// SetSuccess sets the value of Success.
-func (s *CreateAgentMessageScheduleCreated) SetSuccess(val bool) {
-	s.Success = val
-}
-
-// SetData sets the value of Data.
-func (s *CreateAgentMessageScheduleCreated) SetData(val AgentMessageSchedule) {
-	s.Data = val
-}
-
-func (*CreateAgentMessageScheduleCreated) createAgentMessageScheduleRes() {}
-
-type CreateAgentMessageScheduleForbidden ErrorResponse
-
-func (*CreateAgentMessageScheduleForbidden) createAgentMessageScheduleRes() {}
-
-// Ref: #/components/schemas/CreateAgentMessageScheduleInput
-type CreateAgentMessageScheduleInput struct {
-	// A connected agent address in your org.
-	AgentAddress string `json:"agent_address"`
-	// The message sent on every run.
-	BodyText string `json:"body_text"`
-	// Subject of the schedule's thread. Defaults to "Scheduled message".
-	Subject         OptString `json:"subject"`
-	IntervalMinutes int       `json:"interval_minutes"`
-	// Only send after this many minutes without activity from the agent.
-	IdleMinutes OptNilInt `json:"idle_minutes"`
-	// Let the agent stop the schedule.
-	AgentCanStop OptBool `json:"agent_can_stop"`
-}
-
-// GetAgentAddress returns the value of AgentAddress.
-func (s *CreateAgentMessageScheduleInput) GetAgentAddress() string {
-	return s.AgentAddress
-}
-
-// GetBodyText returns the value of BodyText.
-func (s *CreateAgentMessageScheduleInput) GetBodyText() string {
-	return s.BodyText
-}
-
-// GetSubject returns the value of Subject.
-func (s *CreateAgentMessageScheduleInput) GetSubject() OptString {
-	return s.Subject
-}
-
-// GetIntervalMinutes returns the value of IntervalMinutes.
-func (s *CreateAgentMessageScheduleInput) GetIntervalMinutes() int {
-	return s.IntervalMinutes
-}
-
-// GetIdleMinutes returns the value of IdleMinutes.
-func (s *CreateAgentMessageScheduleInput) GetIdleMinutes() OptNilInt {
-	return s.IdleMinutes
-}
-
-// GetAgentCanStop returns the value of AgentCanStop.
-func (s *CreateAgentMessageScheduleInput) GetAgentCanStop() OptBool {
-	return s.AgentCanStop
-}
-
-// SetAgentAddress sets the value of AgentAddress.
-func (s *CreateAgentMessageScheduleInput) SetAgentAddress(val string) {
-	s.AgentAddress = val
-}
-
-// SetBodyText sets the value of BodyText.
-func (s *CreateAgentMessageScheduleInput) SetBodyText(val string) {
-	s.BodyText = val
-}
-
-// SetSubject sets the value of Subject.
-func (s *CreateAgentMessageScheduleInput) SetSubject(val OptString) {
-	s.Subject = val
-}
-
-// SetIntervalMinutes sets the value of IntervalMinutes.
-func (s *CreateAgentMessageScheduleInput) SetIntervalMinutes(val int) {
-	s.IntervalMinutes = val
-}
-
-// SetIdleMinutes sets the value of IdleMinutes.
-func (s *CreateAgentMessageScheduleInput) SetIdleMinutes(val OptNilInt) {
-	s.IdleMinutes = val
-}
-
-// SetAgentCanStop sets the value of AgentCanStop.
-func (s *CreateAgentMessageScheduleInput) SetAgentCanStop(val OptBool) {
-	s.AgentCanStop = val
-}
-
-type CreateAgentMessageScheduleUnauthorized ErrorResponse
-
-func (*CreateAgentMessageScheduleUnauthorized) createAgentMessageScheduleRes() {}
-
-type CreateAgentMessageScheduleUnprocessableEntity ErrorResponse
-
-func (*CreateAgentMessageScheduleUnprocessableEntity) createAgentMessageScheduleRes() {}
 
 type CreateChallengeBadRequest ErrorResponse
 
@@ -9153,18 +8686,6 @@ type DeleteAgentContactUnauthorized ErrorResponse
 
 func (*DeleteAgentContactUnauthorized) deleteAgentContactRes() {}
 
-type DeleteAgentMessageScheduleForbidden ErrorResponse
-
-func (*DeleteAgentMessageScheduleForbidden) deleteAgentMessageScheduleRes() {}
-
-type DeleteAgentMessageScheduleNotFound ErrorResponse
-
-func (*DeleteAgentMessageScheduleNotFound) deleteAgentMessageScheduleRes() {}
-
-type DeleteAgentMessageScheduleUnauthorized ErrorResponse
-
-func (*DeleteAgentMessageScheduleUnauthorized) deleteAgentMessageScheduleRes() {}
-
 type DeleteContactBadRequest ErrorResponse
 
 func (*DeleteContactBadRequest) deleteContactRes() {}
@@ -9484,6 +9005,14 @@ type DeleteRegistryUnauthorized ErrorResponse
 
 func (*DeleteRegistryUnauthorized) deleteRegistryRes() {}
 
+type DeleteRepeatingSendNotFound ErrorResponse
+
+func (*DeleteRepeatingSendNotFound) deleteRepeatingSendRes() {}
+
+type DeleteRepeatingSendUnauthorized ErrorResponse
+
+func (*DeleteRepeatingSendUnauthorized) deleteRepeatingSendRes() {}
+
 type DeleteRouteNotFound ErrorResponse
 
 func (*DeleteRouteNotFound) deleteRouteRes() {}
@@ -9603,17 +9132,17 @@ func (s *Deleted) SetData(val DeletedData) {
 	s.Data = val
 }
 
-func (*Deleted) deleteAgentMessageScheduleRes() {}
-func (*Deleted) deleteDomainRes()               {}
-func (*Deleted) deleteEmailRes()                {}
-func (*Deleted) deleteEndpointRes()             {}
-func (*Deleted) deleteFilterRes()               {}
-func (*Deleted) deleteFunctionRes()             {}
-func (*Deleted) deleteRegistryRes()             {}
-func (*Deleted) deleteRouteRes()                {}
-func (*Deleted) deleteWakeAuthorizationRes()    {}
-func (*Deleted) deleteWakeScheduleRes()         {}
-func (*Deleted) unpublishAgentRes()             {}
+func (*Deleted) deleteDomainRes()            {}
+func (*Deleted) deleteEmailRes()             {}
+func (*Deleted) deleteEndpointRes()          {}
+func (*Deleted) deleteFilterRes()            {}
+func (*Deleted) deleteFunctionRes()          {}
+func (*Deleted) deleteRegistryRes()          {}
+func (*Deleted) deleteRepeatingSendRes()     {}
+func (*Deleted) deleteRouteRes()             {}
+func (*Deleted) deleteWakeAuthorizationRes() {}
+func (*Deleted) deleteWakeScheduleRes()      {}
+func (*Deleted) unpublishAgentRes()          {}
 
 type DeletedData struct {
 	Deleted bool `json:"deleted"`
@@ -11703,6 +11232,10 @@ type EmailDetail struct {
 	// `failed_recipients`, `report`. Treat an unfamiliar value as a
 	// reason added after your client was built.
 	AutomatedReasons []string `json:"automated_reasons"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilEmailDetailRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilEmailDetailSenderMember `json:"sender_member"`
@@ -11931,6 +11464,11 @@ func (s *EmailDetail) GetAutomated() bool {
 // GetAutomatedReasons returns the value of AutomatedReasons.
 func (s *EmailDetail) GetAutomatedReasons() []string {
 	return s.AutomatedReasons
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *EmailDetail) GetRepeat() OptNilEmailDetailRepeat {
+	return s.Repeat
 }
 
 // GetSenderMember returns the value of SenderMember.
@@ -12163,6 +11701,11 @@ func (s *EmailDetail) SetAutomatedReasons(val []string) {
 	s.AutomatedReasons = val
 }
 
+// SetRepeat sets the value of Repeat.
+func (s *EmailDetail) SetRepeat(val OptNilEmailDetailRepeat) {
+	s.Repeat = val
+}
+
 // SetSenderMember sets the value of SenderMember.
 func (s *EmailDetail) SetSenderMember(val OptNilEmailDetailSenderMember) {
 	s.SenderMember = val
@@ -12370,6 +11913,34 @@ func (s *EmailDetailPresenceControlStatus) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type EmailDetailRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *EmailDetailRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *EmailDetailRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *EmailDetailRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *EmailDetailRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Ref: #/components/schemas/EmailDetailReply
@@ -12817,6 +12388,10 @@ type EmailSearchResult struct {
 	// `failed_recipients`, `report`. Treat an unfamiliar value as a
 	// reason added after your client was built.
 	AutomatedReasons []string `json:"automated_reasons"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilEmailSearchResultRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilEmailSearchResultSenderMember `json:"sender_member"`
@@ -12942,6 +12517,11 @@ func (s *EmailSearchResult) GetAutomated() bool {
 // GetAutomatedReasons returns the value of AutomatedReasons.
 func (s *EmailSearchResult) GetAutomatedReasons() []string {
 	return s.AutomatedReasons
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *EmailSearchResult) GetRepeat() OptNilEmailSearchResultRepeat {
+	return s.Repeat
 }
 
 // GetSenderMember returns the value of SenderMember.
@@ -13082,6 +12662,11 @@ func (s *EmailSearchResult) SetAutomated(val bool) {
 // SetAutomatedReasons sets the value of AutomatedReasons.
 func (s *EmailSearchResult) SetAutomatedReasons(val []string) {
 	s.AutomatedReasons = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *EmailSearchResult) SetRepeat(val OptNilEmailSearchResultRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -13313,6 +12898,34 @@ func (s *EmailSearchResultPresenceControlStatus) UnmarshalText(data []byte) erro
 	}
 }
 
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type EmailSearchResultRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *EmailSearchResultRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *EmailSearchResultRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *EmailSearchResultRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *EmailSearchResultRepeat) SetSequence(val int) {
+	s.Sequence = val
+}
+
 // Verified human authorship, projected only within the member organization. Historical attribution
 // is not current sending or owner authority.
 type EmailSearchResultSenderMember struct {
@@ -13525,6 +13138,10 @@ type EmailSummary struct {
 	// `failed_recipients`, `report`. Treat an unfamiliar value as a
 	// reason added after your client was built.
 	AutomatedReasons []string `json:"automated_reasons"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilEmailSummaryRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilEmailSummarySenderMember `json:"sender_member"`
@@ -13645,6 +13262,11 @@ func (s *EmailSummary) GetAutomatedReasons() []string {
 	return s.AutomatedReasons
 }
 
+// GetRepeat returns the value of Repeat.
+func (s *EmailSummary) GetRepeat() OptNilEmailSummaryRepeat {
+	return s.Repeat
+}
+
 // GetSenderMember returns the value of SenderMember.
 func (s *EmailSummary) GetSenderMember() OptNilEmailSummarySenderMember {
 	return s.SenderMember
@@ -13763,6 +13385,11 @@ func (s *EmailSummary) SetAutomated(val bool) {
 // SetAutomatedReasons sets the value of AutomatedReasons.
 func (s *EmailSummary) SetAutomatedReasons(val []string) {
 	s.AutomatedReasons = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *EmailSummary) SetRepeat(val OptNilEmailSummaryRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -13972,6 +13599,34 @@ func (s *EmailSummaryPresenceControlStatus) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type EmailSummaryRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *EmailSummaryRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *EmailSummaryRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *EmailSummaryRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *EmailSummaryRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Verified human authorship, projected only within the member organization. Historical attribution
@@ -17926,46 +17581,6 @@ type GetAgentContactPolicyUnauthorized ErrorResponse
 
 func (*GetAgentContactPolicyUnauthorized) getAgentContactPolicyRes() {}
 
-type GetAgentMessageScheduleForbidden ErrorResponse
-
-func (*GetAgentMessageScheduleForbidden) getAgentMessageScheduleRes() {}
-
-type GetAgentMessageScheduleNotFound ErrorResponse
-
-func (*GetAgentMessageScheduleNotFound) getAgentMessageScheduleRes() {}
-
-// Merged schema.
-type GetAgentMessageScheduleOK struct {
-	Success bool                 `json:"success"`
-	Data    AgentMessageSchedule `json:"data"`
-}
-
-// GetSuccess returns the value of Success.
-func (s *GetAgentMessageScheduleOK) GetSuccess() bool {
-	return s.Success
-}
-
-// GetData returns the value of Data.
-func (s *GetAgentMessageScheduleOK) GetData() AgentMessageSchedule {
-	return s.Data
-}
-
-// SetSuccess sets the value of Success.
-func (s *GetAgentMessageScheduleOK) SetSuccess(val bool) {
-	s.Success = val
-}
-
-// SetData sets the value of Data.
-func (s *GetAgentMessageScheduleOK) SetData(val AgentMessageSchedule) {
-	s.Data = val
-}
-
-func (*GetAgentMessageScheduleOK) getAgentMessageScheduleRes() {}
-
-type GetAgentMessageScheduleUnauthorized ErrorResponse
-
-func (*GetAgentMessageScheduleUnauthorized) getAgentMessageScheduleRes() {}
-
 // Merged schema.
 type GetAgentOK struct {
 	Success bool          `json:"success"`
@@ -18725,6 +18340,42 @@ func (s *GetRegistryOK) SetData(val Registry) {
 }
 
 func (*GetRegistryOK) getRegistryRes() {}
+
+type GetRepeatingSendNotFound ErrorResponse
+
+func (*GetRepeatingSendNotFound) getRepeatingSendRes() {}
+
+// Merged schema.
+type GetRepeatingSendOK struct {
+	Success bool          `json:"success"`
+	Data    RepeatingSend `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetRepeatingSendOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetRepeatingSendOK) GetData() RepeatingSend {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetRepeatingSendOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetRepeatingSendOK) SetData(val RepeatingSend) {
+	s.Data = val
+}
+
+func (*GetRepeatingSendOK) getRepeatingSendRes() {}
+
+type GetRepeatingSendUnauthorized ErrorResponse
+
+func (*GetRepeatingSendUnauthorized) getRepeatingSendRes() {}
 
 // Merged schema.
 type GetSendPermissionsOK struct {
@@ -20985,42 +20636,6 @@ type ListAgentContactsUnauthorized ErrorResponse
 
 func (*ListAgentContactsUnauthorized) listAgentContactsRes() {}
 
-type ListAgentMessageSchedulesForbidden ErrorResponse
-
-func (*ListAgentMessageSchedulesForbidden) listAgentMessageSchedulesRes() {}
-
-// Merged schema.
-type ListAgentMessageSchedulesOK struct {
-	Success bool                   `json:"success"`
-	Data    []AgentMessageSchedule `json:"data"`
-}
-
-// GetSuccess returns the value of Success.
-func (s *ListAgentMessageSchedulesOK) GetSuccess() bool {
-	return s.Success
-}
-
-// GetData returns the value of Data.
-func (s *ListAgentMessageSchedulesOK) GetData() []AgentMessageSchedule {
-	return s.Data
-}
-
-// SetSuccess sets the value of Success.
-func (s *ListAgentMessageSchedulesOK) SetSuccess(val bool) {
-	s.Success = val
-}
-
-// SetData sets the value of Data.
-func (s *ListAgentMessageSchedulesOK) SetData(val []AgentMessageSchedule) {
-	s.Data = val
-}
-
-func (*ListAgentMessageSchedulesOK) listAgentMessageSchedulesRes() {}
-
-type ListAgentMessageSchedulesUnauthorized ErrorResponse
-
-func (*ListAgentMessageSchedulesUnauthorized) listAgentMessageSchedulesRes() {}
-
 type ListAgentNetworksForbidden ErrorResponse
 
 func (*ListAgentNetworksForbidden) listAgentNetworksRes() {}
@@ -22043,6 +21658,42 @@ func (*ListRegistryRequestsOK) listRegistryRequestsRes() {}
 type ListRegistryRequestsUnauthorized ErrorResponse
 
 func (*ListRegistryRequestsUnauthorized) listRegistryRequestsRes() {}
+
+type ListRepeatingSendsForbidden ErrorResponse
+
+func (*ListRepeatingSendsForbidden) listRepeatingSendsRes() {}
+
+// Merged schema.
+type ListRepeatingSendsOK struct {
+	Success bool            `json:"success"`
+	Data    []RepeatingSend `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListRepeatingSendsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListRepeatingSendsOK) GetData() []RepeatingSend {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListRepeatingSendsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListRepeatingSendsOK) SetData(val []RepeatingSend) {
+	s.Data = val
+}
+
+func (*ListRepeatingSendsOK) listRepeatingSendsRes() {}
+
+type ListRepeatingSendsUnauthorized ErrorResponse
+
+func (*ListRepeatingSendsUnauthorized) listRepeatingSendsRes() {}
 
 // Merged schema.
 type ListRoutesOK struct {
@@ -26099,6 +25750,69 @@ func (o OptNilConversationMessagePresenceControl) Or(d ConversationMessagePresen
 	return d
 }
 
+// NewOptNilConversationMessageRepeat returns new OptNilConversationMessageRepeat with value set to v.
+func NewOptNilConversationMessageRepeat(v ConversationMessageRepeat) OptNilConversationMessageRepeat {
+	return OptNilConversationMessageRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilConversationMessageRepeat is optional nullable ConversationMessageRepeat.
+type OptNilConversationMessageRepeat struct {
+	Value ConversationMessageRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilConversationMessageRepeat was set.
+func (o OptNilConversationMessageRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilConversationMessageRepeat) Reset() {
+	var v ConversationMessageRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilConversationMessageRepeat) SetTo(v ConversationMessageRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilConversationMessageRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilConversationMessageRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v ConversationMessageRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilConversationMessageRepeat) Get() (v ConversationMessageRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilConversationMessageRepeat) Or(d ConversationMessageRepeat) ConversationMessageRepeat {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilConversationMessageSenderMember returns new OptNilConversationMessageSenderMember with value set to v.
 func NewOptNilConversationMessageSenderMember(v ConversationMessageSenderMember) OptNilConversationMessageSenderMember {
 	return OptNilConversationMessageSenderMember{
@@ -26666,6 +26380,69 @@ func (o OptNilEmailDetailPresenceControl) Or(d EmailDetailPresenceControl) Email
 	return d
 }
 
+// NewOptNilEmailDetailRepeat returns new OptNilEmailDetailRepeat with value set to v.
+func NewOptNilEmailDetailRepeat(v EmailDetailRepeat) OptNilEmailDetailRepeat {
+	return OptNilEmailDetailRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailDetailRepeat is optional nullable EmailDetailRepeat.
+type OptNilEmailDetailRepeat struct {
+	Value EmailDetailRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailDetailRepeat was set.
+func (o OptNilEmailDetailRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailDetailRepeat) Reset() {
+	var v EmailDetailRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailDetailRepeat) SetTo(v EmailDetailRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailDetailRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailDetailRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailDetailRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailDetailRepeat) Get() (v EmailDetailRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailDetailRepeat) Or(d EmailDetailRepeat) EmailDetailRepeat {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilEmailDetailSenderMember returns new OptNilEmailDetailSenderMember with value set to v.
 func NewOptNilEmailDetailSenderMember(v EmailDetailSenderMember) OptNilEmailDetailSenderMember {
 	return OptNilEmailDetailSenderMember{
@@ -26855,6 +26632,69 @@ func (o OptNilEmailSearchResultPresenceControl) Or(d EmailSearchResultPresenceCo
 	return d
 }
 
+// NewOptNilEmailSearchResultRepeat returns new OptNilEmailSearchResultRepeat with value set to v.
+func NewOptNilEmailSearchResultRepeat(v EmailSearchResultRepeat) OptNilEmailSearchResultRepeat {
+	return OptNilEmailSearchResultRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSearchResultRepeat is optional nullable EmailSearchResultRepeat.
+type OptNilEmailSearchResultRepeat struct {
+	Value EmailSearchResultRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSearchResultRepeat was set.
+func (o OptNilEmailSearchResultRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSearchResultRepeat) Reset() {
+	var v EmailSearchResultRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSearchResultRepeat) SetTo(v EmailSearchResultRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSearchResultRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSearchResultRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSearchResultRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSearchResultRepeat) Get() (v EmailSearchResultRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSearchResultRepeat) Or(d EmailSearchResultRepeat) EmailSearchResultRepeat {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilEmailSearchResultSenderMember returns new OptNilEmailSearchResultSenderMember with value set to v.
 func NewOptNilEmailSearchResultSenderMember(v EmailSearchResultSenderMember) OptNilEmailSearchResultSenderMember {
 	return OptNilEmailSearchResultSenderMember{
@@ -27038,6 +26878,69 @@ func (o OptNilEmailSummaryPresenceControl) Get() (v EmailSummaryPresenceControl,
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailSummaryPresenceControl) Or(d EmailSummaryPresenceControl) EmailSummaryPresenceControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailSummaryRepeat returns new OptNilEmailSummaryRepeat with value set to v.
+func NewOptNilEmailSummaryRepeat(v EmailSummaryRepeat) OptNilEmailSummaryRepeat {
+	return OptNilEmailSummaryRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSummaryRepeat is optional nullable EmailSummaryRepeat.
+type OptNilEmailSummaryRepeat struct {
+	Value EmailSummaryRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSummaryRepeat was set.
+func (o OptNilEmailSummaryRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSummaryRepeat) Reset() {
+	var v EmailSummaryRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSummaryRepeat) SetTo(v EmailSummaryRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSummaryRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSummaryRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSummaryRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSummaryRepeat) Get() (v EmailSummaryRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSummaryRepeat) Or(d EmailSummaryRepeat) EmailSummaryRepeat {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -27800,6 +27703,69 @@ func (o OptNilSentEmailDetailPresenceControl) Or(d SentEmailDetailPresenceContro
 	return d
 }
 
+// NewOptNilSentEmailDetailRepeat returns new OptNilSentEmailDetailRepeat with value set to v.
+func NewOptNilSentEmailDetailRepeat(v SentEmailDetailRepeat) OptNilSentEmailDetailRepeat {
+	return OptNilSentEmailDetailRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilSentEmailDetailRepeat is optional nullable SentEmailDetailRepeat.
+type OptNilSentEmailDetailRepeat struct {
+	Value SentEmailDetailRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilSentEmailDetailRepeat was set.
+func (o OptNilSentEmailDetailRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilSentEmailDetailRepeat) Reset() {
+	var v SentEmailDetailRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilSentEmailDetailRepeat) SetTo(v SentEmailDetailRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilSentEmailDetailRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilSentEmailDetailRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v SentEmailDetailRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilSentEmailDetailRepeat) Get() (v SentEmailDetailRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilSentEmailDetailRepeat) Or(d SentEmailDetailRepeat) SentEmailDetailRepeat {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilSentEmailDetailSenderMember returns new OptNilSentEmailDetailSenderMember with value set to v.
 func NewOptNilSentEmailDetailSenderMember(v SentEmailDetailSenderMember) OptNilSentEmailDetailSenderMember {
 	return OptNilSentEmailDetailSenderMember{
@@ -27920,6 +27886,69 @@ func (o OptNilSentEmailSummaryPresenceControl) Get() (v SentEmailSummaryPresence
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilSentEmailSummaryPresenceControl) Or(d SentEmailSummaryPresenceControl) SentEmailSummaryPresenceControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilSentEmailSummaryRepeat returns new OptNilSentEmailSummaryRepeat with value set to v.
+func NewOptNilSentEmailSummaryRepeat(v SentEmailSummaryRepeat) OptNilSentEmailSummaryRepeat {
+	return OptNilSentEmailSummaryRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilSentEmailSummaryRepeat is optional nullable SentEmailSummaryRepeat.
+type OptNilSentEmailSummaryRepeat struct {
+	Value SentEmailSummaryRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilSentEmailSummaryRepeat was set.
+func (o OptNilSentEmailSummaryRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilSentEmailSummaryRepeat) Reset() {
+	var v SentEmailSummaryRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilSentEmailSummaryRepeat) SetTo(v SentEmailSummaryRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilSentEmailSummaryRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilSentEmailSummaryRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v SentEmailSummaryRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilSentEmailSummaryRepeat) Get() (v SentEmailSummaryRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilSentEmailSummaryRepeat) Or(d SentEmailSummaryRepeat) SentEmailSummaryRepeat {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -28109,6 +28138,69 @@ func (o OptNilStringArray) Get() (v []string, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilStringArray) Or(d []string) []string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilThreadMessageRepeat returns new OptNilThreadMessageRepeat with value set to v.
+func NewOptNilThreadMessageRepeat(v ThreadMessageRepeat) OptNilThreadMessageRepeat {
+	return OptNilThreadMessageRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilThreadMessageRepeat is optional nullable ThreadMessageRepeat.
+type OptNilThreadMessageRepeat struct {
+	Value ThreadMessageRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilThreadMessageRepeat was set.
+func (o OptNilThreadMessageRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilThreadMessageRepeat) Reset() {
+	var v ThreadMessageRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilThreadMessageRepeat) SetTo(v ThreadMessageRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilThreadMessageRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilThreadMessageRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v ThreadMessageRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilThreadMessageRepeat) Get() (v ThreadMessageRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilThreadMessageRepeat) Or(d ThreadMessageRepeat) ThreadMessageRepeat {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -28528,6 +28620,144 @@ func (o OptRecipientRouteMatchType) Get() (v RecipientRouteMatchType, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptRecipientRouteMatchType) Or(d RecipientRouteMatchType) RecipientRouteMatchType {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptRepeatInput returns new OptRepeatInput with value set to v.
+func NewOptRepeatInput(v RepeatInput) OptRepeatInput {
+	return OptRepeatInput{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptRepeatInput is optional RepeatInput.
+type OptRepeatInput struct {
+	Value RepeatInput
+	Set   bool
+}
+
+// IsSet returns true if OptRepeatInput was set.
+func (o OptRepeatInput) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptRepeatInput) Reset() {
+	var v RepeatInput
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptRepeatInput) SetTo(v RepeatInput) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptRepeatInput) Get() (v RepeatInput, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptRepeatInput) Or(d RepeatInput) RepeatInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptRepeatStopInput returns new OptRepeatStopInput with value set to v.
+func NewOptRepeatStopInput(v RepeatStopInput) OptRepeatStopInput {
+	return OptRepeatStopInput{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptRepeatStopInput is optional RepeatStopInput.
+type OptRepeatStopInput struct {
+	Value RepeatStopInput
+	Set   bool
+}
+
+// IsSet returns true if OptRepeatStopInput was set.
+func (o OptRepeatStopInput) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptRepeatStopInput) Reset() {
+	var v RepeatStopInput
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptRepeatStopInput) SetTo(v RepeatStopInput) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptRepeatStopInput) Get() (v RepeatStopInput, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptRepeatStopInput) Or(d RepeatStopInput) RepeatStopInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptRepeatingSendStatus returns new OptRepeatingSendStatus with value set to v.
+func NewOptRepeatingSendStatus(v RepeatingSendStatus) OptRepeatingSendStatus {
+	return OptRepeatingSendStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptRepeatingSendStatus is optional RepeatingSendStatus.
+type OptRepeatingSendStatus struct {
+	Value RepeatingSendStatus
+	Set   bool
+}
+
+// IsSet returns true if OptRepeatingSendStatus was set.
+func (o OptRepeatingSendStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptRepeatingSendStatus) Reset() {
+	var v RepeatingSendStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptRepeatingSendStatus) SetTo(v RepeatingSendStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptRepeatingSendStatus) Get() (v RepeatingSendStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptRepeatingSendStatus) Or(d RepeatingSendStatus) RepeatingSendStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -29224,52 +29454,6 @@ func (o OptStartCliSignupInputMetadata) Or(d StartCliSignupInputMetadata) StartC
 	return d
 }
 
-// NewOptStopAgentMessageScheduleInput returns new OptStopAgentMessageScheduleInput with value set to v.
-func NewOptStopAgentMessageScheduleInput(v StopAgentMessageScheduleInput) OptStopAgentMessageScheduleInput {
-	return OptStopAgentMessageScheduleInput{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptStopAgentMessageScheduleInput is optional StopAgentMessageScheduleInput.
-type OptStopAgentMessageScheduleInput struct {
-	Value StopAgentMessageScheduleInput
-	Set   bool
-}
-
-// IsSet returns true if OptStopAgentMessageScheduleInput was set.
-func (o OptStopAgentMessageScheduleInput) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptStopAgentMessageScheduleInput) Reset() {
-	var v StopAgentMessageScheduleInput
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptStopAgentMessageScheduleInput) SetTo(v StopAgentMessageScheduleInput) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptStopAgentMessageScheduleInput) Get() (v StopAgentMessageScheduleInput, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptStopAgentMessageScheduleInput) Or(d StopAgentMessageScheduleInput) StopAgentMessageScheduleInput {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptString returns new OptString with value set to v.
 func NewOptString(v string) OptString {
 	return OptString{
@@ -29546,52 +29730,6 @@ func (o OptUUID) Or(d uuid.UUID) uuid.UUID {
 	return d
 }
 
-// NewOptUpdateAgentMessageScheduleInputStatus returns new OptUpdateAgentMessageScheduleInputStatus with value set to v.
-func NewOptUpdateAgentMessageScheduleInputStatus(v UpdateAgentMessageScheduleInputStatus) OptUpdateAgentMessageScheduleInputStatus {
-	return OptUpdateAgentMessageScheduleInputStatus{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptUpdateAgentMessageScheduleInputStatus is optional UpdateAgentMessageScheduleInputStatus.
-type OptUpdateAgentMessageScheduleInputStatus struct {
-	Value UpdateAgentMessageScheduleInputStatus
-	Set   bool
-}
-
-// IsSet returns true if OptUpdateAgentMessageScheduleInputStatus was set.
-func (o OptUpdateAgentMessageScheduleInputStatus) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptUpdateAgentMessageScheduleInputStatus) Reset() {
-	var v UpdateAgentMessageScheduleInputStatus
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptUpdateAgentMessageScheduleInputStatus) SetTo(v UpdateAgentMessageScheduleInputStatus) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptUpdateAgentMessageScheduleInputStatus) Get() (v UpdateAgentMessageScheduleInputStatus, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptUpdateAgentMessageScheduleInputStatus) Or(d UpdateAgentMessageScheduleInputStatus) UpdateAgentMessageScheduleInputStatus {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
 // NewOptUpdateEndpointInputRules returns new OptUpdateEndpointInputRules with value set to v.
 func NewOptUpdateEndpointInputRules(v UpdateEndpointInputRules) OptUpdateEndpointInputRules {
 	return OptUpdateEndpointInputRules{
@@ -29678,6 +29816,52 @@ func (o OptUpdateFunctionInputFiles) Get() (v UpdateFunctionInputFiles, ok bool)
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUpdateFunctionInputFiles) Or(d UpdateFunctionInputFiles) UpdateFunctionInputFiles {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdateRepeatingSendInputStatus returns new OptUpdateRepeatingSendInputStatus with value set to v.
+func NewOptUpdateRepeatingSendInputStatus(v UpdateRepeatingSendInputStatus) OptUpdateRepeatingSendInputStatus {
+	return OptUpdateRepeatingSendInputStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdateRepeatingSendInputStatus is optional UpdateRepeatingSendInputStatus.
+type OptUpdateRepeatingSendInputStatus struct {
+	Value UpdateRepeatingSendInputStatus
+	Set   bool
+}
+
+// IsSet returns true if OptUpdateRepeatingSendInputStatus was set.
+func (o OptUpdateRepeatingSendInputStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdateRepeatingSendInputStatus) Reset() {
+	var v UpdateRepeatingSendInputStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdateRepeatingSendInputStatus) SetTo(v UpdateRepeatingSendInputStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdateRepeatingSendInputStatus) Get() (v UpdateRepeatingSendInputStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdateRepeatingSendInputStatus) Or(d UpdateRepeatingSendInputStatus) UpdateRepeatingSendInputStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -33564,6 +33748,488 @@ type ReorderRoutesUnauthorized ErrorResponse
 
 func (*ReorderRoutesUnauthorized) reorderRoutesRes() {}
 
+// Repeat this send every `every_minutes` in the same thread. The first
+// message goes out like any send; each later one is a scheduled send
+// that replies to the previous one, so quotas, gates and cancellation
+// apply as usual. Requires exactly one `to` recipient and no cc, bcc,
+// attachments or `fyi` (422 `repeat_unsupported`). The recipient must
+// be an address of your own organization unless the organization is
+// entitled to repeat to external recipients (403
+// `repeat_recipient_external`). `only_if_recipient_idle_minutes` needs
+// a recipient in your organization (422
+// `repeat_idle_requires_internal_recipient`).
+// Ref: #/components/schemas/RepeatInput
+type RepeatInput struct {
+	EveryMinutes int `json:"every_minutes"`
+	// Skip a repeat while the recipient has sent mail within this many minutes.
+	OnlyIfRecipientIdleMinutes OptInt `json:"only_if_recipient_idle_minutes"`
+	// Let the recipient stop the repeat.
+	StoppableByRecipient OptBool `json:"stoppable_by_recipient"`
+	// Total messages, including the first.
+	MaxSends OptInt `json:"max_sends"`
+	// No repeat is sent after this time. Must be in the future.
+	Until OptDateTime `json:"until"`
+}
+
+// GetEveryMinutes returns the value of EveryMinutes.
+func (s *RepeatInput) GetEveryMinutes() int {
+	return s.EveryMinutes
+}
+
+// GetOnlyIfRecipientIdleMinutes returns the value of OnlyIfRecipientIdleMinutes.
+func (s *RepeatInput) GetOnlyIfRecipientIdleMinutes() OptInt {
+	return s.OnlyIfRecipientIdleMinutes
+}
+
+// GetStoppableByRecipient returns the value of StoppableByRecipient.
+func (s *RepeatInput) GetStoppableByRecipient() OptBool {
+	return s.StoppableByRecipient
+}
+
+// GetMaxSends returns the value of MaxSends.
+func (s *RepeatInput) GetMaxSends() OptInt {
+	return s.MaxSends
+}
+
+// GetUntil returns the value of Until.
+func (s *RepeatInput) GetUntil() OptDateTime {
+	return s.Until
+}
+
+// SetEveryMinutes sets the value of EveryMinutes.
+func (s *RepeatInput) SetEveryMinutes(val int) {
+	s.EveryMinutes = val
+}
+
+// SetOnlyIfRecipientIdleMinutes sets the value of OnlyIfRecipientIdleMinutes.
+func (s *RepeatInput) SetOnlyIfRecipientIdleMinutes(val OptInt) {
+	s.OnlyIfRecipientIdleMinutes = val
+}
+
+// SetStoppableByRecipient sets the value of StoppableByRecipient.
+func (s *RepeatInput) SetStoppableByRecipient(val OptBool) {
+	s.StoppableByRecipient = val
+}
+
+// SetMaxSends sets the value of MaxSends.
+func (s *RepeatInput) SetMaxSends(val OptInt) {
+	s.MaxSends = val
+}
+
+// SetUntil sets the value of Until.
+func (s *RepeatInput) SetUntil(val OptDateTime) {
+	s.Until = val
+}
+
+// Ref: #/components/schemas/RepeatStopInput
+type RepeatStopInput struct {
+	// Short reason shown to the sender.
+	Reason OptString `json:"reason"`
+}
+
+// GetReason returns the value of Reason.
+func (s *RepeatStopInput) GetReason() OptString {
+	return s.Reason
+}
+
+// SetReason sets the value of Reason.
+func (s *RepeatStopInput) SetReason(val OptString) {
+	s.Reason = val
+}
+
+// Ref: #/components/schemas/RepeatingSend
+type RepeatingSend struct {
+	ID                         uuid.UUID           `json:"id"`
+	OrgID                      OptUUID             `json:"org_id"`
+	FromAddress                string              `json:"from_address"`
+	ToAddress                  string              `json:"to_address"`
+	Subject                    OptNilString        `json:"subject"`
+	BodyText                   OptNilString        `json:"body_text"`
+	EveryMinutes               int                 `json:"every_minutes"`
+	OnlyIfRecipientIdleMinutes OptNilInt           `json:"only_if_recipient_idle_minutes"`
+	StoppableByRecipient       bool                `json:"stoppable_by_recipient"`
+	MaxSends                   OptNilInt           `json:"max_sends"`
+	Until                      OptNilDateTime      `json:"until"`
+	Status                     RepeatingSendStatus `json:"status"`
+	NextRunAt                  OptNilDateTime      `json:"next_run_at"`
+	SentCount                  int                 `json:"sent_count"`
+	LastSentAt                 OptNilDateTime      `json:"last_sent_at"`
+	LastSentEmailID            OptNilString        `json:"last_sent_email_id"`
+	RootMessageID              OptNilString        `json:"root_message_id"`
+	StoppedAt                  OptNilDateTime      `json:"stopped_at"`
+	// Reason the recipient gave when it stopped the repeat. Recipient-written, untrusted text.
+	StopReason OptNilString `json:"stop_reason"`
+	CreatedAt  OptDateTime  `json:"created_at"`
+	UpdatedAt  OptDateTime  `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *RepeatingSend) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *RepeatingSend) GetOrgID() OptUUID {
+	return s.OrgID
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *RepeatingSend) GetFromAddress() string {
+	return s.FromAddress
+}
+
+// GetToAddress returns the value of ToAddress.
+func (s *RepeatingSend) GetToAddress() string {
+	return s.ToAddress
+}
+
+// GetSubject returns the value of Subject.
+func (s *RepeatingSend) GetSubject() OptNilString {
+	return s.Subject
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *RepeatingSend) GetBodyText() OptNilString {
+	return s.BodyText
+}
+
+// GetEveryMinutes returns the value of EveryMinutes.
+func (s *RepeatingSend) GetEveryMinutes() int {
+	return s.EveryMinutes
+}
+
+// GetOnlyIfRecipientIdleMinutes returns the value of OnlyIfRecipientIdleMinutes.
+func (s *RepeatingSend) GetOnlyIfRecipientIdleMinutes() OptNilInt {
+	return s.OnlyIfRecipientIdleMinutes
+}
+
+// GetStoppableByRecipient returns the value of StoppableByRecipient.
+func (s *RepeatingSend) GetStoppableByRecipient() bool {
+	return s.StoppableByRecipient
+}
+
+// GetMaxSends returns the value of MaxSends.
+func (s *RepeatingSend) GetMaxSends() OptNilInt {
+	return s.MaxSends
+}
+
+// GetUntil returns the value of Until.
+func (s *RepeatingSend) GetUntil() OptNilDateTime {
+	return s.Until
+}
+
+// GetStatus returns the value of Status.
+func (s *RepeatingSend) GetStatus() RepeatingSendStatus {
+	return s.Status
+}
+
+// GetNextRunAt returns the value of NextRunAt.
+func (s *RepeatingSend) GetNextRunAt() OptNilDateTime {
+	return s.NextRunAt
+}
+
+// GetSentCount returns the value of SentCount.
+func (s *RepeatingSend) GetSentCount() int {
+	return s.SentCount
+}
+
+// GetLastSentAt returns the value of LastSentAt.
+func (s *RepeatingSend) GetLastSentAt() OptNilDateTime {
+	return s.LastSentAt
+}
+
+// GetLastSentEmailID returns the value of LastSentEmailID.
+func (s *RepeatingSend) GetLastSentEmailID() OptNilString {
+	return s.LastSentEmailID
+}
+
+// GetRootMessageID returns the value of RootMessageID.
+func (s *RepeatingSend) GetRootMessageID() OptNilString {
+	return s.RootMessageID
+}
+
+// GetStoppedAt returns the value of StoppedAt.
+func (s *RepeatingSend) GetStoppedAt() OptNilDateTime {
+	return s.StoppedAt
+}
+
+// GetStopReason returns the value of StopReason.
+func (s *RepeatingSend) GetStopReason() OptNilString {
+	return s.StopReason
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *RepeatingSend) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *RepeatingSend) GetUpdatedAt() OptDateTime {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *RepeatingSend) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *RepeatingSend) SetOrgID(val OptUUID) {
+	s.OrgID = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *RepeatingSend) SetFromAddress(val string) {
+	s.FromAddress = val
+}
+
+// SetToAddress sets the value of ToAddress.
+func (s *RepeatingSend) SetToAddress(val string) {
+	s.ToAddress = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *RepeatingSend) SetSubject(val OptNilString) {
+	s.Subject = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *RepeatingSend) SetBodyText(val OptNilString) {
+	s.BodyText = val
+}
+
+// SetEveryMinutes sets the value of EveryMinutes.
+func (s *RepeatingSend) SetEveryMinutes(val int) {
+	s.EveryMinutes = val
+}
+
+// SetOnlyIfRecipientIdleMinutes sets the value of OnlyIfRecipientIdleMinutes.
+func (s *RepeatingSend) SetOnlyIfRecipientIdleMinutes(val OptNilInt) {
+	s.OnlyIfRecipientIdleMinutes = val
+}
+
+// SetStoppableByRecipient sets the value of StoppableByRecipient.
+func (s *RepeatingSend) SetStoppableByRecipient(val bool) {
+	s.StoppableByRecipient = val
+}
+
+// SetMaxSends sets the value of MaxSends.
+func (s *RepeatingSend) SetMaxSends(val OptNilInt) {
+	s.MaxSends = val
+}
+
+// SetUntil sets the value of Until.
+func (s *RepeatingSend) SetUntil(val OptNilDateTime) {
+	s.Until = val
+}
+
+// SetStatus sets the value of Status.
+func (s *RepeatingSend) SetStatus(val RepeatingSendStatus) {
+	s.Status = val
+}
+
+// SetNextRunAt sets the value of NextRunAt.
+func (s *RepeatingSend) SetNextRunAt(val OptNilDateTime) {
+	s.NextRunAt = val
+}
+
+// SetSentCount sets the value of SentCount.
+func (s *RepeatingSend) SetSentCount(val int) {
+	s.SentCount = val
+}
+
+// SetLastSentAt sets the value of LastSentAt.
+func (s *RepeatingSend) SetLastSentAt(val OptNilDateTime) {
+	s.LastSentAt = val
+}
+
+// SetLastSentEmailID sets the value of LastSentEmailID.
+func (s *RepeatingSend) SetLastSentEmailID(val OptNilString) {
+	s.LastSentEmailID = val
+}
+
+// SetRootMessageID sets the value of RootMessageID.
+func (s *RepeatingSend) SetRootMessageID(val OptNilString) {
+	s.RootMessageID = val
+}
+
+// SetStoppedAt sets the value of StoppedAt.
+func (s *RepeatingSend) SetStoppedAt(val OptNilDateTime) {
+	s.StoppedAt = val
+}
+
+// SetStopReason sets the value of StopReason.
+func (s *RepeatingSend) SetStopReason(val OptNilString) {
+	s.StopReason = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *RepeatingSend) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *RepeatingSend) SetUpdatedAt(val OptDateTime) {
+	s.UpdatedAt = val
+}
+
+// Ref: #/components/schemas/RepeatingSendStatus
+type RepeatingSendStatus string
+
+const (
+	RepeatingSendStatusActive             RepeatingSendStatus = "active"
+	RepeatingSendStatusPaused             RepeatingSendStatus = "paused"
+	RepeatingSendStatusStoppedByRecipient RepeatingSendStatus = "stopped_by_recipient"
+	RepeatingSendStatusCanceled           RepeatingSendStatus = "canceled"
+	RepeatingSendStatusCompleted          RepeatingSendStatus = "completed"
+)
+
+// AllValues returns all RepeatingSendStatus values.
+func (RepeatingSendStatus) AllValues() []RepeatingSendStatus {
+	return []RepeatingSendStatus{
+		RepeatingSendStatusActive,
+		RepeatingSendStatusPaused,
+		RepeatingSendStatusStoppedByRecipient,
+		RepeatingSendStatusCanceled,
+		RepeatingSendStatusCompleted,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RepeatingSendStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case RepeatingSendStatusActive:
+		return []byte(s), nil
+	case RepeatingSendStatusPaused:
+		return []byte(s), nil
+	case RepeatingSendStatusStoppedByRecipient:
+		return []byte(s), nil
+	case RepeatingSendStatusCanceled:
+		return []byte(s), nil
+	case RepeatingSendStatusCompleted:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RepeatingSendStatus) UnmarshalText(data []byte) error {
+	switch RepeatingSendStatus(data) {
+	case RepeatingSendStatusActive:
+		*s = RepeatingSendStatusActive
+		return nil
+	case RepeatingSendStatusPaused:
+		*s = RepeatingSendStatusPaused
+		return nil
+	case RepeatingSendStatusStoppedByRecipient:
+		*s = RepeatingSendStatusStoppedByRecipient
+		return nil
+	case RepeatingSendStatusCanceled:
+		*s = RepeatingSendStatusCanceled
+		return nil
+	case RepeatingSendStatusCompleted:
+		*s = RepeatingSendStatusCompleted
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/RepeatingSendStop
+type RepeatingSendStop struct {
+	RepeatID   uuid.UUID               `json:"repeat_id"`
+	Status     RepeatingSendStopStatus `json:"status"`
+	StoppedAt  time.Time               `json:"stopped_at"`
+	StopReason NilString               `json:"stop_reason"`
+	// The reply that told the sender, when one was sent.
+	ReplySentEmailID OptNilString `json:"reply_sent_email_id"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *RepeatingSendStop) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetStatus returns the value of Status.
+func (s *RepeatingSendStop) GetStatus() RepeatingSendStopStatus {
+	return s.Status
+}
+
+// GetStoppedAt returns the value of StoppedAt.
+func (s *RepeatingSendStop) GetStoppedAt() time.Time {
+	return s.StoppedAt
+}
+
+// GetStopReason returns the value of StopReason.
+func (s *RepeatingSendStop) GetStopReason() NilString {
+	return s.StopReason
+}
+
+// GetReplySentEmailID returns the value of ReplySentEmailID.
+func (s *RepeatingSendStop) GetReplySentEmailID() OptNilString {
+	return s.ReplySentEmailID
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *RepeatingSendStop) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *RepeatingSendStop) SetStatus(val RepeatingSendStopStatus) {
+	s.Status = val
+}
+
+// SetStoppedAt sets the value of StoppedAt.
+func (s *RepeatingSendStop) SetStoppedAt(val time.Time) {
+	s.StoppedAt = val
+}
+
+// SetStopReason sets the value of StopReason.
+func (s *RepeatingSendStop) SetStopReason(val NilString) {
+	s.StopReason = val
+}
+
+// SetReplySentEmailID sets the value of ReplySentEmailID.
+func (s *RepeatingSendStop) SetReplySentEmailID(val OptNilString) {
+	s.ReplySentEmailID = val
+}
+
+type RepeatingSendStopStatus string
+
+const (
+	RepeatingSendStopStatusStoppedByRecipient RepeatingSendStopStatus = "stopped_by_recipient"
+)
+
+// AllValues returns all RepeatingSendStopStatus values.
+func (RepeatingSendStopStatus) AllValues() []RepeatingSendStopStatus {
+	return []RepeatingSendStopStatus{
+		RepeatingSendStopStatusStoppedByRecipient,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RepeatingSendStopStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case RepeatingSendStopStatusStoppedByRecipient:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RepeatingSendStopStatus) UnmarshalText(data []byte) error {
+	switch RepeatingSendStopStatus(data) {
+	case RepeatingSendStopStatusStoppedByRecipient:
+		*s = RepeatingSendStopStatusStoppedByRecipient
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ReplayDeliveryBadRequest ErrorResponse
 
 func (*ReplayDeliveryBadRequest) replayDeliveryRes() {}
@@ -33831,6 +34497,7 @@ type ReplyInput struct {
 	// Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments.
 	// Combined raw decoded attachment bytes must be at most 31457280.
 	Attachments []SendMailAttachment `json:"attachments"`
+	Repeat      OptRepeatInput       `json:"repeat"`
 }
 
 // GetBodyText returns the value of BodyText.
@@ -33858,6 +34525,11 @@ func (s *ReplyInput) GetAttachments() []SendMailAttachment {
 	return s.Attachments
 }
 
+// GetRepeat returns the value of Repeat.
+func (s *ReplyInput) GetRepeat() OptRepeatInput {
+	return s.Repeat
+}
+
 // SetBodyText sets the value of BodyText.
 func (s *ReplyInput) SetBodyText(val OptString) {
 	s.BodyText = val
@@ -33881,6 +34553,11 @@ func (s *ReplyInput) SetWait(val OptBool) {
 // SetAttachments sets the value of Attachments.
 func (s *ReplyInput) SetAttachments(val []SendMailAttachment) {
 	s.Attachments = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *ReplyInput) SetRepeat(val OptRepeatInput) {
+	s.Repeat = val
 }
 
 type ReplyToEmailBadGateway ErrorResponse
@@ -36349,6 +37026,7 @@ func (s *SendMailAttachment) SetContentBase64(val string) {
 
 // Ref: #/components/schemas/SendMailInput
 type SendMailInput struct {
+	Repeat OptRepeatInput `json:"repeat"`
 	// RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
 	From string `json:"from"`
 	// Recipient address. Recipient eligibility depends on your account's outbound entitlements.
@@ -36394,6 +37072,11 @@ type SendMailInput struct {
 	// supported on scheduled sends). Reschedule via PATCH
 	// /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
 	ScheduledAt OptDateTime `json:"scheduled_at"`
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *SendMailInput) GetRepeat() OptRepeatInput {
+	return s.Repeat
 }
 
 // GetFrom returns the value of From.
@@ -36464,6 +37147,11 @@ func (s *SendMailInput) GetWaitTimeoutMs() OptInt {
 // GetScheduledAt returns the value of ScheduledAt.
 func (s *SendMailInput) GetScheduledAt() OptDateTime {
 	return s.ScheduledAt
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *SendMailInput) SetRepeat(val OptRepeatInput) {
+	s.Repeat = val
 }
 
 // SetFrom sets the value of From.
@@ -36729,6 +37417,8 @@ func (s *SendMailPayloadRef) SetCek(val string) {
 
 // Ref: #/components/schemas/SendMailResult
 type SendMailResult struct {
+	// Present when the request carried `repeat`. Manage it under `/repeating-sends/{id}`.
+	RepeatID OptUUID `json:"repeat_id"`
 	// Persisted sent-email attempt ID.
 	ID     string          `json:"id"`
 	Status SentEmailStatus `json:"status"`
@@ -36781,6 +37471,11 @@ type SendMailResult struct {
 	// yet: `queue_id` is null and `accepted` / `rejected` are
 	// empty. Absent on immediate sends.
 	ScheduledAt OptDateTime `json:"scheduled_at"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *SendMailResult) GetRepeatID() OptUUID {
+	return s.RepeatID
 }
 
 // GetID returns the value of ID.
@@ -36851,6 +37546,11 @@ func (s *SendMailResult) GetIdempotentReplay() bool {
 // GetScheduledAt returns the value of ScheduledAt.
 func (s *SendMailResult) GetScheduledAt() OptDateTime {
 	return s.ScheduledAt
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *SendMailResult) SetRepeatID(val OptUUID) {
+	s.RepeatID = val
 }
 
 // SetID sets the value of ID.
@@ -37534,6 +38234,10 @@ type SentEmailDetail struct {
 	// reached the `canceled` status.
 	CanceledAt      OptNilDateTime                       `json:"canceled_at"`
 	PresenceControl OptNilSentEmailDetailPresenceControl `json:"presence_control"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilSentEmailDetailRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilSentEmailDetailSenderMember `json:"sender_member"`
@@ -37723,6 +38427,11 @@ func (s *SentEmailDetail) GetCanceledAt() OptNilDateTime {
 // GetPresenceControl returns the value of PresenceControl.
 func (s *SentEmailDetail) GetPresenceControl() OptNilSentEmailDetailPresenceControl {
 	return s.PresenceControl
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *SentEmailDetail) GetRepeat() OptNilSentEmailDetailRepeat {
+	return s.Repeat
 }
 
 // GetSenderMember returns the value of SenderMember.
@@ -37918,6 +38627,11 @@ func (s *SentEmailDetail) SetCanceledAt(val OptNilDateTime) {
 // SetPresenceControl sets the value of PresenceControl.
 func (s *SentEmailDetail) SetPresenceControl(val OptNilSentEmailDetailPresenceControl) {
 	s.PresenceControl = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *SentEmailDetail) SetRepeat(val OptNilSentEmailDetailRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -38118,6 +38832,34 @@ func (s *SentEmailDetailPresenceControlStatus) UnmarshalText(data []byte) error 
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type SentEmailDetailRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *SentEmailDetailRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *SentEmailDetailRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *SentEmailDetailRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *SentEmailDetailRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Verified human authorship, projected only within the member organization. Historical attribution
@@ -38423,6 +39165,10 @@ type SentEmailSummary struct {
 	// reached the `canceled` status.
 	CanceledAt      OptNilDateTime                        `json:"canceled_at"`
 	PresenceControl OptNilSentEmailSummaryPresenceControl `json:"presence_control"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilSentEmailSummaryRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilSentEmailSummarySenderMember `json:"sender_member"`
@@ -38586,6 +39332,11 @@ func (s *SentEmailSummary) GetCanceledAt() OptNilDateTime {
 // GetPresenceControl returns the value of PresenceControl.
 func (s *SentEmailSummary) GetPresenceControl() OptNilSentEmailSummaryPresenceControl {
 	return s.PresenceControl
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *SentEmailSummary) GetRepeat() OptNilSentEmailSummaryRepeat {
+	return s.Repeat
 }
 
 // GetSenderMember returns the value of SenderMember.
@@ -38753,6 +39504,11 @@ func (s *SentEmailSummary) SetPresenceControl(val OptNilSentEmailSummaryPresence
 	s.PresenceControl = val
 }
 
+// SetRepeat sets the value of Repeat.
+func (s *SentEmailSummary) SetRepeat(val OptNilSentEmailSummaryRepeat) {
+	s.Repeat = val
+}
+
 // SetSenderMember sets the value of SenderMember.
 func (s *SentEmailSummary) SetSenderMember(val OptNilSentEmailSummarySenderMember) {
 	s.SenderMember = val
@@ -38829,6 +39585,34 @@ func (s *SentEmailSummaryPresenceControlStatus) UnmarshalText(data []byte) error
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type SentEmailSummaryRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *SentEmailSummaryRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *SentEmailSummaryRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *SentEmailSummaryRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *SentEmailSummaryRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Verified human authorship, projected only within the member organization. Historical attribution
@@ -39996,69 +40780,53 @@ func (s *StartCliSignupInputMetadata) init() StartCliSignupInputMetadata {
 	return m
 }
 
-type StopAgentMessageScheduleBadRequest ErrorResponse
+type StopRepeatingSendBadRequest ErrorResponse
 
-func (*StopAgentMessageScheduleBadRequest) stopAgentMessageScheduleRes() {}
+func (*StopRepeatingSendBadRequest) stopRepeatingSendRes() {}
 
-type StopAgentMessageScheduleForbidden ErrorResponse
+type StopRepeatingSendForbidden ErrorResponse
 
-func (*StopAgentMessageScheduleForbidden) stopAgentMessageScheduleRes() {}
+func (*StopRepeatingSendForbidden) stopRepeatingSendRes() {}
 
-// Ref: #/components/schemas/StopAgentMessageScheduleInput
-type StopAgentMessageScheduleInput struct {
-	// Short reason shown to the schedule's owner.
-	Reason OptString `json:"reason"`
-}
+type StopRepeatingSendNotFound ErrorResponse
 
-// GetReason returns the value of Reason.
-func (s *StopAgentMessageScheduleInput) GetReason() OptString {
-	return s.Reason
-}
-
-// SetReason sets the value of Reason.
-func (s *StopAgentMessageScheduleInput) SetReason(val OptString) {
-	s.Reason = val
-}
-
-type StopAgentMessageScheduleNotFound ErrorResponse
-
-func (*StopAgentMessageScheduleNotFound) stopAgentMessageScheduleRes() {}
+func (*StopRepeatingSendNotFound) stopRepeatingSendRes() {}
 
 // Merged schema.
-type StopAgentMessageScheduleOK struct {
-	Success bool                     `json:"success"`
-	Data    AgentMessageScheduleStop `json:"data"`
+type StopRepeatingSendOK struct {
+	Success bool              `json:"success"`
+	Data    RepeatingSendStop `json:"data"`
 }
 
 // GetSuccess returns the value of Success.
-func (s *StopAgentMessageScheduleOK) GetSuccess() bool {
+func (s *StopRepeatingSendOK) GetSuccess() bool {
 	return s.Success
 }
 
 // GetData returns the value of Data.
-func (s *StopAgentMessageScheduleOK) GetData() AgentMessageScheduleStop {
+func (s *StopRepeatingSendOK) GetData() RepeatingSendStop {
 	return s.Data
 }
 
 // SetSuccess sets the value of Success.
-func (s *StopAgentMessageScheduleOK) SetSuccess(val bool) {
+func (s *StopRepeatingSendOK) SetSuccess(val bool) {
 	s.Success = val
 }
 
 // SetData sets the value of Data.
-func (s *StopAgentMessageScheduleOK) SetData(val AgentMessageScheduleStop) {
+func (s *StopRepeatingSendOK) SetData(val RepeatingSendStop) {
 	s.Data = val
 }
 
-func (*StopAgentMessageScheduleOK) stopAgentMessageScheduleRes() {}
+func (*StopRepeatingSendOK) stopRepeatingSendRes() {}
 
-type StopAgentMessageScheduleUnauthorized ErrorResponse
+type StopRepeatingSendUnauthorized ErrorResponse
 
-func (*StopAgentMessageScheduleUnauthorized) stopAgentMessageScheduleRes() {}
+func (*StopRepeatingSendUnauthorized) stopRepeatingSendRes() {}
 
-type StopAgentMessageScheduleUnprocessableEntity ErrorResponse
+type StopRepeatingSendUnprocessableEntity ErrorResponse
 
-func (*StopAgentMessageScheduleUnprocessableEntity) stopAgentMessageScheduleRes() {}
+func (*StopRepeatingSendUnprocessableEntity) stopRepeatingSendRes() {}
 
 // Ref: #/components/schemas/StorageStats
 type StorageStats struct {
@@ -42004,6 +42772,10 @@ type ThreadMessage struct {
 	Status OptNilString `json:"status"`
 	// Received_at for inbound, created_at for outbound.
 	Timestamp OptNilDateTime `json:"timestamp"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilThreadMessageRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilThreadMessageSenderMember `json:"sender_member"`
@@ -42049,6 +42821,11 @@ func (s *ThreadMessage) GetTimestamp() OptNilDateTime {
 	return s.Timestamp
 }
 
+// GetRepeat returns the value of Repeat.
+func (s *ThreadMessage) GetRepeat() OptNilThreadMessageRepeat {
+	return s.Repeat
+}
+
 // GetSenderMember returns the value of SenderMember.
 func (s *ThreadMessage) GetSenderMember() OptNilThreadMessageSenderMember {
 	return s.SenderMember
@@ -42092,6 +42869,11 @@ func (s *ThreadMessage) SetStatus(val OptNilString) {
 // SetTimestamp sets the value of Timestamp.
 func (s *ThreadMessage) SetTimestamp(val OptNilDateTime) {
 	s.Timestamp = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *ThreadMessage) SetRepeat(val OptNilThreadMessageRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -42141,6 +42923,34 @@ func (s *ThreadMessageDirection) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type ThreadMessageRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *ThreadMessageRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *ThreadMessageRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *ThreadMessageRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *ThreadMessageRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Verified human authorship, projected only within the member organization. Historical attribution
@@ -42402,168 +43212,6 @@ func (*UpdateAccountOK) updateAccountRes() {}
 type UpdateAccountUnauthorized ErrorResponse
 
 func (*UpdateAccountUnauthorized) updateAccountRes() {}
-
-type UpdateAgentMessageScheduleBadRequest ErrorResponse
-
-func (*UpdateAgentMessageScheduleBadRequest) updateAgentMessageScheduleRes() {}
-
-type UpdateAgentMessageScheduleForbidden ErrorResponse
-
-func (*UpdateAgentMessageScheduleForbidden) updateAgentMessageScheduleRes() {}
-
-// Ref: #/components/schemas/UpdateAgentMessageScheduleInput
-type UpdateAgentMessageScheduleInput struct {
-	Status          OptUpdateAgentMessageScheduleInputStatus `json:"status"`
-	Subject         OptString                                `json:"subject"`
-	BodyText        OptString                                `json:"body_text"`
-	IntervalMinutes OptInt                                   `json:"interval_minutes"`
-	IdleMinutes     OptNilInt                                `json:"idle_minutes"`
-	AgentCanStop    OptBool                                  `json:"agent_can_stop"`
-}
-
-// GetStatus returns the value of Status.
-func (s *UpdateAgentMessageScheduleInput) GetStatus() OptUpdateAgentMessageScheduleInputStatus {
-	return s.Status
-}
-
-// GetSubject returns the value of Subject.
-func (s *UpdateAgentMessageScheduleInput) GetSubject() OptString {
-	return s.Subject
-}
-
-// GetBodyText returns the value of BodyText.
-func (s *UpdateAgentMessageScheduleInput) GetBodyText() OptString {
-	return s.BodyText
-}
-
-// GetIntervalMinutes returns the value of IntervalMinutes.
-func (s *UpdateAgentMessageScheduleInput) GetIntervalMinutes() OptInt {
-	return s.IntervalMinutes
-}
-
-// GetIdleMinutes returns the value of IdleMinutes.
-func (s *UpdateAgentMessageScheduleInput) GetIdleMinutes() OptNilInt {
-	return s.IdleMinutes
-}
-
-// GetAgentCanStop returns the value of AgentCanStop.
-func (s *UpdateAgentMessageScheduleInput) GetAgentCanStop() OptBool {
-	return s.AgentCanStop
-}
-
-// SetStatus sets the value of Status.
-func (s *UpdateAgentMessageScheduleInput) SetStatus(val OptUpdateAgentMessageScheduleInputStatus) {
-	s.Status = val
-}
-
-// SetSubject sets the value of Subject.
-func (s *UpdateAgentMessageScheduleInput) SetSubject(val OptString) {
-	s.Subject = val
-}
-
-// SetBodyText sets the value of BodyText.
-func (s *UpdateAgentMessageScheduleInput) SetBodyText(val OptString) {
-	s.BodyText = val
-}
-
-// SetIntervalMinutes sets the value of IntervalMinutes.
-func (s *UpdateAgentMessageScheduleInput) SetIntervalMinutes(val OptInt) {
-	s.IntervalMinutes = val
-}
-
-// SetIdleMinutes sets the value of IdleMinutes.
-func (s *UpdateAgentMessageScheduleInput) SetIdleMinutes(val OptNilInt) {
-	s.IdleMinutes = val
-}
-
-// SetAgentCanStop sets the value of AgentCanStop.
-func (s *UpdateAgentMessageScheduleInput) SetAgentCanStop(val OptBool) {
-	s.AgentCanStop = val
-}
-
-type UpdateAgentMessageScheduleInputStatus string
-
-const (
-	UpdateAgentMessageScheduleInputStatusActive         UpdateAgentMessageScheduleInputStatus = "active"
-	UpdateAgentMessageScheduleInputStatusPaused         UpdateAgentMessageScheduleInputStatus = "paused"
-	UpdateAgentMessageScheduleInputStatusStoppedByOwner UpdateAgentMessageScheduleInputStatus = "stopped_by_owner"
-)
-
-// AllValues returns all UpdateAgentMessageScheduleInputStatus values.
-func (UpdateAgentMessageScheduleInputStatus) AllValues() []UpdateAgentMessageScheduleInputStatus {
-	return []UpdateAgentMessageScheduleInputStatus{
-		UpdateAgentMessageScheduleInputStatusActive,
-		UpdateAgentMessageScheduleInputStatusPaused,
-		UpdateAgentMessageScheduleInputStatusStoppedByOwner,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s UpdateAgentMessageScheduleInputStatus) MarshalText() ([]byte, error) {
-	switch s {
-	case UpdateAgentMessageScheduleInputStatusActive:
-		return []byte(s), nil
-	case UpdateAgentMessageScheduleInputStatusPaused:
-		return []byte(s), nil
-	case UpdateAgentMessageScheduleInputStatusStoppedByOwner:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *UpdateAgentMessageScheduleInputStatus) UnmarshalText(data []byte) error {
-	switch UpdateAgentMessageScheduleInputStatus(data) {
-	case UpdateAgentMessageScheduleInputStatusActive:
-		*s = UpdateAgentMessageScheduleInputStatusActive
-		return nil
-	case UpdateAgentMessageScheduleInputStatusPaused:
-		*s = UpdateAgentMessageScheduleInputStatusPaused
-		return nil
-	case UpdateAgentMessageScheduleInputStatusStoppedByOwner:
-		*s = UpdateAgentMessageScheduleInputStatusStoppedByOwner
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-type UpdateAgentMessageScheduleNotFound ErrorResponse
-
-func (*UpdateAgentMessageScheduleNotFound) updateAgentMessageScheduleRes() {}
-
-// Merged schema.
-type UpdateAgentMessageScheduleOK struct {
-	Success bool                 `json:"success"`
-	Data    AgentMessageSchedule `json:"data"`
-}
-
-// GetSuccess returns the value of Success.
-func (s *UpdateAgentMessageScheduleOK) GetSuccess() bool {
-	return s.Success
-}
-
-// GetData returns the value of Data.
-func (s *UpdateAgentMessageScheduleOK) GetData() AgentMessageSchedule {
-	return s.Data
-}
-
-// SetSuccess sets the value of Success.
-func (s *UpdateAgentMessageScheduleOK) SetSuccess(val bool) {
-	s.Success = val
-}
-
-// SetData sets the value of Data.
-func (s *UpdateAgentMessageScheduleOK) SetData(val AgentMessageSchedule) {
-	s.Data = val
-}
-
-func (*UpdateAgentMessageScheduleOK) updateAgentMessageScheduleRes() {}
-
-type UpdateAgentMessageScheduleUnauthorized ErrorResponse
-
-func (*UpdateAgentMessageScheduleUnauthorized) updateAgentMessageScheduleRes() {}
 
 // Set one or both independent discovery permissions.
 // Ref: #/components/schemas/UpdateAgentNetworkMemberInput
@@ -43101,6 +43749,186 @@ func (*UpdateRegistryUnauthorized) updateRegistryRes() {}
 type UpdateRegistryUnprocessableEntity ErrorResponse
 
 func (*UpdateRegistryUnprocessableEntity) updateRegistryRes() {}
+
+type UpdateRepeatingSendBadRequest ErrorResponse
+
+func (*UpdateRepeatingSendBadRequest) updateRepeatingSendRes() {}
+
+// Ref: #/components/schemas/UpdateRepeatingSendInput
+type UpdateRepeatingSendInput struct {
+	Status                     OptUpdateRepeatingSendInputStatus `json:"status"`
+	EveryMinutes               OptInt                            `json:"every_minutes"`
+	OnlyIfRecipientIdleMinutes OptNilInt                         `json:"only_if_recipient_idle_minutes"`
+	StoppableByRecipient       OptBool                           `json:"stoppable_by_recipient"`
+	MaxSends                   OptNilInt                         `json:"max_sends"`
+	Until                      OptNilDateTime                    `json:"until"`
+	BodyText                   OptString                         `json:"body_text"`
+	Subject                    OptString                         `json:"subject"`
+}
+
+// GetStatus returns the value of Status.
+func (s *UpdateRepeatingSendInput) GetStatus() OptUpdateRepeatingSendInputStatus {
+	return s.Status
+}
+
+// GetEveryMinutes returns the value of EveryMinutes.
+func (s *UpdateRepeatingSendInput) GetEveryMinutes() OptInt {
+	return s.EveryMinutes
+}
+
+// GetOnlyIfRecipientIdleMinutes returns the value of OnlyIfRecipientIdleMinutes.
+func (s *UpdateRepeatingSendInput) GetOnlyIfRecipientIdleMinutes() OptNilInt {
+	return s.OnlyIfRecipientIdleMinutes
+}
+
+// GetStoppableByRecipient returns the value of StoppableByRecipient.
+func (s *UpdateRepeatingSendInput) GetStoppableByRecipient() OptBool {
+	return s.StoppableByRecipient
+}
+
+// GetMaxSends returns the value of MaxSends.
+func (s *UpdateRepeatingSendInput) GetMaxSends() OptNilInt {
+	return s.MaxSends
+}
+
+// GetUntil returns the value of Until.
+func (s *UpdateRepeatingSendInput) GetUntil() OptNilDateTime {
+	return s.Until
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *UpdateRepeatingSendInput) GetBodyText() OptString {
+	return s.BodyText
+}
+
+// GetSubject returns the value of Subject.
+func (s *UpdateRepeatingSendInput) GetSubject() OptString {
+	return s.Subject
+}
+
+// SetStatus sets the value of Status.
+func (s *UpdateRepeatingSendInput) SetStatus(val OptUpdateRepeatingSendInputStatus) {
+	s.Status = val
+}
+
+// SetEveryMinutes sets the value of EveryMinutes.
+func (s *UpdateRepeatingSendInput) SetEveryMinutes(val OptInt) {
+	s.EveryMinutes = val
+}
+
+// SetOnlyIfRecipientIdleMinutes sets the value of OnlyIfRecipientIdleMinutes.
+func (s *UpdateRepeatingSendInput) SetOnlyIfRecipientIdleMinutes(val OptNilInt) {
+	s.OnlyIfRecipientIdleMinutes = val
+}
+
+// SetStoppableByRecipient sets the value of StoppableByRecipient.
+func (s *UpdateRepeatingSendInput) SetStoppableByRecipient(val OptBool) {
+	s.StoppableByRecipient = val
+}
+
+// SetMaxSends sets the value of MaxSends.
+func (s *UpdateRepeatingSendInput) SetMaxSends(val OptNilInt) {
+	s.MaxSends = val
+}
+
+// SetUntil sets the value of Until.
+func (s *UpdateRepeatingSendInput) SetUntil(val OptNilDateTime) {
+	s.Until = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *UpdateRepeatingSendInput) SetBodyText(val OptString) {
+	s.BodyText = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *UpdateRepeatingSendInput) SetSubject(val OptString) {
+	s.Subject = val
+}
+
+type UpdateRepeatingSendInputStatus string
+
+const (
+	UpdateRepeatingSendInputStatusActive   UpdateRepeatingSendInputStatus = "active"
+	UpdateRepeatingSendInputStatusPaused   UpdateRepeatingSendInputStatus = "paused"
+	UpdateRepeatingSendInputStatusCanceled UpdateRepeatingSendInputStatus = "canceled"
+)
+
+// AllValues returns all UpdateRepeatingSendInputStatus values.
+func (UpdateRepeatingSendInputStatus) AllValues() []UpdateRepeatingSendInputStatus {
+	return []UpdateRepeatingSendInputStatus{
+		UpdateRepeatingSendInputStatusActive,
+		UpdateRepeatingSendInputStatusPaused,
+		UpdateRepeatingSendInputStatusCanceled,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdateRepeatingSendInputStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdateRepeatingSendInputStatusActive:
+		return []byte(s), nil
+	case UpdateRepeatingSendInputStatusPaused:
+		return []byte(s), nil
+	case UpdateRepeatingSendInputStatusCanceled:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdateRepeatingSendInputStatus) UnmarshalText(data []byte) error {
+	switch UpdateRepeatingSendInputStatus(data) {
+	case UpdateRepeatingSendInputStatusActive:
+		*s = UpdateRepeatingSendInputStatusActive
+		return nil
+	case UpdateRepeatingSendInputStatusPaused:
+		*s = UpdateRepeatingSendInputStatusPaused
+		return nil
+	case UpdateRepeatingSendInputStatusCanceled:
+		*s = UpdateRepeatingSendInputStatusCanceled
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type UpdateRepeatingSendNotFound ErrorResponse
+
+func (*UpdateRepeatingSendNotFound) updateRepeatingSendRes() {}
+
+// Merged schema.
+type UpdateRepeatingSendOK struct {
+	Success bool          `json:"success"`
+	Data    RepeatingSend `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateRepeatingSendOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateRepeatingSendOK) GetData() RepeatingSend {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateRepeatingSendOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateRepeatingSendOK) SetData(val RepeatingSend) {
+	s.Data = val
+}
+
+func (*UpdateRepeatingSendOK) updateRepeatingSendRes() {}
+
+type UpdateRepeatingSendUnauthorized ErrorResponse
+
+func (*UpdateRepeatingSendUnauthorized) updateRepeatingSendRes() {}
 
 type UpdateRouteBadRequest ErrorResponse
 

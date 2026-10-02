@@ -15,10 +15,6 @@ from .agent_claim_result_plan import AgentClaimResultPlan
 from .agent_claim_start_result import AgentClaimStartResult
 from .agent_contact_policy import AgentContactPolicy
 from .agent_contact_policy_override import AgentContactPolicyOverride
-from .agent_message_schedule import AgentMessageSchedule
-from .agent_message_schedule_status import AgentMessageScheduleStatus
-from .agent_message_schedule_stop import AgentMessageScheduleStop
-from .agent_message_schedule_stop_status import AgentMessageScheduleStopStatus
 from .agent_network import AgentNetwork
 from .agent_network_contact_admission import AgentNetworkContactAdmission
 from .agent_network_contact_admission_input import AgentNetworkContactAdmissionInput
@@ -85,6 +81,7 @@ from .contact_policy_rule_input_effect import ContactPolicyRuleInputEffect
 from .conversation import Conversation
 from .conversation_message import ConversationMessage
 from .conversation_message_direction import ConversationMessageDirection
+from .conversation_message_repeat_type_0 import ConversationMessageRepeatType0
 from .conversation_message_role import ConversationMessageRole
 from .conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
 from .create_agent_account_input import CreateAgentAccountInput
@@ -103,8 +100,6 @@ from .create_agent_connection_response_200_data_type_1 import CreateAgentConnect
 from .create_agent_connection_response_200_data_type_1_connection import CreateAgentConnectionResponse200DataType1Connection
 from .create_agent_connection_response_200_data_type_1_connection_ownership_kind import CreateAgentConnectionResponse200DataType1ConnectionOwnershipKind
 from .create_agent_connection_response_200_data_type_1_connection_status import CreateAgentConnectionResponse200DataType1ConnectionStatus
-from .create_agent_message_schedule_input import CreateAgentMessageScheduleInput
-from .create_agent_message_schedule_response_201 import CreateAgentMessageScheduleResponse201
 from .create_challenge_input import CreateChallengeInput
 from .create_challenge_input_network import CreateChallengeInputNetwork
 from .create_challenge_response_201 import CreateChallengeResponse201
@@ -155,8 +150,6 @@ from .define_agent_response_201 import DefineAgentResponse201
 from .define_agent_response_201_data import DefineAgentResponse201Data
 from .delete_agent_contact_response_200 import DeleteAgentContactResponse200
 from .delete_agent_contact_response_200_data import DeleteAgentContactResponse200Data
-from .delete_agent_message_schedule_response_200 import DeleteAgentMessageScheduleResponse200
-from .delete_agent_message_schedule_response_200_data import DeleteAgentMessageScheduleResponse200Data
 from .delete_contact_response_200 import DeleteContactResponse200
 from .delete_contact_response_200_data import DeleteContactResponse200Data
 from .delete_domain_response_200 import DeleteDomainResponse200
@@ -174,6 +167,8 @@ from .delete_memory_result import DeleteMemoryResult
 from .delete_memory_scope_type import DeleteMemoryScopeType
 from .delete_registry_response_200 import DeleteRegistryResponse200
 from .delete_registry_response_200_data import DeleteRegistryResponse200Data
+from .delete_repeating_send_response_200 import DeleteRepeatingSendResponse200
+from .delete_repeating_send_response_200_data import DeleteRepeatingSendResponse200Data
 from .delete_route_response_200 import DeleteRouteResponse200
 from .delete_route_response_200_data import DeleteRouteResponse200Data
 from .delete_sent_email_response_200 import DeleteSentEmailResponse200
@@ -206,6 +201,7 @@ from .email_auth import EmailAuth
 from .email_detail import EmailDetail
 from .email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
 from .email_detail_awaiting import EmailDetailAwaiting
+from .email_detail_repeat_type_0 import EmailDetailRepeatType0
 from .email_detail_reply import EmailDetailReply
 from .email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
 from .email_search_facet_bucket import EmailSearchFacetBucket
@@ -219,6 +215,7 @@ from .email_status import EmailStatus
 from .email_summary import EmailSummary
 from .email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
 from .email_summary_awaiting import EmailSummaryAwaiting
+from .email_summary_repeat_type_0 import EmailSummaryRepeatType0
 from .email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
 from .email_webhook_status_type_1 import EmailWebhookStatusType1
 from .email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
@@ -272,7 +269,6 @@ from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
 from .get_agent_contact_policy_response_200 import GetAgentContactPolicyResponse200
-from .get_agent_message_schedule_response_200 import GetAgentMessageScheduleResponse200
 from .get_agent_response_200 import GetAgentResponse200
 from .get_challenge_response_200 import GetChallengeResponse200
 from .get_contact_policy_response_200 import GetContactPolicyResponse200
@@ -291,6 +287,7 @@ from .get_memory_scope_type import GetMemoryScopeType
 from .get_org_routing_topology_response_200 import GetOrgRoutingTopologyResponse200
 from .get_outbound_status_response_200 import GetOutboundStatusResponse200
 from .get_registry_response_200 import GetRegistryResponse200
+from .get_repeating_send_response_200 import GetRepeatingSendResponse200
 from .get_send_permissions_response_200 import GetSendPermissionsResponse200
 from .get_sent_email_response_200 import GetSentEmailResponse200
 from .get_spend_policy_response_200 import GetSpendPolicyResponse200
@@ -328,7 +325,6 @@ from .list_agent_connections_response_200_meta import ListAgentConnectionsRespon
 from .list_agent_contacts_response_200 import ListAgentContactsResponse200
 from .list_agent_contacts_response_200_data_item import ListAgentContactsResponse200DataItem
 from .list_agent_contacts_response_200_meta import ListAgentContactsResponse200Meta
-from .list_agent_message_schedules_response_200 import ListAgentMessageSchedulesResponse200
 from .list_agent_networks_response_200 import ListAgentNetworksResponse200
 from .list_contacts_response_200 import ListContactsResponse200
 from .list_contacts_response_200_data_item import ListContactsResponse200DataItem
@@ -356,6 +352,7 @@ from .list_payout_addresses_response_200 import ListPayoutAddressesResponse200
 from .list_registries_response_200 import ListRegistriesResponse200
 from .list_registry_agents_response_200 import ListRegistryAgentsResponse200
 from .list_registry_requests_response_200 import ListRegistryRequestsResponse200
+from .list_repeating_sends_response_200 import ListRepeatingSendsResponse200
 from .list_routes_response_200 import ListRoutesResponse200
 from .list_sent_emails_response_200 import ListSentEmailsResponse200
 from .list_templates_response_200 import ListTemplatesResponse200
@@ -438,6 +435,12 @@ from .remove_default_network_member_response_200_data import RemoveDefaultNetwor
 from .reorder_routes_input import ReorderRoutesInput
 from .reorder_routes_input_updates_item import ReorderRoutesInputUpdatesItem
 from .reorder_routes_response_200 import ReorderRoutesResponse200
+from .repeat_input import RepeatInput
+from .repeat_stop_input import RepeatStopInput
+from .repeating_send import RepeatingSend
+from .repeating_send_status import RepeatingSendStatus
+from .repeating_send_stop import RepeatingSendStop
+from .repeating_send_stop_status import RepeatingSendStopStatus
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
 from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
@@ -505,10 +508,12 @@ from .send_permission_your_domain_type import SendPermissionYourDomainType
 from .send_permissions_meta import SendPermissionsMeta
 from .sent_email_detail import SentEmailDetail
 from .sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
+from .sent_email_detail_repeat_type_0 import SentEmailDetailRepeatType0
 from .sent_email_detail_sender_member_type_0 import SentEmailDetailSenderMemberType0
 from .sent_email_reschedule_input import SentEmailRescheduleInput
 from .sent_email_status import SentEmailStatus
 from .sent_email_summary import SentEmailSummary
+from .sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
 from .sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
 from .set_function_route_response_200 import SetFunctionRouteResponse200
 from .set_function_secret_input import SetFunctionSecretInput
@@ -541,8 +546,7 @@ from .start_cli_login_response_201 import StartCliLoginResponse201
 from .start_cli_signup_input import StartCliSignupInput
 from .start_cli_signup_input_metadata import StartCliSignupInputMetadata
 from .start_cli_signup_response_201 import StartCliSignupResponse201
-from .stop_agent_message_schedule_input import StopAgentMessageScheduleInput
-from .stop_agent_message_schedule_response_200 import StopAgentMessageScheduleResponse200
+from .stop_repeating_send_response_200 import StopRepeatingSendResponse200
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
 from .template_author import TemplateAuthor
@@ -575,6 +579,7 @@ from .test_result import TestResult
 from .thread import Thread
 from .thread_message import ThreadMessage
 from .thread_message_direction import ThreadMessageDirection
+from .thread_message_repeat_type_0 import ThreadMessageRepeatType0
 from .thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
 from .unpublish_agent_response_200 import UnpublishAgentResponse200
 from .unpublish_agent_response_200_data import UnpublishAgentResponse200Data
@@ -583,9 +588,6 @@ from .unset_function_route_response_200_data import UnsetFunctionRouteResponse20
 from .unverified_domain import UnverifiedDomain
 from .update_account_input import UpdateAccountInput
 from .update_account_response_200 import UpdateAccountResponse200
-from .update_agent_message_schedule_input import UpdateAgentMessageScheduleInput
-from .update_agent_message_schedule_input_status import UpdateAgentMessageScheduleInputStatus
-from .update_agent_message_schedule_response_200 import UpdateAgentMessageScheduleResponse200
 from .update_agent_network_member_input import UpdateAgentNetworkMemberInput
 from .update_default_network_member_response_200 import UpdateDefaultNetworkMemberResponse200
 from .update_domain_input import UpdateDomainInput
@@ -601,6 +603,9 @@ from .update_function_response_200 import UpdateFunctionResponse200
 from .update_registry_input import UpdateRegistryInput
 from .update_registry_response_200 import UpdateRegistryResponse200
 from .update_registry_response_200_data import UpdateRegistryResponse200Data
+from .update_repeating_send_input import UpdateRepeatingSendInput
+from .update_repeating_send_input_status import UpdateRepeatingSendInputStatus
+from .update_repeating_send_response_200 import UpdateRepeatingSendResponse200
 from .update_route_input import UpdateRouteInput
 from .update_route_input_match_type import UpdateRouteInputMatchType
 from .update_route_response_200 import UpdateRouteResponse200
@@ -662,10 +667,6 @@ __all__ = (
     "AgentClaimStartResult",
     "AgentContactPolicy",
     "AgentContactPolicyOverride",
-    "AgentMessageSchedule",
-    "AgentMessageScheduleStatus",
-    "AgentMessageScheduleStop",
-    "AgentMessageScheduleStopStatus",
     "AgentNetwork",
     "AgentNetworkContactAdmission",
     "AgentNetworkContactAdmissionInput",
@@ -732,6 +733,7 @@ __all__ = (
     "Conversation",
     "ConversationMessage",
     "ConversationMessageDirection",
+    "ConversationMessageRepeatType0",
     "ConversationMessageRole",
     "ConversationMessageSenderMemberType0",
     "CreateAgentAccountInput",
@@ -750,8 +752,6 @@ __all__ = (
     "CreateAgentConnectionResponse200DataType1Connection",
     "CreateAgentConnectionResponse200DataType1ConnectionOwnershipKind",
     "CreateAgentConnectionResponse200DataType1ConnectionStatus",
-    "CreateAgentMessageScheduleInput",
-    "CreateAgentMessageScheduleResponse201",
     "CreateChallengeInput",
     "CreateChallengeInputNetwork",
     "CreateChallengeResponse201",
@@ -802,8 +802,6 @@ __all__ = (
     "DefineAgentResponse201Data",
     "DeleteAgentContactResponse200",
     "DeleteAgentContactResponse200Data",
-    "DeleteAgentMessageScheduleResponse200",
-    "DeleteAgentMessageScheduleResponse200Data",
     "DeleteContactResponse200",
     "DeleteContactResponse200Data",
     "DeleteDomainResponse200",
@@ -821,6 +819,8 @@ __all__ = (
     "DeleteMemoryScopeType",
     "DeleteRegistryResponse200",
     "DeleteRegistryResponse200Data",
+    "DeleteRepeatingSendResponse200",
+    "DeleteRepeatingSendResponse200Data",
     "DeleteRouteResponse200",
     "DeleteRouteResponse200Data",
     "DeleteSentEmailResponse200",
@@ -853,6 +853,7 @@ __all__ = (
     "EmailDetail",
     "EmailDetailAutomationHeadersType0",
     "EmailDetailAwaiting",
+    "EmailDetailRepeatType0",
     "EmailDetailReply",
     "EmailDetailSenderMemberType0",
     "EmailSearchFacetBucket",
@@ -866,6 +867,7 @@ __all__ = (
     "EmailSummary",
     "EmailSummaryAutomationHeadersType0",
     "EmailSummaryAwaiting",
+    "EmailSummaryRepeatType0",
     "EmailSummarySenderMemberType0",
     "EmailWebhookStatusType1",
     "EmailWebhookStatusType2Type1",
@@ -919,7 +921,6 @@ __all__ = (
     "GateFixAction",
     "GetAccountResponse200",
     "GetAgentContactPolicyResponse200",
-    "GetAgentMessageScheduleResponse200",
     "GetAgentResponse200",
     "GetChallengeResponse200",
     "GetContactPolicyResponse200",
@@ -938,6 +939,7 @@ __all__ = (
     "GetOrgRoutingTopologyResponse200",
     "GetOutboundStatusResponse200",
     "GetRegistryResponse200",
+    "GetRepeatingSendResponse200",
     "GetSendPermissionsResponse200",
     "GetSentEmailResponse200",
     "GetSpendPolicyResponse200",
@@ -975,7 +977,6 @@ __all__ = (
     "ListAgentContactsResponse200",
     "ListAgentContactsResponse200DataItem",
     "ListAgentContactsResponse200Meta",
-    "ListAgentMessageSchedulesResponse200",
     "ListAgentNetworksResponse200",
     "ListContactsResponse200",
     "ListContactsResponse200DataItem",
@@ -1003,6 +1004,7 @@ __all__ = (
     "ListRegistriesResponse200",
     "ListRegistryAgentsResponse200",
     "ListRegistryRequestsResponse200",
+    "ListRepeatingSendsResponse200",
     "ListRoutesResponse200",
     "ListSentEmailsResponse200",
     "ListTemplatesResponse200",
@@ -1085,6 +1087,12 @@ __all__ = (
     "ReorderRoutesInput",
     "ReorderRoutesInputUpdatesItem",
     "ReorderRoutesResponse200",
+    "RepeatingSend",
+    "RepeatingSendStatus",
+    "RepeatingSendStop",
+    "RepeatingSendStopStatus",
+    "RepeatInput",
+    "RepeatStopInput",
     "ReplayDeliveryResponse200",
     "ReplayEmailWebhooksResponse200",
     "ReplayResult",
@@ -1152,10 +1160,12 @@ __all__ = (
     "SendPermissionYourDomainType",
     "SentEmailDetail",
     "SentEmailDetailAttachmentsItem",
+    "SentEmailDetailRepeatType0",
     "SentEmailDetailSenderMemberType0",
     "SentEmailRescheduleInput",
     "SentEmailStatus",
     "SentEmailSummary",
+    "SentEmailSummaryRepeatType0",
     "SentEmailSummarySenderMemberType0",
     "SetFunctionRouteResponse200",
     "SetFunctionSecretInput",
@@ -1188,8 +1198,7 @@ __all__ = (
     "StartCliSignupInput",
     "StartCliSignupInputMetadata",
     "StartCliSignupResponse201",
-    "StopAgentMessageScheduleInput",
-    "StopAgentMessageScheduleResponse200",
+    "StopRepeatingSendResponse200",
     "StorageStats",
     "SuccessEnvelope",
     "TemplateAuthor",
@@ -1222,6 +1231,7 @@ __all__ = (
     "Thread",
     "ThreadMessage",
     "ThreadMessageDirection",
+    "ThreadMessageRepeatType0",
     "ThreadMessageSenderMemberType0",
     "UnpublishAgentResponse200",
     "UnpublishAgentResponse200Data",
@@ -1230,9 +1240,6 @@ __all__ = (
     "UnverifiedDomain",
     "UpdateAccountInput",
     "UpdateAccountResponse200",
-    "UpdateAgentMessageScheduleInput",
-    "UpdateAgentMessageScheduleInputStatus",
-    "UpdateAgentMessageScheduleResponse200",
     "UpdateAgentNetworkMemberInput",
     "UpdateDefaultNetworkMemberResponse200",
     "UpdateDomainInput",
@@ -1248,6 +1255,9 @@ __all__ = (
     "UpdateRegistryInput",
     "UpdateRegistryResponse200",
     "UpdateRegistryResponse200Data",
+    "UpdateRepeatingSendInput",
+    "UpdateRepeatingSendInputStatus",
+    "UpdateRepeatingSendResponse200",
     "UpdateRouteInput",
     "UpdateRouteInputMatchType",
     "UpdateRouteResponse200",

@@ -1804,6 +1804,13 @@ export type EmailSummary = {
      */
     automated_reasons: Array<string>;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -2127,6 +2134,13 @@ export type EmailDetail = {
      */
     automated_reasons: Array<string>;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -2354,6 +2368,13 @@ export type ThreadMessage = {
      */
     timestamp?: string | null;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -2435,6 +2456,13 @@ export type ConversationMessage = {
     timestamp?: string | null;
     presence_control?: PresenceControl;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -2482,6 +2510,7 @@ export type SendMailPayloadRef = {
 };
 
 export type SendMailInput = {
+    repeat?: RepeatInput;
     /**
      * RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
      */
@@ -2852,6 +2881,13 @@ export type SentEmailSummary = {
     canceled_at?: string | null;
     presence_control?: PresenceControl;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -3071,6 +3107,13 @@ export type SentEmailDetail = SentEmailSummary & {
 } & {
     presence_control?: PresenceControl;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -3262,9 +3305,105 @@ export type ReplyInput = {
      * Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most 31457280.
      */
     attachments?: Array<SendMailAttachment>;
+    repeat?: RepeatInput;
+};
+
+/**
+ * Repeat this send every `every_minutes` in the same thread. The first
+ * message goes out like any send; each later one is a scheduled send
+ * that replies to the previous one, so quotas, gates and cancellation
+ * apply as usual. Requires exactly one `to` recipient and no cc, bcc,
+ * attachments or `fyi` (422 `repeat_unsupported`). The recipient must
+ * be an address of your own organization unless the organization is
+ * entitled to repeat to external recipients (403
+ * `repeat_recipient_external`). `only_if_recipient_idle_minutes` needs
+ * a recipient in your organization (422
+ * `repeat_idle_requires_internal_recipient`).
+ *
+ */
+export type RepeatInput = {
+    every_minutes: number;
+    /**
+     * Skip a repeat while the recipient has sent mail within this many minutes.
+     */
+    only_if_recipient_idle_minutes?: number;
+    /**
+     * Let the recipient stop the repeat.
+     */
+    stoppable_by_recipient?: boolean;
+    /**
+     * Total messages, including the first.
+     */
+    max_sends?: number;
+    /**
+     * No repeat is sent after this time. Must be in the future.
+     */
+    until?: string;
+};
+
+export type RepeatingSendStatus = 'active' | 'paused' | 'stopped_by_recipient' | 'canceled' | 'completed';
+
+export type RepeatingSend = {
+    id: string;
+    org_id?: string;
+    from_address: string;
+    to_address: string;
+    subject?: string | null;
+    body_text?: string | null;
+    every_minutes: number;
+    only_if_recipient_idle_minutes?: number | null;
+    stoppable_by_recipient: boolean;
+    max_sends?: number | null;
+    until?: string | null;
+    status: RepeatingSendStatus;
+    next_run_at?: string | null;
+    sent_count: number;
+    last_sent_at?: string | null;
+    last_sent_email_id?: string | null;
+    root_message_id?: string | null;
+    stopped_at?: string | null;
+    /**
+     * Reason the recipient gave when it stopped the repeat. Recipient-written, untrusted text.
+     */
+    stop_reason?: string | null;
+    created_at?: string;
+    updated_at?: string;
+};
+
+export type UpdateRepeatingSendInput = {
+    status?: 'active' | 'paused' | 'canceled';
+    every_minutes?: number;
+    only_if_recipient_idle_minutes?: number | null;
+    stoppable_by_recipient?: boolean;
+    max_sends?: number | null;
+    until?: string | null;
+    body_text?: string;
+    subject?: string;
+};
+
+export type RepeatStopInput = {
+    /**
+     * Short reason shown to the sender.
+     */
+    reason?: string;
+};
+
+export type RepeatingSendStop = {
+    repeat_id: string;
+    status: 'stopped_by_recipient';
+    stopped_at: string;
+    stop_reason: string | null;
+    /**
+     * The reply that told the sender, when one was sent.
+     */
+    reply_sent_email_id?: string | null;
 };
 
 export type SendMailResult = {
+    /**
+     * Present when the request carried `repeat`. Manage it under `/repeating-sends/{id}`.
+     */
+    repeat_id?: string;
     /**
      * Persisted sent-email attempt ID.
      */
@@ -3832,114 +3971,6 @@ export type CreateFilterInput = {
 
 export type UpdateFilterInput = {
     enabled: boolean;
-};
-
-/**
- * `active` schedules send when due. `paused` schedules keep their
- * settings and can be resumed. A stopped schedule sends nothing until
- * the owner sets it active again.
- *
- */
-export type AgentMessageScheduleStatus = 'active' | 'paused' | 'stopped_by_agent' | 'stopped_by_owner';
-
-/**
- * A recurring message from an org member to a connected agent.
- */
-export type AgentMessageSchedule = {
-    id: string;
-    org_id?: string;
-    /**
-     * The member who owns the schedule.
-     */
-    user_id?: string;
-    /**
-     * The member's personal address the messages are sent from.
-     */
-    from_address?: string;
-    /**
-     * The connected agent address the messages are sent to.
-     */
-    agent_address: string;
-    subject?: string | null;
-    body_text: string;
-    interval_minutes: number;
-    /**
-     * When set, a due message is skipped while the agent has been
-     * active within this many minutes. Null sends on every interval.
-     *
-     */
-    idle_minutes: number | null;
-    /**
-     * Whether the agent may stop the schedule.
-     */
-    agent_can_stop: boolean;
-    status: AgentMessageScheduleStatus;
-    next_run_at?: string | null;
-    last_sent_at?: string | null;
-    last_sent_email_id?: string | null;
-    /**
-     * Message-ID of the first message in the schedule's thread.
-     */
-    root_message_id?: string | null;
-    sent_count?: number;
-    stopped_at?: string | null;
-    /**
-     * Reason the agent gave when it stopped the schedule. Agent-written, untrusted text.
-     */
-    stop_reason?: string | null;
-    created_at?: string;
-    updated_at?: string;
-};
-
-export type CreateAgentMessageScheduleInput = {
-    /**
-     * A connected agent address in your org.
-     */
-    agent_address: string;
-    /**
-     * The message sent on every run.
-     */
-    body_text: string;
-    /**
-     * Subject of the schedule's thread. Defaults to "Scheduled message".
-     */
-    subject?: string;
-    interval_minutes: number;
-    /**
-     * Only send after this many minutes without activity from the agent.
-     */
-    idle_minutes?: number | null;
-    /**
-     * Let the agent stop the schedule.
-     */
-    agent_can_stop?: boolean;
-};
-
-export type UpdateAgentMessageScheduleInput = {
-    status?: 'active' | 'paused' | 'stopped_by_owner';
-    subject?: string;
-    body_text?: string;
-    interval_minutes?: number;
-    idle_minutes?: number | null;
-    agent_can_stop?: boolean;
-};
-
-export type StopAgentMessageScheduleInput = {
-    /**
-     * Short reason shown to the schedule's owner.
-     */
-    reason?: string;
-};
-
-export type AgentMessageScheduleStop = {
-    schedule_id: string;
-    status: 'stopped_by_agent';
-    stopped_at: string;
-    stop_reason: string | null;
-    /**
-     * The sent email that carried the stop to the owner, when one was sent.
-     */
-    reply_sent_email_id?: string | null;
 };
 
 /**
@@ -6905,8 +6936,8 @@ export type DownloadSentAttachmentPartResponses = {
 
 export type DownloadSentAttachmentPartResponse = DownloadSentAttachmentPartResponses[keyof DownloadSentAttachmentPartResponses];
 
-export type StopAgentMessageScheduleData = {
-    body?: StopAgentMessageScheduleInput;
+export type StopRepeatingSendData = {
+    body?: RepeatStopInput;
     path: {
         /**
          * Resource UUID
@@ -6914,10 +6945,10 @@ export type StopAgentMessageScheduleData = {
         id: string;
     };
     query?: never;
-    url: '/emails/{id}/schedule-stop';
+    url: '/emails/{id}/repeat-stop';
 };
 
-export type StopAgentMessageScheduleErrors = {
+export type StopRepeatingSendErrors = {
     /**
      * Invalid request parameters
      */
@@ -6927,9 +6958,9 @@ export type StopAgentMessageScheduleErrors = {
      */
     401: ErrorResponse;
     /**
-     * `schedule_stop_not_allowed`: the caller is not the schedule's
-     * agent, the schedule does not let the agent stop it, or the owner
-     * already stopped or deleted it.
+     * `repeat_stop_not_allowed`: the caller is not the recipient, the
+     * repeat does not let the recipient stop it, or the sender canceled
+     * it.
      *
      */
     403: ErrorResponse;
@@ -6938,23 +6969,23 @@ export type StopAgentMessageScheduleErrors = {
      */
     404: ErrorResponse;
     /**
-     * `not_a_scheduled_message`: the email is not a scheduled message.
+     * `not_a_repeating_send`: the email is not part of a repeating send.
      */
     422: ErrorResponse;
 };
 
-export type StopAgentMessageScheduleError = StopAgentMessageScheduleErrors[keyof StopAgentMessageScheduleErrors];
+export type StopRepeatingSendError = StopRepeatingSendErrors[keyof StopRepeatingSendErrors];
 
-export type StopAgentMessageScheduleResponses = {
+export type StopRepeatingSendResponses = {
     /**
-     * Schedule stopped by the agent
+     * The repeat is stopped
      */
     200: SuccessEnvelope & {
-        data?: AgentMessageScheduleStop;
+        data?: RepeatingSendStop;
     };
 };
 
-export type StopAgentMessageScheduleResponse = StopAgentMessageScheduleResponses[keyof StopAgentMessageScheduleResponses];
+export type StopRepeatingSendResponse = StopRepeatingSendResponses[keyof StopRepeatingSendResponses];
 
 export type ReplyToEmailData = {
     body: ReplyInput;
@@ -7675,214 +7706,6 @@ export type UpdateFilterResponses = {
 };
 
 export type UpdateFilterResponse = UpdateFilterResponses[keyof UpdateFilterResponses];
-
-export type ListAgentMessageSchedulesData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Only return schedules that target this agent address.
-         */
-        agent_address?: string;
-    };
-    url: '/agent-message-schedules';
-};
-
-export type ListAgentMessageSchedulesErrors = {
-    /**
-     * Invalid or missing API key
-     */
-    401: ErrorResponse;
-    /**
-     * Authenticated caller lacks permission for the operation
-     */
-    403: ErrorResponse;
-};
-
-export type ListAgentMessageSchedulesError = ListAgentMessageSchedulesErrors[keyof ListAgentMessageSchedulesErrors];
-
-export type ListAgentMessageSchedulesResponses = {
-    /**
-     * The member's schedules
-     */
-    200: SuccessEnvelope & {
-        data?: Array<AgentMessageSchedule>;
-    };
-};
-
-export type ListAgentMessageSchedulesResponse = ListAgentMessageSchedulesResponses[keyof ListAgentMessageSchedulesResponses];
-
-export type CreateAgentMessageScheduleData = {
-    body: CreateAgentMessageScheduleInput;
-    path?: never;
-    query?: never;
-    url: '/agent-message-schedules';
-};
-
-export type CreateAgentMessageScheduleErrors = {
-    /**
-     * Invalid request parameters
-     */
-    400: ErrorResponse;
-    /**
-     * Invalid or missing API key
-     */
-    401: ErrorResponse;
-    /**
-     * Authenticated caller lacks permission for the operation
-     */
-    403: ErrorResponse;
-    /**
-     * `schedule_limit_reached`: the member already has the maximum number of schedules.
-     */
-    409: ErrorResponse;
-    /**
-     * `agent_not_connected`: the address is not a connected agent in
-     * your org. `member_address_missing`: you have no personal address
-     * to send from.
-     *
-     */
-    422: ErrorResponse;
-};
-
-export type CreateAgentMessageScheduleError = CreateAgentMessageScheduleErrors[keyof CreateAgentMessageScheduleErrors];
-
-export type CreateAgentMessageScheduleResponses = {
-    /**
-     * Schedule created
-     */
-    201: SuccessEnvelope & {
-        data?: AgentMessageSchedule;
-    };
-};
-
-export type CreateAgentMessageScheduleResponse = CreateAgentMessageScheduleResponses[keyof CreateAgentMessageScheduleResponses];
-
-export type DeleteAgentMessageScheduleData = {
-    body?: never;
-    path: {
-        /**
-         * Resource UUID
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/agent-message-schedules/{id}';
-};
-
-export type DeleteAgentMessageScheduleErrors = {
-    /**
-     * Invalid or missing API key
-     */
-    401: ErrorResponse;
-    /**
-     * Authenticated caller lacks permission for the operation
-     */
-    403: ErrorResponse;
-    /**
-     * Resource not found
-     */
-    404: ErrorResponse;
-};
-
-export type DeleteAgentMessageScheduleError = DeleteAgentMessageScheduleErrors[keyof DeleteAgentMessageScheduleErrors];
-
-export type DeleteAgentMessageScheduleResponses = {
-    /**
-     * Resource deleted
-     */
-    200: SuccessEnvelope & {
-        data?: {
-            deleted: boolean;
-        };
-    };
-};
-
-export type DeleteAgentMessageScheduleResponse = DeleteAgentMessageScheduleResponses[keyof DeleteAgentMessageScheduleResponses];
-
-export type GetAgentMessageScheduleData = {
-    body?: never;
-    path: {
-        /**
-         * Resource UUID
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/agent-message-schedules/{id}';
-};
-
-export type GetAgentMessageScheduleErrors = {
-    /**
-     * Invalid or missing API key
-     */
-    401: ErrorResponse;
-    /**
-     * Authenticated caller lacks permission for the operation
-     */
-    403: ErrorResponse;
-    /**
-     * Resource not found
-     */
-    404: ErrorResponse;
-};
-
-export type GetAgentMessageScheduleError = GetAgentMessageScheduleErrors[keyof GetAgentMessageScheduleErrors];
-
-export type GetAgentMessageScheduleResponses = {
-    /**
-     * The schedule
-     */
-    200: SuccessEnvelope & {
-        data?: AgentMessageSchedule;
-    };
-};
-
-export type GetAgentMessageScheduleResponse = GetAgentMessageScheduleResponses[keyof GetAgentMessageScheduleResponses];
-
-export type UpdateAgentMessageScheduleData = {
-    body: UpdateAgentMessageScheduleInput;
-    path: {
-        /**
-         * Resource UUID
-         */
-        id: string;
-    };
-    query?: never;
-    url: '/agent-message-schedules/{id}';
-};
-
-export type UpdateAgentMessageScheduleErrors = {
-    /**
-     * Invalid request parameters
-     */
-    400: ErrorResponse;
-    /**
-     * Invalid or missing API key
-     */
-    401: ErrorResponse;
-    /**
-     * Authenticated caller lacks permission for the operation
-     */
-    403: ErrorResponse;
-    /**
-     * Resource not found
-     */
-    404: ErrorResponse;
-};
-
-export type UpdateAgentMessageScheduleError = UpdateAgentMessageScheduleErrors[keyof UpdateAgentMessageScheduleErrors];
-
-export type UpdateAgentMessageScheduleResponses = {
-    /**
-     * Updated schedule
-     */
-    200: SuccessEnvelope & {
-        data?: AgentMessageSchedule;
-    };
-};
-
-export type UpdateAgentMessageScheduleResponse = UpdateAgentMessageScheduleResponses[keyof UpdateAgentMessageScheduleResponses];
 
 export type ListWakeSchedulesData = {
     body?: never;
@@ -8765,6 +8588,160 @@ export type GetOutboundStatusResponses = {
 };
 
 export type GetOutboundStatusResponse = GetOutboundStatusResponses[keyof GetOutboundStatusResponses];
+
+export type ListRepeatingSendsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only return repeats sent to this address.
+         */
+        to?: string;
+        /**
+         * Only return repeats in this status.
+         */
+        status?: RepeatingSendStatus;
+    };
+    url: '/repeating-sends';
+};
+
+export type ListRepeatingSendsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type ListRepeatingSendsError = ListRepeatingSendsErrors[keyof ListRepeatingSendsErrors];
+
+export type ListRepeatingSendsResponses = {
+    /**
+     * Repeating sends
+     */
+    200: SuccessEnvelope & {
+        data?: Array<RepeatingSend>;
+    };
+};
+
+export type ListRepeatingSendsResponse = ListRepeatingSendsResponses[keyof ListRepeatingSendsResponses];
+
+export type DeleteRepeatingSendData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/repeating-sends/{id}';
+};
+
+export type DeleteRepeatingSendErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteRepeatingSendError = DeleteRepeatingSendErrors[keyof DeleteRepeatingSendErrors];
+
+export type DeleteRepeatingSendResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteRepeatingSendResponse = DeleteRepeatingSendResponses[keyof DeleteRepeatingSendResponses];
+
+export type GetRepeatingSendData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/repeating-sends/{id}';
+};
+
+export type GetRepeatingSendErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetRepeatingSendError = GetRepeatingSendErrors[keyof GetRepeatingSendErrors];
+
+export type GetRepeatingSendResponses = {
+    /**
+     * The repeating send
+     */
+    200: SuccessEnvelope & {
+        data?: RepeatingSend;
+    };
+};
+
+export type GetRepeatingSendResponse = GetRepeatingSendResponses[keyof GetRepeatingSendResponses];
+
+export type UpdateRepeatingSendData = {
+    body: UpdateRepeatingSendInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/repeating-sends/{id}';
+};
+
+export type UpdateRepeatingSendErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type UpdateRepeatingSendError = UpdateRepeatingSendErrors[keyof UpdateRepeatingSendErrors];
+
+export type UpdateRepeatingSendResponses = {
+    /**
+     * The updated repeating send
+     */
+    200: SuccessEnvelope & {
+        data?: RepeatingSend;
+    };
+};
+
+export type UpdateRepeatingSendResponse = UpdateRepeatingSendResponses[keyof UpdateRepeatingSendResponses];
 
 export type ListSentEmailsData = {
     body?: never;

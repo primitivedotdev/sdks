@@ -10,10 +10,10 @@ import {
   readConversationStatusContent,
 } from "./notify-session-content.js";
 import {
-  readScheduledMessage,
-  renderScheduledMessage,
-  type ScheduledMessage,
-} from "./scheduled-message.js";
+  type RepeatedMessage,
+  readRepeatedMessage,
+  renderRepeatedMessage,
+} from "./repeat-message.js";
 import { scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   bareAddress,
@@ -69,8 +69,8 @@ export type EmailBriefEnvelope = {
   } | null;
   work_claim: WorkClaim | null;
   peer_signal: PeerSignal | null;
-  /** Set when authenticated mail from the owner or a member is a scheduled message. */
-  scheduled: ScheduledMessage | null;
+  /** Set when the server marks this email as part of a repeating send. */
+  repeat: RepeatedMessage | null;
 };
 
 export type EmailBrief = {
@@ -285,7 +285,6 @@ export async function buildEmailBrief(input: {
       ? readWorkClaim(client, sender, signal)
       : Promise.resolve(null),
   ]);
-  const attachments = detail.parsed?.attachments?.length ?? 0;
   const [relationship, peerSignal] = await Promise.all([
     relationshipFor({
       client,
@@ -300,17 +299,10 @@ export async function buildEmailBrief(input: {
       ? readPeerSignal({ client, thread, self, sender, signal })
       : Promise.resolve(null),
   ]);
-  // The scheduler sends only from an org member's own address, so a tick is
-  // shown only on authenticated mail from the owner or another member. Any
-  // other sender could attach a well-formed tick of its own. The stop
-  // endpoint still decides for itself whether the email is a real scheduled
-  // message.
-  const scheduled =
-    trust.trusted &&
-    attachments > 0 &&
-    (relationship === "owner" || relationship === "member")
-      ? await readScheduledMessage({ client, detail, signal })
-      : null;
+  const attachments = detail.parsed?.attachments?.length ?? 0;
+  // The server's repeat marker, not the message content, establishes that
+  // Primitive sent this as a repeat.
+  const repeat = await readRepeatedMessage({ client, detail, signal });
   return {
     envelope: {
       email_id: detail.id,
@@ -340,7 +332,7 @@ export async function buildEmailBrief(input: {
             },
       work_claim: claim,
       peer_signal: peerSignal,
-      scheduled,
+      repeat,
     },
     subject: detail.subject ?? null,
     body_text: detail.body_text ?? null,
@@ -378,7 +370,7 @@ export function renderEmailBrief(brief: EmailBrief): string {
   lines.push(
     `  attachments: ${e.attachments.present ? `yes (${e.attachments.count})` : "no"}`,
   );
-  if (e.scheduled) lines.push(`  ${renderScheduledMessage(e.scheduled)}`);
+  if (e.repeat) lines.push(`  ${renderRepeatedMessage(e.repeat)}`);
   if (e.work_claim)
     lines.push(
       `  sender's work claim (written by the sender): ${JSON.stringify(e.work_claim.claim)}${e.work_claim.until ? ` until ${e.work_claim.until}` : e.work_claim.legacy ? " (no expiry)" : ""}`,

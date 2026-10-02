@@ -11,14 +11,6 @@ func (s *CompleteWebhookHttpInput) setDefaults() {
 }
 
 // setDefaults set default value of fields.
-func (s *CreateAgentMessageScheduleInput) setDefaults() {
-	{
-		val := bool(true)
-		s.AgentCanStop.SetTo(val)
-	}
-}
-
-// setDefaults set default value of fields.
 func (s *CreateEndpointInput) setDefaults() {
 	{
 		val := CreateEndpointInputKind("http")
@@ -39,6 +31,14 @@ func (s *PullWebhookInput) setDefaults() {
 	{
 		val := int(25)
 		s.WaitSeconds.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *RepeatInput) setDefaults() {
+	{
+		val := bool(true)
+		s.StoppableByRecipient.SetTo(val)
 	}
 }
 

@@ -598,183 +598,6 @@ func (s *AgentContactPolicyOverride) Validate() error {
 	return nil
 }
 
-func (s *AgentMessageSchedule) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := (validate.Int{
-			MinSet:        true,
-			Min:           5,
-			MaxSet:        true,
-			Max:           10080,
-			MinExclusive:  false,
-			MaxExclusive:  false,
-			MultipleOfSet: false,
-			MultipleOf:    0,
-			Pattern:       nil,
-		}).Validate(int64(s.IntervalMinutes)); err != nil {
-			return errors.Wrap(err, "int")
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "interval_minutes",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.IdleMinutes.Get(); ok {
-			if err := func() error {
-				if err := (validate.Int{
-					MinSet:        true,
-					Min:           1,
-					MaxSet:        true,
-					Max:           10080,
-					MinExclusive:  false,
-					MaxExclusive:  false,
-					MultipleOfSet: false,
-					MultipleOf:    0,
-					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "idle_minutes",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if err := s.Status.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "status",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.SentCount.Get(); ok {
-			if err := func() error {
-				if err := (validate.Int{
-					MinSet:        true,
-					Min:           0,
-					MaxSet:        false,
-					Max:           0,
-					MinExclusive:  false,
-					MaxExclusive:  false,
-					MultipleOfSet: false,
-					MultipleOf:    0,
-					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "sent_count",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.StopReason.Get(); ok {
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     0,
-					MinLengthSet:  false,
-					MaxLength:     280,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "stop_reason",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s AgentMessageScheduleStatus) Validate() error {
-	switch s {
-	case "active":
-		return nil
-	case "paused":
-		return nil
-	case "stopped_by_agent":
-		return nil
-	case "stopped_by_owner":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s *AgentMessageScheduleStop) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := s.Status.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "status",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s AgentMessageScheduleStopStatus) Validate() error {
-	switch s {
-	case "stopped_by_agent":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
 func (s *AgentNetworkContactAdmission) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -3139,6 +2962,24 @@ func (s *ConversationMessage) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Repeat.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "repeat",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.SenderMember.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -3228,6 +3069,39 @@ func (s ConversationMessagePresenceControlStatus) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
+}
+
+func (s *ConversationMessageRepeat) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           1,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.Sequence)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sequence",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s ConversationMessageRole) Validate() error {
@@ -4163,183 +4037,6 @@ func (s *CreateAgentConnectionTooManyRequests) Validate() error {
 
 func (s *CreateAgentConnectionUnauthorized) Validate() error {
 	alias := (*ErrorResponseHeaders)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *CreateAgentMessageScheduleBadRequest) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *CreateAgentMessageScheduleConflict) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *CreateAgentMessageScheduleCreated) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := s.Data.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "data",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *CreateAgentMessageScheduleForbidden) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *CreateAgentMessageScheduleInput) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := (validate.String{
-			MinLength:     1,
-			MinLengthSet:  true,
-			MaxLength:     20000,
-			MaxLengthSet:  true,
-			Email:         false,
-			Hostname:      false,
-			Regex:         nil,
-			MinNumeric:    0,
-			MinNumericSet: false,
-			MaxNumeric:    0,
-			MaxNumericSet: false,
-		}).Validate(string(s.BodyText)); err != nil {
-			return errors.Wrap(err, "string")
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "body_text",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.Subject.Get(); ok {
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     200,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "subject",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if err := (validate.Int{
-			MinSet:        true,
-			Min:           5,
-			MaxSet:        true,
-			Max:           10080,
-			MinExclusive:  false,
-			MaxExclusive:  false,
-			MultipleOfSet: false,
-			MultipleOf:    0,
-			Pattern:       nil,
-		}).Validate(int64(s.IntervalMinutes)); err != nil {
-			return errors.Wrap(err, "int")
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "interval_minutes",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.IdleMinutes.Get(); ok {
-			if err := func() error {
-				if err := (validate.Int{
-					MinSet:        true,
-					Min:           1,
-					MaxSet:        true,
-					Max:           10080,
-					MinExclusive:  false,
-					MaxExclusive:  false,
-					MultipleOfSet: false,
-					MultipleOf:    0,
-					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "idle_minutes",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *CreateAgentMessageScheduleUnauthorized) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *CreateAgentMessageScheduleUnprocessableEntity) Validate() error {
-	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
 	}
@@ -6687,30 +6384,6 @@ func (s *DeleteAgentContactUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *DeleteAgentMessageScheduleForbidden) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *DeleteAgentMessageScheduleNotFound) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *DeleteAgentMessageScheduleUnauthorized) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *DeleteContactBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -7082,6 +6755,22 @@ func (s *DeleteRegistryNotFound) Validate() error {
 }
 
 func (s *DeleteRegistryUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DeleteRepeatingSendNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *DeleteRepeatingSendUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -8136,6 +7825,24 @@ func (s *EmailDetail) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Repeat.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "repeat",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.SenderMember.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -8225,6 +7932,39 @@ func (s EmailDetailPresenceControlStatus) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
+}
+
+func (s *EmailDetailRepeat) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           1,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.Sequence)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sequence",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s *EmailDetailReply) Validate() error {
@@ -8515,6 +8255,24 @@ func (s *EmailSearchResult) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Repeat.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "repeat",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.SenderMember.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -8640,6 +8398,39 @@ func (s EmailSearchResultPresenceControlStatus) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
+}
+
+func (s *EmailSearchResultRepeat) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           1,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.Sequence)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sequence",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s *EmailSearchResultSenderMember) Validate() error {
@@ -8807,6 +8598,24 @@ func (s *EmailSummary) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Repeat.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "repeat",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.SenderMember.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -8896,6 +8705,39 @@ func (s EmailSummaryPresenceControlStatus) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
+}
+
+func (s *EmailSummaryRepeat) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           1,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.Sequence)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sequence",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s *EmailSummarySenderMember) Validate() error {
@@ -10315,53 +10157,6 @@ func (s *GetAgentContactPolicyUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *GetAgentMessageScheduleForbidden) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *GetAgentMessageScheduleNotFound) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *GetAgentMessageScheduleOK) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := s.Data.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "data",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *GetAgentMessageScheduleUnauthorized) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *GetAgentOK) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -11182,6 +10977,45 @@ func (s *GetRegistryOK) Validate() error {
 	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetRepeatingSendNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *GetRepeatingSendOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *GetRepeatingSendUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -12810,62 +12644,6 @@ func (s *ListAgentContactsUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *ListAgentMessageSchedulesForbidden) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *ListAgentMessageSchedulesOK) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if s.Data == nil {
-			return errors.New("nil is invalid value")
-		}
-		var failures []validate.FieldError
-		for i, elem := range s.Data {
-			if err := func() error {
-				if err := elem.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				failures = append(failures, validate.FieldError{
-					Name:  fmt.Sprintf("[%d]", i),
-					Error: err,
-				})
-			}
-		}
-		if len(failures) > 0 {
-			return &validate.Error{Fields: failures}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "data",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *ListAgentMessageSchedulesUnauthorized) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *ListAgentNetworksForbidden) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -13977,6 +13755,62 @@ func (s *ListRegistryRequestsOK) Validate() error {
 }
 
 func (s *ListRegistryRequestsUnauthorized) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ListRepeatingSendsForbidden) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ListRepeatingSendsOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if s.Data == nil {
+			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Data {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{Fields: failures}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *ListRepeatingSendsUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -17520,6 +17354,230 @@ func (s *ReorderRoutesUnauthorized) Validate() error {
 	return nil
 }
 
+func (s *RepeatInput) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           5,
+			MaxSet:        true,
+			Max:           10080,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.EveryMinutes)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "every_minutes",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.OnlyIfRecipientIdleMinutes.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           1,
+					MaxSet:        true,
+					Max:           10080,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "only_if_recipient_idle_minutes",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.MaxSends.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           2,
+					MaxSet:        true,
+					Max:           10000,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "max_sends",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *RepeatStopInput) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Reason.Get(); ok {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     280,
+					MaxLengthSet:  true,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(value)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "reason",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *RepeatingSend) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Status.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "status",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           0,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.SentCount)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sent_count",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s RepeatingSendStatus) Validate() error {
+	switch s {
+	case "active":
+		return nil
+	case "paused":
+		return nil
+	case "stopped_by_recipient":
+		return nil
+	case "canceled":
+		return nil
+	case "completed":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s *RepeatingSendStop) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Status.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "status",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s RepeatingSendStopStatus) Validate() error {
+	switch s {
+	case "stopped_by_recipient":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *ReplayDeliveryBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -17637,6 +17695,24 @@ func (s *ReplyInput) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "attachments",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Repeat.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "repeat",
 			Error: err,
 		})
 	}
@@ -19511,6 +19587,24 @@ func (s *SendMailInput) Validate() error {
 
 	var failures []validate.FieldError
 	if err := func() error {
+		if value, ok := s.Repeat.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "repeat",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := (validate.String{
 			MinLength:     3,
 			MinLengthSet:  true,
@@ -20331,6 +20425,24 @@ func (s *SentEmailDetail) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Repeat.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "repeat",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.SenderMember.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -20518,6 +20630,39 @@ func (s SentEmailDetailPresenceControlStatus) Validate() error {
 	}
 }
 
+func (s *SentEmailDetailRepeat) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           1,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.Sequence)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sequence",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
 func (s *SentEmailDetailSenderMember) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -20653,6 +20798,24 @@ func (s *SentEmailSummary) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Repeat.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "repeat",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.SenderMember.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -20731,6 +20894,39 @@ func (s SentEmailSummaryPresenceControlStatus) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
+}
+
+func (s *SentEmailSummaryRepeat) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           1,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.Sequence)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sequence",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s *SentEmailSummarySenderMember) Validate() error {
@@ -21786,7 +21982,7 @@ func (s *StartCliSignupInput) Validate() error {
 	return nil
 }
 
-func (s *StopAgentMessageScheduleBadRequest) Validate() error {
+func (s *StopRepeatingSendBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -21794,7 +21990,7 @@ func (s *StopAgentMessageScheduleBadRequest) Validate() error {
 	return nil
 }
 
-func (s *StopAgentMessageScheduleForbidden) Validate() error {
+func (s *StopRepeatingSendForbidden) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -21802,49 +21998,7 @@ func (s *StopAgentMessageScheduleForbidden) Validate() error {
 	return nil
 }
 
-func (s *StopAgentMessageScheduleInput) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if value, ok := s.Reason.Get(); ok {
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     280,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "reason",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *StopAgentMessageScheduleNotFound) Validate() error {
+func (s *StopRepeatingSendNotFound) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -21852,7 +22006,7 @@ func (s *StopAgentMessageScheduleNotFound) Validate() error {
 	return nil
 }
 
-func (s *StopAgentMessageScheduleOK) Validate() error {
+func (s *StopRepeatingSendOK) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
@@ -21875,7 +22029,7 @@ func (s *StopAgentMessageScheduleOK) Validate() error {
 	return nil
 }
 
-func (s *StopAgentMessageScheduleUnauthorized) Validate() error {
+func (s *StopRepeatingSendUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -21883,7 +22037,7 @@ func (s *StopAgentMessageScheduleUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *StopAgentMessageScheduleUnprocessableEntity) Validate() error {
+func (s *StopRepeatingSendUnprocessableEntity) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -23415,6 +23569,24 @@ func (s *ThreadMessage) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.Repeat.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "repeat",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.SenderMember.Get(); ok {
 			if err := func() error {
 				if err := value.Validate(); err != nil {
@@ -23447,6 +23619,39 @@ func (s ThreadMessageDirection) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
+}
+
+func (s *ThreadMessageRepeat) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := (validate.Int{
+			MinSet:        true,
+			Min:           1,
+			MaxSet:        false,
+			Max:           0,
+			MinExclusive:  false,
+			MaxExclusive:  false,
+			MultipleOfSet: false,
+			MultipleOf:    0,
+			Pattern:       nil,
+		}).Validate(int64(s.Sequence)); err != nil {
+			return errors.Wrap(err, "int")
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sequence",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
 }
 
 func (s *ThreadMessageSenderMember) Validate() error {
@@ -23688,220 +23893,6 @@ func (s *UpdateAccountOK) Validate() error {
 }
 
 func (s *UpdateAccountUnauthorized) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *UpdateAgentMessageScheduleBadRequest) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *UpdateAgentMessageScheduleForbidden) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *UpdateAgentMessageScheduleInput) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if value, ok := s.Status.Get(); ok {
-			if err := func() error {
-				if err := value.Validate(); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "status",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.Subject.Get(); ok {
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     200,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "subject",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.BodyText.Get(); ok {
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     20000,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "body_text",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.IntervalMinutes.Get(); ok {
-			if err := func() error {
-				if err := (validate.Int{
-					MinSet:        true,
-					Min:           5,
-					MaxSet:        true,
-					Max:           10080,
-					MinExclusive:  false,
-					MaxExclusive:  false,
-					MultipleOfSet: false,
-					MultipleOf:    0,
-					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "interval_minutes",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.IdleMinutes.Get(); ok {
-			if err := func() error {
-				if err := (validate.Int{
-					MinSet:        true,
-					Min:           1,
-					MaxSet:        true,
-					Max:           10080,
-					MinExclusive:  false,
-					MaxExclusive:  false,
-					MultipleOfSet: false,
-					MultipleOf:    0,
-					Pattern:       nil,
-				}).Validate(int64(value)); err != nil {
-					return errors.Wrap(err, "int")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "idle_minutes",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s UpdateAgentMessageScheduleInputStatus) Validate() error {
-	switch s {
-	case "active":
-		return nil
-	case "paused":
-		return nil
-	case "stopped_by_owner":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s *UpdateAgentMessageScheduleNotFound) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *UpdateAgentMessageScheduleOK) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := s.Data.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "data",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s *UpdateAgentMessageScheduleUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -24531,6 +24522,240 @@ func (s *UpdateRegistryUnauthorized) Validate() error {
 }
 
 func (s *UpdateRegistryUnprocessableEntity) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateRepeatingSendBadRequest) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateRepeatingSendInput) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Status.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "status",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.EveryMinutes.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           5,
+					MaxSet:        true,
+					Max:           10080,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "every_minutes",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.OnlyIfRecipientIdleMinutes.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           1,
+					MaxSet:        true,
+					Max:           10080,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "only_if_recipient_idle_minutes",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.MaxSends.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           2,
+					MaxSet:        true,
+					Max:           10000,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "max_sends",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.BodyText.Get(); ok {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     0,
+					MaxLengthSet:  false,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(value)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "body_text",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Subject.Get(); ok {
+			if err := func() error {
+				if err := (validate.String{
+					MinLength:     1,
+					MinLengthSet:  true,
+					MaxLength:     0,
+					MaxLengthSet:  false,
+					Email:         false,
+					Hostname:      false,
+					Regex:         nil,
+					MinNumeric:    0,
+					MinNumericSet: false,
+					MaxNumeric:    0,
+					MaxNumericSet: false,
+				}).Validate(string(value)); err != nil {
+					return errors.Wrap(err, "string")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "subject",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s UpdateRepeatingSendInputStatus) Validate() error {
+	switch s {
+	case "active":
+		return nil
+	case "paused":
+		return nil
+	case "canceled":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s *UpdateRepeatingSendNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateRepeatingSendOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *UpdateRepeatingSendUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err

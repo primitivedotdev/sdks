@@ -21,6 +21,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.email_auth import EmailAuth
   from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
+  from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0
   from ..models.email_detail_reply import EmailDetailReply
   from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
   from ..models.parsed_email_data import ParsedEmailData
@@ -251,6 +252,9 @@ class EmailDetail:
                 declared none, and on messages received before these headers
                 were captured, so a null value is not evidence that a person
                 sent the message.
+            repeat (EmailDetailRepeatType0 | None | Unset): Set when Primitive sent this message as part of a repeating
+                send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
+                servers that predate repeating sends.
             sender_member (EmailDetailSenderMemberType0 | None | Unset): Verified human authorship, projected only within
                 the member organization. Historical attribution is not current sending or owner authority.
      """
@@ -300,6 +304,7 @@ class EmailDetail:
     thread_id: None | Unset | UUID = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
     automation_headers: EmailDetailAutomationHeadersType0 | None | Unset = UNSET
+    repeat: EmailDetailRepeatType0 | None | Unset = UNSET
     sender_member: EmailDetailSenderMemberType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -310,6 +315,7 @@ class EmailDetail:
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_auth import EmailAuth
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
+        from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0
         from ..models.email_detail_reply import EmailDetailReply
         from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
         from ..models.parsed_email_data import ParsedEmailData
@@ -543,6 +549,14 @@ class EmailDetail:
         else:
             automation_headers = self.automation_headers
 
+        repeat: dict[str, Any] | None | Unset
+        if isinstance(self.repeat, Unset):
+            repeat = UNSET
+        elif isinstance(self.repeat, EmailDetailRepeatType0):
+            repeat = self.repeat.to_dict()
+        else:
+            repeat = self.repeat
+
         sender_member: dict[str, Any] | None | Unset
         if isinstance(self.sender_member, Unset):
             sender_member = UNSET
@@ -627,6 +641,8 @@ class EmailDetail:
             field_dict["presence_control"] = presence_control
         if automation_headers is not UNSET:
             field_dict["automation_headers"] = automation_headers
+        if repeat is not UNSET:
+            field_dict["repeat"] = repeat
         if sender_member is not UNSET:
             field_dict["sender_member"] = sender_member
 
@@ -638,6 +654,7 @@ class EmailDetail:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_auth import EmailAuth
         from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
+        from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0
         from ..models.email_detail_reply import EmailDetailReply
         from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
         from ..models.parsed_email_data import ParsedEmailData
@@ -1107,6 +1124,26 @@ class EmailDetail:
         automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
 
 
+        def _parse_repeat(data: object) -> EmailDetailRepeatType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                repeat_type_0 = EmailDetailRepeatType0.from_dict(data)
+
+
+
+                return repeat_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailDetailRepeatType0 | None | Unset, data)
+
+        repeat = _parse_repeat(d.pop("repeat", UNSET))
+
+
         def _parse_sender_member(data: object) -> EmailDetailSenderMemberType0 | None | Unset:
             if data is None:
                 return data
@@ -1173,6 +1210,7 @@ class EmailDetail:
             thread_id=thread_id,
             presence_control=presence_control,
             automation_headers=automation_headers,
+            repeat=repeat,
             sender_member=sender_member,
         )
 

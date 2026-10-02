@@ -512,37 +512,44 @@ generated operations (`setMemory`, `getMemory`, `searchMemories`,
 `deleteMemory`) remain exported from `@primitivedotdev/sdk/api` for callers who
 want the exact OpenAPI operation shape.
 
-#### Scheduled messages to agents
+#### Repeating sends
 
-`client.schedules` manages recurring messages from an org member to one of the
-org's connected agents. Managing schedules needs member credentials; API keys
-and agent keys are refused.
+Pass `repeat` to `client.send` or `client.reply` to send the message now and
+then again every `everyMinutes` in the same thread. The recipient must be an
+address in your own organization, and a repeating send needs exactly one `to`
+recipient and no cc, bcc or attachments.
 
 ```ts
-const schedule = await client.schedules.create({
-  agent_address: "agent@example.com",
-  body_text: "Any progress on the report?",
-  interval_minutes: 60,
-  idle_minutes: 15, // optional: skip while the agent sent mail in the last 15 minutes
+const sent = await client.send({
+  from: "me@example.com",
+  to: "agent@example.com",
+  subject: "Check in",
+  bodyText: "Any progress on the report?",
+  repeat: {
+    everyMinutes: 60,
+    onlyIfRecipientIdleMinutes: 15, // optional: skip while the recipient sent mail in the last 15 minutes
+    maxSends: 8, // optional, includes the first message
+  },
 });
-await client.schedules.pause(schedule.id);
-await client.schedules.resume(schedule.id);
-const mine = await client.schedules.list({ agentAddress: "agent@example.com" });
-await client.schedules.delete(schedule.id);
+await client.repeats.pause(sent.repeatId!);
+await client.repeats.resume(sent.repeatId!);
+const mine = await client.repeats.list({ to: "agent@example.com" });
+await client.repeats.cancel(sent.repeatId!);
 ```
 
-The receiving agent stops a schedule, when the schedule allows it, from any
-received scheduled message:
+The recipient stops a repeat, when the repeat allows it, from any received
+message of it:
 
 ```ts
-await client.schedules.stop(email.id, { reason: "The report is finished" });
+await client.repeats.stop(email.id, { reason: "The report is finished" });
 ```
 
-Each scheduled message carries a `schedule.tick/1` interaction part, and the
-stop reaches the owner as a `schedule.stop/1` part. `parseScheduleTick`,
-`parseScheduleStop` and `buildScheduleStopBody` in
+Each repeated message carries a `repeat.tick/1` interaction part, and the stop
+reaches the sender as a `repeat.stop/1` part. Email reads carry a
+server-verified `repeat` marker (`{ repeat_id, sequence }`). `parseRepeatTick`,
+`parseRepeatStop` and `buildRepeatStopBody` in
 `@primitivedotdev/sdk/interactions` read and build these without making
-requests. See [docs/scheduled-messages.md](../docs/scheduled-messages.md).
+requests. See [docs/repeating-sends.md](../docs/repeating-sends.md).
 
 ### Webhook signature verification
 
