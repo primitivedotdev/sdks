@@ -232,23 +232,24 @@ export function installClaudeWakeHook(options: {
         ],
         timeout: 10,
       };
+      // A hook for this exact session is replaced even when an older CLI
+      // install (another path or Node binary) wrote it, so upgrades never
+      // leave a second receive hook for the same session behind.
       const isOwnPendingHook = (candidate: unknown) =>
         record(candidate) &&
         candidate.type === "command" &&
-        candidate.command === process.execPath &&
         Array.isArray(candidate.args) &&
         candidate.args.length === 7 &&
-        candidate.args[0] === pendingPath &&
-        candidate.args[1] === cliPath &&
+        typeof candidate.args[0] === "string" &&
+        basename(candidate.args[0]) === "claude-pending-mail.mjs" &&
         candidate.args[2] === configDir &&
         candidate.args[5] === sessionId &&
         candidate.args[6] === PENDING_MARKER;
       const isOwnHook = (candidate: unknown) => {
         if (!record(candidate) || !Array.isArray(candidate.args)) return false;
         if (
-          candidate.command !== process.execPath ||
-          candidate.args[0] !== wrapperPath ||
-          candidate.args[1] !== cliPath ||
+          typeof candidate.args[0] !== "string" ||
+          basename(candidate.args[0]) !== "claude-wake.mjs" ||
           candidate.args[2] !== configDir
         )
           return false;

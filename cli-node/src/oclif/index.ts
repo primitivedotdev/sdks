@@ -17,6 +17,8 @@ import {
   AgentNotesListCommand,
   AgentNotesSetCommand,
 } from "./commands/agent-notes.js";
+import AgentSessionEndCommand from "./commands/agent-session-end.js";
+import AgentSessionRegisterCommand from "./commands/agent-session-register.js";
 import AgentUpgradeCommand from "./commands/agent-upgrade.js";
 import {
   AgentWorkingClearCommand,
@@ -67,6 +69,7 @@ import ListenCommand from "./commands/listen.js";
 import ListenInitCommand from "./commands/listen-init.js";
 import ListenPendingCommand from "./commands/listen-pending.js";
 import LogoutCommand from "./commands/logout.js";
+import MachineDoctorCommand from "./commands/machine-doctor.js";
 import {
   MemoriesDeleteCommand,
   MemoriesGetCommand,
@@ -559,6 +562,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   "agent:connect": AgentConnectCommand,
   "agent:disconnect": AgentDisconnectCommand,
   "agent:enroll": AgentEnrollCommand,
+  "agent:session-register": AgentSessionRegisterCommand,
+  "agent:session-end": AgentSessionEndCommand,
   "contacts:request": ContactsRequestCommand,
   "contacts:accept": ContactsAcceptCommand,
   "contacts:wait": ContactsWaitCommand,
@@ -664,6 +669,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   // had no single command to bisect "is the CLI / network / key /
   // server broken"; doctor is that command.
   doctor: DoctorCommand,
+  // `machine doctor` checks and repairs the per-machine setup that lets
+  // coding sessions register and receive mail (hooks, instructions, skills).
+  "machine:doctor": MachineDoctorCommand,
   // `emails:latest` is the inbox-triage shortcut: the most recent N
   // inbound emails as a compact text table. emails:list-emails stays
   // available for the full JSON envelope + cursor pagination.

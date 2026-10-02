@@ -26,6 +26,8 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   // repeating-sends operations.
   "repeat",
   "repeats",
+  // Local machine setup checks; no API operation behind the topic.
+  "machine",
 ]);
 
 describe("oclif topics", () => {

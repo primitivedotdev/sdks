@@ -204,29 +204,8 @@ function defaults(
         env: options.env,
       });
     },
-    async seedAgentInfo(profileName, value) {
-      const profile = loadConnectedAgentProfile(options.configDir, profileName);
-      if (!profile) return "failed";
-      const client = new PrimitiveApiClient({
-        apiKey: profile.api_key,
-        apiBaseUrl: profile.api_base_url,
-      });
-      try {
-        await runAddressNotesRequest(client.client, {
-          action: "set",
-          address: profile.agent_address,
-          name: AGENT_INFO_NOTE,
-          value,
-          visibility: "private",
-          ifAbsent: true,
-        });
-        return "created";
-      } catch (error) {
-        if (error instanceof AddressNotesApiError && error.status === 409)
-          return "already_present";
-        return "failed";
-      }
-    },
+    seedAgentInfo: (profileName, value) =>
+      seedAgentInfoNote(options.configDir, profileName, value),
     refreshOwnerMemberAddress: (profileName) =>
       refreshOwnerMemberAddress({ configDir: options.configDir, profileName }),
     async awaitMailCheck(profileName, since) {
@@ -247,6 +226,37 @@ function defaults(
       }
     },
   };
+}
+
+/** Create the private AGENT_INFO note only when the address has none. */
+export async function seedAgentInfoNote(
+  configDir: string,
+  profileName: string,
+  value: string,
+  fetchImpl?: typeof fetch,
+): Promise<AgentInfoSeed> {
+  const profile = loadConnectedAgentProfile(configDir, profileName);
+  if (!profile) return "failed";
+  const client = new PrimitiveApiClient({
+    apiKey: profile.api_key,
+    apiBaseUrl: profile.api_base_url,
+    ...(fetchImpl ? { fetch: fetchImpl } : {}),
+  });
+  try {
+    await runAddressNotesRequest(client.client, {
+      action: "set",
+      address: profile.agent_address,
+      name: AGENT_INFO_NOTE,
+      value,
+      visibility: "private",
+      ifAbsent: true,
+    });
+    return "created";
+  } catch (error) {
+    if (error instanceof AddressNotesApiError && error.status === 409)
+      return "already_present";
+    return "failed";
+  }
 }
 
 type Skip = { step: string; reason: string };
