@@ -9235,6 +9235,16 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "idempotency_key_required":
 		return nil
+	case "repeat_unsupported":
+		return nil
+	case "repeat_recipient_external":
+		return nil
+	case "repeat_idle_requires_internal_recipient":
+		return nil
+	case "not_a_repeating_send":
+		return nil
+	case "repeat_stop_not_allowed":
+		return nil
 	case "idempotency_key_reused":
 		return nil
 	case "credit_code_invalid":
@@ -17443,7 +17453,7 @@ func (s *RepeatInput) Validate() error {
 	return nil
 }
 
-func (s *RepeatStopInput) Validate() error {
+func (s *RepeatStopRequest) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
@@ -17483,6 +17493,38 @@ func (s *RepeatStopInput) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s *RepeatStopResult) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Status.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "status",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s RepeatStopResultStatus) Validate() error {
+	switch s {
+	case "stopped_by_recipient":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s *RepeatingSend) Validate() error {
@@ -17540,38 +17582,6 @@ func (s RepeatingSendStatus) Validate() error {
 	case "canceled":
 		return nil
 	case "completed":
-		return nil
-	default:
-		return errors.Errorf("invalid value: %v", s)
-	}
-}
-
-func (s *RepeatingSendStop) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := s.Status.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "status",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
-}
-
-func (s RepeatingSendStopStatus) Validate() error {
-	switch s {
-	case "stopped_by_recipient":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -21982,7 +21992,7 @@ func (s *StartCliSignupInput) Validate() error {
 	return nil
 }
 
-func (s *StopRepeatingSendBadRequest) Validate() error {
+func (s *StopRepeatFromEmailBadRequest) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -21990,7 +22000,7 @@ func (s *StopRepeatingSendBadRequest) Validate() error {
 	return nil
 }
 
-func (s *StopRepeatingSendForbidden) Validate() error {
+func (s *StopRepeatFromEmailForbidden) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -21998,7 +22008,7 @@ func (s *StopRepeatingSendForbidden) Validate() error {
 	return nil
 }
 
-func (s *StopRepeatingSendNotFound) Validate() error {
+func (s *StopRepeatFromEmailNotFound) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -22006,7 +22016,7 @@ func (s *StopRepeatingSendNotFound) Validate() error {
 	return nil
 }
 
-func (s *StopRepeatingSendOK) Validate() error {
+func (s *StopRepeatFromEmailOK) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
@@ -22029,7 +22039,7 @@ func (s *StopRepeatingSendOK) Validate() error {
 	return nil
 }
 
-func (s *StopRepeatingSendUnauthorized) Validate() error {
+func (s *StopRepeatFromEmailUnauthorized) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -22037,7 +22047,7 @@ func (s *StopRepeatingSendUnauthorized) Validate() error {
 	return nil
 }
 
-func (s *StopRepeatingSendUnprocessableEntity) Validate() error {
+func (s *StopRepeatFromEmailUnprocessableEntity) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
 		return err
@@ -24537,7 +24547,38 @@ func (s *UpdateRepeatingSendBadRequest) Validate() error {
 	return nil
 }
 
-func (s *UpdateRepeatingSendInput) Validate() error {
+func (s *UpdateRepeatingSendNotFound) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *UpdateRepeatingSendOK) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Data.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "data",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s *UpdateRepeatingSendRequest) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
 	}
@@ -24711,7 +24752,7 @@ func (s *UpdateRepeatingSendInput) Validate() error {
 	return nil
 }
 
-func (s UpdateRepeatingSendInputStatus) Validate() error {
+func (s UpdateRepeatingSendRequestStatus) Validate() error {
 	switch s {
 	case "active":
 		return nil
@@ -24722,37 +24763,6 @@ func (s UpdateRepeatingSendInputStatus) Validate() error {
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
-}
-
-func (s *UpdateRepeatingSendNotFound) Validate() error {
-	alias := (*ErrorResponse)(s)
-	if err := alias.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *UpdateRepeatingSendOK) Validate() error {
-	if s == nil {
-		return validate.ErrNilPointer
-	}
-
-	var failures []validate.FieldError
-	if err := func() error {
-		if err := s.Data.Validate(); err != nil {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "data",
-			Error: err,
-		})
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-	return nil
 }
 
 func (s *UpdateRepeatingSendUnauthorized) Validate() error {

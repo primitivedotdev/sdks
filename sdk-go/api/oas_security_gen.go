@@ -165,7 +165,7 @@ var operationRolesBearerAuth = map[string][]string{
 	SetOrgSecretOperation:                        []string{},
 	SimulateRouteOperation:                       []string{},
 	StartAgentClaimOperation:                     []string{},
-	StopRepeatingSendOperation:                   []string{},
+	StopRepeatFromEmailOperation:                 []string{},
 	TestEndpointOperation:                        []string{},
 	TestEndpointRulesOperation:                   []string{},
 	TestFunctionOperation:                        []string{},

@@ -2326,7 +2326,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 											// Leaf node.
 											switch r.Method {
 											case "POST":
-												s.handleStopRepeatingSendRequest([1]string{
+												s.handleStopRepeatFromEmailRequest([1]string{
 													args[0],
 												}, elemIsEscaped, w, r)
 											default:
@@ -6700,9 +6700,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											// Leaf node.
 											switch method {
 											case "POST":
-												r.name = StopRepeatingSendOperation
+												r.name = StopRepeatFromEmailOperation
 												r.summary = "Stop the repeat behind a received message"
-												r.operationID = "stopRepeatingSend"
+												r.operationID = "stopRepeatFromEmail"
 												r.operationGroup = ""
 												r.pathPattern = "/emails/{id}/repeat-stop"
 												r.args = args

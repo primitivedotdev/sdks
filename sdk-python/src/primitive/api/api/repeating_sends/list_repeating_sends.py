@@ -97,10 +97,10 @@ def sync_detailed(
 ) -> Response[ErrorResponse | ListRepeatingSendsResponse200]:
     """ List repeating sends
 
-     Repeating sends you created, newest first. A member sees the repeats
-    it created; a connected agent sees the repeats its key created; repeats
-    created with an organization API key are visible to organization
-    credentials.
+     Repeating sends you created, newest first. A repeat is visible to the
+    member who created it, or to any organization API key or member for
+    repeats created with an organization API key. Agent credentials get
+    403.
 
     Args:
         to (str | Unset):
@@ -136,10 +136,10 @@ def sync(
 ) -> ErrorResponse | ListRepeatingSendsResponse200 | None:
     """ List repeating sends
 
-     Repeating sends you created, newest first. A member sees the repeats
-    it created; a connected agent sees the repeats its key created; repeats
-    created with an organization API key are visible to organization
-    credentials.
+     Repeating sends you created, newest first. A repeat is visible to the
+    member who created it, or to any organization API key or member for
+    repeats created with an organization API key. Agent credentials get
+    403.
 
     Args:
         to (str | Unset):
@@ -170,10 +170,10 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | ListRepeatingSendsResponse200]:
     """ List repeating sends
 
-     Repeating sends you created, newest first. A member sees the repeats
-    it created; a connected agent sees the repeats its key created; repeats
-    created with an organization API key are visible to organization
-    credentials.
+     Repeating sends you created, newest first. A repeat is visible to the
+    member who created it, or to any organization API key or member for
+    repeats created with an organization API key. Agent credentials get
+    403.
 
     Args:
         to (str | Unset):
@@ -209,10 +209,10 @@ async def asyncio(
 ) -> ErrorResponse | ListRepeatingSendsResponse200 | None:
     """ List repeating sends
 
-     Repeating sends you created, newest first. A member sees the repeats
-    it created; a connected agent sees the repeats its key created; repeats
-    created with an organization API key are visible to organization
-    credentials.
+     Repeating sends you created, newest first. A repeat is visible to the
+    member who created it, or to any organization API key or member for
+    repeats created with an organization API key. Agent credentials get
+    403.
 
     Args:
         to (str | Unset):

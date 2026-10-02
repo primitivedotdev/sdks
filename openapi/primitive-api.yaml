@@ -2367,7 +2367,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ResourceId"
     post:
-      operationId: stopRepeatingSend
+      operationId: stopRepeatFromEmail
       summary: Stop the repeat behind a received message
       description: |
         Called by the recipient of a repeating send: the connected agent's own
@@ -2384,7 +2384,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RepeatStopInput"
+              $ref: "#/components/schemas/RepeatStopRequest"
       responses:
         "200":
           description: The repeat is stopped
@@ -2396,7 +2396,7 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: "#/components/schemas/RepeatingSendStop"
+                        $ref: "#/components/schemas/RepeatStopResult"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -3923,10 +3923,10 @@ paths:
       operationId: listRepeatingSends
       summary: List repeating sends
       description: |
-        Repeating sends you created, newest first. A member sees the repeats
-        it created; a connected agent sees the repeats its key created; repeats
-        created with an organization API key are visible to organization
-        credentials.
+        Repeating sends you created, newest first. A repeat is visible to the
+        member who created it, or to any organization API key or member for
+        repeats created with an organization API key. Agent credentials get
+        403.
       tags:
         - Repeating Sends
       parameters:
@@ -4000,7 +4000,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateRepeatingSendInput"
+              $ref: "#/components/schemas/UpdateRepeatingSendRequest"
       responses:
         "200":
           description: The updated repeating send
@@ -12278,6 +12278,11 @@ components:
                 - subscription_unavailable
                 - stale_delivery
                 - idempotency_key_required
+                - repeat_unsupported
+                - repeat_recipient_external
+                - repeat_idle_requires_internal_recipient
+                - not_a_repeating_send
+                - repeat_stop_not_allowed
                 - idempotency_key_reused
                 - credit_code_invalid
                 - credit_code_already_redeemed
@@ -16438,6 +16443,7 @@ components:
         - completed
     RepeatingSend:
       type: object
+      additionalProperties: false
       properties:
         id:
           type: string
@@ -16450,10 +16456,12 @@ components:
         to_address:
           type: string
         subject:
+          type: string
+        body_text:
           type:
             - string
             - "null"
-        body_text:
+        body_html:
           type:
             - string
             - "null"
@@ -16493,6 +16501,7 @@ components:
           type:
             - string
             - "null"
+          format: uuid
         root_message_id:
           type:
             - string
@@ -16515,15 +16524,31 @@ components:
           format: date-time
       required:
         - id
+        - org_id
         - from_address
         - to_address
+        - subject
+        - body_text
+        - body_html
         - every_minutes
+        - only_if_recipient_idle_minutes
         - stoppable_by_recipient
+        - max_sends
+        - until
         - status
+        - next_run_at
         - sent_count
-    UpdateRepeatingSendInput:
+        - last_sent_at
+        - last_sent_email_id
+        - root_message_id
+        - stopped_at
+        - stop_reason
+        - created_at
+        - updated_at
+    UpdateRepeatingSendRequest:
       type: object
       additionalProperties: false
+      minProperties: 1
       properties:
         status:
           type: string
@@ -16560,7 +16585,7 @@ components:
         subject:
           type: string
           minLength: 1
-    RepeatStopInput:
+    RepeatStopRequest:
       type: object
       additionalProperties: false
       properties:
@@ -16569,8 +16594,9 @@ components:
           minLength: 1
           maxLength: 280
           description: Short reason shown to the sender.
-    RepeatingSendStop:
+    RepeatStopResult:
       type: object
+      additionalProperties: false
       properties:
         repeat_id:
           type: string
@@ -16590,12 +16616,14 @@ components:
           type:
             - string
             - "null"
-          description: The reply that told the sender, when one was sent.
+          format: uuid
+          description: The repeat.stop/1 reply that told the sender, or null if it could not be sent.
       required:
         - repeat_id
         - status
         - stopped_at
         - stop_reason
+        - reply_sent_email_id
     SendMailResult:
       type: object
       properties:

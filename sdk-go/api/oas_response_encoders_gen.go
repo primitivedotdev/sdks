@@ -12592,9 +12592,9 @@ func encodeStartCliSignupResponse(response StartCliSignupRes, w http.ResponseWri
 	}
 }
 
-func encodeStopRepeatingSendResponse(response StopRepeatingSendRes, w http.ResponseWriter, span trace.Span) error {
+func encodeStopRepeatFromEmailResponse(response StopRepeatFromEmailRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
-	case *StopRepeatingSendOK:
+	case *StopRepeatFromEmailOK:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
 		span.SetStatus(codes.Ok, http.StatusText(200))
@@ -12607,7 +12607,7 @@ func encodeStopRepeatingSendResponse(response StopRepeatingSendRes, w http.Respo
 
 		return nil
 
-	case *StopRepeatingSendBadRequest:
+	case *StopRepeatFromEmailBadRequest:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(400)
 		span.SetStatus(codes.Error, http.StatusText(400))
@@ -12620,7 +12620,7 @@ func encodeStopRepeatingSendResponse(response StopRepeatingSendRes, w http.Respo
 
 		return nil
 
-	case *StopRepeatingSendUnauthorized:
+	case *StopRepeatFromEmailUnauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
 		span.SetStatus(codes.Error, http.StatusText(401))
@@ -12633,7 +12633,7 @@ func encodeStopRepeatingSendResponse(response StopRepeatingSendRes, w http.Respo
 
 		return nil
 
-	case *StopRepeatingSendForbidden:
+	case *StopRepeatFromEmailForbidden:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(403)
 		span.SetStatus(codes.Error, http.StatusText(403))
@@ -12646,7 +12646,7 @@ func encodeStopRepeatingSendResponse(response StopRepeatingSendRes, w http.Respo
 
 		return nil
 
-	case *StopRepeatingSendNotFound:
+	case *StopRepeatFromEmailNotFound:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(404)
 		span.SetStatus(codes.Error, http.StatusText(404))
@@ -12659,7 +12659,7 @@ func encodeStopRepeatingSendResponse(response StopRepeatingSendRes, w http.Respo
 
 		return nil
 
-	case *StopRepeatingSendUnprocessableEntity:
+	case *StopRepeatFromEmailUnprocessableEntity:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(422)
 		span.SetStatus(codes.Error, http.StatusText(422))

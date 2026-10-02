@@ -9,8 +9,8 @@ from ...types import Response, UNSET
 from ... import errors
 
 from ...models.error_response import ErrorResponse
-from ...models.repeat_stop_input import RepeatStopInput
-from ...models.stop_repeating_send_response_200 import StopRepeatingSendResponse200
+from ...models.repeat_stop_request import RepeatStopRequest
+from ...models.stop_repeat_from_email_response_200 import StopRepeatFromEmailResponse200
 from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
@@ -20,7 +20,7 @@ from uuid import UUID
 def _get_kwargs(
     id: UUID,
     *,
-    body: RepeatStopInput | Unset = UNSET,
+    body: RepeatStopRequest | Unset = UNSET,
 
 ) -> dict[str, Any]:
     headers: dict[str, Any] = {}
@@ -45,9 +45,9 @@ def _get_kwargs(
 
 
 
-def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | StopRepeatingSendResponse200 | None:
+def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> ErrorResponse | StopRepeatFromEmailResponse200 | None:
     if response.status_code == 200:
-        response_200 = StopRepeatingSendResponse200.from_dict(response.json())
+        response_200 = StopRepeatFromEmailResponse200.from_dict(response.json())
 
 
 
@@ -94,7 +94,7 @@ def _parse_response(*, client: AuthenticatedClient | Client, response: httpx.Res
         return None
 
 
-def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | StopRepeatingSendResponse200]:
+def _build_response(*, client: AuthenticatedClient | Client, response: httpx.Response) -> Response[ErrorResponse | StopRepeatFromEmailResponse200]:
     return Response(
         status_code=HTTPStatus(response.status_code),
         content=response.content,
@@ -107,9 +107,9 @@ def sync_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: RepeatStopInput | Unset = UNSET,
+    body: RepeatStopRequest | Unset = UNSET,
 
-) -> Response[ErrorResponse | StopRepeatingSendResponse200]:
+) -> Response[ErrorResponse | StopRepeatFromEmailResponse200]:
     """ Stop the repeat behind a received message
 
      Called by the recipient of a repeating send: the connected agent's own
@@ -122,14 +122,14 @@ def sync_detailed(
 
     Args:
         id (UUID):
-        body (RepeatStopInput | Unset):
+        body (RepeatStopRequest | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ErrorResponse | StopRepeatingSendResponse200]
+        Response[ErrorResponse | StopRepeatFromEmailResponse200]
      """
 
 
@@ -149,9 +149,9 @@ def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: RepeatStopInput | Unset = UNSET,
+    body: RepeatStopRequest | Unset = UNSET,
 
-) -> ErrorResponse | StopRepeatingSendResponse200 | None:
+) -> ErrorResponse | StopRepeatFromEmailResponse200 | None:
     """ Stop the repeat behind a received message
 
      Called by the recipient of a repeating send: the connected agent's own
@@ -164,14 +164,14 @@ def sync(
 
     Args:
         id (UUID):
-        body (RepeatStopInput | Unset):
+        body (RepeatStopRequest | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ErrorResponse | StopRepeatingSendResponse200
+        ErrorResponse | StopRepeatFromEmailResponse200
      """
 
 
@@ -186,9 +186,9 @@ async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: RepeatStopInput | Unset = UNSET,
+    body: RepeatStopRequest | Unset = UNSET,
 
-) -> Response[ErrorResponse | StopRepeatingSendResponse200]:
+) -> Response[ErrorResponse | StopRepeatFromEmailResponse200]:
     """ Stop the repeat behind a received message
 
      Called by the recipient of a repeating send: the connected agent's own
@@ -201,14 +201,14 @@ async def asyncio_detailed(
 
     Args:
         id (UUID):
-        body (RepeatStopInput | Unset):
+        body (RepeatStopRequest | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        Response[ErrorResponse | StopRepeatingSendResponse200]
+        Response[ErrorResponse | StopRepeatFromEmailResponse200]
      """
 
 
@@ -228,9 +228,9 @@ async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
-    body: RepeatStopInput | Unset = UNSET,
+    body: RepeatStopRequest | Unset = UNSET,
 
-) -> ErrorResponse | StopRepeatingSendResponse200 | None:
+) -> ErrorResponse | StopRepeatFromEmailResponse200 | None:
     """ Stop the repeat behind a received message
 
      Called by the recipient of a repeating send: the connected agent's own
@@ -243,14 +243,14 @@ async def asyncio(
 
     Args:
         id (UUID):
-        body (RepeatStopInput | Unset):
+        body (RepeatStopRequest | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
         httpx.TimeoutException: If the request takes longer than Client.timeout.
 
     Returns:
-        ErrorResponse | StopRepeatingSendResponse200
+        ErrorResponse | StopRepeatFromEmailResponse200
      """
 
 

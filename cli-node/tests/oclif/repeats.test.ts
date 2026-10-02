@@ -132,12 +132,12 @@ describe("repeat command registration", () => {
       "repeats:pause",
       "repeats:resume",
       "repeats:cancel",
-      "repeating-sends:stop-repeating-send",
+      "repeating-sends:stop-repeat-from-email",
       "repeating-sends:delete-repeating-send",
     ])
       expect(COMMANDS[id]).toBeDefined();
     expect(
-      operationManifest.find((op) => op.operationId === "stopRepeatingSend"),
+      operationManifest.find((op) => op.operationId === "stopRepeatFromEmail"),
     ).toMatchObject({ method: "POST", path: "/emails/{id}/repeat-stop" });
   });
 });

@@ -8,7 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.repeating_send_stop_status import RepeatingSendStopStatus
+from ..models.repeat_stop_result_status import RepeatStopResultStatus
 from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
@@ -19,27 +19,27 @@ import datetime
 
 
 
-T = TypeVar("T", bound="RepeatingSendStop")
+T = TypeVar("T", bound="RepeatStopResult")
 
 
 
 @_attrs_define
-class RepeatingSendStop:
+class RepeatStopResult:
     """ 
         Attributes:
             repeat_id (UUID):
-            status (RepeatingSendStopStatus):
+            status (RepeatStopResultStatus):
             stopped_at (datetime.datetime):
             stop_reason (None | str):
-            reply_sent_email_id (None | str | Unset): The reply that told the sender, when one was sent.
+            reply_sent_email_id (None | UUID): The repeat.stop/1 reply that told the sender, or null if it could not be
+                sent.
      """
 
     repeat_id: UUID
-    status: RepeatingSendStopStatus
+    status: RepeatStopResultStatus
     stopped_at: datetime.datetime
     stop_reason: None | str
-    reply_sent_email_id: None | str | Unset = UNSET
-    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
+    reply_sent_email_id: None | UUID
 
 
 
@@ -55,23 +55,22 @@ class RepeatingSendStop:
         stop_reason: None | str
         stop_reason = self.stop_reason
 
-        reply_sent_email_id: None | str | Unset
-        if isinstance(self.reply_sent_email_id, Unset):
-            reply_sent_email_id = UNSET
+        reply_sent_email_id: None | str
+        if isinstance(self.reply_sent_email_id, UUID):
+            reply_sent_email_id = str(self.reply_sent_email_id)
         else:
             reply_sent_email_id = self.reply_sent_email_id
 
 
         field_dict: dict[str, Any] = {}
-        field_dict.update(self.additional_properties)
+
         field_dict.update({
             "repeat_id": repeat_id,
             "status": status,
             "stopped_at": stopped_at,
             "stop_reason": stop_reason,
+            "reply_sent_email_id": reply_sent_email_id,
         })
-        if reply_sent_email_id is not UNSET:
-            field_dict["reply_sent_email_id"] = reply_sent_email_id
 
         return field_dict
 
@@ -85,7 +84,7 @@ class RepeatingSendStop:
 
 
 
-        status = RepeatingSendStopStatus(d.pop("status"))
+        status = RepeatStopResultStatus(d.pop("status"))
 
 
 
@@ -103,17 +102,25 @@ class RepeatingSendStop:
         stop_reason = _parse_stop_reason(d.pop("stop_reason"))
 
 
-        def _parse_reply_sent_email_id(data: object) -> None | str | Unset:
+        def _parse_reply_sent_email_id(data: object) -> None | UUID:
             if data is None:
                 return data
-            if isinstance(data, Unset):
-                return data
-            return cast(None | str | Unset, data)
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                reply_sent_email_id_type_0 = UUID(data)
 
-        reply_sent_email_id = _parse_reply_sent_email_id(d.pop("reply_sent_email_id", UNSET))
 
 
-        repeating_send_stop = cls(
+                return reply_sent_email_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        reply_sent_email_id = _parse_reply_sent_email_id(d.pop("reply_sent_email_id"))
+
+
+        repeat_stop_result = cls(
             repeat_id=repeat_id,
             status=status,
             stopped_at=stopped_at,
@@ -121,22 +128,5 @@ class RepeatingSendStop:
             reply_sent_email_id=reply_sent_email_id,
         )
 
+        return repeat_stop_result
 
-        repeating_send_stop.additional_properties = d
-        return repeating_send_stop
-
-    @property
-    def additional_keys(self) -> list[str]:
-        return list(self.additional_properties.keys())
-
-    def __getitem__(self, key: str) -> Any:
-        return self.additional_properties[key]
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        self.additional_properties[key] = value
-
-    def __delitem__(self, key: str) -> None:
-        del self.additional_properties[key]
-
-    def __contains__(self, key: str) -> bool:
-        return key in self.additional_properties

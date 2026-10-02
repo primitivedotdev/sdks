@@ -4,8 +4,8 @@ import {
   listRepeatingSends,
   type RepeatingSend,
   type RepeatingSendStatus,
-  type RepeatingSendStop,
-  stopRepeatingSend,
+  type RepeatStopResult,
+  stopRepeatFromEmail,
   updateRepeatingSend,
 } from "@primitivedotdev/api-core";
 import { buildRepeatStopBody } from "@primitivedotdev/sdk/interactions";
@@ -87,7 +87,7 @@ export function formatRepeat(repeat: RepeatingSend): string {
   return line;
 }
 
-export function formatRepeatStop(stop: RepeatingSendStop): string {
+export function formatRepeatStop(stop: RepeatStopResult): string {
   const lines = [
     `Stopped repeat ${stop.repeat_id}. No more repeats will be sent.`,
   ];
@@ -177,7 +177,7 @@ export class RepeatStopCommand extends Command {
       this,
       flags,
       (client) =>
-        stopRepeatingSend({
+        stopRepeatFromEmail({
           client,
           path: { id: flags.id },
           body,

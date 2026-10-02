@@ -11,26 +11,26 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
-  from ..models.repeating_send_stop import RepeatingSendStop
+  from ..models.repeat_stop_result import RepeatStopResult
 
 
 
 
 
-T = TypeVar("T", bound="StopRepeatingSendResponse200")
+T = TypeVar("T", bound="StopRepeatFromEmailResponse200")
 
 
 
 @_attrs_define
-class StopRepeatingSendResponse200:
+class StopRepeatFromEmailResponse200:
     """ 
         Attributes:
             success (bool):
-            data (RepeatingSendStop | Unset):
+            data (RepeatStopResult | Unset):
      """
 
     success: bool
-    data: RepeatingSendStop | Unset = UNSET
+    data: RepeatStopResult | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,7 +38,7 @@ class StopRepeatingSendResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.repeating_send_stop import RepeatingSendStop
+        from ..models.repeat_stop_result import RepeatStopResult
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,28 +60,28 @@ class StopRepeatingSendResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.repeating_send_stop import RepeatingSendStop
+        from ..models.repeat_stop_result import RepeatStopResult
         d = dict(src_dict)
         success = d.pop("success")
 
         _data = d.pop("data", UNSET)
-        data: RepeatingSendStop | Unset
+        data: RepeatStopResult | Unset
         if isinstance(_data,  Unset):
             data = UNSET
         else:
-            data = RepeatingSendStop.from_dict(_data)
+            data = RepeatStopResult.from_dict(_data)
 
 
 
 
-        stop_repeating_send_response_200 = cls(
+        stop_repeat_from_email_response_200 = cls(
             success=success,
             data=data,
         )
 
 
-        stop_repeating_send_response_200.additional_properties = d
-        return stop_repeating_send_response_200
+        stop_repeat_from_email_response_200.additional_properties = d
+        return stop_repeat_from_email_response_200
 
     @property
     def additional_keys(self) -> list[str]:

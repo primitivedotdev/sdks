@@ -724,8 +724,8 @@ func encodeStartCliSignupRequest(
 	return nil
 }
 
-func encodeStopRepeatingSendRequest(
-	req OptRepeatStopInput,
+func encodeStopRepeatFromEmailRequest(
+	req OptRepeatStopRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"
@@ -877,7 +877,7 @@ func encodeUpdateRegistryRequest(
 }
 
 func encodeUpdateRepeatingSendRequest(
-	req *UpdateRepeatingSendInput,
+	req *UpdateRepeatingSendRequest,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

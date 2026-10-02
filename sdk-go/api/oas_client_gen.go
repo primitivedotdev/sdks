@@ -1185,10 +1185,10 @@ type Invoker interface {
 	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
 	// ListRepeatingSends invokes listRepeatingSends operation.
 	//
-	// Repeating sends you created, newest first. A member sees the repeats
-	// it created; a connected agent sees the repeats its key created; repeats
-	// created with an organization API key are visible to organization
-	// credentials.
+	// Repeating sends you created, newest first. A repeat is visible to the
+	// member who created it, or to any organization API key or member for
+	// repeats created with an organization API key. Agent credentials get
+	// 403.
 	//
 	// GET /repeating-sends
 	ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (ListRepeatingSendsRes, error)
@@ -1722,7 +1722,7 @@ type Invoker interface {
 	//
 	// POST /cli/signup/start
 	StartCliSignup(ctx context.Context, request *StartCliSignupInput) (StartCliSignupRes, error)
-	// StopRepeatingSend invokes stopRepeatingSend operation.
+	// StopRepeatFromEmail invokes stopRepeatFromEmail operation.
 	//
 	// Called by the recipient of a repeating send: the connected agent's own
 	// credential for an agent address, or the signed-in member whose personal
@@ -1733,7 +1733,7 @@ type Invoker interface {
 	// the same result without a second reply.
 	//
 	// POST /emails/{id}/repeat-stop
-	StopRepeatingSend(ctx context.Context, request OptRepeatStopInput, params StopRepeatingSendParams) (StopRepeatingSendRes, error)
+	StopRepeatFromEmail(ctx context.Context, request OptRepeatStopRequest, params StopRepeatFromEmailParams) (StopRepeatFromEmailRes, error)
 	// TestEndpoint invokes testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -1873,7 +1873,7 @@ type Invoker interface {
 	// or `until` clears that limit.
 	//
 	// PATCH /repeating-sends/{id}
-	UpdateRepeatingSend(ctx context.Context, request *UpdateRepeatingSendInput, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error)
+	UpdateRepeatingSend(ctx context.Context, request *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error)
 	// UpdateRoute invokes updateRoute operation.
 	//
 	// Update a recipient route.
@@ -15018,10 +15018,10 @@ func (c *Client) sendListRegistryRequests(ctx context.Context, params ListRegist
 
 // ListRepeatingSends invokes listRepeatingSends operation.
 //
-// Repeating sends you created, newest first. A member sees the repeats
-// it created; a connected agent sees the repeats its key created; repeats
-// created with an organization API key are visible to organization
-// credentials.
+// Repeating sends you created, newest first. A repeat is visible to the
+// member who created it, or to any organization API key or member for
+// repeats created with an organization API key. Agent credentials get
+// 403.
 //
 // GET /repeating-sends
 func (c *Client) ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (ListRepeatingSendsRes, error) {
@@ -21093,7 +21093,7 @@ func (c *Client) sendStartCliSignup(ctx context.Context, request *StartCliSignup
 	return result, nil
 }
 
-// StopRepeatingSend invokes stopRepeatingSend operation.
+// StopRepeatFromEmail invokes stopRepeatFromEmail operation.
 //
 // Called by the recipient of a repeating send: the connected agent's own
 // credential for an agent address, or the signed-in member whose personal
@@ -21104,14 +21104,14 @@ func (c *Client) sendStartCliSignup(ctx context.Context, request *StartCliSignup
 // the same result without a second reply.
 //
 // POST /emails/{id}/repeat-stop
-func (c *Client) StopRepeatingSend(ctx context.Context, request OptRepeatStopInput, params StopRepeatingSendParams) (StopRepeatingSendRes, error) {
-	res, err := c.sendStopRepeatingSend(ctx, request, params)
+func (c *Client) StopRepeatFromEmail(ctx context.Context, request OptRepeatStopRequest, params StopRepeatFromEmailParams) (StopRepeatFromEmailRes, error) {
+	res, err := c.sendStopRepeatFromEmail(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendStopRepeatingSend(ctx context.Context, request OptRepeatStopInput, params StopRepeatingSendParams) (res StopRepeatingSendRes, err error) {
+func (c *Client) sendStopRepeatFromEmail(ctx context.Context, request OptRepeatStopRequest, params StopRepeatFromEmailParams) (res StopRepeatFromEmailRes, err error) {
 	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("stopRepeatingSend"),
+		otelogen.OperationID("stopRepeatFromEmail"),
 		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.URLTemplateKey.String("/emails/{id}/repeat-stop"),
 	}
@@ -21129,7 +21129,7 @@ func (c *Client) sendStopRepeatingSend(ctx context.Context, request OptRepeatSto
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, StopRepeatingSendOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, StopRepeatFromEmailOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -21174,7 +21174,7 @@ func (c *Client) sendStopRepeatingSend(ctx context.Context, request OptRepeatSto
 	if err != nil {
 		return res, errors.Wrap(err, "create request")
 	}
-	if err := encodeStopRepeatingSendRequest(request, r); err != nil {
+	if err := encodeStopRepeatFromEmailRequest(request, r); err != nil {
 		return res, errors.Wrap(err, "encode request")
 	}
 
@@ -21183,7 +21183,7 @@ func (c *Client) sendStopRepeatingSend(ctx context.Context, request OptRepeatSto
 		var satisfied bitset
 		{
 			stage = "Security:BearerAuth"
-			switch err := c.securityBearerAuth(ctx, StopRepeatingSendOperation, r); {
+			switch err := c.securityBearerAuth(ctx, StopRepeatFromEmailOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
@@ -21220,7 +21220,7 @@ func (c *Client) sendStopRepeatingSend(ctx context.Context, request OptRepeatSto
 	defer body.Close()
 
 	stage = "DecodeResponse"
-	result, err := decodeStopRepeatingSendResponse(resp)
+	result, err := decodeStopRepeatFromEmailResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -22827,12 +22827,12 @@ func (c *Client) sendUpdateRegistry(ctx context.Context, request *UpdateRegistry
 // or `until` clears that limit.
 //
 // PATCH /repeating-sends/{id}
-func (c *Client) UpdateRepeatingSend(ctx context.Context, request *UpdateRepeatingSendInput, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error) {
+func (c *Client) UpdateRepeatingSend(ctx context.Context, request *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error) {
 	res, err := c.sendUpdateRepeatingSend(ctx, request, params)
 	return res, err
 }
 
-func (c *Client) sendUpdateRepeatingSend(ctx context.Context, request *UpdateRepeatingSendInput, params UpdateRepeatingSendParams) (res UpdateRepeatingSendRes, err error) {
+func (c *Client) sendUpdateRepeatingSend(ctx context.Context, request *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (res UpdateRepeatingSendRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateRepeatingSend"),
 		semconv.HTTPRequestMethodKey.String("PATCH"),

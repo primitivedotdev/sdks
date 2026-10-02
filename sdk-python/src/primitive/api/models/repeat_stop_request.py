@@ -14,12 +14,12 @@ from ..types import UNSET, Unset
 
 
 
-T = TypeVar("T", bound="RepeatStopInput")
+T = TypeVar("T", bound="RepeatStopRequest")
 
 
 
 @_attrs_define
-class RepeatStopInput:
+class RepeatStopRequest:
     """ 
         Attributes:
             reason (str | Unset): Short reason shown to the sender.
@@ -51,9 +51,9 @@ class RepeatStopInput:
         d = dict(src_dict)
         reason = d.pop("reason", UNSET)
 
-        repeat_stop_input = cls(
+        repeat_stop_request = cls(
             reason=reason,
         )
 
-        return repeat_stop_input
+        return repeat_stop_request
 

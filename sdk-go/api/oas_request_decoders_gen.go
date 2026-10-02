@@ -3953,8 +3953,8 @@ func (s *Server) decodeStartCliSignupRequest(r *http.Request) (
 	}
 }
 
-func (s *Server) decodeStopRepeatingSendRequest(r *http.Request) (
-	req OptRepeatStopInput,
+func (s *Server) decodeStopRepeatFromEmailRequest(r *http.Request) (
+	req OptRepeatStopRequest,
 	rawBody []byte,
 	close func() error,
 	rerr error,
@@ -4004,7 +4004,7 @@ func (s *Server) decodeStopRepeatingSendRequest(r *http.Request) (
 		rawBody = append(rawBody, buf...)
 		d := jx.DecodeBytes(buf)
 
-		var request OptRepeatStopInput
+		var request OptRepeatStopRequest
 		if err := func() error {
 			request.Reset()
 			if err := request.Decode(d); err != nil {
@@ -4742,7 +4742,7 @@ func (s *Server) decodeUpdateRegistryRequest(r *http.Request) (
 }
 
 func (s *Server) decodeUpdateRepeatingSendRequest(r *http.Request) (
-	req *UpdateRepeatingSendInput,
+	req *UpdateRepeatingSendRequest,
 	rawBody []byte,
 	close func() error,
 	rerr error,
@@ -4789,7 +4789,7 @@ func (s *Server) decodeUpdateRepeatingSendRequest(r *http.Request) (
 		rawBody = append(rawBody, buf...)
 		d := jx.DecodeBytes(buf)
 
-		var request UpdateRepeatingSendInput
+		var request UpdateRepeatingSendRequest
 		if err := func() error {
 			if err := request.Decode(d); err != nil {
 				return err

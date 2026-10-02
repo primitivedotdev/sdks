@@ -14326,94 +14326,99 @@ func (s *ErrorResponseError) SetRequestID(val OptString) {
 type ErrorResponseErrorCode string
 
 const (
-	ErrorResponseErrorCodeUnauthorized                    ErrorResponseErrorCode = "unauthorized"
-	ErrorResponseErrorCodeForbidden                       ErrorResponseErrorCode = "forbidden"
-	ErrorResponseErrorCodeNotFound                        ErrorResponseErrorCode = "not_found"
-	ErrorResponseErrorCodeValidationError                 ErrorResponseErrorCode = "validation_error"
-	ErrorResponseErrorCodeRateLimitExceeded               ErrorResponseErrorCode = "rate_limit_exceeded"
-	ErrorResponseErrorCodeInternalError                   ErrorResponseErrorCode = "internal_error"
-	ErrorResponseErrorCodeConflict                        ErrorResponseErrorCode = "conflict"
-	ErrorResponseErrorCodeMxConflict                      ErrorResponseErrorCode = "mx_conflict"
-	ErrorResponseErrorCodeNotScheduled                    ErrorResponseErrorCode = "not_scheduled"
-	ErrorResponseErrorCodeSentEmailDeleted                ErrorResponseErrorCode = "sent_email_deleted"
-	ErrorResponseErrorCodeSentEmailNotSettled             ErrorResponseErrorCode = "sent_email_not_settled"
-	ErrorResponseErrorCodeSentEmailChanged                ErrorResponseErrorCode = "sent_email_changed"
-	ErrorResponseErrorCodeSentEmailCleanupFailed          ErrorResponseErrorCode = "sent_email_cleanup_failed"
-	ErrorResponseErrorCodeConnectionNotRevoked            ErrorResponseErrorCode = "connection_not_revoked"
-	ErrorResponseErrorCodeAttachmentChanged               ErrorResponseErrorCode = "attachment_changed"
-	ErrorResponseErrorCodeContentDiscarded                ErrorResponseErrorCode = "content_discarded"
-	ErrorResponseErrorCodeAttachmentLimitExceeded         ErrorResponseErrorCode = "attachment_limit_exceeded"
-	ErrorResponseErrorCodeAttachmentIntegrityFailed       ErrorResponseErrorCode = "attachment_integrity_failed"
-	ErrorResponseErrorCodeAttachmentNotReady              ErrorResponseErrorCode = "attachment_not_ready"
-	ErrorResponseErrorCodeAttachmentStorageUnavailable    ErrorResponseErrorCode = "attachment_storage_unavailable"
-	ErrorResponseErrorCodeOutboundDisabled                ErrorResponseErrorCode = "outbound_disabled"
-	ErrorResponseErrorCodeCannotSendFromDomain            ErrorResponseErrorCode = "cannot_send_from_domain"
-	ErrorResponseErrorCodeRecipientNotAllowed             ErrorResponseErrorCode = "recipient_not_allowed"
-	ErrorResponseErrorCodeOutboundKeyMissing              ErrorResponseErrorCode = "outbound_key_missing"
-	ErrorResponseErrorCodeOutboundUnreachable             ErrorResponseErrorCode = "outbound_unreachable"
-	ErrorResponseErrorCodeOutboundKeyInvalid              ErrorResponseErrorCode = "outbound_key_invalid"
-	ErrorResponseErrorCodeOutboundCapacityExhausted       ErrorResponseErrorCode = "outbound_capacity_exhausted"
-	ErrorResponseErrorCodeOutboundResponseMalformed       ErrorResponseErrorCode = "outbound_response_malformed"
-	ErrorResponseErrorCodeOutboundRelayFailed             ErrorResponseErrorCode = "outbound_relay_failed"
-	ErrorResponseErrorCodeDiscardNotEnabled               ErrorResponseErrorCode = "discard_not_enabled"
-	ErrorResponseErrorCodeInboundNotRepliable             ErrorResponseErrorCode = "inbound_not_repliable"
-	ErrorResponseErrorCodeSearchTimeout                   ErrorResponseErrorCode = "search_timeout"
-	ErrorResponseErrorCodeAuthorizationPending            ErrorResponseErrorCode = "authorization_pending"
-	ErrorResponseErrorCodeSlowDown                        ErrorResponseErrorCode = "slow_down"
-	ErrorResponseErrorCodeAccessDenied                    ErrorResponseErrorCode = "access_denied"
-	ErrorResponseErrorCodeExpiredToken                    ErrorResponseErrorCode = "expired_token"
-	ErrorResponseErrorCodeInvalidDeviceCode               ErrorResponseErrorCode = "invalid_device_code"
-	ErrorResponseErrorCodeInvalidSignupCode               ErrorResponseErrorCode = "invalid_signup_code"
-	ErrorResponseErrorCodeInvalidSignupToken              ErrorResponseErrorCode = "invalid_signup_token"
-	ErrorResponseErrorCodeInvalidVerificationCode         ErrorResponseErrorCode = "invalid_verification_code"
-	ErrorResponseErrorCodeEmailDeliveryFailed             ErrorResponseErrorCode = "email_delivery_failed"
-	ErrorResponseErrorCodeClerkSignupFailed               ErrorResponseErrorCode = "clerk_signup_failed"
-	ErrorResponseErrorCodeNoOrgsForUser                   ErrorResponseErrorCode = "no_orgs_for_user"
-	ErrorResponseErrorCodeOrgNotAccessible                ErrorResponseErrorCode = "org_not_accessible"
-	ErrorResponseErrorCodeFeatureDisabled                 ErrorResponseErrorCode = "feature_disabled"
-	ErrorResponseErrorCodeMemoryConflict                  ErrorResponseErrorCode = "memory_conflict"
-	ErrorResponseErrorCodeTemplateNotInstallable          ErrorResponseErrorCode = "template_not_installable"
-	ErrorResponseErrorCodeScaffoldOnly                    ErrorResponseErrorCode = "scaffold_only"
-	ErrorResponseErrorCodeInvalidVariables                ErrorResponseErrorCode = "invalid_variables"
-	ErrorResponseErrorCodeUnknownSecrets                  ErrorResponseErrorCode = "unknown_secrets"
-	ErrorResponseErrorCodeMissingSecrets                  ErrorResponseErrorCode = "missing_secrets"
-	ErrorResponseErrorCodeNoInboundDomain                 ErrorResponseErrorCode = "no_inbound_domain"
-	ErrorResponseErrorCodeDomainCannotSend                ErrorResponseErrorCode = "domain_cannot_send"
-	ErrorResponseErrorCodeAddressTaken                    ErrorResponseErrorCode = "address_taken"
-	ErrorResponseErrorCodeRouteCapReached                 ErrorResponseErrorCode = "route_cap_reached"
-	ErrorResponseErrorCodeNameExhausted                   ErrorResponseErrorCode = "name_exhausted"
-	ErrorResponseErrorCodeDeveloperUsageCreditExhausted   ErrorResponseErrorCode = "developer_usage_credit_exhausted"
-	ErrorResponseErrorCodeNoPayoutAddress                 ErrorResponseErrorCode = "no_payout_address"
-	ErrorResponseErrorCodeOwnershipProofFailed            ErrorResponseErrorCode = "ownership_proof_failed"
-	ErrorResponseErrorCodePaymentVerificationFailed       ErrorResponseErrorCode = "payment_verification_failed"
-	ErrorResponseErrorCodePaymentDeclined                 ErrorResponseErrorCode = "payment_declined"
-	ErrorResponseErrorCodeChallengeExpired                ErrorResponseErrorCode = "challenge_expired"
-	ErrorResponseErrorCodeSettlementFailed                ErrorResponseErrorCode = "settlement_failed"
-	ErrorResponseErrorCodePullUnavailable                 ErrorResponseErrorCode = "pull_unavailable"
-	ErrorResponseErrorCodeSubscriptionConflict            ErrorResponseErrorCode = "subscription_conflict"
-	ErrorResponseErrorCodeSubscriptionLimit               ErrorResponseErrorCode = "subscription_limit"
-	ErrorResponseErrorCodeSubscriptionDisabled            ErrorResponseErrorCode = "subscription_disabled"
-	ErrorResponseErrorCodeRequestAborted                  ErrorResponseErrorCode = "request_aborted"
-	ErrorResponseErrorCodeEventContentUnavailable         ErrorResponseErrorCode = "event_content_unavailable"
-	ErrorResponseErrorCodeEventPreparationFailed          ErrorResponseErrorCode = "event_preparation_failed"
-	ErrorResponseErrorCodeSubscriptionUnavailable         ErrorResponseErrorCode = "subscription_unavailable"
-	ErrorResponseErrorCodeStaleDelivery                   ErrorResponseErrorCode = "stale_delivery"
-	ErrorResponseErrorCodeIdempotencyKeyRequired          ErrorResponseErrorCode = "idempotency_key_required"
-	ErrorResponseErrorCodeIdempotencyKeyReused            ErrorResponseErrorCode = "idempotency_key_reused"
-	ErrorResponseErrorCodeCreditCodeInvalid               ErrorResponseErrorCode = "credit_code_invalid"
-	ErrorResponseErrorCodeCreditCodeAlreadyRedeemed       ErrorResponseErrorCode = "credit_code_already_redeemed"
-	ErrorResponseErrorCodeCreditCodeNotEligible           ErrorResponseErrorCode = "credit_code_not_eligible"
-	ErrorResponseErrorCodeCreditCodeBalanceCap            ErrorResponseErrorCode = "credit_code_balance_cap"
-	ErrorResponseErrorCodeRateLimited                     ErrorResponseErrorCode = "rate_limited"
-	ErrorResponseErrorCodeServiceUnavailable              ErrorResponseErrorCode = "service_unavailable"
-	ErrorResponseErrorCodeConnectionDomainUnavailable     ErrorResponseErrorCode = "connection_domain_unavailable"
-	ErrorResponseErrorCodeConnectionAddressUnavailable    ErrorResponseErrorCode = "connection_address_unavailable"
-	ErrorResponseErrorCodeConnectionOwnerAddressInvalid   ErrorResponseErrorCode = "connection_owner_address_invalid"
-	ErrorResponseErrorCodeConnectionInvitationUnavailable ErrorResponseErrorCode = "connection_invitation_unavailable"
-	ErrorResponseErrorCodeAgentConnectionScopeForbidden   ErrorResponseErrorCode = "agent_connection_scope_forbidden"
-	ErrorResponseErrorCodeAddressNoteConflict             ErrorResponseErrorCode = "address_note_conflict"
-	ErrorResponseErrorCodeAddressNotControlled            ErrorResponseErrorCode = "address_not_controlled"
-	ErrorResponseErrorCodeContactConflict                 ErrorResponseErrorCode = "contact_conflict"
+	ErrorResponseErrorCodeUnauthorized                        ErrorResponseErrorCode = "unauthorized"
+	ErrorResponseErrorCodeForbidden                           ErrorResponseErrorCode = "forbidden"
+	ErrorResponseErrorCodeNotFound                            ErrorResponseErrorCode = "not_found"
+	ErrorResponseErrorCodeValidationError                     ErrorResponseErrorCode = "validation_error"
+	ErrorResponseErrorCodeRateLimitExceeded                   ErrorResponseErrorCode = "rate_limit_exceeded"
+	ErrorResponseErrorCodeInternalError                       ErrorResponseErrorCode = "internal_error"
+	ErrorResponseErrorCodeConflict                            ErrorResponseErrorCode = "conflict"
+	ErrorResponseErrorCodeMxConflict                          ErrorResponseErrorCode = "mx_conflict"
+	ErrorResponseErrorCodeNotScheduled                        ErrorResponseErrorCode = "not_scheduled"
+	ErrorResponseErrorCodeSentEmailDeleted                    ErrorResponseErrorCode = "sent_email_deleted"
+	ErrorResponseErrorCodeSentEmailNotSettled                 ErrorResponseErrorCode = "sent_email_not_settled"
+	ErrorResponseErrorCodeSentEmailChanged                    ErrorResponseErrorCode = "sent_email_changed"
+	ErrorResponseErrorCodeSentEmailCleanupFailed              ErrorResponseErrorCode = "sent_email_cleanup_failed"
+	ErrorResponseErrorCodeConnectionNotRevoked                ErrorResponseErrorCode = "connection_not_revoked"
+	ErrorResponseErrorCodeAttachmentChanged                   ErrorResponseErrorCode = "attachment_changed"
+	ErrorResponseErrorCodeContentDiscarded                    ErrorResponseErrorCode = "content_discarded"
+	ErrorResponseErrorCodeAttachmentLimitExceeded             ErrorResponseErrorCode = "attachment_limit_exceeded"
+	ErrorResponseErrorCodeAttachmentIntegrityFailed           ErrorResponseErrorCode = "attachment_integrity_failed"
+	ErrorResponseErrorCodeAttachmentNotReady                  ErrorResponseErrorCode = "attachment_not_ready"
+	ErrorResponseErrorCodeAttachmentStorageUnavailable        ErrorResponseErrorCode = "attachment_storage_unavailable"
+	ErrorResponseErrorCodeOutboundDisabled                    ErrorResponseErrorCode = "outbound_disabled"
+	ErrorResponseErrorCodeCannotSendFromDomain                ErrorResponseErrorCode = "cannot_send_from_domain"
+	ErrorResponseErrorCodeRecipientNotAllowed                 ErrorResponseErrorCode = "recipient_not_allowed"
+	ErrorResponseErrorCodeOutboundKeyMissing                  ErrorResponseErrorCode = "outbound_key_missing"
+	ErrorResponseErrorCodeOutboundUnreachable                 ErrorResponseErrorCode = "outbound_unreachable"
+	ErrorResponseErrorCodeOutboundKeyInvalid                  ErrorResponseErrorCode = "outbound_key_invalid"
+	ErrorResponseErrorCodeOutboundCapacityExhausted           ErrorResponseErrorCode = "outbound_capacity_exhausted"
+	ErrorResponseErrorCodeOutboundResponseMalformed           ErrorResponseErrorCode = "outbound_response_malformed"
+	ErrorResponseErrorCodeOutboundRelayFailed                 ErrorResponseErrorCode = "outbound_relay_failed"
+	ErrorResponseErrorCodeDiscardNotEnabled                   ErrorResponseErrorCode = "discard_not_enabled"
+	ErrorResponseErrorCodeInboundNotRepliable                 ErrorResponseErrorCode = "inbound_not_repliable"
+	ErrorResponseErrorCodeSearchTimeout                       ErrorResponseErrorCode = "search_timeout"
+	ErrorResponseErrorCodeAuthorizationPending                ErrorResponseErrorCode = "authorization_pending"
+	ErrorResponseErrorCodeSlowDown                            ErrorResponseErrorCode = "slow_down"
+	ErrorResponseErrorCodeAccessDenied                        ErrorResponseErrorCode = "access_denied"
+	ErrorResponseErrorCodeExpiredToken                        ErrorResponseErrorCode = "expired_token"
+	ErrorResponseErrorCodeInvalidDeviceCode                   ErrorResponseErrorCode = "invalid_device_code"
+	ErrorResponseErrorCodeInvalidSignupCode                   ErrorResponseErrorCode = "invalid_signup_code"
+	ErrorResponseErrorCodeInvalidSignupToken                  ErrorResponseErrorCode = "invalid_signup_token"
+	ErrorResponseErrorCodeInvalidVerificationCode             ErrorResponseErrorCode = "invalid_verification_code"
+	ErrorResponseErrorCodeEmailDeliveryFailed                 ErrorResponseErrorCode = "email_delivery_failed"
+	ErrorResponseErrorCodeClerkSignupFailed                   ErrorResponseErrorCode = "clerk_signup_failed"
+	ErrorResponseErrorCodeNoOrgsForUser                       ErrorResponseErrorCode = "no_orgs_for_user"
+	ErrorResponseErrorCodeOrgNotAccessible                    ErrorResponseErrorCode = "org_not_accessible"
+	ErrorResponseErrorCodeFeatureDisabled                     ErrorResponseErrorCode = "feature_disabled"
+	ErrorResponseErrorCodeMemoryConflict                      ErrorResponseErrorCode = "memory_conflict"
+	ErrorResponseErrorCodeTemplateNotInstallable              ErrorResponseErrorCode = "template_not_installable"
+	ErrorResponseErrorCodeScaffoldOnly                        ErrorResponseErrorCode = "scaffold_only"
+	ErrorResponseErrorCodeInvalidVariables                    ErrorResponseErrorCode = "invalid_variables"
+	ErrorResponseErrorCodeUnknownSecrets                      ErrorResponseErrorCode = "unknown_secrets"
+	ErrorResponseErrorCodeMissingSecrets                      ErrorResponseErrorCode = "missing_secrets"
+	ErrorResponseErrorCodeNoInboundDomain                     ErrorResponseErrorCode = "no_inbound_domain"
+	ErrorResponseErrorCodeDomainCannotSend                    ErrorResponseErrorCode = "domain_cannot_send"
+	ErrorResponseErrorCodeAddressTaken                        ErrorResponseErrorCode = "address_taken"
+	ErrorResponseErrorCodeRouteCapReached                     ErrorResponseErrorCode = "route_cap_reached"
+	ErrorResponseErrorCodeNameExhausted                       ErrorResponseErrorCode = "name_exhausted"
+	ErrorResponseErrorCodeDeveloperUsageCreditExhausted       ErrorResponseErrorCode = "developer_usage_credit_exhausted"
+	ErrorResponseErrorCodeNoPayoutAddress                     ErrorResponseErrorCode = "no_payout_address"
+	ErrorResponseErrorCodeOwnershipProofFailed                ErrorResponseErrorCode = "ownership_proof_failed"
+	ErrorResponseErrorCodePaymentVerificationFailed           ErrorResponseErrorCode = "payment_verification_failed"
+	ErrorResponseErrorCodePaymentDeclined                     ErrorResponseErrorCode = "payment_declined"
+	ErrorResponseErrorCodeChallengeExpired                    ErrorResponseErrorCode = "challenge_expired"
+	ErrorResponseErrorCodeSettlementFailed                    ErrorResponseErrorCode = "settlement_failed"
+	ErrorResponseErrorCodePullUnavailable                     ErrorResponseErrorCode = "pull_unavailable"
+	ErrorResponseErrorCodeSubscriptionConflict                ErrorResponseErrorCode = "subscription_conflict"
+	ErrorResponseErrorCodeSubscriptionLimit                   ErrorResponseErrorCode = "subscription_limit"
+	ErrorResponseErrorCodeSubscriptionDisabled                ErrorResponseErrorCode = "subscription_disabled"
+	ErrorResponseErrorCodeRequestAborted                      ErrorResponseErrorCode = "request_aborted"
+	ErrorResponseErrorCodeEventContentUnavailable             ErrorResponseErrorCode = "event_content_unavailable"
+	ErrorResponseErrorCodeEventPreparationFailed              ErrorResponseErrorCode = "event_preparation_failed"
+	ErrorResponseErrorCodeSubscriptionUnavailable             ErrorResponseErrorCode = "subscription_unavailable"
+	ErrorResponseErrorCodeStaleDelivery                       ErrorResponseErrorCode = "stale_delivery"
+	ErrorResponseErrorCodeIdempotencyKeyRequired              ErrorResponseErrorCode = "idempotency_key_required"
+	ErrorResponseErrorCodeRepeatUnsupported                   ErrorResponseErrorCode = "repeat_unsupported"
+	ErrorResponseErrorCodeRepeatRecipientExternal             ErrorResponseErrorCode = "repeat_recipient_external"
+	ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient ErrorResponseErrorCode = "repeat_idle_requires_internal_recipient"
+	ErrorResponseErrorCodeNotARepeatingSend                   ErrorResponseErrorCode = "not_a_repeating_send"
+	ErrorResponseErrorCodeRepeatStopNotAllowed                ErrorResponseErrorCode = "repeat_stop_not_allowed"
+	ErrorResponseErrorCodeIdempotencyKeyReused                ErrorResponseErrorCode = "idempotency_key_reused"
+	ErrorResponseErrorCodeCreditCodeInvalid                   ErrorResponseErrorCode = "credit_code_invalid"
+	ErrorResponseErrorCodeCreditCodeAlreadyRedeemed           ErrorResponseErrorCode = "credit_code_already_redeemed"
+	ErrorResponseErrorCodeCreditCodeNotEligible               ErrorResponseErrorCode = "credit_code_not_eligible"
+	ErrorResponseErrorCodeCreditCodeBalanceCap                ErrorResponseErrorCode = "credit_code_balance_cap"
+	ErrorResponseErrorCodeRateLimited                         ErrorResponseErrorCode = "rate_limited"
+	ErrorResponseErrorCodeServiceUnavailable                  ErrorResponseErrorCode = "service_unavailable"
+	ErrorResponseErrorCodeConnectionDomainUnavailable         ErrorResponseErrorCode = "connection_domain_unavailable"
+	ErrorResponseErrorCodeConnectionAddressUnavailable        ErrorResponseErrorCode = "connection_address_unavailable"
+	ErrorResponseErrorCodeConnectionOwnerAddressInvalid       ErrorResponseErrorCode = "connection_owner_address_invalid"
+	ErrorResponseErrorCodeConnectionInvitationUnavailable     ErrorResponseErrorCode = "connection_invitation_unavailable"
+	ErrorResponseErrorCodeAgentConnectionScopeForbidden       ErrorResponseErrorCode = "agent_connection_scope_forbidden"
+	ErrorResponseErrorCodeAddressNoteConflict                 ErrorResponseErrorCode = "address_note_conflict"
+	ErrorResponseErrorCodeAddressNotControlled                ErrorResponseErrorCode = "address_not_controlled"
+	ErrorResponseErrorCodeContactConflict                     ErrorResponseErrorCode = "contact_conflict"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -14492,6 +14497,11 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeSubscriptionUnavailable,
 		ErrorResponseErrorCodeStaleDelivery,
 		ErrorResponseErrorCodeIdempotencyKeyRequired,
+		ErrorResponseErrorCodeRepeatUnsupported,
+		ErrorResponseErrorCodeRepeatRecipientExternal,
+		ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient,
+		ErrorResponseErrorCodeNotARepeatingSend,
+		ErrorResponseErrorCodeRepeatStopNotAllowed,
 		ErrorResponseErrorCodeIdempotencyKeyReused,
 		ErrorResponseErrorCodeCreditCodeInvalid,
 		ErrorResponseErrorCodeCreditCodeAlreadyRedeemed,
@@ -14658,6 +14668,16 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeStaleDelivery:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeIdempotencyKeyRequired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRepeatUnsupported:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRepeatRecipientExternal:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNotARepeatingSend:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRepeatStopNotAllowed:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeIdempotencyKeyReused:
 		return []byte(s), nil
@@ -14915,6 +14935,21 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeIdempotencyKeyRequired:
 		*s = ErrorResponseErrorCodeIdempotencyKeyRequired
+		return nil
+	case ErrorResponseErrorCodeRepeatUnsupported:
+		*s = ErrorResponseErrorCodeRepeatUnsupported
+		return nil
+	case ErrorResponseErrorCodeRepeatRecipientExternal:
+		*s = ErrorResponseErrorCodeRepeatRecipientExternal
+		return nil
+	case ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient:
+		*s = ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient
+		return nil
+	case ErrorResponseErrorCodeNotARepeatingSend:
+		*s = ErrorResponseErrorCodeNotARepeatingSend
+		return nil
+	case ErrorResponseErrorCodeRepeatStopNotAllowed:
+		*s = ErrorResponseErrorCodeRepeatStopNotAllowed
 		return nil
 	case ErrorResponseErrorCodeIdempotencyKeyReused:
 		*s = ErrorResponseErrorCodeIdempotencyKeyReused
@@ -28672,38 +28707,38 @@ func (o OptRepeatInput) Or(d RepeatInput) RepeatInput {
 	return d
 }
 
-// NewOptRepeatStopInput returns new OptRepeatStopInput with value set to v.
-func NewOptRepeatStopInput(v RepeatStopInput) OptRepeatStopInput {
-	return OptRepeatStopInput{
+// NewOptRepeatStopRequest returns new OptRepeatStopRequest with value set to v.
+func NewOptRepeatStopRequest(v RepeatStopRequest) OptRepeatStopRequest {
+	return OptRepeatStopRequest{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptRepeatStopInput is optional RepeatStopInput.
-type OptRepeatStopInput struct {
-	Value RepeatStopInput
+// OptRepeatStopRequest is optional RepeatStopRequest.
+type OptRepeatStopRequest struct {
+	Value RepeatStopRequest
 	Set   bool
 }
 
-// IsSet returns true if OptRepeatStopInput was set.
-func (o OptRepeatStopInput) IsSet() bool { return o.Set }
+// IsSet returns true if OptRepeatStopRequest was set.
+func (o OptRepeatStopRequest) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptRepeatStopInput) Reset() {
-	var v RepeatStopInput
+func (o *OptRepeatStopRequest) Reset() {
+	var v RepeatStopRequest
 	o.Value = v
 	o.Set = false
 }
 
 // SetTo sets value to v.
-func (o *OptRepeatStopInput) SetTo(v RepeatStopInput) {
+func (o *OptRepeatStopRequest) SetTo(v RepeatStopRequest) {
 	o.Set = true
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptRepeatStopInput) Get() (v RepeatStopInput, ok bool) {
+func (o OptRepeatStopRequest) Get() (v RepeatStopRequest, ok bool) {
 	if !o.Set {
 		return v, false
 	}
@@ -28711,7 +28746,7 @@ func (o OptRepeatStopInput) Get() (v RepeatStopInput, ok bool) {
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptRepeatStopInput) Or(d RepeatStopInput) RepeatStopInput {
+func (o OptRepeatStopRequest) Or(d RepeatStopRequest) RepeatStopRequest {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -29822,38 +29857,38 @@ func (o OptUpdateFunctionInputFiles) Or(d UpdateFunctionInputFiles) UpdateFuncti
 	return d
 }
 
-// NewOptUpdateRepeatingSendInputStatus returns new OptUpdateRepeatingSendInputStatus with value set to v.
-func NewOptUpdateRepeatingSendInputStatus(v UpdateRepeatingSendInputStatus) OptUpdateRepeatingSendInputStatus {
-	return OptUpdateRepeatingSendInputStatus{
+// NewOptUpdateRepeatingSendRequestStatus returns new OptUpdateRepeatingSendRequestStatus with value set to v.
+func NewOptUpdateRepeatingSendRequestStatus(v UpdateRepeatingSendRequestStatus) OptUpdateRepeatingSendRequestStatus {
+	return OptUpdateRepeatingSendRequestStatus{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptUpdateRepeatingSendInputStatus is optional UpdateRepeatingSendInputStatus.
-type OptUpdateRepeatingSendInputStatus struct {
-	Value UpdateRepeatingSendInputStatus
+// OptUpdateRepeatingSendRequestStatus is optional UpdateRepeatingSendRequestStatus.
+type OptUpdateRepeatingSendRequestStatus struct {
+	Value UpdateRepeatingSendRequestStatus
 	Set   bool
 }
 
-// IsSet returns true if OptUpdateRepeatingSendInputStatus was set.
-func (o OptUpdateRepeatingSendInputStatus) IsSet() bool { return o.Set }
+// IsSet returns true if OptUpdateRepeatingSendRequestStatus was set.
+func (o OptUpdateRepeatingSendRequestStatus) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptUpdateRepeatingSendInputStatus) Reset() {
-	var v UpdateRepeatingSendInputStatus
+func (o *OptUpdateRepeatingSendRequestStatus) Reset() {
+	var v UpdateRepeatingSendRequestStatus
 	o.Value = v
 	o.Set = false
 }
 
 // SetTo sets value to v.
-func (o *OptUpdateRepeatingSendInputStatus) SetTo(v UpdateRepeatingSendInputStatus) {
+func (o *OptUpdateRepeatingSendRequestStatus) SetTo(v UpdateRepeatingSendRequestStatus) {
 	o.Set = true
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptUpdateRepeatingSendInputStatus) Get() (v UpdateRepeatingSendInputStatus, ok bool) {
+func (o OptUpdateRepeatingSendRequestStatus) Get() (v UpdateRepeatingSendRequestStatus, ok bool) {
 	if !o.Set {
 		return v, false
 	}
@@ -29861,7 +29896,7 @@ func (o OptUpdateRepeatingSendInputStatus) Get() (v UpdateRepeatingSendInputStat
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptUpdateRepeatingSendInputStatus) Or(d UpdateRepeatingSendInputStatus) UpdateRepeatingSendInputStatus {
+func (o OptUpdateRepeatingSendRequestStatus) Or(d UpdateRepeatingSendRequestStatus) UpdateRepeatingSendRequestStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -33821,46 +33856,141 @@ func (s *RepeatInput) SetUntil(val OptDateTime) {
 	s.Until = val
 }
 
-// Ref: #/components/schemas/RepeatStopInput
-type RepeatStopInput struct {
+// Ref: #/components/schemas/RepeatStopRequest
+type RepeatStopRequest struct {
 	// Short reason shown to the sender.
 	Reason OptString `json:"reason"`
 }
 
 // GetReason returns the value of Reason.
-func (s *RepeatStopInput) GetReason() OptString {
+func (s *RepeatStopRequest) GetReason() OptString {
 	return s.Reason
 }
 
 // SetReason sets the value of Reason.
-func (s *RepeatStopInput) SetReason(val OptString) {
+func (s *RepeatStopRequest) SetReason(val OptString) {
 	s.Reason = val
+}
+
+// Ref: #/components/schemas/RepeatStopResult
+type RepeatStopResult struct {
+	RepeatID   uuid.UUID              `json:"repeat_id"`
+	Status     RepeatStopResultStatus `json:"status"`
+	StoppedAt  time.Time              `json:"stopped_at"`
+	StopReason NilString              `json:"stop_reason"`
+	// The repeat.stop/1 reply that told the sender, or null if it could not be sent.
+	ReplySentEmailID NilUUID `json:"reply_sent_email_id"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *RepeatStopResult) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetStatus returns the value of Status.
+func (s *RepeatStopResult) GetStatus() RepeatStopResultStatus {
+	return s.Status
+}
+
+// GetStoppedAt returns the value of StoppedAt.
+func (s *RepeatStopResult) GetStoppedAt() time.Time {
+	return s.StoppedAt
+}
+
+// GetStopReason returns the value of StopReason.
+func (s *RepeatStopResult) GetStopReason() NilString {
+	return s.StopReason
+}
+
+// GetReplySentEmailID returns the value of ReplySentEmailID.
+func (s *RepeatStopResult) GetReplySentEmailID() NilUUID {
+	return s.ReplySentEmailID
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *RepeatStopResult) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *RepeatStopResult) SetStatus(val RepeatStopResultStatus) {
+	s.Status = val
+}
+
+// SetStoppedAt sets the value of StoppedAt.
+func (s *RepeatStopResult) SetStoppedAt(val time.Time) {
+	s.StoppedAt = val
+}
+
+// SetStopReason sets the value of StopReason.
+func (s *RepeatStopResult) SetStopReason(val NilString) {
+	s.StopReason = val
+}
+
+// SetReplySentEmailID sets the value of ReplySentEmailID.
+func (s *RepeatStopResult) SetReplySentEmailID(val NilUUID) {
+	s.ReplySentEmailID = val
+}
+
+type RepeatStopResultStatus string
+
+const (
+	RepeatStopResultStatusStoppedByRecipient RepeatStopResultStatus = "stopped_by_recipient"
+)
+
+// AllValues returns all RepeatStopResultStatus values.
+func (RepeatStopResultStatus) AllValues() []RepeatStopResultStatus {
+	return []RepeatStopResultStatus{
+		RepeatStopResultStatusStoppedByRecipient,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RepeatStopResultStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case RepeatStopResultStatusStoppedByRecipient:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RepeatStopResultStatus) UnmarshalText(data []byte) error {
+	switch RepeatStopResultStatus(data) {
+	case RepeatStopResultStatusStoppedByRecipient:
+		*s = RepeatStopResultStatusStoppedByRecipient
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/RepeatingSend
 type RepeatingSend struct {
 	ID                         uuid.UUID           `json:"id"`
-	OrgID                      OptUUID             `json:"org_id"`
+	OrgID                      uuid.UUID           `json:"org_id"`
 	FromAddress                string              `json:"from_address"`
 	ToAddress                  string              `json:"to_address"`
-	Subject                    OptNilString        `json:"subject"`
-	BodyText                   OptNilString        `json:"body_text"`
+	Subject                    string              `json:"subject"`
+	BodyText                   NilString           `json:"body_text"`
+	BodyHTML                   NilString           `json:"body_html"`
 	EveryMinutes               int                 `json:"every_minutes"`
-	OnlyIfRecipientIdleMinutes OptNilInt           `json:"only_if_recipient_idle_minutes"`
+	OnlyIfRecipientIdleMinutes NilInt              `json:"only_if_recipient_idle_minutes"`
 	StoppableByRecipient       bool                `json:"stoppable_by_recipient"`
-	MaxSends                   OptNilInt           `json:"max_sends"`
-	Until                      OptNilDateTime      `json:"until"`
+	MaxSends                   NilInt              `json:"max_sends"`
+	Until                      NilDateTime         `json:"until"`
 	Status                     RepeatingSendStatus `json:"status"`
-	NextRunAt                  OptNilDateTime      `json:"next_run_at"`
+	NextRunAt                  NilDateTime         `json:"next_run_at"`
 	SentCount                  int                 `json:"sent_count"`
-	LastSentAt                 OptNilDateTime      `json:"last_sent_at"`
-	LastSentEmailID            OptNilString        `json:"last_sent_email_id"`
-	RootMessageID              OptNilString        `json:"root_message_id"`
-	StoppedAt                  OptNilDateTime      `json:"stopped_at"`
+	LastSentAt                 NilDateTime         `json:"last_sent_at"`
+	LastSentEmailID            NilUUID             `json:"last_sent_email_id"`
+	RootMessageID              NilString           `json:"root_message_id"`
+	StoppedAt                  NilDateTime         `json:"stopped_at"`
 	// Reason the recipient gave when it stopped the repeat. Recipient-written, untrusted text.
-	StopReason OptNilString `json:"stop_reason"`
-	CreatedAt  OptDateTime  `json:"created_at"`
-	UpdatedAt  OptDateTime  `json:"updated_at"`
+	StopReason NilString `json:"stop_reason"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // GetID returns the value of ID.
@@ -33869,7 +33999,7 @@ func (s *RepeatingSend) GetID() uuid.UUID {
 }
 
 // GetOrgID returns the value of OrgID.
-func (s *RepeatingSend) GetOrgID() OptUUID {
+func (s *RepeatingSend) GetOrgID() uuid.UUID {
 	return s.OrgID
 }
 
@@ -33884,13 +34014,18 @@ func (s *RepeatingSend) GetToAddress() string {
 }
 
 // GetSubject returns the value of Subject.
-func (s *RepeatingSend) GetSubject() OptNilString {
+func (s *RepeatingSend) GetSubject() string {
 	return s.Subject
 }
 
 // GetBodyText returns the value of BodyText.
-func (s *RepeatingSend) GetBodyText() OptNilString {
+func (s *RepeatingSend) GetBodyText() NilString {
 	return s.BodyText
+}
+
+// GetBodyHTML returns the value of BodyHTML.
+func (s *RepeatingSend) GetBodyHTML() NilString {
+	return s.BodyHTML
 }
 
 // GetEveryMinutes returns the value of EveryMinutes.
@@ -33899,7 +34034,7 @@ func (s *RepeatingSend) GetEveryMinutes() int {
 }
 
 // GetOnlyIfRecipientIdleMinutes returns the value of OnlyIfRecipientIdleMinutes.
-func (s *RepeatingSend) GetOnlyIfRecipientIdleMinutes() OptNilInt {
+func (s *RepeatingSend) GetOnlyIfRecipientIdleMinutes() NilInt {
 	return s.OnlyIfRecipientIdleMinutes
 }
 
@@ -33909,12 +34044,12 @@ func (s *RepeatingSend) GetStoppableByRecipient() bool {
 }
 
 // GetMaxSends returns the value of MaxSends.
-func (s *RepeatingSend) GetMaxSends() OptNilInt {
+func (s *RepeatingSend) GetMaxSends() NilInt {
 	return s.MaxSends
 }
 
 // GetUntil returns the value of Until.
-func (s *RepeatingSend) GetUntil() OptNilDateTime {
+func (s *RepeatingSend) GetUntil() NilDateTime {
 	return s.Until
 }
 
@@ -33924,7 +34059,7 @@ func (s *RepeatingSend) GetStatus() RepeatingSendStatus {
 }
 
 // GetNextRunAt returns the value of NextRunAt.
-func (s *RepeatingSend) GetNextRunAt() OptNilDateTime {
+func (s *RepeatingSend) GetNextRunAt() NilDateTime {
 	return s.NextRunAt
 }
 
@@ -33934,37 +34069,37 @@ func (s *RepeatingSend) GetSentCount() int {
 }
 
 // GetLastSentAt returns the value of LastSentAt.
-func (s *RepeatingSend) GetLastSentAt() OptNilDateTime {
+func (s *RepeatingSend) GetLastSentAt() NilDateTime {
 	return s.LastSentAt
 }
 
 // GetLastSentEmailID returns the value of LastSentEmailID.
-func (s *RepeatingSend) GetLastSentEmailID() OptNilString {
+func (s *RepeatingSend) GetLastSentEmailID() NilUUID {
 	return s.LastSentEmailID
 }
 
 // GetRootMessageID returns the value of RootMessageID.
-func (s *RepeatingSend) GetRootMessageID() OptNilString {
+func (s *RepeatingSend) GetRootMessageID() NilString {
 	return s.RootMessageID
 }
 
 // GetStoppedAt returns the value of StoppedAt.
-func (s *RepeatingSend) GetStoppedAt() OptNilDateTime {
+func (s *RepeatingSend) GetStoppedAt() NilDateTime {
 	return s.StoppedAt
 }
 
 // GetStopReason returns the value of StopReason.
-func (s *RepeatingSend) GetStopReason() OptNilString {
+func (s *RepeatingSend) GetStopReason() NilString {
 	return s.StopReason
 }
 
 // GetCreatedAt returns the value of CreatedAt.
-func (s *RepeatingSend) GetCreatedAt() OptDateTime {
+func (s *RepeatingSend) GetCreatedAt() time.Time {
 	return s.CreatedAt
 }
 
 // GetUpdatedAt returns the value of UpdatedAt.
-func (s *RepeatingSend) GetUpdatedAt() OptDateTime {
+func (s *RepeatingSend) GetUpdatedAt() time.Time {
 	return s.UpdatedAt
 }
 
@@ -33974,7 +34109,7 @@ func (s *RepeatingSend) SetID(val uuid.UUID) {
 }
 
 // SetOrgID sets the value of OrgID.
-func (s *RepeatingSend) SetOrgID(val OptUUID) {
+func (s *RepeatingSend) SetOrgID(val uuid.UUID) {
 	s.OrgID = val
 }
 
@@ -33989,13 +34124,18 @@ func (s *RepeatingSend) SetToAddress(val string) {
 }
 
 // SetSubject sets the value of Subject.
-func (s *RepeatingSend) SetSubject(val OptNilString) {
+func (s *RepeatingSend) SetSubject(val string) {
 	s.Subject = val
 }
 
 // SetBodyText sets the value of BodyText.
-func (s *RepeatingSend) SetBodyText(val OptNilString) {
+func (s *RepeatingSend) SetBodyText(val NilString) {
 	s.BodyText = val
+}
+
+// SetBodyHTML sets the value of BodyHTML.
+func (s *RepeatingSend) SetBodyHTML(val NilString) {
+	s.BodyHTML = val
 }
 
 // SetEveryMinutes sets the value of EveryMinutes.
@@ -34004,7 +34144,7 @@ func (s *RepeatingSend) SetEveryMinutes(val int) {
 }
 
 // SetOnlyIfRecipientIdleMinutes sets the value of OnlyIfRecipientIdleMinutes.
-func (s *RepeatingSend) SetOnlyIfRecipientIdleMinutes(val OptNilInt) {
+func (s *RepeatingSend) SetOnlyIfRecipientIdleMinutes(val NilInt) {
 	s.OnlyIfRecipientIdleMinutes = val
 }
 
@@ -34014,12 +34154,12 @@ func (s *RepeatingSend) SetStoppableByRecipient(val bool) {
 }
 
 // SetMaxSends sets the value of MaxSends.
-func (s *RepeatingSend) SetMaxSends(val OptNilInt) {
+func (s *RepeatingSend) SetMaxSends(val NilInt) {
 	s.MaxSends = val
 }
 
 // SetUntil sets the value of Until.
-func (s *RepeatingSend) SetUntil(val OptNilDateTime) {
+func (s *RepeatingSend) SetUntil(val NilDateTime) {
 	s.Until = val
 }
 
@@ -34029,7 +34169,7 @@ func (s *RepeatingSend) SetStatus(val RepeatingSendStatus) {
 }
 
 // SetNextRunAt sets the value of NextRunAt.
-func (s *RepeatingSend) SetNextRunAt(val OptNilDateTime) {
+func (s *RepeatingSend) SetNextRunAt(val NilDateTime) {
 	s.NextRunAt = val
 }
 
@@ -34039,37 +34179,37 @@ func (s *RepeatingSend) SetSentCount(val int) {
 }
 
 // SetLastSentAt sets the value of LastSentAt.
-func (s *RepeatingSend) SetLastSentAt(val OptNilDateTime) {
+func (s *RepeatingSend) SetLastSentAt(val NilDateTime) {
 	s.LastSentAt = val
 }
 
 // SetLastSentEmailID sets the value of LastSentEmailID.
-func (s *RepeatingSend) SetLastSentEmailID(val OptNilString) {
+func (s *RepeatingSend) SetLastSentEmailID(val NilUUID) {
 	s.LastSentEmailID = val
 }
 
 // SetRootMessageID sets the value of RootMessageID.
-func (s *RepeatingSend) SetRootMessageID(val OptNilString) {
+func (s *RepeatingSend) SetRootMessageID(val NilString) {
 	s.RootMessageID = val
 }
 
 // SetStoppedAt sets the value of StoppedAt.
-func (s *RepeatingSend) SetStoppedAt(val OptNilDateTime) {
+func (s *RepeatingSend) SetStoppedAt(val NilDateTime) {
 	s.StoppedAt = val
 }
 
 // SetStopReason sets the value of StopReason.
-func (s *RepeatingSend) SetStopReason(val OptNilString) {
+func (s *RepeatingSend) SetStopReason(val NilString) {
 	s.StopReason = val
 }
 
 // SetCreatedAt sets the value of CreatedAt.
-func (s *RepeatingSend) SetCreatedAt(val OptDateTime) {
+func (s *RepeatingSend) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
 }
 
 // SetUpdatedAt sets the value of UpdatedAt.
-func (s *RepeatingSend) SetUpdatedAt(val OptDateTime) {
+func (s *RepeatingSend) SetUpdatedAt(val time.Time) {
 	s.UpdatedAt = val
 }
 
@@ -34130,100 +34270,6 @@ func (s *RepeatingSendStatus) UnmarshalText(data []byte) error {
 		return nil
 	case RepeatingSendStatusCompleted:
 		*s = RepeatingSendStatusCompleted
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
-// Ref: #/components/schemas/RepeatingSendStop
-type RepeatingSendStop struct {
-	RepeatID   uuid.UUID               `json:"repeat_id"`
-	Status     RepeatingSendStopStatus `json:"status"`
-	StoppedAt  time.Time               `json:"stopped_at"`
-	StopReason NilString               `json:"stop_reason"`
-	// The reply that told the sender, when one was sent.
-	ReplySentEmailID OptNilString `json:"reply_sent_email_id"`
-}
-
-// GetRepeatID returns the value of RepeatID.
-func (s *RepeatingSendStop) GetRepeatID() uuid.UUID {
-	return s.RepeatID
-}
-
-// GetStatus returns the value of Status.
-func (s *RepeatingSendStop) GetStatus() RepeatingSendStopStatus {
-	return s.Status
-}
-
-// GetStoppedAt returns the value of StoppedAt.
-func (s *RepeatingSendStop) GetStoppedAt() time.Time {
-	return s.StoppedAt
-}
-
-// GetStopReason returns the value of StopReason.
-func (s *RepeatingSendStop) GetStopReason() NilString {
-	return s.StopReason
-}
-
-// GetReplySentEmailID returns the value of ReplySentEmailID.
-func (s *RepeatingSendStop) GetReplySentEmailID() OptNilString {
-	return s.ReplySentEmailID
-}
-
-// SetRepeatID sets the value of RepeatID.
-func (s *RepeatingSendStop) SetRepeatID(val uuid.UUID) {
-	s.RepeatID = val
-}
-
-// SetStatus sets the value of Status.
-func (s *RepeatingSendStop) SetStatus(val RepeatingSendStopStatus) {
-	s.Status = val
-}
-
-// SetStoppedAt sets the value of StoppedAt.
-func (s *RepeatingSendStop) SetStoppedAt(val time.Time) {
-	s.StoppedAt = val
-}
-
-// SetStopReason sets the value of StopReason.
-func (s *RepeatingSendStop) SetStopReason(val NilString) {
-	s.StopReason = val
-}
-
-// SetReplySentEmailID sets the value of ReplySentEmailID.
-func (s *RepeatingSendStop) SetReplySentEmailID(val OptNilString) {
-	s.ReplySentEmailID = val
-}
-
-type RepeatingSendStopStatus string
-
-const (
-	RepeatingSendStopStatusStoppedByRecipient RepeatingSendStopStatus = "stopped_by_recipient"
-)
-
-// AllValues returns all RepeatingSendStopStatus values.
-func (RepeatingSendStopStatus) AllValues() []RepeatingSendStopStatus {
-	return []RepeatingSendStopStatus{
-		RepeatingSendStopStatusStoppedByRecipient,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s RepeatingSendStopStatus) MarshalText() ([]byte, error) {
-	switch s {
-	case RepeatingSendStopStatusStoppedByRecipient:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *RepeatingSendStopStatus) UnmarshalText(data []byte) error {
-	switch RepeatingSendStopStatus(data) {
-	case RepeatingSendStopStatusStoppedByRecipient:
-		*s = RepeatingSendStopStatusStoppedByRecipient
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -40780,53 +40826,53 @@ func (s *StartCliSignupInputMetadata) init() StartCliSignupInputMetadata {
 	return m
 }
 
-type StopRepeatingSendBadRequest ErrorResponse
+type StopRepeatFromEmailBadRequest ErrorResponse
 
-func (*StopRepeatingSendBadRequest) stopRepeatingSendRes() {}
+func (*StopRepeatFromEmailBadRequest) stopRepeatFromEmailRes() {}
 
-type StopRepeatingSendForbidden ErrorResponse
+type StopRepeatFromEmailForbidden ErrorResponse
 
-func (*StopRepeatingSendForbidden) stopRepeatingSendRes() {}
+func (*StopRepeatFromEmailForbidden) stopRepeatFromEmailRes() {}
 
-type StopRepeatingSendNotFound ErrorResponse
+type StopRepeatFromEmailNotFound ErrorResponse
 
-func (*StopRepeatingSendNotFound) stopRepeatingSendRes() {}
+func (*StopRepeatFromEmailNotFound) stopRepeatFromEmailRes() {}
 
 // Merged schema.
-type StopRepeatingSendOK struct {
-	Success bool              `json:"success"`
-	Data    RepeatingSendStop `json:"data"`
+type StopRepeatFromEmailOK struct {
+	Success bool             `json:"success"`
+	Data    RepeatStopResult `json:"data"`
 }
 
 // GetSuccess returns the value of Success.
-func (s *StopRepeatingSendOK) GetSuccess() bool {
+func (s *StopRepeatFromEmailOK) GetSuccess() bool {
 	return s.Success
 }
 
 // GetData returns the value of Data.
-func (s *StopRepeatingSendOK) GetData() RepeatingSendStop {
+func (s *StopRepeatFromEmailOK) GetData() RepeatStopResult {
 	return s.Data
 }
 
 // SetSuccess sets the value of Success.
-func (s *StopRepeatingSendOK) SetSuccess(val bool) {
+func (s *StopRepeatFromEmailOK) SetSuccess(val bool) {
 	s.Success = val
 }
 
 // SetData sets the value of Data.
-func (s *StopRepeatingSendOK) SetData(val RepeatingSendStop) {
+func (s *StopRepeatFromEmailOK) SetData(val RepeatStopResult) {
 	s.Data = val
 }
 
-func (*StopRepeatingSendOK) stopRepeatingSendRes() {}
+func (*StopRepeatFromEmailOK) stopRepeatFromEmailRes() {}
 
-type StopRepeatingSendUnauthorized ErrorResponse
+type StopRepeatFromEmailUnauthorized ErrorResponse
 
-func (*StopRepeatingSendUnauthorized) stopRepeatingSendRes() {}
+func (*StopRepeatFromEmailUnauthorized) stopRepeatFromEmailRes() {}
 
-type StopRepeatingSendUnprocessableEntity ErrorResponse
+type StopRepeatFromEmailUnprocessableEntity ErrorResponse
 
-func (*StopRepeatingSendUnprocessableEntity) stopRepeatingSendRes() {}
+func (*StopRepeatFromEmailUnprocessableEntity) stopRepeatFromEmailRes() {}
 
 // Ref: #/components/schemas/StorageStats
 type StorageStats struct {
@@ -43754,146 +43800,6 @@ type UpdateRepeatingSendBadRequest ErrorResponse
 
 func (*UpdateRepeatingSendBadRequest) updateRepeatingSendRes() {}
 
-// Ref: #/components/schemas/UpdateRepeatingSendInput
-type UpdateRepeatingSendInput struct {
-	Status                     OptUpdateRepeatingSendInputStatus `json:"status"`
-	EveryMinutes               OptInt                            `json:"every_minutes"`
-	OnlyIfRecipientIdleMinutes OptNilInt                         `json:"only_if_recipient_idle_minutes"`
-	StoppableByRecipient       OptBool                           `json:"stoppable_by_recipient"`
-	MaxSends                   OptNilInt                         `json:"max_sends"`
-	Until                      OptNilDateTime                    `json:"until"`
-	BodyText                   OptString                         `json:"body_text"`
-	Subject                    OptString                         `json:"subject"`
-}
-
-// GetStatus returns the value of Status.
-func (s *UpdateRepeatingSendInput) GetStatus() OptUpdateRepeatingSendInputStatus {
-	return s.Status
-}
-
-// GetEveryMinutes returns the value of EveryMinutes.
-func (s *UpdateRepeatingSendInput) GetEveryMinutes() OptInt {
-	return s.EveryMinutes
-}
-
-// GetOnlyIfRecipientIdleMinutes returns the value of OnlyIfRecipientIdleMinutes.
-func (s *UpdateRepeatingSendInput) GetOnlyIfRecipientIdleMinutes() OptNilInt {
-	return s.OnlyIfRecipientIdleMinutes
-}
-
-// GetStoppableByRecipient returns the value of StoppableByRecipient.
-func (s *UpdateRepeatingSendInput) GetStoppableByRecipient() OptBool {
-	return s.StoppableByRecipient
-}
-
-// GetMaxSends returns the value of MaxSends.
-func (s *UpdateRepeatingSendInput) GetMaxSends() OptNilInt {
-	return s.MaxSends
-}
-
-// GetUntil returns the value of Until.
-func (s *UpdateRepeatingSendInput) GetUntil() OptNilDateTime {
-	return s.Until
-}
-
-// GetBodyText returns the value of BodyText.
-func (s *UpdateRepeatingSendInput) GetBodyText() OptString {
-	return s.BodyText
-}
-
-// GetSubject returns the value of Subject.
-func (s *UpdateRepeatingSendInput) GetSubject() OptString {
-	return s.Subject
-}
-
-// SetStatus sets the value of Status.
-func (s *UpdateRepeatingSendInput) SetStatus(val OptUpdateRepeatingSendInputStatus) {
-	s.Status = val
-}
-
-// SetEveryMinutes sets the value of EveryMinutes.
-func (s *UpdateRepeatingSendInput) SetEveryMinutes(val OptInt) {
-	s.EveryMinutes = val
-}
-
-// SetOnlyIfRecipientIdleMinutes sets the value of OnlyIfRecipientIdleMinutes.
-func (s *UpdateRepeatingSendInput) SetOnlyIfRecipientIdleMinutes(val OptNilInt) {
-	s.OnlyIfRecipientIdleMinutes = val
-}
-
-// SetStoppableByRecipient sets the value of StoppableByRecipient.
-func (s *UpdateRepeatingSendInput) SetStoppableByRecipient(val OptBool) {
-	s.StoppableByRecipient = val
-}
-
-// SetMaxSends sets the value of MaxSends.
-func (s *UpdateRepeatingSendInput) SetMaxSends(val OptNilInt) {
-	s.MaxSends = val
-}
-
-// SetUntil sets the value of Until.
-func (s *UpdateRepeatingSendInput) SetUntil(val OptNilDateTime) {
-	s.Until = val
-}
-
-// SetBodyText sets the value of BodyText.
-func (s *UpdateRepeatingSendInput) SetBodyText(val OptString) {
-	s.BodyText = val
-}
-
-// SetSubject sets the value of Subject.
-func (s *UpdateRepeatingSendInput) SetSubject(val OptString) {
-	s.Subject = val
-}
-
-type UpdateRepeatingSendInputStatus string
-
-const (
-	UpdateRepeatingSendInputStatusActive   UpdateRepeatingSendInputStatus = "active"
-	UpdateRepeatingSendInputStatusPaused   UpdateRepeatingSendInputStatus = "paused"
-	UpdateRepeatingSendInputStatusCanceled UpdateRepeatingSendInputStatus = "canceled"
-)
-
-// AllValues returns all UpdateRepeatingSendInputStatus values.
-func (UpdateRepeatingSendInputStatus) AllValues() []UpdateRepeatingSendInputStatus {
-	return []UpdateRepeatingSendInputStatus{
-		UpdateRepeatingSendInputStatusActive,
-		UpdateRepeatingSendInputStatusPaused,
-		UpdateRepeatingSendInputStatusCanceled,
-	}
-}
-
-// MarshalText implements encoding.TextMarshaler.
-func (s UpdateRepeatingSendInputStatus) MarshalText() ([]byte, error) {
-	switch s {
-	case UpdateRepeatingSendInputStatusActive:
-		return []byte(s), nil
-	case UpdateRepeatingSendInputStatusPaused:
-		return []byte(s), nil
-	case UpdateRepeatingSendInputStatusCanceled:
-		return []byte(s), nil
-	default:
-		return nil, errors.Errorf("invalid value: %q", s)
-	}
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler.
-func (s *UpdateRepeatingSendInputStatus) UnmarshalText(data []byte) error {
-	switch UpdateRepeatingSendInputStatus(data) {
-	case UpdateRepeatingSendInputStatusActive:
-		*s = UpdateRepeatingSendInputStatusActive
-		return nil
-	case UpdateRepeatingSendInputStatusPaused:
-		*s = UpdateRepeatingSendInputStatusPaused
-		return nil
-	case UpdateRepeatingSendInputStatusCanceled:
-		*s = UpdateRepeatingSendInputStatusCanceled
-		return nil
-	default:
-		return errors.Errorf("invalid value: %q", data)
-	}
-}
-
 type UpdateRepeatingSendNotFound ErrorResponse
 
 func (*UpdateRepeatingSendNotFound) updateRepeatingSendRes() {}
@@ -43925,6 +43831,146 @@ func (s *UpdateRepeatingSendOK) SetData(val RepeatingSend) {
 }
 
 func (*UpdateRepeatingSendOK) updateRepeatingSendRes() {}
+
+// Ref: #/components/schemas/UpdateRepeatingSendRequest
+type UpdateRepeatingSendRequest struct {
+	Status                     OptUpdateRepeatingSendRequestStatus `json:"status"`
+	EveryMinutes               OptInt                              `json:"every_minutes"`
+	OnlyIfRecipientIdleMinutes OptNilInt                           `json:"only_if_recipient_idle_minutes"`
+	StoppableByRecipient       OptBool                             `json:"stoppable_by_recipient"`
+	MaxSends                   OptNilInt                           `json:"max_sends"`
+	Until                      OptNilDateTime                      `json:"until"`
+	BodyText                   OptString                           `json:"body_text"`
+	Subject                    OptString                           `json:"subject"`
+}
+
+// GetStatus returns the value of Status.
+func (s *UpdateRepeatingSendRequest) GetStatus() OptUpdateRepeatingSendRequestStatus {
+	return s.Status
+}
+
+// GetEveryMinutes returns the value of EveryMinutes.
+func (s *UpdateRepeatingSendRequest) GetEveryMinutes() OptInt {
+	return s.EveryMinutes
+}
+
+// GetOnlyIfRecipientIdleMinutes returns the value of OnlyIfRecipientIdleMinutes.
+func (s *UpdateRepeatingSendRequest) GetOnlyIfRecipientIdleMinutes() OptNilInt {
+	return s.OnlyIfRecipientIdleMinutes
+}
+
+// GetStoppableByRecipient returns the value of StoppableByRecipient.
+func (s *UpdateRepeatingSendRequest) GetStoppableByRecipient() OptBool {
+	return s.StoppableByRecipient
+}
+
+// GetMaxSends returns the value of MaxSends.
+func (s *UpdateRepeatingSendRequest) GetMaxSends() OptNilInt {
+	return s.MaxSends
+}
+
+// GetUntil returns the value of Until.
+func (s *UpdateRepeatingSendRequest) GetUntil() OptNilDateTime {
+	return s.Until
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *UpdateRepeatingSendRequest) GetBodyText() OptString {
+	return s.BodyText
+}
+
+// GetSubject returns the value of Subject.
+func (s *UpdateRepeatingSendRequest) GetSubject() OptString {
+	return s.Subject
+}
+
+// SetStatus sets the value of Status.
+func (s *UpdateRepeatingSendRequest) SetStatus(val OptUpdateRepeatingSendRequestStatus) {
+	s.Status = val
+}
+
+// SetEveryMinutes sets the value of EveryMinutes.
+func (s *UpdateRepeatingSendRequest) SetEveryMinutes(val OptInt) {
+	s.EveryMinutes = val
+}
+
+// SetOnlyIfRecipientIdleMinutes sets the value of OnlyIfRecipientIdleMinutes.
+func (s *UpdateRepeatingSendRequest) SetOnlyIfRecipientIdleMinutes(val OptNilInt) {
+	s.OnlyIfRecipientIdleMinutes = val
+}
+
+// SetStoppableByRecipient sets the value of StoppableByRecipient.
+func (s *UpdateRepeatingSendRequest) SetStoppableByRecipient(val OptBool) {
+	s.StoppableByRecipient = val
+}
+
+// SetMaxSends sets the value of MaxSends.
+func (s *UpdateRepeatingSendRequest) SetMaxSends(val OptNilInt) {
+	s.MaxSends = val
+}
+
+// SetUntil sets the value of Until.
+func (s *UpdateRepeatingSendRequest) SetUntil(val OptNilDateTime) {
+	s.Until = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *UpdateRepeatingSendRequest) SetBodyText(val OptString) {
+	s.BodyText = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *UpdateRepeatingSendRequest) SetSubject(val OptString) {
+	s.Subject = val
+}
+
+type UpdateRepeatingSendRequestStatus string
+
+const (
+	UpdateRepeatingSendRequestStatusActive   UpdateRepeatingSendRequestStatus = "active"
+	UpdateRepeatingSendRequestStatusPaused   UpdateRepeatingSendRequestStatus = "paused"
+	UpdateRepeatingSendRequestStatusCanceled UpdateRepeatingSendRequestStatus = "canceled"
+)
+
+// AllValues returns all UpdateRepeatingSendRequestStatus values.
+func (UpdateRepeatingSendRequestStatus) AllValues() []UpdateRepeatingSendRequestStatus {
+	return []UpdateRepeatingSendRequestStatus{
+		UpdateRepeatingSendRequestStatusActive,
+		UpdateRepeatingSendRequestStatusPaused,
+		UpdateRepeatingSendRequestStatusCanceled,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdateRepeatingSendRequestStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdateRepeatingSendRequestStatusActive:
+		return []byte(s), nil
+	case UpdateRepeatingSendRequestStatusPaused:
+		return []byte(s), nil
+	case UpdateRepeatingSendRequestStatusCanceled:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdateRepeatingSendRequestStatus) UnmarshalText(data []byte) error {
+	switch UpdateRepeatingSendRequestStatus(data) {
+	case UpdateRepeatingSendRequestStatusActive:
+		*s = UpdateRepeatingSendRequestStatusActive
+		return nil
+	case UpdateRepeatingSendRequestStatusPaused:
+		*s = UpdateRepeatingSendRequestStatusPaused
+		return nil
+	case UpdateRepeatingSendRequestStatusCanceled:
+		*s = UpdateRepeatingSendRequestStatusCanceled
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type UpdateRepeatingSendUnauthorized ErrorResponse
 

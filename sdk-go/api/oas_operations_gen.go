@@ -148,7 +148,7 @@ const (
 	StartAgentSignupOperation                    OperationName = "StartAgentSignup"
 	StartCliLoginOperation                       OperationName = "StartCliLogin"
 	StartCliSignupOperation                      OperationName = "StartCliSignup"
-	StopRepeatingSendOperation                   OperationName = "StopRepeatingSend"
+	StopRepeatFromEmailOperation                 OperationName = "StopRepeatFromEmail"
 	TestEndpointOperation                        OperationName = "TestEndpoint"
 	TestEndpointRulesOperation                   OperationName = "TestEndpointRules"
 	TestFunctionOperation                        OperationName = "TestFunction"

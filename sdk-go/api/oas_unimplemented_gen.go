@@ -1482,10 +1482,10 @@ func (UnimplementedHandler) ListRegistryRequests(ctx context.Context, params Lis
 
 // ListRepeatingSends implements listRepeatingSends operation.
 //
-// Repeating sends you created, newest first. A member sees the repeats
-// it created; a connected agent sees the repeats its key created; repeats
-// created with an organization API key are visible to organization
-// credentials.
+// Repeating sends you created, newest first. A repeat is visible to the
+// member who created it, or to any organization API key or member for
+// repeats created with an organization API key. Agent credentials get
+// 403.
 //
 // GET /repeating-sends
 func (UnimplementedHandler) ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (r ListRepeatingSendsRes, _ error) {
@@ -2163,7 +2163,7 @@ func (UnimplementedHandler) StartCliSignup(ctx context.Context, req *StartCliSig
 	return r, ht.ErrNotImplemented
 }
 
-// StopRepeatingSend implements stopRepeatingSend operation.
+// StopRepeatFromEmail implements stopRepeatFromEmail operation.
 //
 // Called by the recipient of a repeating send: the connected agent's own
 // credential for an agent address, or the signed-in member whose personal
@@ -2174,7 +2174,7 @@ func (UnimplementedHandler) StartCliSignup(ctx context.Context, req *StartCliSig
 // the same result without a second reply.
 //
 // POST /emails/{id}/repeat-stop
-func (UnimplementedHandler) StopRepeatingSend(ctx context.Context, req OptRepeatStopInput, params StopRepeatingSendParams) (r StopRepeatingSendRes, _ error) {
+func (UnimplementedHandler) StopRepeatFromEmail(ctx context.Context, req OptRepeatStopRequest, params StopRepeatFromEmailParams) (r StopRepeatFromEmailRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -2353,7 +2353,7 @@ func (UnimplementedHandler) UpdateRegistry(ctx context.Context, req *UpdateRegis
 // or `until` clears that limit.
 //
 // PATCH /repeating-sends/{id}
-func (UnimplementedHandler) UpdateRepeatingSend(ctx context.Context, req *UpdateRepeatingSendInput, params UpdateRepeatingSendParams) (r UpdateRepeatingSendRes, _ error) {
+func (UnimplementedHandler) UpdateRepeatingSend(ctx context.Context, req *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (r UpdateRepeatingSendRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

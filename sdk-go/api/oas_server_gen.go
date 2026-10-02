@@ -1165,10 +1165,10 @@ type Handler interface {
 	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
 	// ListRepeatingSends implements listRepeatingSends operation.
 	//
-	// Repeating sends you created, newest first. A member sees the repeats
-	// it created; a connected agent sees the repeats its key created; repeats
-	// created with an organization API key are visible to organization
-	// credentials.
+	// Repeating sends you created, newest first. A repeat is visible to the
+	// member who created it, or to any organization API key or member for
+	// repeats created with an organization API key. Agent credentials get
+	// 403.
 	//
 	// GET /repeating-sends
 	ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (ListRepeatingSendsRes, error)
@@ -1702,7 +1702,7 @@ type Handler interface {
 	//
 	// POST /cli/signup/start
 	StartCliSignup(ctx context.Context, req *StartCliSignupInput) (StartCliSignupRes, error)
-	// StopRepeatingSend implements stopRepeatingSend operation.
+	// StopRepeatFromEmail implements stopRepeatFromEmail operation.
 	//
 	// Called by the recipient of a repeating send: the connected agent's own
 	// credential for an agent address, or the signed-in member whose personal
@@ -1713,7 +1713,7 @@ type Handler interface {
 	// the same result without a second reply.
 	//
 	// POST /emails/{id}/repeat-stop
-	StopRepeatingSend(ctx context.Context, req OptRepeatStopInput, params StopRepeatingSendParams) (StopRepeatingSendRes, error)
+	StopRepeatFromEmail(ctx context.Context, req OptRepeatStopRequest, params StopRepeatFromEmailParams) (StopRepeatFromEmailRes, error)
 	// TestEndpoint implements testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -1853,7 +1853,7 @@ type Handler interface {
 	// or `until` clears that limit.
 	//
 	// PATCH /repeating-sends/{id}
-	UpdateRepeatingSend(ctx context.Context, req *UpdateRepeatingSendInput, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error)
+	UpdateRepeatingSend(ctx context.Context, req *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error)
 	// UpdateRoute implements updateRoute operation.
 	//
 	// Update a recipient route.

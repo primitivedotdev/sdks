@@ -565,8 +565,8 @@ type StartCliSignupRes interface {
 	startCliSignupRes()
 }
 
-type StopRepeatingSendRes interface {
-	stopRepeatingSendRes()
+type StopRepeatFromEmailRes interface {
+	stopRepeatFromEmailRes()
 }
 
 type TestEndpointRes interface {

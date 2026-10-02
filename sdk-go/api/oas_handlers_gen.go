@@ -18694,10 +18694,10 @@ func (s *Server) handleListRegistryRequestsRequest(args [1]string, argsEscaped b
 
 // handleListRepeatingSendsRequest handles listRepeatingSends operation.
 //
-// Repeating sends you created, newest first. A member sees the repeats
-// it created; a connected agent sees the repeats its key created; repeats
-// created with an organization API key are visible to organization
-// credentials.
+// Repeating sends you created, newest first. A repeat is visible to the
+// member who created it, or to any organization API key or member for
+// repeats created with an organization API key. Agent credentials get
+// 403.
 //
 // GET /repeating-sends
 func (s *Server) handleListRepeatingSendsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -27192,7 +27192,7 @@ func (s *Server) handleStartCliSignupRequest(args [0]string, argsEscaped bool, w
 	}
 }
 
-// handleStopRepeatingSendRequest handles stopRepeatingSend operation.
+// handleStopRepeatFromEmailRequest handles stopRepeatFromEmail operation.
 //
 // Called by the recipient of a repeating send: the connected agent's own
 // credential for an agent address, or the signed-in member whose personal
@@ -27203,11 +27203,11 @@ func (s *Server) handleStartCliSignupRequest(args [0]string, argsEscaped bool, w
 // the same result without a second reply.
 //
 // POST /emails/{id}/repeat-stop
-func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleStopRepeatFromEmailRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("stopRepeatingSend"),
+		otelogen.OperationID("stopRepeatFromEmail"),
 		semconv.HTTPRequestMethodKey.String("POST"),
 		semconv.HTTPRouteKey.String("/emails/{id}/repeat-stop"),
 	}
@@ -27215,7 +27215,7 @@ func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
 
 	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), StopRepeatingSendOperation,
+	ctx, span := s.cfg.Tracer.Start(r.Context(), StopRepeatFromEmailOperation,
 		trace.WithAttributes(otelAttrs...),
 		serverSpanKind,
 	)
@@ -27270,15 +27270,15 @@ func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool
 		}
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: StopRepeatingSendOperation,
-			ID:   "stopRepeatingSend",
+			Name: StopRepeatFromEmailOperation,
+			ID:   "stopRepeatFromEmail",
 		}
 	)
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityBearerAuth(ctx, StopRepeatingSendOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, StopRepeatFromEmailOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
@@ -27318,7 +27318,7 @@ func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool
 			return
 		}
 	}
-	params, err := decodeStopRepeatingSendParams(args, argsEscaped, r)
+	params, err := decodeStopRepeatFromEmailParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -27330,7 +27330,7 @@ func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool
 	}
 
 	var rawBody []byte
-	request, rawBody, close, err := s.decodeStopRepeatingSendRequest(r)
+	request, rawBody, close, err := s.decodeStopRepeatFromEmailRequest(r)
 	if err != nil {
 		err = &ogenerrors.DecodeRequestError{
 			OperationContext: opErrContext,
@@ -27346,13 +27346,13 @@ func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool
 		}
 	}()
 
-	var response StopRepeatingSendRes
+	var response StopRepeatFromEmailRes
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    StopRepeatingSendOperation,
+			OperationName:    StopRepeatFromEmailOperation,
 			OperationSummary: "Stop the repeat behind a received message",
-			OperationID:      "stopRepeatingSend",
+			OperationID:      "stopRepeatFromEmail",
 			Body:             request,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
@@ -27365,9 +27365,9 @@ func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool
 		}
 
 		type (
-			Request  = OptRepeatStopInput
-			Params   = StopRepeatingSendParams
-			Response = StopRepeatingSendRes
+			Request  = OptRepeatStopRequest
+			Params   = StopRepeatFromEmailParams
+			Response = StopRepeatFromEmailRes
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -27376,14 +27376,14 @@ func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool
 		](
 			m,
 			mreq,
-			unpackStopRepeatingSendParams,
+			unpackStopRepeatFromEmailParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.StopRepeatingSend(ctx, request, params)
+				response, err = s.h.StopRepeatFromEmail(ctx, request, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.StopRepeatingSend(ctx, request, params)
+		response, err = s.h.StopRepeatFromEmail(ctx, request, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -27391,7 +27391,7 @@ func (s *Server) handleStopRepeatingSendRequest(args [1]string, argsEscaped bool
 		return
 	}
 
-	if err := encodeStopRepeatingSendResponse(response, w, span); err != nil {
+	if err := encodeStopRepeatFromEmailResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -29997,7 +29997,7 @@ func (s *Server) handleUpdateRepeatingSendRequest(args [1]string, argsEscaped bo
 		}
 
 		type (
-			Request  = *UpdateRepeatingSendInput
+			Request  = *UpdateRepeatingSendRequest
 			Params   = UpdateRepeatingSendParams
 			Response = UpdateRepeatingSendRes
 		)

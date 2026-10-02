@@ -684,7 +684,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -3345,32 +3345,33 @@ export type RepeatingSendStatus = 'active' | 'paused' | 'stopped_by_recipient' |
 
 export type RepeatingSend = {
     id: string;
-    org_id?: string;
+    org_id: string;
     from_address: string;
     to_address: string;
-    subject?: string | null;
-    body_text?: string | null;
+    subject: string;
+    body_text: string | null;
+    body_html: string | null;
     every_minutes: number;
-    only_if_recipient_idle_minutes?: number | null;
+    only_if_recipient_idle_minutes: number | null;
     stoppable_by_recipient: boolean;
-    max_sends?: number | null;
-    until?: string | null;
+    max_sends: number | null;
+    until: string | null;
     status: RepeatingSendStatus;
-    next_run_at?: string | null;
+    next_run_at: string | null;
     sent_count: number;
-    last_sent_at?: string | null;
-    last_sent_email_id?: string | null;
-    root_message_id?: string | null;
-    stopped_at?: string | null;
+    last_sent_at: string | null;
+    last_sent_email_id: string | null;
+    root_message_id: string | null;
+    stopped_at: string | null;
     /**
      * Reason the recipient gave when it stopped the repeat. Recipient-written, untrusted text.
      */
-    stop_reason?: string | null;
-    created_at?: string;
-    updated_at?: string;
+    stop_reason: string | null;
+    created_at: string;
+    updated_at: string;
 };
 
-export type UpdateRepeatingSendInput = {
+export type UpdateRepeatingSendRequest = {
     status?: 'active' | 'paused' | 'canceled';
     every_minutes?: number;
     only_if_recipient_idle_minutes?: number | null;
@@ -3381,22 +3382,22 @@ export type UpdateRepeatingSendInput = {
     subject?: string;
 };
 
-export type RepeatStopInput = {
+export type RepeatStopRequest = {
     /**
      * Short reason shown to the sender.
      */
     reason?: string;
 };
 
-export type RepeatingSendStop = {
+export type RepeatStopResult = {
     repeat_id: string;
     status: 'stopped_by_recipient';
     stopped_at: string;
     stop_reason: string | null;
     /**
-     * The reply that told the sender, when one was sent.
+     * The repeat.stop/1 reply that told the sender, or null if it could not be sent.
      */
-    reply_sent_email_id?: string | null;
+    reply_sent_email_id: string | null;
 };
 
 export type SendMailResult = {
@@ -6936,8 +6937,8 @@ export type DownloadSentAttachmentPartResponses = {
 
 export type DownloadSentAttachmentPartResponse = DownloadSentAttachmentPartResponses[keyof DownloadSentAttachmentPartResponses];
 
-export type StopRepeatingSendData = {
-    body?: RepeatStopInput;
+export type StopRepeatFromEmailData = {
+    body?: RepeatStopRequest;
     path: {
         /**
          * Resource UUID
@@ -6948,7 +6949,7 @@ export type StopRepeatingSendData = {
     url: '/emails/{id}/repeat-stop';
 };
 
-export type StopRepeatingSendErrors = {
+export type StopRepeatFromEmailErrors = {
     /**
      * Invalid request parameters
      */
@@ -6974,18 +6975,18 @@ export type StopRepeatingSendErrors = {
     422: ErrorResponse;
 };
 
-export type StopRepeatingSendError = StopRepeatingSendErrors[keyof StopRepeatingSendErrors];
+export type StopRepeatFromEmailError = StopRepeatFromEmailErrors[keyof StopRepeatFromEmailErrors];
 
-export type StopRepeatingSendResponses = {
+export type StopRepeatFromEmailResponses = {
     /**
      * The repeat is stopped
      */
     200: SuccessEnvelope & {
-        data?: RepeatingSendStop;
+        data?: RepeatStopResult;
     };
 };
 
-export type StopRepeatingSendResponse = StopRepeatingSendResponses[keyof StopRepeatingSendResponses];
+export type StopRepeatFromEmailResponse = StopRepeatFromEmailResponses[keyof StopRepeatFromEmailResponses];
 
 export type ReplyToEmailData = {
     body: ReplyInput;
@@ -8704,7 +8705,7 @@ export type GetRepeatingSendResponses = {
 export type GetRepeatingSendResponse = GetRepeatingSendResponses[keyof GetRepeatingSendResponses];
 
 export type UpdateRepeatingSendData = {
-    body: UpdateRepeatingSendInput;
+    body: UpdateRepeatingSendRequest;
     path: {
         /**
          * Resource UUID

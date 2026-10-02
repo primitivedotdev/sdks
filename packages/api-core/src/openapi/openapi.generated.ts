@@ -2774,7 +2774,7 @@ export const openapiDocument: Record<string, unknown> = {
         }
       ],
       "post": {
-        "operationId": "stopRepeatingSend",
+        "operationId": "stopRepeatFromEmail",
         "summary": "Stop the repeat behind a received message",
         "description": "Called by the recipient of a repeating send: the connected agent's own\ncredential for an agent address, or the signed-in member whose personal\naddress it is. `id` is the caller's received copy of any message of the\nrepeat. Stops the repeat when it lets the recipient stop it, cancels the\npending message, and replies once in the thread with a\n`repeat.stop/1` interaction so the sender sees it. A repeat call returns\nthe same result without a second reply.\n",
         "tags": [
@@ -2785,7 +2785,7 @@ export const openapiDocument: Record<string, unknown> = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RepeatStopInput"
+                "$ref": "#/components/schemas/RepeatStopRequest"
               }
             }
           }
@@ -2804,7 +2804,7 @@ export const openapiDocument: Record<string, unknown> = {
                       "type": "object",
                       "properties": {
                         "data": {
-                          "$ref": "#/components/schemas/RepeatingSendStop"
+                          "$ref": "#/components/schemas/RepeatStopResult"
                         }
                       }
                     }
@@ -4910,7 +4910,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listRepeatingSends",
         "summary": "List repeating sends",
-        "description": "Repeating sends you created, newest first. A member sees the repeats\nit created; a connected agent sees the repeats its key created; repeats\ncreated with an organization API key are visible to organization\ncredentials.\n",
+        "description": "Repeating sends you created, newest first. A repeat is visible to the\nmember who created it, or to any organization API key or member for\nrepeats created with an organization API key. Agent credentials get\n403.\n",
         "tags": [
           "Repeating Sends"
         ],
@@ -5024,7 +5024,7 @@ export const openapiDocument: Record<string, unknown> = {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateRepeatingSendInput"
+                "$ref": "#/components/schemas/UpdateRepeatingSendRequest"
               }
             }
           }
@@ -16009,6 +16009,11 @@ export const openapiDocument: Record<string, unknown> = {
                   "subscription_unavailable",
                   "stale_delivery",
                   "idempotency_key_required",
+                  "repeat_unsupported",
+                  "repeat_recipient_external",
+                  "repeat_idle_requires_internal_recipient",
+                  "not_a_repeating_send",
+                  "repeat_stop_not_allowed",
                   "idempotency_key_reused",
                   "credit_code_invalid",
                   "credit_code_already_redeemed",
@@ -20662,6 +20667,7 @@ export const openapiDocument: Record<string, unknown> = {
       },
       "RepeatingSend": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "id": {
             "type": "string",
@@ -20678,12 +20684,15 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string"
           },
           "subject": {
+            "type": "string"
+          },
+          "body_text": {
             "type": [
               "string",
               "null"
             ]
           },
-          "body_text": {
+          "body_html": {
             "type": [
               "string",
               "null"
@@ -20739,7 +20748,8 @@ export const openapiDocument: Record<string, unknown> = {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "format": "uuid"
           },
           "root_message_id": {
             "type": [
@@ -20772,17 +20782,33 @@ export const openapiDocument: Record<string, unknown> = {
         },
         "required": [
           "id",
+          "org_id",
           "from_address",
           "to_address",
+          "subject",
+          "body_text",
+          "body_html",
           "every_minutes",
+          "only_if_recipient_idle_minutes",
           "stoppable_by_recipient",
+          "max_sends",
+          "until",
           "status",
-          "sent_count"
+          "next_run_at",
+          "sent_count",
+          "last_sent_at",
+          "last_sent_email_id",
+          "root_message_id",
+          "stopped_at",
+          "stop_reason",
+          "created_at",
+          "updated_at"
         ]
       },
-      "UpdateRepeatingSendInput": {
+      "UpdateRepeatingSendRequest": {
         "type": "object",
         "additionalProperties": false,
+        "minProperties": 1,
         "properties": {
           "status": {
             "type": "string",
@@ -20833,7 +20859,7 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       },
-      "RepeatStopInput": {
+      "RepeatStopRequest": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -20845,8 +20871,9 @@ export const openapiDocument: Record<string, unknown> = {
           }
         }
       },
-      "RepeatingSendStop": {
+      "RepeatStopResult": {
         "type": "object",
+        "additionalProperties": false,
         "properties": {
           "repeat_id": {
             "type": "string",
@@ -20873,14 +20900,16 @@ export const openapiDocument: Record<string, unknown> = {
               "string",
               "null"
             ],
-            "description": "The reply that told the sender, when one was sent."
+            "format": "uuid",
+            "description": "The repeat.stop/1 reply that told the sender, or null if it could not be sent."
           }
         },
         "required": [
           "repeat_id",
           "status",
           "stopped_at",
-          "stop_reason"
+          "stop_reason",
+          "reply_sent_email_id"
         ]
       },
       "SendMailResult": {

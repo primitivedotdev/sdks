@@ -1,6 +1,6 @@
 from enum import Enum
 
-class UpdateRepeatingSendInputStatus(str, Enum):
+class UpdateRepeatingSendRequestStatus(str, Enum):
     ACTIVE = "active"
     CANCELED = "canceled"
     PAUSED = "paused"

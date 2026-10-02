@@ -436,11 +436,11 @@ from .reorder_routes_input import ReorderRoutesInput
 from .reorder_routes_input_updates_item import ReorderRoutesInputUpdatesItem
 from .reorder_routes_response_200 import ReorderRoutesResponse200
 from .repeat_input import RepeatInput
-from .repeat_stop_input import RepeatStopInput
+from .repeat_stop_request import RepeatStopRequest
+from .repeat_stop_result import RepeatStopResult
+from .repeat_stop_result_status import RepeatStopResultStatus
 from .repeating_send import RepeatingSend
 from .repeating_send_status import RepeatingSendStatus
-from .repeating_send_stop import RepeatingSendStop
-from .repeating_send_stop_status import RepeatingSendStopStatus
 from .replay_delivery_response_200 import ReplayDeliveryResponse200
 from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
@@ -546,7 +546,7 @@ from .start_cli_login_response_201 import StartCliLoginResponse201
 from .start_cli_signup_input import StartCliSignupInput
 from .start_cli_signup_input_metadata import StartCliSignupInputMetadata
 from .start_cli_signup_response_201 import StartCliSignupResponse201
-from .stop_repeating_send_response_200 import StopRepeatingSendResponse200
+from .stop_repeat_from_email_response_200 import StopRepeatFromEmailResponse200
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
 from .template_author import TemplateAuthor
@@ -603,8 +603,8 @@ from .update_function_response_200 import UpdateFunctionResponse200
 from .update_registry_input import UpdateRegistryInput
 from .update_registry_response_200 import UpdateRegistryResponse200
 from .update_registry_response_200_data import UpdateRegistryResponse200Data
-from .update_repeating_send_input import UpdateRepeatingSendInput
-from .update_repeating_send_input_status import UpdateRepeatingSendInputStatus
+from .update_repeating_send_request import UpdateRepeatingSendRequest
+from .update_repeating_send_request_status import UpdateRepeatingSendRequestStatus
 from .update_repeating_send_response_200 import UpdateRepeatingSendResponse200
 from .update_route_input import UpdateRouteInput
 from .update_route_input_match_type import UpdateRouteInputMatchType
@@ -1089,10 +1089,10 @@ __all__ = (
     "ReorderRoutesResponse200",
     "RepeatingSend",
     "RepeatingSendStatus",
-    "RepeatingSendStop",
-    "RepeatingSendStopStatus",
     "RepeatInput",
-    "RepeatStopInput",
+    "RepeatStopRequest",
+    "RepeatStopResult",
+    "RepeatStopResultStatus",
     "ReplayDeliveryResponse200",
     "ReplayEmailWebhooksResponse200",
     "ReplayResult",
@@ -1198,7 +1198,7 @@ __all__ = (
     "StartCliSignupInput",
     "StartCliSignupInputMetadata",
     "StartCliSignupResponse201",
-    "StopRepeatingSendResponse200",
+    "StopRepeatFromEmailResponse200",
     "StorageStats",
     "SuccessEnvelope",
     "TemplateAuthor",
@@ -1255,8 +1255,8 @@ __all__ = (
     "UpdateRegistryInput",
     "UpdateRegistryResponse200",
     "UpdateRegistryResponse200Data",
-    "UpdateRepeatingSendInput",
-    "UpdateRepeatingSendInputStatus",
+    "UpdateRepeatingSendRequest",
+    "UpdateRepeatingSendRequestStatus",
     "UpdateRepeatingSendResponse200",
     "UpdateRouteInput",
     "UpdateRouteInputMatchType",

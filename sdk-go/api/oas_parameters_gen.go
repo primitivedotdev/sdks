@@ -13222,13 +13222,13 @@ func decodeSetOrgSecretParams(args [1]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
-// StopRepeatingSendParams is parameters of stopRepeatingSend operation.
-type StopRepeatingSendParams struct {
+// StopRepeatFromEmailParams is parameters of stopRepeatFromEmail operation.
+type StopRepeatFromEmailParams struct {
 	// Resource UUID.
 	ID uuid.UUID
 }
 
-func unpackStopRepeatingSendParams(packed middleware.Parameters) (params StopRepeatingSendParams) {
+func unpackStopRepeatFromEmailParams(packed middleware.Parameters) (params StopRepeatFromEmailParams) {
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -13239,7 +13239,7 @@ func unpackStopRepeatingSendParams(packed middleware.Parameters) (params StopRep
 	return params
 }
 
-func decodeStopRepeatingSendParams(args [1]string, argsEscaped bool, r *http.Request) (params StopRepeatingSendParams, _ error) {
+func decodeStopRepeatFromEmailParams(args [1]string, argsEscaped bool, r *http.Request) (params StopRepeatFromEmailParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]

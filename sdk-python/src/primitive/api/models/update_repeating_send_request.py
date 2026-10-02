@@ -8,7 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from ..models.update_repeating_send_input_status import UpdateRepeatingSendInputStatus
+from ..models.update_repeating_send_request_status import UpdateRepeatingSendRequestStatus
 from dateutil.parser import isoparse
 from typing import cast
 import datetime
@@ -18,15 +18,15 @@ import datetime
 
 
 
-T = TypeVar("T", bound="UpdateRepeatingSendInput")
+T = TypeVar("T", bound="UpdateRepeatingSendRequest")
 
 
 
 @_attrs_define
-class UpdateRepeatingSendInput:
+class UpdateRepeatingSendRequest:
     """ 
         Attributes:
-            status (UpdateRepeatingSendInputStatus | Unset):
+            status (UpdateRepeatingSendRequestStatus | Unset):
             every_minutes (int | Unset):
             only_if_recipient_idle_minutes (int | None | Unset):
             stoppable_by_recipient (bool | Unset):
@@ -36,7 +36,7 @@ class UpdateRepeatingSendInput:
             subject (str | Unset):
      """
 
-    status: UpdateRepeatingSendInputStatus | Unset = UNSET
+    status: UpdateRepeatingSendRequestStatus | Unset = UNSET
     every_minutes: int | Unset = UNSET
     only_if_recipient_idle_minutes: int | None | Unset = UNSET
     stoppable_by_recipient: bool | Unset = UNSET
@@ -113,11 +113,11 @@ class UpdateRepeatingSendInput:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
         _status = d.pop("status", UNSET)
-        status: UpdateRepeatingSendInputStatus | Unset
+        status: UpdateRepeatingSendRequestStatus | Unset
         if isinstance(_status,  Unset):
             status = UNSET
         else:
-            status = UpdateRepeatingSendInputStatus(_status)
+            status = UpdateRepeatingSendRequestStatus(_status)
 
 
 
@@ -170,7 +170,7 @@ class UpdateRepeatingSendInput:
 
         subject = d.pop("subject", UNSET)
 
-        update_repeating_send_input = cls(
+        update_repeating_send_request = cls(
             status=status,
             every_minutes=every_minutes,
             only_if_recipient_idle_minutes=only_if_recipient_idle_minutes,
@@ -181,5 +181,5 @@ class UpdateRepeatingSendInput:
             subject=subject,
         )
 
-        return update_repeating_send_input
+        return update_repeating_send_request
 

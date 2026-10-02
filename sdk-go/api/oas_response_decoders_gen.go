@@ -36854,7 +36854,7 @@ func decodeStartCliSignupResponse(resp *http.Response) (res StartCliSignupRes, _
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
-func decodeStopRepeatingSendResponse(resp *http.Response) (res StopRepeatingSendRes, _ error) {
+func decodeStopRepeatFromEmailResponse(resp *http.Response) (res StopRepeatFromEmailRes, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
@@ -36870,7 +36870,7 @@ func decodeStopRepeatingSendResponse(resp *http.Response) (res StopRepeatingSend
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response StopRepeatingSendOK
+			var response StopRepeatFromEmailOK
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err
@@ -36914,7 +36914,7 @@ func decodeStopRepeatingSendResponse(resp *http.Response) (res StopRepeatingSend
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response StopRepeatingSendBadRequest
+			var response StopRepeatFromEmailBadRequest
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err
@@ -36958,7 +36958,7 @@ func decodeStopRepeatingSendResponse(resp *http.Response) (res StopRepeatingSend
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response StopRepeatingSendUnauthorized
+			var response StopRepeatFromEmailUnauthorized
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err
@@ -37002,7 +37002,7 @@ func decodeStopRepeatingSendResponse(resp *http.Response) (res StopRepeatingSend
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response StopRepeatingSendForbidden
+			var response StopRepeatFromEmailForbidden
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err
@@ -37046,7 +37046,7 @@ func decodeStopRepeatingSendResponse(resp *http.Response) (res StopRepeatingSend
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response StopRepeatingSendNotFound
+			var response StopRepeatFromEmailNotFound
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err
@@ -37090,7 +37090,7 @@ func decodeStopRepeatingSendResponse(resp *http.Response) (res StopRepeatingSend
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response StopRepeatingSendUnprocessableEntity
+			var response StopRepeatFromEmailUnprocessableEntity
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err

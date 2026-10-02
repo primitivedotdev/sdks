@@ -40,7 +40,7 @@ import {
   type RepeatInput as GeneratedRepeatInput,
   type RepeatingSend as GeneratedRepeatingSend,
   type RepeatingSendStatus as GeneratedRepeatingSendStatus,
-  type RepeatingSendStop as GeneratedRepeatingSendStop,
+  type RepeatStopResult as GeneratedRepeatStopResult,
   type ReplyInput as GeneratedReplyInput,
   type SearchMemoriesData as GeneratedSearchMemoriesData,
   type SemanticSearchInput as GeneratedSemanticSearchInput,
@@ -50,7 +50,7 @@ import {
   type SendMailInput as GeneratedSendMailInput,
   type SendMailResult as GeneratedSendMailResult,
   type SetMemoryInput as GeneratedSetMemoryInput,
-  type UpdateRepeatingSendInput as GeneratedUpdateRepeatingSendInput,
+  type UpdateRepeatingSendRequest as GeneratedUpdateRepeatingSendRequest,
   operations as generatedOperations,
   isMemoryJsonValue,
   PrimitiveApiClient,
@@ -1178,7 +1178,7 @@ function assertUuid(value: unknown, label: string): asserts value is string {
   }
 }
 
-export type RepeatingSendUpdateInput = GeneratedUpdateRepeatingSendInput;
+export type RepeatingSendUpdateInput = GeneratedUpdateRepeatingSendRequest;
 
 export interface RepeatingSendListInput {
   /** Only return repeats sent to this address. */
@@ -1292,16 +1292,16 @@ export class RepeatsResource {
     emailId: string,
     input: RepeatStopInput = {},
     options?: RequestOptions,
-  ): Promise<GeneratedRepeatingSendStop> {
+  ): Promise<GeneratedRepeatStopResult> {
     assertUuid(emailId, "emailId");
-    const result = await generatedOperations.stopRepeatingSend({
+    const result = await generatedOperations.stopRepeatFromEmail({
       path: { id: emailId },
       body: buildRepeatStopBody(input),
       ...resolveRequestOptions(options),
       client: this.client,
       responseStyle: "fields",
     });
-    return unwrapData<GeneratedRepeatingSendStop>(result, "repeat stop");
+    return unwrapData<GeneratedRepeatStopResult>(result, "repeat stop");
   }
 }
 
