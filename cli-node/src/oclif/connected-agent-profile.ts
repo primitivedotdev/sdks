@@ -15,7 +15,15 @@ export type ConnectedAgentIdentity = {
   profileName: string;
   orgId: string;
   agentAddress: string;
+  /** Control sender for the setup check and presence only. Never a report target. */
   ownerAddress: string;
+  /**
+   * The owner's personal mailbox, the one their apps show: where reports and
+   * questions go. Null for shared connections, an owner without a personal
+   * address, or a server that does not report it yet. Always set by
+   * connectedAgentIdentity; optional only for identities built elsewhere.
+   */
+  ownerMemberAddress?: string | null;
   apiBaseUrl: string;
 };
 export type ConnectedAgentProfile = {
@@ -26,6 +34,8 @@ export type ConnectedAgentProfile = {
   org_id: string;
   agent_address: string;
   owner_address: string;
+  /** Absent when the server has not reported it; null when there is none. */
+  owner_member_address?: string | null;
   invitation_hash: string;
   created_at: string;
   presence_profile?: PresenceProfile;
@@ -141,14 +151,13 @@ export function parseConnectedAgentProfile(
       "invitation_hash",
       "created_at",
     ];
-    const row = mailObject(
-      value,
-      value &&
-        typeof value === "object" &&
-        Object.hasOwn(value, "presence_profile")
-        ? [...keys, "presence_profile"]
-        : keys,
-    );
+    const has = (key: string) =>
+      Boolean(value && typeof value === "object" && Object.hasOwn(value, key));
+    const row = mailObject(value, [
+      ...keys,
+      ...(has("presence_profile") ? ["presence_profile"] : []),
+      ...(has("owner_member_address") ? ["owner_member_address"] : []),
+    ]);
     const apiKey = mailString(row.api_key, 4096);
     const invitationHash = mailString(row.invitation_hash, 64);
     if (
@@ -163,6 +172,13 @@ export function parseConnectedAgentProfile(
       row.presence_profile,
       mailAddress(row.owner_address),
     );
+    const ownerMember = has("owner_member_address")
+      ? parseOwnerMemberAddress(
+          row.owner_member_address,
+          mailAddress(row.owner_address),
+          mailAddress(row.agent_address),
+        )
+      : undefined;
     return {
       version: 1,
       auth_method: "agent_connection",
@@ -171,6 +187,9 @@ export function parseConnectedAgentProfile(
       org_id: mailId(row.org_id),
       agent_address: mailAddress(row.agent_address),
       owner_address: mailAddress(row.owner_address),
+      ...(ownerMember === undefined
+        ? {}
+        : { owner_member_address: ownerMember }),
       invitation_hash: invitationHash,
       created_at: mailTime(row.created_at),
       ...(presence === undefined ? {} : { presence_profile: presence }),
@@ -225,6 +244,22 @@ export function connectedAgentIdentity(
     orgId: profile.org_id,
     agentAddress: profile.agent_address,
     ownerAddress: profile.owner_address,
+    ownerMemberAddress: profile.owner_member_address ?? null,
     apiBaseUrl: profile.api_base_url,
   };
+}
+
+/**
+ * Validates a server-reported owner personal address. It is a person's
+ * mailbox, so it can never be the control sender or the agent itself.
+ */
+export function parseOwnerMemberAddress(
+  value: unknown,
+  ownerAddress: string,
+  agentAddress: string,
+): string | null {
+  if (value === null) return null;
+  const address = mailAddress(value);
+  if (address === ownerAddress || address === agentAddress) throw new Error();
+  return address;
 }

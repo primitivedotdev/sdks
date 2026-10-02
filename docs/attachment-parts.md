@@ -109,6 +109,19 @@ primitive sending download-sent-attachment-part --id <sent-email-id> --part-inde
 Without `--output`, stdout contains only the original bytes. Errors go to stderr
 and produce a nonzero exit. These binary commands do not support `--json`.
 
+While the service answers `attachment_not_ready`, these two commands and
+`primitive emails download-attachments` wait and retry for up to 60 seconds,
+following `Retry-After` and otherwise backing off from 1 to 8 seconds. A single
+note goes to stderr when waiting starts; stdout still carries only the bytes.
+Pass `--no-wait` to return the error immediately. Other errors are never retried.
+
+`primitive emails get --id <email-id> --brief` lists each attachment's filename,
+content type, size and `part_index`, with the exact command that downloads it
+and one that downloads the whole archive. The suggested output name is
+`attachment-<part_index>` plus the filename's extension when that extension is
+plain letters and digits; the sender-written filename itself is never placed in a
+command.
+
 ## Errors
 
 | HTTP | Meaning |
@@ -124,5 +137,5 @@ and produce a nonzero exit. These binary commands do not support `--json`.
 | 503 | `attachment_not_ready` or `attachment_storage_unavailable`; respect `Retry-After` |
 
 The thin JavaScript methods preserve status, error code, and retry delay in
-`PrimitiveApiError`. They do not automatically retry or reinterpret a missing
+`PrimitiveApiError`. Unlike the CLI commands, they do not automatically retry or reinterpret a missing
 part as an empty attachment.

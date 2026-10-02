@@ -16,7 +16,8 @@ vi.mock("../../src/oclif/agent-connect.js", async (original) => ({
   ...(await original<typeof import("../../src/oclif/agent-connect.js")>()),
   readAgentInvitation: mocks.readAgentInvitation,
 }));
-vi.mock("../../src/oclif/agent-setup.js", () => ({
+vi.mock("../../src/oclif/agent-setup.js", async (original) => ({
+  ...(await original<typeof import("../../src/oclif/agent-setup.js")>()),
   setupAgent: mocks.setupAgent,
 }));
 vi.mock("../../src/oclif/agent-enroll.js", () => ({
@@ -296,4 +297,65 @@ it("agent connect points a paused npx setup back at npx", async () => {
   } finally {
     process.argv[1] = entry ?? "";
   }
+});
+
+it("agent connect --json prints one document reporting verification and nothing on stderr", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  const stderr: string[] = [];
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    stderr.push(String(chunk));
+    return true;
+  });
+  vi.spyOn(AgentConnectCommand.prototype, "warn").mockImplementation((line) => {
+    stderr.push(String(line));
+    return line;
+  });
+  process.env.CLAUDE_CODE_SESSION_ID = session;
+  mocks.setupAgent.mockResolvedValue({
+    identity: {
+      profileName: "invited-profile",
+      agentAddress: "invited@example.com",
+      orgId: "22222222-2222-4222-8222-222222222222",
+      ownerAddress: "owner@example.com",
+      apiBaseUrl: "https://api.primitive-staging-1.com/v1",
+    },
+    sessionId: session,
+    verification: {
+      state: "verified",
+      verifiedAt: "2026-09-28T19:00:04.000Z",
+      deliveryStatus: "queued",
+    },
+    receiving: { state: "external_setup_required" },
+    resumeCommand: "primitive agent connect --resume",
+    guidance: "Primitive verified this connection.",
+  });
+  mocks.installClaudeWakeHook.mockReturnValue("installed_unverified");
+  await AgentConnectCommand.run(
+    [
+      "--profile",
+      "invited-profile",
+      "--session",
+      session,
+      "--receiver",
+      "external",
+      "--resume",
+      "--json",
+    ],
+    { root },
+  );
+  expect(process.exitCode).toBeUndefined();
+  expect(outputs).toHaveLength(1);
+  expect(JSON.parse(outputs[0])).toMatchObject({
+    status: "connected",
+    verification: {
+      state: "verified",
+      verifiedAt: "2026-09-28T19:00:04.000Z",
+    },
+    externalHook: "installed_unverified",
+  });
+  expect(stderr).toEqual([]);
+  expect(mocks.installClaudeWakeHook).toHaveBeenCalledOnce();
 });

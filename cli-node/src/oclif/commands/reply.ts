@@ -8,6 +8,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import { haltAutoWorking, restoreAutoWorking } from "../auto-signals.js";
 import { followEmailConversation } from "../conversation-follow.js";
 import {
   buildFyiMessageContent,
@@ -386,6 +387,20 @@ class ReplyCommand extends Command {
         ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
         ...(flags.all ? { reply_all: true } : {}),
       };
+      // An answer ends automatic working for the email it answers.
+      const halted = await haltAutoWorking(
+        this.config.configDir,
+        {
+          emailIds: [emailId],
+          peers:
+            priorRepliesCheck.status === "checked" &&
+            priorRepliesCheck.detail?.from_email
+              ? [priorRepliesCheck.detail.from_email]
+              : [],
+          profileName: auth.connectedAgent?.profileName,
+        },
+        flags.fyi ? "fyi" : "reply",
+      );
       const attemptStartedAtIso = new Date().toISOString();
       this.attemptStartedAtIso = attemptStartedAtIso;
       this.sendRequestStarted = true;
@@ -425,6 +440,8 @@ class ReplyCommand extends Command {
           process.stderr.write(chunk);
         },
       });
+      // A refused answer reached nobody, so the sender still sees working.
+      if (outcome === "not_sent") restoreAutoWorking(halted);
       const exitCode = sendOutcomeExitCode(outcome);
       if (exitCode !== 0) process.exitCode = exitCode;
     });

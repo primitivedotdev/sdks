@@ -9,7 +9,7 @@ import {
   putAgentContactPolicy,
 } from "@primitivedotdev/api-core";
 import { parseAgentInvitation } from "./agent-connect.js";
-import { setupAgent } from "./agent-setup.js";
+import { setupAgent, verificationReplySubmitted } from "./agent-setup.js";
 import { refreshStoredCliCredentials } from "./api-client.js";
 import { loadCliCredentials } from "./auth.js";
 import {
@@ -22,6 +22,10 @@ import {
 import { parseAgentContactPolicy } from "./contact-policy.js";
 import { acquireListenLock } from "./listen-state.js";
 import { connectNativeSession, SESSION_UUID } from "./notify-session-native.js";
+import {
+  ownerReportGuidance,
+  refreshOwnerMemberAddress,
+} from "./owner-member-address.js";
 import {
   mailAddress,
   privateMailDirectory,
@@ -678,7 +682,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       resume: boolean,
       invitation?: string,
     ) => {
-      const result = await (params.setup ?? setupAgent)({
+      const setup = await (params.setup ?? setupAgent)({
         configDir: params.configDir,
         profileName: profile,
         session: params.session,
@@ -687,9 +691,18 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         contactRequests,
         fetch: params.fetch,
       });
-      if (result.verification.state !== "reply_submitted")
+      const ownerMemberAddress = await refreshOwnerMemberAddress({
+        configDir: params.configDir,
+        profileName: profile,
+        fetch: params.fetch,
+      });
+      const identity = { ...setup.identity, ownerMemberAddress };
+      const report = ownerReportGuidance(identity);
+      const result = { ...setup, identity };
+      if (!verificationReplySubmitted(result.verification.state))
         return {
           ...result,
+          guidance: `${result.guidance} ${report}`,
           contactRequestPolicy: contactRequests
             ? ("pending_verification" as const)
             : ("not_requested" as const),
@@ -706,20 +719,37 @@ export async function enrollAgent(params: AgentEnrollOptions) {
             now: params.now,
           })
         : ("not_requested" as const);
-      const status = await confirmOwnerConnection(enrollment, params);
+      const listed = await confirmOwnerConnection(enrollment, params);
+      // Setup already read a verified connection from the agent's own status.
+      // An inconclusive owner-list read must not undo that; only a definite
+      // revoked or departed-owner answer overrides it.
+      const verifiedBySetup =
+        result.verification.state === "verified" &&
+        (listed === "pending" || listed === "unavailable");
+      const status: ConnectionConfirmation = verifiedBySetup
+        ? "connected"
+        : listed;
       return {
         ...result,
         ...(status === "owner_inactive"
           ? { receiving: { state: "not_ready" as const } }
           : {}),
-        guidance:
-          status === "connected"
-            ? "The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected."
-            : status === "revoked"
-              ? "The owner connection list reports this pairing revoked. Stop using this profile and ask the owner to review it."
-              : status === "owner_inactive"
-                ? "The original human owner is no longer an active member. This profile must not be treated as receiving; ask an organization manager to review or remove it."
-                : "The challenge reply was submitted, but pairing is not confirmed. Resume this exact enrollment with the same options; do not create another address or resend the reply.",
+        guidance: `${
+          verifiedBySetup
+            ? "This agent's connection status reports pairing verified. Receiving is separate; configure and verify this session's external hook if external mode was selected."
+            : status === "connected"
+              ? "The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected."
+              : status === "revoked"
+                ? "The owner connection list reports this pairing revoked. Stop using this profile and ask the owner to review it."
+                : status === "owner_inactive"
+                  ? "The original human owner is no longer an active member. This profile must not be treated as receiving; ask an organization manager to review or remove it."
+                  : "The challenge reply was submitted, but pairing is not confirmed. Resume this exact enrollment with the same options; do not create another address or resend the reply."
+        }${
+          // A revoked pairing or a departed owner has no one to report to.
+          status === "revoked" || status === "owner_inactive"
+            ? ""
+            : ` ${report}`
+        }`,
         contactRequestPolicy,
         connection: { status },
       };

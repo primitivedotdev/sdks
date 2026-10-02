@@ -6,7 +6,7 @@ import {
   runAddressNotesRequest,
 } from "./address-notes.js";
 import { agentConnectionStatus } from "./agent-connect.js";
-import { setupAgent } from "./agent-setup.js";
+import { setupAgent, verificationReplySubmitted } from "./agent-setup.js";
 import {
   type ClaudeWakeHookResult,
   installClaudeWakeHook,
@@ -25,6 +25,10 @@ import {
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import {
+  ownerReportGuidance,
+  refreshOwnerMemberAddress,
+} from "./owner-member-address.js";
 import {
   readMailJson,
   removeMailFile,
@@ -66,20 +70,22 @@ function readPendingAgentInfo(path: string): string | null {
   return null;
 }
 
-function savedReceiverMode(
+function savedSetup(
   configDir: string,
   profileName: string,
-): "native" | "external" | null {
+): { receiverMode: "native" | "external"; contactRequests: boolean } | null {
   try {
     const saved = readMailJson(
       join(agentProfileDirectory(configDir, profileName), "setup.json"),
     );
     if (!saved || typeof saved !== "object" || Array.isArray(saved))
       return null;
-    // Setups saved before receiver modes existed were native.
-    return (saved as { receiverMode?: unknown }).receiverMode === "external"
-      ? "external"
-      : "native";
+    const row = saved as { receiverMode?: unknown; contactRequests?: unknown };
+    return {
+      // Setups saved before receiver modes existed were native.
+      receiverMode: row.receiverMode === "external" ? "external" : "native",
+      contactRequests: row.contactRequests === true,
+    };
   } catch {
     return null;
   }
@@ -123,6 +129,8 @@ export type AgentConnectFlowDependencies = {
   seedAgentInfo(profileName: string, value: string): Promise<AgentInfoSeed>;
   /** A check counts only when recorded at or after `since` (epoch ms). */
   awaitMailCheck(profileName: string, since: number): Promise<MailCheck>;
+  /** The owner's personal mailbox from the connection's own record. */
+  refreshOwnerMemberAddress(profileName: string): Promise<string | null>;
 };
 
 export type AgentConnectFlowOptions = {
@@ -219,6 +227,8 @@ function defaults(
         return "failed";
       }
     },
+    refreshOwnerMemberAddress: (profileName) =>
+      refreshOwnerMemberAddress({ configDir: options.configDir, profileName }),
     async awaitMailCheck(profileName, since) {
       const deadline =
         Date.now() + (options.mailCheckWaitMs ?? MAIL_CHECK_WAIT_MS);
@@ -269,7 +279,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
   const receiver =
     options.receiver ??
     (options.resume
-      ? savedReceiverMode(options.configDir, profileName)
+      ? (savedSetup(options.configDir, profileName)?.receiverMode ?? null)
       : null) ??
     (runtime === "claude" ? "external" : "native");
   if (
@@ -327,7 +337,11 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     contactRequests: options.contactRequests,
     ...(options.resume ? {} : { invitation: await options.readInvitation() }),
   });
-  const verified = result.verification.state === "reply_submitted";
+  const verified = verificationReplySubmitted(result.verification.state);
+  const ownerMemberAddress = await dependencies.refreshOwnerMemberAddress(
+    result.identity.profileName,
+  );
+  const identity = { ...result.identity, ownerMemberAddress };
 
   let externalHook: ClaudeWakeHookResult | null = null;
   if (receiver === "external") {
@@ -408,7 +422,11 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     `--session ${options.session}`,
     `--receiver ${receiver}`,
     "--resume",
-    ...(options.contactRequests ? ["--contact-requests"] : []),
+    // A resume reuses the saved choice, so repeat the effective one.
+    ...((options.contactRequests ??
+    savedSetup(options.configDir, profileName)?.contactRequests)
+      ? ["--contact-requests"]
+      : []),
     ...(options.skill === false ? ["--no-skill"] : []),
     ...(options.project ? ["--project"] : []),
     "--json",
@@ -419,6 +437,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     address: result.identity.agentAddress,
     orgId: result.identity.orgId,
     ownerAddress: result.identity.ownerAddress,
+    ownerMemberAddress,
     profile: result.identity.profileName,
     sessionId: options.session,
     runtime,
@@ -436,8 +455,8 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     skipped,
     selectProfile: `PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}`,
     resumeCommand,
-    guidance: result.guidance,
-    identity: result.identity,
+    guidance: `${result.guidance} ${ownerReportGuidance(identity)}`,
+    identity,
     externalHook,
   };
 }

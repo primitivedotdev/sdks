@@ -92,6 +92,9 @@ function fixture(
         lastSuccessfulMailCheckAt: "2026-10-01T21:12:00.000Z",
       }),
     ),
+    refreshOwnerMemberAddress: vi.fn<
+      AgentConnectFlowDependencies["refreshOwnerMemberAddress"]
+    >(async () => "ada_123456789@example.test"),
   };
   const readInvitation = vi.fn(async () => invitation);
   const options: AgentConnectFlowOptions = {
@@ -141,6 +144,8 @@ describe("one-command agent connect", () => {
       address: identity.agentAddress,
       orgId: identity.orgId,
       ownerAddress: identity.ownerAddress,
+      ownerMemberAddress: "ada_123456789@example.test",
+      identity: { ownerMemberAddress: "ada_123456789@example.test" },
       profile: `session-${session}`,
       sessionId: session,
       runtime: "codex",
@@ -165,6 +170,24 @@ describe("one-command agent connect", () => {
     const serialized = JSON.stringify(output);
     expect(serialized).not.toContain(token);
     expect(serialized).not.toContain(credential);
+  });
+
+  it("points reports at the owner's personal address, never the control address", async () => {
+    const { options, dependencies } = fixture();
+    const output = await runAgentConnect(options);
+    expect(dependencies.refreshOwnerMemberAddress).toHaveBeenCalledWith(
+      `session-${session}`,
+    );
+    expect(output.guidance).toContain(
+      "Send reports and questions to your owner's personal address ada_123456789@example.test",
+    );
+    dependencies.refreshOwnerMemberAddress.mockResolvedValueOnce(null);
+    const shared = await runAgentConnect({ ...options, resume: true });
+    expect(shared.ownerMemberAddress).toBeNull();
+    expect(shared.guidance).toContain("reply to the member who wrote to you");
+    expect(shared.guidance).toContain(
+      `never send reports to ${identity.ownerAddress}`,
+    );
   });
 
   it("defaults a Claude session to external hooks and skips the mail check", async () => {
