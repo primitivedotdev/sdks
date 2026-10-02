@@ -8,6 +8,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import { haltAutoWorking } from "../auto-signals.js";
 import { followEmailConversation } from "../conversation-follow.js";
 import {
   buildFyiMessageContent,
@@ -372,6 +373,20 @@ class ReplyCommand extends Command {
         ...(flags.from !== undefined ? { from: flags.from } : {}),
         ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
       };
+      // An answer ends automatic working for the email it answers.
+      await haltAutoWorking(
+        this.config.configDir,
+        {
+          emailIds: [emailId],
+          peers:
+            priorRepliesCheck.status === "checked" &&
+            priorRepliesCheck.detail?.from_email
+              ? [priorRepliesCheck.detail.from_email]
+              : [],
+          profileName: auth.connectedAgent?.profileName,
+        },
+        flags.fyi ? "fyi" : "reply",
+      );
       const attemptStartedAtIso = new Date().toISOString();
       this.attemptStartedAtIso = attemptStartedAtIso;
       this.sendRequestStarted = true;

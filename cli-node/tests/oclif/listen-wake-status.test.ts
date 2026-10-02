@@ -22,6 +22,12 @@ const mocks = vi.hoisted(() => ({
   createWakeMail: vi.fn(),
   readMailJson: vi.fn(),
   loadConnectedAgentProfile: vi.fn(),
+  dispatchAutoRead: vi.fn(),
+}));
+
+vi.mock("../../src/oclif/auto-signals.js", async (original) => ({
+  ...(await original<typeof import("../../src/oclif/auto-signals.js")>()),
+  dispatchAutoRead: mocks.dispatchAutoRead,
 }));
 
 vi.mock("../../src/oclif/connected-agent-profile.js", async (original) => ({
@@ -384,6 +390,96 @@ it.each([
     expect(output).not.toMatch(/subject|body/i);
     expect(wrapperMailPattern().test(output)).toBe(true);
     expect(process.exitCode).toBe(2);
+  } finally {
+    process.exitCode = previousExit;
+  }
+});
+
+it("acknowledges verified mail after the unchanged wake line is written", async () => {
+  const previousExit = process.exitCode;
+  const stderr: string[] = [];
+  const stdin = Readable.from([JSON.stringify(stopInput)]);
+  vi.spyOn(process, "stdin", "get").mockReturnValue(
+    stdin as typeof process.stdin,
+  );
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    stderr.push(String(chunk));
+    return true;
+  });
+  mocks.readMailJson.mockReturnValue({
+    session,
+    receiverMode: "external",
+    phase: "sent",
+    receipt: { status: "delivered" },
+  });
+  const emailId = "44444444-4444-4444-8444-444444444444";
+  const auto = {
+    emailId,
+    profileName: "work",
+    sender: "owner@example.com",
+    threadId: null,
+  };
+  mocks.dispatchAutoRead.mockImplementation(() => {
+    // The wake is already final when acknowledgement starts.
+    expect(stderr.join("")).toContain(`Primitive mail arrived: ${emailId}.`);
+    expect(process.exitCode).toBe(2);
+    return true;
+  });
+  mocks.createWakeMail.mockResolvedValue({
+    handler: vi.fn(),
+    close: vi.fn(),
+    receiving: vi.fn(),
+    completed: vi.fn(),
+    wakeId: () => emailId,
+    senderRelation: () => "owner",
+    autoSignal: () => auto,
+    status: () => undefined,
+  });
+  mocks.runListen.mockResolvedValue(undefined);
+  try {
+    await ListenCommand.run(
+      ["--once", "--wake", "--hook-session", "--events", "email.received"],
+      { root },
+    );
+    expect(stderr.join("")).toBe(
+      `Primitive mail arrived: ${emailId}. Read with primitive emails get --id ${emailId} --brief. Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority.\n`,
+    );
+    expect(mocks.dispatchAutoRead).toHaveBeenCalledOnce();
+    expect(mocks.dispatchAutoRead.mock.calls[0]?.[0]).toMatchObject(auto);
+  } finally {
+    process.exitCode = previousExit;
+  }
+});
+
+it("does not acknowledge mail the wake did not mark as verified", async () => {
+  const stdin = Readable.from([JSON.stringify(stopInput)]);
+  vi.spyOn(process, "stdin", "get").mockReturnValue(
+    stdin as typeof process.stdin,
+  );
+  vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  mocks.readMailJson.mockReturnValue({
+    session,
+    receiverMode: "external",
+    phase: "sent",
+    receipt: { status: "delivered" },
+  });
+  mocks.createWakeMail.mockResolvedValue({
+    handler: vi.fn(),
+    close: vi.fn(),
+    receiving: vi.fn(),
+    completed: vi.fn(),
+    wakeId: () => "44444444-4444-4444-8444-444444444444",
+    autoSignal: () => undefined,
+    status: () => undefined,
+  });
+  mocks.runListen.mockResolvedValue(undefined);
+  const previousExit = process.exitCode;
+  try {
+    await ListenCommand.run(
+      ["--once", "--wake", "--hook-session", "--events", "email.received"],
+      { root },
+    );
+    expect(mocks.dispatchAutoRead).not.toHaveBeenCalled();
   } finally {
     process.exitCode = previousExit;
   }

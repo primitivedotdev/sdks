@@ -6,6 +6,29 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const workers = vi.hoisted(() => [] as Record<string, string>[]);
+// Automatic signal workers are detached processes; record them instead.
+vi.mock("node:child_process", async (original) => {
+  const actual = await original<typeof import("node:child_process")>();
+  return {
+    ...actual,
+    spawn: (...args: Parameters<typeof actual.spawn>) => {
+      const env = (args[2] as { env?: Record<string, string> } | undefined)
+        ?.env;
+      if (env?.PRIMITIVE_AUTO_SIGNAL_WORKER !== "1")
+        return actual.spawn(...args);
+      workers.push(env);
+      return { unref: () => undefined, on: () => undefined };
+    },
+  };
+});
+
+import {
+  claimAutoRead,
+  readWorkingLease,
+  startWorkingLease,
+} from "../../src/oclif/auto-signals.js";
 import {
   agentProfileDirectory,
   saveConnectedAgentProfile,
@@ -982,6 +1005,51 @@ describe("collaboration commands with --json", () => {
     });
   });
 
+  it.each([
+    ["starts automatic working", [], 1],
+    ["--no-signal skips automatic working", ["--no-signal"], 0],
+  ] as const)("emails get --brief %s and still prints one document", async (_label, extra, expected) => {
+    responder = mailApi;
+    workers.length = 0;
+    const configDir = process.env.PRIMITIVE_CONFIG_DIR as string;
+    claimAutoRead(configDir, {
+      emailId,
+      profileName: "work",
+      sender: peer,
+      threadId,
+    });
+    const result = await runMerged("emails:get", [
+      "--id",
+      emailId,
+      "--brief",
+      "--json",
+      ...extra,
+    ]);
+    expect(result.exitCode).toBe(0);
+    expectOneDocument(result);
+    expect(workers).toHaveLength(expected);
+    expect(readWorkingLease(configDir, emailId) !== null).toBe(expected === 1);
+    if (expected)
+      expect(workers[0]).toMatchObject({
+        PRIMITIVE_AUTO_SIGNAL_KIND: "working",
+        PRIMITIVE_AUTO_SIGNAL_EMAIL: emailId,
+        PRIMITIVE_AGENT_PROFILE: "work",
+      });
+  });
+
+  it("emails get --brief never starts working for mail no receiver surfaced", async () => {
+    responder = mailApi;
+    workers.length = 0;
+    const result = await runMerged("emails:get", [
+      "--id",
+      emailId,
+      "--brief",
+      "--json",
+    ]);
+    expectOneDocument(result);
+    expect(workers).toHaveLength(0);
+  });
+
   it("emails get --brief reports a failed read as one document", async () => {
     responder = notFound;
     const result = await runMerged("emails:get", [
@@ -1218,6 +1286,31 @@ describe("collaboration commands with --json", () => {
     expect(expectOneDocument(plain).idempotency_key).not.toBe(
       documents[0]?.idempotency_key,
     );
+  });
+
+  it("reply stops automatic working for the answered email before sending", async () => {
+    responder = mailApi;
+    const configDir = process.env.PRIMITIVE_CONFIG_DIR as string;
+    claimAutoRead(configDir, {
+      emailId,
+      profileName: "work",
+      sender: peer,
+      threadId,
+    });
+    startWorkingLease(configDir, emailId);
+    const result = await runMerged("reply", [
+      "--id",
+      emailId,
+      "--body",
+      "Done.",
+      "--json",
+    ]);
+    expect(result.exitCode).toBe(0);
+    expectOneDocument(result);
+    expect(readWorkingLease(configDir, emailId)).toMatchObject({
+      stop_reason: "reply",
+      stopped_at: expect.any(Number),
+    });
   });
 
   it("reply --thread derives the key from the resolved email", async () => {

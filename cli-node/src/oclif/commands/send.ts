@@ -8,6 +8,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import { haltAutoWorking } from "../auto-signals.js";
 import {
   buildFyiMessageContent,
   FYI_FLAG_DESCRIPTION,
@@ -351,6 +352,15 @@ class SendCommand extends Command {
       }
       const body = { ...envelope, ...content, ...threading };
 
+      // A message to the sender of mail being worked on answers it.
+      await haltAutoWorking(
+        this.config.configDir,
+        {
+          peers: [flags.to],
+          profileName: auth.connectedAgent?.profileName,
+        },
+        flags.fyi ? "fyi" : "reply",
+      );
       const attemptStartedAtIso = new Date().toISOString();
       this.attemptStartedAtIso = attemptStartedAtIso;
       this.sendRequestStarted = true;

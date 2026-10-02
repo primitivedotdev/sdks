@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { isSentSignal } from "../../src/oclif/auto-signals.js";
 import SignalCommand from "../../src/oclif/commands/signal.js";
 import { type SignalKind, sendSignal } from "../../src/oclif/signal-command.js";
 
@@ -346,5 +347,36 @@ describe("explicit signal send", () => {
     await expect(
       SignalCommand.run(args, { root: resolve(import.meta.dirname, "../..") }),
     ).rejects.toThrow();
+  });
+});
+
+describe("automatic renewal options", () => {
+  it("gives each renewal slot its own intent and keeps explicit keys unchanged", async () => {
+    const f = fixture();
+    expect(
+      (await f.send("working", { slot: "auto-working-0" })).data,
+    ).toMatchObject({ outcome: "sent" });
+    expect(
+      (await f.send("working", { slot: "auto-working-0" })).data,
+    ).toMatchObject({ outcome: "already_sent" });
+    expect(
+      (await f.send("working", { slot: "auto-working-1" })).data,
+    ).toMatchObject({ outcome: "sent" });
+    expect((await f.send("working")).data).toMatchObject({ outcome: "sent" });
+    expect(f.posts).toHaveLength(3);
+    expect(new Set(f.posts.map((post) => post.key)).size).toBe(3);
+    // Every sent signal is remembered so answers to it are never acknowledged.
+    for (const record of f.records)
+      expect(isSentSignal(f.context.configDir, String(record.id))).toBe(true);
+  });
+
+  it("leaves the intent unsent when shouldSend refuses at submission time", async () => {
+    const f = fixture();
+    const result = await f.send("working", {
+      slot: "auto-working-0",
+      shouldSend: () => false,
+    });
+    expect(result.data.outcome).toBe("prepared");
+    expect(f.posts).toHaveLength(0);
   });
 });

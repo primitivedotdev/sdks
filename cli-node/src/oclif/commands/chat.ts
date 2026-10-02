@@ -22,6 +22,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import { haltAutoWorking } from "../auto-signals.js";
 import {
   acquireChatLock,
   acquireChatStateLock,
@@ -1977,6 +1978,17 @@ class ChatCommand extends Command {
           receipt.data.idempotency_key ??
           derivedIdempotencyKey;
         this.chatProgress.idempotencyKey = idempotencyKey;
+        // A message to the sender of mail being worked on answers it.
+        if (receipt.data.sent === null)
+          await haltAutoWorking(
+            this.config.configDir,
+            {
+              emailIds: parentReply ? [parentReply.id] : [],
+              peers: [args.recipient],
+              profileName: auth.connectedAgent?.profileName,
+            },
+            "reply",
+          );
         const sendResult =
           receipt.data.sent !== null
             ? { data: { data: receipt.data.sent }, error: undefined }

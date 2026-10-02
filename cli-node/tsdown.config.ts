@@ -24,6 +24,8 @@ export default defineConfig({
     "oclif/proxy-auto-detect": "src/oclif/proxy-auto-detect.ts",
     "oclif/root-signup-hint": "src/oclif/root-signup-hint.ts",
     "oclif/listen-supervisor": "src/oclif/listen-supervisor.ts",
+    "oclif/auto-signals": "src/oclif/auto-signals.ts",
+    "oclif/auto-signal-worker": "src/oclif/auto-signal-worker.ts",
   },
   format: ["esm"],
   // Keep `.js` so the bin and oclif config keep resolving the
