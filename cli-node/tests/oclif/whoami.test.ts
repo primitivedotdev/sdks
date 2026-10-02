@@ -84,6 +84,7 @@ describe("whoami command", () => {
           profileName: "work",
           agentAddress: "agent@example.test",
           ownerAddress: "owner@example.test",
+          ownerMemberAddress: "ada_123456789@example.test",
           apiBaseUrl: "https://api.primitive-staging-1.com/v1",
           orgId: "org-1",
         },
@@ -103,6 +104,11 @@ describe("whoami command", () => {
       "primitive agent connect --profile work --status --json",
     );
     expect(text).toContain("not verified");
+    expect(text).toContain("ada_123456789@example.test");
+    if (!json)
+      expect(text).toContain(
+        "Owner personal address (send reports here): ada_123456789@example.test",
+      );
     expect(text).not.toContain(credential);
     if (json)
       expect(JSON.parse(text)).toMatchObject({

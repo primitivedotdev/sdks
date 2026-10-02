@@ -9,6 +9,7 @@ import {
   runAgentConnect,
 } from "../agent-connect-flow.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
+import { withOwnerMemberAddress } from "../owner-member-address.js";
 
 /** npx runs the CLI from its cache; resume through npx too so the command works without a global install. */
 function invocation(entry: string | undefined): string {
@@ -159,13 +160,19 @@ export default class AgentConnectCommand extends Command {
         throw new AgentConnectionSetupError(
           "Pass --session to connect this session, or --profile for a claim-only or status check.",
         );
-      const result = await connectAgent({
+      // A rerun of an already configured profile refreshes the owner's
+      // personal address, which may have been set up after the claim.
+      const claimed = await connectAgent({
         configDir: this.config.configDir,
         profileName: flags.profile,
         invitation: await readAgentInvitation(
           process.stdin,
           process.stdin.isTTY,
         ),
+      });
+      const result = await withOwnerMemberAddress(claimed, {
+        configDir: this.config.configDir,
+        onlyIfUnknown: claimed.status === "claimed",
       });
       if (flags.json) this.log(JSON.stringify(result));
       else {
@@ -177,6 +184,7 @@ export default class AgentConnectCommand extends Command {
         this.log(
           `Select it with PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}.`,
         );
+        this.log(result.ownerReportGuidance);
       }
     } catch (error) {
       throw new Errors.CLIError(
