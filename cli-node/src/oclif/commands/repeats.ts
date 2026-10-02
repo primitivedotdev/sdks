@@ -111,7 +111,7 @@ type Client = Awaited<
 
 /** Shown when a management command is refused as forbidden. */
 export const REPEATS_FORBIDDEN_HINT =
-  "Repeats are managed with the member login or organization API key that created them; connected-agent credentials cannot manage repeats.";
+  "A repeat a member created is managed by that member. One created with an organization API key can be managed by any organization API key or member. Connected-agent credentials cannot manage repeats.";
 
 async function runRepeatRequest<T>(
   command: Command,

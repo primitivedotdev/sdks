@@ -280,7 +280,7 @@ describe("primitive repeats", () => {
     const result = await run("repeats:list", []);
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain(
-      "connected-agent credentials cannot manage repeats",
+      "Connected-agent credentials cannot manage repeats",
     );
     respond = () =>
       json(
@@ -295,7 +295,7 @@ describe("primitive repeats", () => {
       );
     const scoped = await run("repeats:pause", [REPEAT_ID]);
     expect(scoped.stderr).toContain(
-      "connected-agent credentials cannot manage repeats",
+      "Connected-agent credentials cannot manage repeats",
     );
   });
 
