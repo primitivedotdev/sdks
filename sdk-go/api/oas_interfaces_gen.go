@@ -53,6 +53,10 @@ type CreateAgentConnectionRes interface {
 	createAgentConnectionRes()
 }
 
+type CreateAgentMessageScheduleRes interface {
+	createAgentMessageScheduleRes()
+}
+
 type CreateChallengeRes interface {
 	createChallengeRes()
 }
@@ -107,6 +111,10 @@ type DefineAgentRes interface {
 
 type DeleteAgentContactRes interface {
 	deleteAgentContactRes()
+}
+
+type DeleteAgentMessageScheduleRes interface {
+	deleteAgentMessageScheduleRes()
 }
 
 type DeleteContactRes interface {
@@ -195,6 +203,10 @@ type GetAccountRes interface {
 
 type GetAgentContactPolicyRes interface {
 	getAgentContactPolicyRes()
+}
+
+type GetAgentMessageScheduleRes interface {
+	getAgentMessageScheduleRes()
 }
 
 type GetAgentRes interface {
@@ -311,6 +323,10 @@ type ListAgentConnectionsRes interface {
 
 type ListAgentContactsRes interface {
 	listAgentContactsRes()
+}
+
+type ListAgentMessageSchedulesRes interface {
+	listAgentMessageSchedulesRes()
 }
 
 type ListAgentNetworksRes interface {
@@ -553,6 +569,10 @@ type StartCliSignupRes interface {
 	startCliSignupRes()
 }
 
+type StopAgentMessageScheduleRes interface {
+	stopAgentMessageScheduleRes()
+}
+
 type TestEndpointRes interface {
 	testEndpointRes()
 }
@@ -575,6 +595,10 @@ type UnsetFunctionRouteRes interface {
 
 type UpdateAccountRes interface {
 	updateAccountRes()
+}
+
+type UpdateAgentMessageScheduleRes interface {
+	updateAgentMessageScheduleRes()
 }
 
 type UpdateDefaultNetworkMemberRes interface {

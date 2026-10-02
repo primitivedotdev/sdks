@@ -28,6 +28,9 @@ import {
   type CreateAgentClaimLinkInput,
   type GateDenial,
   type Account as GeneratedAccount,
+  type AgentMessageSchedule as GeneratedAgentMessageSchedule,
+  type AgentMessageScheduleStop as GeneratedAgentMessageScheduleStop,
+  type CreateAgentMessageScheduleInput as GeneratedCreateAgentMessageScheduleInput,
   type DeleteMemoryData as GeneratedDeleteMemoryData,
   type DeleteMemoryResult as GeneratedDeleteMemoryResult,
   type EmailStatus as GeneratedEmailStatus,
@@ -46,6 +49,7 @@ import {
   type SendMailInput as GeneratedSendMailInput,
   type SendMailResult as GeneratedSendMailResult,
   type SetMemoryInput as GeneratedSetMemoryInput,
+  type UpdateAgentMessageScheduleInput as GeneratedUpdateAgentMessageScheduleInput,
   operations as generatedOperations,
   isMemoryJsonValue,
   PrimitiveApiClient,
@@ -55,6 +59,7 @@ import {
   type StartAgentClaimInput,
   type VerifyAgentClaimInput,
 } from "@primitivedotdev/api-core";
+import { buildScheduleStopBody } from "../interactions/schedules.js";
 import { type PushResult, pushBytes, pushFile } from "../payloads/index.js";
 import { loadNodeFsPromises } from "../payloads/node-fs.js";
 import type { ReceivedEmail } from "../webhook/received-email.js";
@@ -1116,6 +1121,154 @@ export class MemoriesResource {
   }
 }
 
+const UUID_PATTERN =
+  /^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$/i;
+
+function assertUuid(value: unknown, label: string): asserts value is string {
+  if (typeof value !== "string" || !UUID_PATTERN.test(value)) {
+    throw new TypeError(`${label} must be a UUID`);
+  }
+}
+
+export type AgentMessageScheduleCreateInput =
+  GeneratedCreateAgentMessageScheduleInput;
+export type AgentMessageScheduleUpdateInput =
+  GeneratedUpdateAgentMessageScheduleInput;
+
+export interface AgentMessageScheduleListInput {
+  /** Only return schedules that target this agent address. */
+  agentAddress?: string;
+}
+
+export interface ScheduleStopInput {
+  /** Short reason shown to the schedule's owner, at most 280 characters. */
+  reason?: string;
+}
+
+/**
+ * Scheduled messages to agents, grouped under `client.schedules`.
+ *
+ * `list`, `get`, `create`, `update`, `pause`, `resume` and `delete` manage
+ * the calling member's schedules and need member credentials (API keys and
+ * agent keys are refused). `stop` is the agent side: called with the agent's
+ * own credential on any received message of the schedule, it stops the
+ * schedule when the schedule allows it, and the server tells the owner in the
+ * thread.
+ */
+export class SchedulesResource {
+  constructor(private readonly client: PrimitiveApiClient["client"]) {}
+
+  async list(
+    input: AgentMessageScheduleListInput = {},
+    options?: RequestOptions,
+  ): Promise<GeneratedAgentMessageSchedule[]> {
+    const result = await generatedOperations.listAgentMessageSchedules({
+      ...(input.agentAddress !== undefined
+        ? { query: { agent_address: input.agentAddress } }
+        : {}),
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedAgentMessageSchedule[]>(result, "schedules");
+  }
+
+  async get(
+    id: string,
+    options?: RequestOptions,
+  ): Promise<GeneratedAgentMessageSchedule> {
+    assertUuid(id, "id");
+    const result = await generatedOperations.getAgentMessageSchedule({
+      path: { id },
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedAgentMessageSchedule>(result, "schedule");
+  }
+
+  async create(
+    input: AgentMessageScheduleCreateInput,
+    options?: RequestOptions,
+  ): Promise<GeneratedAgentMessageSchedule> {
+    const result = await generatedOperations.createAgentMessageSchedule({
+      body: input,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedAgentMessageSchedule>(result, "schedule");
+  }
+
+  async update(
+    id: string,
+    input: AgentMessageScheduleUpdateInput,
+    options?: RequestOptions,
+  ): Promise<GeneratedAgentMessageSchedule> {
+    assertUuid(id, "id");
+    const result = await generatedOperations.updateAgentMessageSchedule({
+      path: { id },
+      body: input,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedAgentMessageSchedule>(result, "schedule");
+  }
+
+  pause(
+    id: string,
+    options?: RequestOptions,
+  ): Promise<GeneratedAgentMessageSchedule> {
+    return this.update(id, { status: "paused" }, options);
+  }
+
+  resume(
+    id: string,
+    options?: RequestOptions,
+  ): Promise<GeneratedAgentMessageSchedule> {
+    return this.update(id, { status: "active" }, options);
+  }
+
+  async delete(
+    id: string,
+    options?: RequestOptions,
+  ): Promise<{ deleted?: boolean }> {
+    assertUuid(id, "id");
+    const result = await generatedOperations.deleteAgentMessageSchedule({
+      path: { id },
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<{ deleted?: boolean }>(result, "schedule delete");
+  }
+
+  /**
+   * Stop the schedule behind a received scheduled message. Idempotent: a
+   * repeat call on a schedule this agent already stopped returns the same
+   * result without a second reply to the owner.
+   */
+  async stop(
+    emailId: string,
+    input: ScheduleStopInput = {},
+    options?: RequestOptions,
+  ): Promise<GeneratedAgentMessageScheduleStop> {
+    assertUuid(emailId, "emailId");
+    const result = await generatedOperations.stopAgentMessageSchedule({
+      path: { id: emailId },
+      body: buildScheduleStopBody(input),
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedAgentMessageScheduleStop>(
+      result,
+      "schedule stop",
+    );
+  }
+}
+
 export class PrimitiveClient extends PrimitiveApiClient {
   /** Receive durable events in this process, without a public URL. */
   readonly events = new EventsResource(this.client);
@@ -1127,6 +1280,8 @@ export class PrimitiveClient extends PrimitiveApiClient {
   readonly account: AccountResource = new AccountResource(this.client);
   /** Durable JSON key-value state for agents and Functions. */
   readonly memories: MemoriesResource = new MemoriesResource(this.client);
+  /** Scheduled messages to connected agents, and stopping one as the agent. */
+  readonly schedules: SchedulesResource = new SchedulesResource(this.client);
 
   // Captured for sendAttachment's upload path, which talks to /v1/payloads
   // directly (streaming, content-addressed) rather than through the generated

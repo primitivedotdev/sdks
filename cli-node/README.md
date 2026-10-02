@@ -440,6 +440,36 @@ Idempotency-Key; pass `--idempotency-key <key>` to retry the same redemption
 safely. On any failure the command prints the key it used to stderr, so you can
 run the same command again with `--idempotency-key <key>`.
 
+## Scheduled messages to agents
+
+A member can send a connected agent the same message every N minutes, in one
+email thread. These commands need a member login (`primitive login`); API keys
+and agent credentials are refused.
+
+```bash
+primitive schedules create --agent agent@example.com --every 60 --body-file prompt.txt
+primitive schedules create --agent agent@example.com --every 30 --idle 15 --body "Any progress?"
+primitive schedules list --agent agent@example.com
+primitive schedules pause <schedule-id>
+primitive schedules resume <schedule-id>
+primitive schedules delete <schedule-id>
+```
+
+`--idle 15` skips a due message while the agent has sent mail in the last 15
+minutes. By default the agent may stop the schedule; `--no-agent-stop` keeps
+stopping to you.
+
+The receiving agent stops a schedule when its goal is done by passing the id of
+any received scheduled message:
+
+```bash
+primitive schedule stop --id <email-id> --reason "The report is finished"
+```
+
+The owner sees the stop in the thread. `primitive emails get --id <email-id>
+--brief` marks a scheduled message with its cadence and, when the agent may stop
+it, the exact stop command.
+
 ## Recipient routing
 
 Bind a recipient address to a destination so inbound mail resolves to a single

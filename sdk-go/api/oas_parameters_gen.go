@@ -1171,6 +1171,72 @@ func decodeDeleteAgentContactParams(args [2]string, argsEscaped bool, r *http.Re
 	return params, nil
 }
 
+// DeleteAgentMessageScheduleParams is parameters of deleteAgentMessageSchedule operation.
+type DeleteAgentMessageScheduleParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackDeleteAgentMessageScheduleParams(packed middleware.Parameters) (params DeleteAgentMessageScheduleParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeDeleteAgentMessageScheduleParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteAgentMessageScheduleParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // DeleteContactParams is parameters of deleteContact operation.
 type DeleteContactParams struct {
 	// Address for contacts.
@@ -3368,6 +3434,72 @@ func decodeGetAgentContactPolicyParams(args [1]string, argsEscaped bool, r *http
 	return params, nil
 }
 
+// GetAgentMessageScheduleParams is parameters of getAgentMessageSchedule operation.
+type GetAgentMessageScheduleParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackGetAgentMessageScheduleParams(packed middleware.Parameters) (params GetAgentMessageScheduleParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeGetAgentMessageScheduleParams(args [1]string, argsEscaped bool, r *http.Request) (params GetAgentMessageScheduleParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetChallengeParams is parameters of getChallenge operation.
 type GetChallengeParams struct {
 	// Resource UUID.
@@ -5390,6 +5522,71 @@ func decodeListAgentContactsParams(args [1]string, argsEscaped bool, r *http.Req
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "limit",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ListAgentMessageSchedulesParams is parameters of listAgentMessageSchedules operation.
+type ListAgentMessageSchedulesParams struct {
+	// Only return schedules that target this agent address.
+	AgentAddress OptString `json:",omitempty,omitzero"`
+}
+
+func unpackListAgentMessageSchedulesParams(packed middleware.Parameters) (params ListAgentMessageSchedulesParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "agent_address",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.AgentAddress = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeListAgentMessageSchedulesParams(args [0]string, argsEscaped bool, r *http.Request) (params ListAgentMessageSchedulesParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: agent_address.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "agent_address",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAgentAddressVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAgentAddressVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.AgentAddress.SetTo(paramsDotAgentAddressVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "agent_address",
 			In:   "query",
 			Err:  err,
 		}
@@ -12958,6 +13155,72 @@ func decodeSetOrgSecretParams(args [1]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
+// StopAgentMessageScheduleParams is parameters of stopAgentMessageSchedule operation.
+type StopAgentMessageScheduleParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackStopAgentMessageScheduleParams(packed middleware.Parameters) (params StopAgentMessageScheduleParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeStopAgentMessageScheduleParams(args [1]string, argsEscaped bool, r *http.Request) (params StopAgentMessageScheduleParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // TestEndpointParams is parameters of testEndpoint operation.
 type TestEndpointParams struct {
 	// Resource UUID.
@@ -13294,6 +13557,72 @@ func unpackUnsetFunctionRouteParams(packed middleware.Parameters) (params UnsetF
 }
 
 func decodeUnsetFunctionRouteParams(args [1]string, argsEscaped bool, r *http.Request) (params UnsetFunctionRouteParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// UpdateAgentMessageScheduleParams is parameters of updateAgentMessageSchedule operation.
+type UpdateAgentMessageScheduleParams struct {
+	// Resource UUID.
+	ID uuid.UUID
+}
+
+func unpackUpdateAgentMessageScheduleParams(packed middleware.Parameters) (params UpdateAgentMessageScheduleParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeUpdateAgentMessageScheduleParams(args [1]string, argsEscaped bool, r *http.Request) (params UpdateAgentMessageScheduleParams, _ error) {
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]

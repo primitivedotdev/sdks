@@ -30,6 +30,10 @@
   ],
   "tags": [
     {
+      "name": "Agent Message Schedules",
+      "description": "Recurring messages from an org member to one of the org's connected\nagents, sent as an ordinary email thread. Each message carries a\n`schedule.tick/1` interaction. When the schedule allows it, the agent\nstops it through `/emails/{id}/schedule-stop`.\n"
+    },
+    {
       "name": "Agent Connections",
       "description": "Manage address-bound connections to external agent runtimes."
     },
@@ -2756,6 +2760,84 @@
         }
       }
     },
+    "/emails/{id}/schedule-stop": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "operationId": "stopAgentMessageSchedule",
+        "summary": "Stop the schedule behind a scheduled message",
+        "description": "Called by the receiving agent with its own connected-agent\ncredential. `id` is the agent's received copy of any message of the\nschedule. Stops the schedule when it allows the agent to, and sends a\nreply in the schedule's thread carrying a `schedule.stop/1`\ninteraction so the owner sees it. Calling it again on a schedule the\nagent already stopped returns the same result without a second reply.\n",
+        "tags": [
+          "Agent Message Schedules"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StopAgentMessageScheduleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Schedule stopped by the agent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentMessageScheduleStop"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`schedule_stop_not_allowed`: the caller is not the schedule's\nagent, the schedule does not let the agent stop it, or the owner\nalready stopped or deleted it.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "description": "`not_a_scheduled_message`: the email is not a scheduled message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/emails/{id}/reply": {
       "parameters": [
         {
@@ -3638,6 +3720,254 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/agent-message-schedules": {
+      "get": {
+        "operationId": "listAgentMessageSchedules",
+        "summary": "List agent message schedules",
+        "description": "Returns the calling member's message schedules, newest first,\noptionally filtered to one agent address. Member credentials only;\nAPI keys and agent keys receive 403.\n",
+        "tags": [
+          "Agent Message Schedules"
+        ],
+        "parameters": [
+          {
+            "name": "agent_address",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only return schedules that target this agent address."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The member's schedules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AgentMessageSchedule"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createAgentMessageSchedule",
+        "summary": "Create an agent message schedule",
+        "description": "Schedule a recurring message from the calling member's personal\naddress to one of the org's connected agents. The first message is\nsent on the next scheduler pass; later messages reply in the same\nthread every `interval_minutes`. With `idle_minutes` set, a due\nmessage is skipped while the agent has been active within that many\nminutes. Member credentials only; API keys and agent keys receive\n403.\n",
+        "tags": [
+          "Agent Message Schedules"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentMessageScheduleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Schedule created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentMessageSchedule"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "description": "`schedule_limit_reached`: the member already has the maximum number of schedules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`agent_not_connected`: the address is not a connected agent in\nyour org. `member_address_missing`: you have no personal address\nto send from.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent-message-schedules/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "operationId": "getAgentMessageSchedule",
+        "summary": "Get an agent message schedule",
+        "tags": [
+          "Agent Message Schedules"
+        ],
+        "responses": {
+          "200": {
+            "description": "The schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentMessageSchedule"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateAgentMessageSchedule",
+        "summary": "Update an agent message schedule",
+        "description": "Pause, resume, or stop a schedule, or change its subject, message,\ncadence, inactivity condition, or whether the agent may stop it.\nSetting `status` to `active` resumes a paused or stopped schedule and\nsends on the next scheduler pass. A null `idle_minutes` clears the\ninactivity condition. Member credentials only; API keys and agent\nkeys receive 403.\n",
+        "tags": [
+          "Agent Message Schedules"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAgentMessageScheduleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/AgentMessageSchedule"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAgentMessageSchedule",
+        "summary": "Delete an agent message schedule",
+        "description": "Delete a schedule. Messages already sent are not affected.",
+        "tags": [
+          "Agent Message Schedules"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
@@ -20828,6 +21158,248 @@
         },
         "required": [
           "enabled"
+        ]
+      },
+      "AgentMessageScheduleStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "paused",
+          "stopped_by_agent",
+          "stopped_by_owner"
+        ],
+        "description": "`active` schedules send when due. `paused` schedules keep their\nsettings and can be resumed. A stopped schedule sends nothing until\nthe owner sets it active again.\n"
+      },
+      "AgentMessageSchedule": {
+        "type": "object",
+        "description": "A recurring message from an org member to a connected agent.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The member who owns the schedule."
+          },
+          "from_address": {
+            "type": "string",
+            "description": "The member's personal address the messages are sent from."
+          },
+          "agent_address": {
+            "type": "string",
+            "description": "The connected agent address the messages are sent to."
+          },
+          "subject": {
+            "type": "string",
+            "nullable": true
+          },
+          "body_text": {
+            "type": "string"
+          },
+          "interval_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 10080
+          },
+          "idle_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "When set, a due message is skipped while the agent has been\nactive within this many minutes. Null sends on every interval.\n",
+            "nullable": true
+          },
+          "agent_can_stop": {
+            "type": "boolean",
+            "description": "Whether the agent may stop the schedule."
+          },
+          "status": {
+            "$ref": "#/components/schemas/AgentMessageScheduleStatus"
+          },
+          "next_run_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "last_sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "last_sent_email_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "root_message_id": {
+            "type": "string",
+            "description": "Message-ID of the first message in the schedule's thread.",
+            "nullable": true
+          },
+          "sent_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stopped_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "stop_reason": {
+            "type": "string",
+            "maxLength": 280,
+            "description": "Reason the agent gave when it stopped the schedule. Agent-written, untrusted text.",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "agent_address",
+          "body_text",
+          "interval_minutes",
+          "idle_minutes",
+          "agent_can_stop",
+          "status"
+        ]
+      },
+      "CreateAgentMessageScheduleInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "agent_address": {
+            "type": "string",
+            "description": "A connected agent address in your org."
+          },
+          "body_text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000,
+            "description": "The message sent on every run."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Subject of the schedule's thread. Defaults to \"Scheduled message\"."
+          },
+          "interval_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 10080
+          },
+          "idle_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Only send after this many minutes without activity from the agent.",
+            "nullable": true
+          },
+          "agent_can_stop": {
+            "type": "boolean",
+            "default": true,
+            "description": "Let the agent stop the schedule."
+          }
+        },
+        "required": [
+          "agent_address",
+          "body_text",
+          "interval_minutes"
+        ]
+      },
+      "UpdateAgentMessageScheduleInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused",
+              "stopped_by_owner"
+            ]
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "body_text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000
+          },
+          "interval_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 10080
+          },
+          "idle_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "nullable": true
+          },
+          "agent_can_stop": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StopAgentMessageScheduleInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280,
+            "description": "Short reason shown to the schedule's owner."
+          }
+        }
+      },
+      "AgentMessageScheduleStop": {
+        "type": "object",
+        "properties": {
+          "schedule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "stopped_by_agent"
+            ]
+          },
+          "stopped_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "stop_reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "reply_sent_email_id": {
+            "type": "string",
+            "description": "The sent email that carried the stop to the owner, when one was sent.",
+            "nullable": true
+          }
+        },
+        "required": [
+          "schedule_id",
+          "status",
+          "stopped_at",
+          "stop_reason"
         ]
       },
       "WakeSchedule": {

@@ -310,6 +310,32 @@ export {
   preparePresenceProbeEmail,
 } from "./presence.js";
 export type {
+  ScheduleStopBody,
+  ScheduleStopParseResult,
+  ScheduleStopPayload,
+  ScheduleTickParseResult,
+  ScheduleTickPayload,
+} from "./schedules.js";
+export {
+  buildScheduleStopBody,
+  interactionKind,
+  normalizeScheduleStopReason,
+  parseScheduleStop,
+  parseScheduleTick,
+  readScheduleStop,
+  readScheduleTick,
+  SCHEDULE_IDLE_MAX_MINUTES,
+  SCHEDULE_INTERVAL_MAX_MINUTES,
+  SCHEDULE_INTERVAL_MIN_MINUTES,
+  SCHEDULE_PROTOCOL_VERSION,
+  SCHEDULE_STOP_KIND,
+  SCHEDULE_STOP_PROTOCOL,
+  SCHEDULE_STOP_REASON_MAX,
+  SCHEDULE_TICK_KIND,
+  SCHEDULE_TICK_PROTOCOL,
+  scheduleStopCommand,
+} from "./schedules.js";
+export type {
   PreparedSignal,
   SignalDependencies,
   SignalInput,

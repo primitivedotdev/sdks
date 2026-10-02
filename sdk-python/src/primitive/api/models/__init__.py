@@ -15,6 +15,10 @@ from .agent_claim_result_plan import AgentClaimResultPlan
 from .agent_claim_start_result import AgentClaimStartResult
 from .agent_contact_policy import AgentContactPolicy
 from .agent_contact_policy_override import AgentContactPolicyOverride
+from .agent_message_schedule import AgentMessageSchedule
+from .agent_message_schedule_status import AgentMessageScheduleStatus
+from .agent_message_schedule_stop import AgentMessageScheduleStop
+from .agent_message_schedule_stop_status import AgentMessageScheduleStopStatus
 from .agent_network import AgentNetwork
 from .agent_network_contact_admission import AgentNetworkContactAdmission
 from .agent_network_contact_admission_input import AgentNetworkContactAdmissionInput
@@ -99,6 +103,8 @@ from .create_agent_connection_response_200_data_type_1 import CreateAgentConnect
 from .create_agent_connection_response_200_data_type_1_connection import CreateAgentConnectionResponse200DataType1Connection
 from .create_agent_connection_response_200_data_type_1_connection_ownership_kind import CreateAgentConnectionResponse200DataType1ConnectionOwnershipKind
 from .create_agent_connection_response_200_data_type_1_connection_status import CreateAgentConnectionResponse200DataType1ConnectionStatus
+from .create_agent_message_schedule_input import CreateAgentMessageScheduleInput
+from .create_agent_message_schedule_response_201 import CreateAgentMessageScheduleResponse201
 from .create_challenge_input import CreateChallengeInput
 from .create_challenge_input_network import CreateChallengeInputNetwork
 from .create_challenge_response_201 import CreateChallengeResponse201
@@ -149,6 +155,8 @@ from .define_agent_response_201 import DefineAgentResponse201
 from .define_agent_response_201_data import DefineAgentResponse201Data
 from .delete_agent_contact_response_200 import DeleteAgentContactResponse200
 from .delete_agent_contact_response_200_data import DeleteAgentContactResponse200Data
+from .delete_agent_message_schedule_response_200 import DeleteAgentMessageScheduleResponse200
+from .delete_agent_message_schedule_response_200_data import DeleteAgentMessageScheduleResponse200Data
 from .delete_contact_response_200 import DeleteContactResponse200
 from .delete_contact_response_200_data import DeleteContactResponse200Data
 from .delete_domain_response_200 import DeleteDomainResponse200
@@ -264,6 +272,7 @@ from .gate_fix import GateFix
 from .gate_fix_action import GateFixAction
 from .get_account_response_200 import GetAccountResponse200
 from .get_agent_contact_policy_response_200 import GetAgentContactPolicyResponse200
+from .get_agent_message_schedule_response_200 import GetAgentMessageScheduleResponse200
 from .get_agent_response_200 import GetAgentResponse200
 from .get_challenge_response_200 import GetChallengeResponse200
 from .get_contact_policy_response_200 import GetContactPolicyResponse200
@@ -319,6 +328,7 @@ from .list_agent_connections_response_200_meta import ListAgentConnectionsRespon
 from .list_agent_contacts_response_200 import ListAgentContactsResponse200
 from .list_agent_contacts_response_200_data_item import ListAgentContactsResponse200DataItem
 from .list_agent_contacts_response_200_meta import ListAgentContactsResponse200Meta
+from .list_agent_message_schedules_response_200 import ListAgentMessageSchedulesResponse200
 from .list_agent_networks_response_200 import ListAgentNetworksResponse200
 from .list_contacts_response_200 import ListContactsResponse200
 from .list_contacts_response_200_data_item import ListContactsResponse200DataItem
@@ -531,6 +541,8 @@ from .start_cli_login_response_201 import StartCliLoginResponse201
 from .start_cli_signup_input import StartCliSignupInput
 from .start_cli_signup_input_metadata import StartCliSignupInputMetadata
 from .start_cli_signup_response_201 import StartCliSignupResponse201
+from .stop_agent_message_schedule_input import StopAgentMessageScheduleInput
+from .stop_agent_message_schedule_response_200 import StopAgentMessageScheduleResponse200
 from .storage_stats import StorageStats
 from .success_envelope import SuccessEnvelope
 from .template_author import TemplateAuthor
@@ -571,6 +583,9 @@ from .unset_function_route_response_200_data import UnsetFunctionRouteResponse20
 from .unverified_domain import UnverifiedDomain
 from .update_account_input import UpdateAccountInput
 from .update_account_response_200 import UpdateAccountResponse200
+from .update_agent_message_schedule_input import UpdateAgentMessageScheduleInput
+from .update_agent_message_schedule_input_status import UpdateAgentMessageScheduleInputStatus
+from .update_agent_message_schedule_response_200 import UpdateAgentMessageScheduleResponse200
 from .update_agent_network_member_input import UpdateAgentNetworkMemberInput
 from .update_default_network_member_response_200 import UpdateDefaultNetworkMemberResponse200
 from .update_domain_input import UpdateDomainInput
@@ -647,6 +662,10 @@ __all__ = (
     "AgentClaimStartResult",
     "AgentContactPolicy",
     "AgentContactPolicyOverride",
+    "AgentMessageSchedule",
+    "AgentMessageScheduleStatus",
+    "AgentMessageScheduleStop",
+    "AgentMessageScheduleStopStatus",
     "AgentNetwork",
     "AgentNetworkContactAdmission",
     "AgentNetworkContactAdmissionInput",
@@ -731,6 +750,8 @@ __all__ = (
     "CreateAgentConnectionResponse200DataType1Connection",
     "CreateAgentConnectionResponse200DataType1ConnectionOwnershipKind",
     "CreateAgentConnectionResponse200DataType1ConnectionStatus",
+    "CreateAgentMessageScheduleInput",
+    "CreateAgentMessageScheduleResponse201",
     "CreateChallengeInput",
     "CreateChallengeInputNetwork",
     "CreateChallengeResponse201",
@@ -781,6 +802,8 @@ __all__ = (
     "DefineAgentResponse201Data",
     "DeleteAgentContactResponse200",
     "DeleteAgentContactResponse200Data",
+    "DeleteAgentMessageScheduleResponse200",
+    "DeleteAgentMessageScheduleResponse200Data",
     "DeleteContactResponse200",
     "DeleteContactResponse200Data",
     "DeleteDomainResponse200",
@@ -896,6 +919,7 @@ __all__ = (
     "GateFixAction",
     "GetAccountResponse200",
     "GetAgentContactPolicyResponse200",
+    "GetAgentMessageScheduleResponse200",
     "GetAgentResponse200",
     "GetChallengeResponse200",
     "GetContactPolicyResponse200",
@@ -951,6 +975,7 @@ __all__ = (
     "ListAgentContactsResponse200",
     "ListAgentContactsResponse200DataItem",
     "ListAgentContactsResponse200Meta",
+    "ListAgentMessageSchedulesResponse200",
     "ListAgentNetworksResponse200",
     "ListContactsResponse200",
     "ListContactsResponse200DataItem",
@@ -1163,6 +1188,8 @@ __all__ = (
     "StartCliSignupInput",
     "StartCliSignupInputMetadata",
     "StartCliSignupResponse201",
+    "StopAgentMessageScheduleInput",
+    "StopAgentMessageScheduleResponse200",
     "StorageStats",
     "SuccessEnvelope",
     "TemplateAuthor",
@@ -1203,6 +1230,9 @@ __all__ = (
     "UnverifiedDomain",
     "UpdateAccountInput",
     "UpdateAccountResponse200",
+    "UpdateAgentMessageScheduleInput",
+    "UpdateAgentMessageScheduleInputStatus",
+    "UpdateAgentMessageScheduleResponse200",
     "UpdateAgentNetworkMemberInput",
     "UpdateDefaultNetworkMemberResponse200",
     "UpdateDomainInput",

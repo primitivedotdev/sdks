@@ -103,6 +103,15 @@ import RoutesRemoveCommand from "./commands/routes-remove.js";
 import RoutesReorderCommand from "./commands/routes-reorder.js";
 import RoutesTestCommand from "./commands/routes-test.js";
 import RoutesUpdateCommand from "./commands/routes-update.js";
+import {
+  ScheduleStopCommand,
+  SchedulesCreateCommand,
+  SchedulesDeleteCommand,
+  SchedulesGetCommand,
+  SchedulesListCommand,
+  SchedulesPauseCommand,
+  SchedulesResumeCommand,
+} from "./commands/schedules.js";
 import SearchCommand from "./commands/search.js";
 import SemanticSearchCommand from "./commands/semantic-search.js";
 import SendCommand from "./commands/send.js";
@@ -818,6 +827,15 @@ export const COMMANDS: Record<string, typeof Command> = {
   // pay-email-step users can get the correctly-shaped challenge without
   // hand-mapping the envelope; `pay-email --in-reply-to` derives it internally.
   "payments:challenge-from-email": PaymentsChallengeFromEmailCommand,
+  // Scheduled messages to agents. `schedule stop` is the agent side;
+  // `schedules ...` is the owner side and needs a member login.
+  "schedule:stop": ScheduleStopCommand,
+  "schedules:list": SchedulesListCommand,
+  "schedules:get": SchedulesGetCommand,
+  "schedules:create": SchedulesCreateCommand,
+  "schedules:pause": SchedulesPauseCommand,
+  "schedules:resume": SchedulesResumeCommand,
+  "schedules:delete": SchedulesDeleteCommand,
   "wake:schedules:list": WakeSchedulesListCommand,
   "wake:schedules:create": WakeSchedulesCreateCommand,
   "wake:schedules:get": WakeSchedulesGetCommand,

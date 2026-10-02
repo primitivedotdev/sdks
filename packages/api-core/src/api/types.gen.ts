@@ -3835,6 +3835,114 @@ export type UpdateFilterInput = {
 };
 
 /**
+ * `active` schedules send when due. `paused` schedules keep their
+ * settings and can be resumed. A stopped schedule sends nothing until
+ * the owner sets it active again.
+ *
+ */
+export type AgentMessageScheduleStatus = 'active' | 'paused' | 'stopped_by_agent' | 'stopped_by_owner';
+
+/**
+ * A recurring message from an org member to a connected agent.
+ */
+export type AgentMessageSchedule = {
+    id: string;
+    org_id?: string;
+    /**
+     * The member who owns the schedule.
+     */
+    user_id?: string;
+    /**
+     * The member's personal address the messages are sent from.
+     */
+    from_address?: string;
+    /**
+     * The connected agent address the messages are sent to.
+     */
+    agent_address: string;
+    subject?: string | null;
+    body_text: string;
+    interval_minutes: number;
+    /**
+     * When set, a due message is skipped while the agent has been
+     * active within this many minutes. Null sends on every interval.
+     *
+     */
+    idle_minutes: number | null;
+    /**
+     * Whether the agent may stop the schedule.
+     */
+    agent_can_stop: boolean;
+    status: AgentMessageScheduleStatus;
+    next_run_at?: string | null;
+    last_sent_at?: string | null;
+    last_sent_email_id?: string | null;
+    /**
+     * Message-ID of the first message in the schedule's thread.
+     */
+    root_message_id?: string | null;
+    sent_count?: number;
+    stopped_at?: string | null;
+    /**
+     * Reason the agent gave when it stopped the schedule. Agent-written, untrusted text.
+     */
+    stop_reason?: string | null;
+    created_at?: string;
+    updated_at?: string;
+};
+
+export type CreateAgentMessageScheduleInput = {
+    /**
+     * A connected agent address in your org.
+     */
+    agent_address: string;
+    /**
+     * The message sent on every run.
+     */
+    body_text: string;
+    /**
+     * Subject of the schedule's thread. Defaults to "Scheduled message".
+     */
+    subject?: string;
+    interval_minutes: number;
+    /**
+     * Only send after this many minutes without activity from the agent.
+     */
+    idle_minutes?: number | null;
+    /**
+     * Let the agent stop the schedule.
+     */
+    agent_can_stop?: boolean;
+};
+
+export type UpdateAgentMessageScheduleInput = {
+    status?: 'active' | 'paused' | 'stopped_by_owner';
+    subject?: string;
+    body_text?: string;
+    interval_minutes?: number;
+    idle_minutes?: number | null;
+    agent_can_stop?: boolean;
+};
+
+export type StopAgentMessageScheduleInput = {
+    /**
+     * Short reason shown to the schedule's owner.
+     */
+    reason?: string;
+};
+
+export type AgentMessageScheduleStop = {
+    schedule_id: string;
+    status: 'stopped_by_agent';
+    stopped_at: string;
+    stop_reason: string | null;
+    /**
+     * The sent email that carried the stop to the owner, when one was sent.
+     */
+    reply_sent_email_id?: string | null;
+};
+
+/**
  * A cron schedule that sends a wake.dispatch command to a function.
  */
 export type WakeSchedule = {
@@ -6797,6 +6905,57 @@ export type DownloadSentAttachmentPartResponses = {
 
 export type DownloadSentAttachmentPartResponse = DownloadSentAttachmentPartResponses[keyof DownloadSentAttachmentPartResponses];
 
+export type StopAgentMessageScheduleData = {
+    body?: StopAgentMessageScheduleInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/emails/{id}/schedule-stop';
+};
+
+export type StopAgentMessageScheduleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * `schedule_stop_not_allowed`: the caller is not the schedule's
+     * agent, the schedule does not let the agent stop it, or the owner
+     * already stopped or deleted it.
+     *
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * `not_a_scheduled_message`: the email is not a scheduled message.
+     */
+    422: ErrorResponse;
+};
+
+export type StopAgentMessageScheduleError = StopAgentMessageScheduleErrors[keyof StopAgentMessageScheduleErrors];
+
+export type StopAgentMessageScheduleResponses = {
+    /**
+     * Schedule stopped by the agent
+     */
+    200: SuccessEnvelope & {
+        data?: AgentMessageScheduleStop;
+    };
+};
+
+export type StopAgentMessageScheduleResponse = StopAgentMessageScheduleResponses[keyof StopAgentMessageScheduleResponses];
+
 export type ReplyToEmailData = {
     body: ReplyInput;
     path: {
@@ -7516,6 +7675,214 @@ export type UpdateFilterResponses = {
 };
 
 export type UpdateFilterResponse = UpdateFilterResponses[keyof UpdateFilterResponses];
+
+export type ListAgentMessageSchedulesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only return schedules that target this agent address.
+         */
+        agent_address?: string;
+    };
+    url: '/agent-message-schedules';
+};
+
+export type ListAgentMessageSchedulesErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type ListAgentMessageSchedulesError = ListAgentMessageSchedulesErrors[keyof ListAgentMessageSchedulesErrors];
+
+export type ListAgentMessageSchedulesResponses = {
+    /**
+     * The member's schedules
+     */
+    200: SuccessEnvelope & {
+        data?: Array<AgentMessageSchedule>;
+    };
+};
+
+export type ListAgentMessageSchedulesResponse = ListAgentMessageSchedulesResponses[keyof ListAgentMessageSchedulesResponses];
+
+export type CreateAgentMessageScheduleData = {
+    body: CreateAgentMessageScheduleInput;
+    path?: never;
+    query?: never;
+    url: '/agent-message-schedules';
+};
+
+export type CreateAgentMessageScheduleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * `schedule_limit_reached`: the member already has the maximum number of schedules.
+     */
+    409: ErrorResponse;
+    /**
+     * `agent_not_connected`: the address is not a connected agent in
+     * your org. `member_address_missing`: you have no personal address
+     * to send from.
+     *
+     */
+    422: ErrorResponse;
+};
+
+export type CreateAgentMessageScheduleError = CreateAgentMessageScheduleErrors[keyof CreateAgentMessageScheduleErrors];
+
+export type CreateAgentMessageScheduleResponses = {
+    /**
+     * Schedule created
+     */
+    201: SuccessEnvelope & {
+        data?: AgentMessageSchedule;
+    };
+};
+
+export type CreateAgentMessageScheduleResponse = CreateAgentMessageScheduleResponses[keyof CreateAgentMessageScheduleResponses];
+
+export type DeleteAgentMessageScheduleData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/agent-message-schedules/{id}';
+};
+
+export type DeleteAgentMessageScheduleErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteAgentMessageScheduleError = DeleteAgentMessageScheduleErrors[keyof DeleteAgentMessageScheduleErrors];
+
+export type DeleteAgentMessageScheduleResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteAgentMessageScheduleResponse = DeleteAgentMessageScheduleResponses[keyof DeleteAgentMessageScheduleResponses];
+
+export type GetAgentMessageScheduleData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/agent-message-schedules/{id}';
+};
+
+export type GetAgentMessageScheduleErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetAgentMessageScheduleError = GetAgentMessageScheduleErrors[keyof GetAgentMessageScheduleErrors];
+
+export type GetAgentMessageScheduleResponses = {
+    /**
+     * The schedule
+     */
+    200: SuccessEnvelope & {
+        data?: AgentMessageSchedule;
+    };
+};
+
+export type GetAgentMessageScheduleResponse = GetAgentMessageScheduleResponses[keyof GetAgentMessageScheduleResponses];
+
+export type UpdateAgentMessageScheduleData = {
+    body: UpdateAgentMessageScheduleInput;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/agent-message-schedules/{id}';
+};
+
+export type UpdateAgentMessageScheduleErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type UpdateAgentMessageScheduleError = UpdateAgentMessageScheduleErrors[keyof UpdateAgentMessageScheduleErrors];
+
+export type UpdateAgentMessageScheduleResponses = {
+    /**
+     * Updated schedule
+     */
+    200: SuccessEnvelope & {
+        data?: AgentMessageSchedule;
+    };
+};
+
+export type UpdateAgentMessageScheduleResponse = UpdateAgentMessageScheduleResponses[keyof UpdateAgentMessageScheduleResponses];
 
 export type ListWakeSchedulesData = {
     body?: never;

@@ -33,6 +33,9 @@ export type {
 export {
   type Account,
   AccountResource,
+  type AgentMessageScheduleCreateInput,
+  type AgentMessageScheduleListInput,
+  type AgentMessageScheduleUpdateInput,
   type AttachmentPartDownload,
   type CreateAgentOptions,
   type CreatedAgent,
@@ -56,6 +59,8 @@ export {
   PrimitiveClient,
   type PrimitiveClientOptions,
   type ReplyInput,
+  type ScheduleStopInput,
+  SchedulesResource,
   type SendAttachment,
   type SendInput,
   type SendResult,

@@ -512,6 +512,38 @@ generated operations (`setMemory`, `getMemory`, `searchMemories`,
 `deleteMemory`) remain exported from `@primitivedotdev/sdk/api` for callers who
 want the exact OpenAPI operation shape.
 
+#### Scheduled messages to agents
+
+`client.schedules` manages recurring messages from an org member to one of the
+org's connected agents. Managing schedules needs member credentials; API keys
+and agent keys are refused.
+
+```ts
+const schedule = await client.schedules.create({
+  agent_address: "agent@example.com",
+  body_text: "Any progress on the report?",
+  interval_minutes: 60,
+  idle_minutes: 15, // optional: skip while the agent sent mail in the last 15 minutes
+});
+await client.schedules.pause(schedule.id);
+await client.schedules.resume(schedule.id);
+const mine = await client.schedules.list({ agentAddress: "agent@example.com" });
+await client.schedules.delete(schedule.id);
+```
+
+The receiving agent stops a schedule, when the schedule allows it, from any
+received scheduled message:
+
+```ts
+await client.schedules.stop(email.id, { reason: "The report is finished" });
+```
+
+Each scheduled message carries a `schedule.tick/1` interaction part, and the
+stop reaches the owner as a `schedule.stop/1` part. `parseScheduleTick`,
+`parseScheduleStop` and `buildScheduleStopBody` in
+`@primitivedotdev/sdk/interactions` read and build these without making
+requests. See [docs/scheduled-messages.md](../docs/scheduled-messages.md).
+
 ### Webhook signature verification
 
 `primitive.receive(...)` handles verification automatically. If you need to verify a delivery yourself (a different language reverse-proxying through Node, a one-off audit, etc.), the wire format is:

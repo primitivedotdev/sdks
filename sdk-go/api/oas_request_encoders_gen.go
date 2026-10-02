@@ -130,6 +130,20 @@ func encodeCreateAgentConnectionRequest(
 	return nil
 }
 
+func encodeCreateAgentMessageScheduleRequest(
+	req *CreateAgentMessageScheduleInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeCreateChallengeRequest(
 	req *CreateChallengeInput,
 	r *http.Request,
@@ -724,6 +738,26 @@ func encodeStartCliSignupRequest(
 	return nil
 }
 
+func encodeStopAgentMessageScheduleRequest(
+	req OptStopAgentMessageScheduleInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	if !req.Set {
+		// Keep request with empty body if value is not set.
+		return nil
+	}
+	e := new(jx.Encoder)
+	{
+		if req.Set {
+			req.Encode(e)
+		}
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeTestEndpointRulesRequest(
 	req *TestEndpointRulesInput,
 	r *http.Request,
@@ -760,6 +794,20 @@ func encodeTestFunctionRequest(
 
 func encodeUpdateAccountRequest(
 	req *UpdateAccountInput,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
+func encodeUpdateAgentMessageScheduleRequest(
+	req *UpdateAgentMessageScheduleInput,
 	r *http.Request,
 ) error {
 	const contentType = "application/json"

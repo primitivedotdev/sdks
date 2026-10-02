@@ -929,6 +929,392 @@ func (s *AgentContactPolicyOverride) SetAllowContactRequests(val NilBool) {
 	s.AllowContactRequests = val
 }
 
+// A recurring message from an org member to a connected agent.
+// Ref: #/components/schemas/AgentMessageSchedule
+type AgentMessageSchedule struct {
+	ID    uuid.UUID `json:"id"`
+	OrgID OptUUID   `json:"org_id"`
+	// The member who owns the schedule.
+	UserID OptUUID `json:"user_id"`
+	// The member's personal address the messages are sent from.
+	FromAddress OptString `json:"from_address"`
+	// The connected agent address the messages are sent to.
+	AgentAddress    string       `json:"agent_address"`
+	Subject         OptNilString `json:"subject"`
+	BodyText        string       `json:"body_text"`
+	IntervalMinutes int          `json:"interval_minutes"`
+	// When set, a due message is skipped while the agent has been
+	// active within this many minutes. Null sends on every interval.
+	IdleMinutes NilInt `json:"idle_minutes"`
+	// Whether the agent may stop the schedule.
+	AgentCanStop    bool                       `json:"agent_can_stop"`
+	Status          AgentMessageScheduleStatus `json:"status"`
+	NextRunAt       OptNilDateTime             `json:"next_run_at"`
+	LastSentAt      OptNilDateTime             `json:"last_sent_at"`
+	LastSentEmailID OptNilString               `json:"last_sent_email_id"`
+	// Message-ID of the first message in the schedule's thread.
+	RootMessageID OptNilString   `json:"root_message_id"`
+	SentCount     OptInt         `json:"sent_count"`
+	StoppedAt     OptNilDateTime `json:"stopped_at"`
+	// Reason the agent gave when it stopped the schedule. Agent-written, untrusted text.
+	StopReason OptNilString `json:"stop_reason"`
+	CreatedAt  OptDateTime  `json:"created_at"`
+	UpdatedAt  OptDateTime  `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *AgentMessageSchedule) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *AgentMessageSchedule) GetOrgID() OptUUID {
+	return s.OrgID
+}
+
+// GetUserID returns the value of UserID.
+func (s *AgentMessageSchedule) GetUserID() OptUUID {
+	return s.UserID
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *AgentMessageSchedule) GetFromAddress() OptString {
+	return s.FromAddress
+}
+
+// GetAgentAddress returns the value of AgentAddress.
+func (s *AgentMessageSchedule) GetAgentAddress() string {
+	return s.AgentAddress
+}
+
+// GetSubject returns the value of Subject.
+func (s *AgentMessageSchedule) GetSubject() OptNilString {
+	return s.Subject
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *AgentMessageSchedule) GetBodyText() string {
+	return s.BodyText
+}
+
+// GetIntervalMinutes returns the value of IntervalMinutes.
+func (s *AgentMessageSchedule) GetIntervalMinutes() int {
+	return s.IntervalMinutes
+}
+
+// GetIdleMinutes returns the value of IdleMinutes.
+func (s *AgentMessageSchedule) GetIdleMinutes() NilInt {
+	return s.IdleMinutes
+}
+
+// GetAgentCanStop returns the value of AgentCanStop.
+func (s *AgentMessageSchedule) GetAgentCanStop() bool {
+	return s.AgentCanStop
+}
+
+// GetStatus returns the value of Status.
+func (s *AgentMessageSchedule) GetStatus() AgentMessageScheduleStatus {
+	return s.Status
+}
+
+// GetNextRunAt returns the value of NextRunAt.
+func (s *AgentMessageSchedule) GetNextRunAt() OptNilDateTime {
+	return s.NextRunAt
+}
+
+// GetLastSentAt returns the value of LastSentAt.
+func (s *AgentMessageSchedule) GetLastSentAt() OptNilDateTime {
+	return s.LastSentAt
+}
+
+// GetLastSentEmailID returns the value of LastSentEmailID.
+func (s *AgentMessageSchedule) GetLastSentEmailID() OptNilString {
+	return s.LastSentEmailID
+}
+
+// GetRootMessageID returns the value of RootMessageID.
+func (s *AgentMessageSchedule) GetRootMessageID() OptNilString {
+	return s.RootMessageID
+}
+
+// GetSentCount returns the value of SentCount.
+func (s *AgentMessageSchedule) GetSentCount() OptInt {
+	return s.SentCount
+}
+
+// GetStoppedAt returns the value of StoppedAt.
+func (s *AgentMessageSchedule) GetStoppedAt() OptNilDateTime {
+	return s.StoppedAt
+}
+
+// GetStopReason returns the value of StopReason.
+func (s *AgentMessageSchedule) GetStopReason() OptNilString {
+	return s.StopReason
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *AgentMessageSchedule) GetCreatedAt() OptDateTime {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *AgentMessageSchedule) GetUpdatedAt() OptDateTime {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *AgentMessageSchedule) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *AgentMessageSchedule) SetOrgID(val OptUUID) {
+	s.OrgID = val
+}
+
+// SetUserID sets the value of UserID.
+func (s *AgentMessageSchedule) SetUserID(val OptUUID) {
+	s.UserID = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *AgentMessageSchedule) SetFromAddress(val OptString) {
+	s.FromAddress = val
+}
+
+// SetAgentAddress sets the value of AgentAddress.
+func (s *AgentMessageSchedule) SetAgentAddress(val string) {
+	s.AgentAddress = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *AgentMessageSchedule) SetSubject(val OptNilString) {
+	s.Subject = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *AgentMessageSchedule) SetBodyText(val string) {
+	s.BodyText = val
+}
+
+// SetIntervalMinutes sets the value of IntervalMinutes.
+func (s *AgentMessageSchedule) SetIntervalMinutes(val int) {
+	s.IntervalMinutes = val
+}
+
+// SetIdleMinutes sets the value of IdleMinutes.
+func (s *AgentMessageSchedule) SetIdleMinutes(val NilInt) {
+	s.IdleMinutes = val
+}
+
+// SetAgentCanStop sets the value of AgentCanStop.
+func (s *AgentMessageSchedule) SetAgentCanStop(val bool) {
+	s.AgentCanStop = val
+}
+
+// SetStatus sets the value of Status.
+func (s *AgentMessageSchedule) SetStatus(val AgentMessageScheduleStatus) {
+	s.Status = val
+}
+
+// SetNextRunAt sets the value of NextRunAt.
+func (s *AgentMessageSchedule) SetNextRunAt(val OptNilDateTime) {
+	s.NextRunAt = val
+}
+
+// SetLastSentAt sets the value of LastSentAt.
+func (s *AgentMessageSchedule) SetLastSentAt(val OptNilDateTime) {
+	s.LastSentAt = val
+}
+
+// SetLastSentEmailID sets the value of LastSentEmailID.
+func (s *AgentMessageSchedule) SetLastSentEmailID(val OptNilString) {
+	s.LastSentEmailID = val
+}
+
+// SetRootMessageID sets the value of RootMessageID.
+func (s *AgentMessageSchedule) SetRootMessageID(val OptNilString) {
+	s.RootMessageID = val
+}
+
+// SetSentCount sets the value of SentCount.
+func (s *AgentMessageSchedule) SetSentCount(val OptInt) {
+	s.SentCount = val
+}
+
+// SetStoppedAt sets the value of StoppedAt.
+func (s *AgentMessageSchedule) SetStoppedAt(val OptNilDateTime) {
+	s.StoppedAt = val
+}
+
+// SetStopReason sets the value of StopReason.
+func (s *AgentMessageSchedule) SetStopReason(val OptNilString) {
+	s.StopReason = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *AgentMessageSchedule) SetCreatedAt(val OptDateTime) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *AgentMessageSchedule) SetUpdatedAt(val OptDateTime) {
+	s.UpdatedAt = val
+}
+
+// `active` schedules send when due. `paused` schedules keep their
+// settings and can be resumed. A stopped schedule sends nothing until
+// the owner sets it active again.
+// Ref: #/components/schemas/AgentMessageScheduleStatus
+type AgentMessageScheduleStatus string
+
+const (
+	AgentMessageScheduleStatusActive         AgentMessageScheduleStatus = "active"
+	AgentMessageScheduleStatusPaused         AgentMessageScheduleStatus = "paused"
+	AgentMessageScheduleStatusStoppedByAgent AgentMessageScheduleStatus = "stopped_by_agent"
+	AgentMessageScheduleStatusStoppedByOwner AgentMessageScheduleStatus = "stopped_by_owner"
+)
+
+// AllValues returns all AgentMessageScheduleStatus values.
+func (AgentMessageScheduleStatus) AllValues() []AgentMessageScheduleStatus {
+	return []AgentMessageScheduleStatus{
+		AgentMessageScheduleStatusActive,
+		AgentMessageScheduleStatusPaused,
+		AgentMessageScheduleStatusStoppedByAgent,
+		AgentMessageScheduleStatusStoppedByOwner,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AgentMessageScheduleStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case AgentMessageScheduleStatusActive:
+		return []byte(s), nil
+	case AgentMessageScheduleStatusPaused:
+		return []byte(s), nil
+	case AgentMessageScheduleStatusStoppedByAgent:
+		return []byte(s), nil
+	case AgentMessageScheduleStatusStoppedByOwner:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AgentMessageScheduleStatus) UnmarshalText(data []byte) error {
+	switch AgentMessageScheduleStatus(data) {
+	case AgentMessageScheduleStatusActive:
+		*s = AgentMessageScheduleStatusActive
+		return nil
+	case AgentMessageScheduleStatusPaused:
+		*s = AgentMessageScheduleStatusPaused
+		return nil
+	case AgentMessageScheduleStatusStoppedByAgent:
+		*s = AgentMessageScheduleStatusStoppedByAgent
+		return nil
+	case AgentMessageScheduleStatusStoppedByOwner:
+		*s = AgentMessageScheduleStatusStoppedByOwner
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/AgentMessageScheduleStop
+type AgentMessageScheduleStop struct {
+	ScheduleID uuid.UUID                      `json:"schedule_id"`
+	Status     AgentMessageScheduleStopStatus `json:"status"`
+	StoppedAt  time.Time                      `json:"stopped_at"`
+	StopReason NilString                      `json:"stop_reason"`
+	// The sent email that carried the stop to the owner, when one was sent.
+	ReplySentEmailID OptNilString `json:"reply_sent_email_id"`
+}
+
+// GetScheduleID returns the value of ScheduleID.
+func (s *AgentMessageScheduleStop) GetScheduleID() uuid.UUID {
+	return s.ScheduleID
+}
+
+// GetStatus returns the value of Status.
+func (s *AgentMessageScheduleStop) GetStatus() AgentMessageScheduleStopStatus {
+	return s.Status
+}
+
+// GetStoppedAt returns the value of StoppedAt.
+func (s *AgentMessageScheduleStop) GetStoppedAt() time.Time {
+	return s.StoppedAt
+}
+
+// GetStopReason returns the value of StopReason.
+func (s *AgentMessageScheduleStop) GetStopReason() NilString {
+	return s.StopReason
+}
+
+// GetReplySentEmailID returns the value of ReplySentEmailID.
+func (s *AgentMessageScheduleStop) GetReplySentEmailID() OptNilString {
+	return s.ReplySentEmailID
+}
+
+// SetScheduleID sets the value of ScheduleID.
+func (s *AgentMessageScheduleStop) SetScheduleID(val uuid.UUID) {
+	s.ScheduleID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *AgentMessageScheduleStop) SetStatus(val AgentMessageScheduleStopStatus) {
+	s.Status = val
+}
+
+// SetStoppedAt sets the value of StoppedAt.
+func (s *AgentMessageScheduleStop) SetStoppedAt(val time.Time) {
+	s.StoppedAt = val
+}
+
+// SetStopReason sets the value of StopReason.
+func (s *AgentMessageScheduleStop) SetStopReason(val NilString) {
+	s.StopReason = val
+}
+
+// SetReplySentEmailID sets the value of ReplySentEmailID.
+func (s *AgentMessageScheduleStop) SetReplySentEmailID(val OptNilString) {
+	s.ReplySentEmailID = val
+}
+
+type AgentMessageScheduleStopStatus string
+
+const (
+	AgentMessageScheduleStopStatusStoppedByAgent AgentMessageScheduleStopStatus = "stopped_by_agent"
+)
+
+// AllValues returns all AgentMessageScheduleStopStatus values.
+func (AgentMessageScheduleStopStatus) AllValues() []AgentMessageScheduleStopStatus {
+	return []AgentMessageScheduleStopStatus{
+		AgentMessageScheduleStopStatusStoppedByAgent,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AgentMessageScheduleStopStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case AgentMessageScheduleStopStatusStoppedByAgent:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AgentMessageScheduleStopStatus) UnmarshalText(data []byte) error {
+	switch AgentMessageScheduleStopStatus(data) {
+	case AgentMessageScheduleStopStatusStoppedByAgent:
+		*s = AgentMessageScheduleStopStatusStoppedByAgent
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // An organization-owned network. The default network cannot be deleted.
 // Ref: #/components/schemas/AgentNetwork
 type AgentNetwork struct {
@@ -6279,6 +6665,129 @@ type CreateAgentConnectionUnauthorized ErrorResponseHeaders
 
 func (*CreateAgentConnectionUnauthorized) createAgentConnectionRes() {}
 
+type CreateAgentMessageScheduleBadRequest ErrorResponse
+
+func (*CreateAgentMessageScheduleBadRequest) createAgentMessageScheduleRes() {}
+
+type CreateAgentMessageScheduleConflict ErrorResponse
+
+func (*CreateAgentMessageScheduleConflict) createAgentMessageScheduleRes() {}
+
+// Merged schema.
+type CreateAgentMessageScheduleCreated struct {
+	Success bool                 `json:"success"`
+	Data    AgentMessageSchedule `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *CreateAgentMessageScheduleCreated) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *CreateAgentMessageScheduleCreated) GetData() AgentMessageSchedule {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *CreateAgentMessageScheduleCreated) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *CreateAgentMessageScheduleCreated) SetData(val AgentMessageSchedule) {
+	s.Data = val
+}
+
+func (*CreateAgentMessageScheduleCreated) createAgentMessageScheduleRes() {}
+
+type CreateAgentMessageScheduleForbidden ErrorResponse
+
+func (*CreateAgentMessageScheduleForbidden) createAgentMessageScheduleRes() {}
+
+// Ref: #/components/schemas/CreateAgentMessageScheduleInput
+type CreateAgentMessageScheduleInput struct {
+	// A connected agent address in your org.
+	AgentAddress string `json:"agent_address"`
+	// The message sent on every run.
+	BodyText string `json:"body_text"`
+	// Subject of the schedule's thread. Defaults to "Scheduled message".
+	Subject         OptString `json:"subject"`
+	IntervalMinutes int       `json:"interval_minutes"`
+	// Only send after this many minutes without activity from the agent.
+	IdleMinutes OptNilInt `json:"idle_minutes"`
+	// Let the agent stop the schedule.
+	AgentCanStop OptBool `json:"agent_can_stop"`
+}
+
+// GetAgentAddress returns the value of AgentAddress.
+func (s *CreateAgentMessageScheduleInput) GetAgentAddress() string {
+	return s.AgentAddress
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *CreateAgentMessageScheduleInput) GetBodyText() string {
+	return s.BodyText
+}
+
+// GetSubject returns the value of Subject.
+func (s *CreateAgentMessageScheduleInput) GetSubject() OptString {
+	return s.Subject
+}
+
+// GetIntervalMinutes returns the value of IntervalMinutes.
+func (s *CreateAgentMessageScheduleInput) GetIntervalMinutes() int {
+	return s.IntervalMinutes
+}
+
+// GetIdleMinutes returns the value of IdleMinutes.
+func (s *CreateAgentMessageScheduleInput) GetIdleMinutes() OptNilInt {
+	return s.IdleMinutes
+}
+
+// GetAgentCanStop returns the value of AgentCanStop.
+func (s *CreateAgentMessageScheduleInput) GetAgentCanStop() OptBool {
+	return s.AgentCanStop
+}
+
+// SetAgentAddress sets the value of AgentAddress.
+func (s *CreateAgentMessageScheduleInput) SetAgentAddress(val string) {
+	s.AgentAddress = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *CreateAgentMessageScheduleInput) SetBodyText(val string) {
+	s.BodyText = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *CreateAgentMessageScheduleInput) SetSubject(val OptString) {
+	s.Subject = val
+}
+
+// SetIntervalMinutes sets the value of IntervalMinutes.
+func (s *CreateAgentMessageScheduleInput) SetIntervalMinutes(val int) {
+	s.IntervalMinutes = val
+}
+
+// SetIdleMinutes sets the value of IdleMinutes.
+func (s *CreateAgentMessageScheduleInput) SetIdleMinutes(val OptNilInt) {
+	s.IdleMinutes = val
+}
+
+// SetAgentCanStop sets the value of AgentCanStop.
+func (s *CreateAgentMessageScheduleInput) SetAgentCanStop(val OptBool) {
+	s.AgentCanStop = val
+}
+
+type CreateAgentMessageScheduleUnauthorized ErrorResponse
+
+func (*CreateAgentMessageScheduleUnauthorized) createAgentMessageScheduleRes() {}
+
+type CreateAgentMessageScheduleUnprocessableEntity ErrorResponse
+
+func (*CreateAgentMessageScheduleUnprocessableEntity) createAgentMessageScheduleRes() {}
+
 type CreateChallengeBadRequest ErrorResponse
 
 func (*CreateChallengeBadRequest) createChallengeRes() {}
@@ -8644,6 +9153,18 @@ type DeleteAgentContactUnauthorized ErrorResponse
 
 func (*DeleteAgentContactUnauthorized) deleteAgentContactRes() {}
 
+type DeleteAgentMessageScheduleForbidden ErrorResponse
+
+func (*DeleteAgentMessageScheduleForbidden) deleteAgentMessageScheduleRes() {}
+
+type DeleteAgentMessageScheduleNotFound ErrorResponse
+
+func (*DeleteAgentMessageScheduleNotFound) deleteAgentMessageScheduleRes() {}
+
+type DeleteAgentMessageScheduleUnauthorized ErrorResponse
+
+func (*DeleteAgentMessageScheduleUnauthorized) deleteAgentMessageScheduleRes() {}
+
 type DeleteContactBadRequest ErrorResponse
 
 func (*DeleteContactBadRequest) deleteContactRes() {}
@@ -9082,16 +9603,17 @@ func (s *Deleted) SetData(val DeletedData) {
 	s.Data = val
 }
 
-func (*Deleted) deleteDomainRes()            {}
-func (*Deleted) deleteEmailRes()             {}
-func (*Deleted) deleteEndpointRes()          {}
-func (*Deleted) deleteFilterRes()            {}
-func (*Deleted) deleteFunctionRes()          {}
-func (*Deleted) deleteRegistryRes()          {}
-func (*Deleted) deleteRouteRes()             {}
-func (*Deleted) deleteWakeAuthorizationRes() {}
-func (*Deleted) deleteWakeScheduleRes()      {}
-func (*Deleted) unpublishAgentRes()          {}
+func (*Deleted) deleteAgentMessageScheduleRes() {}
+func (*Deleted) deleteDomainRes()               {}
+func (*Deleted) deleteEmailRes()                {}
+func (*Deleted) deleteEndpointRes()             {}
+func (*Deleted) deleteFilterRes()               {}
+func (*Deleted) deleteFunctionRes()             {}
+func (*Deleted) deleteRegistryRes()             {}
+func (*Deleted) deleteRouteRes()                {}
+func (*Deleted) deleteWakeAuthorizationRes()    {}
+func (*Deleted) deleteWakeScheduleRes()         {}
+func (*Deleted) unpublishAgentRes()             {}
 
 type DeletedData struct {
 	Deleted bool `json:"deleted"`
@@ -17404,6 +17926,46 @@ type GetAgentContactPolicyUnauthorized ErrorResponse
 
 func (*GetAgentContactPolicyUnauthorized) getAgentContactPolicyRes() {}
 
+type GetAgentMessageScheduleForbidden ErrorResponse
+
+func (*GetAgentMessageScheduleForbidden) getAgentMessageScheduleRes() {}
+
+type GetAgentMessageScheduleNotFound ErrorResponse
+
+func (*GetAgentMessageScheduleNotFound) getAgentMessageScheduleRes() {}
+
+// Merged schema.
+type GetAgentMessageScheduleOK struct {
+	Success bool                 `json:"success"`
+	Data    AgentMessageSchedule `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetAgentMessageScheduleOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetAgentMessageScheduleOK) GetData() AgentMessageSchedule {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetAgentMessageScheduleOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetAgentMessageScheduleOK) SetData(val AgentMessageSchedule) {
+	s.Data = val
+}
+
+func (*GetAgentMessageScheduleOK) getAgentMessageScheduleRes() {}
+
+type GetAgentMessageScheduleUnauthorized ErrorResponse
+
+func (*GetAgentMessageScheduleUnauthorized) getAgentMessageScheduleRes() {}
+
 // Merged schema.
 type GetAgentOK struct {
 	Success bool          `json:"success"`
@@ -20422,6 +20984,42 @@ func (s *ListAgentContactsOKMeta) SetCursor(val NilString) {
 type ListAgentContactsUnauthorized ErrorResponse
 
 func (*ListAgentContactsUnauthorized) listAgentContactsRes() {}
+
+type ListAgentMessageSchedulesForbidden ErrorResponse
+
+func (*ListAgentMessageSchedulesForbidden) listAgentMessageSchedulesRes() {}
+
+// Merged schema.
+type ListAgentMessageSchedulesOK struct {
+	Success bool                   `json:"success"`
+	Data    []AgentMessageSchedule `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListAgentMessageSchedulesOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListAgentMessageSchedulesOK) GetData() []AgentMessageSchedule {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListAgentMessageSchedulesOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListAgentMessageSchedulesOK) SetData(val []AgentMessageSchedule) {
+	s.Data = val
+}
+
+func (*ListAgentMessageSchedulesOK) listAgentMessageSchedulesRes() {}
+
+type ListAgentMessageSchedulesUnauthorized ErrorResponse
+
+func (*ListAgentMessageSchedulesUnauthorized) listAgentMessageSchedulesRes() {}
 
 type ListAgentNetworksForbidden ErrorResponse
 
@@ -28626,6 +29224,52 @@ func (o OptStartCliSignupInputMetadata) Or(d StartCliSignupInputMetadata) StartC
 	return d
 }
 
+// NewOptStopAgentMessageScheduleInput returns new OptStopAgentMessageScheduleInput with value set to v.
+func NewOptStopAgentMessageScheduleInput(v StopAgentMessageScheduleInput) OptStopAgentMessageScheduleInput {
+	return OptStopAgentMessageScheduleInput{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptStopAgentMessageScheduleInput is optional StopAgentMessageScheduleInput.
+type OptStopAgentMessageScheduleInput struct {
+	Value StopAgentMessageScheduleInput
+	Set   bool
+}
+
+// IsSet returns true if OptStopAgentMessageScheduleInput was set.
+func (o OptStopAgentMessageScheduleInput) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptStopAgentMessageScheduleInput) Reset() {
+	var v StopAgentMessageScheduleInput
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptStopAgentMessageScheduleInput) SetTo(v StopAgentMessageScheduleInput) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptStopAgentMessageScheduleInput) Get() (v StopAgentMessageScheduleInput, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptStopAgentMessageScheduleInput) Or(d StopAgentMessageScheduleInput) StopAgentMessageScheduleInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptString returns new OptString with value set to v.
 func NewOptString(v string) OptString {
 	return OptString{
@@ -28896,6 +29540,52 @@ func (o OptUUID) Get() (v uuid.UUID, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUUID) Or(d uuid.UUID) uuid.UUID {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdateAgentMessageScheduleInputStatus returns new OptUpdateAgentMessageScheduleInputStatus with value set to v.
+func NewOptUpdateAgentMessageScheduleInputStatus(v UpdateAgentMessageScheduleInputStatus) OptUpdateAgentMessageScheduleInputStatus {
+	return OptUpdateAgentMessageScheduleInputStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdateAgentMessageScheduleInputStatus is optional UpdateAgentMessageScheduleInputStatus.
+type OptUpdateAgentMessageScheduleInputStatus struct {
+	Value UpdateAgentMessageScheduleInputStatus
+	Set   bool
+}
+
+// IsSet returns true if OptUpdateAgentMessageScheduleInputStatus was set.
+func (o OptUpdateAgentMessageScheduleInputStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdateAgentMessageScheduleInputStatus) Reset() {
+	var v UpdateAgentMessageScheduleInputStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdateAgentMessageScheduleInputStatus) SetTo(v UpdateAgentMessageScheduleInputStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdateAgentMessageScheduleInputStatus) Get() (v UpdateAgentMessageScheduleInputStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdateAgentMessageScheduleInputStatus) Or(d UpdateAgentMessageScheduleInputStatus) UpdateAgentMessageScheduleInputStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -39306,6 +39996,70 @@ func (s *StartCliSignupInputMetadata) init() StartCliSignupInputMetadata {
 	return m
 }
 
+type StopAgentMessageScheduleBadRequest ErrorResponse
+
+func (*StopAgentMessageScheduleBadRequest) stopAgentMessageScheduleRes() {}
+
+type StopAgentMessageScheduleForbidden ErrorResponse
+
+func (*StopAgentMessageScheduleForbidden) stopAgentMessageScheduleRes() {}
+
+// Ref: #/components/schemas/StopAgentMessageScheduleInput
+type StopAgentMessageScheduleInput struct {
+	// Short reason shown to the schedule's owner.
+	Reason OptString `json:"reason"`
+}
+
+// GetReason returns the value of Reason.
+func (s *StopAgentMessageScheduleInput) GetReason() OptString {
+	return s.Reason
+}
+
+// SetReason sets the value of Reason.
+func (s *StopAgentMessageScheduleInput) SetReason(val OptString) {
+	s.Reason = val
+}
+
+type StopAgentMessageScheduleNotFound ErrorResponse
+
+func (*StopAgentMessageScheduleNotFound) stopAgentMessageScheduleRes() {}
+
+// Merged schema.
+type StopAgentMessageScheduleOK struct {
+	Success bool                     `json:"success"`
+	Data    AgentMessageScheduleStop `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *StopAgentMessageScheduleOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *StopAgentMessageScheduleOK) GetData() AgentMessageScheduleStop {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *StopAgentMessageScheduleOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *StopAgentMessageScheduleOK) SetData(val AgentMessageScheduleStop) {
+	s.Data = val
+}
+
+func (*StopAgentMessageScheduleOK) stopAgentMessageScheduleRes() {}
+
+type StopAgentMessageScheduleUnauthorized ErrorResponse
+
+func (*StopAgentMessageScheduleUnauthorized) stopAgentMessageScheduleRes() {}
+
+type StopAgentMessageScheduleUnprocessableEntity ErrorResponse
+
+func (*StopAgentMessageScheduleUnprocessableEntity) stopAgentMessageScheduleRes() {}
+
 // Ref: #/components/schemas/StorageStats
 type StorageStats struct {
 	// Total storage used in bytes.
@@ -41648,6 +42402,168 @@ func (*UpdateAccountOK) updateAccountRes() {}
 type UpdateAccountUnauthorized ErrorResponse
 
 func (*UpdateAccountUnauthorized) updateAccountRes() {}
+
+type UpdateAgentMessageScheduleBadRequest ErrorResponse
+
+func (*UpdateAgentMessageScheduleBadRequest) updateAgentMessageScheduleRes() {}
+
+type UpdateAgentMessageScheduleForbidden ErrorResponse
+
+func (*UpdateAgentMessageScheduleForbidden) updateAgentMessageScheduleRes() {}
+
+// Ref: #/components/schemas/UpdateAgentMessageScheduleInput
+type UpdateAgentMessageScheduleInput struct {
+	Status          OptUpdateAgentMessageScheduleInputStatus `json:"status"`
+	Subject         OptString                                `json:"subject"`
+	BodyText        OptString                                `json:"body_text"`
+	IntervalMinutes OptInt                                   `json:"interval_minutes"`
+	IdleMinutes     OptNilInt                                `json:"idle_minutes"`
+	AgentCanStop    OptBool                                  `json:"agent_can_stop"`
+}
+
+// GetStatus returns the value of Status.
+func (s *UpdateAgentMessageScheduleInput) GetStatus() OptUpdateAgentMessageScheduleInputStatus {
+	return s.Status
+}
+
+// GetSubject returns the value of Subject.
+func (s *UpdateAgentMessageScheduleInput) GetSubject() OptString {
+	return s.Subject
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *UpdateAgentMessageScheduleInput) GetBodyText() OptString {
+	return s.BodyText
+}
+
+// GetIntervalMinutes returns the value of IntervalMinutes.
+func (s *UpdateAgentMessageScheduleInput) GetIntervalMinutes() OptInt {
+	return s.IntervalMinutes
+}
+
+// GetIdleMinutes returns the value of IdleMinutes.
+func (s *UpdateAgentMessageScheduleInput) GetIdleMinutes() OptNilInt {
+	return s.IdleMinutes
+}
+
+// GetAgentCanStop returns the value of AgentCanStop.
+func (s *UpdateAgentMessageScheduleInput) GetAgentCanStop() OptBool {
+	return s.AgentCanStop
+}
+
+// SetStatus sets the value of Status.
+func (s *UpdateAgentMessageScheduleInput) SetStatus(val OptUpdateAgentMessageScheduleInputStatus) {
+	s.Status = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *UpdateAgentMessageScheduleInput) SetSubject(val OptString) {
+	s.Subject = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *UpdateAgentMessageScheduleInput) SetBodyText(val OptString) {
+	s.BodyText = val
+}
+
+// SetIntervalMinutes sets the value of IntervalMinutes.
+func (s *UpdateAgentMessageScheduleInput) SetIntervalMinutes(val OptInt) {
+	s.IntervalMinutes = val
+}
+
+// SetIdleMinutes sets the value of IdleMinutes.
+func (s *UpdateAgentMessageScheduleInput) SetIdleMinutes(val OptNilInt) {
+	s.IdleMinutes = val
+}
+
+// SetAgentCanStop sets the value of AgentCanStop.
+func (s *UpdateAgentMessageScheduleInput) SetAgentCanStop(val OptBool) {
+	s.AgentCanStop = val
+}
+
+type UpdateAgentMessageScheduleInputStatus string
+
+const (
+	UpdateAgentMessageScheduleInputStatusActive         UpdateAgentMessageScheduleInputStatus = "active"
+	UpdateAgentMessageScheduleInputStatusPaused         UpdateAgentMessageScheduleInputStatus = "paused"
+	UpdateAgentMessageScheduleInputStatusStoppedByOwner UpdateAgentMessageScheduleInputStatus = "stopped_by_owner"
+)
+
+// AllValues returns all UpdateAgentMessageScheduleInputStatus values.
+func (UpdateAgentMessageScheduleInputStatus) AllValues() []UpdateAgentMessageScheduleInputStatus {
+	return []UpdateAgentMessageScheduleInputStatus{
+		UpdateAgentMessageScheduleInputStatusActive,
+		UpdateAgentMessageScheduleInputStatusPaused,
+		UpdateAgentMessageScheduleInputStatusStoppedByOwner,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdateAgentMessageScheduleInputStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdateAgentMessageScheduleInputStatusActive:
+		return []byte(s), nil
+	case UpdateAgentMessageScheduleInputStatusPaused:
+		return []byte(s), nil
+	case UpdateAgentMessageScheduleInputStatusStoppedByOwner:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdateAgentMessageScheduleInputStatus) UnmarshalText(data []byte) error {
+	switch UpdateAgentMessageScheduleInputStatus(data) {
+	case UpdateAgentMessageScheduleInputStatusActive:
+		*s = UpdateAgentMessageScheduleInputStatusActive
+		return nil
+	case UpdateAgentMessageScheduleInputStatusPaused:
+		*s = UpdateAgentMessageScheduleInputStatusPaused
+		return nil
+	case UpdateAgentMessageScheduleInputStatusStoppedByOwner:
+		*s = UpdateAgentMessageScheduleInputStatusStoppedByOwner
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type UpdateAgentMessageScheduleNotFound ErrorResponse
+
+func (*UpdateAgentMessageScheduleNotFound) updateAgentMessageScheduleRes() {}
+
+// Merged schema.
+type UpdateAgentMessageScheduleOK struct {
+	Success bool                 `json:"success"`
+	Data    AgentMessageSchedule `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateAgentMessageScheduleOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateAgentMessageScheduleOK) GetData() AgentMessageSchedule {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateAgentMessageScheduleOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateAgentMessageScheduleOK) SetData(val AgentMessageSchedule) {
+	s.Data = val
+}
+
+func (*UpdateAgentMessageScheduleOK) updateAgentMessageScheduleRes() {}
+
+type UpdateAgentMessageScheduleUnauthorized ErrorResponse
+
+func (*UpdateAgentMessageScheduleUnauthorized) updateAgentMessageScheduleRes() {}
 
 // Set one or both independent discovery permissions.
 // Ref: #/components/schemas/UpdateAgentNetworkMemberInput

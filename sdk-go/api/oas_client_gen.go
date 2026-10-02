@@ -195,6 +195,18 @@ type Invoker interface {
 	//
 	// POST /agent-connections
 	CreateAgentConnection(ctx context.Context, request *CreateAgentConnectionReq, params CreateAgentConnectionParams) (CreateAgentConnectionRes, error)
+	// CreateAgentMessageSchedule invokes createAgentMessageSchedule operation.
+	//
+	// Schedule a recurring message from the calling member's personal
+	// address to one of the org's connected agents. The first message is
+	// sent on the next scheduler pass; later messages reply in the same
+	// thread every `interval_minutes`. With `idle_minutes` set, a due
+	// message is skipped while the agent has been active within that many
+	// minutes. Member credentials only; API keys and agent keys receive
+	// 403.
+	//
+	// POST /agent-message-schedules
+	CreateAgentMessageSchedule(ctx context.Context, request *CreateAgentMessageScheduleInput) (CreateAgentMessageScheduleRes, error)
 	// CreateChallenge invokes createChallenge operation.
 	//
 	// Create an x402 payment challenge (the payee side of a payment). The
@@ -380,6 +392,12 @@ type Invoker interface {
 	//
 	// DELETE /agent-contacts/{agent_address}/{contact_address}
 	DeleteAgentContact(ctx context.Context, params DeleteAgentContactParams) (DeleteAgentContactRes, error)
+	// DeleteAgentMessageSchedule invokes deleteAgentMessageSchedule operation.
+	//
+	// Delete a schedule. Messages already sent are not affected.
+	//
+	// DELETE /agent-message-schedules/{id}
+	DeleteAgentMessageSchedule(ctx context.Context, params DeleteAgentMessageScheduleParams) (DeleteAgentMessageScheduleRes, error)
 	// DeleteContact invokes deleteContact operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -621,6 +639,12 @@ type Invoker interface {
 	//
 	// GET /agent-contact-policy/{agent_address}
 	GetAgentContactPolicy(ctx context.Context, params GetAgentContactPolicyParams) (GetAgentContactPolicyRes, error)
+	// GetAgentMessageSchedule invokes getAgentMessageSchedule operation.
+	//
+	// Get an agent message schedule.
+	//
+	// GET /agent-message-schedules/{id}
+	GetAgentMessageSchedule(ctx context.Context, params GetAgentMessageScheduleParams) (GetAgentMessageScheduleRes, error)
 	// GetChallenge invokes getChallenge operation.
 	//
 	// Fetch a challenge you created, to poll its `status` and settlement
@@ -1007,6 +1031,14 @@ type Invoker interface {
 	//
 	// GET /agent-contacts/{agent_address}
 	ListAgentContacts(ctx context.Context, params ListAgentContactsParams) (ListAgentContactsRes, error)
+	// ListAgentMessageSchedules invokes listAgentMessageSchedules operation.
+	//
+	// Returns the calling member's message schedules, newest first,
+	// optionally filtered to one agent address. Member credentials only;
+	// API keys and agent keys receive 403.
+	//
+	// GET /agent-message-schedules
+	ListAgentMessageSchedules(ctx context.Context, params ListAgentMessageSchedulesParams) (ListAgentMessageSchedulesRes, error)
 	// ListAgentNetworks invokes listAgentNetworks operation.
 	//
 	// An organization member login or an active connected agent allowed to see the network can read
@@ -1701,6 +1733,17 @@ type Invoker interface {
 	//
 	// POST /cli/signup/start
 	StartCliSignup(ctx context.Context, request *StartCliSignupInput) (StartCliSignupRes, error)
+	// StopAgentMessageSchedule invokes stopAgentMessageSchedule operation.
+	//
+	// Called by the receiving agent with its own connected-agent
+	// credential. `id` is the agent's received copy of any message of the
+	// schedule. Stops the schedule when it allows the agent to, and sends a
+	// reply in the schedule's thread carrying a `schedule.stop/1`
+	// interaction so the owner sees it. Calling it again on a schedule the
+	// agent already stopped returns the same result without a second reply.
+	//
+	// POST /emails/{id}/schedule-stop
+	StopAgentMessageSchedule(ctx context.Context, request OptStopAgentMessageScheduleInput, params StopAgentMessageScheduleParams) (StopAgentMessageScheduleRes, error)
 	// TestEndpoint invokes testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -1779,6 +1822,17 @@ type Invoker interface {
 	//
 	// PATCH /account
 	UpdateAccount(ctx context.Context, request *UpdateAccountInput) (UpdateAccountRes, error)
+	// UpdateAgentMessageSchedule invokes updateAgentMessageSchedule operation.
+	//
+	// Pause, resume, or stop a schedule, or change its subject, message,
+	// cadence, inactivity condition, or whether the agent may stop it.
+	// Setting `status` to `active` resumes a paused or stopped schedule and
+	// sends on the next scheduler pass. A null `idle_minutes` clears the
+	// inactivity condition. Member credentials only; API keys and agent
+	// keys receive 403.
+	//
+	// PATCH /agent-message-schedules/{id}
+	UpdateAgentMessageSchedule(ctx context.Context, request *UpdateAgentMessageScheduleInput, params UpdateAgentMessageScheduleParams) (UpdateAgentMessageScheduleRes, error)
 	// UpdateDefaultNetworkMember invokes updateDefaultNetworkMember operation.
 	//
 	// An owner or admin may update any active address. Other human members may update only their own
@@ -3524,6 +3578,122 @@ func (c *Client) sendCreateAgentConnection(ctx context.Context, request *CreateA
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateAgentConnectionResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CreateAgentMessageSchedule invokes createAgentMessageSchedule operation.
+//
+// Schedule a recurring message from the calling member's personal
+// address to one of the org's connected agents. The first message is
+// sent on the next scheduler pass; later messages reply in the same
+// thread every `interval_minutes`. With `idle_minutes` set, a due
+// message is skipped while the agent has been active within that many
+// minutes. Member credentials only; API keys and agent keys receive
+// 403.
+//
+// POST /agent-message-schedules
+func (c *Client) CreateAgentMessageSchedule(ctx context.Context, request *CreateAgentMessageScheduleInput) (CreateAgentMessageScheduleRes, error) {
+	res, err := c.sendCreateAgentMessageSchedule(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCreateAgentMessageSchedule(ctx context.Context, request *CreateAgentMessageScheduleInput) (res CreateAgentMessageScheduleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("createAgentMessageSchedule"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/agent-message-schedules"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CreateAgentMessageScheduleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-message-schedules"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCreateAgentMessageScheduleRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateAgentMessageScheduleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCreateAgentMessageScheduleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -5290,6 +5460,131 @@ func (c *Client) sendDeleteAgentContact(ctx context.Context, params DeleteAgentC
 
 	stage = "DecodeResponse"
 	result, err := decodeDeleteAgentContactResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// DeleteAgentMessageSchedule invokes deleteAgentMessageSchedule operation.
+//
+// Delete a schedule. Messages already sent are not affected.
+//
+// DELETE /agent-message-schedules/{id}
+func (c *Client) DeleteAgentMessageSchedule(ctx context.Context, params DeleteAgentMessageScheduleParams) (DeleteAgentMessageScheduleRes, error) {
+	res, err := c.sendDeleteAgentMessageSchedule(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteAgentMessageSchedule(ctx context.Context, params DeleteAgentMessageScheduleParams) (res DeleteAgentMessageScheduleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteAgentMessageSchedule"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/agent-message-schedules/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteAgentMessageScheduleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-message-schedules/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteAgentMessageScheduleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteAgentMessageScheduleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -8460,6 +8755,131 @@ func (c *Client) sendGetAgentContactPolicy(ctx context.Context, params GetAgentC
 
 	stage = "DecodeResponse"
 	result, err := decodeGetAgentContactPolicyResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetAgentMessageSchedule invokes getAgentMessageSchedule operation.
+//
+// Get an agent message schedule.
+//
+// GET /agent-message-schedules/{id}
+func (c *Client) GetAgentMessageSchedule(ctx context.Context, params GetAgentMessageScheduleParams) (GetAgentMessageScheduleRes, error) {
+	res, err := c.sendGetAgentMessageSchedule(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetAgentMessageSchedule(ctx context.Context, params GetAgentMessageScheduleParams) (res GetAgentMessageScheduleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getAgentMessageSchedule"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-message-schedules/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetAgentMessageScheduleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-message-schedules/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetAgentMessageScheduleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetAgentMessageScheduleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -12132,6 +12552,136 @@ func (c *Client) sendListAgentContacts(ctx context.Context, params ListAgentCont
 
 	stage = "DecodeResponse"
 	result, err := decodeListAgentContactsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListAgentMessageSchedules invokes listAgentMessageSchedules operation.
+//
+// Returns the calling member's message schedules, newest first,
+// optionally filtered to one agent address. Member credentials only;
+// API keys and agent keys receive 403.
+//
+// GET /agent-message-schedules
+func (c *Client) ListAgentMessageSchedules(ctx context.Context, params ListAgentMessageSchedulesParams) (ListAgentMessageSchedulesRes, error) {
+	res, err := c.sendListAgentMessageSchedules(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListAgentMessageSchedules(ctx context.Context, params ListAgentMessageSchedulesParams) (res ListAgentMessageSchedulesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listAgentMessageSchedules"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/agent-message-schedules"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListAgentMessageSchedulesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/agent-message-schedules"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "agent_address" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "agent_address",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.AgentAddress.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListAgentMessageSchedulesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListAgentMessageSchedulesResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -20652,6 +21202,140 @@ func (c *Client) sendStartCliSignup(ctx context.Context, request *StartCliSignup
 	return result, nil
 }
 
+// StopAgentMessageSchedule invokes stopAgentMessageSchedule operation.
+//
+// Called by the receiving agent with its own connected-agent
+// credential. `id` is the agent's received copy of any message of the
+// schedule. Stops the schedule when it allows the agent to, and sends a
+// reply in the schedule's thread carrying a `schedule.stop/1`
+// interaction so the owner sees it. Calling it again on a schedule the
+// agent already stopped returns the same result without a second reply.
+//
+// POST /emails/{id}/schedule-stop
+func (c *Client) StopAgentMessageSchedule(ctx context.Context, request OptStopAgentMessageScheduleInput, params StopAgentMessageScheduleParams) (StopAgentMessageScheduleRes, error) {
+	res, err := c.sendStopAgentMessageSchedule(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendStopAgentMessageSchedule(ctx context.Context, request OptStopAgentMessageScheduleInput, params StopAgentMessageScheduleParams) (res StopAgentMessageScheduleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("stopAgentMessageSchedule"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/emails/{id}/schedule-stop"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, StopAgentMessageScheduleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/schedule-stop"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeStopAgentMessageScheduleRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, StopAgentMessageScheduleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeStopAgentMessageScheduleResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // TestEndpoint invokes testEndpoint operation.
 //
 // Sends a sample `email.received` event to the endpoint. The request
@@ -21451,6 +22135,139 @@ func (c *Client) sendUpdateAccount(ctx context.Context, request *UpdateAccountIn
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateAccountResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateAgentMessageSchedule invokes updateAgentMessageSchedule operation.
+//
+// Pause, resume, or stop a schedule, or change its subject, message,
+// cadence, inactivity condition, or whether the agent may stop it.
+// Setting `status` to `active` resumes a paused or stopped schedule and
+// sends on the next scheduler pass. A null `idle_minutes` clears the
+// inactivity condition. Member credentials only; API keys and agent
+// keys receive 403.
+//
+// PATCH /agent-message-schedules/{id}
+func (c *Client) UpdateAgentMessageSchedule(ctx context.Context, request *UpdateAgentMessageScheduleInput, params UpdateAgentMessageScheduleParams) (UpdateAgentMessageScheduleRes, error) {
+	res, err := c.sendUpdateAgentMessageSchedule(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateAgentMessageSchedule(ctx context.Context, request *UpdateAgentMessageScheduleInput, params UpdateAgentMessageScheduleParams) (res UpdateAgentMessageScheduleRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateAgentMessageSchedule"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.URLTemplateKey.String("/agent-message-schedules/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateAgentMessageScheduleOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/agent-message-schedules/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateAgentMessageScheduleRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateAgentMessageScheduleOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateAgentMessageScheduleResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

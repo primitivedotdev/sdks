@@ -1,0 +1,289 @@
+{
+  "ticks": [
+    {
+      "name": "valid tick",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "valid",
+      "tick": {
+        "schedule_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+        "sequence": 3,
+        "interval_minutes": 30,
+        "idle_minutes": 15,
+        "agent_can_stop": true
+      }
+    },
+    {
+      "name": "tick without inactivity condition",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":null,\"agent_can_stop\":false}}",
+      "status": "valid",
+      "tick": {
+        "schedule_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+        "sequence": 3,
+        "interval_minutes": 30,
+        "idle_minutes": null,
+        "agent_can_stop": false
+      }
+    },
+    {
+      "name": "extra payload fields stay data",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true,\"note\":\"x\"}}",
+      "status": "valid",
+      "tick": {
+        "schedule_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+        "sequence": 3,
+        "interval_minutes": 30,
+        "idle_minutes": 15,
+        "agent_can_stop": true
+      }
+    },
+    {
+      "name": "other protocol",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"read\",\"protocol_version\":1,\"step\":\"read\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "other"
+    },
+    {
+      "name": "other protocol version",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":2,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "other"
+    },
+    {
+      "name": "stop interaction is not a tick",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "other"
+    },
+    {
+      "name": "not an envelope",
+      "raw": "{\"kind\":\"schedule.tick/1\"}",
+      "status": "invalid",
+      "reason": "invalid_envelope"
+    },
+    {
+      "name": "not JSON",
+      "raw": "schedule.tick/1",
+      "status": "invalid",
+      "reason": "invalid_envelope"
+    },
+    {
+      "name": "payload is an array",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":[1]}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "schedule id not a UUID",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"abc\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "sequence zero",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":0,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "sequence fractional",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":1.5,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "interval below minimum",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":4,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "interval above maximum",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":10081,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "interval at maximum",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":10080,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "valid",
+      "tick": {
+        "schedule_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+        "sequence": 3,
+        "interval_minutes": 10080,
+        "idle_minutes": 15,
+        "agent_can_stop": true
+      }
+    },
+    {
+      "name": "idle at maximum",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":10080,\"agent_can_stop\":true}}",
+      "status": "valid",
+      "tick": {
+        "schedule_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+        "sequence": 3,
+        "interval_minutes": 30,
+        "idle_minutes": 10080,
+        "agent_can_stop": true
+      }
+    },
+    {
+      "name": "idle above maximum",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":10081,\"agent_can_stop\":true}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "idle zero",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":0,\"agent_can_stop\":true}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "idle missing",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"agent_can_stop\":true}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "agent_can_stop not boolean",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":\"yes\"}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "sequence as string",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":\"3\",\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    }
+  ],
+  "stop_envelopes": [
+    {
+      "name": "stop with reason",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"1c2d3e4f-5061-4b72-8c83-9d4e5f607182\",\"prev_step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"expires_at\":null,\"payload\":{\"reason\":\"Report is done\"}}",
+      "status": "valid",
+      "stop": {
+        "reason": "Report is done"
+      }
+    },
+    {
+      "name": "stop without reason",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"1c2d3e4f-5061-4b72-8c83-9d4e5f607182\",\"prev_step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"expires_at\":null,\"payload\":{}}",
+      "status": "valid",
+      "stop": {
+        "reason": null
+      }
+    },
+    {
+      "name": "stop with null reason",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"1c2d3e4f-5061-4b72-8c83-9d4e5f607182\",\"prev_step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"expires_at\":null,\"payload\":{\"reason\":null}}",
+      "status": "valid",
+      "stop": {
+        "reason": null
+      }
+    },
+    {
+      "name": "tick is not a stop",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"schedule_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"interval_minutes\":30,\"idle_minutes\":15,\"agent_can_stop\":true}}",
+      "status": "other"
+    },
+    {
+      "name": "stop reason not a string",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"1c2d3e4f-5061-4b72-8c83-9d4e5f607182\",\"prev_step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"expires_at\":null,\"payload\":{\"reason\":5}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "stop reason empty",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"1c2d3e4f-5061-4b72-8c83-9d4e5f607182\",\"prev_step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"expires_at\":null,\"payload\":{\"reason\":\"\"}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "stop reason over limit",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"1c2d3e4f-5061-4b72-8c83-9d4e5f607182\",\"prev_step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"expires_at\":null,\"payload\":{\"reason\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "stop payload is a string",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b@example.com\",\"protocol\":\"schedule.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"1c2d3e4f-5061-4b72-8c83-9d4e5f607182\",\"prev_step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"expires_at\":null,\"payload\":\"done\"}",
+      "status": "invalid",
+      "reason": "invalid_payload"
+    },
+    {
+      "name": "stop not an envelope",
+      "raw": "{}",
+      "status": "invalid",
+      "reason": "invalid_envelope"
+    }
+  ],
+  "stop_bodies": [
+    {
+      "name": "no reason",
+      "reason": null,
+      "status": "valid",
+      "body": {}
+    },
+    {
+      "name": "reason",
+      "reason": "Goal reached: the report is done.",
+      "status": "valid",
+      "body": {
+        "reason": "Goal reached: the report is done."
+      }
+    },
+    {
+      "name": "reason is trimmed",
+      "reason": "  \tdone \r\n",
+      "status": "valid",
+      "body": {
+        "reason": "done"
+      }
+    },
+    {
+      "name": "blank reason is omitted",
+      "reason": " \n ",
+      "status": "valid",
+      "body": {}
+    },
+    {
+      "name": "reason at limit",
+      "reason": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "valid",
+      "body": {
+        "reason": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "name": "astral characters count twice",
+      "reason": "𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈",
+      "status": "valid",
+      "body": {
+        "reason": "𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈"
+      }
+    },
+    {
+      "name": "astral characters over limit",
+      "reason": "𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈𐍈",
+      "status": "invalid"
+    },
+    {
+      "name": "reason over limit",
+      "reason": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "invalid"
+    },
+    {
+      "name": "inner newline",
+      "reason": "done\nnow",
+      "status": "invalid"
+    },
+    {
+      "name": "control character",
+      "reason": "done\u0007",
+      "status": "invalid"
+    },
+    {
+      "name": "delete character",
+      "reason": "done",
+      "status": "invalid"
+    }
+  ]
+}

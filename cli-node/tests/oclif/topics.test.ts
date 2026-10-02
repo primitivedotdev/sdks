@@ -22,6 +22,10 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   // operation, so these topics have no spec tag.
   "org",
   "org:secrets",
+  // Friendly scheduled-message commands over the generated
+  // agent-message-schedules operations.
+  "schedule",
+  "schedules",
 ]);
 
 describe("oclif topics", () => {

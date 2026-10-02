@@ -9,6 +9,11 @@ import {
   notificationPartReader,
   readConversationStatusContent,
 } from "./notify-session-content.js";
+import {
+  readScheduledMessage,
+  renderScheduledMessage,
+  type ScheduledMessage,
+} from "./scheduled-message.js";
 import { scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   bareAddress,
@@ -64,6 +69,8 @@ export type EmailBriefEnvelope = {
   } | null;
   work_claim: WorkClaim | null;
   peer_signal: PeerSignal | null;
+  /** Set when an authenticated sender's email is a scheduled message. */
+  scheduled: ScheduledMessage | null;
 };
 
 export type EmailBrief = {
@@ -278,7 +285,8 @@ export async function buildEmailBrief(input: {
       ? readWorkClaim(client, sender, signal)
       : Promise.resolve(null),
   ]);
-  const [relationship, peerSignal] = await Promise.all([
+  const attachments = detail.parsed?.attachments?.length ?? 0;
+  const [relationship, peerSignal, scheduled] = await Promise.all([
     relationshipFor({
       client,
       detail,
@@ -291,8 +299,12 @@ export async function buildEmailBrief(input: {
     trust.trusted
       ? readPeerSignal({ client, thread, self, sender, signal })
       : Promise.resolve(null),
+    // Only authenticated mail can claim to be a scheduled message: the stop
+    // command printed for it acts on the schedule.
+    trust.trusted && attachments > 0
+      ? readScheduledMessage({ client, detail, signal })
+      : Promise.resolve(null),
   ]);
-  const attachments = detail.parsed?.attachments?.length ?? 0;
   return {
     envelope: {
       email_id: detail.id,
@@ -322,6 +334,7 @@ export async function buildEmailBrief(input: {
             },
       work_claim: claim,
       peer_signal: peerSignal,
+      scheduled,
     },
     subject: detail.subject ?? null,
     body_text: detail.body_text ?? null,
@@ -359,6 +372,7 @@ export function renderEmailBrief(brief: EmailBrief): string {
   lines.push(
     `  attachments: ${e.attachments.present ? `yes (${e.attachments.count})` : "no"}`,
   );
+  if (e.scheduled) lines.push(`  ${renderScheduledMessage(e.scheduled)}`);
   if (e.work_claim)
     lines.push(
       `  sender's work claim (written by the sender): ${JSON.stringify(e.work_claim.claim)}${e.work_claim.until ? ` until ${e.work_claim.until}` : e.work_claim.legacy ? " (no expiry)" : ""}`,

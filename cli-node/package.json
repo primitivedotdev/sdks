@@ -131,6 +131,15 @@
       "routes": {
         "description": "Manage recipient routes. Bind an address pattern to an endpoint or function: `primitive routes add alice@d --function <id>`, `primitive routes list`, `primitive routes test <recipient>`, `primitive routes remove <id>`."
       },
+      "agent-message-schedules": {
+        "description": "Generated API operations for scheduled messages to agents. Prefer `primitive schedules ...` (owner) and `primitive schedule stop` (agent)."
+      },
+      "schedule": {
+        "description": "Act on a scheduled message you received as an agent. Use `primitive schedule stop --id <email-id>` when its goal is done."
+      },
+      "schedules": {
+        "description": "Schedule recurring messages from you to a connected agent. Use `primitive schedules list|get|create|pause|resume|delete`."
+      },
       "wake": {
         "description": "Schedule and send wake commands to your own functions over signed email, and manage which senders may wake them. Use `primitive wake schedules list|create|get|update|delete|run`, `primitive wake authorizations list|create|update|delete`, and `primitive wake dispatches list`."
       },
