@@ -84,7 +84,7 @@ try {
   const token=['inert','invitation','x'.repeat(48)].join('_');
   const credential=['pconn','x'.repeat(48)].join('_');
   const preload=join(directory,'claim-fixture.mjs');
-  await writeFile(preload,`globalThis.fetch=async(input,options)=>{if(String(input)!=='https://api.primitive.dev/v1/agent-connections/claim'||options.method!=='POST')throw new Error('Unexpected network');return Response.json(${JSON.stringify({success:true,data:{org_id:version,api_base_url:'https://api.primitive.dev/v1',api_key:credential,owner_address:'owner@example.test',connection:{address:agent,owner_address:'owner@example.test',status:'claimed'}}})});};`,{mode:0o600});
+  await writeFile(preload,`globalThis.fetch=async(input,options)=>{if(String(input)!=='https://api.primitive.dev/v1/agent-connections/claim'||options.method!=='POST')throw new Error('Unexpected network');return Response.json(${JSON.stringify({success:true,data:{org_id:version,api_base_url:'https://api.primitive.dev/v1',api_key:credential,owner_address:'owner@example.test',owner_member_address:'ada_123456789@example.test',connection:{address:agent,owner_address:'owner@example.test',owner_member_address:'ada_123456789@example.test',status:'claimed'}}})});};`,{mode:0o600});
   const before=hits;
   const claim=await run(['agent','connect','--profile','work','--json'],{preload,stdin:JSON.stringify({token})});
   assert.equal(JSON.parse(claim.stdout).status,'claimed');assert.ok(!(claim.stdout+claim.stderr).includes(token)&&!(claim.stdout+claim.stderr).includes(credential));

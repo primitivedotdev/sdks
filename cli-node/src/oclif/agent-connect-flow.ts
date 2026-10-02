@@ -26,6 +26,10 @@ import {
 } from "./connected-agent-profile.js";
 import { SESSION_UUID } from "./notify-session-native.js";
 import {
+  ownerReportGuidance,
+  refreshOwnerMemberAddress,
+} from "./owner-member-address.js";
+import {
   readMailJson,
   removeMailFile,
   writeMailJson,
@@ -123,6 +127,8 @@ export type AgentConnectFlowDependencies = {
   seedAgentInfo(profileName: string, value: string): Promise<AgentInfoSeed>;
   /** A check counts only when recorded at or after `since` (epoch ms). */
   awaitMailCheck(profileName: string, since: number): Promise<MailCheck>;
+  /** The owner's personal mailbox from the connection's own record. */
+  refreshOwnerMemberAddress(profileName: string): Promise<string | null>;
 };
 
 export type AgentConnectFlowOptions = {
@@ -219,6 +225,8 @@ function defaults(
         return "failed";
       }
     },
+    refreshOwnerMemberAddress: (profileName) =>
+      refreshOwnerMemberAddress({ configDir: options.configDir, profileName }),
     async awaitMailCheck(profileName, since) {
       const deadline =
         Date.now() + (options.mailCheckWaitMs ?? MAIL_CHECK_WAIT_MS);
@@ -328,6 +336,10 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     ...(options.resume ? {} : { invitation: await options.readInvitation() }),
   });
   const verified = result.verification.state === "reply_submitted";
+  const ownerMemberAddress = await dependencies.refreshOwnerMemberAddress(
+    result.identity.profileName,
+  );
+  const identity = { ...result.identity, ownerMemberAddress };
 
   let externalHook: ClaudeWakeHookResult | null = null;
   if (receiver === "external") {
@@ -419,6 +431,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     address: result.identity.agentAddress,
     orgId: result.identity.orgId,
     ownerAddress: result.identity.ownerAddress,
+    ownerMemberAddress,
     profile: result.identity.profileName,
     sessionId: options.session,
     runtime,
@@ -436,8 +449,8 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     skipped,
     selectProfile: `PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}`,
     resumeCommand,
-    guidance: result.guidance,
-    identity: result.identity,
+    guidance: `${result.guidance} ${ownerReportGuidance(identity)}`,
+    identity,
     externalHook,
   };
 }
