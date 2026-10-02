@@ -440,6 +440,44 @@ Idempotency-Key; pass `--idempotency-key <key>` to retry the same redemption
 safely. On any failure the command prints the key it used to stderr, so you can
 run the same command again with `--idempotency-key <key>`.
 
+## Repeating sends
+
+Add `--repeat-every <minutes>` to `send` or `reply` to send the message now and
+then again on that cadence in the same thread. The recipient must be an address
+in your own organization, and a repeating send needs exactly one `--to` and no
+cc, bcc, attachments or `--fyi`. Send it with a member login or an organization API key;
+connected-agent credentials can stop repeats they receive but cannot create or
+manage them.
+
+```bash
+primitive send --to agent@example.com --body-file prompt.txt --repeat-every 60
+primitive reply --id <email-id> --body "Any progress?" --repeat-every 30 --only-if-idle 15
+primitive send --to agent@example.com --body "Status?" --repeat-every 60 --max-sends 8 --until 2026-10-09T17:00:00Z --no-recipient-stop
+```
+
+`--only-if-idle 15` skips a repeat while the recipient has sent mail in the last
+15 minutes. By default the recipient may stop the repeat; `--no-recipient-stop`
+keeps stopping to you. The send result names the repeat id.
+
+```bash
+primitive repeats list --to agent@example.com
+primitive repeats get <repeat-id>
+primitive repeats pause <repeat-id>
+primitive repeats resume <repeat-id>
+primitive repeats cancel <repeat-id>
+```
+
+The recipient stops a repeat when it is no longer needed by passing the repeat
+id from the message footer, or the id of any received message of it:
+
+```bash
+primitive repeat stop --id <email-id> --reason "The report is finished"
+```
+
+The sender sees the stop in the thread. `primitive emails get --id <email-id>
+--brief` marks a repeating message with its cadence and, when the recipient may
+stop it, the exact stop command.
+
 ## Recipient routing
 
 Bind a recipient address to a destination so inbound mail resolves to a single

@@ -512,6 +512,45 @@ generated operations (`setMemory`, `getMemory`, `searchMemories`,
 `deleteMemory`) remain exported from `@primitivedotdev/sdk/api` for callers who
 want the exact OpenAPI operation shape.
 
+#### Repeating sends
+
+Pass `repeat` to `client.send` or `client.reply` to send the message now and
+then again every `everyMinutes` in the same thread. The recipient must be an
+address in your own organization, and a repeating send needs exactly one `to`
+recipient and no cc, bcc or attachments.
+
+```ts
+const sent = await client.send({
+  from: "me@example.com",
+  to: "agent@example.com",
+  subject: "Check in",
+  bodyText: "Any progress on the report?",
+  repeat: {
+    everyMinutes: 60,
+    onlyIfRecipientIdleMinutes: 15, // optional: skip while the recipient sent mail in the last 15 minutes
+    maxSends: 8, // optional, includes the first message
+  },
+});
+await client.repeats.pause(sent.repeatId!);
+await client.repeats.resume(sent.repeatId!);
+const mine = await client.repeats.list({ to: "agent@example.com" });
+await client.repeats.cancel(sent.repeatId!);
+```
+
+The recipient stops a repeat, when the repeat allows it, with the repeat id
+from the message footer or the id of any received message of it:
+
+```ts
+await client.repeats.stop(email.id, { reason: "The report is finished" });
+```
+
+Each repeated message carries a `repeat.tick/1` interaction part, and the stop
+reaches the sender as a `repeat.stop/1` part. Email reads carry a
+server-verified `repeat` marker (`{ repeat_id, sequence }`). `parseRepeatTick`,
+`parseRepeatStop` and `buildRepeatStopBody` in
+`@primitivedotdev/sdk/interactions` read and build these without making
+requests. See [docs/repeating-sends.md](../docs/repeating-sends.md).
+
 ### Webhook signature verification
 
 `primitive.receive(...)` handles verification automatically. If you need to verify a delivery yourself (a different language reverse-proxying through Node, a one-off audit, etc.), the wire format is:

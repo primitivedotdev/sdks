@@ -310,6 +310,36 @@ export {
   preparePresenceProbeEmail,
 } from "./presence.js";
 export type {
+  RepeatStopBody,
+  RepeatStopParseResult,
+  RepeatStopPayload,
+  RepeatTickParseResult,
+  RepeatTickPayload,
+} from "./repeats.js";
+export {
+  buildRepeatStopBody,
+  interactionKind,
+  normalizeRepeatStopReason,
+  parseRepeatStop,
+  parseRepeatTick,
+  REPEAT_EVERY_MAX_MINUTES,
+  REPEAT_EVERY_MIN_MINUTES,
+  REPEAT_IDLE_MAX_MINUTES,
+  REPEAT_MAX_SENDS_MAX,
+  REPEAT_MAX_SENDS_MIN,
+  REPEAT_PROTOCOL_VERSION,
+  REPEAT_STOP_KIND,
+  REPEAT_STOP_PROTOCOL,
+  REPEAT_STOP_REASON_MAX,
+  REPEAT_STOP_STEP,
+  REPEAT_TICK_KIND,
+  REPEAT_TICK_PROTOCOL,
+  REPEAT_TICK_STEP,
+  readRepeatStop,
+  readRepeatTick,
+  repeatStopCommand,
+} from "./repeats.js";
+export type {
   PreparedSignal,
   SignalDependencies,
   SignalInput,

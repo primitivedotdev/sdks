@@ -650,10 +650,12 @@ export async function haltAutoWorking(
     }
     const stopped: string[] = [];
     for (const lease of candidates.values()) {
+      // Only the profile that holds the lease answers by peer: a send under
+      // another credential, or with no connected profile, is unrelated mail.
       const byPeer =
         peers.has(lease.sender) &&
-        (match.profileName === undefined ||
-          match.profileName === lease.profile);
+        match.profileName !== undefined &&
+        match.profileName === lease.profile;
       if (!ids.has(lease.email_id) && !byPeer) continue;
       try {
         const stop = stopWorkingLease(configDir, lease.email_id, reason);

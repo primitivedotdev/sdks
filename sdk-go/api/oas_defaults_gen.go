@@ -35,6 +35,14 @@ func (s *PullWebhookInput) setDefaults() {
 }
 
 // setDefaults set default value of fields.
+func (s *RepeatInput) setDefaults() {
+	{
+		val := bool(true)
+		s.StoppableByRecipient.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *SemanticSearchInput) setDefaults() {
 	{
 		val := SemanticSearchInputMode("hybrid")

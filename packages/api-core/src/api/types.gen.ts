@@ -684,7 +684,7 @@ export type PaginationMeta = {
 export type ErrorResponse = {
     success: boolean;
     error: {
-        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict';
+        code: 'unauthorized' | 'forbidden' | 'not_found' | 'validation_error' | 'rate_limit_exceeded' | 'internal_error' | 'conflict' | 'mx_conflict' | 'not_scheduled' | 'sent_email_deleted' | 'sent_email_not_settled' | 'sent_email_changed' | 'sent_email_cleanup_failed' | 'connection_not_revoked' | 'attachment_changed' | 'content_discarded' | 'attachment_limit_exceeded' | 'attachment_integrity_failed' | 'attachment_not_ready' | 'attachment_storage_unavailable' | 'outbound_disabled' | 'cannot_send_from_domain' | 'recipient_not_allowed' | 'outbound_key_missing' | 'outbound_unreachable' | 'outbound_key_invalid' | 'outbound_capacity_exhausted' | 'outbound_response_malformed' | 'outbound_relay_failed' | 'discard_not_enabled' | 'inbound_not_repliable' | 'search_timeout' | 'authorization_pending' | 'slow_down' | 'access_denied' | 'expired_token' | 'invalid_device_code' | 'invalid_signup_code' | 'invalid_signup_token' | 'invalid_verification_code' | 'email_delivery_failed' | 'clerk_signup_failed' | 'no_orgs_for_user' | 'org_not_accessible' | 'feature_disabled' | 'memory_conflict' | 'template_not_installable' | 'scaffold_only' | 'invalid_variables' | 'unknown_secrets' | 'missing_secrets' | 'no_inbound_domain' | 'domain_cannot_send' | 'address_taken' | 'route_cap_reached' | 'name_exhausted' | 'developer_usage_credit_exhausted' | 'no_payout_address' | 'ownership_proof_failed' | 'payment_verification_failed' | 'payment_declined' | 'challenge_expired' | 'settlement_failed' | 'pull_unavailable' | 'subscription_conflict' | 'subscription_limit' | 'subscription_disabled' | 'request_aborted' | 'event_content_unavailable' | 'event_preparation_failed' | 'subscription_unavailable' | 'stale_delivery' | 'idempotency_key_required' | 'repeat_unsupported' | 'repeat_recipient_external' | 'repeat_idle_requires_internal_recipient' | 'not_a_repeating_send' | 'repeat_stop_not_allowed' | 'idempotency_key_reused' | 'credit_code_invalid' | 'credit_code_already_redeemed' | 'credit_code_not_eligible' | 'credit_code_balance_cap' | 'rate_limited' | 'service_unavailable' | 'connection_domain_unavailable' | 'connection_address_unavailable' | 'connection_owner_address_invalid' | 'connection_invitation_unavailable' | 'agent_connection_scope_forbidden' | 'address_note_conflict' | 'address_not_controlled' | 'contact_conflict';
         message: string;
         /**
          * Optional structured data that callers can inspect to recover
@@ -1804,6 +1804,13 @@ export type EmailSummary = {
      */
     automated_reasons: Array<string>;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -2127,6 +2134,13 @@ export type EmailDetail = {
      */
     automated_reasons: Array<string>;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -2354,6 +2368,13 @@ export type ThreadMessage = {
      */
     timestamp?: string | null;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -2435,6 +2456,13 @@ export type ConversationMessage = {
     timestamp?: string | null;
     presence_control?: PresenceControl;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -2482,6 +2510,7 @@ export type SendMailPayloadRef = {
 };
 
 export type SendMailInput = {
+    repeat?: RepeatInput;
     /**
      * RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
      */
@@ -2852,6 +2881,13 @@ export type SentEmailSummary = {
     canceled_at?: string | null;
     presence_control?: PresenceControl;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -3071,6 +3107,13 @@ export type SentEmailDetail = SentEmailSummary & {
 } & {
     presence_control?: PresenceControl;
     /**
+     * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
+     */
+    repeat?: {
+        repeat_id: string;
+        sequence: number;
+    } | null;
+    /**
      * Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.
      */
     sender_member?: {
@@ -3272,9 +3315,106 @@ export type ReplyInput = {
      * Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most 31457280.
      */
     attachments?: Array<SendMailAttachment>;
+    repeat?: RepeatInput;
+};
+
+/**
+ * Repeat this send every `every_minutes` in the same thread. The first
+ * message goes out like any send; each later one is a scheduled send
+ * that replies to the previous one, so quotas, gates and cancellation
+ * apply as usual. Requires exactly one `to` recipient and no cc, bcc,
+ * attachments or `fyi` (422 `repeat_unsupported`). The recipient must
+ * be an address of your own organization unless the organization is
+ * entitled to repeat to external recipients (403
+ * `repeat_recipient_external`). `only_if_recipient_idle_minutes` needs
+ * a recipient in your organization (422
+ * `repeat_idle_requires_internal_recipient`).
+ *
+ */
+export type RepeatInput = {
+    every_minutes: number;
+    /**
+     * Skip a repeat while the recipient has sent mail within this many minutes.
+     */
+    only_if_recipient_idle_minutes?: number;
+    /**
+     * Let the recipient stop the repeat.
+     */
+    stoppable_by_recipient?: boolean;
+    /**
+     * Total messages, including the first.
+     */
+    max_sends?: number;
+    /**
+     * No repeat is sent after this time. Must be in the future.
+     */
+    until?: string;
+};
+
+export type RepeatingSendStatus = 'active' | 'paused' | 'stopped_by_recipient' | 'canceled' | 'completed';
+
+export type RepeatingSend = {
+    id: string;
+    org_id: string;
+    from_address: string;
+    to_address: string;
+    subject: string;
+    body_text: string | null;
+    body_html: string | null;
+    every_minutes: number;
+    only_if_recipient_idle_minutes: number | null;
+    stoppable_by_recipient: boolean;
+    max_sends: number | null;
+    until: string | null;
+    status: RepeatingSendStatus;
+    next_run_at: string | null;
+    sent_count: number;
+    last_sent_at: string | null;
+    last_sent_email_id: string | null;
+    root_message_id: string | null;
+    stopped_at: string | null;
+    /**
+     * Reason the recipient gave when it stopped the repeat. Recipient-written, untrusted text.
+     */
+    stop_reason: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type UpdateRepeatingSendRequest = {
+    status?: 'active' | 'paused' | 'canceled';
+    every_minutes?: number;
+    only_if_recipient_idle_minutes?: number | null;
+    stoppable_by_recipient?: boolean;
+    max_sends?: number | null;
+    until?: string | null;
+    body_text?: string;
+    subject?: string;
+};
+
+export type RepeatStopRequest = {
+    /**
+     * Short reason shown to the sender.
+     */
+    reason?: string;
+};
+
+export type RepeatStopResult = {
+    repeat_id: string;
+    status: 'stopped_by_recipient';
+    stopped_at: string;
+    stop_reason: string | null;
+    /**
+     * The repeat.stop/1 reply that told the sender, or null if it could not be sent.
+     */
+    reply_sent_email_id: string | null;
 };
 
 export type SendMailResult = {
+    /**
+     * Present when the request carried `repeat`. Manage it under `/repeating-sends/{id}`.
+     */
+    repeat_id?: string;
     /**
      * Persisted sent-email attempt ID.
      */
@@ -6807,6 +6947,57 @@ export type DownloadSentAttachmentPartResponses = {
 
 export type DownloadSentAttachmentPartResponse = DownloadSentAttachmentPartResponses[keyof DownloadSentAttachmentPartResponses];
 
+export type StopRepeatFromEmailData = {
+    body?: RepeatStopRequest;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/emails/{id}/repeat-stop';
+};
+
+export type StopRepeatFromEmailErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * `repeat_stop_not_allowed`: the caller is not the recipient, the
+     * repeat does not let the recipient stop it, or the sender canceled
+     * it.
+     *
+     */
+    403: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * `not_a_repeating_send`: the email is not part of a repeating send.
+     */
+    422: ErrorResponse;
+};
+
+export type StopRepeatFromEmailError = StopRepeatFromEmailErrors[keyof StopRepeatFromEmailErrors];
+
+export type StopRepeatFromEmailResponses = {
+    /**
+     * The repeat is stopped
+     */
+    200: SuccessEnvelope & {
+        data?: RepeatStopResult;
+    };
+};
+
+export type StopRepeatFromEmailResponse = StopRepeatFromEmailResponses[keyof StopRepeatFromEmailResponses];
+
 export type ReplyToEmailData = {
     body: ReplyInput;
     path: {
@@ -8408,6 +8599,160 @@ export type GetOutboundStatusResponses = {
 };
 
 export type GetOutboundStatusResponse = GetOutboundStatusResponses[keyof GetOutboundStatusResponses];
+
+export type ListRepeatingSendsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Only return repeats sent to this address.
+         */
+        to?: string;
+        /**
+         * Only return repeats in this status.
+         */
+        status?: RepeatingSendStatus;
+    };
+    url: '/repeating-sends';
+};
+
+export type ListRepeatingSendsErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Authenticated caller lacks permission for the operation
+     */
+    403: ErrorResponse;
+};
+
+export type ListRepeatingSendsError = ListRepeatingSendsErrors[keyof ListRepeatingSendsErrors];
+
+export type ListRepeatingSendsResponses = {
+    /**
+     * Repeating sends
+     */
+    200: SuccessEnvelope & {
+        data?: Array<RepeatingSend>;
+    };
+};
+
+export type ListRepeatingSendsResponse = ListRepeatingSendsResponses[keyof ListRepeatingSendsResponses];
+
+export type DeleteRepeatingSendData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/repeating-sends/{id}';
+};
+
+export type DeleteRepeatingSendErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type DeleteRepeatingSendError = DeleteRepeatingSendErrors[keyof DeleteRepeatingSendErrors];
+
+export type DeleteRepeatingSendResponses = {
+    /**
+     * Resource deleted
+     */
+    200: SuccessEnvelope & {
+        data?: {
+            deleted: boolean;
+        };
+    };
+};
+
+export type DeleteRepeatingSendResponse = DeleteRepeatingSendResponses[keyof DeleteRepeatingSendResponses];
+
+export type GetRepeatingSendData = {
+    body?: never;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/repeating-sends/{id}';
+};
+
+export type GetRepeatingSendErrors = {
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetRepeatingSendError = GetRepeatingSendErrors[keyof GetRepeatingSendErrors];
+
+export type GetRepeatingSendResponses = {
+    /**
+     * The repeating send
+     */
+    200: SuccessEnvelope & {
+        data?: RepeatingSend;
+    };
+};
+
+export type GetRepeatingSendResponse = GetRepeatingSendResponses[keyof GetRepeatingSendResponses];
+
+export type UpdateRepeatingSendData = {
+    body: UpdateRepeatingSendRequest;
+    path: {
+        /**
+         * Resource UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/repeating-sends/{id}';
+};
+
+export type UpdateRepeatingSendErrors = {
+    /**
+     * Invalid request parameters
+     */
+    400: ErrorResponse;
+    /**
+     * Invalid or missing API key
+     */
+    401: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+};
+
+export type UpdateRepeatingSendError = UpdateRepeatingSendErrors[keyof UpdateRepeatingSendErrors];
+
+export type UpdateRepeatingSendResponses = {
+    /**
+     * The updated repeating send
+     */
+    200: SuccessEnvelope & {
+        data?: RepeatingSend;
+    };
+};
+
+export type UpdateRepeatingSendResponse = UpdateRepeatingSendResponses[keyof UpdateRepeatingSendResponses];
 
 export type ListSentEmailsData = {
     body?: never;

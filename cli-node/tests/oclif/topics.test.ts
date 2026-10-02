@@ -22,6 +22,10 @@ const HAND_ROLLED_VISIBLE_TOPICS = new Set([
   // operation, so these topics have no spec tag.
   "org",
   "org:secrets",
+  // Friendly repeating-send commands over the generated
+  // repeating-sends operations.
+  "repeat",
+  "repeats",
 ]);
 
 describe("oclif topics", () => {

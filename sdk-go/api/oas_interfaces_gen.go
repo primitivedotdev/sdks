@@ -149,6 +149,10 @@ type DeleteRegistryRes interface {
 	deleteRegistryRes()
 }
 
+type DeleteRepeatingSendRes interface {
+	deleteRepeatingSendRes()
+}
+
 type DeleteRouteRes interface {
 	deleteRouteRes()
 }
@@ -259,6 +263,10 @@ type GetOutboundStatusRes interface {
 
 type GetRegistryRes interface {
 	getRegistryRes()
+}
+
+type GetRepeatingSendRes interface {
+	getRepeatingSendRes()
 }
 
 type GetSendPermissionsRes interface {
@@ -379,6 +387,10 @@ type ListRegistriesRes interface {
 
 type ListRegistryRequestsRes interface {
 	listRegistryRequestsRes()
+}
+
+type ListRepeatingSendsRes interface {
+	listRepeatingSendsRes()
 }
 
 type ListRoutesRes interface {
@@ -553,6 +565,10 @@ type StartCliSignupRes interface {
 	startCliSignupRes()
 }
 
+type StopRepeatFromEmailRes interface {
+	stopRepeatFromEmailRes()
+}
+
 type TestEndpointRes interface {
 	testEndpointRes()
 }
@@ -599,6 +615,10 @@ type UpdateFunctionRes interface {
 
 type UpdateRegistryRes interface {
 	updateRegistryRes()
+}
+
+type UpdateRepeatingSendRes interface {
+	updateRepeatingSendRes()
 }
 
 type UpdateRouteRes interface {

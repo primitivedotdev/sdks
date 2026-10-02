@@ -37,6 +37,10 @@ import {
   type MemoryRecord as GeneratedMemoryRecord,
   type MemoryRecordWithValue as GeneratedMemoryRecordWithValue,
   type PaginationMeta as GeneratedPaginationMeta,
+  type RepeatInput as GeneratedRepeatInput,
+  type RepeatingSend as GeneratedRepeatingSend,
+  type RepeatingSendStatus as GeneratedRepeatingSendStatus,
+  type RepeatStopResult as GeneratedRepeatStopResult,
   type ReplyInput as GeneratedReplyInput,
   type SearchMemoriesData as GeneratedSearchMemoriesData,
   type SemanticSearchInput as GeneratedSemanticSearchInput,
@@ -46,6 +50,7 @@ import {
   type SendMailInput as GeneratedSendMailInput,
   type SendMailResult as GeneratedSendMailResult,
   type SetMemoryInput as GeneratedSetMemoryInput,
+  type UpdateRepeatingSendRequest as GeneratedUpdateRepeatingSendRequest,
   operations as generatedOperations,
   isMemoryJsonValue,
   PrimitiveApiClient,
@@ -55,6 +60,7 @@ import {
   type StartAgentClaimInput,
   type VerifyAgentClaimInput,
 } from "@primitivedotdev/api-core";
+import { buildRepeatStopBody } from "../interactions/repeats.js";
 import { type PushResult, pushBytes, pushFile } from "../payloads/index.js";
 import { loadNodeFsPromises } from "../payloads/node-fs.js";
 import type { ReceivedEmail } from "../webhook/received-email.js";
@@ -188,6 +194,46 @@ export interface SendInput {
    * POST /sent-emails/{id}/cancel.
    */
   scheduledAt?: string;
+  /**
+   * Send this message now and then again every `everyMinutes` in the same
+   * thread. See {@link RepeatOptions}. The result carries `repeatId`.
+   */
+  repeat?: RepeatOptions;
+}
+
+/**
+ * Options for a repeating send or reply. The recipient must be an address of
+ * your own organization unless it is entitled to repeat externally, and the
+ * send needs exactly one `to` recipient, no cc, bcc or attachments.
+ */
+export interface RepeatOptions {
+  /** Minutes between messages, 5 to 10080. */
+  everyMinutes: number;
+  /** Skip a repeat while the recipient has sent mail within this many minutes. */
+  onlyIfRecipientIdleMinutes?: number;
+  /** Let the recipient stop the repeat. Defaults to true. */
+  stoppableByRecipient?: boolean;
+  /** Total messages including the first, 2 to 10000. */
+  maxSends?: number;
+  /** ISO 8601 time after which no repeat is sent. */
+  until?: string;
+}
+
+function buildRepeatInput(repeat: RepeatOptions): GeneratedRepeatInput {
+  if (!repeat || typeof repeat !== "object") {
+    throw new TypeError("repeat must be an object");
+  }
+  return {
+    every_minutes: repeat.everyMinutes,
+    ...(repeat.onlyIfRecipientIdleMinutes !== undefined
+      ? { only_if_recipient_idle_minutes: repeat.onlyIfRecipientIdleMinutes }
+      : {}),
+    ...(repeat.stoppableByRecipient !== undefined
+      ? { stoppable_by_recipient: repeat.stoppableByRecipient }
+      : {}),
+    ...(repeat.maxSends !== undefined ? { max_sends: repeat.maxSends } : {}),
+    ...(repeat.until !== undefined ? { until: repeat.until } : {}),
+  };
 }
 
 /** Attachments at or below this size are sent inline; larger ones are uploaded + referenced. */
@@ -264,6 +310,8 @@ export type ReplyInput =
       from?: string;
       attachments?: SendAttachment[];
       wait?: boolean;
+      /** Repeat this reply in the same thread. See {@link RepeatOptions}. */
+      repeat?: RepeatOptions;
     };
 
 export interface ForwardInput {
@@ -308,6 +356,8 @@ export interface SendResult {
    * Absent on immediate sends.
    */
   scheduledAt?: string;
+  /** Present when the request carried `repeat`; manage it with `client.repeats`. */
+  repeatId?: string;
 }
 
 /**
@@ -873,6 +923,9 @@ function buildReplyBody(input: ReplyInput): GeneratedReplyInput {
       ? { attachments: resolved.attachments }
       : {}),
     ...(resolved.wait !== undefined ? { wait: resolved.wait } : {}),
+    ...(resolved.repeat !== undefined
+      ? { repeat: buildRepeatInput(resolved.repeat) }
+      : {}),
   };
 }
 
@@ -1116,6 +1169,143 @@ export class MemoriesResource {
   }
 }
 
+const UUID_PATTERN =
+  /^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$/i;
+
+function assertUuid(value: unknown, label: string): asserts value is string {
+  if (typeof value !== "string" || !UUID_PATTERN.test(value)) {
+    throw new TypeError(`${label} must be a UUID`);
+  }
+}
+
+export type RepeatingSendUpdateInput = GeneratedUpdateRepeatingSendRequest;
+
+export interface RepeatingSendListInput {
+  /** Only return repeats sent to this address. */
+  to?: string;
+  /** Only return repeats in this status. */
+  status?: GeneratedRepeatingSendStatus;
+}
+
+export interface RepeatStopInput {
+  /** Short reason shown to the sender, at most 280 characters. */
+  reason?: string;
+}
+
+/**
+ * Repeating sends, grouped under `client.repeats`.
+ *
+ * Create a repeat by passing `repeat` to `client.send` or `client.reply`.
+ * `list`, `get`, `update`, `pause`, `resume`, `cancel` and `delete` manage
+ * repeats you created. `stop` is the recipient side: called on any received
+ * message of a repeat, it stops the repeat when the repeat allows it, and the
+ * server tells the sender in the thread.
+ */
+export class RepeatsResource {
+  constructor(private readonly client: PrimitiveApiClient["client"]) {}
+
+  async list(
+    input: RepeatingSendListInput = {},
+    options?: RequestOptions,
+  ): Promise<GeneratedRepeatingSend[]> {
+    const query = {
+      ...(input.to !== undefined ? { to: input.to } : {}),
+      ...(input.status !== undefined ? { status: input.status } : {}),
+    };
+    const result = await generatedOperations.listRepeatingSends({
+      ...(Object.keys(query).length > 0 ? { query } : {}),
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedRepeatingSend[]>(result, "repeating sends");
+  }
+
+  async get(
+    id: string,
+    options?: RequestOptions,
+  ): Promise<GeneratedRepeatingSend> {
+    assertUuid(id, "id");
+    const result = await generatedOperations.getRepeatingSend({
+      path: { id },
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedRepeatingSend>(result, "repeating send");
+  }
+
+  async update(
+    id: string,
+    input: RepeatingSendUpdateInput,
+    options?: RequestOptions,
+  ): Promise<GeneratedRepeatingSend> {
+    assertUuid(id, "id");
+    const result = await generatedOperations.updateRepeatingSend({
+      path: { id },
+      body: input,
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedRepeatingSend>(result, "repeating send");
+  }
+
+  pause(id: string, options?: RequestOptions): Promise<GeneratedRepeatingSend> {
+    return this.update(id, { status: "paused" }, options);
+  }
+
+  /** Resume a paused repeat, or one the recipient stopped. */
+  resume(
+    id: string,
+    options?: RequestOptions,
+  ): Promise<GeneratedRepeatingSend> {
+    return this.update(id, { status: "active" }, options);
+  }
+
+  cancel(
+    id: string,
+    options?: RequestOptions,
+  ): Promise<GeneratedRepeatingSend> {
+    return this.update(id, { status: "canceled" }, options);
+  }
+
+  async delete(
+    id: string,
+    options?: RequestOptions,
+  ): Promise<{ deleted?: boolean }> {
+    assertUuid(id, "id");
+    const result = await generatedOperations.deleteRepeatingSend({
+      path: { id },
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<{ deleted?: boolean }>(result, "repeating send delete");
+  }
+
+  /**
+   * Stop a repeat as its recipient. `id` is a received message of the repeat
+   * or the repeat id from the message footer. Idempotent: a repeat call
+   * returns the same result without a second reply.
+   */
+  async stop(
+    emailId: string,
+    input: RepeatStopInput = {},
+    options?: RequestOptions,
+  ): Promise<GeneratedRepeatStopResult> {
+    assertUuid(emailId, "emailId");
+    const result = await generatedOperations.stopRepeatFromEmail({
+      path: { id: emailId },
+      body: buildRepeatStopBody(input),
+      ...resolveRequestOptions(options),
+      client: this.client,
+      responseStyle: "fields",
+    });
+    return unwrapData<GeneratedRepeatStopResult>(result, "repeat stop");
+  }
+}
+
 export class PrimitiveClient extends PrimitiveApiClient {
   /** Receive durable events in this process, without a public URL. */
   readonly events = new EventsResource(this.client);
@@ -1127,6 +1317,8 @@ export class PrimitiveClient extends PrimitiveApiClient {
   readonly account: AccountResource = new AccountResource(this.client);
   /** Durable JSON key-value state for agents and Functions. */
   readonly memories: MemoriesResource = new MemoriesResource(this.client);
+  /** Repeating sends you created, and stopping one you received. */
+  readonly repeats: RepeatsResource = new RepeatsResource(this.client);
 
   // Captured for sendAttachment's upload path, which talks to /v1/payloads
   // directly (streaming, content-addressed) rather than through the generated
@@ -1249,6 +1441,9 @@ export class PrimitiveClient extends PrimitiveApiClient {
         : {}),
       ...(input.scheduledAt !== undefined
         ? { scheduled_at: input.scheduledAt }
+        : {}),
+      ...(input.repeat !== undefined
+        ? { repeat: buildRepeatInput(input.repeat) }
         : {}),
     };
 
@@ -1542,6 +1737,9 @@ function mapSendResult(result: GeneratedSendMailResult): SendResult {
       : {}),
     ...(result.scheduled_at !== undefined
       ? { scheduledAt: result.scheduled_at }
+      : {}),
+    ...(typeof result.repeat_id === "string"
+      ? { repeatId: result.repeat_id }
       : {}),
   };
 }

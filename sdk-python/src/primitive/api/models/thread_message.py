@@ -15,6 +15,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0
   from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
 
 
@@ -40,6 +41,9 @@ class ThreadMessage:
             subject (None | str | Unset):
             status (None | str | Unset): Lifecycle status (an EmailStatus or SentEmailStatus value, per `direction`).
             timestamp (datetime.datetime | None | Unset): received_at for inbound, created_at for outbound.
+            repeat (None | ThreadMessageRepeatType0 | Unset): Set when Primitive sent this message as part of a repeating
+                send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
+                servers that predate repeating sends.
             sender_member (None | ThreadMessageSenderMemberType0 | Unset): Verified human authorship, projected only within
                 the member organization. Historical attribution is not current sending or owner authority.
      """
@@ -52,6 +56,7 @@ class ThreadMessage:
     subject: None | str | Unset = UNSET
     status: None | str | Unset = UNSET
     timestamp: datetime.datetime | None | Unset = UNSET
+    repeat: None | ThreadMessageRepeatType0 | Unset = UNSET
     sender_member: None | ThreadMessageSenderMemberType0 | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -60,6 +65,7 @@ class ThreadMessage:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0
         from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
         direction = self.direction.value
 
@@ -103,6 +109,14 @@ class ThreadMessage:
         else:
             timestamp = self.timestamp
 
+        repeat: dict[str, Any] | None | Unset
+        if isinstance(self.repeat, Unset):
+            repeat = UNSET
+        elif isinstance(self.repeat, ThreadMessageRepeatType0):
+            repeat = self.repeat.to_dict()
+        else:
+            repeat = self.repeat
+
         sender_member: dict[str, Any] | None | Unset
         if isinstance(self.sender_member, Unset):
             sender_member = UNSET
@@ -130,6 +144,8 @@ class ThreadMessage:
             field_dict["status"] = status
         if timestamp is not UNSET:
             field_dict["timestamp"] = timestamp
+        if repeat is not UNSET:
+            field_dict["repeat"] = repeat
         if sender_member is not UNSET:
             field_dict["sender_member"] = sender_member
 
@@ -139,6 +155,7 @@ class ThreadMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0
         from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
         d = dict(src_dict)
         direction = ThreadMessageDirection(d.pop("direction"))
@@ -221,6 +238,26 @@ class ThreadMessage:
         timestamp = _parse_timestamp(d.pop("timestamp", UNSET))
 
 
+        def _parse_repeat(data: object) -> None | ThreadMessageRepeatType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                repeat_type_0 = ThreadMessageRepeatType0.from_dict(data)
+
+
+
+                return repeat_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | ThreadMessageRepeatType0 | Unset, data)
+
+        repeat = _parse_repeat(d.pop("repeat", UNSET))
+
+
         def _parse_sender_member(data: object) -> None | ThreadMessageSenderMemberType0 | Unset:
             if data is None:
                 return data
@@ -250,6 +287,7 @@ class ThreadMessage:
             subject=subject,
             status=status,
             timestamp=timestamp,
+            repeat=repeat,
             sender_member=sender_member,
         )
 

@@ -448,6 +448,12 @@ type Handler interface {
 	//
 	// DELETE /registries/{slug}
 	DeleteRegistry(ctx context.Context, params DeleteRegistryParams) (DeleteRegistryRes, error)
+	// DeleteRepeatingSend implements deleteRepeatingSend operation.
+	//
+	// Deletes the repeat and cancels its pending message. Messages already sent are not affected.
+	//
+	// DELETE /repeating-sends/{id}
+	DeleteRepeatingSend(ctx context.Context, params DeleteRepeatingSendParams) (DeleteRepeatingSendRes, error)
 	// DeleteRoute implements deleteRoute operation.
 	//
 	// Delete a recipient route.
@@ -812,6 +818,12 @@ type Handler interface {
 	//
 	// GET /registries/{slug}
 	GetRegistry(ctx context.Context, params GetRegistryParams) (GetRegistryRes, error)
+	// GetRepeatingSend implements getRepeatingSend operation.
+	//
+	// Get a repeating send.
+	//
+	// GET /repeating-sends/{id}
+	GetRepeatingSend(ctx context.Context, params GetRepeatingSendParams) (GetRepeatingSendRes, error)
 	// GetSendPermissions implements getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -1151,6 +1163,15 @@ type Handler interface {
 	//
 	// GET /registries/{slug}/requests
 	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
+	// ListRepeatingSends implements listRepeatingSends operation.
+	//
+	// Repeating sends you created, newest first. A repeat is visible to the
+	// member who created it, or to any organization API key or member for
+	// repeats created with an organization API key. Agent credentials get
+	// 403.
+	//
+	// GET /repeating-sends
+	ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (ListRepeatingSendsRes, error)
 	// ListRoutes implements listRoutes operation.
 	//
 	// Returns the org's recipient routing rules in evaluation order. Each rule
@@ -1683,6 +1704,20 @@ type Handler interface {
 	//
 	// POST /cli/signup/start
 	StartCliSignup(ctx context.Context, req *StartCliSignupInput) (StartCliSignupRes, error)
+	// StopRepeatFromEmail implements stopRepeatFromEmail operation.
+	//
+	// Called by the recipient of a repeating send: the connected agent's own
+	// credential for an agent address, or the signed-in member whose personal
+	// address it is. `id` is the caller's received copy of any message of the
+	// repeat, or the repeat id printed in the message footer, which resolves
+	// to the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels
+	// the
+	// pending message, and replies once in the thread with a
+	// `repeat.stop/1` interaction so the sender sees it. A repeat call returns
+	// the same result without a second reply.
+	//
+	// POST /emails/{id}/repeat-stop
+	StopRepeatFromEmail(ctx context.Context, req OptRepeatStopRequest, params StopRepeatFromEmailParams) (StopRepeatFromEmailRes, error)
 	// TestEndpoint implements testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -1813,6 +1848,16 @@ type Handler interface {
 	//
 	// PATCH /registries/{slug}
 	UpdateRegistry(ctx context.Context, req *UpdateRegistryInput, params UpdateRegistryParams) (UpdateRegistryRes, error)
+	// UpdateRepeatingSend implements updateRepeatingSend operation.
+	//
+	// Pause, resume or cancel a repeat, or change its cadence, limits,
+	// message or whether the recipient may stop it. `active` resumes a paused
+	// repeat or one the recipient stopped; the next message goes out within
+	// about a minute. A null `only_if_recipient_idle_minutes`, `max_sends`
+	// or `until` clears that limit.
+	//
+	// PATCH /repeating-sends/{id}
+	UpdateRepeatingSend(ctx context.Context, req *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error)
 	// UpdateRoute implements updateRoute operation.
 	//
 	// Update a recipient route.

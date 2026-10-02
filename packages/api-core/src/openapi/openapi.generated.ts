@@ -37,6 +37,10 @@ export const openapiDocument: Record<string, unknown> = {
   ],
   "tags": [
     {
+      "name": "Repeating Sends",
+      "description": "A send or reply with `repeat` goes out now and then again every\n`every_minutes` in the same thread. Each message carries a\n`repeat.tick/1` interaction. The recipient stops a repeat it may stop\nthrough `/emails/{id}/repeat-stop`; its creator manages it here.\n"
+    },
+    {
       "name": "Agent Connections",
       "description": "Manage address-bound connections to external agent runtimes."
     },
@@ -2763,6 +2767,84 @@ export const openapiDocument: Record<string, unknown> = {
         }
       }
     },
+    "/emails/{id}/repeat-stop": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "post": {
+        "operationId": "stopRepeatFromEmail",
+        "summary": "Stop the repeat behind a received message",
+        "description": "Called by the recipient of a repeating send: the connected agent's own\ncredential for an agent address, or the signed-in member whose personal\naddress it is. `id` is the caller's received copy of any message of the\nrepeat, or the repeat id printed in the message footer, which resolves\nto the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels the\npending message, and replies once in the thread with a\n`repeat.stop/1` interaction so the sender sees it. A repeat call returns\nthe same result without a second reply.\n",
+        "tags": [
+          "Repeating Sends"
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepeatStopRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The repeat is stopped",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RepeatStopResult"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "`repeat_stop_not_allowed`: the caller is not the recipient, the\nrepeat does not let the recipient stop it, or the sender canceled\nit.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "description": "`not_a_repeating_send`: the email is not part of a repeating send.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/emails/{id}/reply": {
       "parameters": [
         {
@@ -4820,6 +4902,183 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/repeating-sends": {
+      "get": {
+        "operationId": "listRepeatingSends",
+        "summary": "List repeating sends",
+        "description": "Repeating sends you created, newest first. A repeat is visible to the\nmember who created it, or to any organization API key or member for\nrepeats created with an organization API key. Agent credentials get\n403.\n",
+        "tags": [
+          "Repeating Sends"
+        ],
+        "parameters": [
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Only return repeats sent to this address."
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RepeatingSendStatus"
+            },
+            "description": "Only return repeats in this status."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Repeating sends",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/RepeatingSend"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/repeating-sends/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/ResourceId"
+        }
+      ],
+      "get": {
+        "operationId": "getRepeatingSend",
+        "summary": "Get a repeating send",
+        "tags": [
+          "Repeating Sends"
+        ],
+        "responses": {
+          "200": {
+            "description": "The repeating send",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RepeatingSend"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateRepeatingSend",
+        "summary": "Update a repeating send",
+        "description": "Pause, resume or cancel a repeat, or change its cadence, limits,\nmessage or whether the recipient may stop it. `active` resumes a paused\nrepeat or one the recipient stopped; the next message goes out within\nabout a minute. A null `only_if_recipient_idle_minutes`, `max_sends`\nor `until` clears that limit.\n",
+        "tags": [
+          "Repeating Sends"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRepeatingSendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated repeating send",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/RepeatingSend"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteRepeatingSend",
+        "summary": "Delete a repeating send",
+        "description": "Deletes the repeat and cancels its pending message. Messages already sent are not affected.",
+        "tags": [
+          "Repeating Sends"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }
@@ -15750,6 +16009,11 @@ export const openapiDocument: Record<string, unknown> = {
                   "subscription_unavailable",
                   "stale_delivery",
                   "idempotency_key_required",
+                  "repeat_unsupported",
+                  "repeat_recipient_external",
+                  "repeat_idle_requires_internal_recipient",
+                  "not_a_repeating_send",
+                  "repeat_stop_not_allowed",
                   "idempotency_key_reused",
                   "credit_code_invalid",
                   "credit_code_already_redeemed",
@@ -17944,6 +18208,27 @@ export const openapiDocument: Record<string, unknown> = {
             },
             "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
           },
+          "repeat": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+            "properties": {
+              "repeat_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "repeat_id",
+              "sequence"
+            ]
+          },
           "sender_member": {
             "type": [
               "object",
@@ -18422,6 +18707,27 @@ export const openapiDocument: Record<string, unknown> = {
             },
             "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
           },
+          "repeat": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+            "properties": {
+              "repeat_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "repeat_id",
+              "sequence"
+            ]
+          },
           "sender_member": {
             "type": [
               "object",
@@ -18897,6 +19203,27 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "date-time",
             "description": "received_at for inbound, created_at for outbound."
           },
+          "repeat": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+            "properties": {
+              "repeat_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "repeat_id",
+              "sequence"
+            ]
+          },
           "sender_member": {
             "type": [
               "object",
@@ -19034,6 +19361,27 @@ export const openapiDocument: Record<string, unknown> = {
           "presence_control": {
             "$ref": "#/components/schemas/PresenceControl"
           },
+          "repeat": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+            "properties": {
+              "repeat_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "repeat_id",
+              "sequence"
+            ]
+          },
           "sender_member": {
             "type": [
               "object",
@@ -19135,6 +19483,9 @@ export const openapiDocument: Record<string, unknown> = {
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "repeat": {
+            "$ref": "#/components/schemas/RepeatInput"
+          },
           "from": {
             "type": "string",
             "minLength": 3,
@@ -19499,6 +19850,27 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "presence_control": {
             "$ref": "#/components/schemas/PresenceControl"
+          },
+          "repeat": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+            "properties": {
+              "repeat_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "repeat_id",
+              "sequence"
+            ]
           },
           "sender_member": {
             "type": [
@@ -19942,6 +20314,27 @@ export const openapiDocument: Record<string, unknown> = {
           "presence_control": {
             "$ref": "#/components/schemas/PresenceControl"
           },
+          "repeat": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+            "properties": {
+              "repeat_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "repeat_id",
+              "sequence"
+            ]
+          },
           "sender_member": {
             "type": [
               "object",
@@ -20223,12 +20616,314 @@ export const openapiDocument: Record<string, unknown> = {
             "items": {
               "$ref": "#/components/schemas/SendMailAttachment"
             }
+          },
+          "repeat": {
+            "$ref": "#/components/schemas/RepeatInput"
           }
         }
+      },
+      "RepeatInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Repeat this send every `every_minutes` in the same thread. The first\nmessage goes out like any send; each later one is a scheduled send\nthat replies to the previous one, so quotas, gates and cancellation\napply as usual. Requires exactly one `to` recipient and no cc, bcc,\nattachments or `fyi` (422 `repeat_unsupported`). The recipient must\nbe an address of your own organization unless the organization is\nentitled to repeat to external recipients (403\n`repeat_recipient_external`). `only_if_recipient_idle_minutes` needs\na recipient in your organization (422\n`repeat_idle_requires_internal_recipient`).\n",
+        "properties": {
+          "every_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 10080
+          },
+          "only_if_recipient_idle_minutes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10080,
+            "description": "Skip a repeat while the recipient has sent mail within this many minutes."
+          },
+          "stoppable_by_recipient": {
+            "type": "boolean",
+            "default": true,
+            "description": "Let the recipient stop the repeat."
+          },
+          "max_sends": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 10000,
+            "description": "Total messages, including the first."
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time",
+            "description": "No repeat is sent after this time. Must be in the future."
+          }
+        },
+        "required": [
+          "every_minutes"
+        ]
+      },
+      "RepeatingSendStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "paused",
+          "stopped_by_recipient",
+          "canceled",
+          "completed"
+        ]
+      },
+      "RepeatingSend": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "org_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from_address": {
+            "type": "string"
+          },
+          "to_address": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "body_html": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "every_minutes": {
+            "type": "integer"
+          },
+          "only_if_recipient_idle_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "stoppable_by_recipient": {
+            "type": "boolean"
+          },
+          "max_sends": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RepeatingSendStatus"
+          },
+          "next_run_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sent_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_sent_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_sent_email_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "root_message_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stopped_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "stop_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Reason the recipient gave when it stopped the repeat. Recipient-written, untrusted text."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "org_id",
+          "from_address",
+          "to_address",
+          "subject",
+          "body_text",
+          "body_html",
+          "every_minutes",
+          "only_if_recipient_idle_minutes",
+          "stoppable_by_recipient",
+          "max_sends",
+          "until",
+          "status",
+          "next_run_at",
+          "sent_count",
+          "last_sent_at",
+          "last_sent_email_id",
+          "root_message_id",
+          "stopped_at",
+          "stop_reason",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "UpdateRepeatingSendRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "paused",
+              "canceled"
+            ]
+          },
+          "every_minutes": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 10080
+          },
+          "only_if_recipient_idle_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 10080
+          },
+          "stoppable_by_recipient": {
+            "type": "boolean"
+          },
+          "max_sends": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 2,
+            "maximum": 10000
+          },
+          "until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "body_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "RepeatStopRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 280,
+            "description": "Short reason shown to the sender."
+          }
+        }
+      },
+      "RepeatStopResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "repeat_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "stopped_by_recipient"
+            ]
+          },
+          "stopped_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "stop_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reply_sent_email_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The repeat.stop/1 reply that told the sender, or null if it could not be sent."
+          }
+        },
+        "required": [
+          "repeat_id",
+          "status",
+          "stopped_at",
+          "stop_reason",
+          "reply_sent_email_id"
+        ]
       },
       "SendMailResult": {
         "type": "object",
         "properties": {
+          "repeat_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when the request carried `repeat`. Manage it under `/repeating-sends/{id}`."
+          },
           "id": {
             "type": "string",
             "description": "Persisted sent-email attempt ID."

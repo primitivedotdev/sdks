@@ -4854,6 +4854,10 @@ type ConversationMessage struct {
 	// Received_at for inbound, created_at for outbound.
 	Timestamp       OptNilDateTime                           `json:"timestamp"`
 	PresenceControl OptNilConversationMessagePresenceControl `json:"presence_control"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilConversationMessageRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilConversationMessageSenderMember `json:"sender_member"`
@@ -4909,6 +4913,11 @@ func (s *ConversationMessage) GetPresenceControl() OptNilConversationMessagePres
 	return s.PresenceControl
 }
 
+// GetRepeat returns the value of Repeat.
+func (s *ConversationMessage) GetRepeat() OptNilConversationMessageRepeat {
+	return s.Repeat
+}
+
 // GetSenderMember returns the value of SenderMember.
 func (s *ConversationMessage) GetSenderMember() OptNilConversationMessageSenderMember {
 	return s.SenderMember
@@ -4962,6 +4971,11 @@ func (s *ConversationMessage) SetTimestamp(val OptNilDateTime) {
 // SetPresenceControl sets the value of PresenceControl.
 func (s *ConversationMessage) SetPresenceControl(val OptNilConversationMessagePresenceControl) {
 	s.PresenceControl = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *ConversationMessage) SetRepeat(val OptNilConversationMessageRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -5083,6 +5097,34 @@ func (s *ConversationMessagePresenceControlStatus) UnmarshalText(data []byte) er
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type ConversationMessageRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *ConversationMessageRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *ConversationMessageRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *ConversationMessageRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *ConversationMessageRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Chat role derived from `direction`: `user` for inbound
@@ -8963,6 +9005,14 @@ type DeleteRegistryUnauthorized ErrorResponse
 
 func (*DeleteRegistryUnauthorized) deleteRegistryRes() {}
 
+type DeleteRepeatingSendNotFound ErrorResponse
+
+func (*DeleteRepeatingSendNotFound) deleteRepeatingSendRes() {}
+
+type DeleteRepeatingSendUnauthorized ErrorResponse
+
+func (*DeleteRepeatingSendUnauthorized) deleteRepeatingSendRes() {}
+
 type DeleteRouteNotFound ErrorResponse
 
 func (*DeleteRouteNotFound) deleteRouteRes() {}
@@ -9088,6 +9138,7 @@ func (*Deleted) deleteEndpointRes()          {}
 func (*Deleted) deleteFilterRes()            {}
 func (*Deleted) deleteFunctionRes()          {}
 func (*Deleted) deleteRegistryRes()          {}
+func (*Deleted) deleteRepeatingSendRes()     {}
 func (*Deleted) deleteRouteRes()             {}
 func (*Deleted) deleteWakeAuthorizationRes() {}
 func (*Deleted) deleteWakeScheduleRes()      {}
@@ -11181,6 +11232,10 @@ type EmailDetail struct {
 	// `failed_recipients`, `report`. Treat an unfamiliar value as a
 	// reason added after your client was built.
 	AutomatedReasons []string `json:"automated_reasons"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilEmailDetailRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilEmailDetailSenderMember `json:"sender_member"`
@@ -11409,6 +11464,11 @@ func (s *EmailDetail) GetAutomated() bool {
 // GetAutomatedReasons returns the value of AutomatedReasons.
 func (s *EmailDetail) GetAutomatedReasons() []string {
 	return s.AutomatedReasons
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *EmailDetail) GetRepeat() OptNilEmailDetailRepeat {
+	return s.Repeat
 }
 
 // GetSenderMember returns the value of SenderMember.
@@ -11641,6 +11701,11 @@ func (s *EmailDetail) SetAutomatedReasons(val []string) {
 	s.AutomatedReasons = val
 }
 
+// SetRepeat sets the value of Repeat.
+func (s *EmailDetail) SetRepeat(val OptNilEmailDetailRepeat) {
+	s.Repeat = val
+}
+
 // SetSenderMember sets the value of SenderMember.
 func (s *EmailDetail) SetSenderMember(val OptNilEmailDetailSenderMember) {
 	s.SenderMember = val
@@ -11848,6 +11913,34 @@ func (s *EmailDetailPresenceControlStatus) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type EmailDetailRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *EmailDetailRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *EmailDetailRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *EmailDetailRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *EmailDetailRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Ref: #/components/schemas/EmailDetailReply
@@ -12295,6 +12388,10 @@ type EmailSearchResult struct {
 	// `failed_recipients`, `report`. Treat an unfamiliar value as a
 	// reason added after your client was built.
 	AutomatedReasons []string `json:"automated_reasons"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilEmailSearchResultRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilEmailSearchResultSenderMember `json:"sender_member"`
@@ -12420,6 +12517,11 @@ func (s *EmailSearchResult) GetAutomated() bool {
 // GetAutomatedReasons returns the value of AutomatedReasons.
 func (s *EmailSearchResult) GetAutomatedReasons() []string {
 	return s.AutomatedReasons
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *EmailSearchResult) GetRepeat() OptNilEmailSearchResultRepeat {
+	return s.Repeat
 }
 
 // GetSenderMember returns the value of SenderMember.
@@ -12560,6 +12662,11 @@ func (s *EmailSearchResult) SetAutomated(val bool) {
 // SetAutomatedReasons sets the value of AutomatedReasons.
 func (s *EmailSearchResult) SetAutomatedReasons(val []string) {
 	s.AutomatedReasons = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *EmailSearchResult) SetRepeat(val OptNilEmailSearchResultRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -12791,6 +12898,34 @@ func (s *EmailSearchResultPresenceControlStatus) UnmarshalText(data []byte) erro
 	}
 }
 
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type EmailSearchResultRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *EmailSearchResultRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *EmailSearchResultRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *EmailSearchResultRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *EmailSearchResultRepeat) SetSequence(val int) {
+	s.Sequence = val
+}
+
 // Verified human authorship, projected only within the member organization. Historical attribution
 // is not current sending or owner authority.
 type EmailSearchResultSenderMember struct {
@@ -13003,6 +13138,10 @@ type EmailSummary struct {
 	// `failed_recipients`, `report`. Treat an unfamiliar value as a
 	// reason added after your client was built.
 	AutomatedReasons []string `json:"automated_reasons"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilEmailSummaryRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilEmailSummarySenderMember `json:"sender_member"`
@@ -13123,6 +13262,11 @@ func (s *EmailSummary) GetAutomatedReasons() []string {
 	return s.AutomatedReasons
 }
 
+// GetRepeat returns the value of Repeat.
+func (s *EmailSummary) GetRepeat() OptNilEmailSummaryRepeat {
+	return s.Repeat
+}
+
 // GetSenderMember returns the value of SenderMember.
 func (s *EmailSummary) GetSenderMember() OptNilEmailSummarySenderMember {
 	return s.SenderMember
@@ -13241,6 +13385,11 @@ func (s *EmailSummary) SetAutomated(val bool) {
 // SetAutomatedReasons sets the value of AutomatedReasons.
 func (s *EmailSummary) SetAutomatedReasons(val []string) {
 	s.AutomatedReasons = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *EmailSummary) SetRepeat(val OptNilEmailSummaryRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -13450,6 +13599,34 @@ func (s *EmailSummaryPresenceControlStatus) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type EmailSummaryRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *EmailSummaryRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *EmailSummaryRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *EmailSummaryRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *EmailSummaryRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Verified human authorship, projected only within the member organization. Historical attribution
@@ -14149,94 +14326,99 @@ func (s *ErrorResponseError) SetRequestID(val OptString) {
 type ErrorResponseErrorCode string
 
 const (
-	ErrorResponseErrorCodeUnauthorized                    ErrorResponseErrorCode = "unauthorized"
-	ErrorResponseErrorCodeForbidden                       ErrorResponseErrorCode = "forbidden"
-	ErrorResponseErrorCodeNotFound                        ErrorResponseErrorCode = "not_found"
-	ErrorResponseErrorCodeValidationError                 ErrorResponseErrorCode = "validation_error"
-	ErrorResponseErrorCodeRateLimitExceeded               ErrorResponseErrorCode = "rate_limit_exceeded"
-	ErrorResponseErrorCodeInternalError                   ErrorResponseErrorCode = "internal_error"
-	ErrorResponseErrorCodeConflict                        ErrorResponseErrorCode = "conflict"
-	ErrorResponseErrorCodeMxConflict                      ErrorResponseErrorCode = "mx_conflict"
-	ErrorResponseErrorCodeNotScheduled                    ErrorResponseErrorCode = "not_scheduled"
-	ErrorResponseErrorCodeSentEmailDeleted                ErrorResponseErrorCode = "sent_email_deleted"
-	ErrorResponseErrorCodeSentEmailNotSettled             ErrorResponseErrorCode = "sent_email_not_settled"
-	ErrorResponseErrorCodeSentEmailChanged                ErrorResponseErrorCode = "sent_email_changed"
-	ErrorResponseErrorCodeSentEmailCleanupFailed          ErrorResponseErrorCode = "sent_email_cleanup_failed"
-	ErrorResponseErrorCodeConnectionNotRevoked            ErrorResponseErrorCode = "connection_not_revoked"
-	ErrorResponseErrorCodeAttachmentChanged               ErrorResponseErrorCode = "attachment_changed"
-	ErrorResponseErrorCodeContentDiscarded                ErrorResponseErrorCode = "content_discarded"
-	ErrorResponseErrorCodeAttachmentLimitExceeded         ErrorResponseErrorCode = "attachment_limit_exceeded"
-	ErrorResponseErrorCodeAttachmentIntegrityFailed       ErrorResponseErrorCode = "attachment_integrity_failed"
-	ErrorResponseErrorCodeAttachmentNotReady              ErrorResponseErrorCode = "attachment_not_ready"
-	ErrorResponseErrorCodeAttachmentStorageUnavailable    ErrorResponseErrorCode = "attachment_storage_unavailable"
-	ErrorResponseErrorCodeOutboundDisabled                ErrorResponseErrorCode = "outbound_disabled"
-	ErrorResponseErrorCodeCannotSendFromDomain            ErrorResponseErrorCode = "cannot_send_from_domain"
-	ErrorResponseErrorCodeRecipientNotAllowed             ErrorResponseErrorCode = "recipient_not_allowed"
-	ErrorResponseErrorCodeOutboundKeyMissing              ErrorResponseErrorCode = "outbound_key_missing"
-	ErrorResponseErrorCodeOutboundUnreachable             ErrorResponseErrorCode = "outbound_unreachable"
-	ErrorResponseErrorCodeOutboundKeyInvalid              ErrorResponseErrorCode = "outbound_key_invalid"
-	ErrorResponseErrorCodeOutboundCapacityExhausted       ErrorResponseErrorCode = "outbound_capacity_exhausted"
-	ErrorResponseErrorCodeOutboundResponseMalformed       ErrorResponseErrorCode = "outbound_response_malformed"
-	ErrorResponseErrorCodeOutboundRelayFailed             ErrorResponseErrorCode = "outbound_relay_failed"
-	ErrorResponseErrorCodeDiscardNotEnabled               ErrorResponseErrorCode = "discard_not_enabled"
-	ErrorResponseErrorCodeInboundNotRepliable             ErrorResponseErrorCode = "inbound_not_repliable"
-	ErrorResponseErrorCodeSearchTimeout                   ErrorResponseErrorCode = "search_timeout"
-	ErrorResponseErrorCodeAuthorizationPending            ErrorResponseErrorCode = "authorization_pending"
-	ErrorResponseErrorCodeSlowDown                        ErrorResponseErrorCode = "slow_down"
-	ErrorResponseErrorCodeAccessDenied                    ErrorResponseErrorCode = "access_denied"
-	ErrorResponseErrorCodeExpiredToken                    ErrorResponseErrorCode = "expired_token"
-	ErrorResponseErrorCodeInvalidDeviceCode               ErrorResponseErrorCode = "invalid_device_code"
-	ErrorResponseErrorCodeInvalidSignupCode               ErrorResponseErrorCode = "invalid_signup_code"
-	ErrorResponseErrorCodeInvalidSignupToken              ErrorResponseErrorCode = "invalid_signup_token"
-	ErrorResponseErrorCodeInvalidVerificationCode         ErrorResponseErrorCode = "invalid_verification_code"
-	ErrorResponseErrorCodeEmailDeliveryFailed             ErrorResponseErrorCode = "email_delivery_failed"
-	ErrorResponseErrorCodeClerkSignupFailed               ErrorResponseErrorCode = "clerk_signup_failed"
-	ErrorResponseErrorCodeNoOrgsForUser                   ErrorResponseErrorCode = "no_orgs_for_user"
-	ErrorResponseErrorCodeOrgNotAccessible                ErrorResponseErrorCode = "org_not_accessible"
-	ErrorResponseErrorCodeFeatureDisabled                 ErrorResponseErrorCode = "feature_disabled"
-	ErrorResponseErrorCodeMemoryConflict                  ErrorResponseErrorCode = "memory_conflict"
-	ErrorResponseErrorCodeTemplateNotInstallable          ErrorResponseErrorCode = "template_not_installable"
-	ErrorResponseErrorCodeScaffoldOnly                    ErrorResponseErrorCode = "scaffold_only"
-	ErrorResponseErrorCodeInvalidVariables                ErrorResponseErrorCode = "invalid_variables"
-	ErrorResponseErrorCodeUnknownSecrets                  ErrorResponseErrorCode = "unknown_secrets"
-	ErrorResponseErrorCodeMissingSecrets                  ErrorResponseErrorCode = "missing_secrets"
-	ErrorResponseErrorCodeNoInboundDomain                 ErrorResponseErrorCode = "no_inbound_domain"
-	ErrorResponseErrorCodeDomainCannotSend                ErrorResponseErrorCode = "domain_cannot_send"
-	ErrorResponseErrorCodeAddressTaken                    ErrorResponseErrorCode = "address_taken"
-	ErrorResponseErrorCodeRouteCapReached                 ErrorResponseErrorCode = "route_cap_reached"
-	ErrorResponseErrorCodeNameExhausted                   ErrorResponseErrorCode = "name_exhausted"
-	ErrorResponseErrorCodeDeveloperUsageCreditExhausted   ErrorResponseErrorCode = "developer_usage_credit_exhausted"
-	ErrorResponseErrorCodeNoPayoutAddress                 ErrorResponseErrorCode = "no_payout_address"
-	ErrorResponseErrorCodeOwnershipProofFailed            ErrorResponseErrorCode = "ownership_proof_failed"
-	ErrorResponseErrorCodePaymentVerificationFailed       ErrorResponseErrorCode = "payment_verification_failed"
-	ErrorResponseErrorCodePaymentDeclined                 ErrorResponseErrorCode = "payment_declined"
-	ErrorResponseErrorCodeChallengeExpired                ErrorResponseErrorCode = "challenge_expired"
-	ErrorResponseErrorCodeSettlementFailed                ErrorResponseErrorCode = "settlement_failed"
-	ErrorResponseErrorCodePullUnavailable                 ErrorResponseErrorCode = "pull_unavailable"
-	ErrorResponseErrorCodeSubscriptionConflict            ErrorResponseErrorCode = "subscription_conflict"
-	ErrorResponseErrorCodeSubscriptionLimit               ErrorResponseErrorCode = "subscription_limit"
-	ErrorResponseErrorCodeSubscriptionDisabled            ErrorResponseErrorCode = "subscription_disabled"
-	ErrorResponseErrorCodeRequestAborted                  ErrorResponseErrorCode = "request_aborted"
-	ErrorResponseErrorCodeEventContentUnavailable         ErrorResponseErrorCode = "event_content_unavailable"
-	ErrorResponseErrorCodeEventPreparationFailed          ErrorResponseErrorCode = "event_preparation_failed"
-	ErrorResponseErrorCodeSubscriptionUnavailable         ErrorResponseErrorCode = "subscription_unavailable"
-	ErrorResponseErrorCodeStaleDelivery                   ErrorResponseErrorCode = "stale_delivery"
-	ErrorResponseErrorCodeIdempotencyKeyRequired          ErrorResponseErrorCode = "idempotency_key_required"
-	ErrorResponseErrorCodeIdempotencyKeyReused            ErrorResponseErrorCode = "idempotency_key_reused"
-	ErrorResponseErrorCodeCreditCodeInvalid               ErrorResponseErrorCode = "credit_code_invalid"
-	ErrorResponseErrorCodeCreditCodeAlreadyRedeemed       ErrorResponseErrorCode = "credit_code_already_redeemed"
-	ErrorResponseErrorCodeCreditCodeNotEligible           ErrorResponseErrorCode = "credit_code_not_eligible"
-	ErrorResponseErrorCodeCreditCodeBalanceCap            ErrorResponseErrorCode = "credit_code_balance_cap"
-	ErrorResponseErrorCodeRateLimited                     ErrorResponseErrorCode = "rate_limited"
-	ErrorResponseErrorCodeServiceUnavailable              ErrorResponseErrorCode = "service_unavailable"
-	ErrorResponseErrorCodeConnectionDomainUnavailable     ErrorResponseErrorCode = "connection_domain_unavailable"
-	ErrorResponseErrorCodeConnectionAddressUnavailable    ErrorResponseErrorCode = "connection_address_unavailable"
-	ErrorResponseErrorCodeConnectionOwnerAddressInvalid   ErrorResponseErrorCode = "connection_owner_address_invalid"
-	ErrorResponseErrorCodeConnectionInvitationUnavailable ErrorResponseErrorCode = "connection_invitation_unavailable"
-	ErrorResponseErrorCodeAgentConnectionScopeForbidden   ErrorResponseErrorCode = "agent_connection_scope_forbidden"
-	ErrorResponseErrorCodeAddressNoteConflict             ErrorResponseErrorCode = "address_note_conflict"
-	ErrorResponseErrorCodeAddressNotControlled            ErrorResponseErrorCode = "address_not_controlled"
-	ErrorResponseErrorCodeContactConflict                 ErrorResponseErrorCode = "contact_conflict"
+	ErrorResponseErrorCodeUnauthorized                        ErrorResponseErrorCode = "unauthorized"
+	ErrorResponseErrorCodeForbidden                           ErrorResponseErrorCode = "forbidden"
+	ErrorResponseErrorCodeNotFound                            ErrorResponseErrorCode = "not_found"
+	ErrorResponseErrorCodeValidationError                     ErrorResponseErrorCode = "validation_error"
+	ErrorResponseErrorCodeRateLimitExceeded                   ErrorResponseErrorCode = "rate_limit_exceeded"
+	ErrorResponseErrorCodeInternalError                       ErrorResponseErrorCode = "internal_error"
+	ErrorResponseErrorCodeConflict                            ErrorResponseErrorCode = "conflict"
+	ErrorResponseErrorCodeMxConflict                          ErrorResponseErrorCode = "mx_conflict"
+	ErrorResponseErrorCodeNotScheduled                        ErrorResponseErrorCode = "not_scheduled"
+	ErrorResponseErrorCodeSentEmailDeleted                    ErrorResponseErrorCode = "sent_email_deleted"
+	ErrorResponseErrorCodeSentEmailNotSettled                 ErrorResponseErrorCode = "sent_email_not_settled"
+	ErrorResponseErrorCodeSentEmailChanged                    ErrorResponseErrorCode = "sent_email_changed"
+	ErrorResponseErrorCodeSentEmailCleanupFailed              ErrorResponseErrorCode = "sent_email_cleanup_failed"
+	ErrorResponseErrorCodeConnectionNotRevoked                ErrorResponseErrorCode = "connection_not_revoked"
+	ErrorResponseErrorCodeAttachmentChanged                   ErrorResponseErrorCode = "attachment_changed"
+	ErrorResponseErrorCodeContentDiscarded                    ErrorResponseErrorCode = "content_discarded"
+	ErrorResponseErrorCodeAttachmentLimitExceeded             ErrorResponseErrorCode = "attachment_limit_exceeded"
+	ErrorResponseErrorCodeAttachmentIntegrityFailed           ErrorResponseErrorCode = "attachment_integrity_failed"
+	ErrorResponseErrorCodeAttachmentNotReady                  ErrorResponseErrorCode = "attachment_not_ready"
+	ErrorResponseErrorCodeAttachmentStorageUnavailable        ErrorResponseErrorCode = "attachment_storage_unavailable"
+	ErrorResponseErrorCodeOutboundDisabled                    ErrorResponseErrorCode = "outbound_disabled"
+	ErrorResponseErrorCodeCannotSendFromDomain                ErrorResponseErrorCode = "cannot_send_from_domain"
+	ErrorResponseErrorCodeRecipientNotAllowed                 ErrorResponseErrorCode = "recipient_not_allowed"
+	ErrorResponseErrorCodeOutboundKeyMissing                  ErrorResponseErrorCode = "outbound_key_missing"
+	ErrorResponseErrorCodeOutboundUnreachable                 ErrorResponseErrorCode = "outbound_unreachable"
+	ErrorResponseErrorCodeOutboundKeyInvalid                  ErrorResponseErrorCode = "outbound_key_invalid"
+	ErrorResponseErrorCodeOutboundCapacityExhausted           ErrorResponseErrorCode = "outbound_capacity_exhausted"
+	ErrorResponseErrorCodeOutboundResponseMalformed           ErrorResponseErrorCode = "outbound_response_malformed"
+	ErrorResponseErrorCodeOutboundRelayFailed                 ErrorResponseErrorCode = "outbound_relay_failed"
+	ErrorResponseErrorCodeDiscardNotEnabled                   ErrorResponseErrorCode = "discard_not_enabled"
+	ErrorResponseErrorCodeInboundNotRepliable                 ErrorResponseErrorCode = "inbound_not_repliable"
+	ErrorResponseErrorCodeSearchTimeout                       ErrorResponseErrorCode = "search_timeout"
+	ErrorResponseErrorCodeAuthorizationPending                ErrorResponseErrorCode = "authorization_pending"
+	ErrorResponseErrorCodeSlowDown                            ErrorResponseErrorCode = "slow_down"
+	ErrorResponseErrorCodeAccessDenied                        ErrorResponseErrorCode = "access_denied"
+	ErrorResponseErrorCodeExpiredToken                        ErrorResponseErrorCode = "expired_token"
+	ErrorResponseErrorCodeInvalidDeviceCode                   ErrorResponseErrorCode = "invalid_device_code"
+	ErrorResponseErrorCodeInvalidSignupCode                   ErrorResponseErrorCode = "invalid_signup_code"
+	ErrorResponseErrorCodeInvalidSignupToken                  ErrorResponseErrorCode = "invalid_signup_token"
+	ErrorResponseErrorCodeInvalidVerificationCode             ErrorResponseErrorCode = "invalid_verification_code"
+	ErrorResponseErrorCodeEmailDeliveryFailed                 ErrorResponseErrorCode = "email_delivery_failed"
+	ErrorResponseErrorCodeClerkSignupFailed                   ErrorResponseErrorCode = "clerk_signup_failed"
+	ErrorResponseErrorCodeNoOrgsForUser                       ErrorResponseErrorCode = "no_orgs_for_user"
+	ErrorResponseErrorCodeOrgNotAccessible                    ErrorResponseErrorCode = "org_not_accessible"
+	ErrorResponseErrorCodeFeatureDisabled                     ErrorResponseErrorCode = "feature_disabled"
+	ErrorResponseErrorCodeMemoryConflict                      ErrorResponseErrorCode = "memory_conflict"
+	ErrorResponseErrorCodeTemplateNotInstallable              ErrorResponseErrorCode = "template_not_installable"
+	ErrorResponseErrorCodeScaffoldOnly                        ErrorResponseErrorCode = "scaffold_only"
+	ErrorResponseErrorCodeInvalidVariables                    ErrorResponseErrorCode = "invalid_variables"
+	ErrorResponseErrorCodeUnknownSecrets                      ErrorResponseErrorCode = "unknown_secrets"
+	ErrorResponseErrorCodeMissingSecrets                      ErrorResponseErrorCode = "missing_secrets"
+	ErrorResponseErrorCodeNoInboundDomain                     ErrorResponseErrorCode = "no_inbound_domain"
+	ErrorResponseErrorCodeDomainCannotSend                    ErrorResponseErrorCode = "domain_cannot_send"
+	ErrorResponseErrorCodeAddressTaken                        ErrorResponseErrorCode = "address_taken"
+	ErrorResponseErrorCodeRouteCapReached                     ErrorResponseErrorCode = "route_cap_reached"
+	ErrorResponseErrorCodeNameExhausted                       ErrorResponseErrorCode = "name_exhausted"
+	ErrorResponseErrorCodeDeveloperUsageCreditExhausted       ErrorResponseErrorCode = "developer_usage_credit_exhausted"
+	ErrorResponseErrorCodeNoPayoutAddress                     ErrorResponseErrorCode = "no_payout_address"
+	ErrorResponseErrorCodeOwnershipProofFailed                ErrorResponseErrorCode = "ownership_proof_failed"
+	ErrorResponseErrorCodePaymentVerificationFailed           ErrorResponseErrorCode = "payment_verification_failed"
+	ErrorResponseErrorCodePaymentDeclined                     ErrorResponseErrorCode = "payment_declined"
+	ErrorResponseErrorCodeChallengeExpired                    ErrorResponseErrorCode = "challenge_expired"
+	ErrorResponseErrorCodeSettlementFailed                    ErrorResponseErrorCode = "settlement_failed"
+	ErrorResponseErrorCodePullUnavailable                     ErrorResponseErrorCode = "pull_unavailable"
+	ErrorResponseErrorCodeSubscriptionConflict                ErrorResponseErrorCode = "subscription_conflict"
+	ErrorResponseErrorCodeSubscriptionLimit                   ErrorResponseErrorCode = "subscription_limit"
+	ErrorResponseErrorCodeSubscriptionDisabled                ErrorResponseErrorCode = "subscription_disabled"
+	ErrorResponseErrorCodeRequestAborted                      ErrorResponseErrorCode = "request_aborted"
+	ErrorResponseErrorCodeEventContentUnavailable             ErrorResponseErrorCode = "event_content_unavailable"
+	ErrorResponseErrorCodeEventPreparationFailed              ErrorResponseErrorCode = "event_preparation_failed"
+	ErrorResponseErrorCodeSubscriptionUnavailable             ErrorResponseErrorCode = "subscription_unavailable"
+	ErrorResponseErrorCodeStaleDelivery                       ErrorResponseErrorCode = "stale_delivery"
+	ErrorResponseErrorCodeIdempotencyKeyRequired              ErrorResponseErrorCode = "idempotency_key_required"
+	ErrorResponseErrorCodeRepeatUnsupported                   ErrorResponseErrorCode = "repeat_unsupported"
+	ErrorResponseErrorCodeRepeatRecipientExternal             ErrorResponseErrorCode = "repeat_recipient_external"
+	ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient ErrorResponseErrorCode = "repeat_idle_requires_internal_recipient"
+	ErrorResponseErrorCodeNotARepeatingSend                   ErrorResponseErrorCode = "not_a_repeating_send"
+	ErrorResponseErrorCodeRepeatStopNotAllowed                ErrorResponseErrorCode = "repeat_stop_not_allowed"
+	ErrorResponseErrorCodeIdempotencyKeyReused                ErrorResponseErrorCode = "idempotency_key_reused"
+	ErrorResponseErrorCodeCreditCodeInvalid                   ErrorResponseErrorCode = "credit_code_invalid"
+	ErrorResponseErrorCodeCreditCodeAlreadyRedeemed           ErrorResponseErrorCode = "credit_code_already_redeemed"
+	ErrorResponseErrorCodeCreditCodeNotEligible               ErrorResponseErrorCode = "credit_code_not_eligible"
+	ErrorResponseErrorCodeCreditCodeBalanceCap                ErrorResponseErrorCode = "credit_code_balance_cap"
+	ErrorResponseErrorCodeRateLimited                         ErrorResponseErrorCode = "rate_limited"
+	ErrorResponseErrorCodeServiceUnavailable                  ErrorResponseErrorCode = "service_unavailable"
+	ErrorResponseErrorCodeConnectionDomainUnavailable         ErrorResponseErrorCode = "connection_domain_unavailable"
+	ErrorResponseErrorCodeConnectionAddressUnavailable        ErrorResponseErrorCode = "connection_address_unavailable"
+	ErrorResponseErrorCodeConnectionOwnerAddressInvalid       ErrorResponseErrorCode = "connection_owner_address_invalid"
+	ErrorResponseErrorCodeConnectionInvitationUnavailable     ErrorResponseErrorCode = "connection_invitation_unavailable"
+	ErrorResponseErrorCodeAgentConnectionScopeForbidden       ErrorResponseErrorCode = "agent_connection_scope_forbidden"
+	ErrorResponseErrorCodeAddressNoteConflict                 ErrorResponseErrorCode = "address_note_conflict"
+	ErrorResponseErrorCodeAddressNotControlled                ErrorResponseErrorCode = "address_not_controlled"
+	ErrorResponseErrorCodeContactConflict                     ErrorResponseErrorCode = "contact_conflict"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -14315,6 +14497,11 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeSubscriptionUnavailable,
 		ErrorResponseErrorCodeStaleDelivery,
 		ErrorResponseErrorCodeIdempotencyKeyRequired,
+		ErrorResponseErrorCodeRepeatUnsupported,
+		ErrorResponseErrorCodeRepeatRecipientExternal,
+		ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient,
+		ErrorResponseErrorCodeNotARepeatingSend,
+		ErrorResponseErrorCodeRepeatStopNotAllowed,
 		ErrorResponseErrorCodeIdempotencyKeyReused,
 		ErrorResponseErrorCodeCreditCodeInvalid,
 		ErrorResponseErrorCodeCreditCodeAlreadyRedeemed,
@@ -14481,6 +14668,16 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeStaleDelivery:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeIdempotencyKeyRequired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRepeatUnsupported:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRepeatRecipientExternal:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNotARepeatingSend:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRepeatStopNotAllowed:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeIdempotencyKeyReused:
 		return []byte(s), nil
@@ -14738,6 +14935,21 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeIdempotencyKeyRequired:
 		*s = ErrorResponseErrorCodeIdempotencyKeyRequired
+		return nil
+	case ErrorResponseErrorCodeRepeatUnsupported:
+		*s = ErrorResponseErrorCodeRepeatUnsupported
+		return nil
+	case ErrorResponseErrorCodeRepeatRecipientExternal:
+		*s = ErrorResponseErrorCodeRepeatRecipientExternal
+		return nil
+	case ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient:
+		*s = ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient
+		return nil
+	case ErrorResponseErrorCodeNotARepeatingSend:
+		*s = ErrorResponseErrorCodeNotARepeatingSend
+		return nil
+	case ErrorResponseErrorCodeRepeatStopNotAllowed:
+		*s = ErrorResponseErrorCodeRepeatStopNotAllowed
 		return nil
 	case ErrorResponseErrorCodeIdempotencyKeyReused:
 		*s = ErrorResponseErrorCodeIdempotencyKeyReused
@@ -18164,6 +18376,42 @@ func (s *GetRegistryOK) SetData(val Registry) {
 
 func (*GetRegistryOK) getRegistryRes() {}
 
+type GetRepeatingSendNotFound ErrorResponse
+
+func (*GetRepeatingSendNotFound) getRepeatingSendRes() {}
+
+// Merged schema.
+type GetRepeatingSendOK struct {
+	Success bool          `json:"success"`
+	Data    RepeatingSend `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *GetRepeatingSendOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *GetRepeatingSendOK) GetData() RepeatingSend {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *GetRepeatingSendOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *GetRepeatingSendOK) SetData(val RepeatingSend) {
+	s.Data = val
+}
+
+func (*GetRepeatingSendOK) getRepeatingSendRes() {}
+
+type GetRepeatingSendUnauthorized ErrorResponse
+
+func (*GetRepeatingSendUnauthorized) getRepeatingSendRes() {}
+
 // Merged schema.
 type GetSendPermissionsOK struct {
 	Success bool                 `json:"success"`
@@ -21445,6 +21693,42 @@ func (*ListRegistryRequestsOK) listRegistryRequestsRes() {}
 type ListRegistryRequestsUnauthorized ErrorResponse
 
 func (*ListRegistryRequestsUnauthorized) listRegistryRequestsRes() {}
+
+type ListRepeatingSendsForbidden ErrorResponse
+
+func (*ListRepeatingSendsForbidden) listRepeatingSendsRes() {}
+
+// Merged schema.
+type ListRepeatingSendsOK struct {
+	Success bool            `json:"success"`
+	Data    []RepeatingSend `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *ListRepeatingSendsOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *ListRepeatingSendsOK) GetData() []RepeatingSend {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *ListRepeatingSendsOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *ListRepeatingSendsOK) SetData(val []RepeatingSend) {
+	s.Data = val
+}
+
+func (*ListRepeatingSendsOK) listRepeatingSendsRes() {}
+
+type ListRepeatingSendsUnauthorized ErrorResponse
+
+func (*ListRepeatingSendsUnauthorized) listRepeatingSendsRes() {}
 
 // Merged schema.
 type ListRoutesOK struct {
@@ -25501,6 +25785,69 @@ func (o OptNilConversationMessagePresenceControl) Or(d ConversationMessagePresen
 	return d
 }
 
+// NewOptNilConversationMessageRepeat returns new OptNilConversationMessageRepeat with value set to v.
+func NewOptNilConversationMessageRepeat(v ConversationMessageRepeat) OptNilConversationMessageRepeat {
+	return OptNilConversationMessageRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilConversationMessageRepeat is optional nullable ConversationMessageRepeat.
+type OptNilConversationMessageRepeat struct {
+	Value ConversationMessageRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilConversationMessageRepeat was set.
+func (o OptNilConversationMessageRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilConversationMessageRepeat) Reset() {
+	var v ConversationMessageRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilConversationMessageRepeat) SetTo(v ConversationMessageRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilConversationMessageRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilConversationMessageRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v ConversationMessageRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilConversationMessageRepeat) Get() (v ConversationMessageRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilConversationMessageRepeat) Or(d ConversationMessageRepeat) ConversationMessageRepeat {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilConversationMessageSenderMember returns new OptNilConversationMessageSenderMember with value set to v.
 func NewOptNilConversationMessageSenderMember(v ConversationMessageSenderMember) OptNilConversationMessageSenderMember {
 	return OptNilConversationMessageSenderMember{
@@ -26068,6 +26415,69 @@ func (o OptNilEmailDetailPresenceControl) Or(d EmailDetailPresenceControl) Email
 	return d
 }
 
+// NewOptNilEmailDetailRepeat returns new OptNilEmailDetailRepeat with value set to v.
+func NewOptNilEmailDetailRepeat(v EmailDetailRepeat) OptNilEmailDetailRepeat {
+	return OptNilEmailDetailRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailDetailRepeat is optional nullable EmailDetailRepeat.
+type OptNilEmailDetailRepeat struct {
+	Value EmailDetailRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailDetailRepeat was set.
+func (o OptNilEmailDetailRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailDetailRepeat) Reset() {
+	var v EmailDetailRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailDetailRepeat) SetTo(v EmailDetailRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailDetailRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailDetailRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailDetailRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailDetailRepeat) Get() (v EmailDetailRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailDetailRepeat) Or(d EmailDetailRepeat) EmailDetailRepeat {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilEmailDetailSenderMember returns new OptNilEmailDetailSenderMember with value set to v.
 func NewOptNilEmailDetailSenderMember(v EmailDetailSenderMember) OptNilEmailDetailSenderMember {
 	return OptNilEmailDetailSenderMember{
@@ -26257,6 +26667,69 @@ func (o OptNilEmailSearchResultPresenceControl) Or(d EmailSearchResultPresenceCo
 	return d
 }
 
+// NewOptNilEmailSearchResultRepeat returns new OptNilEmailSearchResultRepeat with value set to v.
+func NewOptNilEmailSearchResultRepeat(v EmailSearchResultRepeat) OptNilEmailSearchResultRepeat {
+	return OptNilEmailSearchResultRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSearchResultRepeat is optional nullable EmailSearchResultRepeat.
+type OptNilEmailSearchResultRepeat struct {
+	Value EmailSearchResultRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSearchResultRepeat was set.
+func (o OptNilEmailSearchResultRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSearchResultRepeat) Reset() {
+	var v EmailSearchResultRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSearchResultRepeat) SetTo(v EmailSearchResultRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSearchResultRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSearchResultRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSearchResultRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSearchResultRepeat) Get() (v EmailSearchResultRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSearchResultRepeat) Or(d EmailSearchResultRepeat) EmailSearchResultRepeat {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilEmailSearchResultSenderMember returns new OptNilEmailSearchResultSenderMember with value set to v.
 func NewOptNilEmailSearchResultSenderMember(v EmailSearchResultSenderMember) OptNilEmailSearchResultSenderMember {
 	return OptNilEmailSearchResultSenderMember{
@@ -26440,6 +26913,69 @@ func (o OptNilEmailSummaryPresenceControl) Get() (v EmailSummaryPresenceControl,
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailSummaryPresenceControl) Or(d EmailSummaryPresenceControl) EmailSummaryPresenceControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailSummaryRepeat returns new OptNilEmailSummaryRepeat with value set to v.
+func NewOptNilEmailSummaryRepeat(v EmailSummaryRepeat) OptNilEmailSummaryRepeat {
+	return OptNilEmailSummaryRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSummaryRepeat is optional nullable EmailSummaryRepeat.
+type OptNilEmailSummaryRepeat struct {
+	Value EmailSummaryRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSummaryRepeat was set.
+func (o OptNilEmailSummaryRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSummaryRepeat) Reset() {
+	var v EmailSummaryRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSummaryRepeat) SetTo(v EmailSummaryRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSummaryRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSummaryRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSummaryRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSummaryRepeat) Get() (v EmailSummaryRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSummaryRepeat) Or(d EmailSummaryRepeat) EmailSummaryRepeat {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -27202,6 +27738,69 @@ func (o OptNilSentEmailDetailPresenceControl) Or(d SentEmailDetailPresenceContro
 	return d
 }
 
+// NewOptNilSentEmailDetailRepeat returns new OptNilSentEmailDetailRepeat with value set to v.
+func NewOptNilSentEmailDetailRepeat(v SentEmailDetailRepeat) OptNilSentEmailDetailRepeat {
+	return OptNilSentEmailDetailRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilSentEmailDetailRepeat is optional nullable SentEmailDetailRepeat.
+type OptNilSentEmailDetailRepeat struct {
+	Value SentEmailDetailRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilSentEmailDetailRepeat was set.
+func (o OptNilSentEmailDetailRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilSentEmailDetailRepeat) Reset() {
+	var v SentEmailDetailRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilSentEmailDetailRepeat) SetTo(v SentEmailDetailRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilSentEmailDetailRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilSentEmailDetailRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v SentEmailDetailRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilSentEmailDetailRepeat) Get() (v SentEmailDetailRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilSentEmailDetailRepeat) Or(d SentEmailDetailRepeat) SentEmailDetailRepeat {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilSentEmailDetailSenderMember returns new OptNilSentEmailDetailSenderMember with value set to v.
 func NewOptNilSentEmailDetailSenderMember(v SentEmailDetailSenderMember) OptNilSentEmailDetailSenderMember {
 	return OptNilSentEmailDetailSenderMember{
@@ -27322,6 +27921,69 @@ func (o OptNilSentEmailSummaryPresenceControl) Get() (v SentEmailSummaryPresence
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilSentEmailSummaryPresenceControl) Or(d SentEmailSummaryPresenceControl) SentEmailSummaryPresenceControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilSentEmailSummaryRepeat returns new OptNilSentEmailSummaryRepeat with value set to v.
+func NewOptNilSentEmailSummaryRepeat(v SentEmailSummaryRepeat) OptNilSentEmailSummaryRepeat {
+	return OptNilSentEmailSummaryRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilSentEmailSummaryRepeat is optional nullable SentEmailSummaryRepeat.
+type OptNilSentEmailSummaryRepeat struct {
+	Value SentEmailSummaryRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilSentEmailSummaryRepeat was set.
+func (o OptNilSentEmailSummaryRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilSentEmailSummaryRepeat) Reset() {
+	var v SentEmailSummaryRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilSentEmailSummaryRepeat) SetTo(v SentEmailSummaryRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilSentEmailSummaryRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilSentEmailSummaryRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v SentEmailSummaryRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilSentEmailSummaryRepeat) Get() (v SentEmailSummaryRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilSentEmailSummaryRepeat) Or(d SentEmailSummaryRepeat) SentEmailSummaryRepeat {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -27511,6 +28173,69 @@ func (o OptNilStringArray) Get() (v []string, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilStringArray) Or(d []string) []string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilThreadMessageRepeat returns new OptNilThreadMessageRepeat with value set to v.
+func NewOptNilThreadMessageRepeat(v ThreadMessageRepeat) OptNilThreadMessageRepeat {
+	return OptNilThreadMessageRepeat{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilThreadMessageRepeat is optional nullable ThreadMessageRepeat.
+type OptNilThreadMessageRepeat struct {
+	Value ThreadMessageRepeat
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilThreadMessageRepeat was set.
+func (o OptNilThreadMessageRepeat) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilThreadMessageRepeat) Reset() {
+	var v ThreadMessageRepeat
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilThreadMessageRepeat) SetTo(v ThreadMessageRepeat) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilThreadMessageRepeat) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilThreadMessageRepeat) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v ThreadMessageRepeat
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilThreadMessageRepeat) Get() (v ThreadMessageRepeat, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilThreadMessageRepeat) Or(d ThreadMessageRepeat) ThreadMessageRepeat {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -27930,6 +28655,144 @@ func (o OptRecipientRouteMatchType) Get() (v RecipientRouteMatchType, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptRecipientRouteMatchType) Or(d RecipientRouteMatchType) RecipientRouteMatchType {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptRepeatInput returns new OptRepeatInput with value set to v.
+func NewOptRepeatInput(v RepeatInput) OptRepeatInput {
+	return OptRepeatInput{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptRepeatInput is optional RepeatInput.
+type OptRepeatInput struct {
+	Value RepeatInput
+	Set   bool
+}
+
+// IsSet returns true if OptRepeatInput was set.
+func (o OptRepeatInput) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptRepeatInput) Reset() {
+	var v RepeatInput
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptRepeatInput) SetTo(v RepeatInput) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptRepeatInput) Get() (v RepeatInput, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptRepeatInput) Or(d RepeatInput) RepeatInput {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptRepeatStopRequest returns new OptRepeatStopRequest with value set to v.
+func NewOptRepeatStopRequest(v RepeatStopRequest) OptRepeatStopRequest {
+	return OptRepeatStopRequest{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptRepeatStopRequest is optional RepeatStopRequest.
+type OptRepeatStopRequest struct {
+	Value RepeatStopRequest
+	Set   bool
+}
+
+// IsSet returns true if OptRepeatStopRequest was set.
+func (o OptRepeatStopRequest) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptRepeatStopRequest) Reset() {
+	var v RepeatStopRequest
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptRepeatStopRequest) SetTo(v RepeatStopRequest) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptRepeatStopRequest) Get() (v RepeatStopRequest, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptRepeatStopRequest) Or(d RepeatStopRequest) RepeatStopRequest {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptRepeatingSendStatus returns new OptRepeatingSendStatus with value set to v.
+func NewOptRepeatingSendStatus(v RepeatingSendStatus) OptRepeatingSendStatus {
+	return OptRepeatingSendStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptRepeatingSendStatus is optional RepeatingSendStatus.
+type OptRepeatingSendStatus struct {
+	Value RepeatingSendStatus
+	Set   bool
+}
+
+// IsSet returns true if OptRepeatingSendStatus was set.
+func (o OptRepeatingSendStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptRepeatingSendStatus) Reset() {
+	var v RepeatingSendStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptRepeatingSendStatus) SetTo(v RepeatingSendStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptRepeatingSendStatus) Get() (v RepeatingSendStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptRepeatingSendStatus) Or(d RepeatingSendStatus) RepeatingSendStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -28988,6 +29851,52 @@ func (o OptUpdateFunctionInputFiles) Get() (v UpdateFunctionInputFiles, ok bool)
 
 // Or returns value if set, or given parameter if does not.
 func (o OptUpdateFunctionInputFiles) Or(d UpdateFunctionInputFiles) UpdateFunctionInputFiles {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUpdateRepeatingSendRequestStatus returns new OptUpdateRepeatingSendRequestStatus with value set to v.
+func NewOptUpdateRepeatingSendRequestStatus(v UpdateRepeatingSendRequestStatus) OptUpdateRepeatingSendRequestStatus {
+	return OptUpdateRepeatingSendRequestStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUpdateRepeatingSendRequestStatus is optional UpdateRepeatingSendRequestStatus.
+type OptUpdateRepeatingSendRequestStatus struct {
+	Value UpdateRepeatingSendRequestStatus
+	Set   bool
+}
+
+// IsSet returns true if OptUpdateRepeatingSendRequestStatus was set.
+func (o OptUpdateRepeatingSendRequestStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUpdateRepeatingSendRequestStatus) Reset() {
+	var v UpdateRepeatingSendRequestStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUpdateRepeatingSendRequestStatus) SetTo(v UpdateRepeatingSendRequestStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUpdateRepeatingSendRequestStatus) Get() (v UpdateRepeatingSendRequestStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUpdateRepeatingSendRequestStatus) Or(d UpdateRepeatingSendRequestStatus) UpdateRepeatingSendRequestStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -32874,6 +33783,499 @@ type ReorderRoutesUnauthorized ErrorResponse
 
 func (*ReorderRoutesUnauthorized) reorderRoutesRes() {}
 
+// Repeat this send every `every_minutes` in the same thread. The first
+// message goes out like any send; each later one is a scheduled send
+// that replies to the previous one, so quotas, gates and cancellation
+// apply as usual. Requires exactly one `to` recipient and no cc, bcc,
+// attachments or `fyi` (422 `repeat_unsupported`). The recipient must
+// be an address of your own organization unless the organization is
+// entitled to repeat to external recipients (403
+// `repeat_recipient_external`). `only_if_recipient_idle_minutes` needs
+// a recipient in your organization (422
+// `repeat_idle_requires_internal_recipient`).
+// Ref: #/components/schemas/RepeatInput
+type RepeatInput struct {
+	EveryMinutes int `json:"every_minutes"`
+	// Skip a repeat while the recipient has sent mail within this many minutes.
+	OnlyIfRecipientIdleMinutes OptInt `json:"only_if_recipient_idle_minutes"`
+	// Let the recipient stop the repeat.
+	StoppableByRecipient OptBool `json:"stoppable_by_recipient"`
+	// Total messages, including the first.
+	MaxSends OptInt `json:"max_sends"`
+	// No repeat is sent after this time. Must be in the future.
+	Until OptDateTime `json:"until"`
+}
+
+// GetEveryMinutes returns the value of EveryMinutes.
+func (s *RepeatInput) GetEveryMinutes() int {
+	return s.EveryMinutes
+}
+
+// GetOnlyIfRecipientIdleMinutes returns the value of OnlyIfRecipientIdleMinutes.
+func (s *RepeatInput) GetOnlyIfRecipientIdleMinutes() OptInt {
+	return s.OnlyIfRecipientIdleMinutes
+}
+
+// GetStoppableByRecipient returns the value of StoppableByRecipient.
+func (s *RepeatInput) GetStoppableByRecipient() OptBool {
+	return s.StoppableByRecipient
+}
+
+// GetMaxSends returns the value of MaxSends.
+func (s *RepeatInput) GetMaxSends() OptInt {
+	return s.MaxSends
+}
+
+// GetUntil returns the value of Until.
+func (s *RepeatInput) GetUntil() OptDateTime {
+	return s.Until
+}
+
+// SetEveryMinutes sets the value of EveryMinutes.
+func (s *RepeatInput) SetEveryMinutes(val int) {
+	s.EveryMinutes = val
+}
+
+// SetOnlyIfRecipientIdleMinutes sets the value of OnlyIfRecipientIdleMinutes.
+func (s *RepeatInput) SetOnlyIfRecipientIdleMinutes(val OptInt) {
+	s.OnlyIfRecipientIdleMinutes = val
+}
+
+// SetStoppableByRecipient sets the value of StoppableByRecipient.
+func (s *RepeatInput) SetStoppableByRecipient(val OptBool) {
+	s.StoppableByRecipient = val
+}
+
+// SetMaxSends sets the value of MaxSends.
+func (s *RepeatInput) SetMaxSends(val OptInt) {
+	s.MaxSends = val
+}
+
+// SetUntil sets the value of Until.
+func (s *RepeatInput) SetUntil(val OptDateTime) {
+	s.Until = val
+}
+
+// Ref: #/components/schemas/RepeatStopRequest
+type RepeatStopRequest struct {
+	// Short reason shown to the sender.
+	Reason OptString `json:"reason"`
+}
+
+// GetReason returns the value of Reason.
+func (s *RepeatStopRequest) GetReason() OptString {
+	return s.Reason
+}
+
+// SetReason sets the value of Reason.
+func (s *RepeatStopRequest) SetReason(val OptString) {
+	s.Reason = val
+}
+
+// Ref: #/components/schemas/RepeatStopResult
+type RepeatStopResult struct {
+	RepeatID   uuid.UUID              `json:"repeat_id"`
+	Status     RepeatStopResultStatus `json:"status"`
+	StoppedAt  time.Time              `json:"stopped_at"`
+	StopReason NilString              `json:"stop_reason"`
+	// The repeat.stop/1 reply that told the sender, or null if it could not be sent.
+	ReplySentEmailID NilUUID `json:"reply_sent_email_id"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *RepeatStopResult) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetStatus returns the value of Status.
+func (s *RepeatStopResult) GetStatus() RepeatStopResultStatus {
+	return s.Status
+}
+
+// GetStoppedAt returns the value of StoppedAt.
+func (s *RepeatStopResult) GetStoppedAt() time.Time {
+	return s.StoppedAt
+}
+
+// GetStopReason returns the value of StopReason.
+func (s *RepeatStopResult) GetStopReason() NilString {
+	return s.StopReason
+}
+
+// GetReplySentEmailID returns the value of ReplySentEmailID.
+func (s *RepeatStopResult) GetReplySentEmailID() NilUUID {
+	return s.ReplySentEmailID
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *RepeatStopResult) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetStatus sets the value of Status.
+func (s *RepeatStopResult) SetStatus(val RepeatStopResultStatus) {
+	s.Status = val
+}
+
+// SetStoppedAt sets the value of StoppedAt.
+func (s *RepeatStopResult) SetStoppedAt(val time.Time) {
+	s.StoppedAt = val
+}
+
+// SetStopReason sets the value of StopReason.
+func (s *RepeatStopResult) SetStopReason(val NilString) {
+	s.StopReason = val
+}
+
+// SetReplySentEmailID sets the value of ReplySentEmailID.
+func (s *RepeatStopResult) SetReplySentEmailID(val NilUUID) {
+	s.ReplySentEmailID = val
+}
+
+type RepeatStopResultStatus string
+
+const (
+	RepeatStopResultStatusStoppedByRecipient RepeatStopResultStatus = "stopped_by_recipient"
+)
+
+// AllValues returns all RepeatStopResultStatus values.
+func (RepeatStopResultStatus) AllValues() []RepeatStopResultStatus {
+	return []RepeatStopResultStatus{
+		RepeatStopResultStatusStoppedByRecipient,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RepeatStopResultStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case RepeatStopResultStatusStoppedByRecipient:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RepeatStopResultStatus) UnmarshalText(data []byte) error {
+	switch RepeatStopResultStatus(data) {
+	case RepeatStopResultStatusStoppedByRecipient:
+		*s = RepeatStopResultStatusStoppedByRecipient
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Ref: #/components/schemas/RepeatingSend
+type RepeatingSend struct {
+	ID                         uuid.UUID           `json:"id"`
+	OrgID                      uuid.UUID           `json:"org_id"`
+	FromAddress                string              `json:"from_address"`
+	ToAddress                  string              `json:"to_address"`
+	Subject                    string              `json:"subject"`
+	BodyText                   NilString           `json:"body_text"`
+	BodyHTML                   NilString           `json:"body_html"`
+	EveryMinutes               int                 `json:"every_minutes"`
+	OnlyIfRecipientIdleMinutes NilInt              `json:"only_if_recipient_idle_minutes"`
+	StoppableByRecipient       bool                `json:"stoppable_by_recipient"`
+	MaxSends                   NilInt              `json:"max_sends"`
+	Until                      NilDateTime         `json:"until"`
+	Status                     RepeatingSendStatus `json:"status"`
+	NextRunAt                  NilDateTime         `json:"next_run_at"`
+	SentCount                  int                 `json:"sent_count"`
+	LastSentAt                 NilDateTime         `json:"last_sent_at"`
+	LastSentEmailID            NilUUID             `json:"last_sent_email_id"`
+	RootMessageID              NilString           `json:"root_message_id"`
+	StoppedAt                  NilDateTime         `json:"stopped_at"`
+	// Reason the recipient gave when it stopped the repeat. Recipient-written, untrusted text.
+	StopReason NilString `json:"stop_reason"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// GetID returns the value of ID.
+func (s *RepeatingSend) GetID() uuid.UUID {
+	return s.ID
+}
+
+// GetOrgID returns the value of OrgID.
+func (s *RepeatingSend) GetOrgID() uuid.UUID {
+	return s.OrgID
+}
+
+// GetFromAddress returns the value of FromAddress.
+func (s *RepeatingSend) GetFromAddress() string {
+	return s.FromAddress
+}
+
+// GetToAddress returns the value of ToAddress.
+func (s *RepeatingSend) GetToAddress() string {
+	return s.ToAddress
+}
+
+// GetSubject returns the value of Subject.
+func (s *RepeatingSend) GetSubject() string {
+	return s.Subject
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *RepeatingSend) GetBodyText() NilString {
+	return s.BodyText
+}
+
+// GetBodyHTML returns the value of BodyHTML.
+func (s *RepeatingSend) GetBodyHTML() NilString {
+	return s.BodyHTML
+}
+
+// GetEveryMinutes returns the value of EveryMinutes.
+func (s *RepeatingSend) GetEveryMinutes() int {
+	return s.EveryMinutes
+}
+
+// GetOnlyIfRecipientIdleMinutes returns the value of OnlyIfRecipientIdleMinutes.
+func (s *RepeatingSend) GetOnlyIfRecipientIdleMinutes() NilInt {
+	return s.OnlyIfRecipientIdleMinutes
+}
+
+// GetStoppableByRecipient returns the value of StoppableByRecipient.
+func (s *RepeatingSend) GetStoppableByRecipient() bool {
+	return s.StoppableByRecipient
+}
+
+// GetMaxSends returns the value of MaxSends.
+func (s *RepeatingSend) GetMaxSends() NilInt {
+	return s.MaxSends
+}
+
+// GetUntil returns the value of Until.
+func (s *RepeatingSend) GetUntil() NilDateTime {
+	return s.Until
+}
+
+// GetStatus returns the value of Status.
+func (s *RepeatingSend) GetStatus() RepeatingSendStatus {
+	return s.Status
+}
+
+// GetNextRunAt returns the value of NextRunAt.
+func (s *RepeatingSend) GetNextRunAt() NilDateTime {
+	return s.NextRunAt
+}
+
+// GetSentCount returns the value of SentCount.
+func (s *RepeatingSend) GetSentCount() int {
+	return s.SentCount
+}
+
+// GetLastSentAt returns the value of LastSentAt.
+func (s *RepeatingSend) GetLastSentAt() NilDateTime {
+	return s.LastSentAt
+}
+
+// GetLastSentEmailID returns the value of LastSentEmailID.
+func (s *RepeatingSend) GetLastSentEmailID() NilUUID {
+	return s.LastSentEmailID
+}
+
+// GetRootMessageID returns the value of RootMessageID.
+func (s *RepeatingSend) GetRootMessageID() NilString {
+	return s.RootMessageID
+}
+
+// GetStoppedAt returns the value of StoppedAt.
+func (s *RepeatingSend) GetStoppedAt() NilDateTime {
+	return s.StoppedAt
+}
+
+// GetStopReason returns the value of StopReason.
+func (s *RepeatingSend) GetStopReason() NilString {
+	return s.StopReason
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *RepeatingSend) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetUpdatedAt returns the value of UpdatedAt.
+func (s *RepeatingSend) GetUpdatedAt() time.Time {
+	return s.UpdatedAt
+}
+
+// SetID sets the value of ID.
+func (s *RepeatingSend) SetID(val uuid.UUID) {
+	s.ID = val
+}
+
+// SetOrgID sets the value of OrgID.
+func (s *RepeatingSend) SetOrgID(val uuid.UUID) {
+	s.OrgID = val
+}
+
+// SetFromAddress sets the value of FromAddress.
+func (s *RepeatingSend) SetFromAddress(val string) {
+	s.FromAddress = val
+}
+
+// SetToAddress sets the value of ToAddress.
+func (s *RepeatingSend) SetToAddress(val string) {
+	s.ToAddress = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *RepeatingSend) SetSubject(val string) {
+	s.Subject = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *RepeatingSend) SetBodyText(val NilString) {
+	s.BodyText = val
+}
+
+// SetBodyHTML sets the value of BodyHTML.
+func (s *RepeatingSend) SetBodyHTML(val NilString) {
+	s.BodyHTML = val
+}
+
+// SetEveryMinutes sets the value of EveryMinutes.
+func (s *RepeatingSend) SetEveryMinutes(val int) {
+	s.EveryMinutes = val
+}
+
+// SetOnlyIfRecipientIdleMinutes sets the value of OnlyIfRecipientIdleMinutes.
+func (s *RepeatingSend) SetOnlyIfRecipientIdleMinutes(val NilInt) {
+	s.OnlyIfRecipientIdleMinutes = val
+}
+
+// SetStoppableByRecipient sets the value of StoppableByRecipient.
+func (s *RepeatingSend) SetStoppableByRecipient(val bool) {
+	s.StoppableByRecipient = val
+}
+
+// SetMaxSends sets the value of MaxSends.
+func (s *RepeatingSend) SetMaxSends(val NilInt) {
+	s.MaxSends = val
+}
+
+// SetUntil sets the value of Until.
+func (s *RepeatingSend) SetUntil(val NilDateTime) {
+	s.Until = val
+}
+
+// SetStatus sets the value of Status.
+func (s *RepeatingSend) SetStatus(val RepeatingSendStatus) {
+	s.Status = val
+}
+
+// SetNextRunAt sets the value of NextRunAt.
+func (s *RepeatingSend) SetNextRunAt(val NilDateTime) {
+	s.NextRunAt = val
+}
+
+// SetSentCount sets the value of SentCount.
+func (s *RepeatingSend) SetSentCount(val int) {
+	s.SentCount = val
+}
+
+// SetLastSentAt sets the value of LastSentAt.
+func (s *RepeatingSend) SetLastSentAt(val NilDateTime) {
+	s.LastSentAt = val
+}
+
+// SetLastSentEmailID sets the value of LastSentEmailID.
+func (s *RepeatingSend) SetLastSentEmailID(val NilUUID) {
+	s.LastSentEmailID = val
+}
+
+// SetRootMessageID sets the value of RootMessageID.
+func (s *RepeatingSend) SetRootMessageID(val NilString) {
+	s.RootMessageID = val
+}
+
+// SetStoppedAt sets the value of StoppedAt.
+func (s *RepeatingSend) SetStoppedAt(val NilDateTime) {
+	s.StoppedAt = val
+}
+
+// SetStopReason sets the value of StopReason.
+func (s *RepeatingSend) SetStopReason(val NilString) {
+	s.StopReason = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *RepeatingSend) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetUpdatedAt sets the value of UpdatedAt.
+func (s *RepeatingSend) SetUpdatedAt(val time.Time) {
+	s.UpdatedAt = val
+}
+
+// Ref: #/components/schemas/RepeatingSendStatus
+type RepeatingSendStatus string
+
+const (
+	RepeatingSendStatusActive             RepeatingSendStatus = "active"
+	RepeatingSendStatusPaused             RepeatingSendStatus = "paused"
+	RepeatingSendStatusStoppedByRecipient RepeatingSendStatus = "stopped_by_recipient"
+	RepeatingSendStatusCanceled           RepeatingSendStatus = "canceled"
+	RepeatingSendStatusCompleted          RepeatingSendStatus = "completed"
+)
+
+// AllValues returns all RepeatingSendStatus values.
+func (RepeatingSendStatus) AllValues() []RepeatingSendStatus {
+	return []RepeatingSendStatus{
+		RepeatingSendStatusActive,
+		RepeatingSendStatusPaused,
+		RepeatingSendStatusStoppedByRecipient,
+		RepeatingSendStatusCanceled,
+		RepeatingSendStatusCompleted,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RepeatingSendStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case RepeatingSendStatusActive:
+		return []byte(s), nil
+	case RepeatingSendStatusPaused:
+		return []byte(s), nil
+	case RepeatingSendStatusStoppedByRecipient:
+		return []byte(s), nil
+	case RepeatingSendStatusCanceled:
+		return []byte(s), nil
+	case RepeatingSendStatusCompleted:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RepeatingSendStatus) UnmarshalText(data []byte) error {
+	switch RepeatingSendStatus(data) {
+	case RepeatingSendStatusActive:
+		*s = RepeatingSendStatusActive
+		return nil
+	case RepeatingSendStatusPaused:
+		*s = RepeatingSendStatusPaused
+		return nil
+	case RepeatingSendStatusStoppedByRecipient:
+		*s = RepeatingSendStatusStoppedByRecipient
+		return nil
+	case RepeatingSendStatusCanceled:
+		*s = RepeatingSendStatusCanceled
+		return nil
+	case RepeatingSendStatusCompleted:
+		*s = RepeatingSendStatusCompleted
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type ReplayDeliveryBadRequest ErrorResponse
 
 func (*ReplayDeliveryBadRequest) replayDeliveryRes() {}
@@ -33148,6 +34550,7 @@ type ReplyInput struct {
 	// Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments.
 	// Combined raw decoded attachment bytes must be at most 31457280.
 	Attachments []SendMailAttachment `json:"attachments"`
+	Repeat      OptRepeatInput       `json:"repeat"`
 }
 
 // GetBodyText returns the value of BodyText.
@@ -33180,6 +34583,11 @@ func (s *ReplyInput) GetAttachments() []SendMailAttachment {
 	return s.Attachments
 }
 
+// GetRepeat returns the value of Repeat.
+func (s *ReplyInput) GetRepeat() OptRepeatInput {
+	return s.Repeat
+}
+
 // SetBodyText sets the value of BodyText.
 func (s *ReplyInput) SetBodyText(val OptString) {
 	s.BodyText = val
@@ -33208,6 +34616,11 @@ func (s *ReplyInput) SetReplyAll(val OptBool) {
 // SetAttachments sets the value of Attachments.
 func (s *ReplyInput) SetAttachments(val []SendMailAttachment) {
 	s.Attachments = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *ReplyInput) SetRepeat(val OptRepeatInput) {
+	s.Repeat = val
 }
 
 type ReplyToEmailBadGateway ErrorResponse
@@ -35676,6 +37089,7 @@ func (s *SendMailAttachment) SetContentBase64(val string) {
 
 // Ref: #/components/schemas/SendMailInput
 type SendMailInput struct {
+	Repeat OptRepeatInput `json:"repeat"`
 	// RFC 5322 From header. The sender domain must be a verified outbound domain for your organization.
 	From string `json:"from"`
 	// Recipient address. Recipient eligibility depends on your account's outbound entitlements.
@@ -35721,6 +37135,11 @@ type SendMailInput struct {
 	// supported on scheduled sends). Reschedule via PATCH
 	// /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
 	ScheduledAt OptDateTime `json:"scheduled_at"`
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *SendMailInput) GetRepeat() OptRepeatInput {
+	return s.Repeat
 }
 
 // GetFrom returns the value of From.
@@ -35791,6 +37210,11 @@ func (s *SendMailInput) GetWaitTimeoutMs() OptInt {
 // GetScheduledAt returns the value of ScheduledAt.
 func (s *SendMailInput) GetScheduledAt() OptDateTime {
 	return s.ScheduledAt
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *SendMailInput) SetRepeat(val OptRepeatInput) {
+	s.Repeat = val
 }
 
 // SetFrom sets the value of From.
@@ -36056,6 +37480,8 @@ func (s *SendMailPayloadRef) SetCek(val string) {
 
 // Ref: #/components/schemas/SendMailResult
 type SendMailResult struct {
+	// Present when the request carried `repeat`. Manage it under `/repeating-sends/{id}`.
+	RepeatID OptUUID `json:"repeat_id"`
 	// Persisted sent-email attempt ID.
 	ID     string          `json:"id"`
 	Status SentEmailStatus `json:"status"`
@@ -36108,6 +37534,11 @@ type SendMailResult struct {
 	// yet: `queue_id` is null and `accepted` / `rejected` are
 	// empty. Absent on immediate sends.
 	ScheduledAt OptDateTime `json:"scheduled_at"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *SendMailResult) GetRepeatID() OptUUID {
+	return s.RepeatID
 }
 
 // GetID returns the value of ID.
@@ -36178,6 +37609,11 @@ func (s *SendMailResult) GetIdempotentReplay() bool {
 // GetScheduledAt returns the value of ScheduledAt.
 func (s *SendMailResult) GetScheduledAt() OptDateTime {
 	return s.ScheduledAt
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *SendMailResult) SetRepeatID(val OptUUID) {
+	s.RepeatID = val
 }
 
 // SetID sets the value of ID.
@@ -36861,6 +38297,10 @@ type SentEmailDetail struct {
 	// reached the `canceled` status.
 	CanceledAt      OptNilDateTime                       `json:"canceled_at"`
 	PresenceControl OptNilSentEmailDetailPresenceControl `json:"presence_control"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilSentEmailDetailRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilSentEmailDetailSenderMember `json:"sender_member"`
@@ -37050,6 +38490,11 @@ func (s *SentEmailDetail) GetCanceledAt() OptNilDateTime {
 // GetPresenceControl returns the value of PresenceControl.
 func (s *SentEmailDetail) GetPresenceControl() OptNilSentEmailDetailPresenceControl {
 	return s.PresenceControl
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *SentEmailDetail) GetRepeat() OptNilSentEmailDetailRepeat {
+	return s.Repeat
 }
 
 // GetSenderMember returns the value of SenderMember.
@@ -37245,6 +38690,11 @@ func (s *SentEmailDetail) SetCanceledAt(val OptNilDateTime) {
 // SetPresenceControl sets the value of PresenceControl.
 func (s *SentEmailDetail) SetPresenceControl(val OptNilSentEmailDetailPresenceControl) {
 	s.PresenceControl = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *SentEmailDetail) SetRepeat(val OptNilSentEmailDetailRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -37445,6 +38895,34 @@ func (s *SentEmailDetailPresenceControlStatus) UnmarshalText(data []byte) error 
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type SentEmailDetailRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *SentEmailDetailRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *SentEmailDetailRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *SentEmailDetailRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *SentEmailDetailRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Verified human authorship, projected only within the member organization. Historical attribution
@@ -37750,6 +39228,10 @@ type SentEmailSummary struct {
 	// reached the `canceled` status.
 	CanceledAt      OptNilDateTime                        `json:"canceled_at"`
 	PresenceControl OptNilSentEmailSummaryPresenceControl `json:"presence_control"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilSentEmailSummaryRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilSentEmailSummarySenderMember `json:"sender_member"`
@@ -37913,6 +39395,11 @@ func (s *SentEmailSummary) GetCanceledAt() OptNilDateTime {
 // GetPresenceControl returns the value of PresenceControl.
 func (s *SentEmailSummary) GetPresenceControl() OptNilSentEmailSummaryPresenceControl {
 	return s.PresenceControl
+}
+
+// GetRepeat returns the value of Repeat.
+func (s *SentEmailSummary) GetRepeat() OptNilSentEmailSummaryRepeat {
+	return s.Repeat
 }
 
 // GetSenderMember returns the value of SenderMember.
@@ -38080,6 +39567,11 @@ func (s *SentEmailSummary) SetPresenceControl(val OptNilSentEmailSummaryPresence
 	s.PresenceControl = val
 }
 
+// SetRepeat sets the value of Repeat.
+func (s *SentEmailSummary) SetRepeat(val OptNilSentEmailSummaryRepeat) {
+	s.Repeat = val
+}
+
 // SetSenderMember sets the value of SenderMember.
 func (s *SentEmailSummary) SetSenderMember(val OptNilSentEmailSummarySenderMember) {
 	s.SenderMember = val
@@ -38156,6 +39648,34 @@ func (s *SentEmailSummaryPresenceControlStatus) UnmarshalText(data []byte) error
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type SentEmailSummaryRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *SentEmailSummaryRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *SentEmailSummaryRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *SentEmailSummaryRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *SentEmailSummaryRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Verified human authorship, projected only within the member organization. Historical attribution
@@ -39322,6 +40842,54 @@ func (s *StartCliSignupInputMetadata) init() StartCliSignupInputMetadata {
 	}
 	return m
 }
+
+type StopRepeatFromEmailBadRequest ErrorResponse
+
+func (*StopRepeatFromEmailBadRequest) stopRepeatFromEmailRes() {}
+
+type StopRepeatFromEmailForbidden ErrorResponse
+
+func (*StopRepeatFromEmailForbidden) stopRepeatFromEmailRes() {}
+
+type StopRepeatFromEmailNotFound ErrorResponse
+
+func (*StopRepeatFromEmailNotFound) stopRepeatFromEmailRes() {}
+
+// Merged schema.
+type StopRepeatFromEmailOK struct {
+	Success bool             `json:"success"`
+	Data    RepeatStopResult `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *StopRepeatFromEmailOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *StopRepeatFromEmailOK) GetData() RepeatStopResult {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *StopRepeatFromEmailOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *StopRepeatFromEmailOK) SetData(val RepeatStopResult) {
+	s.Data = val
+}
+
+func (*StopRepeatFromEmailOK) stopRepeatFromEmailRes() {}
+
+type StopRepeatFromEmailUnauthorized ErrorResponse
+
+func (*StopRepeatFromEmailUnauthorized) stopRepeatFromEmailRes() {}
+
+type StopRepeatFromEmailUnprocessableEntity ErrorResponse
+
+func (*StopRepeatFromEmailUnprocessableEntity) stopRepeatFromEmailRes() {}
 
 // Ref: #/components/schemas/StorageStats
 type StorageStats struct {
@@ -41267,6 +42835,10 @@ type ThreadMessage struct {
 	Status OptNilString `json:"status"`
 	// Received_at for inbound, created_at for outbound.
 	Timestamp OptNilDateTime `json:"timestamp"`
+	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+	// records, never from the message content. Null on every other message and on servers that predate
+	// repeating sends.
+	Repeat OptNilThreadMessageRepeat `json:"repeat"`
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilThreadMessageSenderMember `json:"sender_member"`
@@ -41312,6 +42884,11 @@ func (s *ThreadMessage) GetTimestamp() OptNilDateTime {
 	return s.Timestamp
 }
 
+// GetRepeat returns the value of Repeat.
+func (s *ThreadMessage) GetRepeat() OptNilThreadMessageRepeat {
+	return s.Repeat
+}
+
 // GetSenderMember returns the value of SenderMember.
 func (s *ThreadMessage) GetSenderMember() OptNilThreadMessageSenderMember {
 	return s.SenderMember
@@ -41355,6 +42932,11 @@ func (s *ThreadMessage) SetStatus(val OptNilString) {
 // SetTimestamp sets the value of Timestamp.
 func (s *ThreadMessage) SetTimestamp(val OptNilDateTime) {
 	s.Timestamp = val
+}
+
+// SetRepeat sets the value of Repeat.
+func (s *ThreadMessage) SetRepeat(val OptNilThreadMessageRepeat) {
+	s.Repeat = val
 }
 
 // SetSenderMember sets the value of SenderMember.
@@ -41404,6 +42986,34 @@ func (s *ThreadMessageDirection) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
+// records, never from the message content. Null on every other message and on servers that predate
+// repeating sends.
+type ThreadMessageRepeat struct {
+	RepeatID uuid.UUID `json:"repeat_id"`
+	Sequence int       `json:"sequence"`
+}
+
+// GetRepeatID returns the value of RepeatID.
+func (s *ThreadMessageRepeat) GetRepeatID() uuid.UUID {
+	return s.RepeatID
+}
+
+// GetSequence returns the value of Sequence.
+func (s *ThreadMessageRepeat) GetSequence() int {
+	return s.Sequence
+}
+
+// SetRepeatID sets the value of RepeatID.
+func (s *ThreadMessageRepeat) SetRepeatID(val uuid.UUID) {
+	s.RepeatID = val
+}
+
+// SetSequence sets the value of Sequence.
+func (s *ThreadMessageRepeat) SetSequence(val int) {
+	s.Sequence = val
 }
 
 // Verified human authorship, projected only within the member organization. Historical attribution
@@ -42202,6 +43812,186 @@ func (*UpdateRegistryUnauthorized) updateRegistryRes() {}
 type UpdateRegistryUnprocessableEntity ErrorResponse
 
 func (*UpdateRegistryUnprocessableEntity) updateRegistryRes() {}
+
+type UpdateRepeatingSendBadRequest ErrorResponse
+
+func (*UpdateRepeatingSendBadRequest) updateRepeatingSendRes() {}
+
+type UpdateRepeatingSendNotFound ErrorResponse
+
+func (*UpdateRepeatingSendNotFound) updateRepeatingSendRes() {}
+
+// Merged schema.
+type UpdateRepeatingSendOK struct {
+	Success bool          `json:"success"`
+	Data    RepeatingSend `json:"data"`
+}
+
+// GetSuccess returns the value of Success.
+func (s *UpdateRepeatingSendOK) GetSuccess() bool {
+	return s.Success
+}
+
+// GetData returns the value of Data.
+func (s *UpdateRepeatingSendOK) GetData() RepeatingSend {
+	return s.Data
+}
+
+// SetSuccess sets the value of Success.
+func (s *UpdateRepeatingSendOK) SetSuccess(val bool) {
+	s.Success = val
+}
+
+// SetData sets the value of Data.
+func (s *UpdateRepeatingSendOK) SetData(val RepeatingSend) {
+	s.Data = val
+}
+
+func (*UpdateRepeatingSendOK) updateRepeatingSendRes() {}
+
+// Ref: #/components/schemas/UpdateRepeatingSendRequest
+type UpdateRepeatingSendRequest struct {
+	Status                     OptUpdateRepeatingSendRequestStatus `json:"status"`
+	EveryMinutes               OptInt                              `json:"every_minutes"`
+	OnlyIfRecipientIdleMinutes OptNilInt                           `json:"only_if_recipient_idle_minutes"`
+	StoppableByRecipient       OptBool                             `json:"stoppable_by_recipient"`
+	MaxSends                   OptNilInt                           `json:"max_sends"`
+	Until                      OptNilDateTime                      `json:"until"`
+	BodyText                   OptString                           `json:"body_text"`
+	Subject                    OptString                           `json:"subject"`
+}
+
+// GetStatus returns the value of Status.
+func (s *UpdateRepeatingSendRequest) GetStatus() OptUpdateRepeatingSendRequestStatus {
+	return s.Status
+}
+
+// GetEveryMinutes returns the value of EveryMinutes.
+func (s *UpdateRepeatingSendRequest) GetEveryMinutes() OptInt {
+	return s.EveryMinutes
+}
+
+// GetOnlyIfRecipientIdleMinutes returns the value of OnlyIfRecipientIdleMinutes.
+func (s *UpdateRepeatingSendRequest) GetOnlyIfRecipientIdleMinutes() OptNilInt {
+	return s.OnlyIfRecipientIdleMinutes
+}
+
+// GetStoppableByRecipient returns the value of StoppableByRecipient.
+func (s *UpdateRepeatingSendRequest) GetStoppableByRecipient() OptBool {
+	return s.StoppableByRecipient
+}
+
+// GetMaxSends returns the value of MaxSends.
+func (s *UpdateRepeatingSendRequest) GetMaxSends() OptNilInt {
+	return s.MaxSends
+}
+
+// GetUntil returns the value of Until.
+func (s *UpdateRepeatingSendRequest) GetUntil() OptNilDateTime {
+	return s.Until
+}
+
+// GetBodyText returns the value of BodyText.
+func (s *UpdateRepeatingSendRequest) GetBodyText() OptString {
+	return s.BodyText
+}
+
+// GetSubject returns the value of Subject.
+func (s *UpdateRepeatingSendRequest) GetSubject() OptString {
+	return s.Subject
+}
+
+// SetStatus sets the value of Status.
+func (s *UpdateRepeatingSendRequest) SetStatus(val OptUpdateRepeatingSendRequestStatus) {
+	s.Status = val
+}
+
+// SetEveryMinutes sets the value of EveryMinutes.
+func (s *UpdateRepeatingSendRequest) SetEveryMinutes(val OptInt) {
+	s.EveryMinutes = val
+}
+
+// SetOnlyIfRecipientIdleMinutes sets the value of OnlyIfRecipientIdleMinutes.
+func (s *UpdateRepeatingSendRequest) SetOnlyIfRecipientIdleMinutes(val OptNilInt) {
+	s.OnlyIfRecipientIdleMinutes = val
+}
+
+// SetStoppableByRecipient sets the value of StoppableByRecipient.
+func (s *UpdateRepeatingSendRequest) SetStoppableByRecipient(val OptBool) {
+	s.StoppableByRecipient = val
+}
+
+// SetMaxSends sets the value of MaxSends.
+func (s *UpdateRepeatingSendRequest) SetMaxSends(val OptNilInt) {
+	s.MaxSends = val
+}
+
+// SetUntil sets the value of Until.
+func (s *UpdateRepeatingSendRequest) SetUntil(val OptNilDateTime) {
+	s.Until = val
+}
+
+// SetBodyText sets the value of BodyText.
+func (s *UpdateRepeatingSendRequest) SetBodyText(val OptString) {
+	s.BodyText = val
+}
+
+// SetSubject sets the value of Subject.
+func (s *UpdateRepeatingSendRequest) SetSubject(val OptString) {
+	s.Subject = val
+}
+
+type UpdateRepeatingSendRequestStatus string
+
+const (
+	UpdateRepeatingSendRequestStatusActive   UpdateRepeatingSendRequestStatus = "active"
+	UpdateRepeatingSendRequestStatusPaused   UpdateRepeatingSendRequestStatus = "paused"
+	UpdateRepeatingSendRequestStatusCanceled UpdateRepeatingSendRequestStatus = "canceled"
+)
+
+// AllValues returns all UpdateRepeatingSendRequestStatus values.
+func (UpdateRepeatingSendRequestStatus) AllValues() []UpdateRepeatingSendRequestStatus {
+	return []UpdateRepeatingSendRequestStatus{
+		UpdateRepeatingSendRequestStatusActive,
+		UpdateRepeatingSendRequestStatusPaused,
+		UpdateRepeatingSendRequestStatusCanceled,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s UpdateRepeatingSendRequestStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case UpdateRepeatingSendRequestStatusActive:
+		return []byte(s), nil
+	case UpdateRepeatingSendRequestStatusPaused:
+		return []byte(s), nil
+	case UpdateRepeatingSendRequestStatusCanceled:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *UpdateRepeatingSendRequestStatus) UnmarshalText(data []byte) error {
+	switch UpdateRepeatingSendRequestStatus(data) {
+	case UpdateRepeatingSendRequestStatusActive:
+		*s = UpdateRepeatingSendRequestStatusActive
+		return nil
+	case UpdateRepeatingSendRequestStatusPaused:
+		*s = UpdateRepeatingSendRequestStatusPaused
+		return nil
+	case UpdateRepeatingSendRequestStatusCanceled:
+		*s = UpdateRepeatingSendRequestStatusCanceled
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type UpdateRepeatingSendUnauthorized ErrorResponse
+
+func (*UpdateRepeatingSendUnauthorized) updateRepeatingSendRes() {}
 
 type UpdateRouteBadRequest ErrorResponse
 

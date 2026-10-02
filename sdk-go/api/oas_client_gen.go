@@ -468,6 +468,12 @@ type Invoker interface {
 	//
 	// DELETE /registries/{slug}
 	DeleteRegistry(ctx context.Context, params DeleteRegistryParams) (DeleteRegistryRes, error)
+	// DeleteRepeatingSend invokes deleteRepeatingSend operation.
+	//
+	// Deletes the repeat and cancels its pending message. Messages already sent are not affected.
+	//
+	// DELETE /repeating-sends/{id}
+	DeleteRepeatingSend(ctx context.Context, params DeleteRepeatingSendParams) (DeleteRepeatingSendRes, error)
 	// DeleteRoute invokes deleteRoute operation.
 	//
 	// Delete a recipient route.
@@ -832,6 +838,12 @@ type Invoker interface {
 	//
 	// GET /registries/{slug}
 	GetRegistry(ctx context.Context, params GetRegistryParams) (GetRegistryRes, error)
+	// GetRepeatingSend invokes getRepeatingSend operation.
+	//
+	// Get a repeating send.
+	//
+	// GET /repeating-sends/{id}
+	GetRepeatingSend(ctx context.Context, params GetRepeatingSendParams) (GetRepeatingSendRes, error)
 	// GetSendPermissions invokes getSendPermissions operation.
 	//
 	// Returns a flat list of rules describing every recipient the
@@ -1171,6 +1183,15 @@ type Invoker interface {
 	//
 	// GET /registries/{slug}/requests
 	ListRegistryRequests(ctx context.Context, params ListRegistryRequestsParams) (ListRegistryRequestsRes, error)
+	// ListRepeatingSends invokes listRepeatingSends operation.
+	//
+	// Repeating sends you created, newest first. A repeat is visible to the
+	// member who created it, or to any organization API key or member for
+	// repeats created with an organization API key. Agent credentials get
+	// 403.
+	//
+	// GET /repeating-sends
+	ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (ListRepeatingSendsRes, error)
 	// ListRoutes invokes listRoutes operation.
 	//
 	// Returns the org's recipient routing rules in evaluation order. Each rule
@@ -1703,6 +1724,20 @@ type Invoker interface {
 	//
 	// POST /cli/signup/start
 	StartCliSignup(ctx context.Context, request *StartCliSignupInput) (StartCliSignupRes, error)
+	// StopRepeatFromEmail invokes stopRepeatFromEmail operation.
+	//
+	// Called by the recipient of a repeating send: the connected agent's own
+	// credential for an agent address, or the signed-in member whose personal
+	// address it is. `id` is the caller's received copy of any message of the
+	// repeat, or the repeat id printed in the message footer, which resolves
+	// to the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels
+	// the
+	// pending message, and replies once in the thread with a
+	// `repeat.stop/1` interaction so the sender sees it. A repeat call returns
+	// the same result without a second reply.
+	//
+	// POST /emails/{id}/repeat-stop
+	StopRepeatFromEmail(ctx context.Context, request OptRepeatStopRequest, params StopRepeatFromEmailParams) (StopRepeatFromEmailRes, error)
 	// TestEndpoint invokes testEndpoint operation.
 	//
 	// Sends a sample `email.received` event to the endpoint. The request
@@ -1833,6 +1868,16 @@ type Invoker interface {
 	//
 	// PATCH /registries/{slug}
 	UpdateRegistry(ctx context.Context, request *UpdateRegistryInput, params UpdateRegistryParams) (UpdateRegistryRes, error)
+	// UpdateRepeatingSend invokes updateRepeatingSend operation.
+	//
+	// Pause, resume or cancel a repeat, or change its cadence, limits,
+	// message or whether the recipient may stop it. `active` resumes a paused
+	// repeat or one the recipient stopped; the next message goes out within
+	// about a minute. A null `only_if_recipient_idle_minutes`, `max_sends`
+	// or `until` clears that limit.
+	//
+	// PATCH /repeating-sends/{id}
+	UpdateRepeatingSend(ctx context.Context, request *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error)
 	// UpdateRoute invokes updateRoute operation.
 	//
 	// Update a recipient route.
@@ -6685,6 +6730,131 @@ func (c *Client) sendDeleteRegistry(ctx context.Context, params DeleteRegistryPa
 	return result, nil
 }
 
+// DeleteRepeatingSend invokes deleteRepeatingSend operation.
+//
+// Deletes the repeat and cancels its pending message. Messages already sent are not affected.
+//
+// DELETE /repeating-sends/{id}
+func (c *Client) DeleteRepeatingSend(ctx context.Context, params DeleteRepeatingSendParams) (DeleteRepeatingSendRes, error) {
+	res, err := c.sendDeleteRepeatingSend(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendDeleteRepeatingSend(ctx context.Context, params DeleteRepeatingSendParams) (res DeleteRepeatingSendRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("deleteRepeatingSend"),
+		semconv.HTTPRequestMethodKey.String("DELETE"),
+		semconv.URLTemplateKey.String("/repeating-sends/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, DeleteRepeatingSendOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/repeating-sends/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "DELETE", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, DeleteRepeatingSendOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeDeleteRepeatingSendResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // DeleteRoute invokes deleteRoute operation.
 //
 // Delete a recipient route.
@@ -10414,6 +10584,131 @@ func (c *Client) sendGetRegistry(ctx context.Context, params GetRegistryParams) 
 
 	stage = "DecodeResponse"
 	result, err := decodeGetRegistryResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GetRepeatingSend invokes getRepeatingSend operation.
+//
+// Get a repeating send.
+//
+// GET /repeating-sends/{id}
+func (c *Client) GetRepeatingSend(ctx context.Context, params GetRepeatingSendParams) (GetRepeatingSendRes, error) {
+	res, err := c.sendGetRepeatingSend(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGetRepeatingSend(ctx context.Context, params GetRepeatingSendParams) (res GetRepeatingSendRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("getRepeatingSend"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/repeating-sends/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, GetRepeatingSendOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/repeating-sends/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, GetRepeatingSendOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGetRepeatingSendResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -14718,6 +15013,154 @@ func (c *Client) sendListRegistryRequests(ctx context.Context, params ListRegist
 
 	stage = "DecodeResponse"
 	result, err := decodeListRegistryRequestsResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// ListRepeatingSends invokes listRepeatingSends operation.
+//
+// Repeating sends you created, newest first. A repeat is visible to the
+// member who created it, or to any organization API key or member for
+// repeats created with an organization API key. Agent credentials get
+// 403.
+//
+// GET /repeating-sends
+func (c *Client) ListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (ListRepeatingSendsRes, error) {
+	res, err := c.sendListRepeatingSends(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListRepeatingSends(ctx context.Context, params ListRepeatingSendsParams) (res ListRepeatingSendsRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listRepeatingSends"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/repeating-sends"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListRepeatingSendsOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/repeating-sends"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "to" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "to",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.To.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "status" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "status",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Status.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListRepeatingSendsOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListRepeatingSendsResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -20656,6 +21099,143 @@ func (c *Client) sendStartCliSignup(ctx context.Context, request *StartCliSignup
 	return result, nil
 }
 
+// StopRepeatFromEmail invokes stopRepeatFromEmail operation.
+//
+// Called by the recipient of a repeating send: the connected agent's own
+// credential for an agent address, or the signed-in member whose personal
+// address it is. `id` is the caller's received copy of any message of the
+// repeat, or the repeat id printed in the message footer, which resolves
+// to the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels
+// the
+// pending message, and replies once in the thread with a
+// `repeat.stop/1` interaction so the sender sees it. A repeat call returns
+// the same result without a second reply.
+//
+// POST /emails/{id}/repeat-stop
+func (c *Client) StopRepeatFromEmail(ctx context.Context, request OptRepeatStopRequest, params StopRepeatFromEmailParams) (StopRepeatFromEmailRes, error) {
+	res, err := c.sendStopRepeatFromEmail(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendStopRepeatFromEmail(ctx context.Context, request OptRepeatStopRequest, params StopRepeatFromEmailParams) (res StopRepeatFromEmailRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("stopRepeatFromEmail"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/emails/{id}/repeat-stop"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, StopRepeatFromEmailOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [3]string
+	pathParts[0] = "/emails/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	pathParts[2] = "/repeat-stop"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeStopRepeatFromEmailRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, StopRepeatFromEmailOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeStopRepeatFromEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // TestEndpoint invokes testEndpoint operation.
 //
 // Sends a sample `email.received` event to the endpoint. The request
@@ -22239,6 +22819,138 @@ func (c *Client) sendUpdateRegistry(ctx context.Context, request *UpdateRegistry
 
 	stage = "DecodeResponse"
 	result, err := decodeUpdateRegistryResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// UpdateRepeatingSend invokes updateRepeatingSend operation.
+//
+// Pause, resume or cancel a repeat, or change its cadence, limits,
+// message or whether the recipient may stop it. `active` resumes a paused
+// repeat or one the recipient stopped; the next message goes out within
+// about a minute. A null `only_if_recipient_idle_minutes`, `max_sends`
+// or `until` clears that limit.
+//
+// PATCH /repeating-sends/{id}
+func (c *Client) UpdateRepeatingSend(ctx context.Context, request *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (UpdateRepeatingSendRes, error) {
+	res, err := c.sendUpdateRepeatingSend(ctx, request, params)
+	return res, err
+}
+
+func (c *Client) sendUpdateRepeatingSend(ctx context.Context, request *UpdateRepeatingSendRequest, params UpdateRepeatingSendParams) (res UpdateRepeatingSendRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("updateRepeatingSend"),
+		semconv.HTTPRequestMethodKey.String("PATCH"),
+		semconv.URLTemplateKey.String("/repeating-sends/{id}"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, UpdateRepeatingSendOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [2]string
+	pathParts[0] = "/repeating-sends/"
+	{
+		// Encode "id" parameter.
+		e := uri.NewPathEncoder(uri.PathEncoderConfig{
+			Param:   "id",
+			Style:   uri.PathStyleSimple,
+			Explode: false,
+		})
+		if err := func() error {
+			return e.EncodeValue(conv.UUIDToString(params.ID))
+		}(); err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		encoded, err := e.Result()
+		if err != nil {
+			return res, errors.Wrap(err, "encode path")
+		}
+		pathParts[1] = encoded
+	}
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "PATCH", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeUpdateRepeatingSendRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, UpdateRepeatingSendOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeUpdateRepeatingSendResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
