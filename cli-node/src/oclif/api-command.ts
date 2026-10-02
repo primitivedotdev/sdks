@@ -9,6 +9,12 @@ import type {
 import { operations } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
 import {
+  ATTACHMENT_WAIT_FLAG_DESCRIPTION,
+  ATTACHMENT_WAIT_MAX_MS,
+  ATTACHMENT_WAIT_OPERATIONS,
+  withAttachmentWait,
+} from "./attachment-wait.js";
+import {
   type ResolvedCliAuth,
   resolveCliAuth,
   saveSignupCredentials,
@@ -53,6 +59,7 @@ export const API_ERROR_CODES = {
 type OperationExecutor = (options: Record<string, unknown>) => Promise<{
   data?: Blob | File | Record<string, unknown> | Record<string, unknown>[];
   error?: unknown;
+  response?: Response;
 }>;
 
 function flagName(parameterName: string): string {
@@ -804,6 +811,14 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     });
   }
 
+  if (ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)) {
+    flags.wait = Flags.boolean({
+      allowNo: true,
+      default: true,
+      description: ATTACHMENT_WAIT_FLAG_DESCRIPTION,
+    });
+  }
+
   return { flags, bodyFieldFlagToProperty };
 }
 
@@ -1130,14 +1145,30 @@ export function createOperationCommand(
           operation.sdkName,
           query,
         );
-        const result = await operationFn({
-          body,
-          client: apiClient.client,
-          parseAs: operation.binaryResponse ? "blob" : "auto",
-          path: collectValues(operation.pathParams, parsedFlags),
-          query,
-          responseStyle: "fields",
-        });
+        const callOperation = () =>
+          operationFn({
+            body,
+            client: apiClient.client,
+            parseAs: operation.binaryResponse ? "blob" : "auto",
+            path: collectValues(operation.pathParams, parsedFlags),
+            query,
+            responseStyle: "fields",
+          });
+        // Attachment content can be briefly not ready after an email
+        // arrives. Wait for it rather than making the caller poll. The
+        // note goes to stderr: stdout carries only the downloaded bytes.
+        const result = ATTACHMENT_WAIT_OPERATIONS.has(operation.sdkName)
+          ? await withAttachmentWait(callOperation, {
+              wait: parsedFlags.wait !== false,
+              errorCode: (error) =>
+                extractErrorCode(extractErrorPayload(error)),
+              onFirstWait: () => {
+                process.stderr.write(
+                  `Attachment content is not ready yet; waiting up to ${ATTACHMENT_WAIT_MAX_MS / 1000}s. Pass --no-wait to return immediately.\n`,
+                );
+              },
+            })
+          : await callOperation();
 
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
