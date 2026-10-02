@@ -3259,6 +3259,16 @@ export type ReplyInput = {
      */
     wait?: boolean;
     /**
+     * Reply to everyone on the email. To is the sender (or
+     * Reply-To) as in a plain reply; every other To and Cc address
+     * of the email becomes Cc, minus the replying address. Bcc is
+     * never read, so a blind copy stays blind. Every send rule
+     * applies to each recipient exactly as for a direct send with
+     * cc. Defaults to false.
+     *
+     */
+    reply_all?: boolean;
+    /**
      * Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most 31457280.
      */
     attachments?: Array<SendMailAttachment>;

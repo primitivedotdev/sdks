@@ -20212,6 +20212,10 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "boolean",
             "description": "When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics."
           },
+          "reply_all": {
+            "type": "boolean",
+            "description": "Reply to everyone on the email. To is the sender (or\nReply-To) as in a plain reply; every other To and Cc address\nof the email becomes Cc, minus the replying address. Bcc is\nnever read, so a blind copy stays blind. Every send rule\napplies to each recipient exactly as for a direct send with\ncc. Defaults to false.\n"
+          },
           "attachments": {
             "type": "array",
             "maxItems": 100,

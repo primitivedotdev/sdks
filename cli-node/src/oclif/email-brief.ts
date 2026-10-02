@@ -5,6 +5,7 @@ import {
 } from "@primitivedotdev/api-core";
 import { runAddressNotesRequest } from "./address-notes.js";
 import { apiContactPolicy } from "./contact-policy-client.js";
+import { otherParticipants } from "./email-participants.js";
 import {
   notificationPartReader,
   readConversationStatusContent,
@@ -56,6 +57,12 @@ export type EmailBriefEnvelope = {
   };
   thread_id: string | null;
   in_thread: boolean | null;
+  /**
+   * Everyone else the email was addressed to (its To and Cc, without you and
+   * the sender), as the sender wrote them. Empty for a one-to-one email.
+   * `primitive reply --all` includes them.
+   */
+  also_addressed: string[];
   attachments: { present: boolean; count: number };
   /** Null when the API does not report newer mail for this thread. */
   newer: {
@@ -309,6 +316,7 @@ export async function buildEmailBrief(input: {
       },
       thread_id: threadId,
       in_thread: sentInThread(thread, self) ?? null,
+      also_addressed: otherParticipants(detail, self).map(displayAddress),
       attachments: { present: attachments > 0, count: attachments },
       newer:
         thread?.newerInboundCount === undefined
@@ -349,6 +357,10 @@ export function renderEmailBrief(brief: EmailBrief): string {
     `  thread: ${e.thread_id ?? "none"}`,
     `  you have sent in this thread: ${e.in_thread === null ? "unknown" : e.in_thread ? "yes" : "no"}`,
   ];
+  if (e.also_addressed.length > 0)
+    lines.push(
+      `  also addressed (To/Cc as the sender wrote them): ${e.also_addressed.join(", ")}; reply --all includes them`,
+    );
   if (e.newer) {
     lines.push(`  newer messages in thread: ${e.newer.count}`);
     for (const message of e.newer.messages)

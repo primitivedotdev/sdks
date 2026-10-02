@@ -66,6 +66,54 @@ function fixture() {
   return { context, detail, threadId: detail.thread_id as string };
 }
 
+describe("group conversations", () => {
+  it("does not bind a group thread to one peer, even when the thread is already followed", async () => {
+    const f = fixture();
+    expect(await followEmailConversation(f.context, f.detail)).not.toBeNull();
+    const group: EmailDetail = {
+      ...f.detail,
+      id: randomUUID(),
+      from_email: "other-agent@example.com",
+      sender: "other-agent@example.com",
+      parsed: {
+        status: "complete",
+        attachments: [],
+        to_addresses: [
+          { address: f.context.peer, name: null },
+          { address: f.context.recipient, name: null },
+        ],
+        cc: [{ address: "other-agent@example.com", name: null }],
+      },
+    };
+    // A different peer in the same thread would otherwise be refused.
+    await expect(
+      followEmailConversation(
+        { ...f.context, peer: "other-agent@example.com" },
+        group,
+      ),
+    ).resolves.toBeNull();
+    expect(readConversationFollow(f.context, f.threadId)?.peer).toBe(
+      f.context.peer,
+    );
+  });
+
+  it("still follows one-to-one mail that names only this agent", async () => {
+    const f = fixture();
+    const detail: EmailDetail = {
+      ...f.detail,
+      parsed: {
+        status: "complete",
+        attachments: [],
+        to_addresses: [{ address: f.context.recipient, name: null }],
+        cc: [],
+      },
+    };
+    expect(await followEmailConversation(f.context, detail)).toMatchObject({
+      peer: f.context.peer,
+    });
+  });
+});
+
 describe("durable native conversation following", () => {
   it("retains an exact Claude session for follow-up mail", async () => {
     const f = fixture();

@@ -33138,6 +33138,13 @@ type ReplyInput struct {
 	// When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the
 	// send-mail `wait` semantics.
 	Wait OptBool `json:"wait"`
+	// Reply to everyone on the email. To is the sender (or
+	// Reply-To) as in a plain reply; every other To and Cc address
+	// of the email becomes Cc, minus the replying address. Bcc is
+	// never read, so a blind copy stays blind. Every send rule
+	// applies to each recipient exactly as for a direct send with
+	// cc. Defaults to false.
+	ReplyAll OptBool `json:"reply_all"`
 	// Inline attachments for this reply. Use https://api.primitive.dev/v1 for replies with attachments.
 	// Combined raw decoded attachment bytes must be at most 31457280.
 	Attachments []SendMailAttachment `json:"attachments"`
@@ -33163,6 +33170,11 @@ func (s *ReplyInput) GetWait() OptBool {
 	return s.Wait
 }
 
+// GetReplyAll returns the value of ReplyAll.
+func (s *ReplyInput) GetReplyAll() OptBool {
+	return s.ReplyAll
+}
+
 // GetAttachments returns the value of Attachments.
 func (s *ReplyInput) GetAttachments() []SendMailAttachment {
 	return s.Attachments
@@ -33186,6 +33198,11 @@ func (s *ReplyInput) SetFrom(val OptString) {
 // SetWait sets the value of Wait.
 func (s *ReplyInput) SetWait(val OptBool) {
 	s.Wait = val
+}
+
+// SetReplyAll sets the value of ReplyAll.
+func (s *ReplyInput) SetReplyAll(val OptBool) {
+	s.ReplyAll = val
 }
 
 // SetAttachments sets the value of Attachments.

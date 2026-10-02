@@ -278,6 +278,7 @@ describe("email brief", () => {
       },
       thread_id: thread,
       in_thread: true,
+      also_addressed: [],
       attachments: { present: false, count: 0 },
       newer: {
         count: 1,
