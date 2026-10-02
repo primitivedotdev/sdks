@@ -226,20 +226,50 @@ async function npmLatestVersion(
 
 const SKILL_BACKUPS_KEPT = 2;
 
-function pruneSkillBackups(directory: string, runtime: string): void {
-  const pattern = new RegExp(`^${runtime}-\\d{8}T\\d{6}Z(?:-\\d+)?$`);
+/**
+ * Skill backups are named <runtime>-<sequence>-<timestamp>. The sequence is
+ * one past the highest existing one for the runtime, so names order strictly
+ * by creation even when several are made within the same second.
+ */
+function skillBackups(
+  directory: string,
+  runtime: string,
+): Array<{ name: string; sequence: number }> {
+  const pattern = new RegExp(`^${runtime}-(\\d{6,})-\\d{8}T\\d{6}Z$`);
+  let names: string[];
   try {
-    const names = readdirSync(directory)
-      .filter((name) => pattern.test(name))
-      .sort();
-    for (const name of names.slice(
-      0,
-      Math.max(0, names.length - SKILL_BACKUPS_KEPT),
-    ))
-      rmSync(join(directory, name), { recursive: true, force: true });
+    names = readdirSync(directory);
   } catch {
-    /* Old backups are harmless; pruning never fails a repair. */
+    return [];
   }
+  return names
+    .flatMap((name) => {
+      const match = pattern.exec(name);
+      return match ? [{ name, sequence: Number(match[1]) }] : [];
+    })
+    .sort((left, right) => left.sequence - right.sequence);
+}
+
+function nextSkillBackupName(
+  directory: string,
+  runtime: string,
+  now: Date,
+): string {
+  const last = skillBackups(directory, runtime).at(-1)?.sequence ?? 0;
+  return `${runtime}-${String(last + 1).padStart(6, "0")}-${backupStamp(now)}`;
+}
+
+function pruneSkillBackups(directory: string, runtime: string): void {
+  const backups = skillBackups(directory, runtime);
+  for (const { name } of backups.slice(
+    0,
+    Math.max(0, backups.length - SKILL_BACKUPS_KEPT),
+  ))
+    try {
+      rmSync(join(directory, name), { recursive: true, force: true });
+    } catch {
+      /* Old backups are harmless; pruning never fails a repair. */
+    }
 }
 
 function backupStamp(now: Date): string {
@@ -526,11 +556,13 @@ export async function runMachineDoctor(
       if (existsSync(target)) {
         // Keep the whole replaced copy, installed helper packages included,
         // so restoring it brings back a working skill.
-        const stamp = `${runtime}-${backupStamp(now())}`;
-        let backup = join(backups, stamp);
-        for (let attempt = 1; existsSync(backup); attempt++)
-          backup = join(backups, `${stamp}-${attempt}`);
-        mkdirSync(backup, { recursive: true, mode: 0o700 });
+        mkdirSync(backups, { recursive: true, mode: 0o700 });
+        const backup = join(
+          backups,
+          nextSkillBackupName(backups, runtime, now()),
+        );
+        // Created exclusively: a concurrent run cannot share the name.
+        mkdirSync(backup, { mode: 0o700 });
         cpSync(target, backup, { recursive: true, verbatimSymlinks: true });
       }
       const result = installConnectSkill({

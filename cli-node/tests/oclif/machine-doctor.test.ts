@@ -863,12 +863,42 @@ describe("primitive machine doctor", () => {
       .filter((name) => name.startsWith("claude-"))
       .sort();
     expect(kept).toEqual([
-      "claude-20261002T120200Z",
-      "claude-20261002T120300Z",
+      "claude-000003-20261002T120200Z",
+      "claude-000004-20261002T120300Z",
     ]);
     expect(readFileSync(join(backups, kept[1] ?? "", "SKILL.md"), "utf8")).toBe(
       "edited 3\n",
     );
+  });
+
+  it("keeps the newest two backups when many replacements share one second", async () => {
+    const { home, configDir, options } = machine();
+    const skill = join(home, ".claude", "skills", "primitive-connect");
+    const backups = join(configDir, "machine", "backups", "skills");
+    const sameSecond = () => new Date(Date.UTC(2026, 9, 2, 12, 0, 0, 500));
+    for (let round = 0; round < 5; round++) {
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(join(skill, "SKILL.md"), `edited ${round}\n`);
+      const report = byId(
+        await runMachineDoctor({
+          ...options,
+          fix: true,
+          only: new Set(["skill.claude"]),
+          now: sameSecond,
+        }),
+      );
+      expect(report["skill.claude"].fixed).toBe(true);
+    }
+    const kept = readdirSync(backups).filter((name) =>
+      name.startsWith("claude-"),
+    );
+    expect(kept.sort()).toEqual([
+      "claude-000004-20261002T120000Z",
+      "claude-000005-20261002T120000Z",
+    ]);
+    expect(
+      kept.map((name) => readFileSync(join(backups, name, "SKILL.md"), "utf8")),
+    ).toEqual(["edited 3\n", "edited 4\n"]);
   });
 
   it("does not repair while another repair holds the lock", async () => {
