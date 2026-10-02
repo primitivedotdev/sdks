@@ -387,8 +387,9 @@ test("owner OAuth creates one readable address and keeps the invitation out of s
   });
   assert.deepEqual(value, {
     ...result,
-    guidance:
-      "The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected.",
+    // The fixture's own-record read does not report the field.
+    identity: { ...result.identity, ownerMemberAddress: null },
+    guidance: `The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected. No personal owner address is known, so reply to the member who wrote to you; never send reports to ${result.identity.ownerAddress}, the setup and presence control address.`,
     contactRequestPolicy: "enabled",
     connection: { status: "connected" },
   });
@@ -483,6 +484,8 @@ test("an inactive human owner is never reported as receiving", async () => {
   });
   assert.equal(value.connection.status, "owner_inactive");
   assert.equal(value.receiving.state, "not_ready");
+  // No report target is offered for a departed owner.
+  assert.equal(value.guidance.includes("reports"), false);
 });
 
 test("owner confirmation reaches the target on its final bounded page", async () => {
@@ -581,6 +584,28 @@ test("owner list outage leaves a saved enrollment unconfirmed", async () => {
   });
   assert.equal(value.connection.status, "unavailable");
   assert.equal(connectionListReads(), 40);
+  assert.equal(creates.length, 1);
+});
+
+test("owner list outage does not undo a verification setup already confirmed", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ connectionListUnavailable: true });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async () => ({
+      ...result,
+      verification: { state: "verified" as const, verifiedAt: null },
+    })) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
+  assert.match(value.guidance, /connection status reports pairing verified/);
   assert.equal(creates.length, 1);
 });
 

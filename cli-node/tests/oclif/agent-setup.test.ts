@@ -6,8 +6,11 @@ import type { EmailDetail } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type AgentSetupDependencies,
+  parseVerificationCheck,
   setupAgent,
   setupChallenge,
+  VERIFICATION_BACKOFF_MS,
+  verificationReplySubmitted,
 } from "../../src/oclif/agent-setup.js";
 import { agentProfileDirectory } from "../../src/oclif/connected-agent-profile.js";
 
@@ -65,6 +68,9 @@ function fixture() {
       async () => receipt,
     ),
     reconcile: vi.fn<AgentSetupDependencies["reconcile"]>(async () => null),
+    checkVerification: vi.fn<AgentSetupDependencies["checkVerification"]>(
+      async () => ({ state: "unavailable" as const }),
+    ),
     enableOwner: vi.fn<AgentSetupDependencies["enableOwner"]>(
       async () => "enabled",
     ),
@@ -825,5 +831,193 @@ describe("one-command connected agent setup", () => {
       expect(f.dependencies.sleep).toHaveBeenCalledExactlyOnceWith(32_000);
       expect(policyReads).toBeGreaterThanOrEqual(3);
     }
+  });
+});
+
+describe("verification after the setup reply", () => {
+  const me = (address: string, status: string, verifiedAt?: string) =>
+    Response.json({
+      success: true,
+      data: {
+        connection: {
+          address,
+          status,
+          ...(verifiedAt ? { verified_at: verifiedAt } : {}),
+        },
+      },
+    });
+  const claimFetch = (f: ReturnType<typeof fixture>) =>
+    f.fetch.getMockImplementation() as typeof globalThis.fetch;
+  /** Route the claim to the fixture and status reads to `status`. */
+  function routeFetch(
+    f: ReturnType<typeof fixture>,
+    status: () => Promise<Response>,
+  ) {
+    const claim = claimFetch(f);
+    const reads: string[] = [];
+    f.fetch.mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/agent-connections/me")) {
+        reads.push(
+          new Headers(init?.headers).get("authorization") ?? "missing",
+        );
+        return status();
+      }
+      return claim(input, init);
+    });
+    return reads;
+  }
+  const realCheck = (f: ReturnType<typeof fixture>) => {
+    const { checkVerification: _ignored, ...rest } = f.dependencies;
+    return { ...f.params, dependencies: rest };
+  };
+
+  it("reports verified once the server says connected", async () => {
+    const f = fixture();
+    let reads = 0;
+    const authorization = routeFetch(f, async () =>
+      ++reads < 3
+        ? me(f.identity.agentAddress, "claimed")
+        : me(f.identity.agentAddress, "connected", "2026-09-28T19:00:04.000Z"),
+    );
+    const result = await setupAgent(realCheck(f));
+    expect(result.verification).toMatchObject({
+      state: "verified",
+      verifiedAt: "2026-09-28T19:00:04.000Z",
+      sentId: f.receipt.id,
+    });
+    expect(result.guidance).toContain("verified this connection");
+    expect(authorization).toEqual(Array(3).fill(`Bearer ${f.credential}`));
+    expect(f.dependencies.sleep.mock.calls.map(([ms]) => ms)).toEqual(
+      VERIFICATION_BACKOFF_MS.slice(0, 2),
+    );
+    expect(JSON.stringify(result)).not.toContain(f.credential);
+  });
+
+  it("keeps reply_submitted with a pending message when the budget runs out", async () => {
+    const f = fixture();
+    routeFetch(f, async () => me(f.identity.agentAddress, "claimed"));
+    const result = await setupAgent({
+      ...realCheck(f),
+      verificationTimeoutMs: 6_000,
+    });
+    expect(result.verification.state).toBe("reply_submitted");
+    expect(result.verification).not.toHaveProperty("verifiedAt");
+    expect(result.guidance).toContain("usually completes within seconds");
+    const waits = f.dependencies.sleep.mock.calls.map(([ms]) => ms);
+    expect(waits.reduce((sum, ms) => sum + ms, 0)).toBe(6_000);
+    expect(waits).toEqual([1_000, 1_000, 2_000, 2_000]);
+  });
+
+  it("counts slow status reads against the wait and caps each read at the time left", async () => {
+    const f = fixture();
+    let clock = f.now;
+    const budgets: number[] = [];
+    const checkVerification = vi.fn<
+      AgentSetupDependencies["checkVerification"]
+    >(async (_context, timeoutMs) => {
+      budgets.push(timeoutMs);
+      clock += timeoutMs;
+      return { state: "pending" };
+    });
+    const result = await setupAgent({
+      ...f.params,
+      verificationTimeoutMs: 12_000,
+      dependencies: {
+        ...f.dependencies,
+        checkVerification,
+        now: () => clock,
+        sleep: vi.fn(async (ms: number) => {
+          clock += ms;
+        }),
+      },
+    });
+    expect(result.verification.state).toBe("reply_submitted");
+    expect(budgets).toEqual([5_000, 5_000]);
+    expect(clock - f.now).toBe(12_000);
+  });
+
+  it("stops at once and keeps setup successful when the endpoint is missing", async () => {
+    const f = fixture();
+    let reads = 0;
+    routeFetch(f, async () => {
+      reads++;
+      return new Response("not found", { status: 404 });
+    });
+    const result = await setupAgent(realCheck(f));
+    expect(reads).toBe(1);
+    expect(f.dependencies.sleep).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      verification: { state: "reply_submitted" },
+      receiving: { state: "healthy" },
+    });
+  });
+
+  it("stops at once and keeps setup successful on a network error", async () => {
+    const f = fixture();
+    let reads = 0;
+    routeFetch(f, async () => {
+      reads++;
+      throw new TypeError("fetch failed");
+    });
+    const result = await setupAgent(realCheck(f));
+    expect(reads).toBe(1);
+    expect(result.verification.state).toBe("reply_submitted");
+  });
+
+  it("does not poll when the reply was not submitted", async () => {
+    const f = fixture();
+    f.dependencies.sendVerification.mockRejectedValueOnce(new Error("down"));
+    const result = await setupAgent(f.params);
+    expect(result.verification.state).toBe("send_unknown");
+    expect(f.dependencies.checkVerification).not.toHaveBeenCalled();
+  });
+
+  it("skips the wait when it is disabled", async () => {
+    const f = fixture();
+    const result = await setupAgent({ ...f.params, verificationTimeoutMs: 0 });
+    expect(result.verification.state).toBe("reply_submitted");
+    expect(f.dependencies.checkVerification).not.toHaveBeenCalled();
+  });
+
+  it("treats unknown shapes, other addresses and other statuses as unavailable", () => {
+    const address = "agent@example.com";
+    expect(parseVerificationCheck(null, address)).toEqual({
+      state: "unavailable",
+    });
+    expect(
+      parseVerificationCheck({ success: true, data: {} }, address),
+    ).toEqual({ state: "unavailable" });
+    expect(
+      parseVerificationCheck(
+        {
+          success: true,
+          data: {
+            connection: { address: "x@example.com", status: "connected" },
+          },
+        },
+        address,
+      ),
+    ).toEqual({ state: "unavailable" });
+    expect(
+      parseVerificationCheck(
+        { success: true, data: { connection: { address, status: "revoked" } } },
+        address,
+      ),
+    ).toEqual({ state: "unavailable" });
+    expect(
+      parseVerificationCheck(
+        {
+          success: true,
+          data: {
+            connection: { address, status: "connected", verified_at: "nope" },
+          },
+        },
+        address,
+      ),
+    ).toEqual({ state: "verified", verifiedAt: null });
+    expect(verificationReplySubmitted("verified")).toBe(true);
+    expect(verificationReplySubmitted("reply_submitted")).toBe(true);
+    expect(verificationReplySubmitted("send_unknown")).toBe(false);
   });
 });

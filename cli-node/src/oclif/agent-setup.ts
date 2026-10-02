@@ -84,6 +84,7 @@ type Context = {
   identity: ConnectedAgentIdentity;
   profile: ConnectedAgentProfile;
   client: PrimitiveApiClient;
+  fetch: typeof fetch;
   signal: AbortSignal;
   readBudget: SetupReadBudget;
 };
@@ -96,6 +97,11 @@ export type AgentSetupDependencies = {
     key: string,
   ): Promise<SendReceipt>;
   reconcile(context: Context, key: string): Promise<SendReceipt | null>;
+  /** Read this connection's own status within timeoutMs. Never throws. */
+  checkVerification(
+    context: Context,
+    timeoutMs: number,
+  ): Promise<VerificationCheck>;
   enableOwner(context: Context): Promise<"enabled" | "silenced">;
   startListener(
     profile: string,
@@ -106,6 +112,126 @@ export type AgentSetupDependencies = {
   now(): number;
   sleep(ms: number): Promise<void>;
 };
+
+/**
+ * One read of the connection's own status. "pending" means keep polling;
+ * "unavailable" means stop polling and leave the reply reported as submitted.
+ */
+export type VerificationCheck =
+  | { state: "verified"; verifiedAt: string | null }
+  | { state: "pending" }
+  | { state: "unavailable" };
+
+/** Waits between status reads after the reply is submitted. The last value repeats. */
+export const VERIFICATION_BACKOFF_MS = [
+  1_000, 1_000, 2_000, 2_000, 3_000, 5_000,
+];
+export const DEFAULT_VERIFICATION_TIMEOUT_MS = 60_000;
+
+/** Both states mean the setup reply was accepted for sending. */
+export function verificationReplySubmitted(state: string): boolean {
+  return state === "reply_submitted" || state === "verified";
+}
+
+/** Parse GET /agent-connections/me for the expected address. Unknown shapes are unavailable. */
+export function parseVerificationCheck(
+  value: unknown,
+  agentAddress: string,
+): VerificationCheck {
+  if (!value || typeof value !== "object") return { state: "unavailable" };
+  const envelope = value as { success?: unknown; data?: unknown };
+  if (envelope.success !== true || !envelope.data)
+    return { state: "unavailable" };
+  if (typeof envelope.data !== "object") return { state: "unavailable" };
+  const connection = (envelope.data as { connection?: unknown }).connection;
+  if (!connection || typeof connection !== "object")
+    return { state: "unavailable" };
+  const row = connection as {
+    address?: unknown;
+    status?: unknown;
+    verified_at?: unknown;
+  };
+  if (
+    typeof row.address !== "string" ||
+    row.address.toLowerCase() !== agentAddress.toLowerCase()
+  )
+    return { state: "unavailable" };
+  if (row.status === "connected")
+    return {
+      state: "verified",
+      verifiedAt:
+        typeof row.verified_at === "string" &&
+        Number.isFinite(Date.parse(row.verified_at))
+          ? row.verified_at
+          : null,
+    };
+  if (row.status === "claimed") return { state: "pending" };
+  return { state: "unavailable" };
+}
+
+async function checkVerification(
+  context: Context,
+  timeoutMs: number,
+): Promise<VerificationCheck> {
+  try {
+    const response = await context.fetch(
+      `${context.profile.api_base_url}/agent-connections/me`,
+      {
+        method: "GET",
+        redirect: "error",
+        signal: AbortSignal.timeout(timeoutMs),
+        headers: {
+          authorization: `Bearer ${context.profile.api_key}`,
+          accept: "application/json",
+        },
+      },
+    );
+    if (response.status !== 200) {
+      await response.body?.cancel();
+      return { state: "unavailable" };
+    }
+    const text = await response.text();
+    if (text.length > 65_536) return { state: "unavailable" };
+    return parseVerificationCheck(
+      JSON.parse(text),
+      context.identity.agentAddress,
+    );
+  } catch {
+    return { state: "unavailable" };
+  }
+}
+
+/**
+ * Poll until the server reports the connection verified, the budget runs out,
+ * or the status read is unavailable. Elapsed time is the larger of the clock
+ * and the requested waits, so slow reads count against the budget and a
+ * frozen clock in tests cannot loop forever. Each read is capped at the time
+ * remaining (and at five seconds).
+ */
+async function awaitVerification(
+  context: Context,
+  dependencies: AgentSetupDependencies,
+  timeoutMs: number,
+): Promise<VerificationCheck> {
+  const started = dependencies.now();
+  let waited = 0;
+  const remaining = () =>
+    timeoutMs - Math.max(waited, dependencies.now() - started);
+  for (let attempt = 0; ; attempt++) {
+    const readBudget = Math.min(5_000, remaining());
+    if (readBudget <= 0) return { state: "pending" };
+    const check = await dependencies.checkVerification(context, readBudget);
+    if (check.state !== "pending") return check;
+    const step =
+      VERIFICATION_BACKOFF_MS[
+        Math.min(attempt, VERIFICATION_BACKOFF_MS.length - 1)
+      ] ?? 5_000;
+    const wait = Math.min(step, remaining());
+    if (wait <= 0) return check;
+    await dependencies.sleep(wait);
+    waited += wait;
+  }
+}
 
 function parseState(value: unknown): SetupState {
   const keys = [
@@ -355,6 +481,7 @@ async function enableOwner(context: Context): Promise<"enabled" | "silenced"> {
 
 function defaults(): AgentSetupDependencies {
   return {
+    checkVerification,
     now: Date.now,
     sleep: async (ms) => {
       await delay(ms);
@@ -510,6 +637,8 @@ export async function setupAgent(params: {
   resume?: boolean;
   contactRequests?: boolean;
   timeoutMs?: number;
+  /** How long to wait for the server to confirm the reply. Zero skips the wait. */
+  verificationTimeoutMs?: number;
   fetch?: typeof fetch;
   dependencies?: Partial<AgentSetupDependencies>;
 }) {
@@ -527,6 +656,14 @@ export async function setupAgent(params: {
   const timeoutMs = params.timeoutMs ?? 30_000;
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0 || timeoutMs > 120_000)
     throw fail("Setup timeout must be between zero and two minutes.");
+  const verificationTimeoutMs =
+    params.verificationTimeoutMs ?? DEFAULT_VERIFICATION_TIMEOUT_MS;
+  if (
+    !Number.isSafeInteger(verificationTimeoutMs) ||
+    verificationTimeoutMs < 0 ||
+    verificationTimeoutMs > 120_000
+  )
+    throw fail("Verification wait must be between zero and two minutes.");
   const dependencies = { ...defaults(), ...params.dependencies };
   const directory = agentProfileDirectory(params.configDir, profileName);
   // Name a conflicting option before any preflight can fail for it, and let a
@@ -622,36 +759,44 @@ export async function setupAgent(params: {
         apiBaseUrl: profile.api_base_url,
         fetch: params.fetch,
       }),
+      fetch: params.fetch ?? fetch,
       signal: readBudget.signal,
       readBudget,
     };
+    let confirmed: { verifiedAt: string | null } | null = null;
+    const submittedState = () =>
+      state?.phase === "sent"
+        ? ["agent_failed", "gate_denied", "bounced", "canceled"].includes(
+            state.receipt?.status ?? "",
+          )
+          ? "reply_failed"
+          : ["unknown", "wait_timeout"].includes(state.receipt?.status ?? "")
+            ? "delivery_unknown"
+            : "reply_submitted"
+        : state?.phase === "sending"
+          ? "send_unknown"
+          : "challenge_pending";
     const result = (receiving: string, ownerNotifications?: string) => ({
       identity: context.identity,
       sessionId: params.session,
       verification: {
         state:
-          state?.phase === "sent"
-            ? ["agent_failed", "gate_denied", "bounced", "canceled"].includes(
-                state.receipt?.status ?? "",
-              )
-              ? "reply_failed"
-              : ["unknown", "wait_timeout"].includes(
-                    state.receipt?.status ?? "",
-                  )
-                ? "delivery_unknown"
-                : "reply_submitted"
-            : state?.phase === "sending"
-              ? "send_unknown"
-              : "challenge_pending",
+          confirmed && submittedState() === "reply_submitted"
+            ? "verified"
+            : submittedState(),
+        ...(confirmed ? { verifiedAt: confirmed.verifiedAt } : {}),
         ...(state?.receipt
           ? { sentId: state.receipt.id, deliveryStatus: state.receipt.status }
           : {}),
       },
       receiving: { state: receiving },
       ...(ownerNotifications ? { ownerNotifications } : {}),
-      resumeCommand: `primitive agent connect --profile ${profileName} --session ${params.session}${state?.receiverMode === "external" ? " --receiver external" : ""} --resume --json`,
-      guidance:
-        "Reply submission is not proof of delivery or app verification. Receiving health is reported separately. Keep this profile for all mail commands.",
+      resumeCommand: `primitive agent connect --profile ${profileName} --session ${params.session}${state?.receiverMode === "external" ? " --receiver external" : ""} --resume${state?.contactRequests ? " --contact-requests" : ""} --json`,
+      guidance: confirmed
+        ? "Primitive verified this connection. Receiving health is reported separately. Keep this profile for all mail commands."
+        : submittedState() === "reply_submitted"
+          ? "The verification reply was submitted and Primitive has not confirmed it yet. Verification usually completes within seconds; check it later with GET /agent-connections/me. Receiving health is reported separately. Keep this profile for all mail commands."
+          : "Reply submission is not proof of delivery or app verification. Receiving health is reported separately. Keep this profile for all mail commands.",
     });
     const key = `connection-verification-${state.invitationHash}`;
     if (state.phase === "sending") {
@@ -707,6 +852,15 @@ export async function setupAgent(params: {
       } catch {
         /* Saved setup resumes without claiming or sending again. */
       }
+    }
+    if (verificationTimeoutMs > 0 && submittedState() === "reply_submitted") {
+      const check = await awaitVerification(
+        context,
+        dependencies,
+        verificationTimeoutMs,
+      );
+      if (check.state === "verified")
+        confirmed = { verifiedAt: check.verifiedAt };
     }
     return result(
       state.receiverMode === "external"

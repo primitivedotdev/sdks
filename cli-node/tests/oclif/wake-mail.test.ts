@@ -797,6 +797,98 @@ describe("Claude wake metadata, mutes and pending notices", () => {
     await wake.close();
   });
 
+  function singleRecipient() {
+    const read = mocks.getEmail.getMockImplementation();
+    mocks.getEmail.mockImplementation(async (...args: unknown[]) => {
+      const response = await read?.(...args);
+      return {
+        data: {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            message_id: "<owner@example.test>",
+            parsed: {
+              ...response.data.data.parsed,
+              to_addresses: [{ address: "agent@example.test" }],
+            },
+          },
+        },
+      };
+    });
+  }
+
+  it("marks verified same-organization mail for one automatic read", async () => {
+    const f = setup();
+    singleRecipient();
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    await wake.handler(f.delivery as never, new AbortController().signal);
+    expect(wake.wakeId()).toBe(f.emailId);
+    expect(wake.autoSignal()).toEqual({
+      emailId: f.emailId,
+      profileName: "work",
+      sender: "peer@example.test",
+      threadId: thread,
+      replyToSentEmailId: f.parentId,
+    });
+    await wake.close();
+  });
+
+  it.each([
+    ["an approved contact", { kind: "allowed" }],
+    ["an exact reply without network admission", { kind: "response" }],
+  ])("never marks mail from %s for an automatic read", async (_label, admission) => {
+    const f = setup();
+    singleRecipient();
+    f.policy.admit.mockResolvedValue(admission);
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    await wake.handler(f.delivery as never, new AbortController().signal);
+    expect(wake.wakeId()).toBe(f.emailId);
+    expect(wake.autoSignal()).toBeUndefined();
+    await wake.close();
+  });
+
+  it("never marks a copied or multi-recipient message for an automatic read", async () => {
+    const f = setup();
+    const read = mocks.getEmail.getMockImplementation();
+    mocks.getEmail.mockImplementation(async (...args: unknown[]) => {
+      const response = await read?.(...args);
+      return {
+        data: {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            message_id: "<owner@example.test>",
+            parsed: {
+              ...response.data.data.parsed,
+              to_addresses: [{ address: "agent@example.test" }],
+              cc: [{ address: "someone@example.test" }],
+            },
+          },
+        },
+      };
+    });
+    const wake = await createWakeMail({
+      configDir,
+      sessionKey: `claude:${f.sessionId}`,
+      sessionId: f.sessionId,
+      contactRequests: false,
+    });
+    await wake.handler(f.delivery as never, new AbortController().signal);
+    expect(wake.wakeId()).toBe(f.emailId);
+    expect(wake.autoSignal()).toBeUndefined();
+    await wake.close();
+  });
+
   it("completes mail in a muted thread without waking or journaling", async () => {
     const f = setup();
     await muteThread(configDir, "work", thread, `claude:${f.sessionId}`);

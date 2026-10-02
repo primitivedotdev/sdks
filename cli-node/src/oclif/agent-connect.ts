@@ -12,6 +12,7 @@ import {
   connectedApiBaseUrl,
   loadConnectedAgentProfile,
   parseConnectedAgentProfile,
+  parseOwnerMemberAddress,
   saveConnectedAgentProfile,
 } from "./connected-agent-profile.js";
 import { backgroundListenStatus } from "./listen-background.js";
@@ -19,6 +20,7 @@ import { acquireListenLock } from "./listen-state.js";
 import { notificationScope } from "./notify-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
 import {
+  mailAddress,
   privateMailDirectory,
   readMailJson,
   writeMailJson,
@@ -248,6 +250,22 @@ function profileFromClaim(
     !["claimed", "connected"].includes(String(connection.status))
   )
     throw new Error();
+  // Servers that predate the field omit it; the saved profile then omits it
+  // too and a later refresh from the connection's own record fills it in. An
+  // unusable value is dropped the same way: it must never cost the one-time
+  // credential this response carries.
+  let ownerMember: string | null | undefined;
+  try {
+    ownerMember = Object.hasOwn(data, "owner_member_address")
+      ? parseOwnerMemberAddress(
+          data.owner_member_address,
+          mailAddress(data.owner_address),
+          mailAddress(connection.address),
+        )
+      : undefined;
+  } catch {
+    ownerMember = undefined;
+  }
   return parseConnectedAgentProfile({
     version: 1,
     auth_method: "agent_connection",
@@ -256,6 +274,7 @@ function profileFromClaim(
     org_id: data.org_id,
     agent_address: connection.address,
     owner_address: data.owner_address,
+    ...(ownerMember === undefined ? {} : { owner_member_address: ownerMember }),
     invitation_hash: invitationHash,
     created_at: new Date(now()).toISOString(),
     ...(data.presence_profile === undefined

@@ -103,7 +103,7 @@ class WhoamiCommand extends Command {
                 null,
                 2,
               )
-            : `Saved connected-agent profile: ${identity.profileName}\nAgent address: ${identity.agentAddress}\nOwner address: ${identity.ownerAddress}\nAPI origin: ${identity.apiBaseUrl}\n${guidance}\nSaved profile status: ${statusCommand}`,
+            : `Saved connected-agent profile: ${identity.profileName}\nAgent address: ${identity.agentAddress}\nOwner personal address (send reports here): ${identity.ownerMemberAddress ?? "unknown; reply to the member who wrote to you"}\nControl address (setup and presence only): ${identity.ownerAddress}\nAPI origin: ${identity.apiBaseUrl}\n${guidance}\nSaved profile status: ${statusCommand}`,
         );
         return;
       }

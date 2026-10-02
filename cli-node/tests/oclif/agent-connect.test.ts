@@ -138,6 +138,57 @@ describe("connected-agent setup", () => {
       "presence",
     );
   });
+  it("saves the owner's personal address apart from the control address", async () => {
+    const result = claim();
+    Object.assign(result.data, {
+      owner_member_address: "Ada_123456789@example.test",
+    });
+    const outcome = await connectAgent({
+      configDir,
+      profileName: "work",
+      invitation: setupUrl,
+      fetch: vi.fn<typeof globalThis.fetch>(async () => response(result)),
+    });
+    expect(outcome.identity).toMatchObject({
+      ownerAddress,
+      ownerMemberAddress: "ada_123456789@example.test",
+    });
+    expect(loadConnectedAgentProfile(configDir, "work")).toMatchObject({
+      owner_address: ownerAddress,
+      owner_member_address: "ada_123456789@example.test",
+    });
+  });
+  it("records an explicit null and never loses the credential to an unusable personal address", async () => {
+    const none = claim();
+    Object.assign(none.data, { owner_member_address: null });
+    await connectAgent({
+      configDir,
+      profileName: "shared",
+      invitation: setupUrl,
+      fetch: vi.fn<typeof globalThis.fetch>(async () => response(none)),
+    });
+    expect(
+      loadConnectedAgentProfile(configDir, "shared")?.owner_member_address,
+    ).toBeNull();
+    // A separate config: one invitation is claimed at most once per config.
+    const otherConfig = mkdtempSync(join(tmpdir(), "agent-connect-test-"));
+    try {
+      const control = claim();
+      Object.assign(control.data, { owner_member_address: ownerAddress });
+      const outcome = await connectAgent({
+        configDir: otherConfig,
+        profileName: "work",
+        invitation: setupUrl,
+        fetch: vi.fn<typeof globalThis.fetch>(async () => response(control)),
+      });
+      expect(outcome.status).toBe("claimed");
+      const saved = loadConnectedAgentProfile(otherConfig, "work");
+      expect(saved?.api_key).toBe(credential);
+      expect(saved).not.toHaveProperty("owner_member_address");
+    } finally {
+      rmSync(otherConfig, { force: true, recursive: true });
+    }
+  });
   const successfulFetch = () => vi.fn<typeof fetch>(async () => response());
   const params = (fetch: typeof globalThis.fetch) => ({
     configDir,
@@ -184,6 +235,8 @@ describe("connected-agent setup", () => {
         orgId,
         agentAddress,
         ownerAddress,
+        // This fixture models a server that predates the field.
+        ownerMemberAddress: null,
         apiBaseUrl,
       },
     });

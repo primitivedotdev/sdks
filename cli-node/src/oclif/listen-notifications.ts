@@ -1,5 +1,6 @@
 import { type EmailDetail, getEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
+import { autoSignalEligible, dispatchAutoRead } from "./auto-signals.js";
 import {
   isContactAcceptance,
   readContactInteraction,
@@ -640,6 +641,29 @@ export async function runSharedNotificationListen(
         // Persist it separately from native receipts so restarts cannot reclaim it.
         if (outcome.disposition === "skipped")
           await store.skipNotification(row.emailId, sessionKey);
+        // Verified owner and same-organization mail delivered to the session
+        // is acknowledged automatically, once, in the background.
+        if (
+          outcome.disposition === "notified" &&
+          !status &&
+          profileName &&
+          autoSignalEligible(
+            detail,
+            {
+              agentAddress: recipient,
+              ownerAddress: auth.auth.connectedAgent?.ownerAddress,
+            },
+            admission,
+          )
+        )
+          dispatchAutoRead({
+            configDir: options.configDir,
+            emailId: detail.id,
+            profileName,
+            sender: detail.from_email,
+            threadId: detail.thread_id ?? null,
+            replyToSentEmailId: detail.reply_to_sent_email_id ?? null,
+          });
         if (outcome.disposition === "notified" && status)
           await reserveConversationStatus(
             {

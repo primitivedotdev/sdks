@@ -25,6 +25,8 @@ export default defineConfig({
     "oclif/root-signup-hint": "src/oclif/root-signup-hint.ts",
     "oclif/listen-supervisor": "src/oclif/listen-supervisor.ts",
     "oclif/receiver-heal": "src/oclif/receiver-heal.ts",
+    "oclif/auto-signals": "src/oclif/auto-signals.ts",
+    "oclif/auto-signal-worker": "src/oclif/auto-signal-worker.ts",
   },
   format: ["esm"],
   // Keep `.js` so the bin and oclif config keep resolving the

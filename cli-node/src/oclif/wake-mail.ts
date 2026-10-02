@@ -5,6 +5,7 @@ import {
   parseWebhookEvent,
 } from "@primitivedotdev/sdk/webhook";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
+import { autoSignalEligible } from "./auto-signals.js";
 import {
   isContactAcceptance,
   readContactInteraction,
@@ -90,6 +91,15 @@ export async function createWakeMail(options: {
   let senderRelation: "owner" | "member" | undefined;
   let wakeContext: WakeContext | undefined;
   let statusEvent: ConversationStatus | undefined;
+  let autoSignal:
+    | {
+        emailId: string;
+        profileName: string;
+        sender: string;
+        threadId: string | null;
+        replyToSentEmailId: string | null;
+      }
+    | undefined;
   let pendingRequest:
     | {
         sender: string;
@@ -544,6 +554,23 @@ export async function createWakeMail(options: {
         wakeId = detail.id;
         senderRelation = admission.senderRelation;
         wakeContext = context;
+        // Verified owner and same-organization mail is acknowledged
+        // automatically once the wake surfaces it to the session.
+        autoSignal =
+          profileName &&
+          autoSignalEligible(
+            detail,
+            { agentAddress: recipient, ownerAddress: identity?.ownerAddress },
+            admission,
+          )
+            ? {
+                emailId: detail.id,
+                profileName,
+                sender,
+                threadId: detail.thread_id ?? null,
+                replyToSentEmailId: detail.reply_to_sent_email_id ?? null,
+              }
+            : undefined;
       }
       return outcome(true);
     } catch (error) {
@@ -561,6 +588,7 @@ export async function createWakeMail(options: {
     senderRelation: () => senderRelation,
     context: () => wakeContext,
     status: () => statusEvent,
+    autoSignal: () => (wakeId === autoSignal?.emailId ? autoSignal : undefined),
     completed: completePending,
     receiving: (ready: boolean) => {
       receiving = ready;
