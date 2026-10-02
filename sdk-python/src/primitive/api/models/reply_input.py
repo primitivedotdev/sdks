@@ -48,6 +48,12 @@ class ReplyInput:
                 verified outbound domain for your org, same as send-mail.
             wait (bool | Unset): When true, wait for the first downstream SMTP delivery outcome before returning, mirroring
                 the send-mail `wait` semantics.
+            reply_all (bool | Unset): Reply to everyone on the email. To is the sender (or
+                Reply-To) as in a plain reply; every other To and Cc address
+                of the email becomes Cc, minus the replying address. Bcc is
+                never read, so a blind copy stays blind. Every send rule
+                applies to each recipient exactly as for a direct send with
+                cc. Defaults to false.
             attachments (list[SendMailAttachment] | Unset): Inline attachments for this reply. Use
                 https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most
                 31457280.
@@ -67,6 +73,7 @@ class ReplyInput:
     body_html: str | Unset = UNSET
     from_: str | Unset = UNSET
     wait: bool | Unset = UNSET
+    reply_all: bool | Unset = UNSET
     attachments: list[SendMailAttachment] | Unset = UNSET
     repeat: RepeatInput | Unset = UNSET
 
@@ -84,6 +91,8 @@ class ReplyInput:
         from_ = self.from_
 
         wait = self.wait
+
+        reply_all = self.reply_all
 
         attachments: list[dict[str, Any]] | Unset = UNSET
         if not isinstance(self.attachments, Unset):
@@ -111,6 +120,8 @@ class ReplyInput:
             field_dict["from"] = from_
         if wait is not UNSET:
             field_dict["wait"] = wait
+        if reply_all is not UNSET:
+            field_dict["reply_all"] = reply_all
         if attachments is not UNSET:
             field_dict["attachments"] = attachments
         if repeat is not UNSET:
@@ -132,6 +143,8 @@ class ReplyInput:
         from_ = d.pop("from", UNSET)
 
         wait = d.pop("wait", UNSET)
+
+        reply_all = d.pop("reply_all", UNSET)
 
         _attachments = d.pop("attachments", UNSET)
         attachments: list[SendMailAttachment] | Unset = UNSET
@@ -160,6 +173,7 @@ class ReplyInput:
             body_html=body_html,
             from_=from_,
             wait=wait,
+            reply_all=reply_all,
             attachments=attachments,
             repeat=repeat,
         )

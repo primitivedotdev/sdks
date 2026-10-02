@@ -75863,6 +75863,12 @@ func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.ReplyAll.Set {
+			e.FieldStart("reply_all")
+			s.ReplyAll.Encode(e)
+		}
+	}
+	{
 		if s.Attachments != nil {
 			e.FieldStart("attachments")
 			e.ArrStart()
@@ -75880,13 +75886,14 @@ func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfReplyInput = [6]string{
+var jsonFieldsNameOfReplyInput = [7]string{
 	0: "body_text",
 	1: "body_html",
 	2: "from",
 	3: "wait",
-	4: "attachments",
-	5: "repeat",
+	4: "reply_all",
+	5: "attachments",
+	6: "repeat",
 }
 
 // Decode decodes ReplyInput from json.
@@ -75936,6 +75943,16 @@ func (s *ReplyInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"wait\"")
+			}
+		case "reply_all":
+			if err := func() error {
+				s.ReplyAll.Reset()
+				if err := s.ReplyAll.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reply_all\"")
 			}
 		case "attachments":
 			if err := func() error {

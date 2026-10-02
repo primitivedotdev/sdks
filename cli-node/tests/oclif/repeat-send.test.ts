@@ -262,6 +262,15 @@ describe("reply --repeat-every", () => {
     expect(result.stderr).toContain(`as repeat ${REPEAT_ID}`);
   });
 
+  it("refuses --repeat-every with --all", async () => {
+    const result = await run(
+      "reply",
+      replyArgs("--all", "--repeat-every", "60"),
+    );
+    expect(result.exitCode).not.toBeUndefined();
+    expect(mocks.replyToEmail).not.toHaveBeenCalled();
+  });
+
   it("refuses --repeat-every with --fyi", async () => {
     const result = await run(
       "reply",

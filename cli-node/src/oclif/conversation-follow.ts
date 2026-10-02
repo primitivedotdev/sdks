@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import type { EmailDetail } from "@primitivedotdev/api-core";
+import { otherParticipants } from "./email-participants.js";
 import { isPlainChatReply, scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   mailAddress,
@@ -88,6 +89,14 @@ export async function followEmailConversation(
   if (detail.thread_id == null || !isPlainChatReply(detail)) return null;
   const recipient = mailAddress(context.recipient),
     peer = mailAddress(context.peer);
+  // A follow binds one thread to one peer. A group email (addressed to others
+  // besides this agent and its sender) has several, and every copy of a
+  // conversation shares one thread, so a group email never creates a follow:
+  // binding the group to whichever peer was answered first would refuse the
+  // next reply to anyone else. A follow created earlier, while the thread was
+  // one-to-one, is left as it is and keeps routing the thread's mail to its
+  // session; how group mail wakes agents is decided separately.
+  if (otherParticipants(detail, recipient).length > 0) return null;
   if (
     !["accepted", "completed"].includes(detail.status) ||
     mailAddress(detail.recipient) !== recipient ||

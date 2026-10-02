@@ -19257,7 +19257,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "reply-to-email",
-    "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody, optional From override, optional attachments, and optional\n`wait` flag; passing any header or recipient override is\nrejected by the schema (`additionalProperties: false`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
+    "description": "Sends an outbound reply to the inbound email identified by `id`.\nThreading headers (`In-Reply-To`, `References`), recipient\nderivation (Reply-To, then From, then bare sender), and the\n`Re:` subject prefix are all derived server-side from the\nstored inbound row. The request body carries only the message\nbody, optional From override, optional attachments, optional\n`wait` flag, and optional `reply_all` flag, which also copies\nevery other To and Cc address of the inbound (never Bcc).\nPassing any header or explicit recipient override is rejected\nby the schema (`additionalProperties: false`).\n\nForwards through the same gates as `/send-mail`: the response\nstatus, error envelope, and `idempotent_replay` flag mirror\nthe send-mail contract verbatim.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "replyToEmail",
@@ -19294,6 +19294,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "wait": {
           "type": "boolean",
           "description": "When true, wait for the first downstream SMTP delivery outcome before returning, mirroring the send-mail `wait` semantics."
+        },
+        "reply_all": {
+          "type": "boolean",
+          "description": "Reply to everyone on the email. To is the sender (or\nReply-To) as in a plain reply; every other To and Cc address\nof the email becomes Cc, minus the replying address. Bcc is\nnever read, so a blind copy stays blind. Every send rule\napplies to each recipient exactly as for a direct send with\ncc. Defaults to false.\n"
         },
         "attachments": {
           "type": "array",

@@ -71,6 +71,12 @@ class ReplyCommand extends Command {
   2>&1 still parses. If the outcome is uncertain, reconcile with
   \`primitive sent get --idempotency-key <key>\` before retrying.
 
+  --all replies to everyone on the email: the sender (or Reply-To) as
+  To, and every other To and Cc address of the email as Cc, minus your
+  own address. Bcc is never included. Every send rule applies to each
+  recipient. \`primitive emails get --brief\` lists who else was
+  addressed. --all cannot be combined with --fyi.
+
   --fyi sends the reply as an informational acknowledgement: an ack
   signal (status received) whose note is the plain-text body.
   Receivers classify it as informational and do not wake for it. Use
@@ -90,6 +96,7 @@ class ReplyCommand extends Command {
     "<%= config.bin %> reply --id <inbound-email-id> --from 'Support <support@example.com>' --body 'Thanks!'",
     "<%= config.bin %> reply --thread <thread-id> --body 'Answering the latest message.'",
     "<%= config.bin %> reply --id <inbound-email-id> --fyi --body 'Done, merged. No action needed.'",
+    "<%= config.bin %> reply --id <inbound-email-id> --all --body 'Answering everyone on this email.'",
   ];
 
   static flags = {
@@ -116,7 +123,12 @@ class ReplyCommand extends Command {
     }),
     fyi: Flags.boolean({
       description: FYI_FLAG_DESCRIPTION,
-      exclusive: ["html", "html-file", "html-stdin", "attachment"],
+      exclusive: ["html", "html-file", "html-stdin", "attachment", "all"],
+    }),
+    all: Flags.boolean({
+      description:
+        "Reply to everyone on the email: the sender (or Reply-To) as To, every other To and Cc address as Cc, minus your own address. Bcc is never included.",
+      exclusive: ["fyi"],
     }),
     body: Flags.string({
       description:
@@ -167,8 +179,8 @@ class ReplyCommand extends Command {
       description: TIME_FLAG_DESCRIPTION,
     }),
     ...repeatFlags(
-      ["fyi", "attachment"],
-      "The reply recipient (the Reply-To address, else the sender) must be an address in your organization, and the reply cannot use --attachment or --fyi.",
+      ["fyi", "attachment", "all"],
+      "The reply recipient (the Reply-To address, else the sender) must be an address in your organization, and the reply cannot use --attachment, --fyi or --all.",
     ),
   };
 
@@ -344,6 +356,7 @@ class ReplyCommand extends Command {
             : {
                 ...plainContent,
                 ...(flags.from !== undefined ? { from: flags.from } : {}),
+                ...(flags.all ? { reply_all: true } : {}),
                 ...(repeat !== undefined ? { repeat } : {}),
                 in_reply_to_email_id: emailId,
               },
@@ -384,6 +397,7 @@ class ReplyCommand extends Command {
         ...content,
         ...(flags.from !== undefined ? { from: flags.from } : {}),
         ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
+        ...(flags.all ? { reply_all: true } : {}),
         ...(repeat !== undefined ? { repeat } : {}),
       };
       // An answer ends automatic working for the email it answers.
@@ -468,12 +482,12 @@ function priorRepliesEnvelopeFields(
 }
 
 /**
- * With --thread or --fyi the envelope says which email was answered and
- * how, so a caller that only kept the JSON can still tell. Plain --id
+ * With --thread, --fyi or --all the envelope says which email was answered
+ * and how, so a caller that only kept the JSON can still tell. Plain --id
  * replies keep their existing envelope shape.
  */
 function replyTargetEnvelopeFields(
-  flags: { thread?: string; fyi?: boolean },
+  flags: { thread?: string; fyi?: boolean; all?: boolean },
   target: LatestInboundResolution | null,
 ): Record<string, unknown> {
   return {
@@ -487,6 +501,7 @@ function replyTargetEnvelopeFields(
         }
       : {}),
     ...(flags.fyi ? { informational: true } : {}),
+    ...(flags.all ? { reply_all: true } : {}),
   };
 }
 

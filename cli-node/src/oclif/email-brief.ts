@@ -5,6 +5,7 @@ import {
 } from "@primitivedotdev/api-core";
 import { runAddressNotesRequest } from "./address-notes.js";
 import { apiContactPolicy } from "./contact-policy-client.js";
+import { otherParticipants } from "./email-participants.js";
 import {
   notificationPartReader,
   readConversationStatusContent,
@@ -61,6 +62,14 @@ export type EmailBriefEnvelope = {
   };
   thread_id: string | null;
   in_thread: boolean | null;
+  /**
+   * Everyone else the email was addressed to (its To and Cc, without you and
+   * the sender), as the sender wrote them. Empty for a one-to-one email.
+   * `primitive reply --all` includes them. Addresses outside the plain
+   * charset the envelope prints are withheld and only counted.
+   */
+  also_addressed: string[];
+  also_addressed_withheld: number;
   attachments: BriefAttachments;
   /** Null when the API does not report newer mail for this thread. */
   newer: {
@@ -328,6 +337,20 @@ async function relationshipFor(input: {
   });
 }
 
+/** Printable addresses, plus a count of the ones the envelope withholds. */
+function alsoAddressed(addresses: string[]): {
+  also_addressed: string[];
+  also_addressed_withheld: number;
+} {
+  const shown = addresses.filter(
+    (address) => displayAddress(address) === address,
+  );
+  return {
+    also_addressed: shown,
+    also_addressed_withheld: addresses.length - shown.length,
+  };
+}
+
 /** Build the brief for one already-fetched email. API failures leave fields empty, never throw. */
 export async function buildEmailBrief(input: {
   client: Client;
@@ -391,6 +414,7 @@ export async function buildEmailBrief(input: {
       },
       thread_id: threadId,
       in_thread: sentInThread(thread, self) ?? null,
+      ...alsoAddressed(otherParticipants(detail, self)),
       attachments: briefAttachments(detail),
       newer:
         thread?.newerInboundCount === undefined
@@ -432,6 +456,15 @@ export function renderEmailBrief(brief: EmailBrief): string {
     `  thread: ${e.thread_id ?? "none"}`,
     `  you have sent in this thread: ${e.in_thread === null ? "unknown" : e.in_thread ? "yes" : "no"}`,
   ];
+  if (e.also_addressed.length > 0 || e.also_addressed_withheld > 0)
+    lines.push(
+      `  also addressed (To/Cc as the sender wrote them): ${[
+        ...e.also_addressed,
+        ...(e.also_addressed_withheld > 0
+          ? [`${e.also_addressed_withheld} more withheld`]
+          : []),
+      ].join(", ")}; reply --all includes them`,
+    );
   if (e.newer) {
     lines.push(`  newer messages in thread: ${e.newer.count}`);
     for (const message of e.newer.messages)
