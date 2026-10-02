@@ -5,10 +5,16 @@ import {
   operationManifest,
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
+  hasStoredCliLogin: vi.fn(() => false),
+}));
+
+vi.mock("../../src/oclif/auth.js", async (original) => ({
+  ...(await original<typeof import("../../src/oclif/auth.js")>()),
+  hasStoredCliLogin: mocks.hasStoredCliLogin,
 }));
 
 vi.mock("../../src/oclif/api-client.js", () => ({
@@ -17,6 +23,7 @@ vi.mock("../../src/oclif/api-client.js", () => ({
 
 import {
   formatSchedule,
+  ownerApiKey,
   ScheduleStopCommand,
   SchedulesCreateCommand,
 } from "../../src/oclif/commands/schedules.js";
@@ -99,6 +106,9 @@ async function run(id: string, argv: string[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("PRIMITIVE_API_KEY", undefined);
+  vi.stubEnv("PRIMITIVE_AGENT_PROFILE", undefined);
+  mocks.hasStoredCliLogin.mockReturnValue(false);
   calls = [];
   respond = () => json({ success: true, data: SCHEDULE });
   const apiClient = new PrimitiveApiClient({
@@ -123,6 +133,8 @@ beforeEach(() => {
     baseUrlOverridden: false,
   });
 });
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("schedule command registration", () => {
   it("registers the agent and owner commands next to the generated ones", () => {
@@ -200,7 +212,10 @@ describe("primitive schedule stop", () => {
       );
     const result = await run("schedule:stop", ["--id", EMAIL_ID]);
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("Only the schedule's owner can stop");
+    expect(result.stderr).toContain(
+      "receiving agent's own connected credential",
+    );
+    expect(result.stderr).toContain("only the schedule's owner can stop it");
   });
 
   it("rejects a bad id or reason before calling the API", async () => {
@@ -351,6 +366,69 @@ describe("primitive schedules", () => {
         ["DELETE", `/v1/agent-message-schedules/${SCHEDULE_ID}`, null],
       ],
     );
+  });
+
+  it("prefers the saved member login over an env-only API key", async () => {
+    vi.stubEnv("PRIMITIVE_API_KEY", "prim_env_key");
+    mocks.hasStoredCliLogin.mockReturnValue(true);
+    const viaEnv = await run("schedules:list", []);
+    expect(
+      mocks.createAuthenticatedCliApiClient.mock.calls.at(-1)?.[0],
+    ).toMatchObject({ apiKey: undefined });
+    expect(viaEnv.stderr).toContain("uses your saved login");
+    await run("schedules:list", ["--api-key", "prim_flag_key"]);
+    expect(
+      mocks.createAuthenticatedCliApiClient.mock.calls.at(-1)?.[0],
+    ).toMatchObject({ apiKey: "prim_flag_key" });
+    mocks.hasStoredCliLogin.mockReturnValue(false);
+    await run("schedules:list", []);
+    expect(
+      mocks.createAuthenticatedCliApiClient.mock.calls.at(-1)?.[0],
+    ).toMatchObject({ apiKey: "prim_env_key" });
+  });
+
+  it("keeps the agent's env credential for schedule stop", async () => {
+    vi.stubEnv("PRIMITIVE_API_KEY", "prim_agent_key");
+    mocks.hasStoredCliLogin.mockReturnValue(true);
+    respond = () =>
+      json({
+        success: true,
+        data: {
+          schedule_id: SCHEDULE_ID,
+          status: "stopped_by_agent",
+          stopped_at: "2026-10-02T12:30:00.000Z",
+          stop_reason: null,
+          reply_sent_email_id: null,
+        },
+      });
+    await run("schedule:stop", ["--id", EMAIL_ID]);
+    expect(
+      mocks.createAuthenticatedCliApiClient.mock.calls.at(-1)?.[0],
+    ).toMatchObject({ apiKey: "prim_agent_key" });
+  });
+
+  it("chooses the owner credential", () => {
+    expect(
+      ownerApiKey({
+        apiKeyFlag: "k",
+        apiKeyFlagExplicit: false,
+        hasStoredLogin: true,
+      }),
+    ).toEqual({ apiKey: undefined, usedStoredLogin: true });
+    expect(
+      ownerApiKey({
+        apiKeyFlag: "k",
+        apiKeyFlagExplicit: true,
+        hasStoredLogin: true,
+      }),
+    ).toEqual({ apiKey: "k", usedStoredLogin: false });
+    expect(
+      ownerApiKey({
+        apiKeyFlag: undefined,
+        apiKeyFlagExplicit: false,
+        hasStoredLogin: true,
+      }),
+    ).toEqual({ apiKey: undefined, usedStoredLogin: false });
   });
 
   it("explains the member-login requirement on 403", async () => {

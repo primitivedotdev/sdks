@@ -17,6 +17,8 @@ from .interactions import parse_interaction_envelope
 SCHEDULE_TICK_PROTOCOL = "schedule.tick"
 SCHEDULE_STOP_PROTOCOL = "schedule.stop"
 SCHEDULE_PROTOCOL_VERSION = 1
+SCHEDULE_TICK_STEP = "tick"
+SCHEDULE_STOP_STEP = "stop"
 SCHEDULE_TICK_KIND = "schedule.tick/1"
 SCHEDULE_STOP_KIND = "schedule.stop/1"
 # Longest stop reason, in UTF-16 code units (astral characters count twice).
@@ -43,7 +45,7 @@ class ScheduleTick:
 class ScheduleTickResult:
     status: Literal["valid", "other", "invalid"]
     tick: ScheduleTick | None = None
-    reason: Literal["invalid_envelope", "invalid_payload"] | None = None
+    reason: Literal["invalid_envelope", "invalid_step", "invalid_payload"] | None = None
 
 
 @dataclass(frozen=True)
@@ -57,7 +59,7 @@ class ScheduleStop:
 class ScheduleStopResult:
     status: Literal["valid", "other", "invalid"]
     stop: ScheduleStop | None = None
-    reason: Literal["invalid_envelope", "invalid_payload"] | None = None
+    reason: Literal["invalid_envelope", "invalid_step", "invalid_payload"] | None = None
 
 
 def interaction_kind(envelope: dict[str, object]) -> str:
@@ -86,6 +88,8 @@ def read_schedule_tick(envelope: dict[str, object]) -> ScheduleTickResult:
     """Read the tick payload from an envelope that already passed envelope validation."""
     if not _is_protocol(envelope, SCHEDULE_TICK_PROTOCOL):
         return ScheduleTickResult("other")
+    if envelope.get("step") != SCHEDULE_TICK_STEP:
+        return ScheduleTickResult("invalid", reason="invalid_step")
     invalid = ScheduleTickResult("invalid", reason="invalid_payload")
     payload = envelope.get("payload")
     if not isinstance(payload, dict):
@@ -129,6 +133,8 @@ def read_schedule_stop(envelope: dict[str, object]) -> ScheduleStopResult:
     """Read the stop payload from an envelope that already passed envelope validation."""
     if not _is_protocol(envelope, SCHEDULE_STOP_PROTOCOL):
         return ScheduleStopResult("other")
+    if envelope.get("step") != SCHEDULE_STOP_STEP:
+        return ScheduleStopResult("invalid", reason="invalid_step")
     invalid = ScheduleStopResult("invalid", reason="invalid_payload")
     payload = envelope.get("payload")
     if not isinstance(payload, dict):

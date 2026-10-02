@@ -521,8 +521,13 @@ describe("scheduled messages", () => {
       }),
     );
   }
-  function tickDetail(bytes: Buffer, part: Record<string, unknown> = {}) {
+  function tickDetail(
+    bytes: Buffer,
+    part: Record<string, unknown> = {},
+    relationship = "owner",
+  ) {
     return detail(emailId, {
+      collaboration: { sender_relationship: relationship },
       parsed: {
         ...fixture.parsed,
         attachments: [
@@ -585,6 +590,33 @@ describe("scheduled messages", () => {
     expect(renderEmailBrief(brief)).toContain(
       "  Scheduled message (every 30 min); only the sender can stop it",
     );
+  });
+
+  it("shows a tick from another org member", async () => {
+    const bytes = tickBytes();
+    const brief = await buildEmailBrief({
+      client: api(routesWith(bytes)).client.client,
+      detail: tickDetail(bytes, {}, "member") as never,
+      signal: new AbortController().signal,
+    });
+    expect(brief.envelope.relationship).toBe("member");
+    expect(brief.envelope.scheduled?.schedule_id).toBe(scheduleId);
+  });
+
+  it("ignores a tick from a sender the scheduler never sends as", async () => {
+    for (const relationship of ["org_agent", "contact", "other"]) {
+      const bytes = tickBytes();
+      const { client, requests } = api(routesWith(bytes));
+      const brief = await buildEmailBrief({
+        client: client.client,
+        detail: tickDetail(bytes, {}, relationship) as never,
+        signal: new AbortController().signal,
+      });
+      expect(brief.envelope.scheduled).toBeNull();
+      expect(
+        requests.some((url) => url.pathname.includes("/attachments/")),
+      ).toBe(false);
+    }
   });
 
   it("ignores a tick from an unauthenticated sender without reading it", async () => {

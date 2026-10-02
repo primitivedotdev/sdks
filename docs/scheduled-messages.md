@@ -54,6 +54,7 @@ sender.
 | `scheduleStopCommand(emailId)` | `schedule_stop_command(email_id)` | `ScheduleStopCommand` |
 
 Parse results have status `valid`, `other` (a valid envelope of a different
-protocol or version) or `invalid` (`invalid_envelope` or `invalid_payload`).
+protocol or version) or `invalid` (`invalid_envelope`, `invalid_step` or
+`invalid_payload`).
 `test-fixtures/schedule-interactions.json` holds the shared cases all three SDKs
 run.

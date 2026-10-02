@@ -16,6 +16,8 @@ import { parseInteractionEnvelope } from "./index.js";
 export const SCHEDULE_TICK_PROTOCOL = "schedule.tick";
 export const SCHEDULE_STOP_PROTOCOL = "schedule.stop";
 export const SCHEDULE_PROTOCOL_VERSION = 1;
+export const SCHEDULE_TICK_STEP = "tick";
+export const SCHEDULE_STOP_STEP = "stop";
 export const SCHEDULE_TICK_KIND = "schedule.tick/1";
 export const SCHEDULE_STOP_KIND = "schedule.stop/1";
 /** Longest stop reason, in UTF-16 code units (astral characters count twice). */
@@ -42,7 +44,7 @@ export type ScheduleTickParseResult =
   | { status: "other" }
   | {
       status: "invalid";
-      reason: "invalid_envelope" | "invalid_payload";
+      reason: "invalid_envelope" | "invalid_step" | "invalid_payload";
     };
 
 /** The `schedule.stop/1` payload the server sends to the owner. */
@@ -56,7 +58,7 @@ export type ScheduleStopParseResult =
   | { status: "other" }
   | {
       status: "invalid";
-      reason: "invalid_envelope" | "invalid_payload";
+      reason: "invalid_envelope" | "invalid_step" | "invalid_payload";
     };
 
 /** Request body for `POST /v1/emails/{id}/schedule-stop`. */
@@ -94,6 +96,8 @@ export function readScheduleTick(
     envelope.protocol_version !== SCHEDULE_PROTOCOL_VERSION
   )
     return { status: "other" };
+  if (envelope.step !== SCHEDULE_TICK_STEP)
+    return { status: "invalid", reason: "invalid_step" };
   const payload: unknown = envelope.payload;
   const invalid = { status: "invalid", reason: "invalid_payload" } as const;
   if (!payload || typeof payload !== "object" || Array.isArray(payload))
@@ -149,6 +153,8 @@ export function readScheduleStop(
     envelope.protocol_version !== SCHEDULE_PROTOCOL_VERSION
   )
     return { status: "other" };
+  if (envelope.step !== SCHEDULE_STOP_STEP)
+    return { status: "invalid", reason: "invalid_step" };
   const payload: unknown = envelope.payload;
   const invalid = { status: "invalid", reason: "invalid_payload" } as const;
   if (!payload || typeof payload !== "object" || Array.isArray(payload))
@@ -175,6 +181,19 @@ export function parseScheduleStop(
   return readScheduleStop(result.envelope);
 }
 
+function isAsciiSpace(code: number): boolean {
+  return code === 0x20 || code === 0x09 || code === 0x0d || code === 0x0a;
+}
+
+/** Linear-time trim of ASCII space, tab, CR and LF. */
+function trimAsciiSpace(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && isAsciiSpace(value.charCodeAt(start))) start++;
+  while (end > start && isAsciiSpace(value.charCodeAt(end - 1))) end--;
+  return value.slice(start, end);
+}
+
 function isControl(code: number): boolean {
   return code < 0x20 || code === 0x7f;
 }
@@ -190,7 +209,7 @@ export function normalizeScheduleStopReason(
   if (reason === undefined || reason === null) return undefined;
   if (typeof reason !== "string")
     throw new TypeError("reason must be a string");
-  const trimmed = reason.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
+  const trimmed = trimAsciiSpace(reason);
   if (trimmed === "") return undefined;
   for (const char of trimmed) {
     const code = char.codePointAt(0) ?? 0;

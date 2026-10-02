@@ -21,6 +21,8 @@ const (
 	ScheduleTickProtocol       = "schedule.tick"
 	ScheduleStopProtocol       = "schedule.stop"
 	ScheduleProtocolVersion    = 1
+	ScheduleTickStep           = "tick"
+	ScheduleStopStep           = "stop"
 	ScheduleTickKind           = "schedule.tick/1"
 	ScheduleStopKind           = "schedule.stop/1"
 	ScheduleStopReasonMax      = 280 // UTF-16 code units; astral characters count twice.
@@ -41,7 +43,7 @@ type ScheduleTick struct {
 }
 
 // ScheduleTickResult has Status "valid", "other" or "invalid"; Reason is
-// "invalid_envelope" or "invalid_payload" when invalid.
+// "invalid_envelope", "invalid_step" or "invalid_payload" when invalid.
 type ScheduleTickResult struct {
 	Status string
 	Tick   *ScheduleTick
@@ -88,6 +90,9 @@ func ReadScheduleTick(envelope map[string]any) ScheduleTickResult {
 	if !scheduleProtocol(envelope, ScheduleTickProtocol) {
 		return ScheduleTickResult{Status: "other"}
 	}
+	if envelope["step"] != ScheduleTickStep {
+		return ScheduleTickResult{Status: "invalid", Reason: "invalid_step"}
+	}
 	invalid := ScheduleTickResult{Status: "invalid", Reason: "invalid_payload"}
 	payload, ok := envelope["payload"].(map[string]any)
 	if !ok {
@@ -130,6 +135,9 @@ func ParseScheduleTick(source []byte) ScheduleTickResult {
 func ReadScheduleStop(envelope map[string]any) ScheduleStopResult {
 	if !scheduleProtocol(envelope, ScheduleStopProtocol) {
 		return ScheduleStopResult{Status: "other"}
+	}
+	if envelope["step"] != ScheduleStopStep {
+		return ScheduleStopResult{Status: "invalid", Reason: "invalid_step"}
 	}
 	invalid := ScheduleStopResult{Status: "invalid", Reason: "invalid_payload"}
 	payload, ok := envelope["payload"].(map[string]any)

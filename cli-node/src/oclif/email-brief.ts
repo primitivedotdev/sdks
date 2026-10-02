@@ -69,7 +69,7 @@ export type EmailBriefEnvelope = {
   } | null;
   work_claim: WorkClaim | null;
   peer_signal: PeerSignal | null;
-  /** Set when an authenticated sender's email is a scheduled message. */
+  /** Set when authenticated mail from the owner or a member is a scheduled message. */
   scheduled: ScheduledMessage | null;
 };
 
@@ -286,7 +286,7 @@ export async function buildEmailBrief(input: {
       : Promise.resolve(null),
   ]);
   const attachments = detail.parsed?.attachments?.length ?? 0;
-  const [relationship, peerSignal, scheduled] = await Promise.all([
+  const [relationship, peerSignal] = await Promise.all([
     relationshipFor({
       client,
       detail,
@@ -299,12 +299,18 @@ export async function buildEmailBrief(input: {
     trust.trusted
       ? readPeerSignal({ client, thread, self, sender, signal })
       : Promise.resolve(null),
-    // Only authenticated mail can claim to be a scheduled message: the stop
-    // command printed for it acts on the schedule.
-    trust.trusted && attachments > 0
-      ? readScheduledMessage({ client, detail, signal })
-      : Promise.resolve(null),
   ]);
+  // The scheduler sends only from an org member's own address, so a tick is
+  // shown only on authenticated mail from the owner or another member. Any
+  // other sender could attach a well-formed tick of its own. The stop
+  // endpoint still decides for itself whether the email is a real scheduled
+  // message.
+  const scheduled =
+    trust.trusted &&
+    attachments > 0 &&
+    (relationship === "owner" || relationship === "member")
+      ? await readScheduledMessage({ client, detail, signal })
+      : null;
   return {
     envelope: {
       email_id: detail.id,

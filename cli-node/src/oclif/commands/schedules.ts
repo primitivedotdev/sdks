@@ -26,6 +26,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { hasStoredCliLogin } from "../auth.js";
 
 // Scheduled messages to agents. `schedule stop` is the agent side: it stops
 // the schedule behind a received scheduled message. `schedules ...` is the
@@ -72,7 +73,7 @@ export const SCHEDULE_ERROR_HINTS: Record<string, string> = {
   schedule_limit_reached:
     "Delete or reuse an existing schedule (`primitive schedules list`).",
   schedule_stop_not_allowed:
-    "Only the schedule's owner can stop this one: it does not let the agent stop it, or it was already stopped or deleted by the owner.",
+    "Run this with the receiving agent's own connected credential (PRIMITIVE_AGENT_PROFILE), not a member login or API key. If you did, only the schedule's owner can stop it: it does not let the agent stop it, or the owner already stopped or deleted it.",
   not_a_scheduled_message:
     "Pass the id of a received scheduled message (the email whose footer names `primitive schedule stop`).",
 };
@@ -119,9 +120,31 @@ type ApiResult<T> = {
   error?: unknown;
 };
 
+/**
+ * Owner commands need a member login, which the API accepts and API keys do
+ * not. When the only API key came from PRIMITIVE_API_KEY and a login is saved,
+ * use the login. An explicit --api-key still wins.
+ */
+export function ownerApiKey(input: {
+  apiKeyFlag: string | undefined;
+  apiKeyFlagExplicit: boolean;
+  hasStoredLogin: boolean;
+}): { apiKey: string | undefined; usedStoredLogin: boolean } {
+  if (
+    input.apiKeyFlag !== undefined &&
+    !input.apiKeyFlagExplicit &&
+    input.hasStoredLogin
+  )
+    return { apiKey: undefined, usedStoredLogin: true };
+  return { apiKey: input.apiKeyFlag, usedStoredLogin: false };
+}
+
+type RawToken = { type: string; flag?: string };
+
 async function runScheduleRequest<T>(
   command: Command,
   flags: CommonFlags,
+  raw: RawToken[] | null,
   request: (
     client: Awaited<
       ReturnType<typeof createAuthenticatedCliApiClient>
@@ -129,9 +152,27 @@ async function runScheduleRequest<T>(
   ) => Promise<ApiResult<T>>,
   render: (data: T) => string,
 ): Promise<void> {
+  // `raw` holds only tokens typed on the command line, so an api-key flag
+  // token means --api-key was explicit; otherwise the value came from the env.
+  // Null marks the agent-side command, which keeps the usual precedence.
+  let apiKey = flags["api-key"];
+  if (raw) {
+    const owner = ownerApiKey({
+      apiKeyFlag: flags["api-key"],
+      apiKeyFlagExplicit: raw.some(
+        (token) => token.type === "flag" && token.flag === "api-key",
+      ),
+      hasStoredLogin: hasStoredCliLogin(command.config.configDir),
+    });
+    apiKey = owner.apiKey;
+    if (owner.usedStoredLogin)
+      process.stderr.write(
+        "PRIMITIVE_API_KEY is set, but schedules need a member login, so this command uses your saved login. Pass --api-key explicitly to override.\n",
+      );
+  }
   const { apiClient, auth, baseUrlOverridden } =
     await createAuthenticatedCliApiClient({
-      apiKey: flags["api-key"],
+      apiKey,
       apiBaseUrl: flags["api-base-url"],
       configDir: command.config.configDir,
     });
@@ -239,6 +280,7 @@ export class ScheduleStopCommand extends Command {
     await runScheduleRequest(
       this,
       flags,
+      null,
       (client) =>
         stopAgentMessageSchedule({
           client,
@@ -270,10 +312,11 @@ export class SchedulesListCommand extends Command {
   };
 
   async run(): Promise<void> {
-    const { flags } = await this.parse(SchedulesListCommand);
+    const { flags, raw } = await this.parse(SchedulesListCommand);
     await runScheduleRequest(
       this,
       flags,
+      raw,
       (client) =>
         listAgentMessageSchedules({
           client,
@@ -300,10 +343,11 @@ export class SchedulesGetCommand extends Command {
   static flags = COMMON_FLAGS;
 
   async run(): Promise<void> {
-    const { args, flags } = await this.parse(SchedulesGetCommand);
+    const { args, flags, raw } = await this.parse(SchedulesGetCommand);
     await runScheduleRequest(
       this,
       flags,
+      raw,
       (client) =>
         getAgentMessageSchedule({
           client,
@@ -353,7 +397,7 @@ export class SchedulesCreateCommand extends Command {
   };
 
   async run(): Promise<void> {
-    const { flags } = await this.parse(SchedulesCreateCommand);
+    const { flags, raw } = await this.parse(SchedulesCreateCommand);
     const interval = parseMinutes(
       this,
       flags.every,
@@ -375,6 +419,7 @@ export class SchedulesCreateCommand extends Command {
     await runScheduleRequest(
       this,
       flags,
+      raw,
       (client) =>
         createAgentMessageSchedule({
           client,
@@ -410,10 +455,11 @@ function statusCommand(
     static flags = COMMON_FLAGS;
 
     async run(): Promise<void> {
-      const { args, flags } = await this.parse(SchedulesStatusCommand);
+      const { args, flags, raw } = await this.parse(SchedulesStatusCommand);
       await runScheduleRequest(
         this,
         flags,
+        raw,
         (client) =>
           updateAgentMessageSchedule({
             client,
@@ -453,10 +499,11 @@ export class SchedulesDeleteCommand extends Command {
   static flags = COMMON_FLAGS;
 
   async run(): Promise<void> {
-    const { args, flags } = await this.parse(SchedulesDeleteCommand);
+    const { args, flags, raw } = await this.parse(SchedulesDeleteCommand);
     await runScheduleRequest(
       this,
       flags,
+      raw,
       (client) =>
         deleteAgentMessageSchedule({
           client,
