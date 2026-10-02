@@ -118,10 +118,10 @@ export async function withOwnerMemberAddress<
     params.configDir,
     result.identity.profileName,
   );
-  // A claim answered by a current server already carries the value; only an
-  // older answer, or an explicit rerun, needs the extra read.
+  // A claim that already named the personal address needs no extra read. A
+  // null or missing value is read again: the owner may have just set one up.
   const ownerMemberAddress =
-    params.onlyIfUnknown && saved && saved.owner_member_address !== undefined
+    params.onlyIfUnknown && typeof saved?.owner_member_address === "string"
       ? saved.owner_member_address
       : await refreshOwnerMemberAddress({
           configDir: params.configDir,

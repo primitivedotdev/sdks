@@ -147,6 +147,21 @@ describe("the owner's personal address", () => {
     expect(output.identity.ownerMemberAddress).toBe(personal);
   });
 
+  it("reads again after a claim that reported no personal address", async () => {
+    await refresh(async () => me({ owner_member_address: null }));
+    const profile = loadConnectedAgentProfile(configDir, "work");
+    if (!profile) throw new Error("profile missing");
+    const output = await withOwnerMemberAddress(
+      { status: "claimed", identity: connectedAgentIdentity("work", profile) },
+      {
+        configDir,
+        fetch: async () => me({ owner_member_address: personal }),
+        onlyIfUnknown: true,
+      },
+    );
+    expect(output.identity.ownerMemberAddress).toBe(personal);
+  });
+
   it("reports null without a saved value or a profile", async () => {
     expect(await refresh(async () => me({}))).toBeNull();
     expect(
