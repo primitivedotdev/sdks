@@ -18,6 +18,7 @@ if TYPE_CHECKING:
   from ..models.gate_denial import GateDenial
   from ..models.presence_control_type_0 import PresenceControlType0
   from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
+  from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
   from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
 
 
@@ -144,6 +145,9 @@ class SentEmailDetail:
             canceled_at (datetime.datetime | None | Unset): When a scheduled send was canceled. Null unless the row
                 reached the `canceled` status.
             presence_control (None | PresenceControlType0 | Unset):
+            repeat (None | SentEmailSummaryRepeatType0 | Unset): Set when Primitive sent this message as part of a repeating
+                send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
+                servers that predate repeating sends.
             sender_member (None | SentEmailSummarySenderMemberType0 | Unset): Verified human authorship, projected only
                 within the member organization. Historical attribution is not current sending or owner authority.
             body_text (None | str | Unset): Plain-text body sent on the wire. Null when the
@@ -200,6 +204,7 @@ class SentEmailDetail:
     scheduled_at: datetime.datetime | None | Unset = UNSET
     canceled_at: datetime.datetime | None | Unset = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
+    repeat: None | SentEmailSummaryRepeatType0 | Unset = UNSET
     sender_member: None | SentEmailSummarySenderMemberType0 | Unset = UNSET
     body_text: None | str | Unset = UNSET
     body_html: None | str | Unset = UNSET
@@ -217,6 +222,7 @@ class SentEmailDetail:
         from ..models.gate_denial import GateDenial
         from ..models.presence_control_type_0 import PresenceControlType0
         from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
+        from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
         id = str(self.id)
 
@@ -381,6 +387,14 @@ class SentEmailDetail:
         else:
             presence_control = self.presence_control
 
+        repeat: dict[str, Any] | None | Unset
+        if isinstance(self.repeat, Unset):
+            repeat = UNSET
+        elif isinstance(self.repeat, SentEmailSummaryRepeatType0):
+            repeat = self.repeat.to_dict()
+        else:
+            repeat = self.repeat
+
         sender_member: dict[str, Any] | None | Unset
         if isinstance(self.sender_member, Unset):
             sender_member = UNSET
@@ -473,6 +487,8 @@ class SentEmailDetail:
             field_dict["canceled_at"] = canceled_at
         if presence_control is not UNSET:
             field_dict["presence_control"] = presence_control
+        if repeat is not UNSET:
+            field_dict["repeat"] = repeat
         if sender_member is not UNSET:
             field_dict["sender_member"] = sender_member
         if body_text is not UNSET:
@@ -497,6 +513,7 @@ class SentEmailDetail:
         from ..models.gate_denial import GateDenial
         from ..models.presence_control_type_0 import PresenceControlType0
         from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
+        from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
         d = dict(src_dict)
         id = UUID(d.pop("id"))
@@ -813,6 +830,26 @@ class SentEmailDetail:
         presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
 
 
+        def _parse_repeat(data: object) -> None | SentEmailSummaryRepeatType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                repeat_type_0 = SentEmailSummaryRepeatType0.from_dict(data)
+
+
+
+                return repeat_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SentEmailSummaryRepeatType0 | Unset, data)
+
+        repeat = _parse_repeat(d.pop("repeat", UNSET))
+
+
         def _parse_sender_member(data: object) -> None | SentEmailSummarySenderMemberType0 | Unset:
             if data is None:
                 return data
@@ -904,6 +941,7 @@ class SentEmailDetail:
             scheduled_at=scheduled_at,
             canceled_at=canceled_at,
             presence_control=presence_control,
+            repeat=repeat,
             sender_member=sender_member,
             body_text=body_text,
             body_html=body_html,

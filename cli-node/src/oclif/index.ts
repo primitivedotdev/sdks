@@ -96,6 +96,14 @@ import PaymentsPayCommand from "./commands/payments-pay.js";
 import PaymentsPayEmailCommand from "./commands/payments-pay-email.js";
 import PaymentsPayEmailStepCommand from "./commands/payments-pay-email-step.js";
 import PaymentsRegisterPayoutAddressCommand from "./commands/payments-register-payout-address.js";
+import {
+  RepeatStopCommand,
+  RepeatsCancelCommand,
+  RepeatsGetCommand,
+  RepeatsListCommand,
+  RepeatsPauseCommand,
+  RepeatsResumeCommand,
+} from "./commands/repeats.js";
 import ReplyCommand from "./commands/reply.js";
 import RoutesAddCommand from "./commands/routes-add.js";
 import RoutesListCommand from "./commands/routes-list.js";
@@ -818,6 +826,14 @@ export const COMMANDS: Record<string, typeof Command> = {
   // pay-email-step users can get the correctly-shaped challenge without
   // hand-mapping the envelope; `pay-email --in-reply-to` derives it internally.
   "payments:challenge-from-email": PaymentsChallengeFromEmailCommand,
+  // Repeating sends start from `send`/`reply --repeat-every`. `repeat stop`
+  // is the recipient side; `repeats ...` manages repeats you created.
+  "repeat:stop": RepeatStopCommand,
+  "repeats:list": RepeatsListCommand,
+  "repeats:get": RepeatsGetCommand,
+  "repeats:pause": RepeatsPauseCommand,
+  "repeats:resume": RepeatsResumeCommand,
+  "repeats:cancel": RepeatsCancelCommand,
   "wake:schedules:list": WakeSchedulesListCommand,
   "wake:schedules:create": WakeSchedulesCreateCommand,
   "wake:schedules:get": WakeSchedulesGetCommand,

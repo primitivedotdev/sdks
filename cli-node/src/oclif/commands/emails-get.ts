@@ -14,7 +14,7 @@ import { currentMailSessionKey } from "../mail-session.js";
 import { clearReadPendingMail } from "../pending-mail.js";
 
 const BRIEF_DESCRIPTION =
-  "Print a compact brief instead of the raw email: a trusted envelope (sender, relationship, verification, thread, whether you have sent in the thread, newer messages when the API reports them, attachments, the sender's active work claim, and the sender's latest signal on your last message), then the sender-authored subject and body_text fenced and labelled untrusted. With --json, prints one object with `envelope`, `subject` and `body_text`.";
+  "Print a compact brief instead of the raw email: a trusted envelope (sender, relationship, verification, thread, whether you have sent in the thread, newer messages when the API reports them, attachments, the sender's active work claim, the sender's latest signal on your last message, and for a repeating message its cadence and how to stop it), then the sender-authored subject and body_text fenced and labelled untrusted. With --json, prints one object with `envelope`, `subject` and `body_text`.";
 
 /**
  * Remove the email from the current profile's pending wake notices once the

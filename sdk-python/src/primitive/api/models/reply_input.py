@@ -11,6 +11,7 @@ from ..types import UNSET, Unset
 from typing import cast
 
 if TYPE_CHECKING:
+  from ..models.repeat_input import RepeatInput
   from ..models.send_mail_attachment import SendMailAttachment
 
 
@@ -50,6 +51,16 @@ class ReplyInput:
             attachments (list[SendMailAttachment] | Unset): Inline attachments for this reply. Use
                 https://api.primitive.dev/v1 for replies with attachments. Combined raw decoded attachment bytes must be at most
                 31457280.
+            repeat (RepeatInput | Unset): Repeat this send every `every_minutes` in the same thread. The first
+                message goes out like any send; each later one is a scheduled send
+                that replies to the previous one, so quotas, gates and cancellation
+                apply as usual. Requires exactly one `to` recipient and no cc, bcc,
+                attachments or `fyi` (422 `repeat_unsupported`). The recipient must
+                be an address of your own organization unless the organization is
+                entitled to repeat to external recipients (403
+                `repeat_recipient_external`). `only_if_recipient_idle_minutes` needs
+                a recipient in your organization (422
+                `repeat_idle_requires_internal_recipient`).
      """
 
     body_text: str | Unset = UNSET
@@ -57,12 +68,14 @@ class ReplyInput:
     from_: str | Unset = UNSET
     wait: bool | Unset = UNSET
     attachments: list[SendMailAttachment] | Unset = UNSET
+    repeat: RepeatInput | Unset = UNSET
 
 
 
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.repeat_input import RepeatInput
         from ..models.send_mail_attachment import SendMailAttachment
         body_text = self.body_text
 
@@ -81,6 +94,10 @@ class ReplyInput:
 
 
 
+        repeat: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.repeat, Unset):
+            repeat = self.repeat.to_dict()
+
 
         field_dict: dict[str, Any] = {}
 
@@ -96,6 +113,8 @@ class ReplyInput:
             field_dict["wait"] = wait
         if attachments is not UNSET:
             field_dict["attachments"] = attachments
+        if repeat is not UNSET:
+            field_dict["repeat"] = repeat
 
         return field_dict
 
@@ -103,6 +122,7 @@ class ReplyInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.repeat_input import RepeatInput
         from ..models.send_mail_attachment import SendMailAttachment
         d = dict(src_dict)
         body_text = d.pop("body_text", UNSET)
@@ -125,12 +145,23 @@ class ReplyInput:
                 attachments.append(attachments_item)
 
 
+        _repeat = d.pop("repeat", UNSET)
+        repeat: RepeatInput | Unset
+        if isinstance(_repeat,  Unset):
+            repeat = UNSET
+        else:
+            repeat = RepeatInput.from_dict(_repeat)
+
+
+
+
         reply_input = cls(
             body_text=body_text,
             body_html=body_html,
             from_=from_,
             wait=wait,
             attachments=attachments,
+            repeat=repeat,
         )
 
         return reply_input

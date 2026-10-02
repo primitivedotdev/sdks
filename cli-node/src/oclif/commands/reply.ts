@@ -21,6 +21,12 @@ import { currentMailSessionKey } from "../mail-session.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
+  formatRepeatStarted,
+  repeatFlags,
+  repeatFromFlags,
+  writeRepeatErrorHint,
+} from "../repeat-flags.js";
+import {
   assertValidIdempotencyKey,
   buildThrownSendFailureEnvelope,
   checkPriorReplies,
@@ -160,6 +166,10 @@ class ReplyCommand extends Command {
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
+    ...repeatFlags(
+      ["fyi", "attachment"],
+      "The reply recipient (the Reply-To address, else the sender) must be an address in your organization, and the reply cannot use --attachment or --fyi.",
+    ),
   };
 
   private attemptStartedAtIso: string | null = null;
@@ -242,6 +252,7 @@ class ReplyCommand extends Command {
         connectedAgent: auth.connectedAgent,
       });
       const attachments = readAttachmentFiles(flags.attachment);
+      const repeat = repeatFromFlags(flags);
       const receivingSince = new Date().toISOString();
 
       let emailId: string;
@@ -333,6 +344,7 @@ class ReplyCommand extends Command {
             : {
                 ...plainContent,
                 ...(flags.from !== undefined ? { from: flags.from } : {}),
+                ...(repeat !== undefined ? { repeat } : {}),
                 in_reply_to_email_id: emailId,
               },
         );
@@ -372,6 +384,7 @@ class ReplyCommand extends Command {
         ...content,
         ...(flags.from !== undefined ? { from: flags.from } : {}),
         ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
+        ...(repeat !== undefined ? { repeat } : {}),
       };
       // An answer ends automatic working for the email it answers.
       const halted = await haltAutoWorking(
@@ -414,6 +427,7 @@ class ReplyCommand extends Command {
         noun: "Reply",
         onApiError: (errorPayload) => {
           writeErrorWithHints(errorPayload);
+          writeRepeatErrorHint(errorPayload);
           surfaceUnauthorizedHint({
             auth,
             baseUrlOverridden,
@@ -426,6 +440,8 @@ class ReplyCommand extends Command {
           process.stderr.write(chunk);
         },
       });
+      const repeatLine = formatRepeatStarted(result, repeat);
+      if (repeatLine) process.stderr.write(`${repeatLine}\n`);
       // A refused answer reached nobody, so the sender still sees working.
       if (outcome === "not_sent") restoreAutoWorking(halted);
       const exitCode = sendOutcomeExitCode(outcome);

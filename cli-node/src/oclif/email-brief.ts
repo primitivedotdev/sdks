@@ -9,6 +9,11 @@ import {
   notificationPartReader,
   readConversationStatusContent,
 } from "./notify-session-content.js";
+import {
+  type RepeatedMessage,
+  readRepeatedMessage,
+  renderRepeatedMessage,
+} from "./repeat-message.js";
 import { scopedChatSenderTrust } from "./scoped-chat.js";
 import {
   bareAddress,
@@ -64,6 +69,8 @@ export type EmailBriefEnvelope = {
   } | null;
   work_claim: WorkClaim | null;
   peer_signal: PeerSignal | null;
+  /** Set when the server marks this email as part of a repeating send. */
+  repeat: RepeatedMessage | null;
 };
 
 export type BriefAttachment = {
@@ -365,6 +372,9 @@ export async function buildEmailBrief(input: {
       ? readPeerSignal({ client, thread, self, sender, signal })
       : Promise.resolve(null),
   ]);
+  // The server's repeat marker, not the message content, establishes that
+  // Primitive sent this as a repeat.
+  const repeat = await readRepeatedMessage({ client, detail, signal });
   return {
     envelope: {
       email_id: detail.id,
@@ -394,6 +404,7 @@ export async function buildEmailBrief(input: {
             },
       work_claim: claim,
       peer_signal: peerSignal,
+      repeat,
     },
     subject: detail.subject ?? null,
     body_text: detail.body_text ?? null,
@@ -442,6 +453,7 @@ export function renderEmailBrief(brief: EmailBrief): string {
   }
   if (e.attachments.download_all_command)
     lines.push(`    download all: ${e.attachments.download_all_command}`);
+  if (e.repeat) lines.push(`  ${renderRepeatedMessage(e.repeat)}`);
   if (e.work_claim)
     lines.push(
       `  sender's work claim (written by the sender): ${JSON.stringify(e.work_claim.claim)}${e.work_claim.until ? ` until ${e.work_claim.until}` : e.work_claim.legacy ? " (no expiry)" : ""}`,

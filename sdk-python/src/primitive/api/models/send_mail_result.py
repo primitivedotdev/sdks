@@ -12,6 +12,7 @@ from ..models.delivery_status import DeliveryStatus
 from ..models.sent_email_status import SentEmailStatus
 from dateutil.parser import isoparse
 from typing import cast
+from uuid import UUID
 import datetime
 
 
@@ -87,6 +88,7 @@ class SendMailResult:
                 payload). False on a fresh send and on gate-denied
                 responses. Lets callers branch on cache state without
                 diffing fields.
+            repeat_id (UUID | Unset): Present when the request carried `repeat`. Manage it under `/repeating-sends/{id}`.
             delivery_status (DeliveryStatus | Unset): Narrower enum covering only the four terminal delivery
                 outcomes returned to a synchronous `wait: true` send.
 
@@ -123,6 +125,7 @@ class SendMailResult:
     request_id: str
     content_hash: str
     idempotent_replay: bool
+    repeat_id: UUID | Unset = UNSET
     delivery_status: DeliveryStatus | Unset = UNSET
     smtp_response_code: int | None | Unset = UNSET
     smtp_response_text: str | Unset = UNSET
@@ -159,6 +162,10 @@ class SendMailResult:
 
         idempotent_replay = self.idempotent_replay
 
+        repeat_id: str | Unset = UNSET
+        if not isinstance(self.repeat_id, Unset):
+            repeat_id = str(self.repeat_id)
+
         delivery_status: str | Unset = UNSET
         if not isinstance(self.delivery_status, Unset):
             delivery_status = self.delivery_status.value
@@ -191,6 +198,8 @@ class SendMailResult:
             "content_hash": content_hash,
             "idempotent_replay": idempotent_replay,
         })
+        if repeat_id is not UNSET:
+            field_dict["repeat_id"] = repeat_id
         if delivery_status is not UNSET:
             field_dict["delivery_status"] = delivery_status
         if smtp_response_code is not UNSET:
@@ -238,6 +247,16 @@ class SendMailResult:
 
         idempotent_replay = d.pop("idempotent_replay")
 
+        _repeat_id = d.pop("repeat_id", UNSET)
+        repeat_id: UUID | Unset
+        if isinstance(_repeat_id,  Unset):
+            repeat_id = UNSET
+        else:
+            repeat_id = UUID(_repeat_id)
+
+
+
+
         _delivery_status = d.pop("delivery_status", UNSET)
         delivery_status: DeliveryStatus | Unset
         if isinstance(_delivery_status,  Unset):
@@ -281,6 +300,7 @@ class SendMailResult:
             request_id=request_id,
             content_hash=content_hash,
             idempotent_replay=idempotent_replay,
+            repeat_id=repeat_id,
             delivery_status=delivery_status,
             smtp_response_code=smtp_response_code,
             smtp_response_text=smtp_response_text,

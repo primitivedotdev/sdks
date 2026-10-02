@@ -16,6 +16,7 @@ from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
+  from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0
   from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
   from ..models.presence_control_type_0 import PresenceControlType0
 
@@ -46,6 +47,9 @@ class ConversationMessage:
             subject (None | str | Unset):
             timestamp (datetime.datetime | None | Unset): received_at for inbound, created_at for outbound.
             presence_control (None | PresenceControlType0 | Unset):
+            repeat (ConversationMessageRepeatType0 | None | Unset): Set when Primitive sent this message as part of a
+                repeating send. Resolved from Primitive's own records, never from the message content. Null on every other
+                message and on servers that predate repeating sends.
             sender_member (ConversationMessageSenderMemberType0 | None | Unset): Verified human authorship, projected only
                 within the member organization. Historical attribution is not current sending or owner authority.
      """
@@ -60,6 +64,7 @@ class ConversationMessage:
     subject: None | str | Unset = UNSET
     timestamp: datetime.datetime | None | Unset = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
+    repeat: ConversationMessageRepeatType0 | None | Unset = UNSET
     sender_member: ConversationMessageSenderMemberType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -68,6 +73,7 @@ class ConversationMessage:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0
         from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
         from ..models.presence_control_type_0 import PresenceControlType0
         role = self.role.value
@@ -118,6 +124,14 @@ class ConversationMessage:
         else:
             presence_control = self.presence_control
 
+        repeat: dict[str, Any] | None | Unset
+        if isinstance(self.repeat, Unset):
+            repeat = UNSET
+        elif isinstance(self.repeat, ConversationMessageRepeatType0):
+            repeat = self.repeat.to_dict()
+        else:
+            repeat = self.repeat
+
         sender_member: dict[str, Any] | None | Unset
         if isinstance(self.sender_member, Unset):
             sender_member = UNSET
@@ -147,6 +161,8 @@ class ConversationMessage:
             field_dict["timestamp"] = timestamp
         if presence_control is not UNSET:
             field_dict["presence_control"] = presence_control
+        if repeat is not UNSET:
+            field_dict["repeat"] = repeat
         if sender_member is not UNSET:
             field_dict["sender_member"] = sender_member
 
@@ -156,6 +172,7 @@ class ConversationMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0
         from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
         from ..models.presence_control_type_0 import PresenceControlType0
         d = dict(src_dict)
@@ -256,6 +273,26 @@ class ConversationMessage:
         presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
 
 
+        def _parse_repeat(data: object) -> ConversationMessageRepeatType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                repeat_type_0 = ConversationMessageRepeatType0.from_dict(data)
+
+
+
+                return repeat_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(ConversationMessageRepeatType0 | None | Unset, data)
+
+        repeat = _parse_repeat(d.pop("repeat", UNSET))
+
+
         def _parse_sender_member(data: object) -> ConversationMessageSenderMemberType0 | None | Unset:
             if data is None:
                 return data
@@ -287,6 +324,7 @@ class ConversationMessage:
             subject=subject,
             timestamp=timestamp,
             presence_control=presence_control,
+            repeat=repeat,
             sender_member=sender_member,
         )
 
