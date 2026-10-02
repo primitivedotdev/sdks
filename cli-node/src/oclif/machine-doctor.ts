@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   renameSync,
+  rmSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
 import {
@@ -220,6 +221,24 @@ async function npmLatestVersion(
     return typeof version === "string" ? version : null;
   } catch {
     return null;
+  }
+}
+
+const SKILL_BACKUPS_KEPT = 2;
+
+function pruneSkillBackups(directory: string, runtime: string): void {
+  const pattern = new RegExp(`^${runtime}-\\d{8}T\\d{6}Z(?:-\\d+)?$`);
+  try {
+    const names = readdirSync(directory)
+      .filter((name) => pattern.test(name))
+      .sort();
+    for (const name of names.slice(
+      0,
+      Math.max(0, names.length - SKILL_BACKUPS_KEPT),
+    ))
+      rmSync(join(directory, name), { recursive: true, force: true });
+  } catch {
+    /* Old backups are harmless; pruning never fails a repair. */
   }
 }
 
@@ -503,16 +522,14 @@ export async function runMachineDoctor(
       const current = loadBundle();
       if (!current) return false;
       const target = connectSkillTarget({ runtime, env: skillEnv });
+      const backups = join(options.configDir, "machine", "backups", "skills");
       if (existsSync(target)) {
         // Keep the whole replaced copy, installed helper packages included,
         // so restoring it brings back a working skill.
-        const backup = join(
-          options.configDir,
-          "machine",
-          "backups",
-          "skills",
-          `${runtime}-${backupStamp(now())}`,
-        );
+        const stamp = `${runtime}-${backupStamp(now())}`;
+        let backup = join(backups, stamp);
+        for (let attempt = 1; existsSync(backup); attempt++)
+          backup = join(backups, `${stamp}-${attempt}`);
         mkdirSync(backup, { recursive: true, mode: 0o700 });
         cpSync(target, backup, { recursive: true, verbatimSymlinks: true });
       }
@@ -525,6 +542,9 @@ export async function runMachineDoctor(
         throw new MachineFileError(
           `The skill could not be installed (${result.reason ?? "unknown"}).`,
         );
+      // Only after a successful replacement: keep the newest two backups for
+      // this runtime and remove older ones by their exact paths.
+      pruneSkillBackups(backups, runtime);
       return result.state === "installed" || result.state === "updated";
     },
   });

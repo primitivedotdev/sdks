@@ -842,6 +842,35 @@ describe("primitive machine doctor", () => {
     ).toBe("helper\n");
   });
 
+  it("keeps only the newest two skill backups", async () => {
+    const { home, configDir, options } = machine();
+    const skill = join(home, ".claude", "skills", "primitive-connect");
+    const backups = join(configDir, "machine", "backups", "skills");
+    for (let round = 0; round < 4; round++) {
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(join(skill, "SKILL.md"), `edited ${round}\n`);
+      const report = byId(
+        await runMachineDoctor({
+          ...options,
+          fix: true,
+          only: new Set(["skill.claude"]),
+          now: () => new Date(Date.UTC(2026, 9, 2, 12, round)),
+        }),
+      );
+      expect(report["skill.claude"].fixed).toBe(true);
+    }
+    const kept = readdirSync(backups)
+      .filter((name) => name.startsWith("claude-"))
+      .sort();
+    expect(kept).toEqual([
+      "claude-20261002T120200Z",
+      "claude-20261002T120300Z",
+    ]);
+    expect(readFileSync(join(backups, kept[1] ?? "", "SKILL.md"), "utf8")).toBe(
+      "edited 3\n",
+    );
+  });
+
   it("does not repair while another repair holds the lock", async () => {
     const { configDir, options } = machine();
     const { acquireListenLock } = await import(

@@ -92,7 +92,7 @@ type SessionRecord = {
   registeredAt: string;
   endedAt: string | null;
   /** Whether disconnecting an ended session's agent is confirmed. */
-  disconnect: "done" | "pending" | null;
+  disconnect: "done" | "pending" | "pending_enrollment" | null;
 };
 
 function sessionRecordPath(configDir: string, session: string): string {
@@ -135,7 +135,9 @@ function readSessionRecord(
           : new Date(0).toISOString(),
       endedAt: typeof row.endedAt === "string" ? row.endedAt : null,
       disconnect:
-        row.disconnect === "done" || row.disconnect === "pending"
+        row.disconnect === "done" ||
+        row.disconnect === "pending" ||
+        row.disconnect === "pending_enrollment"
           ? row.disconnect
           : // Records written before this field existed ended with a disconnect.
             typeof row.endedAt === "string"
@@ -531,16 +533,23 @@ export type SessionDisconnectDependencies = {
 /**
  * Disconnect whatever agent a session's record points at: through its local
  * credential when present, otherwise by address with the member login.
- * "pending" means it must be retried; it is never reported as done without
- * a confirmed disconnect or proof that no agent was created.
+ * "pending" means it must be retried; "pending_enrollment" means a
+ * registration may still create an agent. It is never reported as done
+ * without a confirmed disconnect or proof that no agent was created.
  */
+type DisconnectOutcome = "done" | "pending" | "pending_enrollment";
+
+/** Enrollment saves its state before any request, so a quiet record this old created nothing. */
+const ENROLLMENT_SETTLED_MS = 10 * 60_000;
+
 async function disconnectSessionAgent(
   configDir: string,
   record: SessionRecord,
   deps: SessionDisconnectDependencies,
   env: Env,
   fetchImpl?: typeof fetch,
-): Promise<"done" | "pending"> {
+  enrollmentSettled = false,
+): Promise<DisconnectOutcome> {
   try {
     if (loadConnectedAgentProfile(configDir, record.profile)) {
       await deps.disconnect({
@@ -554,8 +563,15 @@ async function disconnectSessionAgent(
     if (disconnectConfirmedLocally(configDir, record.profile)) return "done";
     const enrollment = enrollmentAddress(configDir, record.profile);
     const address = record.address ?? enrollment.address;
-    // Nothing was ever requested for this session, so nothing can be connected.
-    if (!address) return enrollment.exists ? "pending" : "done";
+    if (!address) {
+      if (enrollment.exists) return "pending";
+      // No enrollment state: either nothing was ever requested, or a
+      // registration has not reached its first request yet.
+      const settled =
+        enrollmentSettled ||
+        Date.now() - Date.parse(record.registeredAt) > ENROLLMENT_SETTLED_MS;
+      return settled ? "done" : "pending_enrollment";
+    }
     return (await deps.revokeByAddress(configDir, address, fetchImpl))
       ? "done"
       : "pending";
@@ -570,18 +586,29 @@ async function finishSessionDisconnect(
   deps: SessionDisconnectDependencies,
   env: Env,
   fetchImpl?: typeof fetch,
-): Promise<"done" | "pending"> {
+  enrollmentSettled = false,
+): Promise<DisconnectOutcome> {
   const outcome = await disconnectSessionAgent(
     configDir,
     record,
     deps,
     env,
     fetchImpl,
+    enrollmentSettled,
   );
-  await updateSessionRecord(configDir, record.session, (current) =>
-    current ? { ...current, disconnect: outcome } : current,
+  // Compare-and-set: a concurrent attempt may already have confirmed the
+  // disconnect, and "done" is never replaced by a weaker result.
+  const saved = await updateSessionRecord(
+    configDir,
+    record.session,
+    (current) =>
+      !current ||
+      current.disconnect === "done" ||
+      current.disconnect === outcome
+        ? current
+        : { ...current, disconnect: outcome },
   );
-  return outcome;
+  return saved?.disconnect === "done" ? "done" : outcome;
 }
 
 export type SessionRegisterDependencies = SessionDisconnectDependencies & {
@@ -701,11 +728,11 @@ export async function registerSession(
   const profileName = `session-${sessionId}`;
   const known = { ...base, session: sessionId, profile: profileName };
   const cwd = resolve(options.cwd ?? process.cwd());
-  const ended = async (current: SessionRecord, createdNow = false) => {
-    // An agent this run just created is always disconnected, even when the
-    // session end found nothing to disconnect while enrollment was running.
+  const ended = async (current: SessionRecord, enrolledNow = false) => {
+    // After this run's own enrollment returned or failed, whatever it
+    // created is disconnected, even if the end found nothing earlier.
     const outcome =
-      current.disconnect === "done" && !createdNow
+      current.disconnect === "done" && !enrolledNow
         ? "done"
         : await finishSessionDisconnect(
             options.configDir,
@@ -713,6 +740,7 @@ export async function registerSession(
             deps,
             env,
             options.fetch,
+            enrolledNow,
           );
     return {
       ...known,
@@ -857,27 +885,51 @@ export async function registerSession(
     delete enrollEnv.PRIMITIVE_KEY;
     if (runtime === "claude" && options.trustedSession)
       enrollEnv.CLAUDE_CODE_SESSION_ID = sessionId;
-    const result = await deps.enroll({
-      configDir: options.configDir,
-      session: sessionId,
-      name: record.name,
-      receiverMode: runtime === "codex" ? "native" : "external",
-      contactRequests: false,
-      env: enrollEnv,
-      fetch: options.fetch,
-      // omp has no receiver this CLI can drive, so there is nothing to probe.
-      ...(runtime === "omp" ? { preflight: async () => undefined } : {}),
-    });
-    const address = result.identity.agentAddress;
-    // Re-read under the lock: the session may have ended while enrolling. Its
-    // end marker is kept and the agent just created is disconnected.
+    let result: Awaited<ReturnType<typeof deps.enroll>> | null = null;
+    let enrollError: unknown = null;
+    try {
+      result = await deps.enroll({
+        configDir: options.configDir,
+        session: sessionId,
+        name: record.name,
+        receiverMode: runtime === "codex" ? "native" : "external",
+        contactRequests: false,
+        env: enrollEnv,
+        fetch: options.fetch,
+        // omp has no receiver this CLI can drive, so there is nothing to probe.
+        ...(runtime === "omp" ? { preflight: async () => undefined } : {}),
+      });
+    } catch (error) {
+      // Another run holds this session's enrollment; it finishes the job.
+      if (error instanceof ListenStateError) throw error;
+      enrollError = error;
+    }
+    // Whatever the outcome, an agent enrollment created is recorded first,
+    // under the lock. The session may have ended meanwhile: its end marker is
+    // kept and that agent is disconnected.
+    let created: string | null = result?.identity.agentAddress ?? null;
+    if (!created) {
+      try {
+        created =
+          loadConnectedAgentProfile(options.configDir, profileName)
+            ?.agent_address ??
+          enrollmentAddress(options.configDir, profileName).address;
+      } catch {
+        created = enrollmentAddress(options.configDir, profileName).address;
+      }
+    }
     record = await updateSessionRecord(
       options.configDir,
       sessionId,
-      (current) => (current ? { ...current, address } : current),
+      (current) =>
+        current && created && current.address !== created
+          ? { ...current, address: created }
+          : current,
     );
     if (!record) throw new Error("session record unavailable");
     if (record.endedAt) return await ended(record, true);
+    if (enrollError || !result) throw enrollError;
+    const address = result.identity.agentAddress;
     const submitted = verificationReplySubmitted(result.verification.state);
     const status = result.connection.status;
     let hooked = true;
@@ -1064,7 +1116,11 @@ export function pendingSessionDisconnects(configDir: string): SessionRecord[] {
     const match = /^([0-9a-f-]{36})\.json$/.exec(name);
     if (!match?.[1]) return [];
     const record = readSessionRecord(configDir, match[1]);
-    return record?.endedAt && record.disconnect === "pending" ? [record] : [];
+    return record?.endedAt &&
+      (record.disconnect === "pending" ||
+        record.disconnect === "pending_enrollment")
+      ? [record]
+      : [];
   });
 }
 

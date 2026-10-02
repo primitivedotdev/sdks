@@ -502,6 +502,134 @@ describe("agent session-end", () => {
     expect(pendingSessionDisconnects(configDir)).toEqual([]);
   });
 
+  it("disconnects whatever an enrollment left behind when the session ended first", async () => {
+    const cases = [
+      {
+        name: "setup failed after the claim",
+        leave: (configDir: string) =>
+          saveConnectedAgentProfile(
+            configDir,
+            `session-${session}`,
+            profile("claimed@example.test"),
+          ),
+        expectDisconnect: [`session-${session}`],
+        expectRevoke: [] as string[],
+      },
+      {
+        name: "owner confirmation failed before the claim",
+        leave: (configDir: string) =>
+          writeMailJson(
+            join(
+              agentProfileDirectory(configDir, `session-${session}`),
+              "enrollment",
+              "state.json",
+            ),
+            { address: "created@example.test" },
+          ),
+        expectDisconnect: [] as string[],
+        expectRevoke: ["created@example.test"],
+      },
+      {
+        name: "nothing was created",
+        leave: () => undefined,
+        expectDisconnect: [] as string[],
+        expectRevoke: [] as string[],
+      },
+    ];
+    for (const item of cases) {
+      const { configDir } = setup();
+      const { dependencies } = fakeDependencies(configDir);
+      const disconnected: string[] = [];
+      const revoked: string[] = [];
+      const disconnect = (async (params: { profileName: string }) => {
+        disconnected.push(params.profileName);
+        removeMailFile(
+          join(
+            agentProfileDirectory(configDir, params.profileName),
+            "connection.json",
+          ),
+        );
+        return {};
+      }) as unknown as typeof disconnectAgent;
+      const revokeByAddress = async (_dir: string, address: string) => {
+        revoked.push(address);
+        return true;
+      };
+      let endStatus = "";
+      const result = await registerSession({
+        configDir,
+        runtime: "claude",
+        env: { CLAUDE_CODE_SESSION_ID: session },
+        cliPath: "/cli/bin/run.js",
+        dependencies: {
+          ...dependencies,
+          // A fresh registration: its enrollment may still be starting.
+          now: () => new Date(),
+          disconnect,
+          revokeByAddress,
+          enroll: (async () => {
+            // SessionEnd arrives before enrollment has saved any state.
+            endStatus = (
+              await endSession({
+                configDir,
+                runtime: "claude",
+                session,
+                dependencies: { disconnect, revokeByAddress },
+              })
+            ).status;
+            item.leave(configDir);
+            throw new AgentConnectionSetupError("setup failed");
+          }) as unknown as typeof enrollAgent,
+        },
+      });
+      expect(endStatus, item.name).toBe("disconnect_pending");
+      expect(result.status, item.name).toBe("ended");
+      expect(disconnected, item.name).toEqual(item.expectDisconnect);
+      expect(revoked, item.name).toEqual(item.expectRevoke);
+      expect(pendingSessionDisconnects(configDir), item.name).toEqual([]);
+    }
+  });
+
+  it("keeps a confirmed disconnect when a slower attempt reports pending", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    removeMailFile(
+      join(
+        agentProfileDirectory(configDir, `session-${session}`),
+        "connection.json",
+      ),
+    );
+    await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: { revokeByAddress: async () => false },
+    });
+    const slow = retryPendingDisconnects(configDir, {
+      dependencies: {
+        revokeByAddress: async () => {
+          await new Promise((done) => setTimeout(done, 100));
+          return false;
+        },
+      },
+    });
+    const fast = retryPendingDisconnects(configDir, {
+      dependencies: { revokeByAddress: async () => true },
+    });
+    expect(await fast).toBe(1);
+    await slow;
+    expect(pendingSessionDisconnects(configDir)).toEqual([]);
+    const again = await endSession({ configDir, runtime: "claude", session });
+    expect(again.status).toBe("already_ended");
+  });
+
   it("leaves agents connected some other way alone", async () => {
     const { configDir } = setup();
     saveConnectedAgentProfile(
