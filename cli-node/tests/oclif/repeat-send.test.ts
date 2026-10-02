@@ -234,6 +234,20 @@ describe("send --repeat-every", () => {
   });
 });
 
+describe("repeat flag help", () => {
+  it("states each command's own requirement", () => {
+    const flags = (name: "send" | "reply") =>
+      (
+        COMMANDS[name] as unknown as {
+          flags: Record<string, { description?: string }>;
+        }
+      ).flags["repeat-every"]?.description ?? "";
+    expect(flags("send")).toContain("exactly one --to recipient");
+    expect(flags("reply")).toContain("The email you reply to must come from");
+    expect(flags("reply")).not.toContain("--to");
+  });
+});
+
 describe("reply --repeat-every", () => {
   it("adds repeat to the reply", async () => {
     mocks.replyToEmail.mockResolvedValue({

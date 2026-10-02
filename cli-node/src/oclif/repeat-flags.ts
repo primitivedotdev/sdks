@@ -11,12 +11,13 @@ import { extractErrorCode } from "./api-command.js";
 
 /**
  * Flags shared by `send` and `reply` to make the message repeat. `exclusive`
- * names the command's own flags a repeat cannot combine with.
+ * names the command's own flags a repeat cannot combine with, and
+ * `requirement` says, in that command's terms, which messages can repeat.
  */
-export function repeatFlags(exclusive: string[]) {
+export function repeatFlags(exclusive: string[], requirement: string) {
   return {
     "repeat-every": Flags.integer({
-      description: `Send this message now and then again every N minutes (${REPEAT_EVERY_MIN_MINUTES} to ${REPEAT_EVERY_MAX_MINUTES}) in the same thread. Needs exactly one --to recipient in your organization, and no cc, bcc, attachments or --fyi. Manage it later with \`primitive repeats\`.`,
+      description: `Send this message now and then again every N minutes (${REPEAT_EVERY_MIN_MINUTES} to ${REPEAT_EVERY_MAX_MINUTES}) in the same thread. ${requirement} Manage it later with \`primitive repeats\`.`,
       min: REPEAT_EVERY_MIN_MINUTES,
       max: REPEAT_EVERY_MAX_MINUTES,
       exclusive,
@@ -101,7 +102,7 @@ export function formatRepeatStarted(
 /** Guidance for the documented repeat refusals. */
 export const REPEAT_ERROR_HINTS: Record<string, string> = {
   repeat_unsupported:
-    "A repeating send needs exactly one --to recipient and no cc, bcc, attachments or --fyi.",
+    "A repeating message needs exactly one recipient and no cc, bcc, attachments or fyi.",
   repeat_recipient_external:
     "Repeating sends can only go to addresses in your own organization.",
   repeat_idle_requires_internal_recipient:

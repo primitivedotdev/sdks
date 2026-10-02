@@ -197,7 +197,10 @@ class SendCommand extends Command {
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
     }),
-    ...repeatFlags(["fyi", "attachment", "cc", "bcc"]),
+    ...repeatFlags(
+      ["fyi", "attachment", "cc", "bcc"],
+      "Needs exactly one --to recipient in your organization, and no --cc, --bcc, --attachment or --fyi.",
+    ),
   };
 
   private attemptStartedAtIso: string | null = null;
