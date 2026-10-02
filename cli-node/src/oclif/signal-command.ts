@@ -306,6 +306,7 @@ export async function sendSignal(context: Context, options: SignalOptions) {
         return report(state);
       }
       writeMailJson(path, state);
+      if (state.sentId) recordSentSignal(context.configDir, state.sentId);
       if (state.phase === "uncertain") return report(state);
     }
     const expired =
@@ -313,6 +314,7 @@ export async function sendSignal(context: Context, options: SignalOptions) {
       state?.prepared.expiresAtMs !== undefined &&
       now() >= state.prepared.expiresAtMs;
     if (state && ["sent", "not_sent", "expired"].includes(state.phase)) {
+      if (state.sentId) recordSentSignal(context.configDir, state.sentId);
       if (!expired) return report(state, true);
       state = null; // A new explicit invocation may renew only a known, expired outcome.
     }

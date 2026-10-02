@@ -1,4 +1,5 @@
 import { type SpawnOptions, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   existsSync,
   readdirSync,
@@ -38,8 +39,10 @@ export const AUTO_WORKING_EXPIRES_SECONDS = 55;
 export const AUTO_WORKING_RENEW_MS = 40_000;
 /** Stop renewing after this long even if no answer was seen. */
 export const AUTO_WORKING_CAP_MS = 15 * 60_000;
-/** How long a reply waits for an in-flight renewal to settle. */
-const HALT_SETTLE_MS = 3_000;
+/**
+ * A renewal in flight is never older than this: the signal send and its
+ * reconciliation each abort after 5 seconds. Past it the marker is stale.
+ */
 const SENDING_STALE_MS = 15_000;
 
 export type AutoSignalKind = "read" | "working";
@@ -246,6 +249,50 @@ export function readAutoClaim(
 function leasePath(configDir: string, emailId: string): string {
   return join(emailDirectory(configDir, emailId), "working.json");
 }
+/**
+ * The stop lives in its own exclusively created file, so a renewer that
+ * rewrites working.json with new signal IDs can never undo it.
+ */
+function stopPath(configDir: string, emailId: string): string {
+  return join(emailDirectory(configDir, emailId), "stopped.json");
+}
+/**
+ * Index of active leases, so the startup backstop and peer matching read only
+ * live leases instead of every email that was ever acknowledged.
+ */
+function activeIndex(configDir: string): string {
+  return join(root(configDir), "active");
+}
+function markActive(configDir: string, emailId: string): void {
+  privateMailDirectory(activeIndex(configDir), true);
+  writeFileSync(join(activeIndex(configDir), mailId(emailId)), "", {
+    mode: 0o600,
+  });
+}
+function unmarkActive(configDir: string, emailId: string): void {
+  try {
+    unlinkSync(join(activeIndex(configDir), mailId(emailId)));
+  } catch {
+    /* Already gone. */
+  }
+}
+type StopRecord = { at: number; reason: string; token: string };
+function readStop(configDir: string, emailId: string): StopRecord | null {
+  try {
+    const row = readMailJson(
+      stopPath(configDir, emailId),
+      4096,
+    ) as Partial<StopRecord> | null;
+    if (!row || typeof row.at !== "number") return null;
+    return {
+      at: row.at,
+      reason: typeof row.reason === "string" ? row.reason : "stopped",
+      token: typeof row.token === "string" ? row.token : "",
+    };
+  } catch {
+    return null;
+  }
+}
 
 export function readWorkingLease(
   configDir: string,
@@ -267,6 +314,7 @@ export function readWorkingLease(
       !Array.isArray(row.signal_sent_ids)
     )
       return null;
+    const stop = readStop(configDir, emailId);
     return {
       version: 1,
       email_id: mailId(row.email_id),
@@ -274,8 +322,10 @@ export function readWorkingLease(
       sender: mailAddress(row.sender),
       thread_id: row.thread_id ? mailId(row.thread_id) : null,
       started_at: row.started_at,
-      stopped_at: row.stopped_at,
-      stop_reason: typeof row.stop_reason === "string" ? row.stop_reason : null,
+      stopped_at: stop?.at ?? row.stopped_at,
+      stop_reason:
+        stop?.reason ??
+        (typeof row.stop_reason === "string" ? row.stop_reason : null),
       signal_sent_ids: row.signal_sent_ids.slice(-200).map(mailId),
     };
   } catch {
@@ -287,7 +337,12 @@ export function writeWorkingLease(
   configDir: string,
   lease: AutoWorkingLease,
 ): void {
-  writeMailJson(leasePath(configDir, lease.email_id), lease);
+  // Stop state is owned by stopped.json; never write it here.
+  writeMailJson(leasePath(configDir, lease.email_id), {
+    ...lease,
+    stopped_at: null,
+    stop_reason: null,
+  });
 }
 
 /**
@@ -318,25 +373,68 @@ export function startWorkingLease(
       flag: "wx",
       mode: 0o600,
     });
-    return lease;
   } catch {
     return null;
   }
+  try {
+    markActive(configDir, emailId);
+  } catch {
+    /* The cap still bounds a lease the backstop cannot see. */
+  }
+  return lease;
 }
 
+/**
+ * Stop a lease. Returns a token that only the stop it created can use to
+ * restore the lease, or null when it was already stopped or absent.
+ */
 export function stopWorkingLease(
   configDir: string,
   emailId: string,
   reason: string,
   now: () => number = Date.now,
-): void {
+): string | null {
   const lease = readWorkingLease(configDir, emailId);
-  if (!lease || lease.stopped_at !== null) return;
-  writeWorkingLease(configDir, {
-    ...lease,
-    stopped_at: now(),
-    stop_reason: reason,
-  });
+  if (!lease || lease.stopped_at !== null) {
+    if (lease) unmarkActive(configDir, emailId);
+    return null;
+  }
+  const token = randomUUID();
+  try {
+    writeFileSync(
+      stopPath(configDir, emailId),
+      `${JSON.stringify({ at: now(), reason, token })}\n`,
+      { flag: "wx", mode: 0o600 },
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+      unmarkActive(configDir, emailId);
+      return null;
+    }
+    throw error;
+  }
+  unmarkActive(configDir, emailId);
+  return token;
+}
+
+/**
+ * Undo a stop this process made, for an answer known not to have been sent.
+ * A stop made by anyone else (cap, answered, another reply) is left alone.
+ */
+export function restoreWorkingLease(
+  configDir: string,
+  emailId: string,
+  token: string,
+): boolean {
+  try {
+    const stop = readStop(configDir, emailId);
+    if (!stop || stop.token !== token) return false;
+    markActive(configDir, emailId);
+    unlinkSync(stopPath(configDir, emailId));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function sendingPath(configDir: string, emailId: string): string {
@@ -375,52 +473,89 @@ function sendingInFlight(configDir: string, emailId: string): boolean {
   }
 }
 
-/** Active, unstopped leases in this config directory. */
-export function activeWorkingLeases(configDir: string): AutoWorkingLease[] {
+/**
+ * Active, unstopped leases in this config directory, read from the active
+ * index. Index entries for stopped or capped leases are pruned on the way.
+ */
+export function activeWorkingLeases(
+  configDir: string,
+  now: () => number = Date.now,
+): AutoWorkingLease[] {
   let entries: string[];
   try {
-    entries = readdirSync(root(configDir));
+    entries = readdirSync(activeIndex(configDir));
   } catch {
     return [];
   }
   return entries.flatMap((entry) => {
     if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(entry)) return [];
-    if (!existsSync(leasePath(configDir, entry))) return [];
     const lease = readWorkingLease(configDir, entry);
-    return lease && lease.stopped_at === null ? [lease] : [];
+    if (
+      !lease ||
+      lease.stopped_at !== null ||
+      now() - lease.started_at >= AUTO_WORKING_CAP_MS * 2
+    ) {
+      unmarkActive(configDir, entry);
+      return [];
+    }
+    return [lease];
   });
 }
 
+/** Stops made by one answer, so they can be undone if it is not sent. */
+export type HaltedAutoWorking = {
+  configDir: string;
+  stops: { emailId: string; token: string }[];
+};
+
 /**
  * Stop automatic working for the emails an outgoing message answers, before
- * that message is sent, then wait briefly for an in-flight renewal to land
+ * that message is sent, then wait for any renewal already in flight to land
  * first. A renewal that reached receivers after the answer would show the
- * agent as working again. Never throws.
+ * agent as working again. The wait ends when the renewal settles, which is
+ * normally immediate and is bounded by the send timeouts. Never throws.
  */
 export async function haltAutoWorking(
   configDir: string,
   match: { emailIds?: string[]; peers?: string[]; profileName?: string },
   reason: string,
   options: { settleMs?: number } = {},
-): Promise<void> {
+): Promise<HaltedAutoWorking> {
+  const halted: HaltedAutoWorking = { configDir, stops: [] };
   try {
-    const ids = new Set((match.emailIds ?? []).map(lower));
+    const ids = new Set<string>();
+    for (const id of match.emailIds ?? []) {
+      try {
+        ids.add(mailId(id));
+      } catch {
+        /* Not an email id; nothing to stop. */
+      }
+    }
     const peers = new Set((match.peers ?? []).map(lower).filter(Boolean));
+    const candidates = new Map<string, AutoWorkingLease>();
+    for (const lease of activeWorkingLeases(configDir))
+      candidates.set(lease.email_id, lease);
+    // Named emails are checked directly, not only through the index.
+    for (const id of ids) {
+      const lease = readWorkingLease(configDir, id);
+      if (lease && lease.stopped_at === null) candidates.set(id, lease);
+    }
     const stopped: string[] = [];
-    for (const lease of activeWorkingLeases(configDir)) {
+    for (const lease of candidates.values()) {
       const byPeer =
         peers.has(lease.sender) &&
         (match.profileName === undefined ||
           match.profileName === lease.profile);
       if (!ids.has(lease.email_id) && !byPeer) continue;
       try {
-        stopWorkingLease(configDir, lease.email_id, reason);
+        const token = stopWorkingLease(configDir, lease.email_id, reason);
+        if (token) halted.stops.push({ emailId: lease.email_id, token });
         stopped.push(lease.email_id);
       } catch {
         /* A lease that cannot be written still hits its cap. */
       }
     }
-    const deadline = Date.now() + (options.settleMs ?? HALT_SETTLE_MS);
+    const deadline = Date.now() + (options.settleMs ?? SENDING_STALE_MS);
     while (
       stopped.some((id) => sendingInFlight(configDir, id)) &&
       Date.now() < deadline
@@ -428,6 +563,30 @@ export async function haltAutoWorking(
       await new Promise((resolve) => setTimeout(resolve, 50));
   } catch {
     /* Signals are best effort and never block an answer. */
+  }
+  return halted;
+}
+
+/**
+ * The answer was definitively refused, so nothing reached the sender: put
+ * back the working indication this answer stopped. Never throws.
+ */
+export function restoreAutoWorking(
+  halted: HaltedAutoWorking,
+  options: {
+    env?: Record<string, string | undefined>;
+    spawnImpl?: SpawnLike;
+  } = {},
+): number {
+  try {
+    let restored = 0;
+    for (const stop of halted.stops)
+      if (restoreWorkingLease(halted.configDir, stop.emailId, stop.token))
+        restored++;
+    if (restored > 0) resumeAutoWorking(halted.configDir, options);
+    return restored;
+  } catch {
+    return 0;
   }
 }
 
@@ -606,7 +765,7 @@ export function resumeAutoWorking(
       return 0;
     const now = (options.now ?? Date.now)();
     let started = 0;
-    for (const lease of activeWorkingLeases(configDir)) {
+    for (const lease of activeWorkingLeases(configDir, () => now)) {
       if (now - lease.started_at >= AUTO_WORKING_CAP_MS) continue;
       if (renewerAlive(configDir, lease.email_id)) continue;
       if (

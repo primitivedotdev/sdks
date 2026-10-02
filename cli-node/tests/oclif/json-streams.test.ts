@@ -1313,6 +1313,39 @@ describe("collaboration commands with --json", () => {
     });
   });
 
+  it("a refused reply keeps automatic working and restarts its renewer", async () => {
+    responder = (url, init, request) =>
+      (request?.method ?? "GET") === "POST" && url.pathname.endsWith("/reply")
+        ? jsonResponse(422, {
+            success: false,
+            error: { code: "validation_error", message: "refused" },
+          })
+        : mailApi(url, init, request);
+    workers.length = 0;
+    const configDir = process.env.PRIMITIVE_CONFIG_DIR as string;
+    claimAutoRead(configDir, {
+      emailId,
+      profileName: "work",
+      sender: peer,
+      threadId,
+    });
+    startWorkingLease(configDir, emailId);
+    const result = await runMerged("reply", [
+      "--id",
+      emailId,
+      "--body",
+      "Done.",
+      "--json",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(readWorkingLease(configDir, emailId)?.stopped_at).toBeNull();
+    expect(workers).toHaveLength(1);
+    expect(workers[0]).toMatchObject({
+      PRIMITIVE_AUTO_SIGNAL_KIND: "working",
+      PRIMITIVE_AUTO_SIGNAL_EMAIL: emailId,
+    });
+  });
+
   it("reply --thread derives the key from the resolved email", async () => {
     responder = mailApi;
     const viaThread = await runMerged("reply", [

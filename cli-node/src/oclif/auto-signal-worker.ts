@@ -210,7 +210,11 @@ export async function runAutoSignalWorker(
         if (sentId) {
           ownSignals.add(sentId);
           const current = readWorkingLease(configDir, claim.email_id);
-          if (current && !current.signal_sent_ids.includes(sentId))
+          if (
+            current &&
+            current.stopped_at === null &&
+            !current.signal_sent_ids.includes(sentId)
+          )
             writeWorkingLease(configDir, {
               ...current,
               signal_sent_ids: [...current.signal_sent_ids, sentId].slice(-200),

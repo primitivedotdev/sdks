@@ -214,6 +214,10 @@ describe("explicit signal send", () => {
     await f.send("read");
     expect((await f.send("read")).data.outcome).toBe("already_sent");
     expect(f.posts).toHaveLength(1);
+    // The reconciled signal is remembered, so an answer to it is ignored.
+    const saved = JSON.parse(readFileSync(f.path(), "utf8"));
+    expect(saved.sentId).toBeTruthy();
+    expect(isSentSignal(f.context.configDir, saved.sentId)).toBe(true);
   });
   it("does not replay an expired prepared activity after a crash", async () => {
     const f = fixture();

@@ -1,5 +1,5 @@
 import { Args, Command, Flags } from "@oclif/core";
-import { haltAutoWorking } from "../auto-signals.js";
+import { haltAutoWorking, restoreAutoWorking } from "../auto-signals.js";
 import {
   type SignalKind,
   type SignalStatus,
@@ -53,20 +53,23 @@ export default class SignalCommand extends Command {
     const { args, flags } = await this.parse(SignalCommand);
     const context = await contactCommandContext(this, flags, "Signals");
     // Declining ends automatic working for that email.
-    if (args.kind === "ack" && flags.status === "will_not_process")
-      await haltAutoWorking(
-        this.config.configDir,
-        { emailIds: [flags.id] },
-        "will_not_process",
-      );
-    reportContactCommand(
-      this,
-      await sendSignal(context, {
-        id: flags.id,
-        kind: args.kind as SignalKind,
-        status: flags.status as SignalStatus | undefined,
-        expiresIn: flags["expires-in"],
-      }),
-    );
+    const halted =
+      args.kind === "ack" && flags.status === "will_not_process"
+        ? await haltAutoWorking(
+            this.config.configDir,
+            { emailIds: [flags.id] },
+            "will_not_process",
+          )
+        : null;
+    const result = await sendSignal(context, {
+      id: flags.id,
+      kind: args.kind as SignalKind,
+      status: flags.status as SignalStatus | undefined,
+      expiresIn: flags["expires-in"],
+    });
+    // A refused decline reached nobody, so the sender still sees working.
+    if (halted && result.data.outcome === "not_sent")
+      restoreAutoWorking(halted);
+    reportContactCommand(this, result);
   }
 }

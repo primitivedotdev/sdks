@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EmailDetail } from "@primitivedotdev/api-core";
@@ -8,6 +8,7 @@ import { runAutoSignalWorker } from "../../src/oclif/auto-signal-worker.js";
 import {
   AUTO_WORKING_CAP_MS,
   AUTO_WORKING_RENEW_MS,
+  activeWorkingLeases,
   autoSignalEligible,
   autoSignalsDisabled,
   claimAutoRead,
@@ -20,10 +21,12 @@ import {
   readWorkingLease,
   recordRenewer,
   recordSentSignal,
+  restoreAutoWorking,
   resumeAutoWorking,
   type SpawnLike,
   startWorkingLease,
   stopWorkingLease,
+  writeWorkingLease,
 } from "../../src/oclif/auto-signals.js";
 import type { sendSignal } from "../../src/oclif/signal-command.js";
 
@@ -384,11 +387,73 @@ describe("stopping automatic working", () => {
   it("never throws without state", async () => {
     await expect(
       haltAutoWorking("/dev/null/missing", { emailIds: [randomUUID()] }, "x"),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ configDir: "/dev/null/missing", stops: [] });
   });
+
+  it("a renewer rewriting the lease cannot undo a stop", () => {
+    const dir = configDir();
+    const emailId = claim(dir);
+    startWorkingLease(dir, emailId);
+    // The renewer read the lease before the answer stopped it.
+    const stale = readWorkingLease(dir, emailId);
+    expect(stale?.stopped_at).toBeNull();
+    stopWorkingLease(dir, emailId, "reply");
+    if (stale)
+      writeWorkingLease(dir, { ...stale, signal_sent_ids: [randomUUID()] });
+    expect(readWorkingLease(dir, emailId)?.stop_reason).toBe("reply");
+  });
+
+  it("restores working when the answer is refused, and only its own stop", async () => {
+    const dir = configDir();
+    const spawn = spawner();
+    const emailId = claim(dir);
+    startWorkingLease(dir, emailId);
+    const halted = await haltAutoWorking(dir, { emailIds: [emailId] }, "reply");
+    expect(halted.stops).toHaveLength(1);
+    expect(restoreAutoWorking(halted, { env: {}, spawnImpl: spawn.impl })).toBe(
+      1,
+    );
+    expect(readWorkingLease(dir, emailId)?.stopped_at).toBeNull();
+    expect(spawn.calls).toHaveLength(1);
+    // A stop made by someone else (here the cap) is never undone.
+    stopWorkingLease(dir, emailId, "cap");
+    expect(restoreAutoWorking(halted, { env: {}, spawnImpl: spawn.impl })).toBe(
+      0,
+    );
+    expect(readWorkingLease(dir, emailId)?.stop_reason).toBe("cap");
+  });
+
+  it("waits for a renewal that outlasts the old three second settle", async () => {
+    const dir = configDir();
+    const emailId = claim(dir);
+    startWorkingLease(dir, emailId);
+    markWorkingSending(dir, emailId);
+    const started = Date.now();
+    setTimeout(() => clearWorkingSending(dir, emailId), 3_400);
+    await haltAutoWorking(dir, { emailIds: [emailId] }, "reply");
+    expect(Date.now() - started).toBeGreaterThanOrEqual(3_350);
+  }, 10_000);
 });
 
 describe("renewer backstop", () => {
+  it("reads only active leases and prunes stopped ones from the index", () => {
+    const dir = configDir();
+    const live = claim(dir);
+    startWorkingLease(dir, live);
+    const done = claim(dir);
+    startWorkingLease(dir, done);
+    // Claims that never started working are not scanned at all.
+    for (let i = 0; i < 5; i++) claim(dir);
+    expect(readdirSync(join(dir, "auto-signals", "active")).sort()).toEqual(
+      [live, done].sort(),
+    );
+    stopWorkingLease(dir, done, "reply");
+    expect(activeWorkingLeases(dir).map((lease) => lease.email_id)).toEqual([
+      live,
+    ]);
+    expect(readdirSync(join(dir, "auto-signals", "active"))).toEqual([live]);
+  });
+
   it("restarts a renewer only for active, uncapped leases without a live one", () => {
     const dir = configDir();
     const spawn = spawner();
