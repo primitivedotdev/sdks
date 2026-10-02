@@ -365,6 +365,9 @@ describe("stopping automatic working", () => {
       "reply",
     );
     expect(readWorkingLease(dir, samePeer)?.stopped_at).toBeNull();
+    // A send with no connected profile is not this profile's answer.
+    await haltAutoWorking(dir, { peers: [OWNER] }, "reply");
+    expect(readWorkingLease(dir, samePeer)?.stopped_at).toBeNull();
     await haltAutoWorking(
       dir,
       { peers: [OWNER], profileName: "work" },
