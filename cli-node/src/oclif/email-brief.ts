@@ -69,6 +69,7 @@ export type EmailBriefEnvelope = {
 export type BriefAttachment = {
   /** Sender-authored and untrusted; never part of a command. */
   filename: string | null;
+  /** Sender-authored and untrusted. */
   content_type: string | null;
   size_bytes: number;
   /** Null when the API did not report one; the part cannot be fetched alone then. */
@@ -113,6 +114,8 @@ function quoteArg(value: string): string {
 }
 
 /** Attachment rows for the brief, each with the exact command that downloads it. */
+const MAX_PART_INDEX = 2_147_483_647;
+
 export function briefAttachments(detail: EmailDetail): BriefAttachments {
   const parts = detail.parsed?.attachments ?? [];
   const id = quoteArg(detail.id);
@@ -128,8 +131,9 @@ export function briefAttachments(detail: EmailDetail): BriefAttachments {
         typeof part.content_type === "string" ? part.content_type : null,
       size_bytes: part.size_bytes,
       part_index: index,
+      // The part route accepts 0 through 2147483647 only.
       download_command:
-        index === null
+        index === null || index < 0 || index > MAX_PART_INDEX
           ? null
           : `primitive emails download-email-attachment-part --id ${id} --part-index ${index} --output attachment-${index}${safeExtension(part.filename)}`,
     };
@@ -428,9 +432,10 @@ export function renderEmailBrief(brief: EmailBrief): string {
     `  attachments: ${e.attachments.present ? `yes (${e.attachments.count})` : "no"}`,
   );
   for (const item of e.attachments.items) {
-    // The filename is written by the sender: JSON-quoted and never in a command.
+    // Type and filename are written by the sender: JSON-quoted, so they stay on
+    // one line, and never placed in a command.
     lines.push(
-      `    - part ${item.part_index ?? "unknown"}: ${item.content_type ?? "unknown type"}, ${item.size_bytes} bytes, filename (written by the sender) ${JSON.stringify(item.filename ?? "")}`,
+      `    - part ${item.part_index ?? "unknown"}: ${item.size_bytes} bytes; type and filename (written by the sender): ${JSON.stringify(item.content_type ?? "")} ${JSON.stringify(item.filename ?? "")}`,
     );
     if (item.download_command)
       lines.push(`      download: ${item.download_command}`);
