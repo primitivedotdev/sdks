@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import type { CliLocation, HookContext } from "./claude-machine-hooks.js";
 import {
@@ -80,16 +81,29 @@ function sessionStartEntries(settings: RecordValue): unknown[] {
   return Array.isArray(hooks.SessionStart) ? hooks.SessionStart : [];
 }
 
+type ManagedPosition = {
+  entry: number;
+  hook: number;
+  value: RecordValue;
+  last: boolean;
+  matcher: string | null;
+};
+
 /** Where each managed hook sits, as Codex numbers hooks for trust records. */
-function managedPositions(
-  settings: RecordValue,
-): Array<{ entry: number; hook: number; value: RecordValue }> {
-  const found: Array<{ entry: number; hook: number; value: RecordValue }> = [];
+function managedPositions(settings: RecordValue): ManagedPosition[] {
+  const found: ManagedPosition[] = [];
   sessionStartEntries(settings).forEach((entry, entryIndex) => {
     if (!record(entry) || !Array.isArray(entry.hooks)) return;
-    entry.hooks.forEach((hook: unknown, hookIndex: number) => {
+    const hooks = entry.hooks as unknown[];
+    hooks.forEach((hook, hookIndex) => {
       if (isManaged(hook))
-        found.push({ entry: entryIndex, hook: hookIndex, value: hook });
+        found.push({
+          entry: entryIndex,
+          hook: hookIndex,
+          value: hook,
+          last: hookIndex === hooks.length - 1,
+          matcher: typeof entry.matcher === "string" ? entry.matcher : null,
+        });
     });
   });
   return found;
@@ -101,22 +115,84 @@ export type CodexHookFinding = {
   fixable: boolean;
 };
 
+/** Codex's default spill threshold; a hook set to it hashes as if unset. */
+const DEFAULT_ADDITIONAL_CONTEXT_LIMIT = 2_500;
+
+function sortKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortKeys);
+  if (record(value))
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, sortKeys(value[key])]),
+    );
+  return value;
+}
+
 /**
- * Codex runs a hooks.json hook only after the person trusts it, recording
- * that under `[hooks.state."<file>:session_start:<entry>:<hook>"]` in
- * config.toml. A missing record means the hook is installed but not yet
- * running.
+ * The trust hash Codex computes for a hooks.json command hook: SHA-256 of the
+ * key-sorted JSON of its normalized identity (event, matcher, and the
+ * handler with its default timeout filled in and unset options omitted).
+ * Checked against the trust records Codex wrote on a real machine.
  */
-function trustRecorded(
+export function codexHookTrustHash(
+  event: string,
+  matcher: string | null,
+  hook: RecordValue,
+): string {
+  const timeout =
+    typeof hook.timeout === "number" && Number.isInteger(hook.timeout)
+      ? Math.max(1, hook.timeout)
+      : 600;
+  const handler: RecordValue = {
+    type: "command",
+    command: hook.command,
+    timeout,
+    async: hook.async === true,
+  };
+  if (typeof hook.statusMessage === "string")
+    handler.statusMessage = hook.statusMessage;
+  if (
+    typeof hook.additionalContextLimit === "number" &&
+    hook.additionalContextLimit !== DEFAULT_ADDITIONAL_CONTEXT_LIMIT
+  )
+    handler.additionalContextLimit = hook.additionalContextLimit;
+  const identity: RecordValue = { event_name: event, hooks: [handler] };
+  if (matcher !== null) identity.matcher = matcher;
+  return `sha256:${createHash("sha256")
+    .update(JSON.stringify(sortKeys(identity)))
+    .digest("hex")}`;
+}
+
+type TrustState = "trusted" | "modified" | "untrusted" | "disabled";
+
+/**
+ * Codex runs a hooks.json hook only once the person approves it. It records
+ * the approval under `[hooks.state."<file>:session_start:<entry>:<hook>"]` in
+ * config.toml with the hash of the hook as approved; a different current hash
+ * means the approval no longer applies.
+ */
+function trustState(
   configToml: string | null,
-  hooksPath: string,
-  entry: number,
-  hook: number,
-): boolean {
-  if (configToml === null) return false;
-  return configToml.includes(
-    `[hooks.state."${hooksPath}:session_start:${entry}:${hook}"]`,
-  );
+  key: string,
+  currentHash: string,
+): TrustState {
+  if (configToml === null) return "untrusted";
+  const lines = configToml.split(/\r?\n/);
+  const header = `[hooks.state."${key}"]`;
+  const start = lines.findIndex((line) => line.trim() === header);
+  if (start < 0) return "untrusted";
+  let trusted: string | null = null;
+  let disabled = false;
+  for (const line of lines.slice(start + 1)) {
+    if (line.trim().startsWith("[")) break;
+    const hash = /^\s*trusted_hash\s*=\s*"([^"]*)"/.exec(line);
+    if (hash) trusted = hash[1] ?? null;
+    if (/^\s*enabled\s*=\s*false\b/.test(line)) disabled = true;
+  }
+  if (disabled) return "disabled";
+  if (trusted === null) return "untrusted";
+  return trusted === currentHash ? "trusted" : "modified";
 }
 
 export function inspectCodexHook(
@@ -134,36 +210,67 @@ export function inspectCodexHook(
       detail: `No SessionStart hook in ${read.path} runs \`primitive agent session-register --runtime codex --hook\`.${blockedNote}`,
       fixable: canFix,
     };
-  if (managed.length > 1)
+  const desired = context.cli ? codexHookCommand(context.cli) : null;
+  const extras = managed.slice(1);
+  // Only a copy that is last in its entry can go without moving any other
+  // hook; the others stay in place (as this hook) so approvals keep matching.
+  const removable = extras.filter((copy) => copy.last).length;
+  const stale = managed.filter((copy) => copy.value.command !== desired).length;
+  if (removable || stale)
     return {
       status: "fail",
-      detail: `${managed.length} SessionStart hooks run \`primitive agent session-register\`; expected exactly one.${blockedNote}`,
+      detail: [
+        stale
+          ? `${stale} SessionStart hooks run \`primitive agent session-register\` from another CLI path.`
+          : "",
+        removable
+          ? `${removable} extra copies can be removed without moving other hooks.`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .concat(blockedNote),
       fixable: canFix,
     };
-  if (!context.cli || first.value.command !== codexHookCommand(context.cli))
+  if (extras.length)
     return {
-      status: "fail",
-      detail: `The Codex SessionStart hook runs ${String(first.value.command)}, not this CLI.${blockedNote}`,
-      fixable: canFix,
+      status: "warn",
+      detail: `${extras.length} extra copies of the hook sit before other hooks in their entries; they were left in place so those hooks keep their Codex approval. Remove them by hand if you like.`,
+      fixable: false,
     };
-  if (!trustRecorded(configToml, read.path, first.entry, first.hook))
+  const trust = trustState(
+    configToml,
+    `${read.path}:session_start:${first.entry}:${first.hook}`,
+    codexHookTrustHash("session_start", first.matcher, first.value),
+  );
+  if (trust === "disabled")
+    return {
+      status: "warn",
+      detail: "The Codex SessionStart hook is installed but disabled in Codex.",
+      fixable: false,
+    };
+  if (trust !== "trusted")
     return {
       status: "warn",
       detail:
-        "The Codex SessionStart hook is installed, but Codex has no trust record for it yet; Codex asks once before running a new hook.",
+        trust === "modified"
+          ? "The Codex SessionStart hook changed since it was approved; approval needs to be confirmed in Codex."
+          : "The Codex SessionStart hook is installed; approval needs to be confirmed in Codex before it runs.",
       fixable: false,
     };
   return {
     status: "ok",
-    detail: `SessionStart runs \`primitive agent session-register --runtime codex --hook\` from ${context.cli.entry}.`,
+    detail: `SessionStart runs \`primitive agent session-register --runtime codex --hook\` from ${context.cli?.entry ?? "this CLI"}, approved in Codex.`,
     fixable: false,
   };
 }
 
 /**
- * Keep the first managed hook where it is (Codex keys trust by position),
- * fix its command, drop extra copies, and append one when none exists.
- * Nothing else in the file changes.
+ * Codex keys approvals by entry and hook position, so this never removes or
+ * reorders an entry, and never moves a hook that is not Primitive's. Managed
+ * hooks are rewritten in place; an extra copy is removed only when it is the
+ * last hook in its entry (its entry stays, even if empty); a hook is appended
+ * as a new last entry when none exists.
  */
 export function repairCodexHook(
   settings: RecordValue,
@@ -172,12 +279,14 @@ export function repairCodexHook(
   const desired = codexHookCommand(cli);
   let placed = false;
   let changed = false;
-  const entries = sessionStartEntries(settings).flatMap((entry) => {
-    if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
+  const entries = sessionStartEntries(settings).map((entry) => {
+    if (!record(entry) || !Array.isArray(entry.hooks)) return entry;
+    const hooks = entry.hooks as unknown[];
     let touched = false;
-    const kept = entry.hooks.flatMap((hook: unknown) => {
+    const next = hooks.flatMap((hook, index) => {
       if (!isManaged(hook)) return [hook];
-      if (placed) {
+      const isLast = index === hooks.length - 1;
+      if (placed && isLast) {
         touched = true;
         return [];
       }
@@ -186,9 +295,9 @@ export function repairCodexHook(
       touched = true;
       return [{ ...hook, command: desired }];
     });
-    if (!touched) return [entry];
+    if (!touched) return entry;
     changed = true;
-    return kept.length ? [{ ...entry, hooks: kept }] : [];
+    return { ...entry, hooks: next };
   });
   if (!placed) {
     entries.push({ hooks: [{ type: "command", command: desired }] });

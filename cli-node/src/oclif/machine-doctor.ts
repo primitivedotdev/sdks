@@ -62,6 +62,9 @@ import {
   agentConnectionState,
   MACHINE_RUNTIMES,
   type MachineRuntime,
+  pendingSessionDisconnects,
+  retryPendingDisconnects,
+  type SessionDisconnectDependencies,
 } from "./machine-session.js";
 import { notificationScope } from "./notify-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
@@ -178,6 +181,8 @@ export type MachineDoctorOptions = {
     target: BackgroundListenTarget,
   ) => Promise<BackgroundListenStatus>;
   bundle?: () => BundledConnectSkill;
+  /** How ended sessions' agents are disconnected when a retry is due. */
+  sessionDisconnect?: Partial<SessionDisconnectDependencies>;
 };
 
 /** Compare dotted numeric versions; pre-release suffixes are ignored. */
@@ -499,8 +504,8 @@ export async function runMachineDoctor(
       if (!current) return false;
       const target = connectSkillTarget({ runtime, env: skillEnv });
       if (existsSync(target)) {
-        // Keep the replaced copy (without installed helper packages) so a
-        // local edit to the skill can be recovered.
+        // Keep the whole replaced copy, installed helper packages included,
+        // so restoring it brings back a working skill.
         const backup = join(
           options.configDir,
           "machine",
@@ -509,10 +514,7 @@ export async function runMachineDoctor(
           `${runtime}-${backupStamp(now())}`,
         );
         mkdirSync(backup, { recursive: true, mode: 0o700 });
-        cpSync(target, backup, {
-          recursive: true,
-          filter: (source) => !/[\\/]node_modules(?:[\\/]|$)/.test(source),
-        });
+        cpSync(target, backup, { recursive: true, verbatimSymlinks: true });
       }
       const result = installConnectSkill({
         bundle: current,
@@ -623,6 +625,166 @@ export async function runMachineDoctor(
   };
 
   const orphans: Array<{ name: string; profile: ConnectedAgentProfile }> = [];
+  const inspectProfiles = async (): Promise<DoctorCheck> => {
+    orphans.length = 0;
+    const directory = join(
+      agentProfilesDirectory(options.configDir),
+      "profiles",
+    );
+    let names: string[] = [];
+    try {
+      names = readdirSync(directory).filter((name) => {
+        try {
+          agentProfileName(name);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    } catch {
+      names = [];
+    }
+    const profiles: Array<{
+      name: string;
+      profile: ConnectedAgentProfile;
+    }> = [];
+    let unreadable = 0;
+    for (const name of names) {
+      try {
+        const profile = loadConnectedAgentProfile(options.configDir, name);
+        if (profile) profiles.push({ name, profile });
+      } catch {
+        unreadable++;
+      }
+    }
+    if (!profiles.length)
+      return unreadable
+        ? check(
+            "profiles.orphaned",
+            "warn",
+            `${unreadable} saved profiles could not be read; they were left unchanged.`,
+          )
+        : check("profiles.orphaned", "ok", "No saved agent profiles.");
+    let member: StoredCliCredentials | null | undefined;
+    let unconfirmed = 0;
+    let unknown = 0;
+    let connected = 0;
+    // A few requests at a time: this runs on a timer and a machine can
+    // hold many old session profiles.
+    const states: Array<
+      (typeof profiles)[number] & {
+        state: Awaited<ReturnType<typeof agentConnectionState>>;
+      }
+    > = [];
+    for (let start = 0; start < profiles.length; start += 8)
+      states.push(
+        ...(await Promise.all(
+          profiles.slice(start, start + 8).map(async (entry) => ({
+            ...entry,
+            state: await agentConnectionState(entry.profile, fetchImpl),
+          })),
+        )),
+      );
+    for (const entry of states) {
+      if (entry.state === "revoked") orphans.push(entry);
+      else if (entry.state === "rejected") {
+        member ??= await memberCredentialsFor(options);
+        const listed =
+          member &&
+          member.org_id === entry.profile.org_id &&
+          member.api_base_url === entry.profile.api_base_url
+            ? await ownerListedStatus(
+                member,
+                entry.profile.agent_address,
+                fetchImpl,
+              )
+            : null;
+        if (listed === "revoked") orphans.push(entry);
+        else unconfirmed++;
+      } else if (entry.state === "unavailable") unknown++;
+      else connected++;
+    }
+    if (orphans.length)
+      return check(
+        "profiles.orphaned",
+        "fail",
+        `${orphans.length} saved profiles were disconnected in Primitive: ${orphans
+          .map((entry) => entry.profile.agent_address)
+          .join(
+            ", ",
+          )}. A repair moves them aside locally; nothing changes in Primitive.`,
+        { fixable: true },
+      );
+    if (unconfirmed || unreadable)
+      return check(
+        "profiles.orphaned",
+        "warn",
+        [
+          unconfirmed
+            ? `${unconfirmed} profiles' credentials were rejected but disconnection could not be confirmed`
+            : "",
+          unreadable ? `${unreadable} profiles could not be read` : "",
+        ]
+          .filter(Boolean)
+          .join("; ")
+          .concat("; they were left unchanged."),
+      );
+    if (unknown && !connected)
+      return check(
+        "profiles.orphaned",
+        "skip",
+        "Primitive could not be reached to check saved profiles.",
+      );
+    return check(
+      "profiles.orphaned",
+      "ok",
+      `${connected} saved profiles are connected${unknown ? `; ${unknown} could not be checked` : ""}.`,
+    );
+  };
+  const moveOrphans = async (): Promise<boolean> => {
+    let moved = 0;
+    for (const entry of orphans) {
+      const directory = agentProfileDirectory(options.configDir, entry.name);
+      let session: string | null = null;
+      try {
+        const setup = readMailJson(join(directory, "setup.json")) as {
+          session?: unknown;
+        } | null;
+        if (
+          typeof setup?.session === "string" &&
+          SESSION_UUID.test(setup.session)
+        )
+          session = setup.session.toLowerCase();
+      } catch {
+        session = null;
+      }
+      if (session) {
+        const stopped = await (options.stopReceiver ?? stopBackgroundListen)({
+          configDir: options.configDir,
+          scope: notificationScope(
+            entry.profile.api_base_url,
+            entry.profile.api_key,
+          ),
+          threadId: session,
+        }).catch(() => null);
+        if (
+          !stopped ||
+          !(
+            stopped.phase === null ||
+            stopped.phase === "stopped" ||
+            stopped.phase === "failed" ||
+            stopped.reason === "exited"
+          )
+        )
+          continue;
+      }
+      const aside = join(agentProfilesDirectory(options.configDir), "orphaned");
+      mkdirSync(aside, { recursive: true, mode: 0o700 });
+      renameSync(directory, join(aside, `${entry.name}-${backupStamp(now())}`));
+      moved++;
+    }
+    return moved > 0;
+  };
   const runners: Record<DoctorCheckId, CheckRunner> = {
     "cli.installed": {
       inspect: () =>
@@ -838,175 +1000,31 @@ export async function runMachineDoctor(
     "skill.codex": skill("skill.codex", "codex"),
     "profiles.orphaned": {
       inspect: async () => {
-        orphans.length = 0;
-        const directory = join(
-          agentProfilesDirectory(options.configDir),
-          "profiles",
+        const result = await inspectProfiles();
+        const pending = pendingSessionDisconnects(options.configDir);
+        if (!pending.length) return result;
+        const addresses = pending.flatMap((record) =>
+          record.address ? [record.address] : [],
         );
-        let names: string[] = [];
-        try {
-          names = readdirSync(directory).filter((name) => {
-            try {
-              agentProfileName(name);
-              return true;
-            } catch {
-              return false;
-            }
-          });
-        } catch {
-          names = [];
-        }
-        const profiles: Array<{
-          name: string;
-          profile: ConnectedAgentProfile;
-        }> = [];
-        let unreadable = 0;
-        for (const name of names.slice(0, 200)) {
-          try {
-            const profile = loadConnectedAgentProfile(options.configDir, name);
-            if (profile) profiles.push({ name, profile });
-          } catch {
-            unreadable++;
-          }
-        }
-        if (!profiles.length)
-          return unreadable
-            ? check(
-                "profiles.orphaned",
-                "warn",
-                `${unreadable} saved profiles could not be read; they were left unchanged.`,
-              )
-            : check("profiles.orphaned", "ok", "No saved agent profiles.");
-        let member: StoredCliCredentials | null | undefined;
-        let unconfirmed = 0;
-        let unknown = 0;
-        let connected = 0;
-        // A few requests at a time: this runs on a timer and a machine can
-        // hold many old session profiles.
-        const states: Array<
-          (typeof profiles)[number] & {
-            state: Awaited<ReturnType<typeof agentConnectionState>>;
-          }
-        > = [];
-        for (let start = 0; start < profiles.length; start += 8)
-          states.push(
-            ...(await Promise.all(
-              profiles.slice(start, start + 8).map(async (entry) => ({
-                ...entry,
-                state: await agentConnectionState(entry.profile, fetchImpl),
-              })),
-            )),
-          );
-        for (const entry of states) {
-          if (entry.state === "revoked") orphans.push(entry);
-          else if (entry.state === "rejected") {
-            member ??= await memberCredentialsFor(options);
-            const listed =
-              member &&
-              member.org_id === entry.profile.org_id &&
-              member.api_base_url === entry.profile.api_base_url
-                ? await ownerListedStatus(
-                    member,
-                    entry.profile.agent_address,
-                    fetchImpl,
-                  )
-                : null;
-            if (listed === "revoked") orphans.push(entry);
-            else unconfirmed++;
-          } else if (entry.state === "unavailable") unknown++;
-          else connected++;
-        }
-        if (orphans.length)
-          return check(
-            "profiles.orphaned",
-            "fail",
-            `${orphans.length} saved profiles were disconnected in Primitive: ${orphans
-              .map((entry) => entry.profile.agent_address)
-              .join(
-                ", ",
-              )}. A repair moves them aside locally; nothing changes in Primitive.`,
-            { fixable: true },
-          );
-        if (unconfirmed || unreadable)
-          return check(
-            "profiles.orphaned",
-            "warn",
-            [
-              unconfirmed
-                ? `${unconfirmed} profiles' credentials were rejected but disconnection could not be confirmed`
-                : "",
-              unreadable ? `${unreadable} profiles could not be read` : "",
-            ]
-              .filter(Boolean)
-              .join("; ")
-              .concat("; they were left unchanged."),
-          );
-        if (unknown && !connected)
-          return check(
-            "profiles.orphaned",
-            "skip",
-            "Primitive could not be reached to check saved profiles.",
-          );
         return check(
           "profiles.orphaned",
-          "ok",
-          `${connected} saved profiles are connected${unknown ? `; ${unknown} could not be checked` : ""}.`,
+          "fail",
+          `${pending.length} ended sessions still need their agent disconnected${
+            addresses.length ? ` (${addresses.join(", ")})` : ""
+          }; a repair retries it.${result.status === "ok" ? "" : ` ${result.detail}`}`,
+          { fixable: true },
         );
       },
       repair: async () => {
-        let moved = 0;
-        for (const entry of orphans) {
-          const directory = agentProfileDirectory(
-            options.configDir,
-            entry.name,
-          );
-          let session: string | null = null;
-          try {
-            const setup = readMailJson(join(directory, "setup.json")) as {
-              session?: unknown;
-            } | null;
-            if (
-              typeof setup?.session === "string" &&
-              SESSION_UUID.test(setup.session)
-            )
-              session = setup.session.toLowerCase();
-          } catch {
-            session = null;
-          }
-          if (session) {
-            const stopped = await (
-              options.stopReceiver ?? stopBackgroundListen
-            )({
-              configDir: options.configDir,
-              scope: notificationScope(
-                entry.profile.api_base_url,
-                entry.profile.api_key,
-              ),
-              threadId: session,
-            }).catch(() => null);
-            if (
-              !stopped ||
-              !(
-                stopped.phase === null ||
-                stopped.phase === "stopped" ||
-                stopped.phase === "failed" ||
-                stopped.reason === "exited"
-              )
-            )
-              continue;
-          }
-          const aside = join(
-            agentProfilesDirectory(options.configDir),
-            "orphaned",
-          );
-          mkdirSync(aside, { recursive: true, mode: 0o700 });
-          renameSync(
-            directory,
-            join(aside, `${entry.name}-${backupStamp(now())}`),
-          );
-          moved++;
-        }
-        return moved > 0;
+        const retried = await retryPendingDisconnects(options.configDir, {
+          env,
+          fetch: options.fetch,
+          ...(options.sessionDisconnect
+            ? { dependencies: options.sessionDisconnect }
+            : {}),
+        });
+        const moved = await moveOrphans();
+        return moved || retried > 0;
       },
     },
   };

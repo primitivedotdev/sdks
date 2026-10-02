@@ -887,8 +887,9 @@ the CLI install, version (`--min-cli-version` sets a floor) and location, the
 saved member login, Claude `settings.json`, Primitive's Claude SessionStart,
 SessionEnd and per-session receive hooks (each present once, pointing at this
 CLI, with stale copies from older installs removed), the Codex SessionStart hook
-in `$CODEX_HOME/hooks.json` (kept at its position, since Codex records trust per
-hook position, and reported as `warn` until Codex has a trust record for it), a managed block in
+in `$CODEX_HOME/hooks.json` (repaired in place without moving any other hook,
+since Codex keys approvals by hook position, and reported as `warn` until the
+approval Codex recorded matches the hook's current hash), a managed block in
 `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` (or `AGENTS.override.md` when it has
 content) and `~/.omp/agent/AGENTS.md`, the bundled primitive-connect skill, and
 saved agent profiles that were disconnected in Primitive (moved aside locally;
@@ -907,7 +908,10 @@ It gives the session an address once, named `<runtime>-<repository>`, using the
 saved member login, and only re-verifies on resume; a session whose agent was
 disconnected or removed never gets a second address. The SessionEnd hook runs
 `primitive agent session-end`, which disconnects only agents that
-`session-register` created. Both always exit 0 and finish slow work in the
+`session-register` created. The end is recorded first, so a registration still
+running disconnects the agent it creates; when the local credential is gone it
+revokes by address with the member login, and an unconfirmed disconnect is
+reported as `disconnect_pending` and retried by `machine doctor --fix`. Both always exit 0 and finish slow work in the
 background. Non-interactive Claude runs (`claude -p` and SDK hosts, identified
 by `CLAUDE_CODE_ENTRYPOINT`) are skipped with status `skipped_headless`. Codex
 sessions register from their SessionStart hook, with the instructions block as a

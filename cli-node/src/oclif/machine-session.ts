@@ -5,13 +5,16 @@ import {
   existsSync,
   fsyncSync,
   openSync,
+  readdirSync,
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { seedAgentInfoNote } from "./agent-connect-flow.js";
 import { AgentDisconnectError, disconnectAgent } from "./agent-disconnect.js";
 import { enrollAgent } from "./agent-enroll.js";
 import { verificationReplySubmitted } from "./agent-setup.js";
+import { refreshStoredCliCredentials } from "./api-client.js";
 import { loadCliCredentials } from "./auth.js";
 import { installClaudeWakeHook } from "./claude-wake-install.js";
 import {
@@ -20,7 +23,7 @@ import {
   type ConnectedAgentProfile,
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
-import { ListenStateError } from "./listen-state.js";
+import { acquireListenLock, ListenStateError } from "./listen-state.js";
 import { SESSION_UUID } from "./notify-session-native.js";
 import {
   privateMailDirectory,
@@ -63,6 +66,7 @@ export type SessionRegisterResult = {
 export type SessionEndResult = {
   status:
     | "disconnected"
+    | "disconnect_pending"
     | "already_ended"
     | "not_managed"
     | "no_session"
@@ -87,6 +91,8 @@ type SessionRecord = {
   agentInfo: "created" | "already_present" | null;
   registeredAt: string;
   endedAt: string | null;
+  /** Whether disconnecting an ended session's agent is confirmed. */
+  disconnect: "done" | "pending" | null;
 };
 
 function sessionRecordPath(configDir: string, session: string): string {
@@ -128,6 +134,13 @@ function readSessionRecord(
           ? row.registeredAt
           : new Date(0).toISOString(),
       endedAt: typeof row.endedAt === "string" ? row.endedAt : null,
+      disconnect:
+        row.disconnect === "done" || row.disconnect === "pending"
+          ? row.disconnect
+          : // Records written before this field existed ended with a disconnect.
+            typeof row.endedAt === "string"
+            ? "done"
+            : null,
     };
   } catch {
     return null;
@@ -379,7 +392,199 @@ function receiverMode(setupDirectory: string): "native" | "external" | null {
   }
 }
 
-export type SessionRegisterDependencies = {
+/** Serialize every read-modify-write of one session's record. */
+async function withRecordLock<T>(
+  configDir: string,
+  session: string,
+  action: () => T | Promise<T>,
+): Promise<T> {
+  const directory = join(configDir, "machine", "sessions");
+  privateMailDirectory(directory, true);
+  let release: (() => void) | undefined;
+  for (let attempt = 0; attempt < 200 && !release; attempt++) {
+    try {
+      release = acquireListenLock(directory, `session-record-${session}`);
+    } catch {
+      await sleep(50);
+    }
+  }
+  if (!release)
+    throw new ListenStateError("The session record is locked by another run.");
+  try {
+    return await action();
+  } finally {
+    release();
+  }
+}
+
+/** Read, change and save one record under its lock. Returns the saved record. */
+function updateSessionRecord(
+  configDir: string,
+  session: string,
+  change: (current: SessionRecord | null) => SessionRecord | null,
+): Promise<SessionRecord | null> {
+  return withRecordLock(configDir, session, () => {
+    const current = readSessionRecord(configDir, session);
+    const next = change(current);
+    if (next && next !== current) saveSessionRecord(configDir, next);
+    return next ?? current;
+  });
+}
+
+/** The address an interrupted enrollment saved, when there is one. */
+function enrollmentAddress(
+  configDir: string,
+  profileName: string,
+): { exists: boolean; address: string | null } {
+  try {
+    const state = readMailJson(
+      join(
+        agentProfileDirectory(configDir, profileName),
+        "enrollment",
+        "state.json",
+      ),
+      65_536,
+    ) as { address?: unknown } | null;
+    if (state === null) return { exists: false, address: null };
+    return {
+      exists: true,
+      address: typeof state.address === "string" ? state.address : null,
+    };
+  } catch {
+    return { exists: true, address: null };
+  }
+}
+
+/** `agent disconnect` already confirmed revocation of this profile's credential. */
+function disconnectConfirmedLocally(
+  configDir: string,
+  profileName: string,
+): boolean {
+  try {
+    return readdirSync(agentProfileDirectory(configDir, profileName)).some(
+      (name) => /^disconnected-[a-f0-9]{64}\.json$/.test(name),
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Revoke a connection by address with the saved member login, for a session
+ * whose local credential is gone. True only when Primitive confirms it.
+ */
+export async function revokeWithMemberLogin(
+  configDir: string,
+  address: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+  try {
+    const saved = loadCliCredentials(configDir);
+    if (!saved) return false;
+    const credentials = await refreshStoredCliCredentials({
+      apiBaseUrl: saved.api_base_url,
+      configDir,
+      credentials: saved,
+      fetch: fetchImpl,
+    });
+    const response = await fetchImpl(
+      `${credentials.api_base_url}/agent-connections/${encodeURIComponent(address)}`,
+      {
+        method: "DELETE",
+        redirect: "error",
+        signal: AbortSignal.timeout(15_000),
+        headers: {
+          authorization: `Bearer ${credentials.access_token}`,
+          accept: "application/json",
+        },
+      },
+    );
+    if (response.status !== 200) {
+      await response.body?.cancel().catch(() => undefined);
+      return false;
+    }
+    const text = await response.text();
+    if (text.length > 65_536) return false;
+    const body = JSON.parse(text) as {
+      success?: unknown;
+      data?: { connection?: { address?: unknown; status?: unknown } };
+    } | null;
+    return (
+      body?.success === true &&
+      body.data?.connection?.address === address &&
+      body.data.connection.status === "revoked"
+    );
+  } catch {
+    return false;
+  }
+}
+
+export type SessionDisconnectDependencies = {
+  disconnect: typeof disconnectAgent;
+  revokeByAddress: (
+    configDir: string,
+    address: string,
+    fetchImpl?: typeof fetch,
+  ) => Promise<boolean>;
+};
+
+/**
+ * Disconnect whatever agent a session's record points at: through its local
+ * credential when present, otherwise by address with the member login.
+ * "pending" means it must be retried; it is never reported as done without
+ * a confirmed disconnect or proof that no agent was created.
+ */
+async function disconnectSessionAgent(
+  configDir: string,
+  record: SessionRecord,
+  deps: SessionDisconnectDependencies,
+  env: Env,
+  fetchImpl?: typeof fetch,
+): Promise<"done" | "pending"> {
+  try {
+    if (loadConnectedAgentProfile(configDir, record.profile)) {
+      await deps.disconnect({
+        configDir,
+        profileName: record.profile,
+        fetch: fetchImpl,
+        env: env as NodeJS.ProcessEnv,
+      });
+      return "done";
+    }
+    if (disconnectConfirmedLocally(configDir, record.profile)) return "done";
+    const enrollment = enrollmentAddress(configDir, record.profile);
+    const address = record.address ?? enrollment.address;
+    // Nothing was ever requested for this session, so nothing can be connected.
+    if (!address) return enrollment.exists ? "pending" : "done";
+    return (await deps.revokeByAddress(configDir, address, fetchImpl))
+      ? "done"
+      : "pending";
+  } catch {
+    return "pending";
+  }
+}
+
+async function finishSessionDisconnect(
+  configDir: string,
+  record: SessionRecord,
+  deps: SessionDisconnectDependencies,
+  env: Env,
+  fetchImpl?: typeof fetch,
+): Promise<"done" | "pending"> {
+  const outcome = await disconnectSessionAgent(
+    configDir,
+    record,
+    deps,
+    env,
+    fetchImpl,
+  );
+  await updateSessionRecord(configDir, record.session, (current) =>
+    current ? { ...current, disconnect: outcome } : current,
+  );
+  return outcome;
+}
+
+export type SessionRegisterDependencies = SessionDisconnectDependencies & {
   enroll: typeof enrollAgent;
   installClaudeHook: typeof installClaudeWakeHook;
   seedAgentInfo: (
@@ -415,6 +620,25 @@ const RECEIVING: Record<MachineRuntime, SessionRegisterResult["receiving"]> = {
   omp: "unsupported",
 };
 
+function withDefined<T extends object>(
+  defaults: T,
+  overrides: Partial<T> | undefined,
+): T {
+  return {
+    ...defaults,
+    ...Object.fromEntries(
+      Object.entries(overrides ?? {}).filter(
+        ([, value]) => value !== undefined,
+      ),
+    ),
+  } as T;
+}
+
+const ENDED_DETAIL =
+  "This session ended, so its agent was disconnected. A new address is never created for the same session.";
+const ENDED_PENDING_DETAIL =
+  "This session ended, but disconnecting its agent has not been confirmed yet; `primitive machine doctor --fix` retries it.";
+
 /**
  * Give this session an address once. Safe to run on every start and resume:
  * a session already bound to a profile is only re-verified, and a session
@@ -425,20 +649,21 @@ export async function registerSession(
   options: SessionRegisterOptions,
 ): Promise<SessionRegisterResult> {
   const env = options.env ?? process.env;
-  const deps: SessionRegisterDependencies = {
-    enroll: enrollAgent,
-    installClaudeHook: installClaudeWakeHook,
-    seedAgentInfo: (configDir, profileName, value) =>
-      seedAgentInfoNote(configDir, profileName, value, options.fetch),
-    connectionState: (profile) => agentConnectionState(profile, options.fetch),
-    ompSession: ompProcessSession,
-    now: () => new Date(),
-    ...Object.fromEntries(
-      Object.entries(options.dependencies ?? {}).filter(
-        ([, value]) => value !== undefined,
-      ),
-    ),
-  };
+  const deps = withDefined<SessionRegisterDependencies>(
+    {
+      enroll: enrollAgent,
+      installClaudeHook: installClaudeWakeHook,
+      seedAgentInfo: (configDir, profileName, value) =>
+        seedAgentInfoNote(configDir, profileName, value, options.fetch),
+      connectionState: (profile) =>
+        agentConnectionState(profile, options.fetch),
+      ompSession: ompProcessSession,
+      now: () => new Date(),
+      disconnect: disconnectAgent,
+      revokeByAddress: revokeWithMemberLogin,
+    },
+    options.dependencies,
+  );
   const runtime = options.runtime;
   const base = {
     runtime,
@@ -472,31 +697,62 @@ export async function registerSession(
       status: "failed",
       detail: "The session ID is not a UUID. Nothing was changed.",
     };
-  session = session.toLowerCase();
-  const profileName = `session-${session}`;
-  const known = { ...base, session, profile: profileName };
+  const sessionId = session.toLowerCase();
+  const profileName = `session-${sessionId}`;
+  const known = { ...base, session: sessionId, profile: profileName };
   const cwd = resolve(options.cwd ?? process.cwd());
+  const ended = async (current: SessionRecord, createdNow = false) => {
+    // An agent this run just created is always disconnected, even when the
+    // session end found nothing to disconnect while enrollment was running.
+    const outcome =
+      current.disconnect === "done" && !createdNow
+        ? "done"
+        : await finishSessionDisconnect(
+            options.configDir,
+            current,
+            deps,
+            env,
+            options.fetch,
+          );
+    return {
+      ...known,
+      address: current.address,
+      status: "ended" as const,
+      detail: outcome === "done" ? ENDED_DETAIL : ENDED_PENDING_DETAIL,
+    };
+  };
+  const newRecord = (
+    createdBy: SessionRecord["createdBy"],
+    address: string | null,
+  ): SessionRecord => ({
+    version: 1,
+    runtime,
+    session: sessionId,
+    profile: profileName,
+    name: defaultSessionName(runtime, cwd),
+    createdBy,
+    address,
+    agentInfo: null,
+    registeredAt: deps.now().toISOString(),
+    endedAt: null,
+    disconnect: null,
+  });
   try {
-    let record = readSessionRecord(options.configDir, session);
-    if (record?.endedAt)
-      return {
-        ...known,
-        address: record.address,
-        status: "ended",
-        detail:
-          "This session's agent was disconnected when the session ended. A new address is never created for the same session.",
-      };
-    const finishAgentInfo = async (current: SessionRecord) => {
-      if (current.agentInfo) return current;
+    let record = readSessionRecord(options.configDir, sessionId);
+    if (record?.endedAt) return await ended(record);
+    const finishAgentInfo = async () => {
+      if (record?.agentInfo) return;
       const seeded = await deps.seedAgentInfo(
         options.configDir,
         profileName,
         agentInfoForSession(runtime, cwd),
       );
-      if (seeded !== "created" && seeded !== "already_present") return current;
-      const next = { ...current, agentInfo: seeded } as SessionRecord;
-      saveSessionRecord(options.configDir, next);
-      return next;
+      if (seeded !== "created" && seeded !== "already_present") return;
+      record = await updateSessionRecord(
+        options.configDir,
+        sessionId,
+        (current) => (current ? { ...current, agentInfo: seeded } : current),
+      );
     };
     const installHook = (profile: ConnectedAgentProfile): boolean =>
       runtime !== "claude" ||
@@ -507,27 +763,19 @@ export async function registerSession(
         configDir: options.configDir,
         profileName,
         agentAddress: profile.agent_address,
-        sessionId: session,
+        sessionId,
         env: env as NodeJS.ProcessEnv,
       }) === "installed_unverified";
 
     const existing = loadConnectedAgentProfile(options.configDir, profileName);
     if (existing) {
-      if (!record) {
-        record = {
-          version: 1,
-          runtime,
-          session,
-          profile: profileName,
-          name: defaultSessionName(runtime, cwd),
-          createdBy: "existing",
-          address: existing.agent_address,
-          agentInfo: null,
-          registeredAt: deps.now().toISOString(),
-          endedAt: null,
-        };
-        saveSessionRecord(options.configDir, record);
-      }
+      record = await updateSessionRecord(
+        options.configDir,
+        sessionId,
+        (current) => current ?? newRecord("existing", existing.agent_address),
+      );
+      if (!record) throw new Error("session record unavailable");
+      if (record.endedAt) return await ended(record);
       const state = await deps.connectionState(existing);
       const withAddress = { ...known, address: existing.agent_address };
       if (state === "revoked" || state === "rejected")
@@ -554,7 +802,7 @@ export async function registerSession(
         };
       if (state === "connected") {
         const hooked = installHook(existing);
-        await finishAgentInfo(record);
+        await finishAgentInfo();
         return {
           ...withAddress,
           receiving: RECEIVING[runtime],
@@ -565,24 +813,12 @@ export async function registerSession(
         };
       }
       // A pending enrollment this command started resumes below.
-    } else if (record?.address && record.createdBy === "session-register") {
-      const enrollment = readMailJson(
-        join(
-          agentProfileDirectory(options.configDir, profileName),
-          "enrollment",
-          "state.json",
-        ),
-        65_536,
-      );
-      if (enrollment === null)
-        return {
-          ...known,
-          address: record.address,
-          status: "removed",
-          detail:
-            "This session's local profile was removed. No new address was created for the same session.",
-        };
-    } else if (record?.createdBy === "existing")
+    } else if (
+      (record?.address &&
+        record.createdBy === "session-register" &&
+        !enrollmentAddress(options.configDir, profileName).exists) ||
+      record?.createdBy === "existing"
+    )
       return {
         ...known,
         address: record.address,
@@ -604,23 +840,15 @@ export async function registerSession(
         detail:
           "No saved member login on this machine. Run `primitive signin`, then start the session again.",
       };
-    if (!record) {
-      record = {
-        version: 1,
-        runtime,
-        session,
-        profile: profileName,
-        name: defaultSessionName(runtime, cwd),
-        createdBy: "session-register",
-        address: null,
-        agentInfo: null,
-        registeredAt: deps.now().toISOString(),
-        endedAt: null,
-      };
-      // Recorded before enrollment so an interrupted run resumes with the
-      // same name instead of starting a second enrollment.
-      saveSessionRecord(options.configDir, record);
-    }
+    // Recorded before enrollment so an interrupted run resumes with the same
+    // name, and so a SessionEnd that arrives meanwhile can mark it ended.
+    record = await updateSessionRecord(
+      options.configDir,
+      sessionId,
+      (current) => current ?? newRecord("session-register", null),
+    );
+    if (!record) throw new Error("session record unavailable");
+    if (record.endedAt) return await ended(record);
     const enrollEnv: NodeJS.ProcessEnv = { ...env };
     // Enrollment uses only the saved member login; per-shell overrides would
     // otherwise make it refuse on every session start.
@@ -628,10 +856,10 @@ export async function registerSession(
     delete enrollEnv.PRIMITIVE_API_KEY;
     delete enrollEnv.PRIMITIVE_KEY;
     if (runtime === "claude" && options.trustedSession)
-      enrollEnv.CLAUDE_CODE_SESSION_ID = session;
+      enrollEnv.CLAUDE_CODE_SESSION_ID = sessionId;
     const result = await deps.enroll({
       configDir: options.configDir,
-      session,
+      session: sessionId,
       name: record.name,
       receiverMode: runtime === "codex" ? "native" : "external",
       contactRequests: false,
@@ -640,8 +868,16 @@ export async function registerSession(
       // omp has no receiver this CLI can drive, so there is nothing to probe.
       ...(runtime === "omp" ? { preflight: async () => undefined } : {}),
     });
-    record = { ...record, address: result.identity.agentAddress };
-    saveSessionRecord(options.configDir, record);
+    const address = result.identity.agentAddress;
+    // Re-read under the lock: the session may have ended while enrolling. Its
+    // end marker is kept and the agent just created is disconnected.
+    record = await updateSessionRecord(
+      options.configDir,
+      sessionId,
+      (current) => (current ? { ...current, address } : current),
+    );
+    if (!record) throw new Error("session record unavailable");
+    if (record.endedAt) return await ended(record, true);
     const submitted = verificationReplySubmitted(result.verification.state);
     const status = result.connection.status;
     let hooked = true;
@@ -651,23 +887,19 @@ export async function registerSession(
           cliPath: options.cliPath,
           configDir: options.configDir,
           profileName,
-          agentAddress: result.identity.agentAddress,
-          sessionId: session,
+          agentAddress: address,
+          sessionId,
           env: env as NodeJS.ProcessEnv,
         }) === "installed_unverified";
-    if (status === "connected") await finishAgentInfo(record);
-    const withAddress = {
-      ...known,
-      address: result.identity.agentAddress,
-      receiving: RECEIVING[runtime],
-    };
+    if (status === "connected") await finishAgentInfo();
+    const withAddress = { ...known, address, receiving: RECEIVING[runtime] };
     if (status === "connected")
       return {
         ...withAddress,
         status: "registered",
         detail: hooked
-          ? `Connected as ${result.identity.agentAddress}.`
-          : `Connected as ${result.identity.agentAddress}, but the receive hook could not be installed. Run \`primitive machine doctor\`.`,
+          ? `Connected as ${address}.`
+          : `Connected as ${address}, but the receive hook could not be installed. Run \`primitive machine doctor\`.`,
       };
     if (status === "revoked" || status === "owner_inactive")
       return {
@@ -702,14 +934,15 @@ export async function registerSession(
   }
 }
 
-export type SessionEndDependencies = {
-  disconnect: typeof disconnectAgent;
+export type SessionEndDependencies = SessionDisconnectDependencies & {
   now: () => Date;
 };
 
 /**
  * Disconnect the agent a session got from `session-register`. Agents
- * connected any other way are left alone. Never throws.
+ * connected any other way are left alone. The end is recorded first, under
+ * the record's lock, so a registration still enrolling sees it and
+ * disconnects the agent it creates. Never throws.
  */
 export async function endSession(options: {
   configDir: string;
@@ -720,16 +953,18 @@ export async function endSession(options: {
   dependencies?: Partial<SessionEndDependencies>;
 }): Promise<SessionEndResult> {
   const env = options.env ?? process.env;
-  const deps: SessionEndDependencies = {
-    disconnect: disconnectAgent,
-    now: () => new Date(),
-    ...Object.fromEntries(
-      Object.entries(options.dependencies ?? {}).filter(
-        ([, value]) => value !== undefined,
-      ),
-    ),
-  };
+  const deps = withDefined<SessionEndDependencies>(
+    {
+      disconnect: disconnectAgent,
+      revokeByAddress: revokeWithMemberLogin,
+      now: () => new Date(),
+    },
+    options.dependencies,
+  );
   const runtime = options.runtime;
+  const base = { runtime, session: null, address: null };
+  if (runtime === "claude" && headlessClaudeRun(env))
+    return { ...base, status: "skipped_headless", detail: HEADLESS_DETAIL };
   let session: string | null;
   try {
     session =
@@ -738,76 +973,75 @@ export async function endSession(options: {
   } catch {
     session = null;
   }
-  const base = { runtime, session: null, address: null };
-  if (runtime === "claude" && headlessClaudeRun(env))
-    return { ...base, status: "skipped_headless", detail: HEADLESS_DETAIL };
   if (!session || !SESSION_UUID.test(session))
     return {
       ...base,
       status: "no_session",
       detail: "No session ID was given or found. Nothing was changed.",
     };
-  session = session.toLowerCase();
-  const record = readSessionRecord(options.configDir, session);
-  const known = { ...base, session, address: record?.address ?? null };
-  if (!record || record.createdBy !== "session-register")
-    return {
-      ...known,
-      status: "not_managed",
-      detail:
-        "This session's agent was not created by `agent session-register`, so it was left connected.",
-    };
-  if (record.endedAt)
-    return {
-      ...known,
-      status: "already_ended",
-      detail: "This session's agent was already disconnected.",
-    };
+  const sessionId = session.toLowerCase();
   try {
-    const profile = loadConnectedAgentProfile(
+    let managed = false;
+    let alreadyDone = false;
+    const record = await updateSessionRecord(
       options.configDir,
-      record.profile,
-    );
-    if (profile) {
-      await deps.disconnect({
-        configDir: options.configDir,
-        profileName: record.profile,
-        fetch: options.fetch,
-        env: env as NodeJS.ProcessEnv,
-      });
-    } else {
-      const enrollment = readMailJson(
-        join(
-          agentProfileDirectory(options.configDir, record.profile),
-          "enrollment",
-          "state.json",
-        ),
-        65_536,
-      );
-      // An enrollment that never claimed its invitation leaves a pending
-      // address only the owner can clean up; keep the record resumable.
-      if (enrollment !== null && record.address === null)
+      sessionId,
+      (current) => {
+        if (!current || current.createdBy !== "session-register")
+          return current;
+        managed = true;
+        if (current.endedAt && current.disconnect === "done") {
+          alreadyDone = true;
+          return current;
+        }
         return {
-          ...known,
-          status: "failed",
-          detail:
-            "This session's enrollment never finished. Review its pending agent in the app.",
+          ...current,
+          endedAt: current.endedAt ?? deps.now().toISOString(),
+          disconnect: "pending",
         };
-    }
-    saveSessionRecord(options.configDir, {
-      ...record,
-      endedAt: deps.now().toISOString(),
-    });
-    return {
-      ...known,
-      status: profile ? "disconnected" : "already_ended",
-      detail: profile
-        ? "This session's agent was disconnected."
-        : "This session had no connected agent left to disconnect.",
+      },
+    );
+    const known = {
+      ...base,
+      session: sessionId,
+      address: record?.address ?? null,
     };
+    if (!record || !managed)
+      return {
+        ...known,
+        status: "not_managed",
+        detail:
+          "This session's agent was not created by `agent session-register`, so it was left connected.",
+      };
+    if (alreadyDone)
+      return {
+        ...known,
+        status: "already_ended",
+        detail: "This session's agent was already disconnected.",
+      };
+    const outcome = await finishSessionDisconnect(
+      options.configDir,
+      record,
+      deps,
+      env,
+      options.fetch,
+    );
+    return outcome === "done"
+      ? {
+          ...known,
+          status: "disconnected",
+          detail: "This session's agent was disconnected.",
+        }
+      : {
+          ...known,
+          status: "disconnect_pending",
+          detail:
+            "The session is marked ended, but disconnecting its agent is not confirmed yet. The next `primitive machine doctor --fix` (or a registration still finishing) retries it.",
+        };
   } catch (error) {
     return {
-      ...known,
+      ...base,
+      session: sessionId,
       status: "failed",
       detail:
         error instanceof AgentDisconnectError
@@ -815,6 +1049,51 @@ export async function endSession(options: {
           : "Disconnect did not finish. The agent was left as it was.",
     };
   }
+}
+
+/** Ended sessions whose agent disconnect still needs confirming. */
+export function pendingSessionDisconnects(configDir: string): SessionRecord[] {
+  const directory = join(configDir, "machine", "sessions");
+  let names: string[];
+  try {
+    names = readdirSync(directory);
+  } catch {
+    return [];
+  }
+  return names.flatMap((name) => {
+    const match = /^([0-9a-f-]{36})\.json$/.exec(name);
+    if (!match?.[1]) return [];
+    const record = readSessionRecord(configDir, match[1]);
+    return record?.endedAt && record.disconnect === "pending" ? [record] : [];
+  });
+}
+
+/** Retry every pending disconnect. Returns how many are now confirmed. */
+export async function retryPendingDisconnects(
+  configDir: string,
+  options: {
+    env?: Env;
+    fetch?: typeof fetch;
+    dependencies?: Partial<SessionDisconnectDependencies>;
+  } = {},
+): Promise<number> {
+  const deps = withDefined<SessionDisconnectDependencies>(
+    { disconnect: disconnectAgent, revokeByAddress: revokeWithMemberLogin },
+    options.dependencies,
+  );
+  let done = 0;
+  for (const record of pendingSessionDisconnects(configDir))
+    if (
+      (await finishSessionDisconnect(
+        configDir,
+        record,
+        deps,
+        options.env ?? process.env,
+        options.fetch,
+      )) === "done"
+    )
+      done++;
+  return done;
 }
 
 /** Claude hook input: the only fields these hooks read. */

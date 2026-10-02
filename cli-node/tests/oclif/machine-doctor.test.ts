@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { codexHookTrustHash } from "../../src/oclif/codex-machine-hooks.js";
 import {
   type ConnectedAgentProfile,
   saveConnectedAgentProfile,
@@ -352,32 +353,25 @@ describe("primitive machine doctor", () => {
     expect(JSON.stringify(settings).includes("gone@example.test")).toBe(false);
   });
 
-  it("installs one Codex SessionStart hook, keeps other hooks in place and reads trust", async () => {
+  it("repairs the Codex hook without moving any other hook, and checks approval by hash", async () => {
     const { home, bin, options } = machine();
     const hooksPath = join(home, ".codex", "hooks.json");
-    const userHook = { type: "command", command: "notify.sh" };
-    const stale = {
-      type: "command",
-      command:
-        "'/old/node' '/old/primitive/bin/run.js' agent session-register --runtime codex --hook",
-    };
-    writeFileSync(
-      hooksPath,
-      `${JSON.stringify(
-        {
-          hooks: {
-            SessionStart: [
-              { hooks: [userHook] },
-              { hooks: [stale] },
-              { hooks: [stale] },
-            ],
-            Stop: [{ hooks: [userHook] }],
-          },
-        },
-        null,
-        2,
-      )}\n`,
+    const hook = (name: string) => ({ type: "command", command: name });
+    const stale = hook(
+      "'/old/node' '/old/primitive/bin/run.js' agent session-register --runtime codex --hook",
     );
+    const original = {
+      hooks: {
+        SessionStart: [
+          { hooks: [hook("first.sh")] },
+          { hooks: [stale, hook("middle.sh")] },
+          { hooks: [stale] },
+          { matcher: "startup", hooks: [hook("last.sh")] },
+        ],
+        Stop: [{ hooks: [hook("stop.sh")] }],
+      },
+    };
+    writeFileSync(hooksPath, `${JSON.stringify(original, null, 2)}\n`);
     const before = byId(await runMachineDoctor(options));
     expect(before["codex.hook.session_start"]).toMatchObject({
       status: "fail",
@@ -388,31 +382,94 @@ describe("primitive machine doctor", () => {
       status: "warn",
       fixed: true,
     });
-    const hooks = JSON.parse(readFileSync(hooksPath, "utf8")).hooks;
-    expect(hooks.Stop).toEqual([{ hooks: [userHook] }]);
-    // The user's hook keeps index 0 and the managed hook keeps index 1, so
-    // Codex trust records keyed by position still match.
-    expect(hooks.SessionStart).toHaveLength(2);
-    expect(hooks.SessionStart[0]).toEqual({ hooks: [userHook] });
-    expect(hooks.SessionStart[1].hooks[0].command).toBe(
-      `'${process.execPath}' '${join(bin, "run.js")}' agent session-register --runtime codex --hook`,
+    expect(fixed["codex.hook.session_start"].detail).toContain(
+      "approval needs to be confirmed in Codex",
     );
+    const hooks = JSON.parse(readFileSync(hooksPath, "utf8")).hooks;
+    const desired = `'${process.execPath}' '${join(bin, "run.js")}' agent session-register --runtime codex --hook`;
+    // Every unrelated hook keeps its exact entry and hook index.
+    expect(hooks.Stop).toEqual(original.hooks.Stop);
+    expect(hooks.SessionStart).toHaveLength(4);
+    expect(hooks.SessionStart[0]).toEqual({ hooks: [hook("first.sh")] });
+    expect(hooks.SessionStart[1]).toEqual({
+      hooks: [hook(desired), hook("middle.sh")],
+    });
+    expect(hooks.SessionStart[2]).toEqual({ hooks: [] });
+    expect(hooks.SessionStart[3]).toEqual(original.hooks.SessionStart[3]);
     expect(
       readdirSync(join(home, ".codex")).some((name) =>
         name.startsWith("hooks.json.primitive-bak-"),
       ),
     ).toBe(true);
+
+    const configToml = join(home, ".codex", "config.toml");
+    const key = `[hooks.state."${hooksPath}:session_start:1:0"]`;
+    writeFileSync(configToml, `${key}\ntrusted_hash = "sha256:stale"\n`);
+    expect(
+      byId(await runMachineDoctor(options))["codex.hook.session_start"],
+    ).toMatchObject({ status: "warn" });
     writeFileSync(
-      join(home, ".codex", "config.toml"),
-      `[hooks.state."${hooksPath}:session_start:1:0"]\ntrusted_hash = "sha256:x"\n`,
+      configToml,
+      `${key}\ntrusted_hash = "${codexHookTrustHash("session_start", null, hook(desired))}"\n`,
     );
-    const trusted = byId(await runMachineDoctor(options));
-    expect(trusted["codex.hook.session_start"].status).toBe("ok");
+    expect(
+      byId(await runMachineDoctor(options))["codex.hook.session_start"].status,
+    ).toBe("ok");
+    writeFileSync(
+      configToml,
+      `${key}\ntrusted_hash = "${codexHookTrustHash("session_start", null, hook(desired))}"\nenabled = false\n`,
+    );
+    expect(
+      byId(await runMachineDoctor(options))["codex.hook.session_start"].detail,
+    ).toContain("disabled");
     const first = snapshot(home);
     expect((await runMachineDoctor({ ...options, fix: true })).fixedCount).toBe(
       0,
     );
     expect(snapshot(home)).toEqual(first);
+  });
+
+  it("leaves a duplicate Codex hook that precedes another hook in place", async () => {
+    const { home, bin, options } = machine();
+    const hooksPath = join(home, ".codex", "hooks.json");
+    const desired = `'${process.execPath}' '${join(bin, "run.js")}' agent session-register --runtime codex --hook`;
+    const original = {
+      hooks: {
+        SessionStart: [
+          { hooks: [{ type: "command", command: desired }] },
+          {
+            hooks: [
+              { type: "command", command: desired },
+              { type: "command", command: "after.sh" },
+            ],
+          },
+        ],
+      },
+    };
+    const text = `${JSON.stringify(original, null, 2)}\n`;
+    writeFileSync(hooksPath, text);
+    const report = byId(await runMachineDoctor({ ...options, fix: true }));
+    expect(report["codex.hook.session_start"]).toMatchObject({
+      status: "warn",
+      fixable: false,
+    });
+    expect(report["codex.hook.session_start"].detail).toContain(
+      "left in place",
+    );
+    expect(readFileSync(hooksPath, "utf8")).toBe(text);
+  });
+
+  it("reproduces the trust hash Codex records", () => {
+    // Recorded by Codex itself for this hooks.json SessionStart hook.
+    expect(
+      codexHookTrustHash("session_start", null, {
+        type: "command",
+        command:
+          "/opt/homebrew/bin/node /private/tmp/primitive-autoconnect-research/codex-start.mjs",
+      }),
+    ).toBe(
+      "sha256:16f4fa2f695709d0d6e4dd3068a3000d2b6e4f731014623d843a3511d94f2c0b",
+    );
   });
 
   it("reports malformed Codex hooks.json and leaves it alone", async () => {
@@ -680,6 +737,109 @@ describe("primitive machine doctor", () => {
       status: "ok",
       fixed: true,
     });
+  });
+
+  it("checks every saved profile, however many there are", async () => {
+    const { configDir, options } = machine();
+    for (let index = 0; index < 205; index++)
+      saveConnectedAgentProfile(
+        configDir,
+        `profile-${index}`,
+        profile(`agent${index}@example.test`),
+      );
+    const seen = new Set<string>();
+    const fetchStub = (async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      seen.add(new Headers(init?.headers).get("authorization") ?? "");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            connection: { address: "agent204@example.test", status: "revoked" },
+          },
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fetch: fetchStub }),
+    );
+    // Only the last profile matches the revoked reply, so it must have been read.
+    expect(report["profiles.orphaned"].detail).toContain(
+      "agent204@example.test",
+    );
+  }, 30_000);
+
+  it("retries disconnecting ended sessions whose agent is still connected", async () => {
+    const { configDir, options } = machine();
+    const { writeMailJson } = await import(
+      "../../src/oclif/shared-mail-files.js"
+    );
+    writeMailJson(join(configDir, "machine", "sessions", `${sessionA}.json`), {
+      version: 1,
+      runtime: "claude",
+      session: sessionA,
+      profile: `session-${sessionA}`,
+      name: "claude-repo",
+      createdBy: "session-register",
+      address: "ended@example.test",
+      agentInfo: null,
+      registeredAt: "2026-10-01T00:00:00.000Z",
+      endedAt: "2026-10-01T01:00:00.000Z",
+      disconnect: "pending",
+    });
+    const revoked: string[] = [];
+    const before = byId(await runMachineDoctor(options));
+    expect(before["profiles.orphaned"]).toMatchObject({
+      status: "fail",
+      fixable: true,
+    });
+    expect(before["profiles.orphaned"].detail).toContain("ended@example.test");
+    const fixed = byId(
+      await runMachineDoctor({
+        ...options,
+        fix: true,
+        sessionDisconnect: {
+          revokeByAddress: async (_configDir, address) => {
+            revoked.push(address);
+            return true;
+          },
+        },
+      }),
+    );
+    expect(revoked).toEqual(["ended@example.test"]);
+    expect(fixed["profiles.orphaned"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+  });
+
+  it("backs up the whole replaced skill, installed helper packages included", async () => {
+    const { home, configDir, options } = machine();
+    const skill = join(home, ".claude", "skills", "primitive-connect");
+    mkdirSync(join(skill, "node_modules", "helper"), { recursive: true });
+    writeFileSync(join(skill, "SKILL.md"), "old skill\n");
+    writeFileSync(
+      join(skill, "node_modules", "helper", "index.js"),
+      "helper\n",
+    );
+    const report = byId(await runMachineDoctor({ ...options, fix: true }));
+    expect(report["skill.claude"]).toMatchObject({ status: "ok", fixed: true });
+    const backups = join(configDir, "machine", "backups", "skills");
+    const [backup] = readdirSync(backups).filter((name) =>
+      name.startsWith("claude-"),
+    );
+    expect(readFileSync(join(backups, backup ?? "", "SKILL.md"), "utf8")).toBe(
+      "old skill\n",
+    );
+    expect(
+      readFileSync(
+        join(backups, backup ?? "", "node_modules", "helper", "index.js"),
+        "utf8",
+      ),
+    ).toBe("helper\n");
   });
 
   it("does not repair while another repair holds the lock", async () => {
