@@ -733,7 +733,12 @@ export async function enrollAgent(params: AgentEnrollOptions) {
               : status === "owner_inactive"
                 ? "The original human owner is no longer an active member. This profile must not be treated as receiving; ask an organization manager to review or remove it."
                 : "The challenge reply was submitted, but pairing is not confirmed. Resume this exact enrollment with the same options; do not create another address or resend the reply."
-        } ${report}`,
+        }${
+          // A revoked pairing or a departed owner has no one to report to.
+          status === "revoked" || status === "owner_inactive"
+            ? ""
+            : ` ${report}`
+        }`,
         contactRequestPolicy,
         connection: { status },
       };

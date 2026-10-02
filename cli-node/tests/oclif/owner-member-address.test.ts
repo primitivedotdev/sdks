@@ -134,6 +134,19 @@ describe("the owner's personal address", () => {
     expect(output.ownerReportGuidance).toContain(personal);
   });
 
+  it("skips the extra read after a claim that already carried the value", async () => {
+    await refresh(async () => me({ owner_member_address: personal }));
+    const profile = loadConnectedAgentProfile(configDir, "work");
+    if (!profile) throw new Error("profile missing");
+    const fetch = vi.fn<typeof globalThis.fetch>();
+    const output = await withOwnerMemberAddress(
+      { status: "claimed", identity: connectedAgentIdentity("work", profile) },
+      { configDir, fetch, onlyIfUnknown: true },
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    expect(output.identity.ownerMemberAddress).toBe(personal);
+  });
+
   it("reports null without a saved value or a profile", async () => {
     expect(await refresh(async () => me({}))).toBeNull();
     expect(

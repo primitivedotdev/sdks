@@ -162,17 +162,18 @@ export default class AgentConnectCommand extends Command {
         );
       // A rerun of an already configured profile refreshes the owner's
       // personal address, which may have been set up after the claim.
-      const result = await withOwnerMemberAddress(
-        await connectAgent({
-          configDir: this.config.configDir,
-          profileName: flags.profile,
-          invitation: await readAgentInvitation(
-            process.stdin,
-            process.stdin.isTTY,
-          ),
-        }),
-        { configDir: this.config.configDir },
-      );
+      const claimed = await connectAgent({
+        configDir: this.config.configDir,
+        profileName: flags.profile,
+        invitation: await readAgentInvitation(
+          process.stdin,
+          process.stdin.isTTY,
+        ),
+      });
+      const result = await withOwnerMemberAddress(claimed, {
+        configDir: this.config.configDir,
+        onlyIfUnknown: claimed.status === "claimed",
+      });
       if (flags.json) this.log(JSON.stringify(result));
       else {
         this.log(

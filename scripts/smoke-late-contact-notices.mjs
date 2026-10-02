@@ -84,7 +84,7 @@ const api = createServer(async (request, response) => {
     let raw = "";
     for await (const chunk of request) raw += chunk;
     const body = raw ? JSON.parse(raw) : null;
-    if (url.pathname === "/v1/agent-connections/claim") return json(response, { org_id: org, api_base_url: "https://api.primitive.dev/v1", api_key: credential, owner_address: "owner@sender.example", connection: { address: agent, owner_address: "owner@sender.example", status: "claimed" } });
+    if (url.pathname === "/v1/agent-connections/claim") return json(response, { org_id: org, api_base_url: "https://api.primitive.dev/v1", api_key: credential, owner_address: "owner@sender.example", owner_member_address: null, connection: { address: agent, owner_address: "owner@sender.example", owner_member_address: null, status: "claimed" } });
     assert.equal(request.headers.authorization, `Bearer ${credential}`);
     if (request.method === "POST" && url.pathname === "/v1/agent-networks/default/contact-admission") {
       assert.equal(emails.get(body.email_id)?.sender, body.sender_address);

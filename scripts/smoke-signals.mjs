@@ -22,7 +22,7 @@ const server=createServer(async(req,res)=>{
     const url=new URL(req.url,'http://localhost');let raw='';for await(const chunk of req)raw+=chunk;
     const body=raw?JSON.parse(raw):null;requests.push(url.pathname);
     const ok=data=>{res.setHeader('content-type','application/json');res.end(JSON.stringify({success:true,data,meta:{cursor:null}}));};
-    if(url.pathname==='/v1/agent-connections/claim')return ok({org_id:'11111111-1111-4111-8111-111111111111',api_base_url:'https://api.primitive.dev/v1',api_key:credential,owner_address:'owner@example.test',connection:{address:agent,owner_address:'owner@example.test',status:'claimed'}});
+    if(url.pathname==='/v1/agent-connections/claim')return ok({org_id:'11111111-1111-4111-8111-111111111111',api_base_url:'https://api.primitive.dev/v1',api_key:credential,owner_address:'owner@example.test',owner_member_address:'ada_123456789@example.test',connection:{address:agent,owner_address:'owner@example.test',owner_member_address:'ada_123456789@example.test',status:'claimed'}});
     assert.equal(req.headers.authorization,`Bearer ${credential}`);
     if(url.pathname.startsWith('/v1/emails/')){const id=url.pathname.split('/').at(-1);assert.ok(emails.has(id));return ok(emails.get(id));}
     if(url.pathname==='/v1/sent-emails'){assert.equal(url.searchParams.get('limit'),'2');return ok(lookup?sends.filter(x=>x.client_idempotency_key===url.searchParams.get('idempotency_key')):[]);}

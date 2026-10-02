@@ -112,13 +112,22 @@ export async function withOwnerMemberAddress<
   },
 >(
   result: T,
-  params: { configDir: string; fetch?: typeof fetch },
+  params: { configDir: string; fetch?: typeof fetch; onlyIfUnknown?: boolean },
 ): Promise<T & { ownerReportGuidance: string }> {
-  const ownerMemberAddress = await refreshOwnerMemberAddress({
-    configDir: params.configDir,
-    profileName: result.identity.profileName,
-    fetch: params.fetch,
-  });
+  const saved = loadConnectedAgentProfile(
+    params.configDir,
+    result.identity.profileName,
+  );
+  // A claim answered by a current server already carries the value; only an
+  // older answer, or an explicit rerun, needs the extra read.
+  const ownerMemberAddress =
+    params.onlyIfUnknown && saved && saved.owner_member_address !== undefined
+      ? saved.owner_member_address
+      : await refreshOwnerMemberAddress({
+          configDir: params.configDir,
+          profileName: result.identity.profileName,
+          fetch: params.fetch,
+        });
   const identity = { ...result.identity, ownerMemberAddress };
   return {
     ...result,

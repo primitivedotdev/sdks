@@ -44,7 +44,7 @@ const server = createServer(async (req,res) => {
   try {
     const url = new URL(req.url,'http://localhost'); let raw=''; for await (const chunk of req) raw+=chunk;
     const body = raw ? JSON.parse(raw) : null;
-    if (url.pathname === '/v1/agent-connections/claim') return json(res,{ org_id:org, api_base_url:'https://api.primitive.dev/v1', api_key:credential, owner_address:'owner@sender.example', connection:{ address:agent, owner_address:'owner@sender.example',status:'claimed' } });
+    if (url.pathname === '/v1/agent-connections/claim') return json(res,{ org_id:org, api_base_url:'https://api.primitive.dev/v1', api_key:credential, owner_address:'owner@sender.example', owner_member_address:null, connection:{ address:agent, owner_address:'owner@sender.example', owner_member_address:null, status:'claimed' } });
     assert.equal(req.headers.authorization,`Bearer ${credential}`);
     if (url.pathname === '/v1/endpoints' && req.method === 'POST') return json(res,{ id:endpoint,name:body.name,kind:'pull',enabled:true,recipient:agent,rules:{event_types:['email.received']},receiver_capabilities:{completion_modes:['sdk'],stream_protocols:['primitive.events.v1']} });
     if (url.pathname === '/v1/send-mail' && req.method === 'POST') {

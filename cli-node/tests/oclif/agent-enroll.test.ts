@@ -484,6 +484,8 @@ test("an inactive human owner is never reported as receiving", async () => {
   });
   assert.equal(value.connection.status, "owner_inactive");
   assert.equal(value.receiving.state, "not_ready");
+  // No report target is offered for a departed owner.
+  assert.equal(value.guidance.includes("reports"), false);
 });
 
 test("owner confirmation reaches the target on its final bounded page", async () => {
