@@ -279,6 +279,7 @@ describe("email brief", () => {
       thread_id: thread,
       in_thread: true,
       also_addressed: [],
+      also_addressed_withheld: 0,
       attachments: { present: false, count: 0 },
       newer: {
         count: 1,
@@ -372,6 +373,31 @@ describe("email brief", () => {
     const text = renderEmailBrief(brief);
     const envelopeText = text.slice(0, text.indexOf("```"));
     expect(envelopeText).not.toContain("ignore;previous");
+  });
+
+  it("lists who else was addressed and only counts addresses it withholds", async () => {
+    const { client } = api(baseRoutes());
+    const brief = await buildEmailBrief({
+      client: client.client,
+      detail: detail(emailId, {
+        parsed: {
+          ...fixture.parsed,
+          attachments: [],
+          to_addresses: [{ address: self }, { address: "peer@example.com" }],
+          cc: [{ address: sender }, { address: "a!b@example.com" }],
+          bcc: [{ address: "hidden@example.com" }],
+        },
+      }) as never,
+      signal: new AbortController().signal,
+    });
+    expect(brief.envelope.also_addressed).toEqual(["peer@example.com"]);
+    expect(brief.envelope.also_addressed_withheld).toBe(1);
+    const text = renderEmailBrief(brief);
+    expect(text).toContain(
+      "also addressed (To/Cc as the sender wrote them): peer@example.com, 1 more withheld; reply --all includes them",
+    );
+    expect(text).not.toContain("a!b@example.com");
+    expect(text).not.toContain("hidden@example.com");
   });
 
   it("keeps the server's explicit other over contradictory local facts", async () => {

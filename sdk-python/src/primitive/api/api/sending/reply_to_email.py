@@ -151,9 +151,11 @@ def sync_detailed(
     derivation (Reply-To, then From, then bare sender), and the
     `Re:` subject prefix are all derived server-side from the
     stored inbound row. The request body carries only the message
-    body, optional From override, optional attachments, and optional
-    `wait` flag; passing any header or recipient override is
-    rejected by the schema (`additionalProperties: false`).
+    body, optional From override, optional attachments, optional
+    `wait` flag, and optional `reply_all` flag, which also copies
+    every other To and Cc address of the inbound (never Bcc).
+    Passing any header or explicit recipient override is rejected
+    by the schema (`additionalProperties: false`).
 
     Forwards through the same gates as `/send-mail`: the response
     status, error envelope, and `idempotent_replay` flag mirror
@@ -208,9 +210,11 @@ def sync(
     derivation (Reply-To, then From, then bare sender), and the
     `Re:` subject prefix are all derived server-side from the
     stored inbound row. The request body carries only the message
-    body, optional From override, optional attachments, and optional
-    `wait` flag; passing any header or recipient override is
-    rejected by the schema (`additionalProperties: false`).
+    body, optional From override, optional attachments, optional
+    `wait` flag, and optional `reply_all` flag, which also copies
+    every other To and Cc address of the inbound (never Bcc).
+    Passing any header or explicit recipient override is rejected
+    by the schema (`additionalProperties: false`).
 
     Forwards through the same gates as `/send-mail`: the response
     status, error envelope, and `idempotent_replay` flag mirror
@@ -260,9 +264,11 @@ async def asyncio_detailed(
     derivation (Reply-To, then From, then bare sender), and the
     `Re:` subject prefix are all derived server-side from the
     stored inbound row. The request body carries only the message
-    body, optional From override, optional attachments, and optional
-    `wait` flag; passing any header or recipient override is
-    rejected by the schema (`additionalProperties: false`).
+    body, optional From override, optional attachments, optional
+    `wait` flag, and optional `reply_all` flag, which also copies
+    every other To and Cc address of the inbound (never Bcc).
+    Passing any header or explicit recipient override is rejected
+    by the schema (`additionalProperties: false`).
 
     Forwards through the same gates as `/send-mail`: the response
     status, error envelope, and `idempotent_replay` flag mirror
@@ -317,9 +323,11 @@ async def asyncio(
     derivation (Reply-To, then From, then bare sender), and the
     `Re:` subject prefix are all derived server-side from the
     stored inbound row. The request body carries only the message
-    body, optional From override, optional attachments, and optional
-    `wait` flag; passing any header or recipient override is
-    rejected by the schema (`additionalProperties: false`).
+    body, optional From override, optional attachments, optional
+    `wait` flag, and optional `reply_all` flag, which also copies
+    every other To and Cc address of the inbound (never Bcc).
+    Passing any header or explicit recipient override is rejected
+    by the schema (`additionalProperties: false`).
 
     Forwards through the same gates as `/send-mail`: the response
     status, error envelope, and `idempotent_replay` flag mirror
