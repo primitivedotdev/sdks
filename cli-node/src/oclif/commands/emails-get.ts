@@ -8,6 +8,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
+import { dispatchAutoWorking } from "../auto-signals.js";
 import { buildEmailBrief, renderEmailBrief } from "../email-brief.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { clearReadPendingMail } from "../pending-mail.js";
@@ -39,8 +40,12 @@ export async function clearPendingAfterRead(
   }
 }
 
+const NO_SIGNAL_DESCRIPTION =
+  "With --brief, do not report working to the sender. By default, reading mail from the verified owner or a same-organization peer that a receiver surfaced to this session reports working in the background until you answer (also disabled by PRIMITIVE_NO_AUTO_SIGNALS=1).";
+
 type BriefFlags = {
   id: string;
+  "no-signal"?: boolean;
   json?: boolean;
   time?: boolean;
   "api-key"?: string;
@@ -89,6 +94,12 @@ async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
       flags.json ? JSON.stringify(brief, null, 2) : renderEmailBrief(brief),
     );
     await clearPendingAfterRead(command.config.configDir, detail.id);
+    // Detached and silent, so stdout stays one document and stderr empty.
+    if (!flags["no-signal"])
+      dispatchAutoWorking({
+        configDir: command.config.configDir,
+        emailId: detail.id,
+      });
   });
 }
 
@@ -105,6 +116,10 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
     static flags = {
       ...baseFlags,
       brief: Flags.boolean({ description: BRIEF_DESCRIPTION }),
+      "no-signal": Flags.boolean({
+        description: NO_SIGNAL_DESCRIPTION,
+        dependsOn: ["brief"],
+      }),
     } as never;
 
     async run(): Promise<void> {

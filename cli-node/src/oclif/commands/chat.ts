@@ -23,6 +23,11 @@ import {
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
 import {
+  type HaltedAutoWorking,
+  haltAutoWorking,
+  restoreAutoWorking,
+} from "../auto-signals.js";
+import {
   acquireChatLock,
   acquireChatStateLock,
   ChatLockContentionError,
@@ -1977,6 +1982,18 @@ class ChatCommand extends Command {
           receipt.data.idempotency_key ??
           derivedIdempotencyKey;
         this.chatProgress.idempotencyKey = idempotencyKey;
+        // A message to the sender of mail being worked on answers it.
+        let halted: HaltedAutoWorking | null = null;
+        if (receipt.data.sent === null)
+          halted = await haltAutoWorking(
+            this.config.configDir,
+            {
+              emailIds: parentReply ? [parentReply.id] : [],
+              peers: [args.recipient],
+              profileName: auth.connectedAgent?.profileName,
+            },
+            "reply",
+          );
         const sendResult =
           receipt.data.sent !== null
             ? { data: { data: receipt.data.sent }, error: undefined }
@@ -2003,8 +2020,11 @@ class ChatCommand extends Command {
               apiResultHttpStatus(sendResult),
               extractErrorPayload(sendResult.error),
             ) === "not_sent"
-          )
+          ) {
+            // Refused, so nothing reached the sender: keep showing working.
+            if (halted) restoreAutoWorking(halted);
             await connectedWait?.cancelRejectedSend();
+          }
           this.reportSendFailure({
             authFailureContext,
             json: flags.json,

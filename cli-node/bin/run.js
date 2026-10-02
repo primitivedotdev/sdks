@@ -27,6 +27,36 @@ if (
 // process.env inside this process is too late for built-in fetch.
 restartWithProxyEnvIfNeeded();
 
+// A detached automatic signal worker: no command, no output.
+if (process.env.PRIMITIVE_AUTO_SIGNAL_WORKER === "1") {
+  const { runAutoSignalWorker } = await import(
+    "../dist/oclif/auto-signal-worker.js"
+  );
+  await runAutoSignalWorker();
+  process.exit(0);
+}
+
+// Keep an automatic working signal alive in runtimes that end background
+// processes between tool calls. Silent, and skipped when nothing is active.
+{
+  const { existsSync } = await import("node:fs");
+  const { homedir } = await import("node:os");
+  const { join } = await import("node:path");
+  const configDir =
+    process.env.PRIMITIVE_CONFIG_DIR ||
+    join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "primitive");
+  if (existsSync(join(configDir, "auto-signals"))) {
+    try {
+      const { resumeAutoWorking } = await import(
+        "../dist/oclif/auto-signals.js"
+      );
+      resumeAutoWorking(configDir);
+    } catch {
+      // Automatic signals never affect the command being run.
+    }
+  }
+}
+
 const { writeRootAuthContextIfNeeded } = await import(
   "../dist/oclif/root-signup-hint.js"
 );

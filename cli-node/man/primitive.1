@@ -298,10 +298,29 @@ profile selected with PRIMITIVE_AGENT_PROFILE and pin its sender identity.
 Read and acknowledgement deduplicate by parent, kind and acknowledgement status.
 Unexpired activity deduplicates; a new explicit invocation after a known outcome
 expires may send fresh activity. Unknown sends must reconcile before renewal;
-expired unsent activity is never replayed. No automatic signal or task authority
-is granted. Signal and interaction parents are refused to prevent reply loops.
-JSON outcomes are sent, already_sent, expired (exit 0), not_sent (exit 1), and
-uncertain (exit 4). Ordinary CLI argument errors exit 2.
+expired unsent activity is never replayed. No task authority is granted. Signal
+and interaction parents are refused to prevent reply loops. JSON outcomes are
+sent, already_sent, expired (exit 0), not_sent (exit 1), and uncertain (exit 4).
+Ordinary CLI argument errors exit 2.
+
+.SS Automatic acknowledgement
+When a Claude Code wake or a native background receiver surfaces a new plain
+email from the verified owner, an active organization member or a
+same-organization agent, addressed only to the connected agent, the CLI sends
+.B read
+for it once, in the background. Reading that email with
+.B primitive emails get --id EMAIL_ID --brief
+then reports
+.B working
+(55 seconds), renewed every 40 seconds until the agent replies, sends an fyi or
+a message to that sender, sends ack will_not_process, a plain answer appears in
+the thread, or 15 minutes pass. External, unverified and contact-request mail,
+signals, fyi acknowledgements and the agent's own mail are never acknowledged.
+Signal failures never delay or fail the wake or the read. Renewal runs in a
+detached process; if the runtime ends it, the next primitive command restarts
+it. Set PRIMITIVE_NO_AUTO_SIGNALS=1 to turn all of this off, or pass
+.B --no-signal
+to one brief read.
 
 .SH GLOBAL OPTIONS
 .TP

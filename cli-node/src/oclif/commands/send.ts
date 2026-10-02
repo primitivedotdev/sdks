@@ -8,6 +8,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
+import { haltAutoWorking, restoreAutoWorking } from "../auto-signals.js";
 import {
   buildFyiMessageContent,
   FYI_FLAG_DESCRIPTION,
@@ -363,6 +364,15 @@ class SendCommand extends Command {
       }
       const body = { ...envelope, ...content, ...threading };
 
+      // A message to the sender of mail being worked on answers it.
+      const halted = await haltAutoWorking(
+        this.config.configDir,
+        {
+          peers: [flags.to],
+          profileName: auth.connectedAgent?.profileName,
+        },
+        flags.fyi ? "fyi" : "reply",
+      );
       const attemptStartedAtIso = new Date().toISOString();
       this.attemptStartedAtIso = attemptStartedAtIso;
       this.sendRequestStarted = true;
@@ -398,6 +408,8 @@ class SendCommand extends Command {
       });
       const repeatLine = formatRepeatStarted(result, repeat);
       if (repeatLine) process.stderr.write(`${repeatLine}\n`);
+      // A refused message reached nobody, so the sender still sees working.
+      if (outcome === "not_sent") restoreAutoWorking(halted);
       const exitCode = sendOutcomeExitCode(outcome);
       if (exitCode !== 0) process.exitCode = exitCode;
     });

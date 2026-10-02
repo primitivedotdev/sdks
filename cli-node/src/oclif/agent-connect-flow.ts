@@ -6,7 +6,7 @@ import {
   runAddressNotesRequest,
 } from "./address-notes.js";
 import { agentConnectionStatus } from "./agent-connect.js";
-import { setupAgent } from "./agent-setup.js";
+import { setupAgent, verificationReplySubmitted } from "./agent-setup.js";
 import {
   type ClaudeWakeHookResult,
   installClaudeWakeHook,
@@ -335,7 +335,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     contactRequests: options.contactRequests,
     ...(options.resume ? {} : { invitation: await options.readInvitation() }),
   });
-  const verified = result.verification.state === "reply_submitted";
+  const verified = verificationReplySubmitted(result.verification.state);
   const ownerMemberAddress = await dependencies.refreshOwnerMemberAddress(
     result.identity.profileName,
   );
