@@ -115,7 +115,9 @@ def sync_detailed(
      Called by the recipient of a repeating send: the connected agent's own
     credential for an agent address, or the signed-in member whose personal
     address it is. `id` is the caller's received copy of any message of the
-    repeat. Stops the repeat when it lets the recipient stop it, cancels the
+    repeat, or the repeat id printed in the message footer, which resolves
+    to the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels
+    the
     pending message, and replies once in the thread with a
     `repeat.stop/1` interaction so the sender sees it. A repeat call returns
     the same result without a second reply.
@@ -157,7 +159,9 @@ def sync(
      Called by the recipient of a repeating send: the connected agent's own
     credential for an agent address, or the signed-in member whose personal
     address it is. `id` is the caller's received copy of any message of the
-    repeat. Stops the repeat when it lets the recipient stop it, cancels the
+    repeat, or the repeat id printed in the message footer, which resolves
+    to the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels
+    the
     pending message, and replies once in the thread with a
     `repeat.stop/1` interaction so the sender sees it. A repeat call returns
     the same result without a second reply.
@@ -194,7 +198,9 @@ async def asyncio_detailed(
      Called by the recipient of a repeating send: the connected agent's own
     credential for an agent address, or the signed-in member whose personal
     address it is. `id` is the caller's received copy of any message of the
-    repeat. Stops the repeat when it lets the recipient stop it, cancels the
+    repeat, or the repeat id printed in the message footer, which resolves
+    to the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels
+    the
     pending message, and replies once in the thread with a
     `repeat.stop/1` interaction so the sender sees it. A repeat call returns
     the same result without a second reply.
@@ -236,7 +242,9 @@ async def asyncio(
      Called by the recipient of a repeating send: the connected agent's own
     credential for an agent address, or the signed-in member whose personal
     address it is. `id` is the caller's received copy of any message of the
-    repeat. Stops the repeat when it lets the recipient stop it, cancels the
+    repeat, or the repeat id printed in the message footer, which resolves
+    to the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels
+    the
     pending message, and replies once in the thread with a
     `repeat.stop/1` interaction so the sender sees it. A repeat call returns
     the same result without a second reply.

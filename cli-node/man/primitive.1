@@ -248,8 +248,9 @@ on reply. Add --only-if-idle MINUTES, --max-sends N, --until TIME, or
 .B primitive repeats list|get|pause|resume|cancel
 Manage the repeating sends you created.
 .TP
-.B primitive repeat stop --id EMAIL_ID [--reason TEXT]
-As the recipient, stop the repeat behind a received message.
+.B primitive repeat stop --id ID [--reason TEXT]
+As the recipient, stop a repeat. ID is the repeat id from the message footer
+or the id of a received message of the repeat.
 .TP
 .B primitive list-operations
 Print the generated API operation manifest.

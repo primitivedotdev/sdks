@@ -1285,8 +1285,9 @@ export class RepeatsResource {
   }
 
   /**
-   * Stop the repeat behind a received message, as its recipient. Idempotent:
-   * a repeat call returns the same result without a second reply.
+   * Stop a repeat as its recipient. `id` is a received message of the repeat
+   * or the repeat id from the message footer. Idempotent: a repeat call
+   * returns the same result without a second reply.
    */
   async stop(
     emailId: string,

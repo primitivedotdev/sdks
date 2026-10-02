@@ -156,7 +156,7 @@ export class RepeatStopCommand extends Command {
   static summary = "Stop a message that repeats to you";
 
   static description =
-    "Run as the recipient when a repeating message is no longer needed. Pass the id of any received message of the repeat. The repeat stops when it lets the recipient stop it, and the sender is told in the thread. Running it again on a repeat you already stopped returns the same result without telling the sender twice.";
+    "Run as the recipient when a repeating message is no longer needed. Pass the repeat id from the message footer, or the id of any received message of the repeat. The repeat stops when it lets the recipient stop it, and the sender is told in the thread. Running it again on a repeat you already stopped returns the same result without telling the sender twice.";
 
   static examples = [
     '<%= config.bin %> repeat stop --id <email-id> --reason "The report is finished"',
@@ -166,7 +166,8 @@ export class RepeatStopCommand extends Command {
   static flags = {
     ...COMMON_FLAGS,
     id: Flags.string({
-      description: "Id of a received message that repeats",
+      description:
+        "Repeat id from the message footer, or the id of a received message that repeats",
       required: true,
     }),
     reason: Flags.string({
@@ -177,7 +178,7 @@ export class RepeatStopCommand extends Command {
   async run(): Promise<void> {
     const { flags } = await this.parse(RepeatStopCommand);
     if (!UUID.test(flags.id))
-      this.error("--id must be an email id (UUID).", { exit: 2 });
+      this.error("--id must be a repeat id or email id (UUID).", { exit: 2 });
     let body: { reason?: string };
     try {
       body = buildRepeatStopBody({ reason: flags.reason });

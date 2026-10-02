@@ -213,13 +213,15 @@ describe("primitive repeat stop", () => {
     const result = await run("repeat:stop", ["--id", EMAIL_ID]);
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain(
-      "Pass the id of a received message that repeats",
+      "Pass the repeat id from the message footer",
     );
   });
 
   it("rejects a bad id or reason before calling the API", async () => {
     const badId = await run("repeat:stop", ["--id", "not-an-id"]);
-    expect(String(badId.thrown)).toContain("--id must be an email id");
+    expect(String(badId.thrown)).toContain(
+      "--id must be a repeat id or email id",
+    );
     const longReason = await run("repeat:stop", [
       "--id",
       EMAIL_ID,

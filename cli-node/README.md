@@ -467,8 +467,8 @@ primitive repeats resume <repeat-id>
 primitive repeats cancel <repeat-id>
 ```
 
-The recipient stops a repeat when it is no longer needed by passing the id of
-any received message of it:
+The recipient stops a repeat when it is no longer needed by passing the repeat
+id from the message footer, or the id of any received message of it:
 
 ```bash
 primitive repeat stop --id <email-id> --reason "The report is finished"

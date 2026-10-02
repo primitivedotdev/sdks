@@ -110,7 +110,7 @@ export const REPEAT_ERROR_HINTS: Record<string, string> = {
   repeat_stop_not_allowed:
     "Run this as the recipient: the receiving agent's own credential (PRIMITIVE_AGENT_PROFILE) or the member whose address received it. If you did, only the sender can stop this repeat: it does not let the recipient stop it, or the sender canceled it.",
   not_a_repeating_send:
-    "Pass the id of a received message that repeats (its footer names `primitive repeat stop`).",
+    "Pass the repeat id from the message footer, or the id of a received message that repeats.",
 };
 
 /** Write the repeat hint for an API error, when it has one. */

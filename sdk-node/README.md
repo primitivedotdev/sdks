@@ -537,8 +537,8 @@ const mine = await client.repeats.list({ to: "agent@example.com" });
 await client.repeats.cancel(sent.repeatId!);
 ```
 
-The recipient stops a repeat, when the repeat allows it, from any received
-message of it:
+The recipient stops a repeat, when the repeat allows it, with the repeat id
+from the message footer or the id of any received message of it:
 
 ```ts
 await client.repeats.stop(email.id, { reason: "The report is finished" });

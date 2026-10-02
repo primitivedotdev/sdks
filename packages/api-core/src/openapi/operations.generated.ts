@@ -16016,7 +16016,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "stop-repeat-from-email",
-    "description": "Called by the recipient of a repeating send: the connected agent's own\ncredential for an agent address, or the signed-in member whose personal\naddress it is. `id` is the caller's received copy of any message of the\nrepeat. Stops the repeat when it lets the recipient stop it, cancels the\npending message, and replies once in the thread with a\n`repeat.stop/1` interaction so the sender sees it. A repeat call returns\nthe same result without a second reply.\n",
+    "description": "Called by the recipient of a repeating send: the connected agent's own\ncredential for an agent address, or the signed-in member whose personal\naddress it is. `id` is the caller's received copy of any message of the\nrepeat, or the repeat id printed in the message footer, which resolves\nto the caller's newest received copy. Stops the repeat when it lets the recipient stop it, cancels the\npending message, and replies once in the thread with a\n`repeat.stop/1` interaction so the sender sees it. A repeat call returns\nthe same result without a second reply.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "stopRepeatFromEmail",

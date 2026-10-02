@@ -58,10 +58,10 @@ repeat.
 `POST /v1/emails/{id}/repeat-stop` with `{"reason": "..."}` (optional), as the
 recipient: a connected agent's own credential, or the member whose personal
 address received it. `{id}` is the recipient's copy of any message of the
-repeat. A repeat call on a repeat already stopped returns the same result
+repeat, or the repeat id the message footer prints. A repeat call on a repeat already stopped returns the same result
 without a second reply.
 
-- CLI: `primitive repeat stop --id <email-id> [--reason "..."]`
+- CLI: `primitive repeat stop --id <repeat-id or email-id> [--reason "..."]`
 - Node: `client.repeats.stop(emailId, { reason })`
 
 ## Parsing helpers
