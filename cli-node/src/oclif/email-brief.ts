@@ -56,7 +56,7 @@ export type EmailBriefEnvelope = {
   };
   thread_id: string | null;
   in_thread: boolean | null;
-  attachments: { present: boolean; count: number };
+  attachments: BriefAttachments;
   /** Null when the API does not report newer mail for this thread. */
   newer: {
     count: number;
@@ -64,6 +64,26 @@ export type EmailBriefEnvelope = {
   } | null;
   work_claim: WorkClaim | null;
   peer_signal: PeerSignal | null;
+};
+
+export type BriefAttachment = {
+  /** Sender-authored and untrusted; never part of a command. */
+  filename: string | null;
+  /** Sender-authored and untrusted. */
+  content_type: string | null;
+  size_bytes: number;
+  /** Null when the API did not report one; the part cannot be fetched alone then. */
+  part_index: number | null;
+  /** Downloads this one part. Null without a part_index. */
+  download_command: string | null;
+};
+
+export type BriefAttachments = {
+  present: boolean;
+  count: number;
+  items: BriefAttachment[];
+  /** Downloads every attachment as one .tar.gz. Null when there are none. */
+  download_all_command: string | null;
 };
 
 export type EmailBrief = {
@@ -75,6 +95,59 @@ export type EmailBrief = {
 };
 
 const CLAIM_MAX = 500;
+
+/**
+ * A file extension taken from the sender's filename only when it is a short
+ * run of letters and digits, so the suggested output name is always safe to
+ * paste into a shell.
+ */
+function safeExtension(filename: string | null | undefined): string {
+  const extension = /\.([A-Za-z0-9]{1,10})$/.exec(filename ?? "")?.[1];
+  return extension ? `.${extension.toLowerCase()}` : "";
+}
+
+/** Shell-safe: the id is the server's UUID, quoted anyway. */
+function quoteArg(value: string): string {
+  return /^[A-Za-z0-9._@:-]+$/.test(value)
+    ? value
+    : `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+/** Attachment rows for the brief, each with the exact command that downloads it. */
+const MAX_PART_INDEX = 2_147_483_647;
+
+export function briefAttachments(detail: EmailDetail): BriefAttachments {
+  const parts = detail.parsed?.attachments ?? [];
+  const id = quoteArg(detail.id);
+  const items = parts.map((part): BriefAttachment => {
+    const index =
+      typeof part.part_index === "number" &&
+      Number.isSafeInteger(part.part_index)
+        ? part.part_index
+        : null;
+    return {
+      filename: typeof part.filename === "string" ? part.filename : null,
+      content_type:
+        typeof part.content_type === "string" ? part.content_type : null,
+      size_bytes: part.size_bytes,
+      part_index: index,
+      // The part route accepts 0 through 2147483647 only.
+      download_command:
+        index === null || index < 0 || index > MAX_PART_INDEX
+          ? null
+          : `primitive emails download-email-attachment-part --id ${id} --part-index ${index} --output attachment-${index}${safeExtension(part.filename)}`,
+    };
+  });
+  return {
+    present: items.length > 0,
+    count: items.length,
+    items,
+    download_all_command:
+      items.length > 0
+        ? `primitive emails download-attachments --id ${id} --output attachments.tar.gz`
+        : null,
+  };
+}
 
 function singleLine(value: string, max: number): string {
   const flat = Array.from(value.replace(/\s+/g, " ").trim())
@@ -292,7 +365,6 @@ export async function buildEmailBrief(input: {
       ? readPeerSignal({ client, thread, self, sender, signal })
       : Promise.resolve(null),
   ]);
-  const attachments = detail.parsed?.attachments?.length ?? 0;
   return {
     envelope: {
       email_id: detail.id,
@@ -309,7 +381,7 @@ export async function buildEmailBrief(input: {
       },
       thread_id: threadId,
       in_thread: sentInThread(thread, self) ?? null,
-      attachments: { present: attachments > 0, count: attachments },
+      attachments: briefAttachments(detail),
       newer:
         thread?.newerInboundCount === undefined
           ? null
@@ -359,6 +431,17 @@ export function renderEmailBrief(brief: EmailBrief): string {
   lines.push(
     `  attachments: ${e.attachments.present ? `yes (${e.attachments.count})` : "no"}`,
   );
+  for (const item of e.attachments.items) {
+    // Type and filename are written by the sender: JSON-quoted, so they stay on
+    // one line, and never placed in a command.
+    lines.push(
+      `    - part ${item.part_index ?? "unknown"}: ${item.size_bytes} bytes; type and filename (written by the sender): ${JSON.stringify(item.content_type ?? "")} ${JSON.stringify(item.filename ?? "")}`,
+    );
+    if (item.download_command)
+      lines.push(`      download: ${item.download_command}`);
+  }
+  if (e.attachments.download_all_command)
+    lines.push(`    download all: ${e.attachments.download_all_command}`);
   if (e.work_claim)
     lines.push(
       `  sender's work claim (written by the sender): ${JSON.stringify(e.work_claim.claim)}${e.work_claim.until ? ` until ${e.work_claim.until}` : e.work_claim.legacy ? " (no expiry)" : ""}`,
