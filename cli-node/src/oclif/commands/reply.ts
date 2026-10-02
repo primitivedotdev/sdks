@@ -167,7 +167,7 @@ class ReplyCommand extends Command {
     }),
     ...repeatFlags(
       ["fyi", "attachment"],
-      "The email you reply to must come from an address in your organization, and the reply cannot use --attachment or --fyi.",
+      "The reply recipient (the Reply-To address, else the sender) must be an address in your organization, and the reply cannot use --attachment or --fyi.",
     ),
   };
 

@@ -243,7 +243,9 @@ describe("repeat flag help", () => {
         }
       ).flags["repeat-every"]?.description ?? "";
     expect(flags("send")).toContain("exactly one --to recipient");
-    expect(flags("reply")).toContain("The email you reply to must come from");
+    expect(flags("reply")).toContain(
+      "The reply recipient (the Reply-To address",
+    );
     expect(flags("reply")).not.toContain("--to");
   });
 });
