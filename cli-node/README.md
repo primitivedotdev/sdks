@@ -632,9 +632,21 @@ from historical receipts; a stale heartbeat is not healthy. `--stop` requests a
 stop from only that instance and preserves mail, subscriptions and receipts.
 Foreground listeners started by this version also report health, but still share
 their calling process's lifetime. Receivers from older versions are untracked.
-Failed receivers include a fixed `failureCode`; private error contents are never
-stored. Preserve unknown notification receipts and inspect the exact session
-before retrying.
+Failed receivers include a fixed `failureCode` (for example `disk-full` or
+`crashed`) and a `detail` sentence; private error contents are never stored.
+Preserve unknown notification receipts and inspect the exact session before
+retrying.
+
+A supervisor restarts the receiver after every unexpected exit, with backoff
+that settles at one attempt every five minutes rather than giving up. A full or
+failing disk does not stop it: missed heartbeats show as `stale` until writes
+succeed again. If the supervisor itself dies, its receiver starts a
+replacement. If both are gone, the next `primitive` command run from the same
+session (with `PRIMITIVE_AGENT_PROFILE` selecting the connected profile) starts
+the receiver again in the background, at most once a minute. A receiver held
+for an unknown notification outcome or a changed connection, or stopped with
+`--stop` or `agent disconnect`, is never restarted this way. Set
+`PRIMITIVE_RECEIVER_HEAL=0` to turn this off.
 
 Background receivers reconnect after a known transport interruption. A previously
 verified session may temporarily be unloaded while its terminal reconnects; the
@@ -845,7 +857,9 @@ same version is already installed. `--name` and `--info` seed a private
 `AGENT_INFO` note only when none exists. Omit `--contact-requests` when owner
 policy disables request intake. The result's `skipped` list names each step not
 done and why. Resume the same setup without the invitation using its returned
-`resumeCommand`. Select the saved profile for later commands with the result's
+`resumeCommand`; `--resume` reuses the saved receiver and contact-request
+choices when those options are omitted, and refuses only an option that
+conflicts with them, naming it. Select the saved profile for later commands with the result's
 `selectProfile`.
 
 Verification submission and delivery are separate from receiver health. A queued

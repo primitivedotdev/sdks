@@ -90,6 +90,8 @@ export function agentConnectionStatus(configDir: string, profileName: string) {
                   ? "unknown"
                   : "down",
             reason: listener.reason ?? listener.failureCode,
+            failureCode: listener.failureCode,
+            detail: listener.detail ?? null,
             lastSuccessfulMailCheckAt: mailOwner?.lastMailCheckAt ?? null,
             liveness:
               listener.healthy && listener.phase === "receiving"

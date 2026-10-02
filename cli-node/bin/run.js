@@ -36,6 +36,13 @@ if (process.env.PRIMITIVE_AUTO_SIGNAL_WORKER === "1") {
   process.exit(0);
 }
 
+// Bring back a connected session's native receiver if it died without being
+// stopped. Detached and best effort: it never delays or changes this command.
+const { healSelectedReceiverQuietly } = await import(
+  "../dist/oclif/receiver-heal.js"
+);
+healSelectedReceiverQuietly();
+
 // Keep an automatic working signal alive in runtimes that end background
 // processes between tool calls. Silent, and skipped when nothing is active.
 {
