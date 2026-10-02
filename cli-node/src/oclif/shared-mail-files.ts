@@ -71,8 +71,14 @@ export function readMailJson(path: string, maxBytes = 16_384): unknown | null {
     if (value === null) throw invalidSharedMail();
     return value;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw invalidSharedMail();
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") return null;
+    const invalid = invalidSharedMail();
+    // Keep only the errno so callers can tell a failing disk from bad
+    // content; the message and path stay private.
+    if (typeof code === "string")
+      (invalid as Error & { cause?: unknown }).cause = { code };
+    throw invalid;
   }
 }
 export function writeMailJson(path: string, value: unknown): void {

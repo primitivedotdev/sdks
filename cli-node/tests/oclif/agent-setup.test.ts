@@ -219,7 +219,7 @@ describe("one-command connected agent setup", () => {
       receiving: { state: "external_setup_required" },
     });
     expect(f.dependencies.preflight).not.toHaveBeenCalled();
-    f.dependencies.preflight.mockResolvedValue(undefined);
+    // The conflicting option is named even though native preflight would fail.
     await expect(
       setupAgent({
         ...f.params,
@@ -228,6 +228,7 @@ describe("one-command connected agent setup", () => {
         receiverMode: "native",
       }),
     ).rejects.toThrow("--receiver native (saved: external)");
+    expect(f.dependencies.preflight).not.toHaveBeenCalled();
     expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
     expect(f.fetch).toHaveBeenCalledOnce();
   });

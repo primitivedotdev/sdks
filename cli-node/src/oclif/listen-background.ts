@@ -53,13 +53,17 @@ const failureCodes = [
   "disk-full",
   "storage-unavailable",
   "crashed",
+  "unrecognized",
 ] as const;
 export type BackgroundListenFailureCode = (typeof failureCodes)[number];
 // These hold the receiver on purpose: restarting could repeat a notification
 // whose outcome is unknown, or adopt a connection the owner did not choose.
+// "unrecognized" is a code from a newer CLI: it may be a hold this version
+// cannot recognize, so it is never treated as safe to restart.
 const HOLDING_FAILURE_CODES: readonly BackgroundListenFailureCode[] = [
   "notification-outcome-unknown",
   "connection-changed",
+  "unrecognized",
 ];
 
 function knownFailureCode(value: unknown): BackgroundListenFailureCode | null {
@@ -71,7 +75,7 @@ function knownFailureCode(value: unknown): BackgroundListenFailureCode | null {
 /** A newer CLI may record a code this version does not know; keep the record readable. */
 function savedFailureCode(value: unknown): BackgroundListenFailureCode | null {
   if (value === null || value === undefined) return null;
-  return knownFailureCode(value) ?? "receiving-failed";
+  return knownFailureCode(value) ?? "unrecognized";
 }
 
 const DISK_FULL_ERRORS = new Set(["ENOSPC", "EDQUOT"]);
@@ -89,10 +93,14 @@ const STORAGE_ERRORS = new Set([
 export function storageFailureCode(
   error: unknown,
 ): "disk-full" | "storage-unavailable" | null {
-  const code =
-    error && typeof error === "object"
-      ? (error as NodeJS.ErrnoException).code
+  const errno = (value: unknown) =>
+    value && typeof value === "object"
+      ? (value as NodeJS.ErrnoException).code
       : undefined;
+  // Private reads wrap the filesystem error and keep only its errno as cause.
+  const code =
+    errno(error) ??
+    errno(error && typeof error === "object" ? (error as Error).cause : null);
   if (typeof code !== "string") return null;
   if (DISK_FULL_ERRORS.has(code)) return "disk-full";
   if (STORAGE_ERRORS.has(code)) return "storage-unavailable";
@@ -129,6 +137,8 @@ function failureGuidance(code: BackgroundListenFailureCode): string {
       return "The receiver could not read or write its local state. Check the config directory's disk and permissions; the receiver retries on its own.";
     case "crashed":
       return "The receiver exited without reporting a reason. It is restarted automatically; inspect status if this repeats.";
+    case "unrecognized":
+      return "A newer Primitive CLI recorded this receiver's state. Inspect it with that version before restarting.";
   }
 }
 
@@ -513,8 +523,12 @@ export function claimBackgroundListenRestart(
   target: BackgroundListenTarget,
   now = Date.now(),
 ): boolean {
+  let release: (() => void) | undefined;
   try {
     const paths = files(target, true);
+    // Two commands can find the slot free at once; only the lock holder may
+    // read and take it.
+    release = acquireListenLock(paths.directory, "background-restart-claim");
     const path = join(paths.directory, "restart.json");
     const prior = readMailJson(path, 256);
     const at =
@@ -531,6 +545,12 @@ export function claimBackgroundListenRestart(
     return true;
   } catch {
     return false;
+  } finally {
+    try {
+      release?.();
+    } catch {
+      /* A stale claim lock is recovered by the next claimant. */
+    }
   }
 }
 
@@ -687,9 +707,16 @@ export async function runBackgroundListen(
     started = true;
   };
   let relaunched = false;
+  let nextRelaunchCheck = 0;
   const supervised = process.env[SUPERVISOR_WORKER_ENV] === token;
   const watchSupervisor = () => {
-    if (!supervised || relaunched || controller.signal.aborted) return;
+    if (
+      !supervised ||
+      relaunched ||
+      controller.signal.aborted ||
+      Date.now() < nextRelaunchCheck
+    )
+      return;
     const supervisor = readSupervisor(paths.supervisor);
     if (!supervisor || supervisor.token !== token) return;
     // The IPC channel closes as soon as the supervisor exits; a stale
@@ -701,8 +728,13 @@ export async function runBackgroundListen(
       supervisor.phase === "running" ||
       (supervisor.phase === "failed" && supervisor.failureCode === "crashed");
     if (!lost || owner(supervisor) !== "gone") return;
+    // A refused claim (full disk, or another restart moments ago) is retried
+    // later; this worker must not stay unsupervised for the rest of its life.
+    if (!claimBackgroundListenRestart(options)) {
+      nextRelaunchCheck = Date.now() + 5000;
+      return;
+    }
     relaunched = true;
-    if (!claimBackgroundListenRestart(options)) return;
     (options.relaunchSupervisor ?? relaunchSupervisor)();
   };
   const tick = () => {

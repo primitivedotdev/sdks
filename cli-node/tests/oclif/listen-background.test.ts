@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
@@ -38,14 +38,21 @@ import {
   verifyBackgroundListenTarget,
 } from "../../src/oclif/listen-background.js";
 import {
+  acquireListenLock,
   ListenStateError,
   listenProcessIdentity,
 } from "../../src/oclif/listen-state.js";
-import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
+import {
+  readMailJson,
+  writeMailJson,
+} from "../../src/oclif/shared-mail-files.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 // Simulates a full disk for this process's own state writes only.
-const storage = vi.hoisted(() => ({ failWrites: null as string | null }));
+const storage = vi.hoisted(() => ({
+  failWrites: null as string | null,
+  failReads: null as string | null,
+}));
 vi.mock("../../src/oclif/shared-mail-files.js", async (original) => {
   const actual =
     await original<typeof import("../../src/oclif/shared-mail-files.js")>();
@@ -57,6 +64,15 @@ vi.mock("../../src/oclif/shared-mail-files.js", async (original) => {
           code: storage.failWrites,
         });
       actual.writeMailJson(path, value);
+    },
+    readMailJson: (path: string, maxBytes?: number) => {
+      if (storage.failReads) {
+        // The same shape the real reader produces for a filesystem error.
+        const error = actual.invalidSharedMail();
+        error.cause = { code: storage.failReads };
+        throw error;
+      }
+      return actual.readMailJson(path, maxBytes);
     },
   };
 });
@@ -83,6 +99,7 @@ beforeEach(() => {
 });
 afterEach(async () => {
   storage.failWrites = null;
+  storage.failReads = null;
   vi.unstubAllEnvs();
   vi.mocked(listenProcessIdentity).mockRestore();
   for (const item of active.splice(0)) {
@@ -93,6 +110,9 @@ afterEach(async () => {
   rmSync(directory, { recursive: true, force: true });
 });
 
+function deadPid(): number {
+  return spawnSync(process.execPath, ["-e", ""]).pid as number;
+}
 function stateFile() {
   const key = createHash("sha256")
     .update(JSON.stringify([target.scope, target.threadId]))
@@ -539,6 +559,117 @@ describe("listener lifecycle state", () => {
     await f.done;
   });
 
+  it("keeps receiving when reading its own state fails on a failing disk", async () => {
+    let aborted = false;
+    const f = running(async (signal, ready) => {
+      ready();
+      await untilStopped(signal);
+      aborted = true;
+    });
+    await vi.waitFor(() =>
+      expect(backgroundListenStatus(target).phase).toBe("receiving"),
+    );
+    storage.failReads = "EIO";
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(aborted).toBe(false);
+    storage.failReads = null;
+    expect(backgroundListenStatus(target)).toMatchObject({
+      phase: "receiving",
+      healthy: true,
+    });
+    f.controller.abort();
+    await f.done;
+  });
+
+  it("keeps a filesystem errno, and nothing else, on a failed private read", () => {
+    const file = join(directory, "plain.json");
+    writeFileSync(file, "{}", { mode: 0o600 });
+    const error = (() => {
+      try {
+        readMailJson(join(file, "child.json"));
+      } catch (caught) {
+        return caught as Error;
+      }
+    })();
+    expect(error?.cause).toEqual({ code: "ENOTDIR" });
+    expect(String(error?.message)).not.toContain(directory);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "retries replacing a lost supervisor after a refused restart claim",
+    async () => {
+      const token = randomUUID();
+      vi.stubEnv("PRIMITIVE_LISTEN_SUPERVISOR_WORKER", token);
+      const relaunch = vi.fn();
+      const controller = new AbortController();
+      const done = runBackgroundListen({
+        ...target,
+        token,
+        signal: controller.signal,
+        heartbeatMs: 50,
+        retryDelayMs: 10,
+        relaunchSupervisor: relaunch,
+        run: async (signal, ready) => {
+          ready();
+          await untilStopped(signal);
+        },
+        retryable: () => false,
+      });
+      active.push({ controller, done });
+      await vi.waitFor(() =>
+        expect(backgroundListenStatus(target).phase).toBe("receiving"),
+      );
+      // Another restart took the slot moments ago; it frees in about a second.
+      const directoryPath = join(stateFile(), "..");
+      writeMailJson(join(directoryPath, "restart.json"), {
+        at: Date.now() - BACKGROUND_HEAL_INTERVAL_MS + 1000,
+      });
+      const dead = deadPid();
+      writeMailJson(join(directoryPath, "supervisor.json"), {
+        version: 1,
+        token,
+        pid: dead,
+        identity: `synthetic:${dead}`,
+        phase: "running",
+        updatedAt: Date.now() - 60_000,
+        failureCode: null,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(relaunch).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(relaunch).toHaveBeenCalledOnce(), {
+        timeout: 8000,
+      });
+      controller.abort();
+      await done;
+    },
+    15_000,
+  );
+
+  it("refuses a restart claim while another claimant holds the claim lock", () => {
+    const now = Date.now();
+    expect(claimBackgroundListenRestart(target, now)).toBe(true);
+    const release = acquireListenLock(
+      join(stateFile(), ".."),
+      "background-restart-claim",
+    );
+    try {
+      expect(
+        claimBackgroundListenRestart(
+          target,
+          now + 2 * BACKGROUND_HEAL_INTERVAL_MS,
+        ),
+      ).toBe(false);
+    } finally {
+      release();
+    }
+    expect(
+      claimBackgroundListenRestart(
+        target,
+        now + 2 * BACKGROUND_HEAL_INTERVAL_MS,
+      ),
+    ).toBe(true);
+  });
+
   it.each([
     ["ENOSPC", "disk-full"],
     ["EDQUOT", "disk-full"],
@@ -577,7 +708,7 @@ describe("listener lifecycle state", () => {
     expect(backgroundListenRestartable(current)).toBe(false);
   });
 
-  it("reads a failure code from a newer CLI as a generic failure instead of rejecting the record", async () => {
+  it("reads a failure code from a newer CLI without rejecting the record or restarting it", async () => {
     const f = running();
     await vi.waitFor(() =>
       expect(backgroundListenStatus(target).phase).toBe("receiving"),
@@ -592,10 +723,13 @@ describe("listener lifecycle state", () => {
         failureCode: "some-future-code",
       }),
     );
-    expect(backgroundListenStatus(target)).toMatchObject({
+    const current = backgroundListenStatus(target);
+    expect(current).toMatchObject({
       phase: "failed",
-      failureCode: "receiving-failed",
+      failureCode: "unrecognized",
     });
+    // A newer CLI's code may be a deliberate hold, so it is never auto-restarted.
+    expect(backgroundListenRestartable(current)).toBe(false);
   });
 
   it("allows one external restart per interval and refuses when the claim cannot be saved", () => {
