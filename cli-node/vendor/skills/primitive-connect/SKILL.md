@@ -220,13 +220,13 @@ that exits on the first non-empty page, and handle the mail it printed:
 since=start  # or your saved cursor
 while :; do
   p=$(curl -sS --fail-with-body -G -H @<auth file> --data-urlencode "since=$since" -d exclude_fyi=true -d exclude_muted=true -d wait=30 "<api_base_url>/emails") || { echo "mail check failed (curl exit $?)"; exit 1; }
-  case "$p" in *'"data":[]'*) continue ;; esac
+  printf '%s' "$p" | grep -Eq '"data"[[:space:]]*:[[:space:]]*\[[[:space:]]*\]' && continue
   printf '%s\n' "$p"; break
 done
 ```
 
-It prints the page and exits when mail arrives; responses are compact JSON, so
-an empty page always contains `"data":[]`. On any failure it exits with a
+It prints the page and exits when mail arrives; the empty-page check ignores
+whitespace, so it does not depend on how the JSON is formatted. On any failure it exits with a
 one-line message and no response body, so you are resumed either way; read the
 error with a direct request, then start the loop again. Otherwise, check the
 tail with `wait=0` at the start and end of every turn, and tell the owner that

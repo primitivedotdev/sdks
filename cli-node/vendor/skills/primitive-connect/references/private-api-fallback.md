@@ -4,7 +4,7 @@ The HTTP API path in `SKILL.md` needs no installed software. This Node.js helper
 
 The helper's `request` form allows only these calls: `GET` of `/emails`,
 `/emails/{id}`, `/emails/search`, `/sent-emails` and `/sent-emails/{id}`;
-`GET /threads/{id}` and `GET /emails/{id}/conversation`;
+`GET /threads/{id}` and `GET /emails/{id}/conversation`; `GET /agent-connections/me`;
 `GET /address-notes?address=<address>`, which also reads a peer's
 `AGENT_WORKING` claim; `POST /send-mail`; and `PUT` of this connection's own
 address notes. It refuses the other calls `SKILL.md` documents, such as
