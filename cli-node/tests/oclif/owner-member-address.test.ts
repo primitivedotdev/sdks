@@ -10,6 +10,7 @@ import {
 import {
   ownerReportGuidance,
   refreshOwnerMemberAddress,
+  withOwnerMemberAddress,
 } from "../../src/oclif/owner-member-address.js";
 
 const apiBaseUrl = "https://api.primitive.dev/v1";
@@ -97,6 +98,40 @@ describe("the owner's personal address", () => {
     expect(
       loadConnectedAgentProfile(configDir, "work")?.owner_member_address,
     ).toBe(personal);
+  });
+
+  it("stops reading an oversized response and keeps the saved value", async () => {
+    await refresh(async () => me({ owner_member_address: personal }));
+    let pulled = 0;
+    const endless = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        controller.enqueue(new Uint8Array(16 * 1024).fill(32));
+      },
+    });
+    expect(await refresh(async () => new Response(endless))).toBe(personal);
+    expect(pulled).toBeLessThan(10);
+  });
+
+  it("refreshes a rerun of an already configured claim-only profile", async () => {
+    const result = {
+      status: "already_configured" as const,
+      identity: connectedAgentIdentity(
+        "work",
+        loadConnectedAgentProfile(configDir, "work") ??
+          (() => {
+            throw new Error("profile missing");
+          })(),
+      ),
+    };
+    expect(result.identity.ownerMemberAddress).toBeNull();
+    const output = await withOwnerMemberAddress(result, {
+      configDir,
+      fetch: async () => me({ owner_member_address: personal }),
+    });
+    expect(output.status).toBe("already_configured");
+    expect(output.identity.ownerMemberAddress).toBe(personal);
+    expect(output.ownerReportGuidance).toContain(personal);
   });
 
   it("reports null without a saved value or a profile", async () => {
