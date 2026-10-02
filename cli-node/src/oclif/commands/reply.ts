@@ -179,8 +179,8 @@ class ReplyCommand extends Command {
       description: TIME_FLAG_DESCRIPTION,
     }),
     ...repeatFlags(
-      ["fyi", "attachment"],
-      "The reply recipient (the Reply-To address, else the sender) must be an address in your organization, and the reply cannot use --attachment or --fyi.",
+      ["fyi", "attachment", "all"],
+      "The reply recipient (the Reply-To address, else the sender) must be an address in your organization, and the reply cannot use --attachment, --fyi or --all.",
     ),
   };
 
