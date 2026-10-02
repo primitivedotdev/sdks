@@ -27,6 +27,13 @@ if (
 // process.env inside this process is too late for built-in fetch.
 restartWithProxyEnvIfNeeded();
 
+// Bring back a connected session's native receiver if it died without being
+// stopped. Detached and best effort: it never delays or changes this command.
+const { healSelectedReceiverQuietly } = await import(
+  "../dist/oclif/receiver-heal.js"
+);
+healSelectedReceiverQuietly();
+
 const { writeRootAuthContextIfNeeded } = await import(
   "../dist/oclif/root-signup-hint.js"
 );

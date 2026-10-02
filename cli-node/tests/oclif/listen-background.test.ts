@@ -22,13 +22,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveCliAuth, saveCliCredentials } from "../../src/oclif/auth.js";
 import ListenCommand from "../../src/oclif/commands/listen.js";
 import {
+  BACKGROUND_HEAL_INTERVAL_MS,
   BACKGROUND_LISTEN_TARGET_ENV,
   BACKGROUND_LISTEN_TOKEN_ENV,
   type BackgroundListenFailureCode,
   type BackgroundListenTarget,
+  backgroundListenRestartable,
   backgroundListenStatus,
   backgroundListenToken,
+  claimBackgroundListenRestart,
   runBackgroundListen,
+  runBackgroundListenSupervisor,
   startBackgroundListen,
   stopBackgroundListen,
   verifyBackgroundListenTarget,
@@ -39,6 +43,23 @@ import {
 } from "../../src/oclif/listen-state.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
+
+// Simulates a full disk for this process's own state writes only.
+const storage = vi.hoisted(() => ({ failWrites: null as string | null }));
+vi.mock("../../src/oclif/shared-mail-files.js", async (original) => {
+  const actual =
+    await original<typeof import("../../src/oclif/shared-mail-files.js")>();
+  return {
+    ...actual,
+    writeMailJson: (path: string, value: unknown) => {
+      if (storage.failWrites)
+        throw Object.assign(new Error("synthetic storage failure"), {
+          code: storage.failWrites,
+        });
+      actual.writeMailJson(path, value);
+    },
+  };
+});
 
 vi.mock("../../src/oclif/listen-state.js", async (original) => {
   const actual =
@@ -61,6 +82,7 @@ beforeEach(() => {
   };
 });
 afterEach(async () => {
+  storage.failWrites = null;
   vi.unstubAllEnvs();
   vi.mocked(listenProcessIdentity).mockRestore();
   for (const item of active.splice(0)) {
@@ -149,7 +171,18 @@ function childFiles() {
     import { backgroundListenToken, runBackgroundListen } from './listen-background.js';
     if (process.env.PRIMITIVE_LISTEN_SUPERVISOR === '1') {
       const { runBackgroundListenSupervisor } = await import('./listen-background.js');
-      await runBackgroundListenSupervisor();
+      await runBackgroundListenSupervisor({
+        restartDelayMs: Number(process.env.TEST_RESTART_DELAY_MS) || undefined,
+        cooldownMs: Number(process.env.TEST_COOLDOWN_MS) || undefined,
+      });
+      process.exit(0);
+    }
+    // A worker that lost its supervisor relaunches its own command with
+    // --background, as the real CLI does.
+    if (process.argv.includes('--background')) {
+      const { startBackgroundListen } = await import('./listen-background.js');
+      const relaunchTarget = JSON.parse(process.env.TEST_LISTEN_TARGET);
+      await startBackgroundListen({ ...relaunchTarget, argv: [process.argv[1]], startupTimeoutMs: 5000 });
       process.exit(0);
     }
     import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -479,6 +512,106 @@ describe("listener lifecycle state", () => {
     expect(attempt).toBe(2);
     f.controller.abort();
     await f.done;
+  });
+
+  it("keeps receiving through a full disk and resumes its heartbeat afterwards", async () => {
+    let aborted = false;
+    const f = running(async (signal, ready) => {
+      ready();
+      await untilStopped(signal);
+      aborted = true;
+    });
+    await vi.waitFor(() =>
+      expect(backgroundListenStatus(target).phase).toBe("receiving"),
+    );
+    storage.failWrites = "ENOSPC";
+    const frozen = saved().updatedAt;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(aborted).toBe(false);
+    expect(saved().updatedAt).toBe(frozen);
+    storage.failWrites = null;
+    await vi.waitFor(() => expect(saved().updatedAt).toBeGreaterThan(frozen));
+    expect(backgroundListenStatus(target)).toMatchObject({
+      phase: "receiving",
+      healthy: true,
+    });
+    f.controller.abort();
+    await f.done;
+  });
+
+  it.each([
+    ["ENOSPC", "disk-full"],
+    ["EDQUOT", "disk-full"],
+    ["EIO", "storage-unavailable"],
+  ] as const)("records %s from the receiver as %s with guidance", async (code, failureCode) => {
+    const primary = Object.assign(new Error("synthetic write failure"), {
+      code,
+    });
+    const f = running(async () => {
+      throw primary;
+    });
+    await expect(f.done).rejects.toBe(primary);
+    const current = backgroundListenStatus(target);
+    expect(current).toMatchObject({
+      phase: "failed",
+      reason: "failed",
+      healthy: false,
+      failureCode,
+    });
+    expect(current.detail).toContain("new mail is not reaching this session");
+    expect(backgroundListenRestartable(current)).toBe(true);
+  });
+
+  it("keeps a holding failure code over a storage classification", async () => {
+    const primary = Object.assign(new Error("synthetic"), { code: "ENOSPC" });
+    const f = running(
+      async () => {
+        throw primary;
+      },
+      () => false,
+      { failureCode: () => "notification-outcome-unknown" },
+    );
+    await expect(f.done).rejects.toBe(primary);
+    const current = backgroundListenStatus(target);
+    expect(current.failureCode).toBe("notification-outcome-unknown");
+    expect(backgroundListenRestartable(current)).toBe(false);
+  });
+
+  it("reads a failure code from a newer CLI as a generic failure instead of rejecting the record", async () => {
+    const f = running();
+    await vi.waitFor(() =>
+      expect(backgroundListenStatus(target).phase).toBe("receiving"),
+    );
+    f.controller.abort();
+    await f.done;
+    writeFileSync(
+      stateFile(),
+      JSON.stringify({
+        ...saved(),
+        phase: "failed",
+        failureCode: "some-future-code",
+      }),
+    );
+    expect(backgroundListenStatus(target)).toMatchObject({
+      phase: "failed",
+      failureCode: "receiving-failed",
+    });
+  });
+
+  it("allows one external restart per interval and refuses when the claim cannot be saved", () => {
+    const now = Date.now();
+    expect(claimBackgroundListenRestart(target, now)).toBe(true);
+    expect(claimBackgroundListenRestart(target, now + 1000)).toBe(false);
+    expect(
+      claimBackgroundListenRestart(target, now + BACKGROUND_HEAL_INTERVAL_MS),
+    ).toBe(true);
+    storage.failWrites = "ENOSPC";
+    expect(
+      claimBackgroundListenRestart(
+        target,
+        now + 3 * BACKGROUND_HEAL_INTERVAL_MS,
+      ),
+    ).toBe(false);
   });
 
   it("keeps an unknown dispatch failure terminal when stop arrives concurrently", async () => {
@@ -886,15 +1019,20 @@ describe("detached synthetic listener processes", () => {
   );
 
   it.skipIf(process.platform === "win32")(
-    "stops after five unexpected exits within ten minutes",
+    "keeps restarting on a slow cooldown after five unexpected exits instead of giving up",
     async () => {
       const child = childFiles();
       const result = await startBackgroundListen({
         ...target,
         argv: [child],
-        env: { TEST_LISTEN_TARGET: JSON.stringify(target) },
+        env: {
+          TEST_LISTEN_TARGET: JSON.stringify(target),
+          TEST_RESTART_DELAY_MS: "50",
+          TEST_COOLDOWN_MS: "2500",
+        },
         startupTimeoutMs: 5000,
       });
+      const supervisorPid = result.status.supervisorPid;
       let pid = result.status.pid as number;
       for (let exit = 1; exit <= 5; exit++) {
         process.kill(pid, "SIGKILL");
@@ -905,6 +1043,7 @@ describe("detached synthetic listener processes", () => {
               expect(current).toMatchObject({
                 phase: "receiving",
                 healthy: true,
+                failureCode: null,
               });
               expect(current.pid).not.toBe(pid);
             },
@@ -913,17 +1052,129 @@ describe("detached synthetic listener processes", () => {
           pid = backgroundListenStatus(target).pid as number;
         }
       }
+      // An exit nobody reported is recorded as a crash, and status says the
+      // receiver is coming back rather than gone for good.
       await vi.waitFor(
         () =>
           expect(backgroundListenStatus(target)).toMatchObject({
-            phase: "failed",
+            phase: "reconnecting",
+            reason: "restarting",
             healthy: false,
-            failureCode: "restart-budget-exhausted",
+            failureCode: "crashed",
+            supervisorPid,
+          }),
+        { timeout: 2000 },
+      );
+      expect(backgroundListenStatus(target).detail).toContain("restarting");
+      await vi.waitFor(
+        () => {
+          const current = backgroundListenStatus(target);
+          expect(current).toMatchObject({
+            phase: "receiving",
+            healthy: true,
+            failureCode: null,
+            supervisorPid,
+          });
+          expect(current.pid).not.toBe(pid);
+        },
+        { timeout: 8000 },
+      );
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+    },
+    30_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "replaces a supervisor that was killed while its worker kept receiving",
+    async () => {
+      const child = childFiles();
+      const result = await startBackgroundListen({
+        ...target,
+        argv: [child],
+        env: { TEST_LISTEN_TARGET: JSON.stringify(target) },
+        startupTimeoutMs: 5000,
+      });
+      const supervisorPid = result.status.supervisorPid as number;
+      expect(supervisorPid).toBeGreaterThan(0);
+      process.kill(supervisorPid, "SIGKILL");
+      await vi.waitFor(
+        () => {
+          const current = backgroundListenStatus(target);
+          expect(current).toMatchObject({ phase: "receiving", healthy: true });
+          expect(current.supervisorPid).toBeGreaterThan(0);
+          expect(current.supervisorPid).not.toBe(supervisorPid);
+        },
+        { timeout: 15_000 },
+      );
+      // The replacement is a normal supervisor: it restarts its own worker.
+      const replaced = backgroundListenStatus(target);
+      process.kill(replaced.pid as number, "SIGKILL");
+      await vi.waitFor(
+        () => {
+          const current = backgroundListenStatus(target);
+          expect(current).toMatchObject({ phase: "receiving", healthy: true });
+          expect(current.pid).not.toBe(replaced.pid);
+          expect(current.supervisorPid).toBe(replaced.supervisorPid);
+        },
+        { timeout: 10_000 },
+      );
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+    },
+    40_000,
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "keeps supervising through a full disk instead of exiting",
+    async () => {
+      const child = childFiles();
+      const token = randomUUID();
+      vi.stubEnv(BACKGROUND_LISTEN_TOKEN_ENV, token);
+      vi.stubEnv(
+        BACKGROUND_LISTEN_TARGET_ENV,
+        JSON.stringify({
+          scope: target.scope,
+          threadId: target.threadId,
+          configDir: realpathSync(directory),
+          configuration: null,
+        }),
+      );
+      vi.stubEnv("PRIMITIVE_LISTEN_SUPERVISOR_ARGV", JSON.stringify([child]));
+      vi.stubEnv("TEST_LISTEN_TARGET", JSON.stringify(target));
+      let settled = false;
+      const done = runBackgroundListenSupervisor({
+        restartDelayMs: 50,
+      }).finally(() => {
+        settled = true;
+      });
+      await vi.waitFor(
+        () =>
+          expect(backgroundListenStatus(target)).toMatchObject({
+            phase: "receiving",
+            healthy: true,
           }),
         { timeout: 5000 },
       );
+      // Only this process's writes fail: the supervisor's heartbeat and its
+      // stop handling. Before this was tolerated, the first failed heartbeat
+      // ended supervision with nothing recorded.
+      storage.failWrites = "ENOSPC";
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      expect(settled).toBe(false);
+      storage.failWrites = null;
+      await vi.waitFor(
+        () => {
+          const current = backgroundListenStatus(target);
+          expect(current).toMatchObject({ phase: "receiving", healthy: true });
+          expect(Date.now() - (current.supervisorUpdatedAt ?? 0)).toBeLessThan(
+            2000,
+          );
+        },
+        { timeout: 5000 },
+      );
+      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+      await done;
     },
-    30_000,
+    20_000,
   );
 
   it("rejects a profile replaced during child startup before it can create another receiver", async () => {

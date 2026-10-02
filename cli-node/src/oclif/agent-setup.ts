@@ -491,7 +491,19 @@ export async function setupAgent(params: {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0 || timeoutMs > 120_000)
     throw fail("Setup timeout must be between zero and two minutes.");
   const dependencies = { ...defaults(), ...params.dependencies };
-  if ((params.receiverMode ?? "native") === "native") {
+  const directory = agentProfileDirectory(params.configDir, profileName);
+  // A resume without --receiver keeps the saved receiver, so preflight that one.
+  let receiverMode = params.receiverMode;
+  if (receiverMode === undefined && params.resume) {
+    try {
+      const saved = readMailJson(join(directory, "setup.json"));
+      receiverMode =
+        saved === null ? undefined : parseState(saved).receiverMode;
+    } catch {
+      /* The locked read below reports an invalid saved setup. */
+    }
+  }
+  if ((receiverMode ?? "native") === "native") {
     try {
       await dependencies.preflight(params.session);
     } catch {
@@ -500,22 +512,38 @@ export async function setupAgent(params: {
       );
     }
   }
-  const directory = agentProfileDirectory(params.configDir, profileName);
   privateMailDirectory(directory, true);
   const release = acquireListenLock(directory, "setup");
   try {
     const path = join(directory, "setup.json");
     const value = readMailJson(path);
     let state = value === null ? null : parseState(value);
-    if (
-      state &&
-      (state.session !== params.session ||
-        state.receiverMode !== (params.receiverMode ?? "native") ||
-        state.contactRequests !== Boolean(params.contactRequests))
-    )
-      throw fail(
-        "This profile is already bound to a different setup configuration. Its session and notification preferences were not changed.",
-      );
+    // Saved choices are reused when an option is omitted. Only an explicit
+    // option that disagrees with the saved setup is refused, and the message
+    // names it so the caller can drop or correct that one option.
+    if (state) {
+      const conflicts = [
+        ...(state.session !== params.session
+          ? [`--session (this profile is bound to session ${state.session})`]
+          : []),
+        ...(params.receiverMode !== undefined &&
+        state.receiverMode !== params.receiverMode
+          ? [`--receiver ${params.receiverMode} (saved: ${state.receiverMode})`]
+          : []),
+        ...(params.contactRequests !== undefined &&
+        state.contactRequests !== params.contactRequests
+          ? [
+              state.contactRequests
+                ? "contact requests off (saved setup has --contact-requests)"
+                : "--contact-requests (saved setup did not enable it)",
+            ]
+          : []),
+      ];
+      if (conflicts.length)
+        throw fail(
+          `This profile's saved setup conflicts with ${conflicts.join(" and ")}. Omit the option to reuse the saved setup${params.resume ? "" : ", or use a separate profile"}. Its session and notification preferences were not changed.`,
+        );
+    }
     if (!state && loadConnectedAgentProfile(params.configDir, profileName))
       throw fail(
         "This profile was configured without a setup binding. Use its existing session setup; do not adopt it into another session.",
@@ -608,7 +636,7 @@ export async function setupAgent(params: {
       },
       receiving: { state: receiving },
       ...(ownerNotifications ? { ownerNotifications } : {}),
-      resumeCommand: `primitive agent connect --profile ${profileName} --session ${params.session}${state?.receiverMode === "external" ? " --receiver external" : ""} --resume${state?.contactRequests ? " --contact-requests" : ""} --json`,
+      resumeCommand: `primitive agent connect --profile ${profileName} --session ${params.session}${state?.receiverMode === "external" ? " --receiver external" : ""} --resume --json`,
       guidance:
         "Reply submission is not proof of delivery or app verification. Receiving health is reported separately. Keep this profile for all mail commands.",
     });

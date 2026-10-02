@@ -30,6 +30,12 @@ const STALE_AFTER_MS = 15_000;
 const RESTART_WINDOW_MS = 10 * 60_000;
 const HEALTHY_RESET_MS = 10 * 60_000;
 const MAX_FAILURES = 5;
+// After the fast restart budget is spent the supervisor keeps trying, slowly.
+// A receiver that stays down is worse than one that retries every few minutes.
+const RESTART_COOLDOWN_MS = 5 * 60_000;
+// Restarts that come from outside the supervisor (a worker replacing a lost
+// supervisor, or a command run from the bound session) share one rate limit.
+export const BACKGROUND_HEAL_INTERVAL_MS = 60_000;
 const phases = [
   "starting",
   "receiving",
@@ -44,13 +50,65 @@ const failureCodes = [
   "connection-changed",
   "receiving-failed",
   "restart-budget-exhausted",
+  "disk-full",
+  "storage-unavailable",
+  "crashed",
 ] as const;
 export type BackgroundListenFailureCode = (typeof failureCodes)[number];
+// These hold the receiver on purpose: restarting could repeat a notification
+// whose outcome is unknown, or adopt a connection the owner did not choose.
+const HOLDING_FAILURE_CODES: readonly BackgroundListenFailureCode[] = [
+  "notification-outcome-unknown",
+  "connection-changed",
+];
 
 function knownFailureCode(value: unknown): BackgroundListenFailureCode | null {
   return failureCodes.includes(value as BackgroundListenFailureCode)
     ? (value as BackgroundListenFailureCode)
     : null;
+}
+
+/** A newer CLI may record a code this version does not know; keep the record readable. */
+function savedFailureCode(value: unknown): BackgroundListenFailureCode | null {
+  if (value === null || value === undefined) return null;
+  return knownFailureCode(value) ?? "receiving-failed";
+}
+
+const DISK_FULL_ERRORS = new Set(["ENOSPC", "EDQUOT"]);
+const STORAGE_ERRORS = new Set([
+  "EIO",
+  "EROFS",
+  "EMFILE",
+  "ENFILE",
+  "EAGAIN",
+  "EBUSY",
+  "ENOMEM",
+]);
+
+/** Classify local storage failures that a later retry can outlive. */
+export function storageFailureCode(
+  error: unknown,
+): "disk-full" | "storage-unavailable" | null {
+  const code =
+    error && typeof error === "object"
+      ? (error as NodeJS.ErrnoException).code
+      : undefined;
+  if (typeof code !== "string") return null;
+  if (DISK_FULL_ERRORS.has(code)) return "disk-full";
+  if (STORAGE_ERRORS.has(code)) return "storage-unavailable";
+  return null;
+}
+
+/** Whether a stopped receiver may be restarted without an explicit owner action. */
+export function backgroundListenRestartable(
+  status: BackgroundListenStatus,
+): boolean {
+  if (status.reason === "exited") return true;
+  return (
+    status.reason === "failed" &&
+    status.failureCode !== null &&
+    !HOLDING_FAILURE_CODES.includes(status.failureCode)
+  );
 }
 
 function failureGuidance(code: BackgroundListenFailureCode): string {
@@ -65,6 +123,48 @@ function failureGuidance(code: BackgroundListenFailureCode): string {
       return "Inspect listener status and run the same command without --background for details.";
     case "restart-budget-exhausted":
       return "The listener repeatedly exited. Inspect listener status before starting it again.";
+    case "disk-full":
+      return "The disk was full, so the receiver could not save its state. Free disk space; the receiver retries on its own.";
+    case "storage-unavailable":
+      return "The receiver could not read or write its local state. Check the config directory's disk and permissions; the receiver retries on its own.";
+    case "crashed":
+      return "The receiver exited without reporting a reason. It is restarted automatically; inspect status if this repeats.";
+  }
+}
+
+/** One sentence an owner or agent can act on; never raw error text. */
+function statusDetail(
+  status: Pick<BackgroundListenStatus, "healthy" | "reason" | "failureCode">,
+): string | null {
+  if (status.healthy) return null;
+  const guidance = status.failureCode
+    ? failureGuidance(status.failureCode)
+    : "";
+  const withGuidance = (text: string) =>
+    guidance ? `${text} ${guidance}` : text;
+  switch (status.reason) {
+    case "exited":
+      return "The receiver stopped unexpectedly and new mail is not reaching this session. Any primitive command run from this session restarts it, or start it again with the same listen command.";
+    case "restarting":
+      return withGuidance(
+        "The receiver is restarting; new mail waits until it is back.",
+      );
+    case "failed":
+      return withGuidance(
+        "The receiver stopped and new mail is not reaching this session.",
+      );
+    case "stale":
+      return withGuidance(
+        "The receiver has not recorded a heartbeat recently. It may be unable to write local state.",
+      );
+    case "unverifiable":
+      return "The receiver's process cannot be verified.";
+    case "stopped":
+      return "The receiver was stopped.";
+    case "absent":
+      return "No background receiver is recorded for this session.";
+    default:
+      return guidance || null;
   }
 }
 export type BackgroundListenTarget = {
@@ -110,6 +210,8 @@ export type BackgroundListenStatus = {
   updatedAt: number | null;
   supervisorPid?: number | null;
   supervisorUpdatedAt?: number | null;
+  /** Why the receiver is not healthy, in words; null when healthy. */
+  detail?: string | null;
 };
 
 export function backgroundListenToken(
@@ -230,7 +332,7 @@ function readSupervisor(path: string): SupervisorState | null {
     !["starting", "running", "stopped", "failed"].includes(String(row.phase)) ||
     !Number.isSafeInteger(row.updatedAt) ||
     Number(row.updatedAt) < 0 ||
-    (row.failureCode !== null && knownFailureCode(row.failureCode) === null)
+    (row.failureCode !== null && typeof row.failureCode !== "string")
   )
     throw new ListenStateError(
       "Background supervisor state is invalid. Preserve it before retrying.",
@@ -242,7 +344,7 @@ function readSupervisor(path: string): SupervisorState | null {
     identity: mailString(row.identity),
     phase: row.phase as SupervisorState["phase"],
     updatedAt: Number(row.updatedAt),
-    failureCode: knownFailureCode(row.failureCode),
+    failureCode: savedFailureCode(row.failureCode),
   };
 }
 
@@ -271,7 +373,7 @@ function readState(path: string): State | null {
     (row.configuration !== null && typeof row.configuration !== "string") ||
     (row.failureCode !== undefined &&
       row.failureCode !== null &&
-      knownFailureCode(row.failureCode) === null) ||
+      typeof row.failureCode !== "string") ||
     !Number.isSafeInteger(row.updatedAt) ||
     Number(row.updatedAt) < 0
   )
@@ -288,7 +390,7 @@ function readState(path: string): State | null {
     configuration: configurationFingerprint(
       row.configuration === null ? undefined : String(row.configuration),
     ),
-    failureCode: knownFailureCode(row.failureCode),
+    failureCode: savedFailureCode(row.failureCode),
     updatedAt: Number(row.updatedAt),
   };
 }
@@ -317,6 +419,11 @@ function status(state: State | null): BackgroundListenStatus {
       failureCode: null,
       reason: "absent",
       updatedAt: null,
+      detail: statusDetail({
+        healthy: false,
+        reason: "absent",
+        failureCode: null,
+      }),
     };
   const age = Date.now() - state.updatedAt;
   const ownership = owner(state);
@@ -338,6 +445,11 @@ function status(state: State | null): BackgroundListenStatus {
     failureCode: state.failureCode,
     reason,
     updatedAt: state.updatedAt,
+    detail: statusDetail({
+      healthy: reason === null,
+      reason,
+      failureCode: state.failureCode,
+    }),
   };
 }
 
@@ -370,6 +482,11 @@ export function backgroundListenStatus(
               : worker.healthy
                 ? null
                 : "restarting";
+  const healthy = active && reason === null;
+  // A healthy receiver's last recovered failure is history, not its state.
+  const failureCode = healthy
+    ? null
+    : (supervisor.failureCode ?? worker.failureCode);
   return {
     ...worker,
     phase:
@@ -378,12 +495,43 @@ export function backgroundListenStatus(
         : reason === "restarting"
           ? "reconnecting"
           : worker.phase,
-    healthy: active && reason === null,
+    healthy,
     reason,
-    failureCode: supervisor.failureCode ?? worker.failureCode,
+    failureCode,
     supervisorPid: supervisor.pid,
     supervisorUpdatedAt: supervisor.updatedAt,
+    detail: statusDetail({ healthy, reason, failureCode }),
   };
+}
+
+/**
+ * Claim the shared restart slot for one receiver. False means another restart
+ * was attempted recently, or the claim could not be recorded (for example on a
+ * full disk), so the caller must not start one.
+ */
+export function claimBackgroundListenRestart(
+  target: BackgroundListenTarget,
+  now = Date.now(),
+): boolean {
+  try {
+    const paths = files(target, true);
+    const path = join(paths.directory, "restart.json");
+    const prior = readMailJson(path, 256);
+    const at =
+      prior && typeof prior === "object" && !Array.isArray(prior)
+        ? (prior as { at?: unknown }).at
+        : undefined;
+    if (
+      typeof at === "number" &&
+      at <= now &&
+      now - at < BACKGROUND_HEAL_INTERVAL_MS
+    )
+      return false;
+    writeMailJson(path, { at: now });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function stopToken(path: string): string | null {
@@ -495,6 +643,12 @@ export async function runBackgroundListen(
     signal?: AbortSignal;
     heartbeatMs?: number;
     retryDelayMs?: number;
+    /**
+     * Start a replacement supervisor after this worker's supervisor died
+     * without stopping it. Defaults to relaunching this same command with
+     * --background; the replacement stops this worker and supervises a new one.
+     */
+    relaunchSupervisor?(): void;
   },
 ): Promise<void> {
   verifyBackgroundListenTarget(options);
@@ -532,13 +686,43 @@ export async function runBackgroundListen(
     writeMailJson(paths.state, state);
     started = true;
   };
+  let relaunched = false;
+  const supervised = process.env[SUPERVISOR_WORKER_ENV] === token;
+  const watchSupervisor = () => {
+    if (!supervised || relaunched || controller.signal.aborted) return;
+    const supervisor = readSupervisor(paths.supervisor);
+    if (!supervisor || supervisor.token !== token) return;
+    // The IPC channel closes as soon as the supervisor exits; a stale
+    // heartbeat covers a supervisor that started this worker without one.
+    if (process.connected && Date.now() - supervisor.updatedAt < STALE_AFTER_MS)
+      return;
+    const lost =
+      supervisor.phase === "starting" ||
+      supervisor.phase === "running" ||
+      (supervisor.phase === "failed" && supervisor.failureCode === "crashed");
+    if (!lost || owner(supervisor) !== "gone") return;
+    relaunched = true;
+    if (!claimBackgroundListenRestart(options)) return;
+    (options.relaunchSupervisor ?? relaunchSupervisor)();
+  };
   const tick = () => {
     try {
       if (stopToken(paths.stop) === token) cancel();
       publish();
     } catch (error) {
-      failure ??= { error };
-      cancel();
+      // A full or failing disk must not end receiving: mail can still be
+      // delivered, and the heartbeat resumes once the disk recovers. Status
+      // reports the missing heartbeat as stale meanwhile.
+      if (storageFailureCode(error) === null) {
+        failure ??= { error };
+        cancel();
+        return;
+      }
+    }
+    try {
+      watchSupervisor();
+    } catch {
+      /* Supervision recovery is best effort and never ends receiving. */
     }
   };
   options.signal?.addEventListener("abort", cancel, { once: true });
@@ -593,9 +777,13 @@ export async function runBackgroundListen(
   } catch (error) {
     failure ??= { error };
     try {
-      state.failureCode =
+      const reported =
         knownFailureCode(options.failureCode?.(failure.error)) ??
         "receiving-failed";
+      state.failureCode =
+        reported === "receiving-failed"
+          ? (storageFailureCode(failure.error) ?? reported)
+          : reported;
     } catch {
       // Diagnostics cannot replace the primary failure or expose raw errors.
       state.failureCode = "receiving-failed";
@@ -629,8 +817,25 @@ export async function runBackgroundListen(
   if (failure) throw failure.error;
 }
 
-/** Supervise one exact listener generation until a stop or the restart budget is exhausted. */
-export async function runBackgroundListenSupervisor(): Promise<void> {
+/** Relaunch this worker's own command detached, with --background restored. */
+function relaunchSupervisor(): void {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env[BACKGROUND_LISTEN_TOKEN_ENV];
+  delete env[BACKGROUND_LISTEN_TARGET_ENV];
+  delete env[SUPERVISOR_WORKER_ENV];
+  const child = spawn(
+    process.execPath,
+    [...process.execArgv, ...process.argv.slice(1), "--background"],
+    { env, detached: true, windowsHide: true, stdio: "ignore" },
+  );
+  child.on("error", () => {});
+  child.unref();
+}
+
+/** Supervise one exact listener generation until a stop or a holding failure. */
+export async function runBackgroundListenSupervisor(
+  options: { restartDelayMs?: number; cooldownMs?: number } = {},
+): Promise<void> {
   const token = mailId(process.env[BACKGROUND_LISTEN_TOKEN_ENV]);
   const expected = mailObject(
     JSON.parse(process.env[BACKGROUND_LISTEN_TARGET_ENV] ?? ""),
@@ -651,6 +856,8 @@ export async function runBackgroundListenSupervisor(): Promise<void> {
   )
     throw new ListenStateError("Background supervisor command is invalid.");
   const argv = argvValue as string[];
+  const restartDelayMs = options.restartDelayMs ?? 1000;
+  const cooldownMs = options.cooldownMs ?? RESTART_COOLDOWN_MS;
   const paths = files(target, true);
   const release = acquireListenLock(paths.directory, "background-supervisor");
   const identity = listenProcessIdentity(process.pid);
@@ -682,31 +889,68 @@ export async function runBackgroundListenSupervisor(): Promise<void> {
     record.updatedAt = Date.now();
     writeMailJson(paths.supervisor, record);
   };
+  // Supervision outlives a full or failing disk: a missed write only leaves
+  // the record stale until the next heartbeat. Ownership conflicts still end it.
+  const tryPublish = () => {
+    try {
+      publish();
+    } catch (error) {
+      if (storageFailureCode(error) === null) throw error;
+    }
+  };
+  const stopRequested = () => {
+    try {
+      return stopToken(paths.stop) === token;
+    } catch (error) {
+      if (storageFailureCode(error) !== null) return false;
+      throw error;
+    }
+  };
   let child: ReturnType<typeof spawn> | undefined;
   let stopped = false;
   const cancel = () => {
     stopped = true;
-    writeMailJson(paths.stop, { token });
+    try {
+      writeMailJson(paths.stop, { token });
+    } catch {
+      /* The signal below still reaches the current worker. */
+    }
     child?.kill("SIGTERM");
   };
   process.on("SIGTERM", cancel);
   process.on("SIGINT", cancel);
+  // Anything this function does not catch would end supervision silently.
+  // Record why before exiting so status and the worker can tell a crash from
+  // a deliberate stop.
+  const crashed = () => {
+    record.phase = "failed";
+    record.failureCode = "crashed";
+    try {
+      tryPublish();
+    } catch {
+      /* Exit regardless. */
+    }
+    child?.kill("SIGTERM");
+    process.exit(1);
+  };
+  process.on("uncaughtException", crashed);
+  process.on("unhandledRejection", crashed);
   const heartbeat = setInterval(() => {
     try {
-      if (stopToken(paths.stop) === token) {
+      if (stopRequested()) {
         stopped = true;
         child?.kill("SIGTERM");
       }
-      publish();
+      tryPublish();
     } catch {
       cancel();
     }
   }, 1000);
   const failures: number[] = [];
   try {
-    publish();
+    tryPublish();
     while (!stopped) {
-      if (stopToken(paths.stop) === token) break;
+      if (stopRequested()) break;
       const env: NodeJS.ProcessEnv = {
         ...process.env,
         [SUPERVISOR_WORKER_ENV]: token,
@@ -719,12 +963,23 @@ export async function runBackgroundListenSupervisor(): Promise<void> {
         stdio: ["ignore", "ignore", "ignore", "ipc"],
       });
       let readyAt: number | null = null;
+      // The worker reports its failure over IPC too, so a reason survives a
+      // disk too full for the worker to record it.
+      let reported: BackgroundListenFailureCode | null = null;
       child.on("message", (message: unknown) => {
         if (!message || typeof message !== "object") return;
         const row = message as Record<string, unknown>;
         if (row.type !== "primitive-listen-state" || row.token !== token)
           return;
-        if (row.phase === "receiving" && readyAt === null) readyAt = Date.now();
+        if (row.phase === "receiving") {
+          if (readyAt === null) readyAt = Date.now();
+          if (record.failureCode !== null) {
+            record.failureCode = null;
+            tryPublish();
+          }
+        }
+        if (row.phase === "failed")
+          reported = knownFailureCode(row.failureCode) ?? "receiving-failed";
         try {
           if (process.connected) process.send?.(message, () => {});
         } catch {
@@ -732,24 +987,36 @@ export async function runBackgroundListenSupervisor(): Promise<void> {
         }
       });
       record.phase = "running";
-      publish();
-      await new Promise<void>((resolve) => {
-        child?.once("exit", () => resolve());
-        child?.once("error", () => resolve());
+      tryPublish();
+      const exit = await new Promise<{
+        code: number | null;
+        signal: NodeJS.Signals | null;
+      }>((resolve) => {
+        child?.once("exit", (code, signal) => resolve({ code, signal }));
+        child?.once("error", () => resolve({ code: null, signal: null }));
       });
       child = undefined;
-      if (stopped || stopToken(paths.stop) === token) break;
-      const worker = readState(paths.state);
-      if (
-        worker?.token === token &&
-        worker.phase === "failed" &&
-        ["notification-outcome-unknown", "connection-changed"].includes(
-          worker.failureCode ?? "",
-        )
-      ) {
+      if (stopped || stopRequested()) break;
+      let worker: State | null = null;
+      try {
+        worker = readState(paths.state);
+      } catch {
+        /* An unreadable record is treated as an unreported exit. */
+      }
+      const recorded =
+        worker?.token === token && worker.phase === "failed"
+          ? worker.failureCode
+          : null;
+      const failureCode: BackgroundListenFailureCode =
+        reported ??
+        recorded ??
+        (exit.code === 0 && exit.signal === null
+          ? "receiving-failed"
+          : "crashed");
+      if (HOLDING_FAILURE_CODES.includes(failureCode)) {
         record.phase = "failed";
-        record.failureCode = worker.failureCode;
-        publish();
+        record.failureCode = failureCode;
+        tryPublish();
         return;
       }
       const now = Date.now();
@@ -758,24 +1025,25 @@ export async function runBackgroundListenSupervisor(): Promise<void> {
       failures.push(now);
       while (failures.length && (failures[0] ?? now) < now - RESTART_WINDOW_MS)
         failures.shift();
-      if (failures.length >= MAX_FAILURES) {
-        record.phase = "failed";
-        record.failureCode = "restart-budget-exhausted";
-        publish();
-        return;
-      }
+      // Never give up on a receiver the owner still expects to work. Once
+      // the fast budget is spent, retry on a slow, fixed cooldown instead.
+      const backoff =
+        failures.length >= MAX_FAILURES
+          ? cooldownMs
+          : Math.min(restartDelayMs * 2 ** (failures.length - 1), 30_000);
       record.phase = "starting";
-      publish();
-      const backoff = Math.min(1000 * 2 ** (failures.length - 1), 30_000);
+      record.failureCode = failureCode;
+      tryPublish();
       const end = Date.now() + backoff;
-      while (!stopped && Date.now() < end && stopToken(paths.stop) !== token)
+      while (!stopped && Date.now() < end && !stopRequested())
         await delay(Math.min(200, end - Date.now()));
     }
     record.phase = "stopped";
-    publish();
+    record.failureCode = null;
+    tryPublish();
   } catch (error) {
     record.phase = "failed";
-    record.failureCode = "receiving-failed";
+    record.failureCode = "crashed";
     try {
       publish();
     } catch {
@@ -786,10 +1054,16 @@ export async function runBackgroundListenSupervisor(): Promise<void> {
     clearInterval(heartbeat);
     process.off("SIGTERM", cancel);
     process.off("SIGINT", cancel);
+    process.off("uncaughtException", crashed);
+    process.off("unhandledRejection", crashed);
     child?.kill("SIGTERM");
-    if (stopToken(paths.stop) === token) removeMailFile(paths.stop);
-    if (record.phase === "stopped" && readState(paths.state) === null)
-      removeMailFile(paths.supervisor);
+    try {
+      if (stopToken(paths.stop) === token) removeMailFile(paths.stop);
+      if (record.phase === "stopped" && readState(paths.state) === null)
+        removeMailFile(paths.supervisor);
+    } catch {
+      /* Cleanup never replaces the outcome already recorded. */
+    }
     release();
   }
 }
@@ -874,14 +1148,16 @@ export async function startBackgroundListen(
         throw new ListenStateError(
           "An existing foreground listener owns this session. Stop it before restarting with --background.",
         );
-      if (prior.configuration !== configuration)
-        throw new ListenStateError(
-          "Stop the existing listener before changing receiving options.",
-        );
       // A supervisor record that is no longer running means this worker
       // lost its restart protection. Stop it and start a supervised one
-      // rather than reuse it.
-      if (!priorSupervisor) return { started: false, status: current };
+      // rather than reuse it, even when an upgrade changed its options.
+      if (!priorSupervisor) {
+        if (prior.configuration !== configuration)
+          throw new ListenStateError(
+            "Stop the existing listener before changing receiving options.",
+          );
+        return { started: false, status: current };
+      }
       if (!(await stopOrphanedWorker(paths, prior.token)))
         throw new ListenStateError(
           "The existing background listener lost its supervisor and did not stop. Stop it, then start again.",

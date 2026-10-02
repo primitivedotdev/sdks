@@ -66,20 +66,22 @@ function readPendingAgentInfo(path: string): string | null {
   return null;
 }
 
-function savedReceiverMode(
+function savedSetup(
   configDir: string,
   profileName: string,
-): "native" | "external" | null {
+): { receiverMode: "native" | "external"; contactRequests: boolean } | null {
   try {
     const saved = readMailJson(
       join(agentProfileDirectory(configDir, profileName), "setup.json"),
     );
     if (!saved || typeof saved !== "object" || Array.isArray(saved))
       return null;
-    // Setups saved before receiver modes existed were native.
-    return (saved as { receiverMode?: unknown }).receiverMode === "external"
-      ? "external"
-      : "native";
+    const row = saved as { receiverMode?: unknown; contactRequests?: unknown };
+    return {
+      // Setups saved before receiver modes existed were native.
+      receiverMode: row.receiverMode === "external" ? "external" : "native",
+      contactRequests: row.contactRequests === true,
+    };
   } catch {
     return null;
   }
@@ -269,7 +271,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
   const receiver =
     options.receiver ??
     (options.resume
-      ? savedReceiverMode(options.configDir, profileName)
+      ? (savedSetup(options.configDir, profileName)?.receiverMode ?? null)
       : null) ??
     (runtime === "claude" ? "external" : "native");
   if (
@@ -408,7 +410,11 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     `--session ${options.session}`,
     `--receiver ${receiver}`,
     "--resume",
-    ...(options.contactRequests ? ["--contact-requests"] : []),
+    // A resume reuses the saved choice, so repeat the effective one.
+    ...((options.contactRequests ??
+    savedSetup(options.configDir, profileName)?.contactRequests)
+      ? ["--contact-requests"]
+      : []),
     ...(options.skill === false ? ["--no-skill"] : []),
     ...(options.project ? ["--project"] : []),
     "--json",
