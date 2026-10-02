@@ -102,12 +102,25 @@ export default class AgentConnectCommand extends Command {
           flags.profile,
         );
         if (flags.json) this.log(JSON.stringify(result));
-        else
+        else if (result.status !== "configured")
+          this.log(`Agent profile ${flags.profile} is not configured.`);
+        else {
+          const receiving: {
+            state: string;
+            reason: string | null;
+            failureCode?: string | null;
+            detail?: string | null;
+          } = result.receiving;
+          const why = [
+            receiving.reason,
+            receiving.failureCode !== receiving.reason
+              ? receiving.failureCode
+              : null,
+          ].filter(Boolean);
           this.log(
-            result.status === "configured"
-              ? `Agent profile ${flags.profile} is configured for ${result.identity.agentAddress}. Local receiving: ${result.receiving.state}${result.receiving.reason ? ` (${result.receiving.reason})` : ""}.`
-              : `Agent profile ${flags.profile} is not configured.`,
+            `Agent profile ${flags.profile} is configured for ${result.identity.agentAddress}. Local receiving: ${receiving.state}${why.length ? ` (${why.join(", ")})` : ""}.${receiving.detail ? ` ${receiving.detail}` : ""}`,
           );
+        }
         return;
       }
       if (flags.session) {
@@ -192,7 +205,7 @@ export default class AgentConnectCommand extends Command {
         error instanceof AgentConnectionSetupError
           ? error.message
           : flags.session
-            ? `Setup paused. Preserve the private profile and run ${invocation(process.argv[1])} agent connect --profile ${flags.profile ?? defaultAgentProfileName(flags.session)} --session ${flags.session}${flags.receiver ? ` --receiver ${flags.receiver}` : ""} --resume${flags["contact-requests"] ? " --contact-requests" : ""} --json. Do not manually resend verification or reclaim the invitation.`
+            ? `Setup paused. Preserve the private profile and run ${invocation(process.argv[1])} agent connect --profile ${flags.profile ?? defaultAgentProfileName(flags.session)} --session ${flags.session}${flags.receiver ? ` --receiver ${flags.receiver}` : ""} --resume --json. Do not manually resend verification or reclaim the invitation.`
             : "Agent setup did not complete. Preserve the private profile and request a fresh owner invitation if a claim may have been submitted.",
         { exit: 1 },
       );

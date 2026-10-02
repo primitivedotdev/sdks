@@ -100,6 +100,8 @@ describe("connected-agent setup", () => {
       mode: "native",
       state: "unknown",
       reason: "absent",
+      failureCode: null,
+      detail: "No background receiver is recorded for this session.",
       liveness: "unknown",
       lastSuccessfulMailCheckAt: null,
     });

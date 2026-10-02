@@ -219,8 +219,22 @@ describe("one-command connected agent setup", () => {
       verification: { state: "reply_submitted" },
       receiving: { state: "external_setup_required" },
     });
-    f.dependencies.preflight.mockResolvedValue(undefined);
-    await expect(f.resume()).rejects.toThrow("different setup configuration");
+    // Omitting --receiver on resume reuses the saved external receiver and
+    // never probes a native socket.
+    expect(await f.resume()).toMatchObject({
+      receiving: { state: "external_setup_required" },
+    });
+    expect(f.dependencies.preflight).not.toHaveBeenCalled();
+    // The conflicting option is named even though native preflight would fail.
+    await expect(
+      setupAgent({
+        ...f.params,
+        invitation: undefined,
+        resume: true,
+        receiverMode: "native",
+      }),
+    ).rejects.toThrow("--receiver native (saved: external)");
+    expect(f.dependencies.preflight).not.toHaveBeenCalled();
     expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
     expect(f.fetch).toHaveBeenCalledOnce();
   });
@@ -313,7 +327,7 @@ describe("one-command connected agent setup", () => {
         resume: true,
         session: randomUUID(),
       }),
-    ).rejects.toThrow("different setup configuration");
+    ).rejects.toThrow("conflicts with --session");
     await expect(
       setupAgent({
         ...f.params,
@@ -321,8 +335,47 @@ describe("one-command connected agent setup", () => {
         resume: true,
         contactRequests: false,
       }),
-    ).rejects.toThrow("different setup configuration");
+    ).rejects.toThrow("saved setup has --contact-requests");
     expect(f.fetch).toHaveBeenCalledOnce();
+  });
+  it("reuses the saved setup configuration when resume omits its options", async () => {
+    const f = fixture();
+    f.dependencies.startListener.mockResolvedValueOnce(false);
+    expect(await setupAgent(f.params)).toMatchObject({
+      receiving: { state: "not_ready" },
+    });
+    const { contactRequests: _omitted, ...withoutOptions } = f.params;
+    expect(
+      await setupAgent({
+        ...withoutOptions,
+        invitation: undefined,
+        resume: true,
+      }),
+    ).toMatchObject({ receiving: { state: "healthy" } });
+    // The listener restarts with the saved contact-request choice.
+    expect(f.dependencies.startListener).toHaveBeenLastCalledWith(
+      f.params.profileName,
+      f.params.session,
+      true,
+      f.configDir,
+    );
+    expect(f.state().contactRequests).toBe(true);
+    expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
+  });
+  it("names an explicit option that conflicts with the saved setup", async () => {
+    const f = fixture();
+    await setupAgent({ ...f.params, contactRequests: false });
+    const error = await setupAgent({
+      ...f.params,
+      invitation: undefined,
+      resume: true,
+      contactRequests: true,
+    }).catch((caught: unknown) => caught);
+    expect((error as Error).message).toContain(
+      "--contact-requests (saved setup did not enable it)",
+    );
+    expect((error as Error).message).toContain("Omit the option");
+    expect(f.state().contactRequests).toBe(false);
   });
   it("preserves silence and reports receiver failure without losing completed setup", async () => {
     const f = fixture();
