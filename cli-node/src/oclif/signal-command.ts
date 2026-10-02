@@ -15,6 +15,7 @@ import {
   sendPreparedSignal,
 } from "@primitivedotdev/sdk/interactions";
 import { extractErrorPayload } from "./api-command.js";
+import { recordSentSignal } from "./auto-signals.js";
 import type { ConnectedAgentIdentity } from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
 import { reconcileChatSend } from "./reconcile-chat-send.js";
@@ -36,6 +37,14 @@ export type SignalOptions = {
   kind: SignalKind;
   status?: SignalStatus;
   expiresIn?: number;
+  /**
+   * Distinguishes successive automatic renewals of the same activity so each
+   * is its own durable intent. Explicit invocations never set it, which keeps
+   * their deduplication keys unchanged.
+   */
+  slot?: string;
+  /** Checked immediately before submission; false leaves the intent unsent. */
+  shouldSend?: () => boolean;
 };
 type State = {
   version: 1;
@@ -253,6 +262,7 @@ export async function sendSignal(context: Context, options: SignalOptions) {
         id,
         options.kind,
         options.status ?? null,
+        ...(options.slot === undefined ? [] : [options.slot]),
       ]),
     )
     .digest("hex");
@@ -296,6 +306,7 @@ export async function sendSignal(context: Context, options: SignalOptions) {
         return report(state);
       }
       writeMailJson(path, state);
+      if (state.sentId) recordSentSignal(context.configDir, state.sentId);
       if (state.phase === "uncertain") return report(state);
     }
     const expired =
@@ -303,6 +314,7 @@ export async function sendSignal(context: Context, options: SignalOptions) {
       state?.prepared.expiresAtMs !== undefined &&
       now() >= state.prepared.expiresAtMs;
     if (state && ["sent", "not_sent", "expired"].includes(state.phase)) {
+      if (state.sentId) recordSentSignal(context.configDir, state.sentId);
       if (!expired) return report(state, true);
       state = null; // A new explicit invocation may renew only a known, expired outcome.
     }
@@ -329,6 +341,7 @@ export async function sendSignal(context: Context, options: SignalOptions) {
       writeMailJson(path, state);
       return report(state);
     }
+    if (options.shouldSend && !options.shouldSend()) return report(state);
     state.phase = "submitting";
     writeMailJson(path, state);
     let outcome: SignalSendResult<Awaited<ReturnType<typeof sendEmail<false>>>>;
@@ -380,6 +393,7 @@ export async function sendSignal(context: Context, options: SignalOptions) {
       }
     }
     writeMailJson(path, state);
+    if (state.sentId) recordSentSignal(context.configDir, state.sentId);
     return report(state, alreadySent);
   } finally {
     release();

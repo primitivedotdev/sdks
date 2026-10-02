@@ -5,6 +5,7 @@ import { Command, Errors, Flags } from "@oclif/core";
 import { resolveCliApiRequestConfig } from "../api-client.js";
 import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
+import { dispatchAutoRead } from "../auto-signals.js";
 import {
   agentProfileDirectory,
   agentProfileName,
@@ -706,6 +707,9 @@ export default class ListenCommand extends Command {
         `Primitive mail arrived: ${wake.wakeId()}${metadata}. Read with primitive emails get --id ${wake.wakeId()} --brief. ${authority}\n`,
       );
       process.exitCode = 2;
+      // Detached and silent: the wake line and exit status are already final.
+      const auto = wake.autoSignal?.();
+      if (auto) dispatchAutoRead({ configDir: this.config.configDir, ...auto });
     } else if (controller.signal.aborted)
       process.exitCode = timedOut && flags.wake ? 0 : timedOut ? 2 : 130;
   }
