@@ -587,6 +587,28 @@ test("owner list outage leaves a saved enrollment unconfirmed", async () => {
   assert.equal(creates.length, 1);
 });
 
+test("owner list outage does not undo a verification setup already confirmed", async () => {
+  const configDir = owner();
+  const { fetcher, creates } = server({ connectionListUnavailable: true });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async () => ({
+      ...result,
+      verification: { state: "verified" as const, verifiedAt: null },
+    })) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
+  assert.match(value.guidance, /connection status reports pairing verified/);
+  assert.equal(creates.length, 1);
+});
+
 test("enabling contact requests preserves existing agent rules with a version precondition", async () => {
   const configDir = owner();
   const version = "77777777-7777-4777-8777-777777777777";

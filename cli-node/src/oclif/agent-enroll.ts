@@ -719,20 +719,31 @@ export async function enrollAgent(params: AgentEnrollOptions) {
             now: params.now,
           })
         : ("not_requested" as const);
-      const status = await confirmOwnerConnection(enrollment, params);
+      const listed = await confirmOwnerConnection(enrollment, params);
+      // Setup already read a verified connection from the agent's own status.
+      // An inconclusive owner-list read must not undo that; only a definite
+      // revoked or departed-owner answer overrides it.
+      const verifiedBySetup =
+        result.verification.state === "verified" &&
+        (listed === "pending" || listed === "unavailable");
+      const status: ConnectionConfirmation = verifiedBySetup
+        ? "connected"
+        : listed;
       return {
         ...result,
         ...(status === "owner_inactive"
           ? { receiving: { state: "not_ready" as const } }
           : {}),
         guidance: `${
-          status === "connected"
-            ? "The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected."
-            : status === "revoked"
-              ? "The owner connection list reports this pairing revoked. Stop using this profile and ask the owner to review it."
-              : status === "owner_inactive"
-                ? "The original human owner is no longer an active member. This profile must not be treated as receiving; ask an organization manager to review or remove it."
-                : "The challenge reply was submitted, but pairing is not confirmed. Resume this exact enrollment with the same options; do not create another address or resend the reply."
+          verifiedBySetup
+            ? "This agent's connection status reports pairing verified. Receiving is separate; configure and verify this session's external hook if external mode was selected."
+            : status === "connected"
+              ? "The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected."
+              : status === "revoked"
+                ? "The owner connection list reports this pairing revoked. Stop using this profile and ask the owner to review it."
+                : status === "owner_inactive"
+                  ? "The original human owner is no longer an active member. This profile must not be treated as receiving; ask an organization manager to review or remove it."
+                  : "The challenge reply was submitted, but pairing is not confirmed. Resume this exact enrollment with the same options; do not create another address or resend the reply."
         }${
           // A revoked pairing or a departed owner has no one to report to.
           status === "revoked" || status === "owner_inactive"
