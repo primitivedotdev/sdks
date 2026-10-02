@@ -64,6 +64,9 @@ function validateState(value) {
 function summary(state) {
   return {
     address: state.connection.address,
+    // Send reports and questions here: the owner's personal mailbox. Null when
+    // there is none or the server does not report it yet.
+    owner_member_address: typeof state.owner_member_address === 'string' ? state.owner_member_address : null,
     owner_address: state.owner_address,
     org_id: state.org_id,
     credential_saved: true,
@@ -150,7 +153,8 @@ export async function run(args, { input = '', directory, fetcher = fetch } = {})
     new RegExp(`^/emails/${uuid}/conversation$`, 'i').test(pathname)
   );
   const allowed = url.pathname.startsWith('/v1/') && url.origin === ORIGIN && !url.hash && !url.username && !url.password && path.startsWith('/') && (
-    (method === 'GET' && (/^\/(emails|sent-emails)(\/[^/]+)?$/.test(pathname) || pathname === '/address-notes')) ||
+    (method === 'GET' && (/^\/(emails|sent-emails)(\/[^/]+)?$/.test(pathname) || pathname === '/address-notes' ||
+      (pathname === '/agent-connections/me' && !url.search))) ||
     conversationRead ||
     (method === 'POST' && pathname === '/send-mail') ||
     (method === 'PUT' && ownNote)
