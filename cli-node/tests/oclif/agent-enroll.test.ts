@@ -387,6 +387,8 @@ test("owner OAuth creates one readable address and keeps the invitation out of s
   });
   assert.deepEqual(value, {
     ...result,
+    // The fixture's own-record read does not report the field.
+    identity: { ...result.identity, ownerMemberAddress: null },
     guidance:
       "The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected.",
     contactRequestPolicy: "enabled",

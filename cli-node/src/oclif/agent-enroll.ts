@@ -22,6 +22,7 @@ import {
 import { parseAgentContactPolicy } from "./contact-policy.js";
 import { acquireListenLock } from "./listen-state.js";
 import { connectNativeSession, SESSION_UUID } from "./notify-session-native.js";
+import { refreshOwnerMemberAddress } from "./owner-member-address.js";
 import {
   mailAddress,
   privateMailDirectory,
@@ -678,7 +679,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       resume: boolean,
       invitation?: string,
     ) => {
-      const result = await (params.setup ?? setupAgent)({
+      const setup = await (params.setup ?? setupAgent)({
         configDir: params.configDir,
         profileName: profile,
         session: params.session,
@@ -687,6 +688,15 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         contactRequests,
         fetch: params.fetch,
       });
+      const ownerMemberAddress = await refreshOwnerMemberAddress({
+        configDir: params.configDir,
+        profileName: profile,
+        fetch: params.fetch,
+      });
+      const result = {
+        ...setup,
+        identity: { ...setup.identity, ownerMemberAddress },
+      };
       if (result.verification.state !== "reply_submitted")
         return {
           ...result,
