@@ -44,6 +44,7 @@ export type SessionRegisterStatus =
   | "owner_inactive"
   | "not_logged_in"
   | "no_session"
+  | "skipped_headless"
   | "offline"
   | "busy"
   | "failed";
@@ -65,6 +66,7 @@ export type SessionEndResult = {
     | "already_ended"
     | "not_managed"
     | "no_session"
+    | "skipped_headless"
     | "started"
     | "failed";
   runtime: MachineRuntime;
@@ -284,6 +286,30 @@ export function runtimeSessionId(
   return value?.trim() || null;
 }
 
+/**
+ * Claude sets CLAUDE_CODE_ENTRYPOINT to "cli" for an interactive session and
+ * to "sdk-cli" for `claude -p`; SDK hosts set "sdk-ts" or "sdk-py", and the
+ * GitHub action and MCP server modes have their own values. Those runs are
+ * not sessions a person works in, so they get no address. Any other or
+ * missing value is treated as interactive.
+ */
+const HEADLESS_CLAUDE_ENTRYPOINTS = new Set([
+  "sdk-cli",
+  "sdk-ts",
+  "sdk-py",
+  "claude-code-github-action",
+  "mcp",
+]);
+
+export function headlessClaudeRun(env: Env): boolean {
+  return HEADLESS_CLAUDE_ENTRYPOINTS.has(
+    env.CLAUDE_CODE_ENTRYPOINT?.trim() ?? "",
+  );
+}
+
+const HEADLESS_DETAIL =
+  "This is a non-interactive Claude run (CLAUDE_CODE_ENTRYPOINT), so no address is used for it.";
+
 type ConnectionState =
   | "connected"
   | "pending"
@@ -421,6 +447,8 @@ export async function registerSession(
     address: null,
     receiving: null,
   } as const;
+  if (runtime === "claude" && headlessClaudeRun(env))
+    return { ...base, status: "skipped_headless", detail: HEADLESS_DETAIL };
   let session: string | null;
   try {
     session =
@@ -711,6 +739,8 @@ export async function endSession(options: {
     session = null;
   }
   const base = { runtime, session: null, address: null };
+  if (runtime === "claude" && headlessClaudeRun(env))
+    return { ...base, status: "skipped_headless", detail: HEADLESS_DETAIL };
   if (!session || !SESSION_UUID.test(session))
     return {
       ...base,

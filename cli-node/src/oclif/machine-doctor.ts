@@ -25,6 +25,12 @@ import {
   writeClaudeSettings,
 } from "./claude-machine-hooks.js";
 import {
+  inspectCodexHook,
+  readCodexHooks,
+  repairCodexHook,
+  writeCodexHooks,
+} from "./codex-machine-hooks.js";
+import {
   type AgentRuntime,
   type BundledConnectSkill,
   connectSkillTarget,
@@ -73,6 +79,7 @@ export const DOCTOR_CHECK_IDS = [
   "claude.hook.session_end",
   "claude.hook.stop",
   "claude.instructions",
+  "codex.hook.session_start",
   "codex.instructions",
   "omp.instructions",
   "skill.claude",
@@ -117,6 +124,7 @@ const TITLES: Record<DoctorCheckId, string> = {
   "claude.hook.session_end": "Claude SessionEnd hook",
   "claude.hook.stop": "Claude per-session receive hooks",
   "claude.instructions": "Claude Code instructions",
+  "codex.hook.session_start": "Codex SessionStart hook",
   "codex.instructions": "Codex instructions",
   "omp.instructions": "omp instructions",
   "skill.claude": "primitive-connect skill for Claude Code",
@@ -133,8 +141,8 @@ const SECRET_LINE = "Never print invitation tokens or credentials.";
 /** The managed instruction block for one runtime. Kept short on purpose. */
 export function managedInstructions(runtime: MachineRuntime): string {
   const register =
-    runtime === "claude"
-      ? "A Primitive SessionStart hook registers this session with `primitive agent session-register --runtime claude --quiet`; if it has not run, run that command once."
+    runtime === "claude" || runtime === "codex"
+      ? `A Primitive SessionStart hook registers this session with \`primitive agent session-register --runtime ${runtime} --quiet\`; if it has not run, run that command once.`
       : `At session start, if this session is not registered yet, run \`primitive agent session-register --runtime ${runtime} --quiet\`.`;
   return [
     "## Primitive",
@@ -579,6 +587,41 @@ export async function runMachineDoctor(
     },
   });
 
+  const codexHook: CheckRunner = {
+    inspect: () => {
+      const id = "codex.hook.session_start";
+      const skip = skipRuntime("codex");
+      if (skip) return check(id, "skip", skip);
+      const read = readCodexHooks(paths.codexHome);
+      if (!read.ok)
+        return check(id, "fail", read.detail, {
+          path: read.path,
+          action: "edit_file",
+        });
+      const configToml = readManagedFile(join(paths.codexHome, "config.toml"));
+      const finding = inspectCodexHook(
+        read,
+        hookContext,
+        configToml.state === "present" ? configToml.text : null,
+      );
+      return check(id, finding.status, finding.detail, {
+        fixable: finding.fixable,
+        path: read.path,
+        ...(finding.status === "fail" && !finding.fixable && hookBlocked
+          ? { action: "install_cli" as const }
+          : {}),
+      });
+    },
+    repair: () => {
+      const read = readCodexHooks(paths.codexHome);
+      if (!read.ok || !cli || hookBlocked) return false;
+      const repaired = repairCodexHook(read.settings, cli);
+      if (!repaired.changed) return false;
+      writeCodexHooks({ read: read.read, settings: repaired.settings, now });
+      return true;
+    },
+  };
+
   const orphans: Array<{ name: string; profile: ConnectedAgentProfile }> = [];
   const runners: Record<DoctorCheckId, CheckRunner> = {
     "cli.installed": {
@@ -781,6 +824,7 @@ export async function runMachineDoctor(
     "claude.hook.session_start": hookCheck("claude.hook.session_start"),
     "claude.hook.session_end": hookCheck("claude.hook.session_end"),
     "claude.hook.stop": hookCheck("claude.hook.stop"),
+    "codex.hook.session_start": codexHook,
     "claude.instructions": instruction("claude.instructions", "claude", () =>
       join(paths.claudeDir, "CLAUDE.md"),
     ),
@@ -1012,8 +1056,9 @@ export async function runMachineDoctor(
         try {
           const changed = await runner.repair(result);
           const after = await runner.inspect();
-          result = { ...after, fixed: changed && after.status === "ok" };
-          if (changed && after.status !== "ok")
+          // A Codex hook can be repaired yet still await the person's trust.
+          result = { ...after, fixed: changed && after.status !== "fail" };
+          if (changed && after.status === "fail")
             result.detail = `${after.detail} (A repair was applied but did not resolve this.)`;
         } catch (error) {
           result = {

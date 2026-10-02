@@ -241,6 +241,55 @@ describe("agent session-register", () => {
     expect(unreachable.status).toBe("offline");
   });
 
+  it("skips non-interactive Claude runs and treats unknown entrypoints as interactive", async () => {
+    const { configDir } = setup();
+    const { calls, dependencies } = fakeDependencies(configDir);
+    for (const entrypoint of ["sdk-cli", "sdk-ts", "sdk-py"]) {
+      const result = await registerSession({
+        configDir,
+        runtime: "claude",
+        env: {
+          CLAUDE_CODE_SESSION_ID: session,
+          CLAUDE_CODE_ENTRYPOINT: entrypoint,
+        },
+        cliPath: "/cli/bin/run.js",
+        dependencies,
+      });
+      expect(result.status).toBe("skipped_headless");
+    }
+    expect(calls.enroll).toHaveLength(0);
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      env: {
+        CLAUDE_CODE_SESSION_ID: session,
+        CLAUDE_CODE_ENTRYPOINT: "sdk-cli",
+      },
+    });
+    expect(ended.status).toBe("skipped_headless");
+    const unknown = await registerSession({
+      configDir,
+      runtime: "claude",
+      env: {
+        CLAUDE_CODE_SESSION_ID: session,
+        CLAUDE_CODE_ENTRYPOINT: "something-new",
+      },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    expect(unknown.status).toBe("registered");
+    // Codex is never filtered by the Claude entrypoint.
+    const codex = await registerSession({
+      configDir,
+      runtime: "codex",
+      session: "44444444-4444-4444-8444-444444444444",
+      env: { CLAUDE_CODE_ENTRYPOINT: "sdk-cli" },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    expect(codex.status).toBe("registered");
+  });
+
   it("reports no session instead of guessing one", async () => {
     const { configDir } = setup();
     const { calls, dependencies } = fakeDependencies(configDir);

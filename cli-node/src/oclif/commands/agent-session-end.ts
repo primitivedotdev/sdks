@@ -1,6 +1,7 @@
 import { Command, Flags } from "@oclif/core";
 import {
   endSession,
+  headlessClaudeRun,
   MACHINE_RUNTIMES,
   type MachineRuntime,
   readClaudeHookInput,
@@ -38,7 +39,8 @@ export default class AgentSessionEndCommand extends Command {
     const runtime = flags.runtime as MachineRuntime;
     if (flags.hook) {
       const input = await readClaudeHookInput(process.stdin);
-      if (!input) return;
+      if (!input || (runtime === "claude" && headlessClaudeRun(process.env)))
+        return;
       await runDetached({
         node: process.execPath,
         entry: process.argv[1] ?? "",

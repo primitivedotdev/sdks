@@ -179,9 +179,14 @@ describe("primitive machine doctor", () => {
     ] as const)
       expect(checks[id], id).toMatchObject({ status: "ok", fixed: true });
     expect(checks["omp.instructions"].status).toBe("skip");
-    expect(fixed.fixedCount).toBe(6);
+    // Installed, but Codex has not recorded trust for it yet.
+    expect(checks["codex.hook.session_start"]).toMatchObject({
+      status: "warn",
+      fixed: true,
+    });
+    expect(fixed.fixedCount).toBe(7);
     expect(fixed.version).toBe(1);
-    expect(fixed.summary).toEqual({ ok: 12, warn: 0, fail: 1, skip: 1 });
+    expect(fixed.summary).toEqual({ ok: 12, warn: 1, fail: 1, skip: 1 });
 
     const settings = JSON.parse(
       readFileSync(join(home, ".claude", "settings.json"), "utf8"),
@@ -347,6 +352,82 @@ describe("primitive machine doctor", () => {
     expect(JSON.stringify(settings).includes("gone@example.test")).toBe(false);
   });
 
+  it("installs one Codex SessionStart hook, keeps other hooks in place and reads trust", async () => {
+    const { home, bin, options } = machine();
+    const hooksPath = join(home, ".codex", "hooks.json");
+    const userHook = { type: "command", command: "notify.sh" };
+    const stale = {
+      type: "command",
+      command:
+        "'/old/node' '/old/primitive/bin/run.js' agent session-register --runtime codex --hook",
+    };
+    writeFileSync(
+      hooksPath,
+      `${JSON.stringify(
+        {
+          hooks: {
+            SessionStart: [
+              { hooks: [userHook] },
+              { hooks: [stale] },
+              { hooks: [stale] },
+            ],
+            Stop: [{ hooks: [userHook] }],
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const before = byId(await runMachineDoctor(options));
+    expect(before["codex.hook.session_start"]).toMatchObject({
+      status: "fail",
+      fixable: true,
+    });
+    const fixed = byId(await runMachineDoctor({ ...options, fix: true }));
+    expect(fixed["codex.hook.session_start"]).toMatchObject({
+      status: "warn",
+      fixed: true,
+    });
+    const hooks = JSON.parse(readFileSync(hooksPath, "utf8")).hooks;
+    expect(hooks.Stop).toEqual([{ hooks: [userHook] }]);
+    // The user's hook keeps index 0 and the managed hook keeps index 1, so
+    // Codex trust records keyed by position still match.
+    expect(hooks.SessionStart).toHaveLength(2);
+    expect(hooks.SessionStart[0]).toEqual({ hooks: [userHook] });
+    expect(hooks.SessionStart[1].hooks[0].command).toBe(
+      `'${process.execPath}' '${join(bin, "run.js")}' agent session-register --runtime codex --hook`,
+    );
+    expect(
+      readdirSync(join(home, ".codex")).some((name) =>
+        name.startsWith("hooks.json.primitive-bak-"),
+      ),
+    ).toBe(true);
+    writeFileSync(
+      join(home, ".codex", "config.toml"),
+      `[hooks.state."${hooksPath}:session_start:1:0"]\ntrusted_hash = "sha256:x"\n`,
+    );
+    const trusted = byId(await runMachineDoctor(options));
+    expect(trusted["codex.hook.session_start"].status).toBe("ok");
+    const first = snapshot(home);
+    expect((await runMachineDoctor({ ...options, fix: true })).fixedCount).toBe(
+      0,
+    );
+    expect(snapshot(home)).toEqual(first);
+  });
+
+  it("reports malformed Codex hooks.json and leaves it alone", async () => {
+    const { home, options } = machine();
+    const hooksPath = join(home, ".codex", "hooks.json");
+    writeFileSync(hooksPath, "{ not json");
+    const report = byId(await runMachineDoctor({ ...options, fix: true }));
+    expect(report["codex.hook.session_start"]).toMatchObject({
+      status: "fail",
+      fixable: false,
+      action: "edit_file",
+    });
+    expect(readFileSync(hooksPath, "utf8")).toBe("{ not json");
+  });
+
   it("reports malformed settings.json and never rewrites it", async () => {
     const { home, options } = machine();
     mkdirSync(join(home, ".claude"), { recursive: true });
@@ -470,7 +551,7 @@ describe("primitive machine doctor", () => {
       only: new Set(["claude.instructions"]),
     });
     const checks = byId(report);
-    expect(report.checks).toHaveLength(14);
+    expect(report.checks).toHaveLength(15);
     expect(checks["claude.instructions"]).toMatchObject({ fixed: true });
     expect(checks["codex.instructions"].status).toBe("fail");
     expect(checks["claude.hook.session_start"].status).toBe("fail");

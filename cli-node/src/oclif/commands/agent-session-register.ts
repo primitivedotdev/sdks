@@ -1,5 +1,6 @@
 import { Command, Flags } from "@oclif/core";
 import {
+  headlessClaudeRun,
   MACHINE_RUNTIMES,
   type MachineRuntime,
   readClaudeHookInput,
@@ -13,7 +14,7 @@ const HOOK_BUDGET_MS = 3_000;
 export default class AgentSessionRegisterCommand extends Command {
   static summary = "Register this coding session with Primitive, once";
   static description =
-    "Gives the current Claude Code, Codex or omp session an address in your organization using the saved member login, without a browser. Safe to run on every start and resume: a session that already has a profile is only re-verified, and a session whose agent was disconnected or removed never gets a second address. The session ID comes from CLAUDE_CODE_SESSION_ID (Claude), CODEX_THREAD_ID or CODEX_SESSION_ID (Codex), or --session. omp does not expose a session ID to commands, so omp sessions use one generated ID per running omp process, and receiving mail is not supported for them. The agent is named <runtime>-<repository> and gets a private AGENT_INFO note naming the runtime and repository when it has none. Claude sessions receive mail through exact-session hooks; Codex through the native receiver. Never blocks a session: every outcome, including no login or no network, exits 0 with a status. --hook reads Claude's SessionStart hook input from stdin, returns within a few seconds and finishes slower work in the background.";
+    "Gives the current Claude Code, Codex or omp session an address in your organization using the saved member login, without a browser. Safe to run on every start and resume: a session that already has a profile is only re-verified, and a session whose agent was disconnected or removed never gets a second address. The session ID comes from CLAUDE_CODE_SESSION_ID (Claude), CODEX_THREAD_ID or CODEX_SESSION_ID (Codex), or --session. omp does not expose a session ID to commands, so omp sessions use one generated ID per running omp process, and receiving mail is not supported for them. The agent is named <runtime>-<repository> and gets a private AGENT_INFO note naming the runtime and repository when it has none. Claude sessions receive mail through exact-session hooks; Codex through the native receiver. Non-interactive Claude runs (claude -p and SDK hosts, by CLAUDE_CODE_ENTRYPOINT) are skipped with status skipped_headless. Never blocks a session: every outcome, including no login or no network, exits 0 with a status. --hook reads Claude's or Codex's SessionStart hook input from stdin, returns within a few seconds and finishes slower work in the background.";
   static examples = [
     "<%= config.bin %> agent session-register --runtime codex --quiet",
     "<%= config.bin %> agent session-register --runtime claude --json",
@@ -35,7 +36,7 @@ export default class AgentSessionRegisterCommand extends Command {
     }),
     hook: Flags.boolean({
       description:
-        "Read Claude hook JSON from stdin and finish in the background if registration is slow",
+        "Read Claude or Codex SessionStart hook JSON from stdin and finish in the background if registration is slow",
     }),
     json: Flags.boolean({ description: "Print the result as JSON" }),
     quiet: Flags.boolean({ description: "Print nothing" }),
@@ -47,7 +48,12 @@ export default class AgentSessionRegisterCommand extends Command {
     if (flags.hook) {
       // Hook output becomes session context, so a hook prints nothing.
       const input = await readClaudeHookInput(process.stdin);
-      if (!input || runtime !== "claude") return;
+      if (
+        !input ||
+        (runtime !== "claude" && runtime !== "codex") ||
+        (runtime === "claude" && headlessClaudeRun(process.env))
+      )
+        return;
       await runDetached({
         node: process.execPath,
         entry: process.argv[1] ?? "",
@@ -55,14 +61,19 @@ export default class AgentSessionRegisterCommand extends Command {
           "agent",
           "session-register",
           "--runtime",
-          "claude",
+          runtime,
           "--session",
           input.sessionId,
           ...(input.cwd ? ["--cwd", input.cwd] : []),
           "--quiet",
         ],
-        // Claude's own hook input names the exact loaded session.
-        env: { ...process.env, CLAUDE_CODE_SESSION_ID: input.sessionId },
+        // The runtime's own hook input names the exact loaded session.
+        env: {
+          ...process.env,
+          ...(runtime === "claude"
+            ? { CLAUDE_CODE_SESSION_ID: input.sessionId }
+            : { CODEX_THREAD_ID: input.sessionId }),
+        },
         cwd: input.cwd ?? undefined,
         waitMs: HOOK_BUDGET_MS,
       });
