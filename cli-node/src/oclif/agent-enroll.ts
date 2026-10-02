@@ -9,7 +9,7 @@ import {
   putAgentContactPolicy,
 } from "@primitivedotdev/api-core";
 import { parseAgentInvitation } from "./agent-connect.js";
-import { setupAgent } from "./agent-setup.js";
+import { setupAgent, verificationReplySubmitted } from "./agent-setup.js";
 import { refreshStoredCliCredentials } from "./api-client.js";
 import { loadCliCredentials } from "./auth.js";
 import {
@@ -687,7 +687,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         contactRequests,
         fetch: params.fetch,
       });
-      if (result.verification.state !== "reply_submitted")
+      if (!verificationReplySubmitted(result.verification.state))
         return {
           ...result,
           contactRequestPolicy: contactRequests

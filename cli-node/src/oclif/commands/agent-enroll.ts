@@ -1,5 +1,6 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import { enrollAgent } from "../agent-enroll.js";
+import { verificationReplySubmitted } from "../agent-setup.js";
 import { installClaudeWakeHook } from "../claude-wake-install.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
 
@@ -49,7 +50,7 @@ export default class AgentEnrollCommand extends Command {
       });
       const externalHook =
         flags.receiver === "external" &&
-        result.verification.state === "reply_submitted" &&
+        verificationReplySubmitted(result.verification.state) &&
         result.connection.status !== "owner_inactive"
           ? installClaudeWakeHook({
               cliPath: process.argv[1] ?? "",
