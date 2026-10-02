@@ -400,17 +400,19 @@ function stopHeld(configDir: string, emailId: string): boolean {
 }
 
 /**
- * Stop a lease. Returns a token that only the stop it created can use to
- * restore the lease, or null when it was already stopped or absent. A caller
- * that finds the lease already stopped leaves a hold, so the earlier stop can
- * no longer be undone: this caller's answer may already be on its way.
+ * What one stop attempt left behind. The creator of the stop owns it and may
+ * restore it; a caller that found the lease already stopped holds it instead,
+ * so the stop cannot be undone while that caller's answer may be on its way.
  */
+export type WorkingStop = { token: string; owner: boolean };
+
+/** Stop a lease, or hold an existing stop. Null when there is no lease. */
 export function stopWorkingLease(
   configDir: string,
   emailId: string,
   reason: string,
   now: () => number = Date.now,
-): string | null {
+): WorkingStop | null {
   const lease = readWorkingLease(configDir, emailId);
   if (!lease) return null;
   const token = randomUUID();
@@ -426,7 +428,8 @@ export function stopWorkingLease(
       { flag: "wx", mode: 0o600 },
     );
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") return null;
+    if ((error as NodeJS.ErrnoException).code === "EEXIST")
+      return { token, owner: false };
     throw error;
   }
   // This call owns the stop through its token; it no longer needs a hold.
@@ -435,13 +438,19 @@ export function stopWorkingLease(
   } catch {
     /* A leftover hold only makes a later restore more conservative. */
   }
-  return token;
+  return { token, owner: true };
+}
+
+function pendingPath(configDir: string, emailId: string): string {
+  return join(emailDirectory(configDir, emailId), "restore-pending.json");
 }
 
 /**
  * Undo a stop this process made, for an answer known not to have been sent.
- * A stop made by anyone else (cap, answered, another reply) is left alone,
- * and so is one that a later answer relies on.
+ * A stop made by anyone else (cap, answered, another reply) is left alone.
+ * While a later answer holds the stop it stays in place, and the restore is
+ * left pending: the last holder to release finishes it if its answer was
+ * refused too (see releaseStopHold).
  */
 export function restoreWorkingLease(
   configDir: string,
@@ -451,17 +460,23 @@ export function restoreWorkingLease(
   try {
     const stop = readStop(configDir, emailId);
     if (!stop || stop.token !== token) return false;
+    // Recorded before the holds are checked, so a holder that releases at
+    // the same moment either sees this or has already gone.
+    writeFileSync(pendingPath(configDir, emailId), JSON.stringify({ token }), {
+      mode: 0o600,
+    });
     if (stopHeld(configDir, emailId)) return false;
     markActive(configDir, emailId);
     unlinkSync(stopPath(configDir, emailId));
     // A concurrent answer writes its hold before it looks for the stop. If
     // it found the stop just before the unlink, its hold is visible now, so
-    // put the stop back rather than show working after that answer.
+    // put the stop back (same token, restore still pending) rather than show
+    // working after that answer.
     if (stopHeld(configDir, emailId)) {
       try {
         writeFileSync(
           stopPath(configDir, emailId),
-          `${JSON.stringify({ at: stop.at, reason: stop.reason, token: randomUUID() })}\n`,
+          `${JSON.stringify(stop)}\n`,
           { flag: "wx", mode: 0o600 },
         );
       } catch {
@@ -469,7 +484,44 @@ export function restoreWorkingLease(
       }
       return false;
     }
+    try {
+      unlinkSync(pendingPath(configDir, emailId));
+    } catch {
+      /* Already finished by a releasing holder. */
+    }
     return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Release a hold for an answer known not to have been sent. If the stop's
+ * owner was refused too and is waiting on holds, the last release restores
+ * the lease. Returns true when it restored it.
+ */
+export function releaseStopHold(
+  configDir: string,
+  emailId: string,
+  token: string,
+): boolean {
+  try {
+    try {
+      unlinkSync(join(holdsDirectory(configDir, emailId), token));
+    } catch {
+      return false;
+    }
+    if (stopHeld(configDir, emailId)) return false;
+    let pending: string | null = null;
+    try {
+      const row = JSON.parse(
+        readFileSync(pendingPath(configDir, emailId), "utf8"),
+      ) as { token?: unknown };
+      pending = typeof row.token === "string" ? row.token : null;
+    } catch {
+      return false;
+    }
+    return pending !== null && restoreWorkingLease(configDir, emailId, pending);
   } catch {
     return false;
   }
@@ -559,7 +611,7 @@ export function activeWorkingLeases(
 /** Stops made by one answer, so they can be undone if it is not sent. */
 export type HaltedAutoWorking = {
   configDir: string;
-  stops: { emailId: string; token: string }[];
+  stops: ({ emailId: string } & WorkingStop)[];
 };
 
 /**
@@ -604,8 +656,8 @@ export async function haltAutoWorking(
           match.profileName === lease.profile);
       if (!ids.has(lease.email_id) && !byPeer) continue;
       try {
-        const token = stopWorkingLease(configDir, lease.email_id, reason);
-        if (token) halted.stops.push({ emailId: lease.email_id, token });
+        const stop = stopWorkingLease(configDir, lease.email_id, reason);
+        if (stop) halted.stops.push({ emailId: lease.email_id, ...stop });
         stopped.push(lease.email_id);
       } catch {
         /* A lease that cannot be written still hits its cap. */
@@ -637,8 +689,10 @@ export function restoreAutoWorking(
   try {
     let restored = 0;
     for (const stop of halted.stops) {
-      if (!restoreWorkingLease(halted.configDir, stop.emailId, stop.token))
-        continue;
+      const restoredHere = stop.owner
+        ? restoreWorkingLease(halted.configDir, stop.emailId, stop.token)
+        : releaseStopHold(halted.configDir, stop.emailId, stop.token);
+      if (!restoredHere) continue;
       restored++;
       const lease = readWorkingLease(halted.configDir, stop.emailId);
       // Always start a renewer: the previous one may have seen the stop and

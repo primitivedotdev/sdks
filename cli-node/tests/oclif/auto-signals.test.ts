@@ -432,12 +432,35 @@ describe("stopping automatic working", () => {
     const first = await haltAutoWorking(dir, { emailIds: [emailId] }, "reply");
     // A second answer goes out while the first one is still in flight.
     const second = await haltAutoWorking(dir, { emailIds: [emailId] }, "reply");
-    expect(second.stops).toHaveLength(0);
+    expect(second.stops).toMatchObject([{ owner: false }]);
     expect(restoreAutoWorking(first, { env: {}, spawnImpl: spawn.impl })).toBe(
       0,
     );
     expect(readWorkingLease(dir, emailId)?.stop_reason).toBe("reply");
     expect(spawn.calls).toHaveLength(0);
+  });
+
+  it.each([
+    ["the owner first", [0, 1]],
+    ["the holder first", [1, 0]],
+  ] as const)("restores working when both answers are refused, %s", async (_label, order) => {
+    const dir = configDir();
+    const spawn = spawner();
+    const emailId = claim(dir);
+    startWorkingLease(dir, emailId);
+    const halts = [
+      await haltAutoWorking(dir, { emailIds: [emailId] }, "reply"),
+      await haltAutoWorking(dir, { emailIds: [emailId] }, "reply"),
+    ];
+    let restored = 0;
+    for (const index of order)
+      restored += restoreAutoWorking(halts[index] as HaltedAutoWorking, {
+        env: {},
+        spawnImpl: spawn.impl,
+      });
+    expect(restored).toBe(1);
+    expect(readWorkingLease(dir, emailId)?.stopped_at).toBeNull();
+    expect(spawn.calls).toHaveLength(1);
   });
 
   it("starts a renewer on restore even while the old heartbeat looks live", async () => {
