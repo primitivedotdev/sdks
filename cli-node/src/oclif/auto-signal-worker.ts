@@ -43,6 +43,8 @@ export type AutoSignalWorkerDeps = {
     lease: AutoWorkingLease,
     ownSignals: Set<string>,
   ) => Promise<boolean>;
+  /** Called after each release of the renewer lock (tests use it). */
+  released?: () => void;
 };
 
 function configDirectory(env: Env): string {
@@ -146,17 +148,8 @@ export async function runAutoSignalWorker(
       return;
     }
     if (kind !== "working") return;
-    let release: () => void;
-    try {
-      release = acquireListenLock(
-        join(configDir, "auto-signals", claim.email_id),
-        "auto-signal-working",
-      );
-    } catch {
-      return; // Another renewer owns this email.
-    }
-    try {
-      const ownSignals = new Set<string>();
+    const ownSignals = new Set<string>();
+    const renew = async (): Promise<void> => {
       for (;;) {
         const lease = readWorkingLease(configDir, claim.email_id);
         if (!lease || lease.stopped_at !== null) return;
@@ -231,8 +224,30 @@ export async function runAutoSignalWorker(
           await sleep(Math.min(1_000, next - now()));
         }
       }
-    } finally {
-      release();
+    };
+    // A refused answer can restore the lease just after this renewer saw it
+    // stopped. A replacement started then would find the lock still held and
+    // exit, so a renewer re-checks after releasing and carries on instead.
+    for (let round = 0; round < 10; round++) {
+      let release: () => void;
+      try {
+        release = acquireListenLock(
+          join(configDir, "auto-signals", claim.email_id),
+          "auto-signal-working",
+        );
+      } catch {
+        return; // Another renewer owns this email.
+      }
+      try {
+        await renew();
+      } finally {
+        release();
+      }
+      deps.released?.();
+      if (autoSignalsDisabled(env)) return;
+      const lease = readWorkingLease(configDir, claim.email_id);
+      if (!lease || lease.stopped_at !== null) return;
+      if (now() - lease.started_at >= AUTO_WORKING_CAP_MS) return;
     }
   } catch {
     /* Automatic signals are best effort. */

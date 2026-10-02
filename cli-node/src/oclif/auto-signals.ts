@@ -385,8 +385,25 @@ export function startWorkingLease(
 }
 
 /**
+ * Answers that rely on a stop someone else created. While any exist, the
+ * creator of that stop may not undo it, even if its own answer was refused.
+ */
+function holdsDirectory(configDir: string, emailId: string): string {
+  return join(emailDirectory(configDir, emailId), "stop-holds");
+}
+function stopHeld(configDir: string, emailId: string): boolean {
+  try {
+    return readdirSync(holdsDirectory(configDir, emailId)).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Stop a lease. Returns a token that only the stop it created can use to
- * restore the lease, or null when it was already stopped or absent.
+ * restore the lease, or null when it was already stopped or absent. A caller
+ * that finds the lease already stopped leaves a hold, so the earlier stop can
+ * no longer be undone: this caller's answer may already be on its way.
  */
 export function stopWorkingLease(
   configDir: string,
@@ -395,11 +412,13 @@ export function stopWorkingLease(
   now: () => number = Date.now,
 ): string | null {
   const lease = readWorkingLease(configDir, emailId);
-  if (!lease || lease.stopped_at !== null) {
-    if (lease) unmarkActive(configDir, emailId);
-    return null;
-  }
+  if (!lease) return null;
   const token = randomUUID();
+  // The hold is written before the stop is attempted, so a restore that
+  // races with this call always sees it (see restoreWorkingLease).
+  const hold = join(holdsDirectory(configDir, emailId), token);
+  privateMailDirectory(holdsDirectory(configDir, emailId), true);
+  writeFileSync(hold, "", { mode: 0o600 });
   try {
     writeFileSync(
       stopPath(configDir, emailId),
@@ -407,19 +426,22 @@ export function stopWorkingLease(
       { flag: "wx", mode: 0o600 },
     );
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-      unmarkActive(configDir, emailId);
-      return null;
-    }
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return null;
     throw error;
   }
-  unmarkActive(configDir, emailId);
+  // This call owns the stop through its token; it no longer needs a hold.
+  try {
+    unlinkSync(hold);
+  } catch {
+    /* A leftover hold only makes a later restore more conservative. */
+  }
   return token;
 }
 
 /**
  * Undo a stop this process made, for an answer known not to have been sent.
- * A stop made by anyone else (cap, answered, another reply) is left alone.
+ * A stop made by anyone else (cap, answered, another reply) is left alone,
+ * and so is one that a later answer relies on.
  */
 export function restoreWorkingLease(
   configDir: string,
@@ -429,8 +451,24 @@ export function restoreWorkingLease(
   try {
     const stop = readStop(configDir, emailId);
     if (!stop || stop.token !== token) return false;
+    if (stopHeld(configDir, emailId)) return false;
     markActive(configDir, emailId);
     unlinkSync(stopPath(configDir, emailId));
+    // A concurrent answer writes its hold before it looks for the stop. If
+    // it found the stop just before the unlink, its hold is visible now, so
+    // put the stop back rather than show working after that answer.
+    if (stopHeld(configDir, emailId)) {
+      try {
+        writeFileSync(
+          stopPath(configDir, emailId),
+          `${JSON.stringify({ at: stop.at, reason: stop.reason, token: randomUUID() })}\n`,
+          { flag: "wx", mode: 0o600 },
+        );
+      } catch {
+        /* The concurrent answer created its own stop. */
+      }
+      return false;
+    }
     return true;
   } catch {
     return false;
@@ -474,12 +512,14 @@ function sendingInFlight(configDir: string, emailId: string): boolean {
 }
 
 /**
- * Active, unstopped leases in this config directory, read from the active
- * index. Index entries for stopped or capped leases are pruned on the way.
+ * A stopped lease stays indexed this long, so a later answer to the same
+ * sender can still find it and hold its stop against a refused earlier one.
  */
-export function activeWorkingLeases(
+const STOPPED_INDEX_MS = 10 * 60_000;
+
+function indexedLeases(
   configDir: string,
-  now: () => number = Date.now,
+  now: () => number,
 ): AutoWorkingLease[] {
   let entries: string[];
   try {
@@ -492,7 +532,8 @@ export function activeWorkingLeases(
     const lease = readWorkingLease(configDir, entry);
     if (
       !lease ||
-      lease.stopped_at !== null ||
+      (lease.stopped_at !== null &&
+        now() - lease.stopped_at >= STOPPED_INDEX_MS) ||
       now() - lease.started_at >= AUTO_WORKING_CAP_MS * 2
     ) {
       unmarkActive(configDir, entry);
@@ -500,6 +541,19 @@ export function activeWorkingLeases(
     }
     return [lease];
   });
+}
+
+/**
+ * Active, unstopped leases in this config directory, read from the lease
+ * index rather than every email ever acknowledged. Old entries are pruned.
+ */
+export function activeWorkingLeases(
+  configDir: string,
+  now: () => number = Date.now,
+): AutoWorkingLease[] {
+  return indexedLeases(configDir, now).filter(
+    (lease) => lease.stopped_at === null,
+  );
 }
 
 /** Stops made by one answer, so they can be undone if it is not sent. */
@@ -532,13 +586,15 @@ export async function haltAutoWorking(
       }
     }
     const peers = new Set((match.peers ?? []).map(lower).filter(Boolean));
+    // Recently stopped leases are included: stopping one again leaves a
+    // hold, so an earlier answer that is refused cannot restore it.
     const candidates = new Map<string, AutoWorkingLease>();
-    for (const lease of activeWorkingLeases(configDir))
+    for (const lease of indexedLeases(configDir, Date.now))
       candidates.set(lease.email_id, lease);
     // Named emails are checked directly, not only through the index.
     for (const id of ids) {
       const lease = readWorkingLease(configDir, id);
-      if (lease && lease.stopped_at === null) candidates.set(id, lease);
+      if (lease) candidates.set(id, lease);
     }
     const stopped: string[] = [];
     for (const lease of candidates.values()) {
@@ -580,10 +636,25 @@ export function restoreAutoWorking(
 ): number {
   try {
     let restored = 0;
-    for (const stop of halted.stops)
-      if (restoreWorkingLease(halted.configDir, stop.emailId, stop.token))
-        restored++;
-    if (restored > 0) resumeAutoWorking(halted.configDir, options);
+    for (const stop of halted.stops) {
+      if (!restoreWorkingLease(halted.configDir, stop.emailId, stop.token))
+        continue;
+      restored++;
+      const lease = readWorkingLease(halted.configDir, stop.emailId);
+      // Always start a renewer: the previous one may have seen the stop and
+      // be exiting even though its heartbeat still looks live. If it is in
+      // fact still running, the per-email lock makes this one exit and the
+      // old one carries on (see runAutoSignalWorker).
+      if (lease)
+        spawnAutoSignalWorker({
+          configDir: halted.configDir,
+          emailId: lease.email_id,
+          kind: "working",
+          profileName: lease.profile,
+          env: options.env ?? process.env,
+          spawnImpl: options.spawnImpl,
+        });
+    }
     return restored;
   } catch {
     return 0;

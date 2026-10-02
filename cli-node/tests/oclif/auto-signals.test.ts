@@ -15,6 +15,7 @@ import {
   clearWorkingSending,
   dispatchAutoRead,
   dispatchAutoWorking,
+  type HaltedAutoWorking,
   haltAutoWorking,
   markWorkingSending,
   readAutoClaim,
@@ -423,6 +424,35 @@ describe("stopping automatic working", () => {
     expect(readWorkingLease(dir, emailId)?.stop_reason).toBe("cap");
   });
 
+  it("never undoes a stop that a later answer relies on", async () => {
+    const dir = configDir();
+    const spawn = spawner();
+    const emailId = claim(dir);
+    startWorkingLease(dir, emailId);
+    const first = await haltAutoWorking(dir, { emailIds: [emailId] }, "reply");
+    // A second answer goes out while the first one is still in flight.
+    const second = await haltAutoWorking(dir, { emailIds: [emailId] }, "reply");
+    expect(second.stops).toHaveLength(0);
+    expect(restoreAutoWorking(first, { env: {}, spawnImpl: spawn.impl })).toBe(
+      0,
+    );
+    expect(readWorkingLease(dir, emailId)?.stop_reason).toBe("reply");
+    expect(spawn.calls).toHaveLength(0);
+  });
+
+  it("starts a renewer on restore even while the old heartbeat looks live", async () => {
+    const dir = configDir();
+    const spawn = spawner();
+    const emailId = claim(dir);
+    startWorkingLease(dir, emailId);
+    recordRenewer(dir, emailId);
+    const halted = await haltAutoWorking(dir, { emailIds: [emailId] }, "reply");
+    expect(restoreAutoWorking(halted, { env: {}, spawnImpl: spawn.impl })).toBe(
+      1,
+    );
+    expect(spawn.calls).toHaveLength(1);
+  });
+
   it("waits for a renewal that outlasts the old three second settle", async () => {
     const dir = configDir();
     const emailId = claim(dir);
@@ -451,6 +481,10 @@ describe("renewer backstop", () => {
     expect(activeWorkingLeases(dir).map((lease) => lease.email_id)).toEqual([
       live,
     ]);
+    // A stopped lease stays indexed briefly so a later answer can hold it,
+    // then is pruned.
+    expect(readdirSync(join(dir, "auto-signals", "active"))).toHaveLength(2);
+    activeWorkingLeases(dir, () => Date.now() + 10 * 60_000);
     expect(readdirSync(join(dir, "auto-signals", "active"))).toEqual([live]);
   });
 
@@ -603,6 +637,43 @@ describe("automatic signal worker", () => {
     });
     expect(h.sends).toHaveLength(1);
     expect(readWorkingLease(h.dir, h.emailId)?.stop_reason).toBe("reply");
+  });
+
+  it("keeps renewing when a refused answer restores the lease as it exits", async () => {
+    const h = harness("working");
+    startWorkingLease(h.dir, h.emailId, h.now);
+    let halted: HaltedAutoWorking | null = null;
+    let renewing = true;
+    await runAutoSignalWorker(h.env, {
+      context: h.context,
+      send: h.send as never,
+      now: h.now,
+      sleep: async (ms) => {
+        h.advance(ms);
+        if (halted === null && renewing)
+          halted = await haltAutoWorking(
+            h.dir,
+            { emailIds: [h.emailId] },
+            "reply",
+            { settleMs: 0 },
+          );
+      },
+      // The answer is refused right after this renewer saw the stop.
+      released: () => {
+        if (halted && renewing) {
+          restoreAutoWorking(halted, { env: {}, spawnImpl: spawner().impl });
+          renewing = false;
+        }
+      },
+      answered: async () => h.sends.length >= 2,
+    });
+    // The renewer did not exit: it renewed again in the same window, whose
+    // durable intent reconciles instead of sending twice.
+    expect(h.sends.map((send) => send.slot)).toEqual([
+      "auto-working-0",
+      "auto-working-0",
+    ]);
+    expect(readWorkingLease(h.dir, h.emailId)?.stop_reason).toBe("answered");
   });
 
   it("stops at the cap and after a refused send", async () => {
