@@ -97,8 +97,11 @@ export type AgentSetupDependencies = {
     key: string,
   ): Promise<SendReceipt>;
   reconcile(context: Context, key: string): Promise<SendReceipt | null>;
-  /** Read this connection's own status. Never throws. */
-  checkVerification(context: Context): Promise<VerificationCheck>;
+  /** Read this connection's own status within timeoutMs. Never throws. */
+  checkVerification(
+    context: Context,
+    timeoutMs: number,
+  ): Promise<VerificationCheck>;
   enableOwner(context: Context): Promise<"enabled" | "silenced">;
   startListener(
     profile: string,
@@ -166,14 +169,17 @@ export function parseVerificationCheck(
   return { state: "unavailable" };
 }
 
-async function checkVerification(context: Context): Promise<VerificationCheck> {
+async function checkVerification(
+  context: Context,
+  timeoutMs: number,
+): Promise<VerificationCheck> {
   try {
     const response = await context.fetch(
       `${context.profile.api_base_url}/agent-connections/me`,
       {
         method: "GET",
         redirect: "error",
-        signal: AbortSignal.timeout(5_000),
+        signal: AbortSignal.timeout(timeoutMs),
         headers: {
           authorization: `Bearer ${context.profile.api_key}`,
           accept: "application/json",
@@ -197,23 +203,30 @@ async function checkVerification(context: Context): Promise<VerificationCheck> {
 
 /**
  * Poll until the server reports the connection verified, the budget runs out,
- * or the status read is unavailable. The budget counts requested waits, so a
- * frozen clock in tests cannot loop forever.
+ * or the status read is unavailable. Elapsed time is the larger of the clock
+ * and the requested waits, so slow reads count against the budget and a
+ * frozen clock in tests cannot loop forever. Each read is capped at the time
+ * remaining (and at five seconds).
  */
 async function awaitVerification(
   context: Context,
   dependencies: AgentSetupDependencies,
   timeoutMs: number,
 ): Promise<VerificationCheck> {
+  const started = dependencies.now();
   let waited = 0;
+  const remaining = () =>
+    timeoutMs - Math.max(waited, dependencies.now() - started);
   for (let attempt = 0; ; attempt++) {
-    const check = await dependencies.checkVerification(context);
+    const readBudget = Math.min(5_000, remaining());
+    if (readBudget <= 0) return { state: "pending" };
+    const check = await dependencies.checkVerification(context, readBudget);
     if (check.state !== "pending") return check;
     const step =
       VERIFICATION_BACKOFF_MS[
         Math.min(attempt, VERIFICATION_BACKOFF_MS.length - 1)
       ] ?? 5_000;
-    const wait = Math.min(step, timeoutMs - waited);
+    const wait = Math.min(step, remaining());
     if (wait <= 0) return check;
     await dependencies.sleep(wait);
     waited += wait;

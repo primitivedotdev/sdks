@@ -856,6 +856,34 @@ describe("verification after the setup reply", () => {
     expect(waits).toEqual([1_000, 1_000, 2_000, 2_000]);
   });
 
+  it("counts slow status reads against the wait and caps each read at the time left", async () => {
+    const f = fixture();
+    let clock = f.now;
+    const budgets: number[] = [];
+    const checkVerification = vi.fn<
+      AgentSetupDependencies["checkVerification"]
+    >(async (_context, timeoutMs) => {
+      budgets.push(timeoutMs);
+      clock += timeoutMs;
+      return { state: "pending" };
+    });
+    const result = await setupAgent({
+      ...f.params,
+      verificationTimeoutMs: 12_000,
+      dependencies: {
+        ...f.dependencies,
+        checkVerification,
+        now: () => clock,
+        sleep: vi.fn(async (ms: number) => {
+          clock += ms;
+        }),
+      },
+    });
+    expect(result.verification.state).toBe("reply_submitted");
+    expect(budgets).toEqual([5_000, 5_000]);
+    expect(clock - f.now).toBe(12_000);
+  });
+
   it("stops at once and keeps setup successful when the endpoint is missing", async () => {
     const f = fixture();
     let reads = 0;
