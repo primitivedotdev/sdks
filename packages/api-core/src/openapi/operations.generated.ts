@@ -7000,7 +7000,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "get-conversation",
-    "description": "Returns the full conversation the given inbound email belongs\nto, as ordered, ready-to-prompt turns WITH bodies. It resolves\nthe thread from the email and returns every message oldest-first,\nso an agent that received an email can pass `messages` straight\nto a chat model in one call instead of walking `/threads/{id}`\nplus `/emails/{id}` and `/sent-emails/{id}` per message.\n\nEach message carries a `direction` (`inbound` | `outbound`) and a\nderived `role`: `inbound` -> `user`, `outbound` -> `assistant`\n(your own prior replies). The role mapping assumes the caller\nowns the outbound side, which is the agent-reply case this exists\nfor. If the email has no thread yet (a brand-new message), the\nconversation is just that one message as a single user turn.\n\nThe message list is capped; check `truncated` to detect when\nolder messages were omitted. Consecutive same-role turns are not\nmerged here; that normalization is model-specific and left to the\ncaller.\n",
+    "description": "Returns the full conversation the given inbound email belongs\nto, as ordered, ready-to-prompt turns WITH bodies. It resolves\nthe thread from the email and returns every message oldest-first,\nso an agent that received an email can pass `messages` straight\nto a chat model in one call instead of walking `/threads/{id}`\nplus `/emails/{id}` and `/sent-emails/{id}` per message.\n\nEach message carries a `direction` (`inbound` | `outbound`) and a\nderived `role`: `inbound` -> `user`, `outbound` -> `assistant`\n(your own prior replies). The role mapping assumes the caller\nowns the outbound side, which is the agent-reply case this exists\nfor. If the email has no thread yet (a brand-new message), the\nconversation is just that one message as a single user turn.\n\nThe message list is capped; check `truncated` to detect when\nolder messages were omitted. Consecutive same-role turns are not\nmerged here; that normalization is model-specific and left to the\ncaller.\n\nPass `since` for an incremental read. `since=start` returns the\nfull conversation plus a `cursor`. Sending that `cursor` back as\n`since` returns only the messages created or changed after it,\noldest first, with the same per-message shape, and a new\n`cursor`. Without `since` the response carries no `cursor` and\nno per-message `status`.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "getConversation",
@@ -7014,7 +7014,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
-    "queryParams": [],
+    "queryParams": [
+      {
+        "description": "Incremental read position. Either the literal `start` or a\n`cursor` returned by a previous read of this endpoint (an\nRFC 3339 UTC timestamp with microsecond precision). Any other\nvalue returns 400 `validation_error`.\n\nWith `start`, the response holds every message the read\nwithout `since` would return, plus `cursor`. With a cursor,\n`messages` holds only the messages created or changed after\nit, oldest first. A change includes an inbound message\nbecoming visible or its body being filled, withheld or\ndiscarded, and a delivery status change on an outbound\nmessage. `thread_id`, `subject`, `message_count` and\n`truncated` always describe the whole conversation, not the\nreturned messages.\n\nSend `cursor` back verbatim. The cursor trails the read by 10\nseconds so a write that commits late is not skipped, which\nmeans a message changed within that window can be returned\nagain by the next read: upsert messages by `id`. Deleted\nmessages are not reported; a periodic `since=start` read (or\na read without `since`) reconciles.\n",
+        "enum": null,
+        "name": "since",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -7047,7 +7055,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "array",
           "items": {
             "type": "object",
-            "description": "One message in the conversation, with its body and a chat role.",
+            "description": "One message in the conversation, with its body and a chat role.\n`status` is the delivery status of an outbound message, as on\n`/sent-emails/{id}`, and is present only on a `since` read and\nonly on outbound messages.\n",
             "properties": {
               "role": {
                 "type": "string",
@@ -7104,6 +7112,23 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 ],
                 "format": "date-time",
                 "description": "received_at for inbound, created_at for outbound."
+              },
+              "status": {
+                "type": "string",
+                "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
+                "enum": [
+                  "queued",
+                  "submitted_to_agent",
+                  "agent_failed",
+                  "gate_denied",
+                  "unknown",
+                  "delivered",
+                  "bounced",
+                  "deferred",
+                  "wait_timeout",
+                  "scheduled",
+                  "canceled"
+                ]
               },
               "presence_control": {
                 "anyOf": [
@@ -7191,6 +7216,10 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "text"
             ]
           }
+        },
+        "cursor": {
+          "type": "string",
+          "description": "Present only on a `since` read: the position to send as\n`since` on the next read. Send it back verbatim.\n"
         }
       },
       "required": [

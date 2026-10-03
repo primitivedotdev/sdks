@@ -4781,6 +4781,9 @@ type Conversation struct {
 	// the thread exceeds the per-call cap.
 	Truncated bool                  `json:"truncated"`
 	Messages  []ConversationMessage `json:"messages"`
+	// Present only on a `since` read: the position to send as
+	// `since` on the next read. Send it back verbatim.
+	Cursor OptString `json:"cursor"`
 }
 
 // GetThreadID returns the value of ThreadID.
@@ -4808,6 +4811,11 @@ func (s *Conversation) GetMessages() []ConversationMessage {
 	return s.Messages
 }
 
+// GetCursor returns the value of Cursor.
+func (s *Conversation) GetCursor() OptString {
+	return s.Cursor
+}
+
 // SetThreadID sets the value of ThreadID.
 func (s *Conversation) SetThreadID(val NilUUID) {
 	s.ThreadID = val
@@ -4833,7 +4841,15 @@ func (s *Conversation) SetMessages(val []ConversationMessage) {
 	s.Messages = val
 }
 
+// SetCursor sets the value of Cursor.
+func (s *Conversation) SetCursor(val OptString) {
+	s.Cursor = val
+}
+
 // One message in the conversation, with its body and a chat role.
+// `status` is the delivery status of an outbound message, as on
+// `/sent-emails/{id}`, and is present only on a `since` read and
+// only on outbound messages.
 // Ref: #/components/schemas/ConversationMessage
 type ConversationMessage struct {
 	// Chat role derived from `direction`: `user` for inbound
@@ -4853,6 +4869,7 @@ type ConversationMessage struct {
 	Text string `json:"text"`
 	// Received_at for inbound, created_at for outbound.
 	Timestamp       OptNilDateTime                           `json:"timestamp"`
+	Status          OptSentEmailStatus                       `json:"status"`
 	PresenceControl OptNilConversationMessagePresenceControl `json:"presence_control"`
 	// Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
 	// records, never from the message content. Null on every other message and on servers that predate
@@ -4906,6 +4923,11 @@ func (s *ConversationMessage) GetText() string {
 // GetTimestamp returns the value of Timestamp.
 func (s *ConversationMessage) GetTimestamp() OptNilDateTime {
 	return s.Timestamp
+}
+
+// GetStatus returns the value of Status.
+func (s *ConversationMessage) GetStatus() OptSentEmailStatus {
+	return s.Status
 }
 
 // GetPresenceControl returns the value of PresenceControl.
@@ -4966,6 +4988,11 @@ func (s *ConversationMessage) SetText(val string) {
 // SetTimestamp sets the value of Timestamp.
 func (s *ConversationMessage) SetTimestamp(val OptNilDateTime) {
 	s.Timestamp = val
+}
+
+// SetStatus sets the value of Status.
+func (s *ConversationMessage) SetStatus(val OptSentEmailStatus) {
+	s.Status = val
 }
 
 // SetPresenceControl sets the value of PresenceControl.

@@ -2610,8 +2610,43 @@ paths:
         older messages were omitted. Consecutive same-role turns are not
         merged here; that normalization is model-specific and left to the
         caller.
+
+        Pass `since` for an incremental read. `since=start` returns the
+        full conversation plus a `cursor`. Sending that `cursor` back as
+        `since` returns only the messages created or changed after it,
+        oldest first, with the same per-message shape, and a new
+        `cursor`. Without `since` the response carries no `cursor` and
+        no per-message `status`.
       tags:
         - Emails
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            Incremental read position. Either the literal `start` or a
+            `cursor` returned by a previous read of this endpoint (an
+            RFC 3339 UTC timestamp with microsecond precision). Any other
+            value returns 400 `validation_error`.
+
+            With `start`, the response holds every message the read
+            without `since` would return, plus `cursor`. With a cursor,
+            `messages` holds only the messages created or changed after
+            it, oldest first. A change includes an inbound message
+            becoming visible or its body being filled, withheld or
+            discarded, and a delivery status change on an outbound
+            message. `thread_id`, `subject`, `message_count` and
+            `truncated` always describe the whole conversation, not the
+            returned messages.
+
+            Send `cursor` back verbatim. The cursor trails the read by 10
+            seconds so a write that commits late is not skipped, which
+            means a message changed within that window can be returned
+            again by the next read: upsert messages by `id`. Deleted
+            messages are not reported; a periodic `since=start` read (or
+            a read without `since`) reconciles.
       responses:
         "200":
           description: Conversation
@@ -15121,6 +15156,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConversationMessage"
+        cursor:
+          type: string
+          description: |
+            Present only on a `since` read: the position to send as
+            `since` on the next read. Send it back verbatim.
       required:
         - thread_id
         - message_count
@@ -15128,7 +15168,11 @@ components:
         - messages
     ConversationMessage:
       type: object
-      description: One message in the conversation, with its body and a chat role.
+      description: |
+        One message in the conversation, with its body and a chat role.
+        `status` is the delivery status of an outbound message, as on
+        `/sent-emails/{id}`, and is present only on a `since` read and
+        only on outbound messages.
       properties:
         role:
           type: string
@@ -15177,6 +15221,8 @@ components:
             - "null"
           format: date-time
           description: received_at for inbound, created_at for outbound.
+        status:
+          $ref: "#/components/schemas/SentEmailStatus"
         presence_control:
           $ref: "#/components/schemas/PresenceControl"
         repeat:

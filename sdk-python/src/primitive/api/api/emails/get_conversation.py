@@ -10,6 +10,7 @@ from ... import errors
 
 from ...models.error_response import ErrorResponse
 from ...models.get_conversation_response_200 import GetConversationResponse200
+from ...types import UNSET, Unset
 from typing import cast
 from uuid import UUID
 
@@ -17,17 +18,26 @@ from uuid import UUID
 
 def _get_kwargs(
     id: UUID,
+    *,
+    since: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
 
     
 
-    
+    params: dict[str, Any] = {}
+
+    params["since"] = since
+
+
+    params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
+
 
     _kwargs: dict[str, Any] = {
         "method": "get",
         "url": "/emails/{id}/conversation".format(id=quote(str(id), safe=""),),
+        "params": params,
     }
 
 
@@ -83,6 +93,7 @@ def sync_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    since: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | GetConversationResponse200]:
     """ Get the conversation an email belongs to
@@ -106,8 +117,16 @@ def sync_detailed(
     merged here; that normalization is model-specific and left to the
     caller.
 
+    Pass `since` for an incremental read. `since=start` returns the
+    full conversation plus a `cursor`. Sending that `cursor` back as
+    `since` returns only the messages created or changed after it,
+    oldest first, with the same per-message shape, and a new
+    `cursor`. Without `since` the response carries no `cursor` and
+    no per-message `status`.
+
     Args:
         id (UUID):
+        since (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -120,6 +139,7 @@ def sync_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+since=since,
 
     )
 
@@ -133,6 +153,7 @@ def sync(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    since: str | Unset = UNSET,
 
 ) -> ErrorResponse | GetConversationResponse200 | None:
     """ Get the conversation an email belongs to
@@ -156,8 +177,16 @@ def sync(
     merged here; that normalization is model-specific and left to the
     caller.
 
+    Pass `since` for an incremental read. `since=start` returns the
+    full conversation plus a `cursor`. Sending that `cursor` back as
+    `since` returns only the messages created or changed after it,
+    oldest first, with the same per-message shape, and a new
+    `cursor`. Without `since` the response carries no `cursor` and
+    no per-message `status`.
+
     Args:
         id (UUID):
+        since (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -171,6 +200,7 @@ def sync(
     return sync_detailed(
         id=id,
 client=client,
+since=since,
 
     ).parsed
 
@@ -178,6 +208,7 @@ async def asyncio_detailed(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    since: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | GetConversationResponse200]:
     """ Get the conversation an email belongs to
@@ -201,8 +232,16 @@ async def asyncio_detailed(
     merged here; that normalization is model-specific and left to the
     caller.
 
+    Pass `since` for an incremental read. `since=start` returns the
+    full conversation plus a `cursor`. Sending that `cursor` back as
+    `since` returns only the messages created or changed after it,
+    oldest first, with the same per-message shape, and a new
+    `cursor`. Without `since` the response carries no `cursor` and
+    no per-message `status`.
+
     Args:
         id (UUID):
+        since (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -215,6 +254,7 @@ async def asyncio_detailed(
 
     kwargs = _get_kwargs(
         id=id,
+since=since,
 
     )
 
@@ -228,6 +268,7 @@ async def asyncio(
     id: UUID,
     *,
     client: AuthenticatedClient | Client,
+    since: str | Unset = UNSET,
 
 ) -> ErrorResponse | GetConversationResponse200 | None:
     """ Get the conversation an email belongs to
@@ -251,8 +292,16 @@ async def asyncio(
     merged here; that normalization is model-specific and left to the
     caller.
 
+    Pass `since` for an incremental read. `since=start` returns the
+    full conversation plus a `cursor`. Sending that `cursor` back as
+    `since` returns only the messages created or changed after it,
+    oldest first, with the same per-message shape, and a new
+    `cursor`. Without `since` the response carries no `cursor` and
+    no per-message `status`.
+
     Args:
         id (UUID):
+        since (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -266,5 +315,6 @@ async def asyncio(
     return (await asyncio_detailed(
         id=id,
 client=client,
+since=since,
 
     )).parsed

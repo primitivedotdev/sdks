@@ -812,6 +812,13 @@ export const discardEmailContent = <ThrowOnError extends boolean = false>(option
  * merged here; that normalization is model-specific and left to the
  * caller.
  *
+ * Pass `since` for an incremental read. `since=start` returns the
+ * full conversation plus a `cursor`. Sending that `cursor` back as
+ * `since` returns only the messages created or changed after it,
+ * oldest first, with the same per-message shape, and a new
+ * `cursor`. Without `since` the response carries no `cursor` and
+ * no per-message `status`.
+ *
  */
 export const getConversation = <ThrowOnError extends boolean = false>(options: Options<GetConversationData, ThrowOnError>) => (options.client ?? client).get<GetConversationResponses, GetConversationErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

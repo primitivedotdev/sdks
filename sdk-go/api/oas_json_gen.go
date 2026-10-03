@@ -11702,14 +11702,21 @@ func (s *Conversation) encodeFields(e *jx.Encoder) {
 		}
 		e.ArrEnd()
 	}
+	{
+		if s.Cursor.Set {
+			e.FieldStart("cursor")
+			s.Cursor.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfConversation = [5]string{
+var jsonFieldsNameOfConversation = [6]string{
 	0: "thread_id",
 	1: "subject",
 	2: "message_count",
 	3: "truncated",
 	4: "messages",
+	5: "cursor",
 }
 
 // Decode decodes Conversation from json.
@@ -11782,6 +11789,16 @@ func (s *Conversation) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"messages\"")
+			}
+		case "cursor":
+			if err := func() error {
+				s.Cursor.Reset()
+				if err := s.Cursor.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"cursor\"")
 			}
 		default:
 			return d.Skip()
@@ -11895,6 +11912,12 @@ func (s *ConversationMessage) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Status.Set {
+			e.FieldStart("status")
+			s.Status.Encode(e)
+		}
+	}
+	{
 		if s.PresenceControl.Set {
 			e.FieldStart("presence_control")
 			s.PresenceControl.Encode(e)
@@ -11914,7 +11937,7 @@ func (s *ConversationMessage) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfConversationMessage = [12]string{
+var jsonFieldsNameOfConversationMessage = [13]string{
 	0:  "role",
 	1:  "direction",
 	2:  "id",
@@ -11924,9 +11947,10 @@ var jsonFieldsNameOfConversationMessage = [12]string{
 	6:  "subject",
 	7:  "text",
 	8:  "timestamp",
-	9:  "presence_control",
-	10: "repeat",
-	11: "sender_member",
+	9:  "status",
+	10: "presence_control",
+	11: "repeat",
+	12: "sender_member",
 }
 
 // Decode decodes ConversationMessage from json.
@@ -12031,6 +12055,16 @@ func (s *ConversationMessage) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"timestamp\"")
+			}
+		case "status":
+			if err := func() error {
+				s.Status.Reset()
+				if err := s.Status.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"status\"")
 			}
 		case "presence_control":
 			if err := func() error {

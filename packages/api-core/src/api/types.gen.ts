@@ -2436,10 +2436,20 @@ export type Conversation = {
      */
     truncated: boolean;
     messages: Array<ConversationMessage>;
+    /**
+     * Present only on a `since` read: the position to send as
+     * `since` on the next read. Send it back verbatim.
+     *
+     */
+    cursor?: string;
 };
 
 /**
  * One message in the conversation, with its body and a chat role.
+ * `status` is the delivery status of an outbound message, as on
+ * `/sent-emails/{id}`, and is present only on a `since` read and
+ * only on outbound messages.
+ *
  */
 export type ConversationMessage = {
     /**
@@ -2470,6 +2480,7 @@ export type ConversationMessage = {
      * received_at for inbound, created_at for outbound.
      */
     timestamp?: string | null;
+    status?: SentEmailStatus;
     presence_control?: PresenceControl;
     /**
      * Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.
@@ -7189,7 +7200,33 @@ export type GetConversationData = {
          */
         id: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * Incremental read position. Either the literal `start` or a
+         * `cursor` returned by a previous read of this endpoint (an
+         * RFC 3339 UTC timestamp with microsecond precision). Any other
+         * value returns 400 `validation_error`.
+         *
+         * With `start`, the response holds every message the read
+         * without `since` would return, plus `cursor`. With a cursor,
+         * `messages` holds only the messages created or changed after
+         * it, oldest first. A change includes an inbound message
+         * becoming visible or its body being filled, withheld or
+         * discarded, and a delivery status change on an outbound
+         * message. `thread_id`, `subject`, `message_count` and
+         * `truncated` always describe the whole conversation, not the
+         * returned messages.
+         *
+         * Send `cursor` back verbatim. The cursor trails the read by 10
+         * seconds so a write that commits late is not skipped, which
+         * means a message changed within that window can be returned
+         * again by the next read: upsert messages by `id`. Deleted
+         * messages are not reported; a periodic `since=start` read (or
+         * a read without `since`) reconciles.
+         *
+         */
+        since?: string;
+    };
     url: '/emails/{id}/conversation';
 };
 
