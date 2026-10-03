@@ -1,4 +1,4 @@
-import { renameSync } from "node:fs";
+import { existsSync, renameSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { disconnectAgent } from "./agent-disconnect.js";
 import {
@@ -45,6 +45,7 @@ export function guardedSession(
 export function alreadyConnectedDetail(
   bound: BoundAddress[],
   command: "connect" | "enroll",
+  continuation?: string,
 ): string {
   const list = bound
     .map((row) => `${row.address} (profile ${row.profile})`)
@@ -58,6 +59,7 @@ export function alreadyConnectedDetail(
     `This session already has a Primitive ${noun}: ${list}. ${action} and nothing was changed.`,
     `Ask the user whether to keep the existing ${noun} and not connect a new one, or to disconnect the existing agent first. Do not decide for them.`,
     `If they want to replace it, rerun this command with --replace-existing, which disconnects the existing agent and then continues. If they want this session to have more than one address on purpose, rerun with --keep-existing.`,
+    ...(continuation ? [continuation] : []),
   ].join(" ");
 }
 
@@ -102,6 +104,7 @@ export function alreadyConnected(
   session: string,
   bound: BoundAddress[],
   command: "connect" | "enroll",
+  continuation?: string,
 ): AlreadyConnectedResult {
   const rows = bound.map(({ profile, address }) => ({ profile, address }));
   return {
@@ -109,8 +112,26 @@ export function alreadyConnected(
     session,
     existing: rows[0] as BoundAddress,
     bound: rows,
-    detail: alreadyConnectedDetail(rows, command),
+    detail: alreadyConnectedDetail(rows, command, continuation),
   };
+}
+
+/**
+ * How to continue the target profile's own connection when the refusal is
+ * only about it: a setup with saved progress resumes without reading stdin,
+ * while a claim-only profile (no saved setup) is refreshed by rerunning the
+ * same claim with --keep-existing. Null when neither path applies.
+ */
+export function targetContinuation(
+  configDir: string,
+  profile: string,
+  claimOnly: boolean,
+): string | null {
+  if (existsSync(join(agentProfileDirectory(configDir, profile), "setup.json")))
+    return `If ${profile} is this same setup continuing, rerun with --resume instead; it reads no invitation.`;
+  if (claimOnly)
+    return `If ${profile} was claimed from this same invitation, rerun this command with --keep-existing to refresh it; the same invitation is not claimed again.`;
+  return null;
 }
 
 /** Move a file aside so a fresh setup can start, keeping it for recovery. */

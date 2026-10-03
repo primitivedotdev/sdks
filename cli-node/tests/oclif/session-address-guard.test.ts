@@ -364,6 +364,60 @@ describe("one address per session", () => {
     );
   });
 
+  it("points a claim-only rerun at --keep-existing, which refreshes the same profile", async () => {
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    const target = `session-${session}`;
+    // Claim-only saves a credential but no setup binding.
+    savedProfile(
+      target,
+      "claimed@example.test",
+      null,
+      agentInvitationHash(invitation),
+    );
+    await AgentConnectCommand.run(["--profile", target, "--json"], { root });
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    const refusal = JSON.parse(outputs[0] ?? "");
+    expect(refusal.detail).toContain("--keep-existing to refresh it");
+    expect(refusal.detail).not.toContain("--resume");
+    expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
+    process.exitCode = undefined;
+    outputs = [];
+    mocks.connectAgent.mockImplementation(
+      async (
+        params: Parameters<
+          typeof import("../../src/oclif/agent-connect.js").connectAgent
+        >[0],
+      ) =>
+        (
+          await vi.importActual<
+            typeof import("../../src/oclif/agent-connect.js")
+          >("../../src/oclif/agent-connect.js")
+        ).connectAgent(params),
+    );
+    await AgentConnectCommand.run(
+      ["--profile", target, "--keep-existing", "--json"],
+      { root },
+    );
+    expect(process.exitCode).not.toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "already_configured",
+      identity: { profileName: target },
+    });
+  });
+
+  it("points a target with saved setup progress at --resume", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    const target = `session-${session}`;
+    savedProfile(target, "same@example.test", session);
+    await AgentConnectCommand.run(["--session", session, "--no-skill"], {
+      root,
+    });
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(outputs.join("\n")).toContain("rerun with --resume instead");
+    expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
+  });
+
   it("never refuses a resume or a kept target", async () => {
     process.env.CODEX_THREAD_ID = session;
     savedProfile(
