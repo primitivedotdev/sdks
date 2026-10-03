@@ -893,10 +893,12 @@ verification reply is accepted for delivery. Do not claim again or resend becaus
 setup was interrupted. The CLI preserves its private recovery state.
 
 A session has one address. Before claiming or enrolling, `agent connect` and
-`agent enroll` look for another saved profile that still holds a credential
-and is bound to the same session (the `--session` value, or the runtime's
-session ID from the environment). If one exists, they claim nothing, create
-nothing, leave the invitation unread and unused, and exit 3. With `--json` the
+`agent enroll` look for any saved profile that still holds a credential and
+is bound to the same session (the `--session` value, or the runtime's session
+ID from the environment when `--session` is absent), including the profile
+being connected; enrollment skips only its own resumable enrollment. If one
+exists, they claim nothing, create nothing, leave the invitation unread and
+unused, and exit 3. With `--json` the
 result is:
 
 ```json
@@ -906,7 +908,8 @@ result is:
 The agent asks the user whether to keep the existing address and not connect a
 new one, or to disconnect the existing agent first, and does not decide for
 them. To replace it, rerun with `--replace-existing`, which disconnects each
-bound profile through `agent disconnect` before claiming. To keep both on
+bound profile through `agent disconnect` once the new setup's local checks
+pass, immediately before claiming. To keep both on
 purpose, rerun with `--keep-existing`. `--resume` continues a claim that
 already happened and is never refused.
 

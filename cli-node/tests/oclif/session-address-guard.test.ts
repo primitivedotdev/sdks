@@ -330,7 +330,41 @@ describe("one address per session", () => {
     expect(mocks.enrollAgent).toHaveBeenCalledTimes(1);
   });
 
-  it("never refuses the profile being connected or a resume", async () => {
+  it("refuses a connection in the target profile without reading stdin", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    const target = `session-${session}`;
+    // Even the same invitation is refused: continuing it is what --resume is for.
+    savedProfile(
+      target,
+      "same@example.test",
+      session,
+      agentInvitationHash(invitation),
+    );
+    await AgentConnectCommand.run(
+      ["--session", session, "--no-skill", "--json"],
+      { root },
+    );
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "already_connected",
+      bound: [{ profile: target, address: "same@example.test" }],
+    });
+    expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
+    expect(mocks.setupAgent).not.toHaveBeenCalled();
+    // --replace-existing reads it and leaves a same-invitation target to resume.
+    process.exitCode = undefined;
+    mocks.setupAgent.mockResolvedValue(setupResult(target));
+    await AgentConnectCommand.run(
+      ["--session", session, "--replace-existing", "--no-skill", "--json"],
+      { root },
+    );
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(mocks.setupAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ profileName: target, session, invitation }),
+    );
+  });
+
+  it("never refuses a resume or a kept target", async () => {
     process.env.CODEX_THREAD_ID = session;
     savedProfile(
       `session-${session}`,
@@ -340,7 +374,7 @@ describe("one address per session", () => {
     );
     mocks.setupAgent.mockResolvedValue(setupResult(`session-${session}`));
     await AgentConnectCommand.run(
-      ["--session", session, "--no-skill", "--json"],
+      ["--session", session, "--keep-existing", "--no-skill", "--json"],
       {
         root,
       },
@@ -448,6 +482,7 @@ describe("one address per session", () => {
     });
     expect(mocks.setupAgent).not.toHaveBeenCalled();
     expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
     process.exitCode = undefined;
     outputs = [];
     mocks.setupAgent.mockResolvedValue(setupResult(target));

@@ -36,7 +36,7 @@ function invocation(entry: string | undefined): string {
 
 export default class AgentConnectCommand extends Command {
   static description =
-    `Connect this coding session to Primitive in one call. With --session, the command checks this CLI's capabilities, installs or refreshes the matching primitive-connect skill for the detected runtime (Claude Code or Codex) from files bundled in this CLI, claims the owner's private setup invitation from piped stdin, answers one authenticated setup challenge, enables owner notifications, starts receiving, seeds a private AGENT_INFO note from --name and --info when absent, and prints one JSON result. The receiver defaults to external hooks in Claude Code and the native background listener elsewhere. Without a session (no --session, or an empty one) the receiver is poll: for runtimes with no local session ID or hooks, such as a cloud-hosted conversation whose commands run in a separate sandbox, the invitation is claimed and verified the same way, nothing is installed, and the result's receiving.checkCommand is the command the agent runs to check for new mail at the start of each turn and after it sends. Native receiving starts or reuses a supervised background listener and waits briefly for its first successful mail check; external receiving installs the exact Claude session's fail-open Stop hook and resume SessionStart hook after the verification reply; a real idle mail event must still verify wake. The profile defaults to session-<session>, or to connection-<invitation hash prefix> without a session. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. After the reply is submitted it waits up to a minute for the server to confirm the connection and reports verification.state verified, or reply_submitted while confirmation is still pending. Verification is separate from receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. One address per session: if this session already has a connected Primitive address, the command claims nothing and exits ${ALREADY_CONNECTED_EXIT_CODE} with status already_connected; ask the user whether to keep the existing address or disconnect it first, then rerun with --keep-existing or --replace-existing. Never choose for the user. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --profile with --status --json to inspect saved identity and local receiver health offline.`;
+    `Connect this coding session to Primitive in one call. With --session, the command checks this CLI's capabilities, installs or refreshes the matching primitive-connect skill for the detected runtime (Claude Code or Codex) from files bundled in this CLI, claims the owner's private setup invitation from piped stdin, answers one authenticated setup challenge, enables owner notifications, starts receiving, seeds a private AGENT_INFO note from --name and --info when absent, and prints one JSON result. The receiver defaults to external hooks in Claude Code and the native background listener elsewhere. Without a session (no --session, or an empty one) the receiver is poll: for runtimes with no local session ID or hooks, such as a cloud-hosted conversation whose commands run in a separate sandbox, the invitation is claimed and verified the same way, nothing is installed, and the result's receiving.checkCommand is the command the agent runs to check for new mail at the start of each turn and after it sends. Native receiving starts or reuses a supervised background listener and waits briefly for its first successful mail check; external receiving installs the exact Claude session's fail-open Stop hook and resume SessionStart hook after the verification reply; a real idle mail event must still verify wake. The profile defaults to session-<session>, or to connection-<invitation hash prefix> without a session. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. After the reply is submitted it waits up to a minute for the server to confirm the connection and reports verification.state verified, or reply_submitted while confirmation is still pending. Verification is separate from receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. One address per session: if this session already has a connected Primitive address, including one saved in the profile being connected, the command claims nothing, leaves stdin unread, and exits ${ALREADY_CONNECTED_EXIT_CODE} with status already_connected. To continue that same setup use --resume. Otherwise ask the user whether to keep the existing address or disconnect it first, then rerun with --keep-existing or --replace-existing. Never choose for the user. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --profile with --status --json to inspect saved identity and local receiver health offline.`;
   static summary = "Connect and verify an agent address";
   static examples = [
     '<%= config.bin %> agent connect --session "$CODEX_THREAD_ID" --name Research --info "Reviews pull requests" --json < private-invitation.txt',
@@ -208,20 +208,25 @@ export default class AgentConnectCommand extends Command {
           targetProfile,
         });
         let bound: BoundAddress[] = check.others;
-        // Another profile's address is refused before stdin is read, so the
-        // invitation stays unread and unclaimed for a retry. The target
-        // profile is a second address only when it holds a different
-        // invitation, which takes reading it; a replacement reads it anyway
-        // so a malformed invitation fails before anything is disconnected.
-        if (check.target && (flags["replace-existing"] || bound.length === 0)) {
+        // A refusal is decided before stdin is read, so the invitation stays
+        // unread and unclaimed for a retry after the user chooses. A
+        // connection already in the target profile counts as the session's
+        // address whatever invitation it came from: continuing the same
+        // setup is what --resume is for. Only a replacement reads the
+        // invitation first, so a malformed one fails before anything is
+        // disconnected and a same-invitation target is left to resume.
+        if (flags["replace-existing"]) {
           const hash = agentInvitationHash(await readInvitationOnce());
-          if (check.target.invitationHash !== hash)
+          if (check.target && check.target.invitationHash !== hash)
             bound = [
               ...bound,
               { profile: check.target.profile, address: check.target.address },
             ];
-        } else if (flags["replace-existing"] && bound.length > 0)
-          agentInvitationHash(await readInvitationOnce());
+        } else if (check.target)
+          bound = [
+            ...bound,
+            { profile: check.target.profile, address: check.target.address },
+          ];
         if (bound.length > 0 && !flags["replace-existing"]) {
           const refusal = alreadyConnected(guardSession, bound, "connect");
           if (flags.json) this.log(JSON.stringify(refusal));
