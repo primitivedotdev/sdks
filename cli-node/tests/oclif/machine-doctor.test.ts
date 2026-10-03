@@ -20,6 +20,7 @@ import {
   type ConnectedAgentProfile,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
+import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import {
   type DoctorCheckId,
   type DoctorReport,
@@ -909,6 +910,43 @@ describe("primitive machine doctor", () => {
     ]);
   });
 
+  it("reports no receive hook changes when the settings write fails", async () => {
+    const { home, configDir, options } = machine({ runtimes: ["claude"] });
+    const claudeDir = join(home, ".claude");
+    const settingsPath = join(claudeDir, "settings.json");
+    writeFileSync(settingsPath, "{}\n");
+    saveConnectedAgentProfile(
+      configDir,
+      "my-agent",
+      profile("my-agent@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "my-agent"), "setup.json"),
+      { session: sessionA, receiverMode: "external" },
+    );
+    // Another command holds the settings lock, so every write fails. The
+    // SessionStart repair runs first and would also add the receive hooks.
+    const release = acquireListenLock(claudeDir, "primitive-claude-settings");
+    let report: ReturnType<typeof byId>;
+    try {
+      report = byId(await runMachineDoctor({ ...options, fix: true }));
+    } finally {
+      release();
+    }
+    const stop = report["claude.hook.stop"];
+    expect(stop.status).toBe("fail");
+    expect(stop.fixed).toBeFalsy();
+    expect(stop.changes).toBeUndefined();
+    expect(stop.items).toHaveLength(3);
+    expect(stop.detail).toContain(
+      "Repair failed: Another Primitive command is editing Claude settings",
+    );
+    expect(report["claude.hook.session_start"].detail).toContain(
+      "Repair failed",
+    );
+    expect(readFileSync(settingsPath, "utf8")).toBe("{}\n");
+  }, 20_000);
+
   it("with profiles set, repairs only those profiles' receive hooks", async () => {
     const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
     const settingsPath = join(home, ".claude", "settings.json");
@@ -947,10 +985,12 @@ describe("primitive machine doctor", () => {
     expect(stop.changes?.every((change) => change.action === "added")).toBe(
       true,
     );
-    expect(stop.items?.map((item) => [item.profile, item.state])).toEqual([
-      ["test-agent", "missing"],
-      ["test-agent", "missing"],
-      ["test-agent", "missing"],
+    expect(
+      stop.items?.map((item) => [item.profile, item.state, item.selected]),
+    ).toEqual([
+      ["test-agent", "missing", false],
+      ["test-agent", "missing", false],
+      ["test-agent", "missing", false],
     ]);
     const text = readFileSync(settingsPath, "utf8");
     expect(text).toContain("my-agent@example.test");

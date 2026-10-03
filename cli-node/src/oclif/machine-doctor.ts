@@ -653,7 +653,21 @@ export async function runMachineDoctor(
         ...(finding.status === "fail" && !finding.fixable && hookBlocked
           ? { action: "install_cli" as const }
           : {}),
-        ...(finding.items?.length ? { items: finding.items } : {}),
+        ...(finding.items?.length
+          ? {
+              items: finding.items.map((item) =>
+                // With --fix --profile, say which hooks this run leaves alone.
+                options.fix && options.profiles
+                  ? {
+                      ...item,
+                      selected:
+                        item.profile !== null &&
+                        options.profiles.has(item.profile),
+                    }
+                  : item,
+              ),
+            }
+          : {}),
         ...(id === "claude.hook.stop" && sessionHookChanges.length
           ? { changes: [...sessionHookChanges] }
           : {}),
@@ -676,14 +690,16 @@ export async function runMachineDoctor(
         { profiles: options.profiles },
       );
       if (!repaired.changed.size) return false;
-      sessionHookChanges.push(...repaired.changes);
-      for (const hook of repaired.changed) repairedAhead.add(hook);
+      // A failed write throws before anything is recorded, so no later check
+      // reports a change that was never saved.
       writeClaudeSettings({
         claudeDir: paths.claudeDir,
         read: settingsRead.read,
         settings: repaired.settings,
         now,
       });
+      sessionHookChanges.push(...repaired.changes);
+      for (const hook of repaired.changed) repairedAhead.add(hook);
       settingsRead = readClaudeSettings(paths.claudeDir);
       return repaired.changed.has(id);
     },

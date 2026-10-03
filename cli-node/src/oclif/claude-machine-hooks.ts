@@ -243,6 +243,8 @@ export type SessionHookItem = {
   session: string | null;
   hook: SessionEvent;
   state: SessionHookState;
+  /** With --fix --profile: false when this run leaves the hook alone. */
+  selected?: boolean;
 };
 
 /** One per-session receive hook a repair actually changed. */

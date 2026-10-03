@@ -177,3 +177,49 @@ it("prints one line per receive hook it would change or changed, capped", async 
   expect(lines.slice(5)).toHaveLength(11);
   expect(lines.at(-1)).toBe("    and 2 more");
 });
+
+it("lists hooks excluded by --profile apart from those the run would change", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(MachineDoctorCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  const session = "11111111-1111-4111-8111-111111111111";
+  mocks.runMachineDoctor.mockResolvedValue({
+    ...report("fail"),
+    checks: [
+      {
+        id: "claude.hook.stop",
+        title: "Claude per-session receive hooks",
+        status: "fail",
+        detail: "Per-session receive hooks need cleanup.",
+        fixable: true,
+        items: [
+          {
+            profile: "my-agent",
+            session,
+            hook: "Stop",
+            state: "outdated",
+            selected: true,
+          },
+          {
+            profile: "test-agent",
+            session,
+            hook: "Stop",
+            state: "missing",
+            selected: false,
+          },
+        ],
+      },
+    ],
+  });
+  await MachineDoctorCommand.run(
+    ["--fix", "--check", "claude.hook.stop", "--profile", "my-agent"],
+    { root },
+  );
+  expect((outputs[0] ?? "").split("\n").slice(1)).toEqual([
+    "  Would change:",
+    `    Stop hook for profile my-agent, session ${session}: old CLI path`,
+    "  Not selected (left unchanged by --profile):",
+    `    Stop hook for profile test-agent, session ${session}: missing`,
+  ]);
+});

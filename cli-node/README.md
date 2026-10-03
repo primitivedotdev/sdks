@@ -951,7 +951,8 @@ hooks written by old CLI versions that did not record them. After `--fix` it
 also reports `changes`, the same fields plus `action` (`added`, `removed` or
 `updated`), for each hook it changed. `--profile <name>` (repeatable, with
 `--fix`) limits those per-session hook changes to the named profiles; combine it
-with `--check claude.hook.stop` so nothing else is repaired.
+with `--check claude.hook.stop` so nothing else is repaired. With `--profile`,
+each item also carries `selected: false` when this run leaves it unchanged.
 
 Repairs only touch Primitive-owned hooks, blocks and skill copies. Any existing
 file is backed up beside itself as `<file>.primitive-bak-<timestamp>` before it

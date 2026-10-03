@@ -36,11 +36,20 @@ function renderCheck(check: DoctorCheck): string {
       "  Changed:",
       ...capped(check.changes.map(describeSessionHookChange)),
     );
-  if (check.status !== "ok" && check.items?.length)
-    lines.push(
-      check.changes?.length ? "  Still needing repair:" : "  Would change:",
-      ...capped(check.items.map(describeSessionHookItem)),
-    );
+  if (check.status !== "ok" && check.items?.length) {
+    const selected = check.items.filter((item) => item.selected !== false);
+    const excluded = check.items.filter((item) => item.selected === false);
+    if (selected.length)
+      lines.push(
+        check.changes?.length ? "  Still needing repair:" : "  Would change:",
+        ...capped(selected.map(describeSessionHookItem)),
+      );
+    if (excluded.length)
+      lines.push(
+        "  Not selected (left unchanged by --profile):",
+        ...capped(excluded.map(describeSessionHookItem)),
+      );
+  }
   return lines.join("\n");
 }
 
