@@ -15,7 +15,7 @@ cancellation apply as usual.
 }
 ```
 
-Only `every_minutes` (5 to 10080) is required. A repeating send needs exactly
+Only `every_minutes` (1 to 10080) is required. A repeating send needs exactly
 one `to` recipient and no cc, bcc, attachments or `fyi`
 (`422 repeat_unsupported`), and is created with a member login or an organization
 API key; connected-agent and Function credentials get `403 repeat_unsupported`.
@@ -41,7 +41,7 @@ Each repeated message carries an `interaction.json` part:
 | `step` | `tick` |
 | `payload.repeat_id` | repeat UUID |
 | `payload.sequence` | 1 for the first message, then one higher per message |
-| `payload.every_minutes` | 5 to 10080 |
+| `payload.every_minutes` | 1 to 10080 |
 | `payload.only_if_recipient_idle_minutes` | 1 to 10080, or null |
 | `payload.stoppable_by_recipient` | whether the recipient may stop the repeat |
 

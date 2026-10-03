@@ -27,7 +27,7 @@ const (
 	RepeatTickKind        = "repeat.tick/1"
 	RepeatStopKind        = "repeat.stop/1"
 	RepeatStopReasonMax   = 280 // UTF-16 code units; astral characters count twice.
-	RepeatEveryMinMinutes = 5
+	RepeatEveryMinMinutes = 1
 	RepeatEveryMaxMinutes = 10080
 	RepeatIdleMaxMinutes  = 10080
 )

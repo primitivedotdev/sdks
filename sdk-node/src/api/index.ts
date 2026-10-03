@@ -207,7 +207,7 @@ export interface SendInput {
  * send needs exactly one `to` recipient, no cc, bcc or attachments.
  */
 export interface RepeatOptions {
-  /** Minutes between messages, 5 to 10080. */
+  /** Minutes between messages, 1 to 10080. */
   everyMinutes: number;
   /** Skip a repeat while the recipient has sent mail within this many minutes. */
   onlyIfRecipientIdleMinutes?: number;

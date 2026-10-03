@@ -188,6 +188,20 @@ describe("send --repeat-every", () => {
     );
   });
 
+  it("accepts the one-minute minimum", async () => {
+    mocks.sendEmail.mockResolvedValue({
+      data: { data: { ...sendResult(), repeat_id: REPEAT_ID } },
+    });
+    const result = await run("send", sendArgs("--repeat-every", "1"));
+    expect(result.exitCode).toBeUndefined();
+    expect(mocks.sendEmail.mock.calls[0]?.[0].body.repeat).toEqual({
+      every_minutes: 1,
+    });
+    expect(result.stderr).toContain(
+      `Repeating every 1 min as repeat ${REPEAT_ID}.`,
+    );
+  });
+
   it("sends no repeat field without --repeat-every", async () => {
     await run("send", sendArgs());
     expect(mocks.sendEmail.mock.calls[0]?.[0].body).not.toHaveProperty(
@@ -208,7 +222,7 @@ describe("send --repeat-every", () => {
     for (const argv of [
       sendArgs("--only-if-idle", "5"),
       sendArgs("--max-sends", "3"),
-      sendArgs("--repeat-every", "4"),
+      sendArgs("--repeat-every", "0"),
       sendArgs("--repeat-every", "30", "--cc", "bob@example.com"),
     ]) {
       const result = await run("send", argv);
@@ -258,6 +272,18 @@ describe("reply --repeat-every", () => {
     const result = await run("reply", replyArgs("--repeat-every", "60"));
     expect(mocks.replyToEmail.mock.calls[0]?.[0].body.repeat).toEqual({
       every_minutes: 60,
+    });
+    expect(result.stderr).toContain(`as repeat ${REPEAT_ID}`);
+  });
+
+  it("accepts the one-minute minimum on a reply", async () => {
+    mocks.replyToEmail.mockResolvedValue({
+      data: { data: { ...sendResult(), repeat_id: REPEAT_ID } },
+    });
+    const result = await run("reply", replyArgs("--repeat-every", "1"));
+    expect(result.exitCode).toBeUndefined();
+    expect(mocks.replyToEmail.mock.calls[0]?.[0].body.repeat).toEqual({
+      every_minutes: 1,
     });
     expect(result.stderr).toContain(`as repeat ${REPEAT_ID}`);
   });
