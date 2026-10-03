@@ -123,7 +123,8 @@ function syncDirectory(directory: string): void {
   }
 }
 
-function pruneBackups(target: string): void {
+/** Keep only the newest Primitive backups of one file. */
+export function pruneManagedBackups(target: string): void {
   const directory = dirname(target);
   const prefix = `${basename(target)}${BACKUP_INFIX}`;
   try {
@@ -214,7 +215,7 @@ export function writeManagedFile(params: {
   } finally {
     if (existsSync(temporary)) unlinkSync(temporary);
   }
-  if (backup) pruneBackups(target);
+  if (backup) pruneManagedBackups(target);
   return { backup };
 }
 

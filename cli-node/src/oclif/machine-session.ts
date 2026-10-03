@@ -20,6 +20,8 @@ import { installClaudeWakeHook } from "./claude-wake-install.js";
 import {
   AgentConnectionSetupError,
   agentProfileDirectory,
+  agentProfileName,
+  agentProfilesDirectory,
   type ConnectedAgentProfile,
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
@@ -457,6 +459,42 @@ function enrollmentAddress(
   }
 }
 
+/**
+ * Saved profiles, other than the session's own, whose setup says they were
+ * connected for this exact session. Sorted for a stable choice.
+ */
+function profilesBoundToSession(
+  configDir: string,
+  sessionId: string,
+  ownProfile: string,
+): Array<{ name: string; profile: ConnectedAgentProfile }> {
+  let names: string[];
+  try {
+    names = readdirSync(join(agentProfilesDirectory(configDir), "profiles"));
+  } catch {
+    return [];
+  }
+  const bound: Array<{ name: string; profile: ConnectedAgentProfile }> = [];
+  for (const name of names.sort()) {
+    if (name === ownProfile) continue;
+    try {
+      const setup = readMailJson(
+        join(agentProfileDirectory(configDir, name), "setup.json"),
+      ) as { session?: unknown } | null;
+      if (
+        typeof setup?.session !== "string" ||
+        setup.session.toLowerCase() !== sessionId
+      )
+        continue;
+      const profile = loadConnectedAgentProfile(configDir, name);
+      if (profile) bound.push({ name, profile });
+    } catch {
+      /* An unreadable or invalid profile is never reused. */
+    }
+  }
+  return bound;
+}
+
 /** `agent disconnect` already confirmed revocation of this profile's credential. */
 function disconnectConfirmedLocally(
   configDir: string,
@@ -725,7 +763,47 @@ export async function registerSession(
       detail: "The session ID is not a UUID. Nothing was changed.",
     };
   const sessionId = session.toLowerCase();
-  const profileName = `session-${sessionId}`;
+  const ownProfile = `session-${sessionId}`;
+  let profileName = ownProfile;
+  // A profile already connected for this session (for example by `agent
+  // connect`) is reused, so the session never gets a second address.
+  try {
+    const saved = readSessionRecord(options.configDir, sessionId);
+    if (saved?.createdBy === "existing" && saved.profile !== ownProfile)
+      profileName = agentProfileName(saved.profile);
+    else if (
+      !saved &&
+      !loadConnectedAgentProfile(options.configDir, ownProfile) &&
+      !enrollmentAddress(options.configDir, ownProfile).exists
+    ) {
+      let offline = false;
+      for (const candidate of profilesBoundToSession(
+        options.configDir,
+        sessionId,
+        ownProfile,
+      )) {
+        const state = await deps.connectionState(candidate.profile);
+        if (state === "connected") {
+          profileName = candidate.name;
+          offline = false;
+          break;
+        }
+        if (state === "unavailable") offline = true;
+      }
+      if (offline)
+        return {
+          ...base,
+          session: sessionId,
+          receiving: RECEIVING[runtime],
+          status: "offline",
+          detail:
+            "A saved profile is connected for this session, but its status could not be checked right now. No new address was created.",
+        };
+    }
+  } catch {
+    profileName = ownProfile;
+  }
+  const reused = profileName !== ownProfile;
   const known = { ...base, session: sessionId, profile: profileName };
   const cwd = resolve(options.cwd ?? process.cwd());
   const ended = async (current: SessionRecord, enrolledNow = false) => {
@@ -769,7 +847,8 @@ export async function registerSession(
     let record = readSessionRecord(options.configDir, sessionId);
     if (record?.endedAt) return await ended(record);
     const finishAgentInfo = async () => {
-      if (record?.agentInfo) return;
+      // A reused profile's notes belong to whoever connected it.
+      if (reused || record?.agentInfo) return;
       const seeded = await deps.seedAgentInfo(
         options.configDir,
         profileName,

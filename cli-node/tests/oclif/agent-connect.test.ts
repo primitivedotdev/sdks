@@ -1,6 +1,7 @@
 import {
   chmodSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -23,6 +24,7 @@ import {
   resolveCliApiRequestConfig,
 } from "../../src/oclif/api-client.js";
 import { resolveCliAuth } from "../../src/oclif/auth.js";
+import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
 import {
   agentProfileDirectory,
   agentProfilesDirectory,
@@ -104,6 +106,53 @@ describe("connected-agent setup", () => {
       detail: "No background receiver is recorded for this session.",
       liveness: "unknown",
       lastSuccessfulMailCheckAt: null,
+    });
+  });
+  it("status reports a missing Claude receive hook as a failure, separate from unverified liveness", async () => {
+    await connectAgent({
+      configDir,
+      profileName: "work",
+      invitation: setupUrl,
+      fetch: vi.fn<typeof globalThis.fetch>(async () => response()),
+    });
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "work"), "setup.json"),
+      { session: orgId, receiverMode: "external" },
+    );
+    const claudeDir = join(configDir, "claude-home");
+    const env = { CLAUDE_CONFIG_DIR: claudeDir };
+    const missing = agentConnectionStatus(configDir, "work", env).receiving;
+    expect(missing).toMatchObject({
+      mode: "external",
+      state: "down",
+      reason: "hook_missing",
+      liveness: "unknown",
+    });
+    const detail = JSON.stringify(missing);
+    expect(detail).toContain("mail will not wake this session");
+    expect(detail).toContain("primitive machine doctor --fix");
+
+    const bin = join(configDir, "bin");
+    mkdirSync(bin);
+    for (const name of ["run.js", "claude-wake.mjs", "claude-pending-mail.mjs"])
+      writeFileSync(join(bin, name), "");
+    expect(
+      installClaudeWakeHook({
+        cliPath: join(bin, "run.js"),
+        configDir,
+        profileName: "work",
+        agentAddress,
+        sessionId: orgId,
+        env,
+      }),
+    ).toBe("installed_unverified");
+    expect(
+      agentConnectionStatus(configDir, "work", env).receiving,
+    ).toMatchObject({
+      state: "unknown",
+      reason: "hook_liveness_unverified",
+      detail: null,
+      hook: { installed: true },
     });
   });
   it("advertises presence only for session setup and persists its trusted fixed return profile", async () => {

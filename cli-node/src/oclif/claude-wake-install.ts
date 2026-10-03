@@ -13,11 +13,13 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
+import { samePath } from "./claude-machine-hooks.js";
 import {
   agentProfileDirectory,
   agentProfileName,
 } from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
+import { backupManagedFile, pruneManagedBackups } from "./machine-files.js";
 import { SESSION_UUID } from "./notify-session-native.js";
 import { mailAddress, readMailJson } from "./shared-mail-files.js";
 
@@ -75,7 +77,9 @@ export function claudeWakeHookStatus(options: {
               const offset = 2;
               return (
                 candidate.type === "command" &&
-                candidate.command === process.execPath &&
+                // Doctor writes a stable PATH link to the same Node binary,
+                // so compare files rather than spellings.
+                samePath(candidate.command, process.execPath) &&
                 args.length === 7 &&
                 typeof args[0] === "string" &&
                 basename(args[0]) === script &&
@@ -145,10 +149,13 @@ function editClaudeSettings(
       }
       const next = edit(settings);
       if (next === null) return true;
+      const rendered = `${JSON.stringify(next, null, 2)}\n`;
+      // Rewriting identical settings would only churn backups.
+      if (original !== null && rendered === original) return true;
       const temporary = join(claudeDir, `.settings.json.${randomUUID()}.tmp`);
       const fd = openSync(temporary, "wx", 0o600);
       try {
-        writeFileSync(fd, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+        writeFileSync(fd, rendered, "utf8");
       } finally {
         closeSync(fd);
       }
@@ -159,7 +166,18 @@ function editClaudeSettings(
           ? readFileSync(settingsPath, "utf8")
           : null;
         if (current !== original) continue;
+        // Keep the previous settings beside the file, as machine doctor
+        // does, so every hook change can be traced and undone.
+        const backup =
+          original === null
+            ? null
+            : backupManagedFile(
+                settingsPath,
+                lstatSync(settingsPath).mode & 0o777,
+                new Date(),
+              );
         renameSync(temporary, settingsPath);
+        if (backup) pruneManagedBackups(settingsPath);
         return true;
       } finally {
         if (existsSync(temporary)) unlinkSync(temporary);
@@ -232,9 +250,10 @@ export function installClaudeWakeHook(options: {
         ],
         timeout: 10,
       };
-      // A hook for this exact session is replaced even when an older CLI
-      // install (another path or Node binary) wrote it, so upgrades never
-      // leave a second receive hook for the same session behind.
+      // A hook for this exact profile and session is replaced even when an
+      // older CLI install (another path or Node binary) wrote it, so upgrades
+      // never leave a second receive hook behind. One session can carry
+      // several profiles, so hooks of any other profile are always kept.
       const isOwnPendingHook = (candidate: unknown) =>
         record(candidate) &&
         candidate.type === "command" &&
@@ -243,6 +262,7 @@ export function installClaudeWakeHook(options: {
         typeof candidate.args[0] === "string" &&
         basename(candidate.args[0]) === "claude-pending-mail.mjs" &&
         candidate.args[2] === configDir &&
+        candidate.args[3] === profileName &&
         candidate.args[5] === sessionId &&
         candidate.args[6] === PENDING_MARKER;
       const isOwnHook = (candidate: unknown) => {
@@ -250,7 +270,8 @@ export function installClaudeWakeHook(options: {
         if (
           typeof candidate.args[0] !== "string" ||
           basename(candidate.args[0]) !== "claude-wake.mjs" ||
-          candidate.args[2] !== configDir
+          candidate.args[2] !== configDir ||
+          candidate.args[3] !== profileName
         )
           return false;
         if (
@@ -265,9 +286,8 @@ export function installClaudeWakeHook(options: {
         if (candidate.args.length !== 6 || candidate.args[5] !== HOOK_MARKER)
           return false;
         try {
-          const profile = agentProfileName(String(candidate.args[3]));
           const state = readMailJson(
-            join(agentProfileDirectory(configDir, profile), "setup.json"),
+            join(agentProfileDirectory(configDir, profileName), "setup.json"),
           );
           return record(state) && state.session === sessionId;
         } catch {
