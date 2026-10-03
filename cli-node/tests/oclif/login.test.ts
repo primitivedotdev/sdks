@@ -141,8 +141,7 @@ describe("pollCliLoginUntilApproved", () => {
   }
 
   it("stops polling and surfaces the server message when the sign-in email must change", async () => {
-    const message =
-      "Your Primitive sign-in email is on a domain Primitive receives mail for. Change it to an external address in the browser, then log in again.";
+    const message = "Update your sign-in email before continuing.";
     const poll = vi
       .fn()
       .mockResolvedValueOnce(errorResponse("authorization_pending"))
