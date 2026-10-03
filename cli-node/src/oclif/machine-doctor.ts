@@ -23,6 +23,8 @@ import {
   inspectClaudeHooks,
   readClaudeSettings,
   repairClaudeHooks,
+  type SessionHookChange,
+  type SessionHookItem,
   samePath,
   writeClaudeSettings,
 } from "./claude-machine-hooks.js";
@@ -107,6 +109,10 @@ export type DoctorCheck = {
   fixed?: boolean;
   action?: DoctorAction;
   path?: string;
+  /** claude.hook.stop: each per-session receive hook a repair would change. */
+  items?: SessionHookItem[];
+  /** claude.hook.stop after --fix: each per-session receive hook it changed. */
+  changes?: SessionHookChange[];
 };
 
 export type DoctorReport = {
@@ -165,6 +171,8 @@ export type MachineDoctorOptions = {
   fix: boolean;
   /** With --fix, repair only these checks; every check is still reported. */
   only?: ReadonlySet<string>;
+  /** With --fix, change per-session receive hooks only for these profiles. */
+  profiles?: ReadonlySet<string>;
   runtimes?: ReadonlySet<MachineRuntime>;
   configDir: string;
   home: string;
@@ -611,6 +619,8 @@ export async function runMachineDoctor(
     "claude.hook.stop",
   ];
   const repairedAhead = new Set<DoctorCheckId>();
+  // Per-session receive hooks changed by any hook repair in this run.
+  const sessionHookChanges: SessionHookChange[] = [];
   // Claude settings are parsed once; every hook check reads the same copy and
   // all hook repairs land in one backed-up write.
   let settingsRead = readClaudeSettings(paths.claudeDir);
@@ -643,6 +653,24 @@ export async function runMachineDoctor(
         ...(finding.status === "fail" && !finding.fixable && hookBlocked
           ? { action: "install_cli" as const }
           : {}),
+        ...(finding.items?.length
+          ? {
+              items: finding.items.map((item) =>
+                // With --fix --profile, say which hooks this run leaves alone.
+                options.fix && options.profiles
+                  ? {
+                      ...item,
+                      selected:
+                        item.profile !== null &&
+                        options.profiles.has(item.profile),
+                    }
+                  : item,
+              ),
+            }
+          : {}),
+        ...(id === "claude.hook.stop" && sessionHookChanges.length
+          ? { changes: [...sessionHookChanges] }
+          : {}),
       });
     },
     repair: () => {
@@ -659,15 +687,19 @@ export async function runMachineDoctor(
         settingsRead.settings,
         hookContext,
         new Set(ids),
+        { profiles: options.profiles },
       );
       if (!repaired.changed.size) return false;
-      for (const hook of repaired.changed) repairedAhead.add(hook);
+      // A failed write throws before anything is recorded, so no later check
+      // reports a change that was never saved.
       writeClaudeSettings({
         claudeDir: paths.claudeDir,
         read: settingsRead.read,
         settings: repaired.settings,
         now,
       });
+      sessionHookChanges.push(...repaired.changes);
+      for (const hook of repaired.changed) repairedAhead.add(hook);
       settingsRead = readClaudeSettings(paths.claudeDir);
       return repaired.changed.has(id);
     },
@@ -1161,7 +1193,10 @@ export async function runMachineDoctor(
           // A Codex hook can be repaired yet still await the person's trust.
           result = { ...after, fixed: changed && after.status !== "fail" };
           if (changed && after.status === "fail")
-            result.detail = `${after.detail} (A repair was applied but did not resolve this.)`;
+            result.detail =
+              id === "claude.hook.stop" && options.profiles
+                ? `${after.detail} (Only the selected profiles were repaired.)`
+                : `${after.detail} (A repair was applied but did not resolve this.)`;
         } catch (error) {
           result = {
             ...result,
