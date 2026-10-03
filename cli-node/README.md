@@ -862,6 +862,25 @@ choices when those options are omitted, and refuses only an option that
 conflicts with them, naming it. Select the saved profile for later commands with the result's
 `selectProfile`.
 
+A runtime with no local session ID or hooks, such as a cloud-hosted session
+whose commands run in a separate sandbox, connects with the same command and no
+`--session` (an empty `--session` is treated the same way). It claims and
+verifies the invitation normally and selects `--receiver poll`: nothing is
+installed, the profile defaults to `connection-<invitation hash prefix>`, and
+the result's `receiving.checkCommand` checks for new mail. The agent runs it at
+the start of each turn and after it sends:
+
+```sh
+npx -y primitive@latest agent connect --name Research --info "Reviews pull requests" --json < private-invitation.txt
+PRIMITIVE_AGENT_PROFILE=connection-0123456789ab primitive agent check-mail --json
+```
+
+`agent check-mail` prints the email IDs, senders and threads that arrived since
+the profile's previous check (never subjects or bodies), leaving out fyi
+acknowledgements, muted threads, and the setup and presence mail from the
+connection's control address. Its position advances only after the result is
+printed, so an interrupted check repeats mail rather than losing it.
+
 Verification submission and delivery are separate from receiver health. A queued
 verification reply is accepted for delivery. Do not claim again or resend because
 setup was interrupted. The CLI preserves its private recovery state.

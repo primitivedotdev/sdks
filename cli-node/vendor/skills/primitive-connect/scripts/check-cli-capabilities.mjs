@@ -4,8 +4,8 @@ import { spawnSync } from 'node:child_process';
 const receiver = process.argv.length === 4 && process.argv[2] === '--receiver'
   ? process.argv[3]
   : null;
-if (receiver !== 'native' && receiver !== 'external') {
-  process.stderr.write('Usage: node scripts/check-cli-capabilities.mjs --receiver native|external\n');
+if (receiver !== 'native' && receiver !== 'external' && receiver !== 'poll') {
+  process.stderr.write('Usage: node scripts/check-cli-capabilities.mjs --receiver native|external|poll\n');
   process.exitCode = 2;
 } else {
   const checks = [
@@ -14,7 +14,12 @@ if (receiver !== 'native' && receiver !== 'external') {
     { args: ['listen', '--help'], label: 'listen', patterns: [/external mail events at tool-output authority/i, /never synthetic user messages/i] },
     { args: ['network', 'peers', '--help'], label: 'network peers', patterns: [/discover listed peers/i, /--owner\b/] },
   ];
-  if (receiver === 'external') {
+  if (receiver === 'poll') {
+    // Nothing is installed and no listener runs: the agent checks for mail.
+    checks[0].patterns.push(/poll installs nothing/i);
+    checks[1].patterns.push(/\bpoll\b/);
+    checks[2] = { args: ['agent', 'check-mail', '--help'], label: 'agent check-mail', patterns: [/since its previous check/i] };
+  } else if (receiver === 'external') {
     checks[0].patterns.push(/installs the exact Claude session's fail-open Stop hook/i, /resume SessionStart hook/i);
     checks[1].patterns.push(/exact Claude session, install a fail-open Stop hook/i, /resume SessionStart hook/i);
     checks[2].patterns.push(/--wake\b/, /--hook-session\b/);

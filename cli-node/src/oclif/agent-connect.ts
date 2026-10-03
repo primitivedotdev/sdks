@@ -58,71 +58,85 @@ export function agentConnectionStatus(configDir: string, profileName: string) {
       ? saved.session
       : null;
   const mode =
-    saved && saved.receiverMode === "external" ? "external" : "native";
+    saved?.receiverMode === "external" || saved?.receiverMode === "poll"
+      ? saved.receiverMode
+      : "native";
   const receiving =
-    profile && session && mode === "native"
-      ? (() => {
-          const scope = notificationScope(
-            profile.api_base_url,
-            profile.api_key,
-          );
-          const listener = backgroundListenStatus({
-            configDir,
-            scope,
-            threadId: session,
-          });
-          const sharedDirectory = join(
-            configDir,
-            "shared-mail",
-            createHash("sha256").update(scope).digest("hex"),
-          );
-          const mailOwner = readSharedMailOwner({ directory: sharedDirectory });
-          return {
-            mode,
-            sessionId: session,
-            state: listener.healthy
-              ? listener.phase === "receiving"
-                ? "running"
-                : "degraded"
-              : listener.reason === "restarting"
-                ? "degraded"
-                : listener.reason === "absent"
-                  ? "unknown"
-                  : "down",
-            reason: listener.reason ?? listener.failureCode,
-            failureCode: listener.failureCode,
-            detail: listener.detail ?? null,
-            lastSuccessfulMailCheckAt: mailOwner?.lastMailCheckAt ?? null,
-            liveness:
-              listener.healthy && listener.phase === "receiving"
-                ? "live"
-                : "unknown",
-            listener,
-          };
-        })()
-      : profile && session
-        ? {
-            mode,
-            sessionId: session,
-            state: "unknown",
-            reason: "hook_liveness_unverified",
-            lastSuccessfulMailCheckAt: null,
-            liveness: "unknown",
-            hook: claudeWakeHookStatus({
+    profile && saved && mode === "poll"
+      ? {
+          // Nothing local receives: the agent checks with `agent check-mail`.
+          mode,
+          sessionId: session,
+          state: "poll",
+          reason: "agent_checks_mail",
+          lastSuccessfulMailCheckAt: null,
+          liveness: "unknown",
+        }
+      : profile && session && mode === "native"
+        ? (() => {
+            const scope = notificationScope(
+              profile.api_base_url,
+              profile.api_key,
+            );
+            const listener = backgroundListenStatus({
               configDir,
-              profileName,
-              agentAddress: profile.agent_address,
+              scope,
+              threadId: session,
+            });
+            const sharedDirectory = join(
+              configDir,
+              "shared-mail",
+              createHash("sha256").update(scope).digest("hex"),
+            );
+            const mailOwner = readSharedMailOwner({
+              directory: sharedDirectory,
+            });
+            return {
+              mode,
               sessionId: session,
-            }),
-          }
-        : {
-            mode: "unknown",
-            sessionId: null,
-            state: "unknown",
-            reason: "session_not_configured",
-            lastSuccessfulMailCheckAt: null,
-            liveness: "unknown",
-          };
+              state: listener.healthy
+                ? listener.phase === "receiving"
+                  ? "running"
+                  : "degraded"
+                : listener.reason === "restarting"
+                  ? "degraded"
+                  : listener.reason === "absent"
+                    ? "unknown"
+                    : "down",
+              reason: listener.reason ?? listener.failureCode,
+              failureCode: listener.failureCode,
+              detail: listener.detail ?? null,
+              lastSuccessfulMailCheckAt: mailOwner?.lastMailCheckAt ?? null,
+              liveness:
+                listener.healthy && listener.phase === "receiving"
+                  ? "live"
+                  : "unknown",
+              listener,
+            };
+          })()
+        : profile && session
+          ? {
+              mode,
+              sessionId: session,
+              state: "unknown",
+              reason: "hook_liveness_unverified",
+              lastSuccessfulMailCheckAt: null,
+              liveness: "unknown",
+              hook: claudeWakeHookStatus({
+                configDir,
+                profileName,
+                agentAddress: profile.agent_address,
+                sessionId: session,
+              }),
+            }
+          : {
+              mode: "unknown",
+              sessionId: null,
+              state: "unknown",
+              reason: "session_not_configured",
+              lastSuccessfulMailCheckAt: null,
+              liveness: "unknown",
+            };
   return profile
     ? {
         status: "configured" as const,

@@ -265,18 +265,112 @@ it("agent connect --session runs the whole flow with a default profile and one J
   expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
 });
 
-it("agent connect requires --profile without --session and for --status", async () => {
+it("agent connect requires --profile for --status", async () => {
   vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
     () => undefined,
-  );
-  await expect(AgentConnectCommand.run([], { root })).rejects.toThrow(
-    /Pass --session/,
   );
   await expect(AgentConnectCommand.run(["--status"], { root })).rejects.toThrow(
     /--profile with --status/,
   );
   expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
   expect(existsSync(join(home, "codex"))).toBe(false);
+});
+
+const pollInvitation = `https://api.primitive.dev/v1/agent-connections/setup#token=${["invitation", "c".repeat(48)].join("_")}`;
+function pollResult(profileName: string) {
+  return {
+    identity: {
+      profileName,
+      agentAddress: "cloud@example.com",
+      orgId: "22222222-2222-4222-8222-222222222222",
+      ownerAddress: "owner@example.com",
+      apiBaseUrl: "https://api.primitive.dev/v1",
+    },
+    sessionId: null,
+    verification: { state: "verified", deliveryStatus: "delivered" },
+    receiving: { state: "poll" },
+    resumeCommand: "primitive agent connect --resume",
+    guidance: "Primitive verified this connection.",
+  };
+}
+
+it.each([
+  ["no session", ["--no-skill", "--json"]],
+  ["an empty session", ["--session", "", "--no-skill", "--json"]],
+  ["--receiver poll", ["--receiver", "poll", "--no-skill", "--json"]],
+])("agent connect with %s claims once and reports poll receiving", async (_label, argv) => {
+  const outputs: string[] = [];
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  const { invitationProfileName } = await import(
+    "../../src/oclif/agent-connect-flow.js"
+  );
+  const profile = invitationProfileName(pollInvitation);
+  expect(profile).toMatch(/^connection-[a-f0-9]{12}$/);
+  mocks.readAgentInvitation.mockResolvedValue(pollInvitation);
+  mocks.setupAgent.mockResolvedValue(pollResult(profile));
+  await AgentConnectCommand.run(argv, { root });
+  expect(process.exitCode).toBeUndefined();
+  expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
+  expect(mocks.setupAgent).toHaveBeenCalledTimes(1);
+  const [options] = mocks.setupAgent.mock.calls[0];
+  expect(options).toMatchObject({
+    profileName: profile,
+    receiverMode: "poll",
+    invitation: pollInvitation,
+  });
+  expect(options).not.toHaveProperty("session");
+  expect(mocks.installClaudeWakeHook).not.toHaveBeenCalled();
+  const output = JSON.parse(outputs[0]);
+  expect(output).toMatchObject({
+    status: "connected",
+    address: "cloud@example.com",
+    profile,
+    sessionId: null,
+    receiving: {
+      mode: "poll",
+      state: "poll",
+      checkCommand: `PRIMITIVE_AGENT_PROFILE=${profile} primitive agent check-mail --json`,
+    },
+    resumeCommand: `primitive agent connect --profile ${profile} --receiver poll --resume --no-skill --json`,
+  });
+  expect(output.cli.capabilities).toContain("poll_receiver");
+});
+
+it("agent connect without a session names the poll resume command when setup pauses", async () => {
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
+    () => undefined,
+  );
+  const { invitationProfileName } = await import(
+    "../../src/oclif/agent-connect-flow.js"
+  );
+  mocks.readAgentInvitation.mockResolvedValue(pollInvitation);
+  mocks.setupAgent.mockRejectedValue(new Error("network"));
+  await expect(
+    AgentConnectCommand.run(["--no-skill", "--json"], { root }),
+  ).rejects.toThrow(
+    `run primitive agent connect --profile ${invitationProfileName(pollInvitation)} --receiver poll --resume --json`,
+  );
+  expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
+});
+
+it("agent connect refuses native or external receiving without a session before reading the invitation", async () => {
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
+    () => undefined,
+  );
+  mocks.readAgentInvitation.mockResolvedValue(pollInvitation);
+  for (const receiver of ["native", "external"])
+    await expect(
+      AgentConnectCommand.run(
+        ["--profile", "cloud", "--receiver", receiver, "--json"],
+        { root },
+      ),
+    ).rejects.toThrow(
+      /Without one, use --receiver poll. No invitation was claimed/,
+    );
+  expect(mocks.setupAgent).not.toHaveBeenCalled();
+  expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
 });
 
 it("agent connect points a paused npx setup back at npx", async () => {

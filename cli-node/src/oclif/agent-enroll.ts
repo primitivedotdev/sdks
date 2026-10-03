@@ -9,7 +9,12 @@ import {
   putAgentContactPolicy,
 } from "@primitivedotdev/api-core";
 import { parseAgentInvitation } from "./agent-connect.js";
-import { setupAgent, verificationReplySubmitted } from "./agent-setup.js";
+import {
+  RECEIVER_MODES,
+  type ReceiverMode,
+  setupAgent,
+  verificationReplySubmitted,
+} from "./agent-setup.js";
 import { refreshStoredCliCredentials } from "./api-client.js";
 import { loadCliCredentials } from "./auth.js";
 import {
@@ -53,7 +58,7 @@ type Enrollment = {
   orgId: string;
   grantId: string;
   apiBaseUrl: string;
-  receiverMode: "native" | "external";
+  receiverMode: ReceiverMode;
   contactRequests: boolean;
   startedAt: string;
   phase: "create_attempted" | "setup_attempted";
@@ -64,10 +69,7 @@ type Enrollment = {
 type EnrollDependencies = {
   fetch?: typeof fetch;
   now?: () => number;
-  preflight?: (
-    session: string,
-    receiver: "native" | "external",
-  ) => Promise<void>;
+  preflight?: (session: string, receiver: ReceiverMode) => Promise<void>;
   setup?: typeof setupAgent;
   env?: NodeJS.ProcessEnv;
 };
@@ -76,7 +78,7 @@ export type AgentEnrollOptions = {
   configDir: string;
   session: string;
   name?: string;
-  receiverMode?: "native" | "external";
+  receiverMode?: ReceiverMode;
   contactRequests?: boolean;
   continueSetup?: boolean;
   confirmationSleep?: (milliseconds: number) => Promise<void>;
@@ -132,7 +134,7 @@ function savedEnrollment(value: unknown): Enrollment {
     typeof row.grantId !== "string" ||
     !row.grantId ||
     typeof row.apiBaseUrl !== "string" ||
-    !["native", "external"].includes(String(row.receiverMode)) ||
+    !RECEIVER_MODES.includes(row.receiverMode as ReceiverMode) ||
     typeof row.contactRequests !== "boolean" ||
     typeof row.startedAt !== "string" ||
     !Number.isFinite(Date.parse(row.startedAt)) ||
@@ -192,9 +194,11 @@ function resolvedEnrollment(state: Enrollment): ResolvedEnrollment {
 
 async function preflight(
   session: string,
-  receiver: "native" | "external",
+  receiver: ReceiverMode,
   env: NodeJS.ProcessEnv,
 ): Promise<void> {
+  // Poll receiving wakes nothing, so there is no session to probe.
+  if (receiver === "poll") return;
   if (receiver === "external") {
     if (env.CLAUDE_CODE_SESSION_ID !== session)
       throw refuse(

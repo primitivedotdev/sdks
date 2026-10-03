@@ -104,6 +104,14 @@ export function contactRequestSessionKey(
     }
     if (typeof raw !== "object" || Array.isArray(raw)) throw sessionRequired();
     const setup = raw as Record<string, unknown>;
+    // Poll receiving binds no session: like a bare profile, it requests and
+    // waits manually, and its agent checks for the acceptance itself.
+    if (
+      setup.receiverMode === "poll" &&
+      setup.session === null &&
+      setup.invitationHash === profile.invitation_hash
+    )
+      return null;
     const session = mailId(setup.session);
     const receiverMode = setup.receiverMode ?? "native";
     const receipt = setup.receipt;
