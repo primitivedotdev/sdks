@@ -407,6 +407,25 @@ describe("one-command connected agent setup", () => {
     expect(f.state().contactRequests).toBe(true);
     expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
   });
+  it("refuses a different invitation on a connected profile without advising a separate profile", async () => {
+    const f = fixture();
+    await setupAgent(f.params);
+    const claims = f.params.fetch.mock.calls.length;
+    const error = await setupAgent({
+      ...f.params,
+      invitation: f.params.invitation.replace("#token=", "#token=next_"),
+    }).catch((caught: unknown) => caught);
+    const message = (error as Error).message;
+    expect(message).toContain(
+      "Agent profile private-session is already connected as agent@example.com with a different invitation. No invitation was claimed and nothing was changed.",
+    );
+    expect(message).toContain("Do not create a separate profile on your own.");
+    expect(message).toContain("Ask the user whether to keep agent@example.com");
+    expect(message).toContain("--replace-existing");
+    expect(message).toContain("--keep-existing");
+    expect(message).not.toMatch(/Use a separate profile/);
+    expect(f.params.fetch.mock.calls.length).toBe(claims);
+  });
   it("names an explicit option that conflicts with the saved setup", async () => {
     const f = fixture();
     await setupAgent({ ...f.params, contactRequests: false });

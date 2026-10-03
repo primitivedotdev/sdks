@@ -81,6 +81,8 @@ export type AgentEnrollOptions = {
   receiverMode?: ReceiverMode;
   contactRequests?: boolean;
   continueSetup?: boolean;
+  /** Runs once the saved login and session preflight pass, before any request. */
+  beforeCreate?: () => Promise<void>;
   confirmationSleep?: (milliseconds: number) => Promise<void>;
 } & EnrollDependencies;
 
@@ -604,6 +606,39 @@ async function confirmOwnerConnection(
   return last;
 }
 
+/**
+ * True when `session-<session>` holds this session's own enrollment, saved
+ * state and credential agreeing, so rerunning enroll resumes it rather than
+ * adding a second address. Offline and read-only.
+ */
+export function enrollmentResumes(configDir: string, session: string): boolean {
+  const profile = `session-${session}`;
+  try {
+    const raw = readMailJson(
+      join(
+        agentProfileDirectory(configDir, profile),
+        "enrollment",
+        "state.json",
+      ),
+    );
+    if (raw === null) return false;
+    const state = savedEnrollment(raw);
+    if (state.profile !== profile) return false;
+    const existing = loadConnectedAgentProfile(configDir, profile);
+    return (
+      !existing ||
+      (existing.agent_address === state.address &&
+        existing.org_id === state.orgId &&
+        existing.api_base_url === state.apiBaseUrl &&
+        (state.phase !== "setup_attempted" ||
+          (existing.invitation_hash === state.invitationHash &&
+            existing.owner_address === state.ownerAddress)))
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Trusted-machine enrollment using only saved member OAuth and the public API. */
 export async function enrollAgent(params: AgentEnrollOptions) {
   if (!SESSION_UUID.test(params.session))
@@ -642,6 +677,9 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       params.preflight ??
       ((session, receiver) => preflight(session, receiver, env))
     )(params.session, receiverMode);
+    // Every local check above has passed; a hook that changes state (such as
+    // disconnecting the agent this enrollment replaces) runs only now.
+    await params.beforeCreate?.();
     const path = join(directory, "state.json");
     const old = readMailJson(path);
     let state = old === null ? null : savedEnrollment(old);

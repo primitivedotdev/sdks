@@ -501,6 +501,67 @@ function profilesBoundToSession(
   return bound;
 }
 
+/**
+ * Every saved profile that still holds a credential and is bound to this
+ * session: the session's own `session-<id>` profile, the profile its session
+ * record names, and any profile whose setup names the session, in any
+ * receiver mode. Mail to any of them wakes the session, so a second one
+ * splits its mail across two addresses. Offline and read-only.
+ */
+export function connectedProfilesForSession(
+  configDir: string,
+  session: string,
+  exclude?: string,
+): Array<{ profile: string; address: string }> {
+  const sessionId = session.trim().toLowerCase();
+  if (!SESSION_UUID.test(sessionId)) return [];
+  const candidates = new Set<string>([`session-${sessionId}`]);
+  const record = readSessionRecord(configDir, sessionId);
+  if (record) candidates.add(record.profile);
+  try {
+    for (const name of readdirSync(
+      join(agentProfilesDirectory(configDir), "profiles"),
+    ).sort()) {
+      try {
+        const setup = readMailJson(
+          join(agentProfileDirectory(configDir, name), "setup.json"),
+        ) as { session?: unknown } | null;
+        if (
+          typeof setup?.session === "string" &&
+          setup.session.toLowerCase() === sessionId
+        )
+          candidates.add(name);
+      } catch {
+        /* An unreadable setup binds nothing. */
+      }
+    }
+  } catch {
+    /* No saved profiles. */
+  }
+  const bound: Array<{ profile: string; address: string }> = [];
+  for (const name of [...candidates].sort()) {
+    if (name === exclude) continue;
+    try {
+      const profile = loadConnectedAgentProfile(configDir, name);
+      // A disconnect marker counts only for this credential's invitation, so
+      // a profile reused for a new connection after a replacement is found.
+      if (
+        profile &&
+        !existsSync(
+          join(
+            agentProfileDirectory(configDir, name),
+            `disconnected-${profile.invitation_hash}.json`,
+          ),
+        )
+      )
+        bound.push({ profile: name, address: profile.agent_address });
+    } catch {
+      /* An invalid profile name or credential is not a connected address. */
+    }
+  }
+  return bound;
+}
+
 /** `agent disconnect` already confirmed revocation of this profile's credential. */
 function disconnectConfirmedLocally(
   configDir: string,

@@ -2,6 +2,8 @@
 
 For a Claude Code or Codex session, `primitive agent connect --session <exact-session-uuid> --json < private-invitation.txt` does the whole setup in one call: it installs the bundled primitive-connect skill, claims the invitation, answers the email challenge, starts receiving and prints one JSON result. A runtime with no local session ID or hooks omits `--session`; the same command then claims and verifies, installs nothing, and receives by polling with `primitive agent check-mail` (see the CLI README). The steps below are the claim-only path.
 
+If this session already has a connected Primitive address, `agent connect` and `agent enroll` claim nothing and exit 3 with status `already_connected`. Ask the user whether to keep the existing address or disconnect it first, then rerun with `--keep-existing` or `--replace-existing`.
+
 The app supplies a private one-use invitation. The CLI stores it as a separate
 agent profile without replacing the normal OAuth login:
 

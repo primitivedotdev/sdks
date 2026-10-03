@@ -25,6 +25,7 @@ import {
   type ConnectedAgentProfile,
   connectedAgentIdentity,
   loadConnectedAgentProfile,
+  profileAlreadyConnectedMessage,
 } from "./connected-agent-profile.js";
 import { evaluateContactPolicy } from "./contact-policy.js";
 import { runContactRequest } from "./contacts.js";
@@ -496,6 +497,16 @@ async function enableOwner(context: Context): Promise<"enabled" | "silenced"> {
     : "silenced";
 }
 
+/** Probe that this exact session is loaded and reachable for native receiving. */
+export async function nativeSessionPreflight(session: string): Promise<void> {
+  const connection = await connectNativeSession({
+    threadId: session,
+    expectedCwd: process.cwd(),
+    signal: AbortSignal.timeout(10_000),
+  });
+  connection.close();
+}
+
 function defaults(): AgentSetupDependencies {
   return {
     checkVerification,
@@ -503,14 +514,7 @@ function defaults(): AgentSetupDependencies {
     sleep: async (ms) => {
       await delay(ms);
     },
-    async preflight(session) {
-      const connection = await connectNativeSession({
-        threadId: session,
-        expectedCwd: process.cwd(),
-        signal: AbortSignal.timeout(10_000),
-      });
-      connection.close();
-    },
+    preflight: nativeSessionPreflight,
     findChallenge,
     async sendVerification(context, challenge, key) {
       const result = await sendEmail({
@@ -649,7 +653,7 @@ function refuseSetupConflicts(
   ];
   if (conflicts.length)
     throw fail(
-      `This profile's saved setup conflicts with ${conflicts.join(" and ")}. Omit the option to reuse the saved setup${params.resume ? "" : ", or use a separate profile"}. Its session and notification preferences were not changed.`,
+      `This profile's saved setup conflicts with ${conflicts.join(" and ")}. Omit the option to reuse the saved setup. Its session and notification preferences were not changed.${params.resume ? "" : " Do not create a separate profile on your own: if this session should get a different address, ask the user whether to keep the existing one or disconnect it first."}`,
     );
 }
 
@@ -742,7 +746,11 @@ export async function setupAgent(params: {
         .digest("hex");
       if (state && state.invitationHash !== hash)
         throw fail(
-          "This setup belongs to another invitation. Use a separate profile.",
+          profileAlreadyConnectedMessage(
+            profileName,
+            loadConnectedAgentProfile(params.configDir, profileName)
+              ?.agent_address ?? null,
+          ),
         );
       if (!state) {
         // Challenges precede claiming. A single recent authenticated challenge is

@@ -263,3 +263,22 @@ export function parseOwnerMemberAddress(
   if (address === ownerAddress || address === agentAddress) throw new Error();
   return address;
 }
+
+/**
+ * Refusal text for a profile that is already connected (or mid-setup) with a
+ * different invitation. It never tells the agent to pick another profile on
+ * its own: whether this session keeps its address or replaces it is the
+ * user's decision.
+ */
+export function profileAlreadyConnectedMessage(
+  profileName: string,
+  address: string | null,
+): string {
+  const who = address ? `already connected as ${address}` : "already set up";
+  const it = address ?? "it";
+  return [
+    `Agent profile ${profileName} is ${who} with a different invitation. No invitation was claimed and nothing was changed.`,
+    `Do not create a separate profile on your own. Ask the user whether to keep ${it} and not connect a new address, or to disconnect it first. Do not decide for them.`,
+    `If they choose to disconnect it, run \`primitive agent disconnect --profile ${profileName}\` (or rerun this command with --replace-existing when it is bound to this session), then connect again. If they want a second address on purpose, rerun with a new --profile and --keep-existing.`,
+  ].join(" ");
+}

@@ -13,6 +13,7 @@ import {
   loadConnectedAgentProfile,
   parseConnectedAgentProfile,
   parseOwnerMemberAddress,
+  profileAlreadyConnectedMessage,
   saveConnectedAgentProfile,
 } from "./connected-agent-profile.js";
 import { backgroundListenStatus } from "./listen-background.js";
@@ -217,6 +218,16 @@ export function parseAgentInvitation(input: string): Invitation {
   }
 }
 
+/** The saved binding of an invitation: a one-way hash of its origin and token. */
+export function agentInvitationHash(input: string): string {
+  const invitation = parseAgentInvitation(input);
+  return createHash("sha256")
+    .update(invitation.apiBaseUrl)
+    .update("\0")
+    .update(invitation.token)
+    .digest("hex");
+}
+
 export async function readAgentInvitation(
   input: AsyncIterable<string | Buffer>,
   isTTY: boolean | undefined,
@@ -323,11 +334,7 @@ export async function connectAgent(params: {
 }): Promise<AgentConnectResult> {
   const profileName = agentProfileName(params.profileName);
   const invitation = parseAgentInvitation(params.invitation);
-  const invitationHash = createHash("sha256")
-    .update(invitation.apiBaseUrl)
-    .update("\0")
-    .update(invitation.token)
-    .digest("hex");
+  const invitationHash = agentInvitationHash(params.invitation);
   const directory = agentProfilesDirectory(params.configDir);
   let release: (() => void) | undefined;
   try {
@@ -343,7 +350,7 @@ export async function connectAgent(params: {
     if (existing) {
       if (existing.invitation_hash !== invitationHash)
         throw new AgentConnectionSetupError(
-          "This agent profile is already configured. Its identity and credentials were not changed. Use a separate profile for another invitation.",
+          profileAlreadyConnectedMessage(profileName, existing.agent_address),
         );
       return {
         status: "already_configured",

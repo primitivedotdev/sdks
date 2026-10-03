@@ -11,6 +11,7 @@ import {
   parseAgentInvitation,
 } from "./agent-connect.js";
 import {
+  nativeSessionPreflight,
   type ReceiverMode,
   setupAgent,
   verificationReplySubmitted,
@@ -136,6 +137,8 @@ export type MailCheck = {
 
 export type AgentConnectFlowDependencies = {
   setupAgent: typeof setupAgent;
+  /** Probe the exact session for native receiving before a beforeSetup hook. */
+  nativePreflight(session: string): Promise<void>;
   installClaudeWakeHook: typeof installClaudeWakeHook;
   installSkill(runtime: AgentRuntime): ConnectSkillInstall;
   seedAgentInfo(profileName: string, value: string): Promise<AgentInfoSeed>;
@@ -165,6 +168,11 @@ export type AgentConnectFlowOptions = {
   cwd?: string;
   env?: Record<string, string | undefined>;
   readInvitation(): Promise<string>;
+  /**
+   * Runs once every local check has passed, immediately before the
+   * invitation is claimed. Not called on --resume.
+   */
+  beforeSetup?: () => Promise<void>;
   /** Bounded wait for the listener's first mail check. */
   mailCheckWaitMs?: number;
   dependencies?: Partial<AgentConnectFlowDependencies>;
@@ -230,6 +238,7 @@ function defaults(
 ): AgentConnectFlowDependencies {
   return {
     setupAgent,
+    nativePreflight: nativeSessionPreflight,
     installClaudeWakeHook,
     installSkill(runtime) {
       const bundle = readBundledConnectSkill(options.packageRoot);
@@ -393,6 +402,24 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
 
   const startedAt = Date.now();
 
+  const setupInvitation = options.resume
+    ? undefined
+    : (invitation ?? (await options.readInvitation()));
+  if (options.beforeSetup) {
+    // The last point before the claim. Probe what can still fail locally
+    // first, so a hook that changes state (such as disconnecting the agent
+    // this one replaces) runs only when the new setup can start.
+    if (receiver === "native" && session) {
+      try {
+        await dependencies.nativePreflight(session);
+      } catch {
+        throw new AgentConnectionSetupError(
+          "This exact session is not available for native receiving. No invitation was claimed and nothing was changed. Open a supported session and retry setup.",
+        );
+      }
+    }
+    await options.beforeSetup();
+  }
   const result: SetupResult = await dependencies.setupAgent({
     configDir: options.configDir,
     profileName,
@@ -400,9 +427,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     receiverMode: receiver,
     resume: options.resume,
     contactRequests: options.contactRequests,
-    ...(options.resume
-      ? {}
-      : { invitation: invitation ?? (await options.readInvitation()) }),
+    ...(setupInvitation === undefined ? {} : { invitation: setupInvitation }),
   });
   const verified = verificationReplySubmitted(result.verification.state);
   const ownerMemberAddress = await dependencies.refreshOwnerMemberAddress(
