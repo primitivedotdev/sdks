@@ -6741,6 +6741,9 @@ type ListEmailsParams struct {
 	// Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with
 	// existing filters and cursors; does not search message text.
 	Recipient OptString `json:",omitempty,omitzero"`
+	// With `true`, leave out emails whose `fyi` is true. Combines with every other filter and with both
+	// `cursor` and `since`.
+	ExcludeFyi OptListEmailsExcludeFyi `json:",omitempty,omitzero"`
 }
 
 func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsParams) {
@@ -6850,6 +6853,15 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 		}
 		if v, ok := packed[key]; ok {
 			params.Recipient = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "exclude_fyi",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ExcludeFyi = v.(OptListEmailsExcludeFyi)
 		}
 	}
 	return params
@@ -7526,6 +7538,62 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "recipient",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: exclude_fyi.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "exclude_fyi",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotExcludeFyiVal ListEmailsExcludeFyi
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotExcludeFyiVal = ListEmailsExcludeFyi(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ExcludeFyi.SetTo(paramsDotExcludeFyiVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.ExcludeFyi.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "exclude_fyi",
 			In:   "query",
 			Err:  err,
 		}

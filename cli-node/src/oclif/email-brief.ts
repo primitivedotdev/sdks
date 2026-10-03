@@ -7,6 +7,13 @@ import { runAddressNotesRequest } from "./address-notes.js";
 import { apiContactPolicy } from "./contact-policy-client.js";
 import { otherParticipants } from "./email-participants.js";
 import {
+  type EmailInteraction,
+  interactionHumanLine,
+  interactionNextActions,
+  type NextAction,
+  readEmailInteraction,
+} from "./interaction-actions.js";
+import {
   notificationPartReader,
   readConversationStatusContent,
 } from "./notify-session-content.js";
@@ -80,6 +87,17 @@ export type EmailBriefEnvelope = {
   peer_signal: PeerSignal | null;
   /** Set when the server marks this email as part of a repeating send. */
   repeat: RepeatedMessage | null;
+  /**
+   * The server's interaction facts (`interaction_hint`, `interaction_kind`,
+   * `fyi`), decided from a DKIM-authenticated part and never from headers or
+   * sender text. Null when the server does not report them.
+   */
+  interaction: EmailInteraction | null;
+  /**
+   * The commands that answer this email, best first. Empty when it needs no
+   * reply or this CLI cannot answer it.
+   */
+  next_actions: NextAction[];
 };
 
 export type BriefAttachment = {
@@ -132,8 +150,21 @@ function quoteArg(value: string): string {
 /** Attachment rows for the brief, each with the exact command that downloads it. */
 const MAX_PART_INDEX = 2_147_483_647;
 
-export function briefAttachments(detail: EmailDetail): BriefAttachments {
-  const parts = detail.parsed?.attachments ?? [];
+export function briefAttachments(
+  detail: EmailDetail,
+  options: { hideInteractionPart?: boolean } = {},
+): BriefAttachments {
+  const all = detail.parsed?.attachments ?? [];
+  // The interaction part of a server-classified interaction is protocol data,
+  // answered by the command in next_actions, not a file to download. Hidden
+  // only when exactly one part carries that name.
+  const named = all.filter(
+    (part) => part.filename?.toLowerCase() === "interaction.json",
+  );
+  const parts =
+    options.hideInteractionPart && named.length === 1
+      ? all.filter((part) => part !== named[0])
+      : all;
   const id = quoteArg(detail.id);
   const items = parts.map((part): BriefAttachment => {
     const index =
@@ -398,6 +429,10 @@ export async function buildEmailBrief(input: {
   // The server's repeat marker, not the message content, establishes that
   // Primitive sent this as a repeat.
   const repeat = await readRepeatedMessage({ client, detail, signal });
+  const interaction = readEmailInteraction(detail);
+  const nextActions = interactionNextActions(interaction, detail.id, {
+    repeatStoppable: repeat ? repeat.stop_command !== null : null,
+  });
   return {
     envelope: {
       email_id: detail.id,
@@ -415,7 +450,10 @@ export async function buildEmailBrief(input: {
       thread_id: threadId,
       in_thread: sentInThread(thread, self) ?? null,
       ...alsoAddressed(otherParticipants(detail, self)),
-      attachments: briefAttachments(detail),
+      attachments: briefAttachments(detail, {
+        hideInteractionPart:
+          interaction?.hint === "card" || interaction?.hint === "status",
+      }),
       newer:
         thread?.newerInboundCount === undefined
           ? null
@@ -429,6 +467,8 @@ export async function buildEmailBrief(input: {
       work_claim: claim,
       peer_signal: peerSignal,
       repeat,
+      interaction,
+      next_actions: nextActions,
     },
     subject: detail.subject ?? null,
     body_text: detail.body_text ?? null,
@@ -495,6 +535,8 @@ export function renderEmailBrief(brief: EmailBrief): string {
     lines.push(
       `  sender's latest signal on your last message ${e.peer_signal.sent_email_id}: ${e.peer_signal.kind} at ${e.peer_signal.received_at}${e.peer_signal.active ? "" : " (expired)"}`,
     );
+  const answer = interactionHumanLine(e.interaction, e.next_actions);
+  if (answer) lines.push(`  how to answer: ${answer}`);
   const body = brief.body_text ?? "";
   const marker = fence(body);
   lines.push(

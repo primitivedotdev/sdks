@@ -355,6 +355,13 @@ signal or interaction, so two agents cannot keep acknowledging each other.
 `primitive send --fyi --in-reply-to <message-id>` sends the same kind of
 acknowledgement for a message identified by its Message-Id.
 
+A plain `primitive reply` to an email the server classifies as an interaction
+the reply does not complete (a payment or contact request, or a kind this CLI
+cannot answer), or to informational mail or a status signal, is still sent.
+Without `--json` one `Warning:` line on stderr names the command that answers
+it; with `--json` the envelope carries `interaction_warning` (`code`,
+`email_id`, `kind`, `category`, `message`, `expected`), null otherwise.
+
 An informational reply or send carries an idempotency key like any other
 send, derived from the target and the note, so retrying the same command is
 deduplicated. With `--json` the envelope reports it as `idempotency_key`.
@@ -983,7 +990,7 @@ The wake line carries only metadata the server or local listener state
 provides, never the subject or body:
 
 ```text
-Primitive mail arrived: <email-id> from=<sender> relationship=<owner|member|agent|contact|other> thread=<thread-id|none> in_thread=<yes|no> attachments=<yes|no> newer=<n>. Read with primitive emails get --id <email-id> --brief. <authority sentence>
+Primitive mail arrived: <email-id> from=<sender> relationship=<owner|member|agent|contact|other> thread=<thread-id|none> in_thread=<yes|no> attachments=<yes|no> newer=<n> interaction=<kind|fyi>. Read with primitive emails get --id <email-id> --brief. <authority sentence>
 ```
 
 `relationship` comes from server admission and verification: `owner` and
@@ -992,6 +999,13 @@ verification or agent network admission, `contact` from an explicit contact
 allowance. `in_thread` says whether this profile has sent in the thread.
 `newer` appears only when the API reports newer inbound mail in the thread. A
 sender address outside a plain character set is shown as `from=unavailable`.
+`interaction=<protocol>/<version>` appears when the server classifies the email
+as an interaction (its `interaction_hint` is `card`), and `interaction=fyi`
+for informational mail. Either is followed by one fixed sentence matching the
+brief: that it needs no reply, that a plain reply does not complete it and the
+brief names the command, that it is a repeating message, or that this CLI
+cannot answer it. Both come only from the server's `interaction_hint`,
+`interaction_kind` and `fyi` fields.
 Codex notifications carry the same fields in their JSON line.
 
 `primitive emails get --id <id> --brief` prints a trusted envelope first
@@ -1001,6 +1015,38 @@ sender's active `AGENT_WORKING` claim, and the sender's latest read, ack or
 working signal on your last message in the thread), then the sender's subject
 and `body_text`, fenced and labelled untrusted. With `--json` it prints one
 object with `envelope`, `subject` and `body_text`.
+
+The envelope also carries `interaction` (the server's `interaction_hint`,
+`interaction_kind` and `fyi`, plus a `category` and whether a plain reply
+completes it; null when the server does not report them) and `next_actions`,
+the commands that answer the email, best first, each with `kind`, `command`,
+`argv`, `description`, `placeholders` and `requires_message`. For anything
+other than ordinary mail, one `how to answer:` line directly above the
+untrusted content names the command:
+
+| Server classification | `how to answer` |
+|---|---|
+| `x402.payment/1` | `primitive payments challenge-from-email --id <id>` to review, `primitive payments pay-email --in-reply-to <id>` to pay |
+| `primitive.contact/1` | `primitive contacts accept --id <id>` |
+| `repeat.tick/1` | reply if needed; `primitive repeat stop --id <id>` once its goal is met |
+| `repeat.stop/1`, status signals, `fyi` | no reply needed |
+| any other interaction kind | this CLI cannot answer it, and a plain reply does not complete it |
+
+The classification is decided by the server from a DKIM-authenticated
+`interaction.json` part. The CLI never derives it from the
+`X-Primitive-Interaction` header, part filenames, the subject or the body.
+When the server classifies the email as an interaction, its `interaction.json`
+part is left out of the attachment list. `primitive inbox next` carries the
+same `interaction` and `next_actions` in its JSON envelope, prints the same
+line above the conversation, and ends with matching instructions: the answering
+command first for payment and contact requests (a reply only as optional), "No
+reply needed." for fyi mail, signals and repeat-stopped notices, and the stop
+command for a repeat only when the recipient may stop it. `inbox next` skips
+mail that needs no reply (fyi mail, status signals, repeat-stopped notices):
+the server's reply state does not consider them, so they would otherwise be
+returned on every call. It asks the server to leave out fyi mail with
+`exclude_fyi=true` and skips the rest using the server's `fyi` and
+`interaction_hint` fields.
 
 Before a wake event is acknowledged, the listener records a pending notice for
 the session in

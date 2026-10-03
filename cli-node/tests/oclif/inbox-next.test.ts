@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -41,6 +42,7 @@ import InboxNextCommand, {
   waitForActivity,
 } from "../../src/oclif/commands/inbox-next.js";
 import { COMMANDS } from "../../src/oclif/index.js";
+import { readEmailInteraction } from "../../src/oclif/interaction-actions.js";
 import {
   AwaitingIncludesRejectedError,
   ReplyStateUnsupportedError,
@@ -60,6 +62,8 @@ type FakeEmail = {
   body_text: string;
   status?: string;
   automation_headers?: Record<string, string> | null;
+  /** Extra server fields on the list row and the detail (fyi, hints). */
+  server?: Record<string, unknown>;
 };
 
 // "current": reply state and the automated filter. "old-strict" and
@@ -83,6 +87,8 @@ type ServerMode =
 class FakeInbox {
   emails: FakeEmail[] = [];
   mode: ServerMode = "current";
+  /** How this server treats `exclude_fyi`: applies it, ignores it, or rejects it. */
+  fyiFilter: "supported" | "ignored" | "rejected" = "supported";
   detailOverride: Partial<Record<string, Record<string, unknown>>> = {};
   onWait: (() => void) | null = null;
   calls: Array<{ op: string; query?: Record<string, unknown>; id?: string }> =
@@ -128,6 +134,7 @@ class FakeInbox {
       message_id: `<${email.id}@example.com>`,
       webhook_attempt_count: 0,
       automation_headers: email.automation_headers,
+      ...(email.server ?? {}),
     };
     return base;
   }
@@ -177,6 +184,17 @@ class FakeInbox {
               query.automated !== undefined
             ? "automated"
             : null;
+      if (this.fyiFilter === "rejected" && query.exclude_fyi !== undefined) {
+        return {
+          error: {
+            success: false,
+            error: {
+              code: "validation_error",
+              message: "Unrecognized key(s) in object: 'exclude_fyi'",
+            },
+          },
+        };
+      }
       if (rejected) {
         return {
           error: {
@@ -198,7 +216,10 @@ class FakeInbox {
       // A current server's awaiting filter matches delivered mail only.
       const excludesRejected =
         Boolean(filterAwaiting) && this.mode !== "awaiting-includes-rejected";
+      const excludeFyi =
+        this.fyiFilter === "supported" && query.exclude_fyi === "true";
       const keep = (e: FakeEmail) =>
+        !(excludeFyi && e.server?.fyi === true) &&
         !(excludesRejected && e.status === "rejected") &&
         (!filterAwaiting || e.awaiting === filterAwaiting) &&
         (filterAutomated === undefined ||
@@ -356,6 +377,7 @@ describe("findNextAwaiting", () => {
       query: {
         awaiting: "you",
         automated: "false",
+        exclude_fyi: "true",
         limit: 100,
         since: EPOCH_CURSOR,
       },
@@ -460,6 +482,7 @@ describe("findNextAwaiting", () => {
     });
     expect(inbox.calls[0]?.query).toEqual({
       awaiting: "you",
+      exclude_fyi: "true",
       limit: 100,
       since: EPOCH_CURSOR,
     });
@@ -493,8 +516,64 @@ describe("findNextAwaiting", () => {
       await countAutomatedAwaiting({ apiClient, api: inbox.api() }),
     ).toEqual({ total: 1, capped: false });
     expect(inbox.calls).toEqual([
-      { op: "list", query: { awaiting: "you", automated: "true", limit: 1 } },
+      {
+        op: "list",
+        query: {
+          awaiting: "you",
+          automated: "true",
+          exclude_fyi: "true",
+          limit: 100,
+        },
+      },
     ]);
+  });
+
+  it("does not count automated mail that inbox next would skip anyway", async () => {
+    for (const fyiFilter of ["supported", "ignored"] as const) {
+      const inbox = new FakeInbox();
+      inbox.fyiFilter = fyiFilter;
+      const automated = { precedence: "bulk" };
+      inbox.add({
+        id: "auto-fyi",
+        created_at: "2026-09-18T00:00:00.000Z",
+        automation_headers: automated,
+        server: { fyi: true, interaction_hint: "status" },
+      });
+      inbox.add({
+        id: "auto-read",
+        created_at: "2026-09-18T00:01:00.000Z",
+        automation_headers: automated,
+        server: { interaction_hint: "status", interaction_kind: "read/1" },
+      });
+      inbox.add({
+        id: "auto-stopped",
+        created_at: "2026-09-18T00:02:00.000Z",
+        automation_headers: automated,
+        server: { interaction_hint: "card", interaction_kind: "repeat.stop/1" },
+      });
+      // Every counted row would be skipped: no --include-automated hint.
+      expect(
+        await countAutomatedAwaiting({ apiClient, api: inbox.api() }),
+      ).toEqual({ total: 0, capped: false });
+      // And --include-automated indeed shows none of them.
+      expect(
+        (
+          await findNextAwaiting({
+            apiClient,
+            includeAutomated: true,
+            api: inbox.api(),
+          })
+        ).outcome,
+      ).toBe("empty");
+      inbox.add({
+        id: "auto-real",
+        created_at: "2026-09-18T00:03:00.000Z",
+        automation_headers: automated,
+      });
+      expect(
+        await countAutomatedAwaiting({ apiClient, api: inbox.api() }),
+      ).toEqual({ total: 1, capped: false });
+    }
   });
 
   it("skips an email the detail now reports automated (parsed since the list)", async () => {
@@ -745,6 +824,8 @@ describe("output", () => {
       "automated",
       "conversation",
       "reply_command",
+      "interaction",
+      "next_actions",
       "automated_awaiting",
     ]);
     expect(json.version).toBe(1);
@@ -807,12 +888,262 @@ describe("output", () => {
       automated: null,
       conversation: null,
       reply_command: null,
+      interaction: null,
+      next_actions: [],
       automated_awaiting: { total: 3, capped: false },
     });
     expect(errorJson("reply_state_unsupported", "old").error).toEqual({
       code: "reply_state_unsupported",
       message: "old",
     });
+  });
+
+  it("names the payments command for a server-classified payment request", async () => {
+    const id = "6f1e2d3c-4b5a-4968-8776-655443322110";
+    const inbox = new FakeInbox();
+    inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
+    inbox.detailOverride[id] = {
+      interaction_hint: "card",
+      interaction_kind: "x402.payment/1",
+      interaction_candidate: true,
+    };
+    const result = await findNextAwaiting({
+      apiClient,
+      includeAutomated: false,
+      api: inbox.api(),
+    });
+    if (result.outcome !== "email") throw new Error("expected email");
+    const json = toJson(result, "primitive");
+    expect(json.interaction).toMatchObject({
+      hint: "card",
+      kind: "x402.payment/1",
+      category: "payment",
+      plain_reply_completes: false,
+    });
+    expect(json.next_actions.map((action) => action.command)).toEqual([
+      `primitive payments challenge-from-email --id ${id}`,
+      `primitive payments pay-email --in-reply-to ${id}`,
+    ]);
+    // reply_command is kept for compatibility.
+    expect(json.reply_command).toBe(`primitive reply --id ${id}`);
+    const text = formatTranscript(result, "primitive");
+    const line = text
+      .split("\n")
+      .find((row) => row.startsWith("  how to answer:"));
+    expect(line).toBe(
+      `  how to answer: Payment interaction (x402.payment/1). If it requests payment, review it with primitive payments challenge-from-email --id ${id} and pay with primitive payments pay-email --in-reply-to ${id}. A plain reply does not pay or decline it.`,
+    );
+    // The line sits above the conversation, which is sender text.
+    expect(text.indexOf("how to answer:")).toBeLessThan(
+      text.indexOf("Conversation ("),
+    );
+  });
+
+  it("ends with the interaction's command, not an unconditional reply", async () => {
+    const id = "6f1e2d3c-4b5a-4968-8776-655443322112";
+    const footer = async (fields: Record<string, unknown>) => {
+      const inbox = new FakeInbox();
+      inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
+      const result = await findNextAwaiting({
+        apiClient,
+        includeAutomated: false,
+        api: inbox.api(),
+      });
+      if (result.outcome !== "email") throw new Error("expected email");
+      // inbox next itself skips no-reply mail; the footer is still checked
+      // for every category so it never offers a reply where none is needed.
+      const text = formatTranscript(
+        { ...result, interaction: readEmailInteraction({ ...fields }) },
+        "primitive",
+      );
+      return text.slice(text.lastIndexOf("--- [2]")).split("\n").slice(2);
+    };
+    expect(
+      await footer({
+        interaction_hint: "card",
+        interaction_kind: "x402.payment/1",
+      }),
+    ).toEqual([
+      "",
+      "Answer with:",
+      `  primitive payments challenge-from-email --id ${id}`,
+      `  primitive payments pay-email --in-reply-to ${id}`,
+      "A plain reply does not complete it. Optional, to also write to the sender:",
+      `  primitive reply --id ${id} --body "..."`,
+      "Then run `primitive inbox next` again.",
+    ]);
+    expect(
+      await footer({
+        interaction_hint: "card",
+        interaction_kind: "primitive.contact/1",
+      }),
+    ).toContain(`  primitive contacts accept --id ${id}`);
+    for (const fields of [
+      { interaction_hint: "status", interaction_kind: "ack/1", fyi: true },
+      { interaction_hint: "status", interaction_kind: "read/1" },
+      { interaction_hint: "card", interaction_kind: "repeat.stop/1" },
+    ]) {
+      const lines = await footer(fields);
+      expect(lines).toContain("No reply needed.");
+      expect(lines.join("\n")).not.toContain("primitive reply");
+    }
+    expect(
+      await footer({ interaction_hint: "none", interaction_kind: null }),
+    ).toEqual([
+      "",
+      "Reply with:",
+      `  primitive reply --id ${id} --body "..."`,
+      "Then run `primitive inbox next` again.",
+    ]);
+  });
+
+  it("agrees with the brief on a repeat only the sender can stop", async () => {
+    const id = "6f1e2d3c-4b5a-4968-8776-655443322113";
+    const repeatId = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+    const tick = (stoppable: boolean) =>
+      Buffer.from(
+        JSON.stringify({
+          interaction_version: 1,
+          interaction_id: `${repeatId}@example.com`,
+          protocol: "repeat.tick",
+          protocol_version: 1,
+          step: "tick",
+          step_id: "0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607",
+          prev_step_id: null,
+          expires_at: null,
+          payload: {
+            repeat_id: repeatId,
+            sequence: 2,
+            every_minutes: 30,
+            only_if_recipient_idle_minutes: null,
+            stoppable_by_recipient: stoppable,
+          },
+        }),
+      );
+    const run = async (stoppable: boolean) => {
+      const bytes = tick(stoppable);
+      const inbox = new FakeInbox();
+      inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
+      inbox.detailOverride[id] = {
+        interaction_hint: "card",
+        interaction_kind: "repeat.tick/1",
+        repeat: { repeat_id: repeatId, sequence: 2 },
+        parsed: {
+          status: "complete",
+          attachments: [
+            {
+              filename: "interaction.json",
+              content_type: "application/json",
+              size_bytes: bytes.byteLength,
+              sha256: createHash("sha256").update(bytes).digest("hex"),
+              part_index: 1,
+            },
+          ],
+        },
+      };
+      const result = await findNextAwaiting({
+        apiClient,
+        includeAutomated: false,
+        api: { ...inbox.api(), readPart: async () => new Uint8Array(bytes) },
+      });
+      if (result.outcome !== "email") throw new Error("expected email");
+      return {
+        json: toJson(result, "primitive"),
+        text: formatTranscript(result, "primitive"),
+      };
+    };
+    const locked = await run(false);
+    expect(locked.json.next_actions.map((action) => action.kind)).toEqual([
+      "reply",
+    ]);
+    expect(locked.text).toContain(
+      "how to answer: Repeating message (repeat.tick/1). Reply if it asks for an answer; only the sender can stop it.",
+    );
+    expect(locked.text).toContain("Only the sender can stop this repeat.");
+    expect(locked.text).not.toContain("repeat stop");
+    const open = await run(true);
+    expect(open.json.next_actions.map((action) => action.command)).toContain(
+      `primitive repeat stop --id ${id}`,
+    );
+    expect(open.text).toContain("Stop the repeat once its goal is met:");
+  });
+
+  it("never gets stuck on mail that needs no reply", async () => {
+    for (const fyiFilter of ["supported", "ignored", "rejected"] as const) {
+      const inbox = new FakeInbox();
+      inbox.fyiFilter = fyiFilter;
+      // Oldest first: an fyi ack, a read signal and a repeat-stopped notice,
+      // all at awaiting=you, then one ordinary email.
+      inbox.add({
+        id: "a-fyi",
+        created_at: "2026-09-18T00:00:00.000Z",
+        server: {
+          fyi: true,
+          interaction_hint: "status",
+          interaction_kind: "ack/1",
+        },
+      });
+      inbox.add({
+        id: "b-read",
+        created_at: "2026-09-18T00:01:00.000Z",
+        server: { interaction_hint: "status", interaction_kind: "read/1" },
+      });
+      inbox.add({
+        id: "c-stopped",
+        created_at: "2026-09-18T00:02:00.000Z",
+        server: { interaction_hint: "card", interaction_kind: "repeat.stop/1" },
+      });
+      inbox.add({ id: "d-real", created_at: "2026-09-18T00:03:00.000Z" });
+      // Repeated calls without any reply keep moving past the no-reply mail.
+      for (let call = 0; call < 3; call++) {
+        const result = await findNextAwaiting({
+          apiClient,
+          includeAutomated: false,
+          api: inbox.api(),
+        });
+        expect(result.outcome === "email" && result.email.id).toBe("d-real");
+      }
+      const lists = inbox.calls.filter((c) => c.op === "list");
+      expect(lists.some((c) => c.query?.exclude_fyi === "true")).toBe(true);
+      // None of the no-reply mail is even read in full.
+      expect(
+        inbox.calls.filter((c) => c.op === "get").map((c) => c.id),
+      ).toEqual(["d-real", "d-real", "d-real"]);
+      // Once the real email is answered, nothing is left: no fyi loop.
+      inbox.emails[3].awaiting = "them";
+      expect(
+        (
+          await findNextAwaiting({
+            apiClient,
+            includeAutomated: false,
+            api: inbox.api(),
+          })
+        ).outcome,
+      ).toBe("empty");
+    }
+  });
+
+  it("offers a reply for ordinary mail and prints no answer line", async () => {
+    const id = "6f1e2d3c-4b5a-4968-8776-655443322111";
+    const inbox = new FakeInbox();
+    inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
+    inbox.detailOverride[id] = {
+      interaction_hint: "none",
+      interaction_kind: null,
+      interaction_candidate: true,
+    };
+    const result = await findNextAwaiting({
+      apiClient,
+      includeAutomated: false,
+      api: inbox.api(),
+    });
+    if (result.outcome !== "email") throw new Error("expected email");
+    const json = toJson(result, "primitive");
+    expect(json.interaction?.category).toBe("ordinary");
+    expect(json.next_actions.map((action) => action.kind)).toEqual(["reply"]);
+    expect(formatTranscript(result, "primitive")).not.toContain(
+      "how to answer:",
+    );
   });
 
   it("renders a readable transcript with the reply command", async () => {

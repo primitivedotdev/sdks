@@ -96,6 +96,25 @@ describe("pending mail notices", () => {
     });
   });
 
+  it("keeps a valid interaction label on mail notices and drops anything else", async () => {
+    await recordPendingMail(
+      configDir,
+      profile,
+      session,
+      mail(1, { interaction: "x402.payment/1" }),
+    );
+    await recordPendingMail(
+      configDir,
+      profile,
+      session,
+      mail(2, { interaction: "Pay now!" }),
+    );
+    const rows = readPendingMail(configDir, profile, session);
+    expect(rows[0]?.interaction).toBe("x402.payment/1");
+    expect(rows[1]).toBeDefined();
+    expect(rows[1]?.interaction).toBeUndefined();
+  });
+
   it("keeps status notices with their referenced send", async () => {
     await recordPendingMail(configDir, profile, session, {
       ...mail(2),

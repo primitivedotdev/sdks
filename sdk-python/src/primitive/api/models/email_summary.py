@@ -174,6 +174,28 @@ class EmailSummary:
                 servers that predate repeating sends.
             sender_member (EmailSummarySenderMemberType0 | None | Unset): Verified human authorship, projected only within
                 the member organization. Historical attribution is not current sending or owner authority.
+            fyi (bool | Unset): True when the email is an informational signal (an acknowledgement, read, working or typing
+                signal) and nothing else, so it needs no answer, not even another informational reply. Never true for mail from
+                the reader's owner. Older servers omit it.
+            interaction_hint (str | Unset): How to place this email in a timeline without downloading it: `status`, `card`,
+                `none` or `pending`. Not declared as a closed enum so that a value added later does not fail decoding. Decided
+                once by the server from the message's authoritative `interaction.json` part, and only when a passing DKIM
+                signature covering From and Content-Type authenticates the From that wrote it; the `X-Primitive-Interaction`
+                header is never used, so an unsigned or forged message is always `none`. `status`: a pure status signal (`read`,
+                `working`, `typing`, or an `ack` in the strict signal shape), shown as a property of the message it is about
+                rather than as a row. `card`: an interaction that renders as its own timeline item (for example `ack-request`,
+                `x402.payment`, `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail,
+                including any interaction kind not listed. `pending`: the email has not finished processing; read it again
+                later. Email processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers
+                omit it.
+            interaction_kind (None | str | Unset): The `<protocol>/<version>` that `interaction_hint` was decided from (for
+                example `repeat.tick/1` or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.
+            interaction_candidate (bool | Unset): UNVERIFIED early signal for the `pending` window: true when the raw
+                message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any
+                signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a
+                placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name
+                a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is
+                anything other than `pending`.
      """
 
     id: UUID
@@ -201,6 +223,10 @@ class EmailSummary:
     automation_headers: EmailSummaryAutomationHeadersType0 | None | Unset = UNSET
     repeat: EmailSummaryRepeatType0 | None | Unset = UNSET
     sender_member: EmailSummarySenderMemberType0 | None | Unset = UNSET
+    fyi: bool | Unset = UNSET
+    interaction_hint: str | Unset = UNSET
+    interaction_kind: None | str | Unset = UNSET
+    interaction_candidate: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -336,6 +362,18 @@ class EmailSummary:
         else:
             sender_member = self.sender_member
 
+        fyi = self.fyi
+
+        interaction_hint = self.interaction_hint
+
+        interaction_kind: None | str | Unset
+        if isinstance(self.interaction_kind, Unset):
+            interaction_kind = UNSET
+        else:
+            interaction_kind = self.interaction_kind
+
+        interaction_candidate = self.interaction_candidate
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -378,6 +416,14 @@ class EmailSummary:
             field_dict["repeat"] = repeat
         if sender_member is not UNSET:
             field_dict["sender_member"] = sender_member
+        if fyi is not UNSET:
+            field_dict["fyi"] = fyi
+        if interaction_hint is not UNSET:
+            field_dict["interaction_hint"] = interaction_hint
+        if interaction_kind is not UNSET:
+            field_dict["interaction_kind"] = interaction_kind
+        if interaction_candidate is not UNSET:
+            field_dict["interaction_candidate"] = interaction_candidate
 
         return field_dict
 
@@ -668,6 +714,22 @@ class EmailSummary:
         sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
 
 
+        fyi = d.pop("fyi", UNSET)
+
+        interaction_hint = d.pop("interaction_hint", UNSET)
+
+        def _parse_interaction_kind(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        interaction_kind = _parse_interaction_kind(d.pop("interaction_kind", UNSET))
+
+
+        interaction_candidate = d.pop("interaction_candidate", UNSET)
+
         email_summary = cls(
             id=id,
             status=status,
@@ -694,6 +756,10 @@ class EmailSummary:
             automation_headers=automation_headers,
             repeat=repeat,
             sender_member=sender_member,
+            fyi=fyi,
+            interaction_hint=interaction_hint,
+            interaction_kind=interaction_kind,
+            interaction_candidate=interaction_candidate,
         )
 
 

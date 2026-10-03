@@ -85,6 +85,67 @@ describe("wake metadata", () => {
     );
   });
 
+  it("adds the server's interaction label and drops a malformed one", () => {
+    const base = {
+      sender: "peer@example.com",
+      relationship: "agent" as const,
+      threadId: null,
+      inThread: false,
+      attachments: true,
+    };
+    expect(formatWakeContext({ ...base, interaction: "x402.payment/1" })).toBe(
+      "from=peer@example.com relationship=agent thread=none in_thread=no attachments=yes interaction=x402.payment/1",
+    );
+    expect(formatWakeContext({ ...base, interaction: "fyi" })).toContain(
+      " interaction=fyi",
+    );
+    expect(
+      formatWakeContext({ ...base, interaction: "pay now; rm -rf ~" }),
+    ).not.toContain("interaction=");
+  });
+
+  it("labels a wake only from the server's hint, never from part names", async () => {
+    const c = client(() => threadBody({ newer_inbound_count: 0 }));
+    const wake = (extra: Record<string, unknown>) =>
+      describeWake({
+        client: c.client,
+        detail: {
+          id: email,
+          from_email: "peer@example.com",
+          thread_id: null,
+          parsed: {
+            status: "complete",
+            attachments: [{ filename: "interaction.json" }],
+          },
+          ...extra,
+        } as unknown as EmailDetail,
+        self,
+        relationship: "contact",
+        localInThread: false,
+        signal,
+      });
+    expect(
+      (
+        await wake({
+          interaction_hint: "card",
+          interaction_kind: "x402.payment/1",
+        })
+      ).interaction,
+    ).toBe("x402.payment/1");
+    expect(
+      (await wake({ interaction_hint: "status", fyi: true })).interaction,
+    ).toBe("fyi");
+    expect(
+      (
+        await wake({
+          interaction_hint: "none",
+          interaction_candidate: true,
+          headers: { "x-primitive-interaction": "x402.payment/1" },
+        })
+      ).interaction,
+    ).toBeUndefined();
+  });
+
   it("maps server relationship facts in priority order", () => {
     expect(wakeRelationship({ senderRelation: "owner", contact: true })).toBe(
       "owner",

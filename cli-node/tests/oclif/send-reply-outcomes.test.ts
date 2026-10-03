@@ -259,6 +259,7 @@ describe("reply outcomes", () => {
       ],
       prior_replies: [],
       prior_replies_check: { status: "checked" },
+      interaction_warning: null,
     });
   });
 

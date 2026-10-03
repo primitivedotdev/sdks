@@ -111,3 +111,68 @@ it("omits metadata it does not have instead of failing the notification", async 
   expect(payload).not.toHaveProperty("relationship");
   expect(payload).not.toHaveProperty("newer_inbound_count");
 });
+
+it("names a server-classified interaction in the wake", async () => {
+  const f = await setup(async () => ({
+    sender: "sender@example.com",
+    relationship: "contact",
+    threadId: null,
+    inThread: false,
+    attachments: true,
+    interaction: "x402.payment/1",
+  }));
+  await f.notifications.handleDetail(
+    f.detail,
+    randomUUID(),
+    new AbortController().signal,
+  );
+  const text = String(f.queue.mock.calls[0]?.[0]);
+  const payload = JSON.parse(
+    text.split("\n").find((line) => line.startsWith("{")) ?? "{}",
+  );
+  expect(payload.interaction).toBe("x402.payment/1");
+  expect(text).toContain(
+    "Primitive classifies this email as x402.payment/1. It is an interaction a plain reply does not complete; the brief names the command that answers it.",
+  );
+});
+
+it("says fyi mail needs no reply in the wake", async () => {
+  const f = await setup(async () => ({
+    sender: "sender@example.com",
+    relationship: "contact",
+    threadId: null,
+    inThread: false,
+    attachments: false,
+    interaction: "fyi",
+  }));
+  await f.notifications.handleDetail(
+    f.detail,
+    randomUUID(),
+    new AbortController().signal,
+  );
+  const text = String(f.queue.mock.calls[0]?.[0]);
+  expect(text).toContain(
+    "Primitive classifies this email as fyi. It needs no reply.",
+  );
+});
+
+it("says a repeat-stopped notice needs no reply, like the brief", async () => {
+  const f = await setup(async () => ({
+    sender: "sender@example.com",
+    relationship: "contact",
+    threadId: null,
+    inThread: false,
+    attachments: true,
+    interaction: "repeat.stop/1",
+  }));
+  await f.notifications.handleDetail(
+    f.detail,
+    randomUUID(),
+    new AbortController().signal,
+  );
+  const text = String(f.queue.mock.calls[0]?.[0]);
+  expect(text).toContain(
+    "Primitive classifies this email as repeat.stop/1. It needs no reply.",
+  );
+  expect(text).not.toContain("names the command");
+});

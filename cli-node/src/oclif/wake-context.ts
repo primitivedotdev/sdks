@@ -3,6 +3,10 @@ import type {
   PrimitiveApiClient,
   ThreadMessage,
 } from "@primitivedotdev/api-core";
+import {
+  isWakeInteractionLabel,
+  wakeInteractionLabel,
+} from "./interaction-actions.js";
 
 /**
  * Server-derived facts about one received email that a wake may carry.
@@ -24,6 +28,12 @@ export type WakeContext = {
   attachments: boolean;
   /** Present only when the API reports newer inbound mail for this thread. */
   newer?: number;
+  /**
+   * The server's interaction kind (`<protocol>/<version>`) when it classifies
+   * the email as an interaction card, or `fyi` for informational mail.
+   * Absent for ordinary mail and on servers that do not report it.
+   */
+  interaction?: string;
 };
 
 export type NewerInbound = { id: string; from: string; received_at: string };
@@ -266,7 +276,10 @@ export function formatWakeContext(context: WakeContext): string {
     context.newer >= 0
       ? ` newer=${Math.min(context.newer, 9999)}`
       : "";
-  return `from=${sender} relationship=${context.relationship} thread=${thread} in_thread=${context.inThread ? "yes" : "no"} attachments=${context.attachments ? "yes" : "no"}${newer}`;
+  const interaction = isWakeInteractionLabel(context.interaction)
+    ? ` interaction=${context.interaction}`
+    : "";
+  return `from=${sender} relationship=${context.relationship} thread=${thread} in_thread=${context.inThread ? "yes" : "no"} attachments=${context.attachments ? "yes" : "no"}${newer}${interaction}`;
 }
 
 /** Build a wake context, reading the thread once. Never throws for API failures. */
@@ -286,6 +299,7 @@ export async function describeWake(input: {
   const thread = threadId
     ? await readThreadContext(input.client, threadId, detail.id, input.signal)
     : null;
+  const interaction = wakeInteractionLabel(detail);
   return {
     sender: detail.from_email.trim().toLowerCase(),
     relationship: serverRelationship(detail) ?? input.relationship,
@@ -295,5 +309,6 @@ export async function describeWake(input: {
     ...(thread?.newerInboundCount === undefined
       ? {}
       : { newer: thread.newerInboundCount }),
+    ...(interaction ? { interaction } : {}),
   };
 }

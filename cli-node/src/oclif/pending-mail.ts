@@ -7,6 +7,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { agentProfileDirectory } from "./connected-agent-profile.js";
+import { isWakeInteractionLabel } from "./interaction-actions.js";
 import {
   privateMailPermissions,
   syncMailDirectory,
@@ -35,6 +36,11 @@ export type PendingMailNotice = {
   newer: number | null;
   /** Status notices only: the sent email the signal refers to. */
   ref_sent_email_id?: string;
+  /**
+   * Mail notices only: the server's interaction kind for an interaction card,
+   * or `fyi`. Absent for ordinary mail.
+   */
+  interaction?: string;
 };
 
 export const PENDING_MAIL_LIMIT = 50;
@@ -113,6 +119,10 @@ function notice(value: unknown): PendingMailNotice | null {
     newer: row.newer as number | null,
     ...(kind === "status"
       ? { ref_sent_email_id: row.ref_sent_email_id as string }
+      : {}),
+    // An unreadable label is dropped, never the notice.
+    ...(kind === "mail" && isWakeInteractionLabel(row.interaction)
+      ? { interaction: row.interaction }
       : {}),
   };
 }

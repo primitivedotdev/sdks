@@ -30142,9 +30142,33 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 			s.SenderMember.Encode(e)
 		}
 	}
+	{
+		if s.Fyi.Set {
+			e.FieldStart("fyi")
+			s.Fyi.Encode(e)
+		}
+	}
+	{
+		if s.InteractionHint.Set {
+			e.FieldStart("interaction_hint")
+			s.InteractionHint.Encode(e)
+		}
+	}
+	{
+		if s.InteractionKind.Set {
+			e.FieldStart("interaction_kind")
+			s.InteractionKind.Encode(e)
+		}
+	}
+	{
+		if s.InteractionCandidate.Set {
+			e.FieldStart("interaction_candidate")
+			s.InteractionCandidate.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailDetail = [47]string{
+var jsonFieldsNameOfEmailDetail = [51]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -30192,6 +30216,10 @@ var jsonFieldsNameOfEmailDetail = [47]string{
 	44: "automated_reasons",
 	45: "repeat",
 	46: "sender_member",
+	47: "fyi",
+	48: "interaction_hint",
+	49: "interaction_kind",
+	50: "interaction_candidate",
 }
 
 // Decode decodes EmailDetail from json.
@@ -30199,7 +30227,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode EmailDetail to nil")
 	}
-	var requiredBitSet [6]uint8
+	var requiredBitSet [7]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -30715,6 +30743,46 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sender_member\"")
 			}
+		case "fyi":
+			if err := func() error {
+				s.Fyi.Reset()
+				if err := s.Fyi.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"fyi\"")
+			}
+		case "interaction_hint":
+			if err := func() error {
+				s.InteractionHint.Reset()
+				if err := s.InteractionHint.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_hint\"")
+			}
+		case "interaction_kind":
+			if err := func() error {
+				s.InteractionKind.Reset()
+				if err := s.InteractionKind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_kind\"")
+			}
+		case "interaction_candidate":
+			if err := func() error {
+				s.InteractionCandidate.Reset()
+				if err := s.InteractionCandidate.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_candidate\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -30724,13 +30792,14 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [6]uint8{
+	for i, mask := range [7]uint8{
 		0b00110001,
 		0b11000110,
 		0b00000100,
 		0b01100000,
 		0b00110011,
 		0b00011111,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -32456,6 +32525,30 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Fyi.Set {
+			e.FieldStart("fyi")
+			s.Fyi.Encode(e)
+		}
+	}
+	{
+		if s.InteractionHint.Set {
+			e.FieldStart("interaction_hint")
+			s.InteractionHint.Encode(e)
+		}
+	}
+	{
+		if s.InteractionKind.Set {
+			e.FieldStart("interaction_kind")
+			s.InteractionKind.Encode(e)
+		}
+	}
+	{
+		if s.InteractionCandidate.Set {
+			e.FieldStart("interaction_candidate")
+			s.InteractionCandidate.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("attachment_count")
 		e.Int(s.AttachmentCount)
 	}
@@ -32477,7 +32570,7 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailSearchResult = [29]string{
+var jsonFieldsNameOfEmailSearchResult = [33]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -32503,10 +32596,14 @@ var jsonFieldsNameOfEmailSearchResult = [29]string{
 	22: "automated_reasons",
 	23: "repeat",
 	24: "sender_member",
-	25: "attachment_count",
-	26: "from_known_address",
-	27: "score",
-	28: "highlights",
+	25: "fyi",
+	26: "interaction_hint",
+	27: "interaction_kind",
+	28: "interaction_candidate",
+	29: "attachment_count",
+	30: "from_known_address",
+	31: "score",
+	32: "highlights",
 }
 
 // Decode decodes EmailSearchResult from json.
@@ -32514,7 +32611,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode EmailSearchResult to nil")
 	}
-	var requiredBitSet [4]uint8
+	var requiredBitSet [5]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -32796,8 +32893,48 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sender_member\"")
 			}
+		case "fyi":
+			if err := func() error {
+				s.Fyi.Reset()
+				if err := s.Fyi.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"fyi\"")
+			}
+		case "interaction_hint":
+			if err := func() error {
+				s.InteractionHint.Reset()
+				if err := s.InteractionHint.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_hint\"")
+			}
+		case "interaction_kind":
+			if err := func() error {
+				s.InteractionKind.Reset()
+				if err := s.InteractionKind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_kind\"")
+			}
+		case "interaction_candidate":
+			if err := func() error {
+				s.InteractionCandidate.Reset()
+				if err := s.InteractionCandidate.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_candidate\"")
+			}
 		case "attachment_count":
-			requiredBitSet[3] |= 1 << 1
+			requiredBitSet[3] |= 1 << 5
 			if err := func() error {
 				v, err := d.Int()
 				s.AttachmentCount = int(v)
@@ -32809,7 +32946,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"attachment_count\"")
 			}
 		case "from_known_address":
-			requiredBitSet[3] |= 1 << 2
+			requiredBitSet[3] |= 1 << 6
 			if err := func() error {
 				v, err := d.Bool()
 				s.FromKnownAddress = bool(v)
@@ -32849,11 +32986,12 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [4]uint8{
+	for i, mask := range [5]uint8{
 		0b01110001,
 		0b01001101,
 		0b01111100,
-		0b00000110,
+		0b01100000,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -33705,9 +33843,33 @@ func (s *EmailSummary) encodeFields(e *jx.Encoder) {
 			s.SenderMember.Encode(e)
 		}
 	}
+	{
+		if s.Fyi.Set {
+			e.FieldStart("fyi")
+			s.Fyi.Encode(e)
+		}
+	}
+	{
+		if s.InteractionHint.Set {
+			e.FieldStart("interaction_hint")
+			s.InteractionHint.Encode(e)
+		}
+	}
+	{
+		if s.InteractionKind.Set {
+			e.FieldStart("interaction_kind")
+			s.InteractionKind.Encode(e)
+		}
+	}
+	{
+		if s.InteractionCandidate.Set {
+			e.FieldStart("interaction_candidate")
+			s.InteractionCandidate.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailSummary = [25]string{
+var jsonFieldsNameOfEmailSummary = [29]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -33733,6 +33895,10 @@ var jsonFieldsNameOfEmailSummary = [25]string{
 	22: "automated_reasons",
 	23: "repeat",
 	24: "sender_member",
+	25: "fyi",
+	26: "interaction_hint",
+	27: "interaction_kind",
+	28: "interaction_candidate",
 }
 
 // Decode decodes EmailSummary from json.
@@ -34021,6 +34187,46 @@ func (s *EmailSummary) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sender_member\"")
+			}
+		case "fyi":
+			if err := func() error {
+				s.Fyi.Reset()
+				if err := s.Fyi.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"fyi\"")
+			}
+		case "interaction_hint":
+			if err := func() error {
+				s.InteractionHint.Reset()
+				if err := s.InteractionHint.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_hint\"")
+			}
+		case "interaction_kind":
+			if err := func() error {
+				s.InteractionKind.Reset()
+				if err := s.InteractionKind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_kind\"")
+			}
+		case "interaction_candidate":
+			if err := func() error {
+				s.InteractionCandidate.Reset()
+				if err := s.InteractionCandidate.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_candidate\"")
 			}
 		default:
 			return d.Skip()

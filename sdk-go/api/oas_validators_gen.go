@@ -13244,6 +13244,17 @@ func (s *ListEmailsBadRequest) Validate() error {
 	return nil
 }
 
+func (s ListEmailsExcludeFyi) Validate() error {
+	switch s {
+	case "true":
+		return nil
+	case "false":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *ListEmailsOK) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
