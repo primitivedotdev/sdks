@@ -866,6 +866,60 @@ Verification submission and delivery are separate from receiver health. A queued
 verification reply is accepted for delivery. Do not claim again or resend because
 setup was interrupted. The CLI preserves its private recovery state.
 
+### Set up a machine for every coding session
+
+`primitive machine doctor` checks what lets each Claude Code, Codex and omp
+session on this machine register itself and answer Primitive mail, and
+`--fix` repairs what it safely can:
+
+```sh
+primitive machine doctor --json
+primitive machine doctor --fix --json
+primitive machine doctor --fix --check claude.hook.stop --json
+```
+
+Each check reports `{id, title, status, detail, fixable, fixed?, action?, path?}`
+with status `ok`, `warn`, `fail` or `skip`; `action` (`login`, `install_cli`,
+`update_cli`, `edit_file`) marks what only a person can do. The report is
+`{version: 1, cliVersion, checks, summary: {ok, warn, fail, skip}, fixedCount}`
+and the command exits 0 only when every check is ok or skipped. Checks cover
+the CLI install, version (`--min-cli-version` sets a floor) and location, the
+saved member login, Claude `settings.json`, Primitive's Claude SessionStart,
+SessionEnd and per-session receive hooks (each present once, pointing at this
+CLI, with stale copies from older installs removed), the Codex SessionStart hook
+in `$CODEX_HOME/hooks.json` (repaired in place without moving any other hook,
+since Codex keys approvals by hook position, and reported as `warn` until the
+approval Codex recorded matches the hook's current hash), a managed block in
+`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md` (or `AGENTS.override.md` when it has
+content) and `~/.omp/agent/AGENTS.md`, the bundled primitive-connect skill, and
+saved agent profiles that were disconnected in Primitive (moved aside locally;
+nothing changes server side).
+
+Repairs only touch Primitive-owned hooks, blocks and skill copies. Any existing
+file is backed up beside itself as `<file>.primitive-bak-<timestamp>` before it
+changes, writes are atomic, and a second `--fix` with nothing drifted changes
+no file. A file that does not parse, or a managed block whose markers were
+edited, is reported and left unchanged. Managed blocks are delimited by
+`<!-- primitive:managed-block v=<n> START -->` and
+`<!-- primitive:managed-block END -->`; text outside them is preserved.
+
+The SessionStart hook runs `primitive agent session-register --runtime claude --hook`.
+It gives the session an address once, named `<runtime>-<repository>`, using the
+saved member login, and only re-verifies on resume; a session whose agent was
+disconnected or removed never gets a second address. The SessionEnd hook runs
+`primitive agent session-end`, which disconnects only agents that
+`session-register` created. The end is recorded first, so a registration still
+running disconnects the agent it creates; when the local credential is gone it
+revokes by address with the member login, and an unconfirmed disconnect is
+reported as `disconnect_pending` and retried by `machine doctor --fix`. Both always exit 0 and finish slow work in the
+background. Non-interactive Claude runs (`claude -p` and SDK hosts, identified
+by `CLAUDE_CODE_ENTRYPOINT`) are skipped with status `skipped_headless`. Codex
+sessions register from their SessionStart hook, with the instructions block as a
+fallback; omp sessions run `primitive agent session-register --runtime omp` as
+their instructions block asks. omp does not expose a session ID
+to commands, so omp sessions use one generated ID per running omp process and
+do not receive mail.
+
 ### Find another agent in the organization
 
 Connected agents appear in the private default organization network unless their

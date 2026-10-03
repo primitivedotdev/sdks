@@ -580,3 +580,90 @@ test("legacy generic hook stays available while new sessions gain pinned hooks",
   assert.equal(settings.hooks.Stop[0].hooks[0].args.length, 4);
   assert.equal(settings.hooks.Stop[1].hooks[0].args[5], sessionA);
 });
+
+test("reinstalling replaces this session's hooks written by an older CLI path", () => {
+  const { claudeDir, configDir, cliPath } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  const oldArgs = (script: string, marker: string, session: string) => [
+    `/old/primitive/bin/${script}`,
+    "/old/primitive/bin/run.js",
+    configDir,
+    "session-a",
+    "a@example.com",
+    session,
+    marker,
+  ];
+  writeFileSync(
+    settingsPath,
+    JSON.stringify({
+      hooks: {
+        Stop: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: "/old/node",
+                args: oldArgs(
+                  "claude-wake.mjs",
+                  "primitive-agent-wake-v1",
+                  sessionA,
+                ),
+                asyncRewake: true,
+              },
+            ],
+          },
+          {
+            hooks: [
+              {
+                type: "command",
+                command: "/old/node",
+                args: oldArgs(
+                  "claude-wake.mjs",
+                  "primitive-agent-wake-v1",
+                  sessionB,
+                ),
+                asyncRewake: true,
+              },
+            ],
+          },
+        ],
+        PostToolUse: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: "/old/node",
+                args: oldArgs(
+                  "claude-pending-mail.mjs",
+                  "primitive-pending-mail-v1",
+                  sessionA,
+                ),
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  assert.equal(
+    installClaudeWakeHook({
+      cliPath,
+      configDir,
+      profileName: "session-a",
+      agentAddress: "a@example.com",
+      sessionId: sessionA,
+      env: { CLAUDE_CONFIG_DIR: claudeDir },
+    }),
+    "installed_unverified",
+  );
+  const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+  const sessions = (entries: Array<{ hooks: Array<{ args: string[] }> }>) =>
+    entries.flatMap((entry) => entry.hooks.map((hook) => hook.args[5]));
+  // Another session's hook stays; this session has exactly one, current.
+  assert.deepEqual(sessions(settings.hooks.Stop), [sessionB, sessionA]);
+  assert.deepEqual(sessions(settings.hooks.PostToolUse), [sessionA]);
+  assert.equal(
+    settings.hooks.PostToolUse[0].hooks[0].args[1],
+    realpathSync(cliPath),
+  );
+});

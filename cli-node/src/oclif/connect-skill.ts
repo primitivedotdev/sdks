@@ -286,7 +286,8 @@ function otherCopies(target: string): string[] {
   }
 }
 
-function installedVersion(target: string): string | null {
+/** Version of an installed copy, or null when absent or unreadable. */
+export function installedVersion(target: string): string | null {
   try {
     if (!statSync(target).isDirectory()) return null;
     return connectSkillVersion(hashFiles(target));

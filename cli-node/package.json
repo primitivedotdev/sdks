@@ -49,6 +49,9 @@
       "account": {
         "description": "Manage your account settings, storage, and webhook secret"
       },
+      "machine": {
+        "description": "Check and repair this machine's setup for coding agents. Use `primitive machine doctor --json` to inspect and `--fix` to repair."
+      },
       "agent-connections": {
         "description": "Create, list, invite, revoke, and remove connected agents; claim private invitations through stdin."
       },
