@@ -21496,6 +21496,47 @@ type ListEmailsBadRequest ErrorResponse
 
 func (*ListEmailsBadRequest) listEmailsRes() {}
 
+type ListEmailsExcludeFyi string
+
+const (
+	ListEmailsExcludeFyiTrue  ListEmailsExcludeFyi = "true"
+	ListEmailsExcludeFyiFalse ListEmailsExcludeFyi = "false"
+)
+
+// AllValues returns all ListEmailsExcludeFyi values.
+func (ListEmailsExcludeFyi) AllValues() []ListEmailsExcludeFyi {
+	return []ListEmailsExcludeFyi{
+		ListEmailsExcludeFyiTrue,
+		ListEmailsExcludeFyiFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s ListEmailsExcludeFyi) MarshalText() ([]byte, error) {
+	switch s {
+	case ListEmailsExcludeFyiTrue:
+		return []byte(s), nil
+	case ListEmailsExcludeFyiFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *ListEmailsExcludeFyi) UnmarshalText(data []byte) error {
+	switch ListEmailsExcludeFyi(data) {
+	case ListEmailsExcludeFyiTrue:
+		*s = ListEmailsExcludeFyiTrue
+		return nil
+	case ListEmailsExcludeFyiFalse:
+		*s = ListEmailsExcludeFyiFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Merged schema.
 type ListEmailsOK struct {
 	Success bool           `json:"success"`
@@ -25555,6 +25596,52 @@ func (o OptListEmailsAwaiting) Get() (v ListEmailsAwaiting, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptListEmailsAwaiting) Or(d ListEmailsAwaiting) ListEmailsAwaiting {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptListEmailsExcludeFyi returns new OptListEmailsExcludeFyi with value set to v.
+func NewOptListEmailsExcludeFyi(v ListEmailsExcludeFyi) OptListEmailsExcludeFyi {
+	return OptListEmailsExcludeFyi{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptListEmailsExcludeFyi is optional ListEmailsExcludeFyi.
+type OptListEmailsExcludeFyi struct {
+	Value ListEmailsExcludeFyi
+	Set   bool
+}
+
+// IsSet returns true if OptListEmailsExcludeFyi was set.
+func (o OptListEmailsExcludeFyi) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptListEmailsExcludeFyi) Reset() {
+	var v ListEmailsExcludeFyi
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptListEmailsExcludeFyi) SetTo(v ListEmailsExcludeFyi) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptListEmailsExcludeFyi) Get() (v ListEmailsExcludeFyi, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptListEmailsExcludeFyi) Or(d ListEmailsExcludeFyi) ListEmailsExcludeFyi {
 	if v, ok := o.Get(); ok {
 		return v
 	}

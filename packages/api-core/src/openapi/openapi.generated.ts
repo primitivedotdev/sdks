@@ -2043,6 +2043,19 @@ export const openapiDocument: Record<string, unknown> = {
               "maxLength": 320
             },
             "description": "Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with existing filters and cursors; does not search message text."
+          },
+          {
+            "name": "exclude_fyi",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "With `true`, leave out emails whose `fyi` is true. Combines with every other filter and with both `cursor` and `since`."
           }
         ],
         "responses": {

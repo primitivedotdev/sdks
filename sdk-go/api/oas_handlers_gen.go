@@ -16886,6 +16886,10 @@ func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w htt
 					Name: "recipient",
 					In:   "query",
 				}: params.Recipient,
+				{
+					Name: "exclude_fyi",
+					In:   "query",
+				}: params.ExcludeFyi,
 			},
 			Raw: r,
 		}

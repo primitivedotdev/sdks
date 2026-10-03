@@ -13765,6 +13765,23 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 			return res, errors.Wrap(err, "encode query")
 		}
 	}
+	{
+		// Encode "exclude_fyi" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "exclude_fyi",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ExcludeFyi.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
 	u.RawQuery = q.Values().Encode()
 
 	stage = "EncodeRequest"

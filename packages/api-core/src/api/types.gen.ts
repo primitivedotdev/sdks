@@ -6507,6 +6507,10 @@ export type ListEmailsData = {
          * Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with existing filters and cursors; does not search message text.
          */
         recipient?: string;
+        /**
+         * With `true`, leave out emails whose `fyi` is true. Combines with every other filter and with both `cursor` and `since`.
+         */
+        exclude_fyi?: 'true' | 'false';
     };
     url: '/emails';
 };

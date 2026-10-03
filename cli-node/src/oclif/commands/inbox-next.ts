@@ -370,13 +370,28 @@ async function listPage(
     limit: number;
     since?: string;
     wait?: number;
+    exclude_fyi?: "true";
   },
 ): Promise<ListPage> {
-  const result = await api.listEmails({
+  let result = await api.listEmails({
     client: apiClient.client,
     query,
     responseStyle: "fields",
   });
+  // A server without the fyi filter: list without it. fyi mail is then
+  // skipped client-side (see needsNoReply).
+  if (
+    result.error &&
+    query.exclude_fyi &&
+    isUnknownFilterError(extractErrorPayload(result.error), "exclude_fyi")
+  ) {
+    const { exclude_fyi: _dropped, ...rest } = query;
+    result = await api.listEmails({
+      client: apiClient.client,
+      query: rest,
+      responseStyle: "fields",
+    });
+  }
   if (result.error) {
     const payload = extractErrorPayload(result.error);
     if (query.awaiting && isAwaitingRejectedError(payload)) {
@@ -409,6 +424,33 @@ async function listPage(
   };
 }
 
+function isUnknownFilterError(payload: unknown, name: string): boolean {
+  const body = (payload as { error?: unknown } | null)?.error ?? payload;
+  const record =
+    body !== null && typeof body === "object"
+      ? (body as { code?: unknown; message?: unknown })
+      : {};
+  if (record.code !== "validation_error") return false;
+  const message =
+    typeof record.message === "string"
+      ? record.message
+      : JSON.stringify(payload);
+  return message.includes(name) && /unrecogni[sz]ed|unknown/i.test(message);
+}
+
+/**
+ * Mail that needs no reply: the server's `fyi`, a status signal, or any
+ * interaction whose category needs no reply (for example a notice that a
+ * repeat stopped). The server's `awaiting` is a thread turn that does not
+ * consider these, so they can sit at `awaiting=you` forever; `inbox next`
+ * skips them instead of returning the same message on every call. Decided
+ * from server fields only.
+ */
+export function needsNoReply(row: LooseRecord): boolean {
+  if (row.fyi === true || row.interaction_hint === "status") return true;
+  return readEmailInteraction(row)?.no_reply_needed === true;
+}
+
 /**
  * Find the oldest inbound email awaiting your reply. Walks the
  * `awaiting=you` forward tail from the oldest row with the server's
@@ -434,6 +476,7 @@ export async function findNextAwaiting(params: {
     const page = await listPage(api, params.apiClient, {
       awaiting: "you",
       ...(filterAutomated ? { automated: "false" as const } : {}),
+      exclude_fyi: "true",
       limit: SCAN_PAGE_SIZE,
       since,
     });
@@ -445,6 +488,7 @@ export async function findNextAwaiting(params: {
 
     for (const row of page.rows) {
       if (row.awaiting !== "you") continue;
+      if (needsNoReply(row)) continue;
       const id = str(row.id);
       if (!id) continue;
 
@@ -486,6 +530,7 @@ export async function findNextAwaiting(params: {
         if (automated.automated) continue;
       }
 
+      if (needsNoReply(detail as LooseRecord)) continue;
       const interaction = readEmailInteraction(detail);
       const conversationResult = await api.getConversation({
         client: params.apiClient.client,
@@ -769,6 +814,8 @@ class InboxNextCommand extends Command {
   "Waiting on your reply" is the server's reply state (\`awaiting=you\`): the latest message in the email's thread is inbound. The filter covers delivered mail only: mail the server rejected (for example over the storage limit) was never delivered and is never returned. Sending or queueing a reply with \`primitive reply\` moves the thread to \`awaiting=them\`, so the next call moves on. A reply that fails or is canceled puts the email back. Because this reads server state rather than a local cursor, mail that arrived while you were composing is never skipped.
 
   Automated mail is skipped by default, using the server's \`automated\` verdict (decided when the mail arrived) as a filter, so the call costs the same however much unanswered automated mail has piled up: bounces (null envelope sender), mailer-daemon and postmaster, mail sent from the very address it was delivered to, delivery, feedback and disposition reports, and mail whose headers declare it automated (Auto-Submitted, Precedence bulk/list/junk, List-Unsubscribe, List-Id, X-Auto-Response-Suppress, X-Failed-Recipients). Pass --include-automated to get it anyway; the \`automated\` verdict and its reasons are always reported.
+
+  Mail that needs no reply is always skipped: informational (fyi) mail, status signals, and interactions that need no answer such as a notice that a repeat stopped. The server's reply state is a thread turn that does not consider these, so without the skip they would be returned on every call. The list asks the server to leave out fyi mail (\`exclude_fyi\`), and the rest is skipped using the server's \`fyi\` and \`interaction_hint\` fields; the wake and \`emails get --brief\` still show them.
 
   NOT A WORK QUEUE. Nothing is claimed or locked. Two agents running \`inbox next\` on the same inbox get the same email until one of them replies, and both may answer it. Run one agent per inbox, or coordinate outside Primitive.
 

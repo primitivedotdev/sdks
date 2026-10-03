@@ -337,6 +337,7 @@ from .list_deliveries_status import ListDeliveriesStatus
 from .list_domains_response_200 import ListDomainsResponse200
 from .list_emails_automated import ListEmailsAutomated
 from .list_emails_awaiting import ListEmailsAwaiting
+from .list_emails_exclude_fyi import ListEmailsExcludeFyi
 from .list_emails_response_200 import ListEmailsResponse200
 from .list_endpoints_response_200 import ListEndpointsResponse200
 from .list_envelope import ListEnvelope
@@ -989,6 +990,7 @@ __all__ = (
     "ListDomainsResponse200",
     "ListEmailsAutomated",
     "ListEmailsAwaiting",
+    "ListEmailsExcludeFyi",
     "ListEmailsResponse200",
     "ListEndpointsResponse200",
     "ListEnvelope",

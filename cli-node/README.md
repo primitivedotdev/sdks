@@ -1041,7 +1041,12 @@ same `interaction` and `next_actions` in its JSON envelope, prints the same
 line above the conversation, and ends with matching instructions: the answering
 command first for payment and contact requests (a reply only as optional), "No
 reply needed." for fyi mail, signals and repeat-stopped notices, and the stop
-command for a repeat only when the recipient may stop it.
+command for a repeat only when the recipient may stop it. `inbox next` skips
+mail that needs no reply (fyi mail, status signals, repeat-stopped notices):
+the server's reply state does not consider them, so they would otherwise be
+returned on every call. It asks the server to leave out fyi mail with
+`exclude_fyi=true` and skips the rest using the server's `fyi` and
+`interaction_hint` fields.
 
 Before a wake event is acknowledged, the listener records a pending notice for
 the session in

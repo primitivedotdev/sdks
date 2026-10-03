@@ -42,6 +42,7 @@ import InboxNextCommand, {
   waitForActivity,
 } from "../../src/oclif/commands/inbox-next.js";
 import { COMMANDS } from "../../src/oclif/index.js";
+import { readEmailInteraction } from "../../src/oclif/interaction-actions.js";
 import {
   AwaitingIncludesRejectedError,
   ReplyStateUnsupportedError,
@@ -61,6 +62,8 @@ type FakeEmail = {
   body_text: string;
   status?: string;
   automation_headers?: Record<string, string> | null;
+  /** Extra server fields on the list row and the detail (fyi, hints). */
+  server?: Record<string, unknown>;
 };
 
 // "current": reply state and the automated filter. "old-strict" and
@@ -84,6 +87,8 @@ type ServerMode =
 class FakeInbox {
   emails: FakeEmail[] = [];
   mode: ServerMode = "current";
+  /** How this server treats `exclude_fyi`: applies it, ignores it, or rejects it. */
+  fyiFilter: "supported" | "ignored" | "rejected" = "supported";
   detailOverride: Partial<Record<string, Record<string, unknown>>> = {};
   onWait: (() => void) | null = null;
   calls: Array<{ op: string; query?: Record<string, unknown>; id?: string }> =
@@ -129,6 +134,7 @@ class FakeInbox {
       message_id: `<${email.id}@example.com>`,
       webhook_attempt_count: 0,
       automation_headers: email.automation_headers,
+      ...(email.server ?? {}),
     };
     return base;
   }
@@ -178,6 +184,17 @@ class FakeInbox {
               query.automated !== undefined
             ? "automated"
             : null;
+      if (this.fyiFilter === "rejected" && query.exclude_fyi !== undefined) {
+        return {
+          error: {
+            success: false,
+            error: {
+              code: "validation_error",
+              message: "Unrecognized key(s) in object: 'exclude_fyi'",
+            },
+          },
+        };
+      }
       if (rejected) {
         return {
           error: {
@@ -199,7 +216,10 @@ class FakeInbox {
       // A current server's awaiting filter matches delivered mail only.
       const excludesRejected =
         Boolean(filterAwaiting) && this.mode !== "awaiting-includes-rejected";
+      const excludeFyi =
+        this.fyiFilter === "supported" && query.exclude_fyi === "true";
       const keep = (e: FakeEmail) =>
+        !(excludeFyi && e.server?.fyi === true) &&
         !(excludesRejected && e.status === "rejected") &&
         (!filterAwaiting || e.awaiting === filterAwaiting) &&
         (filterAutomated === undefined ||
@@ -357,6 +377,7 @@ describe("findNextAwaiting", () => {
       query: {
         awaiting: "you",
         automated: "false",
+        exclude_fyi: "true",
         limit: 100,
         since: EPOCH_CURSOR,
       },
@@ -461,6 +482,7 @@ describe("findNextAwaiting", () => {
     });
     expect(inbox.calls[0]?.query).toEqual({
       awaiting: "you",
+      exclude_fyi: "true",
       limit: 100,
       since: EPOCH_CURSOR,
     });
@@ -866,14 +888,18 @@ describe("output", () => {
     const footer = async (fields: Record<string, unknown>) => {
       const inbox = new FakeInbox();
       inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
-      inbox.detailOverride[id] = fields;
       const result = await findNextAwaiting({
         apiClient,
         includeAutomated: false,
         api: inbox.api(),
       });
       if (result.outcome !== "email") throw new Error("expected email");
-      const text = formatTranscript(result, "primitive");
+      // inbox next itself skips no-reply mail; the footer is still checked
+      // for every category so it never offers a reply where none is needed.
+      const text = formatTranscript(
+        { ...result, interaction: readEmailInteraction({ ...fields }) },
+        "primitive",
+      );
       return text.slice(text.lastIndexOf("--- [2]")).split("\n").slice(2);
     };
     expect(
@@ -984,6 +1010,61 @@ describe("output", () => {
       `primitive repeat stop --id ${id}`,
     );
     expect(open.text).toContain("Stop the repeat once its goal is met:");
+  });
+
+  it("never gets stuck on mail that needs no reply", async () => {
+    for (const fyiFilter of ["supported", "ignored", "rejected"] as const) {
+      const inbox = new FakeInbox();
+      inbox.fyiFilter = fyiFilter;
+      // Oldest first: an fyi ack, a read signal and a repeat-stopped notice,
+      // all at awaiting=you, then one ordinary email.
+      inbox.add({
+        id: "a-fyi",
+        created_at: "2026-09-18T00:00:00.000Z",
+        server: {
+          fyi: true,
+          interaction_hint: "status",
+          interaction_kind: "ack/1",
+        },
+      });
+      inbox.add({
+        id: "b-read",
+        created_at: "2026-09-18T00:01:00.000Z",
+        server: { interaction_hint: "status", interaction_kind: "read/1" },
+      });
+      inbox.add({
+        id: "c-stopped",
+        created_at: "2026-09-18T00:02:00.000Z",
+        server: { interaction_hint: "card", interaction_kind: "repeat.stop/1" },
+      });
+      inbox.add({ id: "d-real", created_at: "2026-09-18T00:03:00.000Z" });
+      // Repeated calls without any reply keep moving past the no-reply mail.
+      for (let call = 0; call < 3; call++) {
+        const result = await findNextAwaiting({
+          apiClient,
+          includeAutomated: false,
+          api: inbox.api(),
+        });
+        expect(result.outcome === "email" && result.email.id).toBe("d-real");
+      }
+      const lists = inbox.calls.filter((c) => c.op === "list");
+      expect(lists.some((c) => c.query?.exclude_fyi === "true")).toBe(true);
+      // None of the no-reply mail is even read in full.
+      expect(
+        inbox.calls.filter((c) => c.op === "get").map((c) => c.id),
+      ).toEqual(["d-real", "d-real", "d-real"]);
+      // Once the real email is answered, nothing is left: no fyi loop.
+      inbox.emails[3].awaiting = "them";
+      expect(
+        (
+          await findNextAwaiting({
+            apiClient,
+            includeAutomated: false,
+            api: inbox.api(),
+          })
+        ).outcome,
+      ).toBe("empty");
+    }
   });
 
   it("offers a reply for ordinary mail and prints no answer line", async () => {

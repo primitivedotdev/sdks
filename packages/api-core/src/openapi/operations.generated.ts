@@ -8137,6 +8137,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name": "recipient",
         "required": false,
         "type": "string"
+      },
+      {
+        "description": "With `true`, leave out emails whose `fyi` is true. Combines with every other filter and with both `cursor` and `since`.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "exclude_fyi",
+        "required": false,
+        "type": "string"
       }
     ],
     "requestSchema": null,
