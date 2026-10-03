@@ -3588,11 +3588,40 @@ func decodeGetContactParams(args [1]string, argsEscaped bool, r *http.Request) (
 
 // GetConversationParams is parameters of getConversation operation.
 type GetConversationParams struct {
+	// Incremental read position. Either the literal `start` or a
+	// `cursor` returned by a previous read of this endpoint (an
+	// RFC 3339 UTC timestamp with microsecond precision). Any other
+	// value returns 400 `validation_error`.
+	// With `start`, the response holds every message the read
+	// without `since` would return, plus `cursor`. With a cursor,
+	// `messages` holds only the messages created or changed after
+	// it, oldest first. A change includes an inbound message
+	// becoming visible or its body being filled, withheld or
+	// discarded, and a delivery status change on an outbound
+	// message. `thread_id`, `subject`, `message_count` and
+	// `truncated` always describe the whole conversation, not the
+	// returned messages.
+	// Send `cursor` back verbatim. The cursor trails the read by 10
+	// seconds so a write that commits late is not skipped, which
+	// means a message changed within that window can be returned
+	// again by the next read: upsert messages by `id`. Deleted
+	// messages are not reported; a periodic `since=start` read (or
+	// a read without `since`) reconciles.
+	Since OptString `json:",omitempty,omitzero"`
 	// Resource UUID.
 	ID uuid.UUID
 }
 
 func unpackGetConversationParams(packed middleware.Parameters) (params GetConversationParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "since",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Since = v.(OptString)
+		}
+	}
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -3604,6 +3633,48 @@ func unpackGetConversationParams(packed middleware.Parameters) (params GetConver
 }
 
 func decodeGetConversationParams(args [1]string, argsEscaped bool, r *http.Request) (params GetConversationParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: since.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "since",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSinceVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSinceVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Since.SetTo(paramsDotSinceVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "since",
+			In:   "query",
+			Err:  err,
+		}
+	}
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]

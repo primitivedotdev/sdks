@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 
 from ..models.conversation_message_direction import ConversationMessageDirection
 from ..models.conversation_message_role import ConversationMessageRole
+from ..models.sent_email_status import SentEmailStatus
 from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
@@ -31,6 +32,9 @@ T = TypeVar("T", bound="ConversationMessage")
 @_attrs_define
 class ConversationMessage:
     """ One message in the conversation, with its body and a chat role.
+    `status` is the delivery status of an outbound message, as on
+    `/sent-emails/{id}`, and is present only on a `since` read and
+    only on outbound messages.
 
         Attributes:
             role (ConversationMessageRole): Chat role derived from `direction`: `user` for inbound
@@ -46,6 +50,31 @@ class ConversationMessage:
             to (None | str | Unset):
             subject (None | str | Unset):
             timestamp (datetime.datetime | None | Unset): received_at for inbound, created_at for outbound.
+            status (SentEmailStatus | Unset): Lifecycle status of a sent_emails row. Possible values:
+
+                  - `queued`: pre-call INSERT; the outbound agent has not
+                    yet replied.
+                  - `submitted_to_agent`: agent accepted; `queue_id` is set.
+                  - `agent_failed`: agent rejected; `error_code` and
+                    `error_message` carry the reason.
+                  - `gate_denied`: a recipient-scope gate denied the send;
+                    the agent was never called. The `gates` array carries
+                    the denial detail. /send-mail returns 403 in this case
+                    so callers see the denial synchronously; /sent-emails
+                    additionally records the row for historical lookup,
+                    which is when this status appears in a listing.
+                  - `unknown`: terminal indeterminate; the on-box log
+                    poller couldn't classify the receiver's response.
+                  - `delivered` / `bounced` / `deferred` / `wait_timeout`:
+                    terminal delivery outcomes (see DeliveryStatus).
+                  - `scheduled`: created with a future `scheduled_at` and
+                    not yet executed; `scheduled_at` carries the pending
+                    execution time. Reschedulable via PATCH
+                    /sent-emails/{id} and cancelable via
+                    /sent-emails/{id}/cancel while in this status.
+                  - `canceled`: terminal; a scheduled send canceled before
+                    execution. `canceled_at` carries the cancellation time
+                    and nothing was dispatched.
             presence_control (None | PresenceControlType0 | Unset):
             repeat (ConversationMessageRepeatType0 | None | Unset): Set when Primitive sent this message as part of a
                 repeating send. Resolved from Primitive's own records, never from the message content. Null on every other
@@ -63,6 +92,7 @@ class ConversationMessage:
     to: None | str | Unset = UNSET
     subject: None | str | Unset = UNSET
     timestamp: datetime.datetime | None | Unset = UNSET
+    status: SentEmailStatus | Unset = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
     repeat: ConversationMessageRepeatType0 | None | Unset = UNSET
     sender_member: ConversationMessageSenderMemberType0 | None | Unset = UNSET
@@ -116,6 +146,11 @@ class ConversationMessage:
         else:
             timestamp = self.timestamp
 
+        status: str | Unset = UNSET
+        if not isinstance(self.status, Unset):
+            status = self.status.value
+
+
         presence_control: dict[str, Any] | None | Unset
         if isinstance(self.presence_control, Unset):
             presence_control = UNSET
@@ -159,6 +194,8 @@ class ConversationMessage:
             field_dict["subject"] = subject
         if timestamp is not UNSET:
             field_dict["timestamp"] = timestamp
+        if status is not UNSET:
+            field_dict["status"] = status
         if presence_control is not UNSET:
             field_dict["presence_control"] = presence_control
         if repeat is not UNSET:
@@ -253,6 +290,16 @@ class ConversationMessage:
         timestamp = _parse_timestamp(d.pop("timestamp", UNSET))
 
 
+        _status = d.pop("status", UNSET)
+        status: SentEmailStatus | Unset
+        if isinstance(_status,  Unset):
+            status = UNSET
+        else:
+            status = SentEmailStatus(_status)
+
+
+
+
         def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
             if data is None:
                 return data
@@ -323,6 +370,7 @@ class ConversationMessage:
             to=to,
             subject=subject,
             timestamp=timestamp,
+            status=status,
             presence_control=presence_control,
             repeat=repeat,
             sender_member=sender_member,

@@ -10468,6 +10468,12 @@ func (s *Server) handleGetContactPolicyRequest(args [0]string, argsEscaped bool,
 // older messages were omitted. Consecutive same-role turns are not
 // merged here; that normalization is model-specific and left to the
 // caller.
+// Pass `since` for an incremental read. `since=start` returns the
+// full conversation plus a `cursor`. Sending that `cursor` back as
+// `since` returns only the messages created or changed after it,
+// oldest first, with the same per-message shape, and a new
+// `cursor`. Without `since` the response carries no `cursor` and
+// no per-message `status`.
 //
 // GET /emails/{id}/conversation
 func (s *Server) handleGetConversationRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -10608,6 +10614,10 @@ func (s *Server) handleGetConversationRequest(args [1]string, argsEscaped bool, 
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
+				{
+					Name: "since",
+					In:   "query",
+				}: params.Since,
 				{
 					Name: "id",
 					In:   "path",

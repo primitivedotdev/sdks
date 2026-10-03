@@ -871,6 +871,12 @@ func (UnimplementedHandler) GetContactPolicy(ctx context.Context) (r GetContactP
 // older messages were omitted. Consecutive same-role turns are not
 // merged here; that normalization is model-specific and left to the
 // caller.
+// Pass `since` for an incremental read. `since=start` returns the
+// full conversation plus a `cursor`. Sending that `cursor` back as
+// `since` returns only the messages created or changed after it,
+// oldest first, with the same per-message shape, and a new
+// `cursor`. Without `since` the response carries no `cursor` and
+// no per-message `status`.
 //
 // GET /emails/{id}/conversation
 func (UnimplementedHandler) GetConversation(ctx context.Context, params GetConversationParams) (r GetConversationRes, _ error) {

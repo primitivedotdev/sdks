@@ -42,6 +42,8 @@ class Conversation:
             messages (list[ConversationMessage]):
             subject (None | str | Unset): Normalized thread subject (Re/Fwd prefixes stripped), or the
                 email's own subject when it isn't threaded.
+            cursor (str | Unset): Present only on a `since` read: the position to send as
+                `since` on the next read. Send it back verbatim.
      """
 
     thread_id: None | UUID
@@ -49,6 +51,7 @@ class Conversation:
     truncated: bool
     messages: list[ConversationMessage]
     subject: None | str | Unset = UNSET
+    cursor: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -80,6 +83,8 @@ class Conversation:
         else:
             subject = self.subject
 
+        cursor = self.cursor
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -91,6 +96,8 @@ class Conversation:
         })
         if subject is not UNSET:
             field_dict["subject"] = subject
+        if cursor is not UNSET:
+            field_dict["cursor"] = cursor
 
         return field_dict
 
@@ -142,12 +149,15 @@ class Conversation:
         subject = _parse_subject(d.pop("subject", UNSET))
 
 
+        cursor = d.pop("cursor", UNSET)
+
         conversation = cls(
             thread_id=thread_id,
             message_count=message_count,
             truncated=truncated,
             messages=messages,
             subject=subject,
+            cursor=cursor,
         )
 
 
