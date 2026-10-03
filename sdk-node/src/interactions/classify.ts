@@ -115,9 +115,48 @@ function utcExpiry(value: unknown): boolean {
     Number(match[6]) < 60
   );
 }
+/** The fixed body of a repeat-stop notice; the stated reason is its only variable text. */
+function repeatStopNoticeText(reason: string | null): string {
+  return reason
+    ? `Stopped this repeating message. Reason: ${reason}`
+    : "Stopped this repeating message.";
+}
+/**
+ * The notice body for a `repeat.stop/1` envelope sent back to a repeat's sender:
+ * step `stop`, a previous step, no expiry, and a payload of `{}` or `{reason}`.
+ * Unlike a status signal, the notice text is required.
+ */
+function repeatStopFallback(
+  e: Extract<InteractionParseResult, { status: "valid" }>["envelope"],
+): string | null {
+  if (
+    !exactKeys(e, ENVELOPE_KEYS) ||
+    e.protocol_version !== 1 ||
+    e.step !== "stop" ||
+    typeof e.prev_step_id !== "string" ||
+    e.expires_at !== null ||
+    !e.payload ||
+    typeof e.payload !== "object" ||
+    Array.isArray(e.payload)
+  )
+    return null;
+  const p = e.payload as Record<string, unknown>;
+  if (!exactKeys(p, [], ["reason"])) return null;
+  if (!Object.hasOwn(p, "reason")) return repeatStopNoticeText(null);
+  const reason = p.reason;
+  if (
+    typeof reason !== "string" ||
+    reason.length === 0 ||
+    reason.length > 280 ||
+    reason.includes("\0")
+  )
+    return null;
+  return repeatStopNoticeText(reason);
+}
 function fallback(result: InteractionParseResult): string | null {
   if (result.status !== "valid") return null;
   const e = result.envelope;
+  if (e.protocol === "repeat.stop") return repeatStopFallback(e);
   if (
     !exactKeys(e, ENVELOPE_KEYS) ||
     e.protocol_version !== 1 ||
@@ -239,9 +278,13 @@ export function classifySignalContent(
     };
   const actual = (input.bodies.text ?? "").replace(/\r\n/g, "\n");
   const expected = text.replace(/\r\n/g, "\n");
+  // A status signal may omit its fallback text; a repeat-stop notice may not.
+  const textOptional = !(
+    interaction.status === "valid" &&
+    interaction.envelope.protocol === "repeat.stop"
+  );
   const matches =
-    actual === "" ||
-    actual === "\n" ||
+    (textOptional && (actual === "" || actual === "\n")) ||
     actual === expected ||
     actual === `${expected}\n`;
   return {

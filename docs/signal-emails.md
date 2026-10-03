@@ -286,6 +286,15 @@ one to nine fractional second digits; leap seconds are not accepted. The classif
 has no clock and does not infer observation time, remaining lifetime or the
 sender's original 60-second interval from an expiry alone.
 
+A repeat-stop notice is also informational only: the `repeat.stop/1` envelope a
+repeat's recipient sends back when it stops the repeat. It requires the nine
+envelope keys, step `stop`, a non-null `prev_step_id`, a null expiry, and a payload
+of either `{}` or `{"reason": ...}` with a non-empty reason of at most 280 UTF-16
+code units and no NUL. Its plain text must be exactly `Stopped this repeating
+message.`, or `Stopped this repeating message. Reason: <reason>` when a reason is
+present. Unlike a status signal, the text may not be empty. A stop envelope next
+to any other text, HTML or part stays mixed.
+
 For informational-only content, HTML must be known absent/empty. Plain text must
 be known absent/empty or exactly the helper's canonical fallback, including the
 ACK note. Normalize CRLF to LF on both sides and allow at most one additional MIME

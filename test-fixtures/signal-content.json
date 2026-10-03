@@ -1956,5 +1956,173 @@
     "classification": "mixed_or_unsupported",
     "reason": "text_mismatch",
     "interactionStatus": "valid"
+  },
+  {
+    "name": "repeat stop notice",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Stopped this repeating message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"33333333-3333-4333-8333-333333333333@sender.example\",\"protocol\":\"repeat.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"44444444-4444-4444-8444-444444444444\",\"prev_step_id\":\"55555555-5555-4555-8555-555555555555\",\"expires_at\":null,\"payload\":{}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "repeat stop notice with reason",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Stopped this repeating message. Reason: No longer needed\n",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"33333333-3333-4333-8333-333333333333@sender.example\",\"protocol\":\"repeat.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"44444444-4444-4444-8444-444444444444\",\"prev_step_id\":\"55555555-5555-4555-8555-555555555555\",\"expires_at\":null,\"payload\":{\"reason\":\"No longer needed\"}}",
+    "classification": "informational_only",
+    "reason": "informational_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "repeat stop with a question",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Stopped this repeating message. Can you send it monthly instead?",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"33333333-3333-4333-8333-333333333333@sender.example\",\"protocol\":\"repeat.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"44444444-4444-4444-8444-444444444444\",\"prev_step_id\":\"55555555-5555-4555-8555-555555555555\",\"expires_at\":null,\"payload\":{}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "repeat stop reason not in body",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Stopped this repeating message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"33333333-3333-4333-8333-333333333333@sender.example\",\"protocol\":\"repeat.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"44444444-4444-4444-8444-444444444444\",\"prev_step_id\":\"55555555-5555-4555-8555-555555555555\",\"expires_at\":null,\"payload\":{\"reason\":\"call me\"}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "repeat stop empty body",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"33333333-3333-4333-8333-333333333333@sender.example\",\"protocol\":\"repeat.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"44444444-4444-4444-8444-444444444444\",\"prev_step_id\":\"55555555-5555-4555-8555-555555555555\",\"expires_at\":null,\"payload\":{}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "text_mismatch",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "repeat stop html",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Stopped this repeating message.",
+      "html": "<p>Stopped</p>"
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"33333333-3333-4333-8333-333333333333@sender.example\",\"protocol\":\"repeat.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"44444444-4444-4444-8444-444444444444\",\"prev_step_id\":\"55555555-5555-4555-8555-555555555555\",\"expires_at\":null,\"payload\":{}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "html_present",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "repeat stop extra payload key",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Stopped this repeating message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"33333333-3333-4333-8333-333333333333@sender.example\",\"protocol\":\"repeat.stop\",\"protocol_version\":1,\"step\":\"stop\",\"step_id\":\"44444444-4444-4444-8444-444444444444\",\"prev_step_id\":\"55555555-5555-4555-8555-555555555555\",\"expires_at\":null,\"payload\":{\"reason\":\"x\",\"extra\":1}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
+  },
+  {
+    "name": "repeat stop wrong step",
+    "inventory": {
+      "status": "complete",
+      "parts": [
+        {
+          "filename": "interaction.json",
+          "contentType": "application/json"
+        }
+      ]
+    },
+    "bodies": {
+      "status": "complete",
+      "text": "Stopped this repeating message.",
+      "html": null
+    },
+    "source": "{\"interaction_version\":1,\"interaction_id\":\"33333333-3333-4333-8333-333333333333@sender.example\",\"protocol\":\"repeat.stop\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"44444444-4444-4444-8444-444444444444\",\"prev_step_id\":\"55555555-5555-4555-8555-555555555555\",\"expires_at\":null,\"payload\":{}}",
+    "classification": "mixed_or_unsupported",
+    "reason": "unsupported_signal",
+    "interactionStatus": "valid"
   }
 ]

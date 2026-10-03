@@ -113,11 +113,47 @@ def _utc_expiry(value: object) -> bool:
     )
 
 
+def _repeat_stop_notice_text(reason: str | None) -> str:
+    """The fixed body of a repeat-stop notice; the stated reason is its only variable text."""
+    if reason:
+        return f"Stopped this repeating message. Reason: {reason}"
+    return "Stopped this repeating message."
+
+
+def _repeat_stop_fallback(e: dict[str, object]) -> str | None:
+    """Notice body for a ``repeat.stop/1`` envelope: step ``stop``, a previous
+    step, no expiry, and a payload of ``{}`` or ``{"reason": ...}``."""
+    if (
+        set(e) != _ENVELOPE_KEYS
+        or e.get("protocol_version") != 1
+        or e.get("step") != "stop"
+        or not isinstance(e.get("prev_step_id"), str)
+        or e.get("expires_at") is not None
+    ):
+        return None
+    p = e.get("payload")
+    if not isinstance(p, dict) or not set(p) <= {"reason"}:
+        return None
+    if "reason" not in p:
+        return _repeat_stop_notice_text(None)
+    reason = p["reason"]
+    if (
+        not isinstance(reason, str)
+        or not reason
+        or len(reason.encode("utf-16-le")) > 560
+        or "\0" in reason
+    ):
+        return None
+    return _repeat_stop_notice_text(reason)
+
+
 def _fallback(result: InteractionResult) -> str | None:
     if result.status != "valid" or result.envelope is None:
         return None
     e = result.envelope
     protocol = e.get("protocol")
+    if protocol == "repeat.stop":
+        return _repeat_stop_fallback(e)
     iid, sid = e.get("interaction_id"), e.get("step_id")
     if (
         set(e) != _ENVELOPE_KEYS
@@ -230,7 +266,14 @@ def classify_signal_content(content: SignalContentInput) -> SignalContentResult:
         return SignalContentResult("mixed_or_unsupported", "html_present", interaction)
     actual = (content.bodies.text or "").replace("\r\n", "\n")
     expected = fallback.replace("\r\n", "\n")
-    matches = actual in ("", "\n", expected, expected + "\n")
+    # A status signal may omit its fallback text; a repeat-stop notice may not.
+    text_optional = not (
+        interaction.envelope is not None
+        and interaction.envelope.get("protocol") == "repeat.stop"
+    )
+    matches = actual in (expected, expected + "\n") or (
+        text_optional and actual in ("", "\n")
+    )
     return SignalContentResult(
         "informational_only" if matches else "mixed_or_unsupported",
         "informational_signal" if matches else "text_mismatch",

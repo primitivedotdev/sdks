@@ -85,12 +85,46 @@ func signalUTCExpiry(value any) bool {
 	}
 	return year >= 1970 && month >= 1 && month <= 12 && day >= 1 && day <= days[month-1] && parts[3] < 24 && parts[4] < 60 && parts[5] < 60
 }
+
+// repeatStopNoticeText is the fixed body of a repeat-stop notice; the stated
+// reason is its only variable text.
+func repeatStopNoticeText(reason string) string {
+	if reason == "" {
+		return "Stopped this repeating message."
+	}
+	return "Stopped this repeating message. Reason: " + reason
+}
+
+// repeatStopFallback is the notice body for a repeat.stop/1 envelope: step
+// "stop", a previous step, no expiry, and a payload of {} or {"reason": ...}.
+func repeatStopFallback(e map[string]any) (string, bool) {
+	if _, ok := e["prev_step_id"].(string); !ok || !signalExactKeys(e, signalEnvelopeKeys) || e["protocol_version"] != float64(1) || e["step"] != "stop" || e["expires_at"] != nil {
+		return "", false
+	}
+	p, ok := e["payload"].(map[string]any)
+	if !ok || !signalExactKeys(p, nil, "reason") {
+		return "", false
+	}
+	value, exists := p["reason"]
+	if !exists {
+		return repeatStopNoticeText(""), true
+	}
+	reason, ok := value.(string)
+	if !ok || reason == "" || len(utf16.Encode([]rune(reason))) > 280 || strings.ContainsRune(reason, 0) {
+		return "", false
+	}
+	return repeatStopNoticeText(reason), true
+}
+
 func signalContentFallback(result InteractionResult) (string, bool) {
 	if result.Status != "valid" {
 		return "", false
 	}
 	e := result.Envelope
 	protocol, _ := e["protocol"].(string)
+	if protocol == "repeat.stop" {
+		return repeatStopFallback(e)
+	}
 	iid, _ := e["interaction_id"].(string)
 	sid, _ := e["step_id"].(string)
 	if !signalExactKeys(e, signalEnvelopeKeys) || e["protocol_version"] != float64(1) || (protocol != "ack" && protocol != "read" && protocol != "working" && protocol != "typing") || e["step"] != protocol || e["prev_step_id"] != nil || strings.EqualFold(strings.Split(iid, "@")[0], sid) {
@@ -198,7 +232,9 @@ func ClassifySignalContent(input SignalContentInput) SignalContentResult {
 	}
 	actual = strings.ReplaceAll(actual, "\r\n", "\n")
 	expected = strings.ReplaceAll(expected, "\r\n", "\n")
-	if actual != "" && actual != "\n" && actual != expected && actual != expected+"\n" {
+	// A status signal may omit its fallback text; a repeat-stop notice may not.
+	textOptional := interaction.Envelope["protocol"] != "repeat.stop"
+	if actual != expected && actual != expected+"\n" && !(textOptional && (actual == "" || actual == "\n")) {
 		return result("mixed_or_unsupported", "text_mismatch", interaction)
 	}
 	return result("informational_only", "informational_signal", interaction)
