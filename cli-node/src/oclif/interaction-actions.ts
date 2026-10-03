@@ -92,6 +92,47 @@ function categoryOf(
 }
 
 /**
+ * What answering an email of a category takes. The single source for the
+ * brief and `inbox next` lines, the `inbox next` footer, the wake sentence
+ * and the reply warning, so they cannot disagree.
+ */
+export type ReplyExpectation =
+  /** A plain reply answers it (ordinary mail). */
+  | "reply"
+  /** Nothing is needed: fyi, status signals, repeat-stopped notices. */
+  | "no_reply"
+  /** A dedicated command answers it; a plain reply does not. */
+  | "answer_with_command"
+  /** A repeating message: reply if needed, stop it with its own command. */
+  | "repeat"
+  /** An interaction this CLI cannot answer; a plain reply does not complete it. */
+  | "unsupported"
+  /** The server has not finished checking it; read it again. */
+  | "read_again";
+
+export function replyExpectation(
+  category: InteractionCategory,
+): ReplyExpectation {
+  switch (category) {
+    case "fyi":
+    case "signal":
+    case "repeat_stopped":
+      return "no_reply";
+    case "payment":
+    case "contact":
+      return "answer_with_command";
+    case "repeat":
+      return "repeat";
+    case "unsupported":
+      return "unsupported";
+    case "pending":
+      return "read_again";
+    default:
+      return "reply";
+  }
+}
+
+/**
  * The server's interaction facts for an email read, or null when the server
  * did not report `interaction_hint` (an older server). An unfamiliar hint is
  * treated as `none`, as the API documents.
@@ -116,16 +157,14 @@ export function readEmailInteraction(detail: unknown): EmailInteraction | null {
     fyi,
     row.interaction_candidate === true,
   );
+  const expectation = replyExpectation(category);
   return {
     hint,
     kind,
     fyi,
     category,
-    plain_reply_completes: category === "ordinary" || category === "repeat",
-    no_reply_needed:
-      category === "fyi" ||
-      category === "signal" ||
-      category === "repeat_stopped",
+    plain_reply_completes: expectation === "reply" || expectation === "repeat",
+    no_reply_needed: expectation === "no_reply",
   };
 }
 
@@ -262,15 +301,36 @@ export function wakeInteractionLabel(detail: unknown): string | null {
   return null;
 }
 
+/** The category a wake label stands for, or null for an invalid label. */
+export function wakeLabelCategory(label: unknown): InteractionCategory | null {
+  if (!isWakeInteractionLabel(label)) return null;
+  if (label === "fyi") return "fyi";
+  return categoryOf("card", label === "unknown" ? null : label, false, false);
+}
+
+/**
+ * The fixed wake sentences, keyed by reply expectation. The Claude hook
+ * scripts in bin/ carry copies (they run standalone); a test keeps them equal.
+ */
+export const WAKE_SENTENCES: Record<ReplyExpectation, string> = {
+  reply: "",
+  read_again: "",
+  no_reply: " It needs no reply.",
+  answer_with_command:
+    " It is an interaction a plain reply does not complete; the brief names the command that answers it.",
+  repeat:
+    " It is a repeating message; the brief says how to answer it and whether you can stop it.",
+  unsupported:
+    " It is an interaction this CLI cannot answer; a plain reply does not complete it.",
+};
+
 /**
  * The sentence a wake line adds after its read command for an interaction
  * label: empty for ordinary mail and for anything that is not a valid label.
  */
 export function wakeInteractionSentence(label: unknown): string {
-  if (!isWakeInteractionLabel(label)) return "";
-  return label === "fyi"
-    ? " It is informational (fyi) and needs no reply."
-    : " It is an interaction; a plain reply may not complete it, and the brief names the command that answers it.";
+  const category = wakeLabelCategory(label);
+  return category ? WAKE_SENTENCES[replyExpectation(category)] : "";
 }
 
 /** Accepts only labels `wakeInteractionLabel` can produce. */
@@ -308,6 +368,8 @@ export function replyInteractionWarning(
   const expected = interactionNextActions(interaction, id);
   const commandFor = (actionKind: NextActionKind) =>
     expected.find((action) => action.kind === actionKind)?.command;
+  const expectation = replyExpectation(interaction.category);
+  if (expectation === "reply" || expectation === "repeat") return null;
   switch (interaction.category) {
     case "payment":
       return {

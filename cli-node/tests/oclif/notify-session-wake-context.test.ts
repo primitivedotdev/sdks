@@ -132,7 +132,7 @@ it("names a server-classified interaction in the wake", async () => {
   );
   expect(payload.interaction).toBe("x402.payment/1");
   expect(text).toContain(
-    "Primitive classifies this email as an interaction (x402.payment/1). A plain reply may not complete it; the brief names the command that answers it.",
+    "Primitive classifies this email as x402.payment/1. It is an interaction a plain reply does not complete; the brief names the command that answers it.",
   );
 });
 
@@ -152,6 +152,27 @@ it("says fyi mail needs no reply in the wake", async () => {
   );
   const text = String(f.queue.mock.calls[0]?.[0]);
   expect(text).toContain(
-    "Primitive marks this email informational (fyi): it needs no reply.",
+    "Primitive classifies this email as fyi. It needs no reply.",
   );
+});
+
+it("says a repeat-stopped notice needs no reply, like the brief", async () => {
+  const f = await setup(async () => ({
+    sender: "sender@example.com",
+    relationship: "contact",
+    threadId: null,
+    inThread: false,
+    attachments: true,
+    interaction: "repeat.stop/1",
+  }));
+  await f.notifications.handleDetail(
+    f.detail,
+    randomUUID(),
+    new AbortController().signal,
+  );
+  const text = String(f.queue.mock.calls[0]?.[0]);
+  expect(text).toContain(
+    "Primitive classifies this email as repeat.stop/1. It needs no reply.",
+  );
+  expect(text).not.toContain("names the command");
 });

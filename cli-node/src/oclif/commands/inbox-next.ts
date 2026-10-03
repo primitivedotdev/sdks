@@ -2,6 +2,7 @@ import { Command, Flags } from "@oclif/core";
 import type {
   Conversation,
   ConversationMessage,
+  EmailDetail,
   PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import {
@@ -37,7 +38,10 @@ import {
   interactionNextActions,
   type NextAction,
   readEmailInteraction,
+  replyExpectation,
 } from "../interaction-actions.js";
+import type { ReadNotificationPart } from "../notify-session-content.js";
+import { readRepeatedMessage } from "../repeat-message.js";
 import {
   assertAwaitingFilterRows,
   awaitingRejectedError,
@@ -143,6 +147,11 @@ export type InboxNextResult =
       conversation: Conversation;
       /** The server's interaction facts; absent or null on older servers. */
       interaction?: EmailInteraction | null;
+      /**
+       * For a repeating message, whether its tick part lets the recipient
+       * stop it (false: only the sender can); null when unknown.
+       */
+      repeat_stoppable?: boolean | null;
     }
   | { outcome: "empty"; automated_awaiting: InboxNextAutomatedAwaiting | null };
 
@@ -339,6 +348,8 @@ export type InboxNextApi = {
   getConversation: typeof getConversation;
   getEmail: typeof getEmail;
   listEmails: typeof listEmails;
+  /** Reads an attachment part; defaults to the API download route. */
+  readPart?: ReadNotificationPart;
 };
 
 const DEFAULT_API: InboxNextApi = { getConversation, getEmail, listEmails };
@@ -475,6 +486,7 @@ export async function findNextAwaiting(params: {
         if (automated.automated) continue;
       }
 
+      const interaction = readEmailInteraction(detail);
       const conversationResult = await api.getConversation({
         client: params.apiClient.client,
         path: { id },
@@ -501,7 +513,19 @@ export async function findNextAwaiting(params: {
         email: toInboxNextEmail(detail as LooseRecord & ReplyStateFields),
         automated,
         conversation,
-        interaction: readEmailInteraction(detail),
+        interaction,
+        // Same stoppability input as the brief: the repeat's own tick part.
+        repeat_stoppable:
+          interaction?.category === "repeat"
+            ? ((
+                await readRepeatedMessage({
+                  client: params.apiClient.client,
+                  detail: detail as EmailDetail,
+                  signal: AbortSignal.timeout(30_000),
+                  ...(api.readPart ? { readPart: api.readPart } : {}),
+                })
+              )?.stoppable_by_recipient ?? null)
+            : null,
       };
     }
 
@@ -595,7 +619,7 @@ export function toJson(result: InboxNextResult, bin: string): InboxNextJson {
     next_actions: interactionNextActions(
       result.interaction ?? null,
       result.email.id,
-      { bin },
+      { bin, repeatStoppable: result.repeat_stoppable ?? null },
     ),
     automated_awaiting: null,
   };
@@ -651,10 +675,11 @@ export function formatTranscript(
 ): string {
   const { email, conversation, automated } = result;
   const interaction = result.interaction ?? null;
-  const answer = interactionHumanLine(
-    interaction,
-    interactionNextActions(interaction, email.id, { bin }),
-  );
+  const actions = interactionNextActions(interaction, email.id, {
+    bin,
+    repeatStoppable: result.repeat_stoppable ?? null,
+  });
+  const answer = interactionHumanLine(interaction, actions);
   const lines = [
     "Awaiting your reply:",
     `  id:        ${email.id}`,
@@ -673,11 +698,58 @@ export function formatTranscript(
       formatMessage(message, index),
     ),
     "",
-    "Reply with:",
-    `  ${replyCommand(bin, email.id)} --body "..."`,
+    ...transcriptFooter(interaction, actions, email.id, bin),
     `Then run \`${bin} inbox next\` again.`,
   ];
   return lines.join("\n");
+}
+
+/**
+ * The closing instructions, following the same reply expectation as the
+ * `how to answer` line. Ordinary mail (and older servers) keeps the plain
+ * reply footer.
+ */
+function transcriptFooter(
+  interaction: EmailInteraction | null,
+  actions: NextAction[],
+  id: string,
+  bin: string,
+): string[] {
+  const reply = `  ${replyCommand(bin, id)} --body "..."`;
+  const commands = (kinds: string[]) =>
+    actions
+      .filter((action) => kinds.includes(action.kind))
+      .map((action) => `  ${action.command}`);
+  switch (interaction ? replyExpectation(interaction.category) : "reply") {
+    case "no_reply":
+      return ["No reply needed."];
+    case "answer_with_command":
+      return [
+        "Answer with:",
+        ...commands(["inspect_payment", "pay", "accept_contact"]),
+        "A plain reply does not complete it. Optional, to also write to the sender:",
+        reply,
+      ];
+    case "repeat": {
+      const stop = commands(["stop_repeat"]);
+      return [
+        "Reply with:",
+        reply,
+        ...(stop.length > 0
+          ? ["Stop the repeat once its goal is met:", ...stop]
+          : ["Only the sender can stop this repeat."]),
+      ];
+    }
+    case "unsupported":
+      return [
+        "This CLI cannot answer this interaction, and a plain reply does not complete it. Optional, to write to the sender:",
+        reply,
+      ];
+    case "read_again":
+      return ["Read it again before answering:", ...commands(["read_again"])];
+    default:
+      return ["Reply with:", reply];
+  }
 }
 
 function sleep(ms: number): Promise<void> {

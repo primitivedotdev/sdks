@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -858,6 +859,131 @@ describe("output", () => {
     expect(text.indexOf("how to answer:")).toBeLessThan(
       text.indexOf("Conversation ("),
     );
+  });
+
+  it("ends with the interaction's command, not an unconditional reply", async () => {
+    const id = "6f1e2d3c-4b5a-4968-8776-655443322112";
+    const footer = async (fields: Record<string, unknown>) => {
+      const inbox = new FakeInbox();
+      inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
+      inbox.detailOverride[id] = fields;
+      const result = await findNextAwaiting({
+        apiClient,
+        includeAutomated: false,
+        api: inbox.api(),
+      });
+      if (result.outcome !== "email") throw new Error("expected email");
+      const text = formatTranscript(result, "primitive");
+      return text.slice(text.lastIndexOf("--- [2]")).split("\n").slice(2);
+    };
+    expect(
+      await footer({
+        interaction_hint: "card",
+        interaction_kind: "x402.payment/1",
+      }),
+    ).toEqual([
+      "",
+      "Answer with:",
+      `  primitive payments challenge-from-email --id ${id}`,
+      `  primitive payments pay-email --in-reply-to ${id}`,
+      "A plain reply does not complete it. Optional, to also write to the sender:",
+      `  primitive reply --id ${id} --body "..."`,
+      "Then run `primitive inbox next` again.",
+    ]);
+    expect(
+      await footer({
+        interaction_hint: "card",
+        interaction_kind: "primitive.contact/1",
+      }),
+    ).toContain(`  primitive contacts accept --id ${id}`);
+    for (const fields of [
+      { interaction_hint: "status", interaction_kind: "ack/1", fyi: true },
+      { interaction_hint: "status", interaction_kind: "read/1" },
+      { interaction_hint: "card", interaction_kind: "repeat.stop/1" },
+    ]) {
+      const lines = await footer(fields);
+      expect(lines).toContain("No reply needed.");
+      expect(lines.join("\n")).not.toContain("primitive reply");
+    }
+    expect(
+      await footer({ interaction_hint: "none", interaction_kind: null }),
+    ).toEqual([
+      "",
+      "Reply with:",
+      `  primitive reply --id ${id} --body "..."`,
+      "Then run `primitive inbox next` again.",
+    ]);
+  });
+
+  it("agrees with the brief on a repeat only the sender can stop", async () => {
+    const id = "6f1e2d3c-4b5a-4968-8776-655443322113";
+    const repeatId = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+    const tick = (stoppable: boolean) =>
+      Buffer.from(
+        JSON.stringify({
+          interaction_version: 1,
+          interaction_id: `${repeatId}@example.com`,
+          protocol: "repeat.tick",
+          protocol_version: 1,
+          step: "tick",
+          step_id: "0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607",
+          prev_step_id: null,
+          expires_at: null,
+          payload: {
+            repeat_id: repeatId,
+            sequence: 2,
+            every_minutes: 30,
+            only_if_recipient_idle_minutes: null,
+            stoppable_by_recipient: stoppable,
+          },
+        }),
+      );
+    const run = async (stoppable: boolean) => {
+      const bytes = tick(stoppable);
+      const inbox = new FakeInbox();
+      inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
+      inbox.detailOverride[id] = {
+        interaction_hint: "card",
+        interaction_kind: "repeat.tick/1",
+        repeat: { repeat_id: repeatId, sequence: 2 },
+        parsed: {
+          status: "complete",
+          attachments: [
+            {
+              filename: "interaction.json",
+              content_type: "application/json",
+              size_bytes: bytes.byteLength,
+              sha256: createHash("sha256").update(bytes).digest("hex"),
+              part_index: 1,
+            },
+          ],
+        },
+      };
+      const result = await findNextAwaiting({
+        apiClient,
+        includeAutomated: false,
+        api: { ...inbox.api(), readPart: async () => new Uint8Array(bytes) },
+      });
+      if (result.outcome !== "email") throw new Error("expected email");
+      return {
+        json: toJson(result, "primitive"),
+        text: formatTranscript(result, "primitive"),
+      };
+    };
+    const locked = await run(false);
+    expect(locked.json.next_actions.map((action) => action.kind)).toEqual([
+      "reply",
+    ]);
+    expect(locked.text).toContain(
+      "how to answer: Repeating message (repeat.tick/1). Reply if it asks for an answer; only the sender can stop it.",
+    );
+    expect(locked.text).toContain("Only the sender can stop this repeat.");
+    expect(locked.text).not.toContain("repeat stop");
+    const open = await run(true);
+    expect(open.json.next_actions.map((action) => action.command)).toContain(
+      `primitive repeat stop --id ${id}`,
+    );
+    expect(open.text).toContain("Stop the repeat once its goal is met:");
   });
 
   it("offers a reply for ordinary mail and prints no answer line", async () => {

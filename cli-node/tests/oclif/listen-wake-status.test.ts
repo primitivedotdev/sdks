@@ -371,6 +371,45 @@ it.each([
     metadata:
       "from=peer@example.com relationship=agent thread=none in_thread=yes attachments=yes interaction=fyi",
   },
+  {
+    relation: undefined,
+    context: {
+      sender: "peer@example.com",
+      relationship: "agent" as const,
+      threadId: null,
+      inThread: false,
+      attachments: true,
+      interaction: "repeat.tick/1",
+    },
+    metadata:
+      "from=peer@example.com relationship=agent thread=none in_thread=no attachments=yes interaction=repeat.tick/1",
+  },
+  {
+    relation: undefined,
+    context: {
+      sender: "peer@example.com",
+      relationship: "agent" as const,
+      threadId: null,
+      inThread: false,
+      attachments: true,
+      interaction: "repeat.stop/1",
+    },
+    metadata:
+      "from=peer@example.com relationship=agent thread=none in_thread=no attachments=yes interaction=repeat.stop/1",
+  },
+  {
+    relation: undefined,
+    context: {
+      sender: "peer@example.com",
+      relationship: "agent" as const,
+      threadId: null,
+      inThread: false,
+      attachments: true,
+      interaction: "ack-request/1",
+    },
+    metadata:
+      "from=peer@example.com relationship=agent thread=none in_thread=no attachments=yes interaction=ack-request/1",
+  },
 ])("prints a metadata wake the Claude wrapper forwards ($metadata)", async ({
   relation,
   context,

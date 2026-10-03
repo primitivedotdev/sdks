@@ -1000,10 +1000,12 @@ allowance. `in_thread` says whether this profile has sent in the thread.
 `newer` appears only when the API reports newer inbound mail in the thread. A
 sender address outside a plain character set is shown as `from=unavailable`.
 `interaction=<protocol>/<version>` appears when the server classifies the email
-as an interaction (its `interaction_hint` is `card`), followed by a sentence
-saying that a plain reply may not complete it; `interaction=fyi` appears for
-informational mail, with a sentence saying it needs no reply. Both come only
-from the server's `interaction_hint`, `interaction_kind` and `fyi` fields.
+as an interaction (its `interaction_hint` is `card`), and `interaction=fyi`
+for informational mail. Either is followed by one fixed sentence matching the
+brief: that it needs no reply, that a plain reply does not complete it and the
+brief names the command, that it is a repeating message, or that this CLI
+cannot answer it. Both come only from the server's `interaction_hint`,
+`interaction_kind` and `fyi` fields.
 Codex notifications carry the same fields in their JSON line.
 
 `primitive emails get --id <id> --brief` prints a trusted envelope first
@@ -1035,8 +1037,11 @@ The classification is decided by the server from a DKIM-authenticated
 `X-Primitive-Interaction` header, part filenames, the subject or the body.
 When the server classifies the email as an interaction, its `interaction.json`
 part is left out of the attachment list. `primitive inbox next` carries the
-same `interaction` and `next_actions` in its JSON envelope and prints the same
-line above the conversation.
+same `interaction` and `next_actions` in its JSON envelope, prints the same
+line above the conversation, and ends with matching instructions: the answering
+command first for payment and contact requests (a reply only as optional), "No
+reply needed." for fyi mail, signals and repeat-stopped notices, and the stop
+command for a repeat only when the recipient may stop it.
 
 Before a wake event is acknowledged, the listener records a pending notice for
 the session in
