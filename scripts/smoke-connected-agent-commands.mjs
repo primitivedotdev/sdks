@@ -96,13 +96,20 @@ try {
   assert.equal(JSON.parse(identity.stdout).identity.agentAddress,agent);
   assert.match(JSON.parse(identity.stdout).status_command,/agent connect --profile work --status --json/);
   for (const args of [
-    ['agent','connect','--profile','work','--resume'],
-    ['agent','connect','--profile','work','--receiver','external'],
     ['agent','connect','--profile','work','--session',session,'--receiver','unsupported'],
-    ['agent','connect','--profile','work','--contact-requests'],
     ['agent','connect','--profile','work','--status','--session',session],
     ['listen','--email-id',session],
   ]) await run(args,{exit:2});
+  // --resume, --receiver and --contact-requests are valid without --session
+  // for poll receiving, so they are no longer usage errors. Against this
+  // claim-only profile each is still refused before any network call, and
+  // never adopts the profile into a setup.
+  for (const [args,message] of [
+    [['agent','connect','--profile','work','--resume'],/configured without a setup binding/],
+    [['agent','connect','--profile','work','--receiver','external'],/requires the exact loaded session UUID.*No invitation was claimed/s],
+    [['agent','connect','--profile','work','--contact-requests'],/configured without a setup binding/],
+  ]) assert.match((await run(args,{preload:deny,exit:1})).stderr.replace(/\s*›\s*/g,' '),message);
+  assert.equal(JSON.parse((await run(['agent','connect','--profile','work','--status','--json'],{preload:deny})).stdout).status,'configured');
   await run(['listen','--once','--wake','--hook-session','--events','email.received'],{exit:1});
   const unusedHook=await run(['listen','--once','--wake','--hook-session','--events','email.received','--timeout','1'],{preload:deny,stdin:JSON.stringify({hook_event_name:'Stop',session_id:session})});
   assert.equal(unusedHook.stdout+unusedHook.stderr,'','an unpaired Claude session must not be woken or emit mail');
