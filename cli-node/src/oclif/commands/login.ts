@@ -69,6 +69,103 @@ function retryAfterSeconds(result: unknown): number | null {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+// Returned by the device-login poll when the signed-in account's email
+// must be changed before a CLI session can be issued. Terminal: polling
+// again cannot succeed until the account is updated in the browser.
+export const SIGN_IN_EMAIL_CHANGE_REQUIRED = "sign_in_email_change_required";
+
+const SIGN_IN_EMAIL_CHANGE_REQUIRED_FALLBACK =
+  "Your Primitive sign-in email is on a domain Primitive receives mail for. Change it to an external address in the browser, then log in again.";
+
+function errorMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const inner = (payload as { error?: unknown }).error;
+  const source =
+    inner && typeof inner === "object" ? (inner as object) : payload;
+  const message = (source as { message?: unknown }).message;
+  return typeof message === "string" && message.trim() !== ""
+    ? message.trim()
+    : null;
+}
+
+type CliLoginPollResponse = {
+  data?: unknown;
+  error?: unknown;
+  response?: Response;
+};
+
+export async function pollCliLoginUntilApproved(params: {
+  poll: (deviceCode: string) => Promise<CliLoginPollResponse>;
+  retryCommand: string;
+  sleep?: (ms: number) => Promise<void>;
+  start: Pick<CliLoginStartResult, "device_code" | "expires_in" | "interval">;
+}): Promise<CliLoginPollResult> {
+  const wait = params.sleep ?? sleep;
+  const { retryCommand, start } = params;
+  const deadline = Date.now() + start.expires_in * 1000;
+  let interval = Math.min(
+    Math.max(1, start.interval),
+    MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS,
+  );
+  let nextPollDelay = 1;
+
+  while (Date.now() < deadline) {
+    await wait(nextPollDelay * 1000);
+    nextPollDelay = interval;
+
+    const polled = await params.poll(start.device_code);
+
+    if (polled.data) {
+      const login = unwrapData<CliLoginPollResult>(polled.data);
+      if (!login) {
+        throw cliError("Primitive API returned an empty CLI poll response.");
+      }
+      return login;
+    }
+
+    const payload = extractErrorPayload(polled.error);
+    const code = extractErrorCode(payload);
+    if (code === API_ERROR_CODES.authorizationPending) {
+      nextPollDelay = interval;
+      continue;
+    }
+    if (code === API_ERROR_CODES.slowDown) {
+      interval = Math.min(
+        retryAfterSeconds(polled) ?? interval + 5,
+        MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS,
+      );
+      nextPollDelay = interval;
+      continue;
+    }
+    if (code === SIGN_IN_EMAIL_CHANGE_REQUIRED) {
+      throw new Errors.CLIError(
+        errorMessage(payload) ?? SIGN_IN_EMAIL_CHANGE_REQUIRED_FALLBACK,
+        { code: SIGN_IN_EMAIL_CHANGE_REQUIRED, exit: 1 },
+      );
+    }
+    if (code === API_ERROR_CODES.accessDenied) {
+      throw cliError("Primitive CLI login was denied in the browser.");
+    }
+    if (code === API_ERROR_CODES.expiredToken) {
+      throw cliError(
+        `Primitive CLI login expired. Run \`primitive ${retryCommand}\` again.`,
+      );
+    }
+    if (code === API_ERROR_CODES.invalidDeviceCode) {
+      throw cliError(
+        `Primitive CLI login device code is invalid. Run \`primitive ${retryCommand}\` again.`,
+      );
+    }
+
+    writeErrorWithHints(payload);
+    throw cliError("Primitive CLI login failed while polling for approval.");
+  }
+
+  throw cliError(
+    `Primitive CLI login expired. Run \`primitive ${retryCommand}\` again.`,
+  );
+}
+
 type ExistingLoginStatus =
   | { status: "valid" }
   | { status: "removed_stale" }
@@ -305,86 +402,36 @@ class LoginCommand extends Command {
     );
     process.stderr.write("Waiting for browser approval...\n");
 
-    const deadline = Date.now() + start.expires_in * 1000;
-    let interval = Math.min(
-      Math.max(1, start.interval),
-      MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS,
-    );
-    let nextPollDelay = 1;
+    const login = await pollCliLoginUntilApproved({
+      poll: (deviceCode) =>
+        pollCliLogin({
+          body: { device_code: deviceCode },
+          client: apiClient.client,
+          responseStyle: "fields",
+        }),
+      retryCommand,
+      start,
+    });
 
-    while (Date.now() < deadline) {
-      await sleep(nextPollDelay * 1000);
-      nextPollDelay = interval;
+    deleteChatState(this.config.configDir);
+    saveCliCredentials(this.config.configDir, {
+      access_token: login.access_token,
+      api_base_url: apiBaseUrl,
+      auth_method: "oauth",
+      created_at: new Date().toISOString(),
+      expires_at: cliAccessTokenExpiresAt(login.expires_in),
+      oauth_client_id: login.oauth_client_id,
+      oauth_grant_id: login.oauth_grant_id,
+      org_id: login.org_id,
+      org_name: login.org_name,
+      refresh_token: login.refresh_token,
+      token_type: login.token_type,
+    });
 
-      const polled = await pollCliLogin({
-        body: { device_code: start.device_code },
-        client: apiClient.client,
-        responseStyle: "fields",
-      });
-
-      if (polled.data) {
-        const login = unwrapData<CliLoginPollResult>(polled.data);
-        if (!login) {
-          throw cliError("Primitive API returned an empty CLI poll response.");
-        }
-
-        deleteChatState(this.config.configDir);
-        saveCliCredentials(this.config.configDir, {
-          access_token: login.access_token,
-          api_base_url: apiBaseUrl,
-          auth_method: "oauth",
-          created_at: new Date().toISOString(),
-          expires_at: cliAccessTokenExpiresAt(login.expires_in),
-          oauth_client_id: login.oauth_client_id,
-          oauth_grant_id: login.oauth_grant_id,
-          org_id: login.org_id,
-          org_name: login.org_name,
-          refresh_token: login.refresh_token,
-          token_type: login.token_type,
-        });
-
-        const org = login.org_name ? ` (${login.org_name})` : "";
-        process.stderr.write(`Logged in to org ${login.org_id}${org}.\n`);
-        process.stderr.write(
-          `Saved credentials to ${credentialsPath(this.config.configDir)}.\n`,
-        );
-        return;
-      }
-
-      const payload = extractErrorPayload(polled.error);
-      const code = extractErrorCode(payload);
-      if (code === API_ERROR_CODES.authorizationPending) {
-        nextPollDelay = interval;
-        continue;
-      }
-      if (code === API_ERROR_CODES.slowDown) {
-        interval = Math.min(
-          retryAfterSeconds(polled) ?? interval + 5,
-          MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS,
-        );
-        nextPollDelay = interval;
-        continue;
-      }
-      if (code === API_ERROR_CODES.accessDenied) {
-        throw cliError("Primitive CLI login was denied in the browser.");
-      }
-      if (code === API_ERROR_CODES.expiredToken) {
-        throw cliError(
-          `Primitive CLI login expired. Run \`primitive ${retryCommand}\` again.`,
-        );
-      }
-      if (code === API_ERROR_CODES.invalidDeviceCode) {
-        throw cliError(
-          `Primitive CLI login device code is invalid. Run \`primitive ${retryCommand}\` again.`,
-        );
-      }
-
-      writeErrorWithHints(payload);
-      throw cliError("Primitive CLI login failed while polling for approval.");
-    }
-
-    throw cliError(
-      `Primitive CLI login expired. Run \`primitive ${retryCommand}\` again.`,
+    const org = login.org_name ? ` (${login.org_name})` : "";
+    process.stderr.write(`Logged in to org ${login.org_id}${org}.\n`);
+    process.stderr.write(
+      `Saved credentials to ${credentialsPath(this.config.configDir)}.\n`,
     );
   }
 }

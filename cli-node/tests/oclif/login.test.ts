@@ -1,13 +1,18 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Errors } from "@oclif/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   loadCliCredentials,
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../../src/oclif/auth.js";
-import { checkExistingLogin } from "../../src/oclif/commands/login.js";
+import {
+  checkExistingLogin,
+  pollCliLoginUntilApproved,
+  SIGN_IN_EMAIL_CHANGE_REQUIRED,
+} from "../../src/oclif/commands/login.js";
 
 const CREDENTIALS: StoredCliCredentials = {
   access_token: "prim_oat_existing",
@@ -110,5 +115,107 @@ describe("checkExistingLogin", () => {
 
     expect(result).toEqual({ status: "removed_stale" });
     expect(loadCliCredentials(tempDir)).toBeNull();
+  });
+});
+
+describe("pollCliLoginUntilApproved", () => {
+  const START = { device_code: "dev_code", expires_in: 600, interval: 1 };
+  const noSleep = async () => undefined;
+  let writeSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    writeSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    writeSpy.mockRestore();
+  });
+
+  function errorResponse(code: string, message?: string) {
+    return {
+      error: {
+        success: false,
+        error: { code, ...(message === undefined ? {} : { message }) },
+      },
+    };
+  }
+
+  it("stops polling and surfaces the server message when the sign-in email must change", async () => {
+    const message = "Update your sign-in email before continuing.";
+    const poll = vi
+      .fn()
+      .mockResolvedValueOnce(errorResponse("authorization_pending"))
+      .mockResolvedValueOnce(
+        errorResponse(SIGN_IN_EMAIL_CHANGE_REQUIRED, message),
+      )
+      .mockResolvedValue(errorResponse("authorization_pending"));
+
+    const error = await pollCliLoginUntilApproved({
+      poll,
+      retryCommand: "login",
+      sleep: noSleep,
+      start: START,
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(Errors.CLIError);
+    expect((error as Errors.CLIError).message).toBe(message);
+    expect((error as Errors.CLIError).code).toBe(
+      "sign_in_email_change_required",
+    );
+    expect((error as Errors.CLIError).oclif.exit).toBe(1);
+    expect(poll).toHaveBeenCalledTimes(2);
+  });
+
+  it("falls back to local text when the server omits the message", async () => {
+    const poll = vi
+      .fn()
+      .mockResolvedValue(errorResponse(SIGN_IN_EMAIL_CHANGE_REQUIRED));
+
+    await expect(
+      pollCliLoginUntilApproved({
+        poll,
+        retryCommand: "login",
+        sleep: noSleep,
+        start: START,
+      }),
+    ).rejects.toThrow(/Change it to an external address in the browser/);
+    expect(poll).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the access_denied outcome unchanged", async () => {
+    const poll = vi
+      .fn()
+      .mockResolvedValue(errorResponse("access_denied", "Denied"));
+
+    const error = await pollCliLoginUntilApproved({
+      poll,
+      retryCommand: "login",
+      sleep: noSleep,
+      start: START,
+    }).catch((caught: unknown) => caught);
+
+    expect((error as Errors.CLIError).message).toBe(
+      "Primitive CLI login was denied in the browser.",
+    );
+    expect((error as Errors.CLIError).code).toBeUndefined();
+    expect(poll).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns the session once the browser approves", async () => {
+    const login = { access_token: "prim_oat_new", org_id: "org" };
+    const poll = vi
+      .fn()
+      .mockResolvedValueOnce(errorResponse("authorization_pending"))
+      .mockResolvedValueOnce({ data: { data: login } });
+
+    await expect(
+      pollCliLoginUntilApproved({
+        poll,
+        retryCommand: "login",
+        sleep: noSleep,
+        start: START,
+      }),
+    ).resolves.toEqual(login);
+    expect(poll).toHaveBeenCalledTimes(2);
   });
 });
