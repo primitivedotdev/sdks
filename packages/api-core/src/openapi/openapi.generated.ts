@@ -17185,8 +17185,10 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "Storage included with the plan, in megabytes."
           },
           "limit_mb": {
-            "type": "number",
-            "nullable": true,
+            "type": [
+              "number",
+              "null"
+            ],
             "description": "Storage in megabytes past which inbound email is refused. Null when inbound email is never refused for storage."
           },
           "overage_mb": {

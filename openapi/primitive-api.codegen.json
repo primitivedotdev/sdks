@@ -16949,8 +16949,8 @@
           },
           "limit_mb": {
             "type": "number",
-            "nullable": true,
-            "description": "Storage in megabytes past which inbound email is refused. Null when inbound email is never refused for storage."
+            "description": "Storage in megabytes past which inbound email is refused. Null when inbound email is never refused for storage.",
+            "nullable": true
           },
           "overage_mb": {
             "type": "number",
