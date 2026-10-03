@@ -22,7 +22,7 @@ export const REPEAT_TICK_KIND = "repeat.tick/1";
 export const REPEAT_STOP_KIND = "repeat.stop/1";
 /** Longest stop reason, in UTF-16 code units (astral characters count twice). */
 export const REPEAT_STOP_REASON_MAX = 280;
-export const REPEAT_EVERY_MIN_MINUTES = 5;
+export const REPEAT_EVERY_MIN_MINUTES = 1;
 export const REPEAT_EVERY_MAX_MINUTES = 10_080;
 export const REPEAT_IDLE_MAX_MINUTES = 10_080;
 export const REPEAT_MAX_SENDS_MIN = 2;

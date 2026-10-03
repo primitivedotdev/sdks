@@ -208,7 +208,7 @@ describe("send --repeat-every", () => {
     for (const argv of [
       sendArgs("--only-if-idle", "5"),
       sendArgs("--max-sends", "3"),
-      sendArgs("--repeat-every", "4"),
+      sendArgs("--repeat-every", "0"),
       sendArgs("--repeat-every", "30", "--cc", "bob@example.com"),
     ]) {
       const result = await run("send", argv);

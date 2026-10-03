@@ -17373,7 +17373,7 @@ func (s *RepeatInput) Validate() error {
 	if err := func() error {
 		if err := (validate.Int{
 			MinSet:        true,
-			Min:           5,
+			Min:           1,
 			MaxSet:        true,
 			Max:           10080,
 			MinExclusive:  false,
@@ -24661,7 +24661,7 @@ func (s *UpdateRepeatingSendRequest) Validate() error {
 			if err := func() error {
 				if err := (validate.Int{
 					MinSet:        true,
-					Min:           5,
+					Min:           1,
 					MaxSet:        true,
 					Max:           10080,
 					MinExclusive:  false,

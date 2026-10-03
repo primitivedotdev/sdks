@@ -101,9 +101,21 @@
     },
     {
       "name": "interval below minimum",
-      "raw": "{\"interaction_version\":1,\"interaction_id\":\"9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d@example.com\",\"protocol\":\"repeat.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"repeat_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"every_minutes\":4,\"only_if_recipient_idle_minutes\":15,\"stoppable_by_recipient\":true}}",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d@example.com\",\"protocol\":\"repeat.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"repeat_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"every_minutes\":0,\"only_if_recipient_idle_minutes\":15,\"stoppable_by_recipient\":true}}",
       "status": "invalid",
       "reason": "invalid_payload"
+    },
+    {
+      "name": "interval at minimum",
+      "raw": "{\"interaction_version\":1,\"interaction_id\":\"9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d@example.com\",\"protocol\":\"repeat.tick\",\"protocol_version\":1,\"step\":\"tick\",\"step_id\":\"0b1c2d3e-4f50-4a61-8b72-9c83d4e5f607\",\"prev_step_id\":null,\"expires_at\":null,\"payload\":{\"repeat_id\":\"9A8B7C6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D\",\"sequence\":3,\"every_minutes\":1,\"only_if_recipient_idle_minutes\":15,\"stoppable_by_recipient\":true}}",
+      "status": "valid",
+      "tick": {
+        "repeat_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+        "sequence": 3,
+        "every_minutes": 1,
+        "only_if_recipient_idle_minutes": 15,
+        "stoppable_by_recipient": true
+      }
     },
     {
       "name": "interval above maximum",

@@ -16142,7 +16142,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "every_minutes": {
           "type": "integer",
-          "minimum": 5,
+          "minimum": 1,
           "maximum": 10080
         },
         "only_if_recipient_idle_minutes": {
@@ -19358,7 +19358,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "properties": {
             "every_minutes": {
               "type": "integer",
-              "minimum": 5,
+              "minimum": 1,
               "maximum": 10080
             },
             "only_if_recipient_idle_minutes": {
@@ -20086,7 +20086,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "properties": {
             "every_minutes": {
               "type": "integer",
-              "minimum": 5,
+              "minimum": 1,
               "maximum": 10080
             },
             "only_if_recipient_idle_minutes": {
