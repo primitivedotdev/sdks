@@ -7016,7 +7016,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     ],
     "queryParams": [
       {
-        "description": "Incremental read position. Either the literal `start` or a\n`cursor` returned by a previous read of this endpoint (an\nRFC 3339 UTC timestamp with microsecond precision). Any other\nvalue returns 400 `validation_error`.\n\nWith `start`, the response holds every message the read\nwithout `since` would return, plus `cursor`. With a cursor,\n`messages` holds only the messages created or changed after\nit, oldest first. A change includes an inbound message\nbecoming visible or its body being filled, withheld or\ndiscarded, and a delivery status change on an outbound\nmessage. `thread_id`, `subject`, `message_count` and\n`truncated` always describe the whole conversation, not the\nreturned messages.\n\nSend `cursor` back verbatim. The cursor trails the read by 10\nseconds so a write that commits late is not skipped, which\nmeans a message changed within that window can be returned\nagain by the next read: upsert messages by `id`. Deleted\nmessages are not reported; a periodic `since=start` read (or\na read without `since`) reconciles.\n",
+        "description": "Incremental read position. Either the literal `start` or a\n`cursor` returned by a previous read of this endpoint. Any\nother value returns 400 `validation_error`.\n\nWith `start`, the response holds every message the read\nwithout `since` would return, plus `cursor`. With a cursor,\n`messages` holds only the messages created or changed after\nit, oldest first. A change includes an inbound message\nbecoming visible or its body being filled, withheld or\ndiscarded, and a delivery status change on an outbound\nmessage. `thread_id`, `subject`, `message_count` and\n`truncated` always describe the whole conversation, not the\nreturned messages.\n\nThe cursor is an opaque string. Send it back verbatim and do\nnot parse it or build one; its format can change. A message\ncan be returned again by a later read (for example while\nolder writes are still committing), so upsert messages by\n`id`. Deleted messages are not reported; a periodic\n`since=start` read (or a read without `since`) reconciles.\n",
         "enum": null,
         "name": "since",
         "required": false,
@@ -7219,7 +7219,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         },
         "cursor": {
           "type": "string",
-          "description": "Present only on a `since` read: the position to send as\n`since` on the next read. Send it back verbatim.\n"
+          "description": "Present only on a `since` read: the position to send as\n`since` on the next read. An opaque string: send it back\nverbatim and do not parse it or build one.\n"
         }
       },
       "required": [

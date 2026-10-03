@@ -2438,7 +2438,8 @@ export type Conversation = {
     messages: Array<ConversationMessage>;
     /**
      * Present only on a `since` read: the position to send as
-     * `since` on the next read. Send it back verbatim.
+     * `since` on the next read. An opaque string: send it back
+     * verbatim and do not parse it or build one.
      *
      */
     cursor?: string;
@@ -7203,9 +7204,8 @@ export type GetConversationData = {
     query?: {
         /**
          * Incremental read position. Either the literal `start` or a
-         * `cursor` returned by a previous read of this endpoint (an
-         * RFC 3339 UTC timestamp with microsecond precision). Any other
-         * value returns 400 `validation_error`.
+         * `cursor` returned by a previous read of this endpoint. Any
+         * other value returns 400 `validation_error`.
          *
          * With `start`, the response holds every message the read
          * without `since` would return, plus `cursor`. With a cursor,
@@ -7217,12 +7217,12 @@ export type GetConversationData = {
          * `truncated` always describe the whole conversation, not the
          * returned messages.
          *
-         * Send `cursor` back verbatim. The cursor trails the read by 10
-         * seconds so a write that commits late is not skipped, which
-         * means a message changed within that window can be returned
-         * again by the next read: upsert messages by `id`. Deleted
-         * messages are not reported; a periodic `since=start` read (or
-         * a read without `since`) reconciles.
+         * The cursor is an opaque string. Send it back verbatim and do
+         * not parse it or build one; its format can change. A message
+         * can be returned again by a later read (for example while
+         * older writes are still committing), so upsert messages by
+         * `id`. Deleted messages are not reported; a periodic
+         * `since=start` read (or a read without `since`) reconciles.
          *
          */
         since?: string;

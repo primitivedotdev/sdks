@@ -3589,9 +3589,8 @@ func decodeGetContactParams(args [1]string, argsEscaped bool, r *http.Request) (
 // GetConversationParams is parameters of getConversation operation.
 type GetConversationParams struct {
 	// Incremental read position. Either the literal `start` or a
-	// `cursor` returned by a previous read of this endpoint (an
-	// RFC 3339 UTC timestamp with microsecond precision). Any other
-	// value returns 400 `validation_error`.
+	// `cursor` returned by a previous read of this endpoint. Any
+	// other value returns 400 `validation_error`.
 	// With `start`, the response holds every message the read
 	// without `since` would return, plus `cursor`. With a cursor,
 	// `messages` holds only the messages created or changed after
@@ -3601,12 +3600,12 @@ type GetConversationParams struct {
 	// message. `thread_id`, `subject`, `message_count` and
 	// `truncated` always describe the whole conversation, not the
 	// returned messages.
-	// Send `cursor` back verbatim. The cursor trails the read by 10
-	// seconds so a write that commits late is not skipped, which
-	// means a message changed within that window can be returned
-	// again by the next read: upsert messages by `id`. Deleted
-	// messages are not reported; a periodic `since=start` read (or
-	// a read without `since`) reconciles.
+	// The cursor is an opaque string. Send it back verbatim and do
+	// not parse it or build one; its format can change. A message
+	// can be returned again by a later read (for example while
+	// older writes are still committing), so upsert messages by
+	// `id`. Deleted messages are not reported; a periodic
+	// `since=start` read (or a read without `since`) reconciles.
 	Since OptString `json:",omitempty,omitzero"`
 	// Resource UUID.
 	ID uuid.UUID

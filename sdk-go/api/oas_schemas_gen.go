@@ -4782,7 +4782,8 @@ type Conversation struct {
 	Truncated bool                  `json:"truncated"`
 	Messages  []ConversationMessage `json:"messages"`
 	// Present only on a `since` read: the position to send as
-	// `since` on the next read. Send it back verbatim.
+	// `since` on the next read. An opaque string: send it back
+	// verbatim and do not parse it or build one.
 	Cursor OptString `json:"cursor"`
 }
 

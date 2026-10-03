@@ -4,8 +4,8 @@ import { getConversation, PrimitiveClient } from "../../src/api/index.js";
 const key = ["fixture", "credential"].join("-");
 const EMAIL_ID = "11111111-1111-4111-8111-111111111111";
 const SENT_ID = "22222222-2222-4222-8222-222222222222";
-const FIRST_CURSOR = "2026-10-03T12:00:00.123456Z";
-const NEXT_CURSOR = "2026-10-03T12:05:00.654321Z";
+const FIRST_CURSOR = "2026-10-03T12:00:00.000000Z|12345";
+const NEXT_CURSOR = "2026-10-03T12:05:00.000000Z|12391";
 
 function conversation(
   messages: Record<string, unknown>[],
