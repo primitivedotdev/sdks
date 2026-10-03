@@ -1,6 +1,17 @@
-import { accessSync, constants, existsSync, realpathSync } from "node:fs";
+import {
+  accessSync,
+  constants,
+  existsSync,
+  readdirSync,
+  realpathSync,
+} from "node:fs";
 import { basename, delimiter, dirname, join, resolve } from "node:path";
-import { loadConnectedAgentProfile } from "./connected-agent-profile.js";
+import {
+  agentProfileDirectory,
+  agentProfileName,
+  agentProfilesDirectory,
+  loadConnectedAgentProfile,
+} from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
 import {
   jsonIndentation,
@@ -9,6 +20,8 @@ import {
   readManagedFile,
   writeManagedFile,
 } from "./machine-files.js";
+import { SESSION_UUID } from "./notify-session-native.js";
+import { readMailJson } from "./shared-mail-files.js";
 
 type RecordValue = Record<string, unknown>;
 
@@ -408,7 +421,139 @@ export type HookContext = {
   cli: CliLocation | null;
   /** Why hooks cannot be written now, shown in fixable checks. */
   blocked: string | null;
+  /** Connected profiles that receive through hooks in a live Claude session. */
+  bound?: BoundSessionProfile[];
 };
+
+/** A connected profile whose saved setup receives through Claude hooks. */
+export type BoundSessionProfile = {
+  configDir: string;
+  profile: string;
+  address: string;
+  session: string;
+};
+
+/**
+ * Connected profiles whose setup binds an external (hook) receiver to a
+ * Claude session that this machine has not recorded as ended.
+ */
+export function boundSessionProfiles(configDir: string): BoundSessionProfile[] {
+  const root = resolve(configDir);
+  let names: string[];
+  try {
+    names = readdirSync(join(agentProfilesDirectory(root), "profiles")).sort();
+  } catch {
+    return [];
+  }
+  const bound: BoundSessionProfile[] = [];
+  for (const name of names) {
+    try {
+      agentProfileName(name);
+      const setup = readMailJson(
+        join(agentProfileDirectory(root, name), "setup.json"),
+      ) as { session?: unknown; receiverMode?: unknown } | null;
+      if (
+        setup?.receiverMode !== "external" ||
+        typeof setup.session !== "string" ||
+        !SESSION_UUID.test(setup.session)
+      )
+        continue;
+      const session = setup.session.toLowerCase();
+      const ended = readMailJson(
+        join(root, "machine", "sessions", `${session}.json`),
+      ) as { endedAt?: unknown } | null;
+      if (typeof ended?.endedAt === "string") continue;
+      const profile = loadConnectedAgentProfile(root, name);
+      if (profile)
+        bound.push({
+          configDir: root,
+          profile: name,
+          address: profile.agent_address,
+          session,
+        });
+    } catch {
+      /* An unreadable profile is reported by the profile checks. */
+    }
+  }
+  return bound;
+}
+
+const SESSION_HOOK_KIND = {
+  Stop: "wake",
+  SessionStart: "wake",
+  PostToolUse: "pending",
+} as const;
+
+/** Receive hooks each bound profile should have and does not. */
+function missingSessionHooks(
+  hooks: RecordValue,
+  bound: readonly BoundSessionProfile[],
+): Array<{
+  event: (typeof SESSION_EVENTS)[number];
+  bound: BoundSessionProfile;
+}> {
+  const present = new Set<string>();
+  for (const event of SESSION_EVENTS) {
+    const entries = hooks[event];
+    if (!Array.isArray(entries)) continue;
+    for (const entry of entries) {
+      if (!record(entry) || !Array.isArray(entry.hooks)) continue;
+      for (const hook of entry.hooks) {
+        const parsed = parseSessionHook(hook);
+        if (!parsed?.profile || !parsed.session) continue;
+        present.add(
+          [
+            event,
+            parsed.kind,
+            resolve(parsed.configDir),
+            parsed.profile,
+            parsed.session.toLowerCase(),
+          ].join("\0"),
+        );
+      }
+    }
+  }
+  return bound.flatMap((item) =>
+    SESSION_EVENTS.filter(
+      (event) =>
+        !present.has(
+          [
+            event,
+            SESSION_HOOK_KIND[event],
+            item.configDir,
+            item.profile,
+            item.session,
+          ].join("\0"),
+        ),
+    ).map((event) => ({ event, bound: item })),
+  );
+}
+
+/** The exact entry `agent connect` and `session-register` install. */
+function sessionHookEntry(
+  event: (typeof SESSION_EVENTS)[number],
+  item: BoundSessionProfile,
+  cli: CliLocation,
+): RecordValue {
+  const pending = SESSION_HOOK_KIND[event] === "pending";
+  const hook = {
+    type: "command",
+    command: cli.node,
+    args: [
+      pending ? cli.pending : cli.wake,
+      cli.entry,
+      item.configDir,
+      item.profile,
+      item.address,
+      item.session,
+      pending ? PENDING_MARKER : WAKE_MARKER,
+    ],
+    ...(pending ? { timeout: 10 } : { asyncRewake: true, timeout: 604800 }),
+  };
+  return event === "SessionStart"
+    ? { matcher: "resume", hooks: [hook] }
+    : { hooks: [hook] };
+}
 
 /** Inspect every Primitive-owned Claude hook without changing anything. */
 export function inspectClaudeHooks(
@@ -480,7 +625,9 @@ export function inspectClaudeHooks(
   const counts = { keep: 0, stale: 0, duplicate: 0, outdated: 0 };
   for (const verdict of judgeSessionHooks(hooks, context.cli).values())
     counts[verdict]++;
+  const missing = missingSessionHooks(hooks, context.bound ?? []).length;
   const problems = [
+    missing ? `${missing} missing for connected sessions` : "",
     counts.stale ? `${counts.stale} for disconnected or removed sessions` : "",
     counts.duplicate ? `${counts.duplicate} duplicates` : "",
     counts.outdated ? `${counts.outdated} pointing at an old CLI path` : "",
@@ -490,7 +637,9 @@ export function inspectClaudeHooks(
         status: "fail",
         detail: `Per-session receive hooks need cleanup: ${problems.join(", ")}.${blockedNote}`,
         // Removing hooks for dead sessions never needs a CLI path.
-        fixable: canFix || (counts.outdated === 0 && context.blocked === null),
+        fixable:
+          canFix ||
+          (counts.outdated === 0 && missing === 0 && context.blocked === null),
       }
     : {
         status: "ok",
@@ -597,6 +746,18 @@ export function repairClaudeHooks(
           changed.add("claude.hook.stop");
         }
       }
+      // A connected session whose hook was removed gets it back, exactly as
+      // `agent connect` wrote it; mail would otherwise never wake it.
+      if (cli)
+        for (const { event, bound } of missingSessionHooks(
+          hooks,
+          context.bound ?? [],
+        )) {
+          const entries = eventEntries(hooks, event);
+          if (entries === "invalid") continue;
+          hooks[event] = [...entries, sessionHookEntry(event, bound, cli)];
+          changed.add("claude.hook.stop");
+        }
     }
   }
   if (!changed.size) return { settings, changed };

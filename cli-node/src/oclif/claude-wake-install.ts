@@ -1,16 +1,4 @@
-import { randomUUID } from "node:crypto";
-import {
-  closeSync,
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  realpathSync,
-  renameSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { samePath } from "./claude-machine-hooks.js";
@@ -19,7 +7,11 @@ import {
   agentProfileName,
 } from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
-import { backupManagedFile, pruneManagedBackups } from "./machine-files.js";
+import {
+  MachineFileError,
+  readManagedFile,
+  writeManagedFile,
+} from "./machine-files.js";
 import { SESSION_UUID } from "./notify-session-native.js";
 import { mailAddress, readMailJson } from "./shared-mail-files.js";
 
@@ -59,7 +51,12 @@ export function claudeWakeHookStatus(options: {
     const claudeDir = resolve(
       options.env?.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
     );
-    const settings = readMailJson(join(claudeDir, "settings.json"));
+    // Claude's own settings file is user-owned: it is often readable by
+    // others and larger than Primitive's private records, so it is read
+    // the way machine doctor reads it.
+    const read = readManagedFile(join(claudeDir, "settings.json"));
+    if (read.state !== "present") return unavailable;
+    const settings: unknown = JSON.parse(read.text);
     if (!record(settings) || !record(settings.hooks)) return unavailable;
     const hooks = settings.hooks;
     const owns = (event: string, script: string, marker: string) => {
@@ -117,7 +114,11 @@ export function claudeWakeHookStatus(options: {
   }
 }
 
-function editClaudeSettings(
+/**
+ * Apply one edit to Claude's settings under the shared lock, backing up the
+ * previous file. Exported for tests.
+ */
+export function editClaudeSettings(
   claudeDir: string,
   edit: (settings: RecordValue) => RecordValue | null,
 ): boolean {
@@ -137,50 +138,28 @@ function editClaudeSettings(
   try {
     const settingsPath = join(claudeDir, "settings.json");
     for (let attempt = 0; attempt < 3; attempt++) {
-      let original: string | null = null;
+      const read = readManagedFile(settingsPath);
+      if (read.state === "invalid") return false;
       let settings: RecordValue = {};
-      if (existsSync(settingsPath)) {
-        const stat = lstatSync(settingsPath);
-        if (!stat.isFile() || stat.size > 1_048_576) return false;
-        original = readFileSync(settingsPath, "utf8");
-        const parsed: unknown = JSON.parse(original);
+      if (read.state === "present") {
+        const parsed: unknown = JSON.parse(read.text);
         if (!record(parsed)) return false;
         settings = parsed;
       }
       const next = edit(settings);
       if (next === null) return true;
-      const rendered = `${JSON.stringify(next, null, 2)}\n`;
+      const content = `${JSON.stringify(next, null, 2)}\n`;
       // Rewriting identical settings would only churn backups.
-      if (original !== null && rendered === original) return true;
-      const temporary = join(claudeDir, `.settings.json.${randomUUID()}.tmp`);
-      const fd = openSync(temporary, "wx", 0o600);
+      if (read.state === "present" && content === read.text) return true;
       try {
-        writeFileSync(fd, rendered, "utf8");
-      } finally {
-        closeSync(fd);
-      }
-      try {
-        // Other tools do not share our lock. Retry if one wrote settings
-        // while we prepared this replacement.
-        const current = existsSync(settingsPath)
-          ? readFileSync(settingsPath, "utf8")
-          : null;
-        if (current !== original) continue;
-        // Keep the previous settings beside the file, as machine doctor
-        // does, so every hook change can be traced and undone.
-        const backup =
-          original === null
-            ? null
-            : backupManagedFile(
-                settingsPath,
-                lstatSync(settingsPath).mode & 0o777,
-                new Date(),
-              );
-        renameSync(temporary, settingsPath);
-        if (backup) pruneManagedBackups(settingsPath);
+        // The same writer machine doctor uses: it backs up the previous
+        // settings, and refuses to replace them if another tool, which does
+        // not share our lock, changed the file since it was read. The edit
+        // is then applied again to the newer content.
+        writeManagedFile({ read, content, newFileMode: 0o600 });
         return true;
-      } finally {
-        if (existsSync(temporary)) unlinkSync(temporary);
+      } catch (error) {
+        if (!(error instanceof MachineFileError)) throw error;
       }
     }
     return false;

@@ -15,6 +15,7 @@ import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { codexHookTrustHash } from "../../src/oclif/codex-machine-hooks.js";
 import {
+  agentProfileDirectory,
   type ConnectedAgentProfile,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
@@ -26,6 +27,7 @@ import {
   runMachineDoctor,
 } from "../../src/oclif/machine-doctor.js";
 import { renderManagedBlock } from "../../src/oclif/machine-files.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const directories: string[] = [];
 afterEach(() => {
@@ -737,6 +739,91 @@ describe("primitive machine doctor", () => {
       status: "ok",
       fixed: true,
     });
+  });
+
+  it("reinstalls a removed receive hook for a connected session, never for an ended one", async () => {
+    const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    writeFileSync(settingsPath, '{"model": "opus"}\n');
+    for (const [name, session] of [
+      ["my-agent", sessionA],
+      ["finished", sessionB],
+    ] as const) {
+      saveConnectedAgentProfile(
+        configDir,
+        name,
+        profile(`${name}@example.test`),
+      );
+      writeMailJson(
+        join(agentProfileDirectory(configDir, name), "setup.json"),
+        { session, receiverMode: "external" },
+      );
+    }
+    writeMailJson(join(configDir, "machine", "sessions", `${sessionB}.json`), {
+      version: 1,
+      session: sessionB,
+      endedAt: "2026-10-01T00:00:00.000Z",
+    });
+    const before = byId(await runMachineDoctor(options));
+    expect(before["claude.hook.stop"]).toMatchObject({
+      status: "fail",
+      fixable: true,
+    });
+    expect(before["claude.hook.stop"].detail).toContain(
+      "3 missing for connected sessions",
+    );
+
+    const fixed = byId(await runMachineDoctor({ ...options, fix: true }));
+    expect(fixed["claude.hook.stop"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    expect(settings.model).toBe("opus");
+    expect(settings.hooks.Stop).toEqual([
+      {
+        hooks: [
+          wakeHook(
+            bin,
+            configDir,
+            "my-agent",
+            "my-agent@example.test",
+            sessionA,
+          ),
+        ],
+      },
+    ]);
+    expect(settings.hooks.SessionStart).toContainEqual({
+      matcher: "resume",
+      hooks: [
+        wakeHook(bin, configDir, "my-agent", "my-agent@example.test", sessionA),
+      ],
+    });
+    expect(settings.hooks.PostToolUse).toEqual([
+      {
+        hooks: [
+          {
+            type: "command",
+            command: process.execPath,
+            args: [
+              join(bin, "claude-pending-mail.mjs"),
+              join(bin, "run.js"),
+              configDir,
+              "my-agent",
+              "my-agent@example.test",
+              sessionA,
+              "primitive-pending-mail-v1",
+            ],
+            timeout: 10,
+          },
+        ],
+      },
+    ]);
+    expect(JSON.stringify(settings)).not.toContain("finished");
+
+    const again = byId(await runMachineDoctor({ ...options, fix: true }));
+    expect(again["claude.hook.stop"]).toMatchObject({ status: "ok" });
+    expect(again["claude.hook.stop"].fixed).toBeFalsy();
   });
 
   it("checks every saved profile, however many there are", async () => {

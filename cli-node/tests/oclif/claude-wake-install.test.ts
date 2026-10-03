@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   realpathSync,
+  statSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -16,6 +18,7 @@ import { pathToFileURL } from "node:url";
 import { test } from "vitest";
 import {
   claudeWakeHookStatus,
+  editClaudeSettings,
   installClaudeWakeHook,
   uninstallClaudeWakeHook,
 } from "../../src/oclif/claude-wake-install.js";
@@ -438,6 +441,68 @@ test("every hook write leaves a backup of the previous settings, and an unchange
   assert.equal(backups().length, 1);
   assert.equal(uninstallClaudeWakeHook(options), true);
   assert.equal(backups().length, 2);
+});
+
+test("hook status reads a shared-readable settings file larger than a private record", () => {
+  const { claudeDir, configDir, cliPath } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  writeFileSync(
+    settingsPath,
+    `${JSON.stringify({ notes: "x".repeat(40_000) })}\n`,
+    { mode: 0o644 },
+  );
+  chmodSync(settingsPath, 0o644);
+  const options = {
+    configDir,
+    profileName: "my-agent",
+    agentAddress: "mine@example.com",
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+  };
+  assert.equal(
+    installClaudeWakeHook({ ...options, cliPath }),
+    "installed_unverified",
+  );
+  assert.equal(statSync(settingsPath).mode & 0o777, 0o644);
+  assert.equal(claudeWakeHookStatus(options).installed, true);
+});
+
+test("a settings change made by another tool during an edit is merged, not overwritten", () => {
+  const { claudeDir } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  writeFileSync(settingsPath, `${JSON.stringify({ theme: "dark" })}\n`);
+  const seen: unknown[] = [];
+  assert.equal(
+    editClaudeSettings(claudeDir, (settings) => {
+      seen.push(settings);
+      // Another tool, which does not take our lock, writes while the first
+      // attempt is being prepared.
+      if (seen.length === 1)
+        writeFileSync(
+          settingsPath,
+          `${JSON.stringify({ theme: "dark", model: "opus" })}\n`,
+        );
+      return { ...settings, added: true };
+    }),
+    true,
+  );
+  assert.deepEqual(seen, [{ theme: "dark" }, { theme: "dark", model: "opus" }]);
+  assert.deepEqual(JSON.parse(readFileSync(settingsPath, "utf8")), {
+    theme: "dark",
+    model: "opus",
+    added: true,
+  });
+  const backups = readdirSync(claudeDir).filter((name) =>
+    name.startsWith("settings.json.primitive-bak-"),
+  );
+  assert.ok(backups.length >= 1);
+  assert.ok(
+    backups.some(
+      (name) =>
+        readFileSync(join(claudeDir, name), "utf8") ===
+        `${JSON.stringify({ theme: "dark", model: "opus" })}\n`,
+    ),
+  );
 });
 
 test("hook status accepts a Node path that resolves to the running binary", () => {
