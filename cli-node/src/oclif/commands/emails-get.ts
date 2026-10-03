@@ -2,6 +2,7 @@ import { type Command, Errors, Flags } from "@oclif/core";
 import { getEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
+  extractErrorCode,
   extractErrorPayload,
   runWithTiming,
   surfaceUnauthorizedHint,
@@ -12,6 +13,7 @@ import { dispatchAutoWorking } from "../auto-signals.js";
 import { buildEmailBrief, renderEmailBrief } from "../email-brief.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { clearReadPendingMail } from "../pending-mail.js";
+import { explainPendingMailNotFound } from "../pending-mail-miss.js";
 
 const BRIEF_DESCRIPTION =
   "Print a compact brief instead of the raw email: a trusted envelope (sender, relationship, verification, thread, whether you have sent in the thread, newer messages when the API reports them, attachments, the sender's active work claim, the sender's latest signal on your last message, and for a repeating message its cadence and how to stop it), then the sender-authored subject and body_text fenced and labelled untrusted. With --json, prints one object with `envelope`, `subject` and `body_text`.";
@@ -75,6 +77,8 @@ async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
         configDir: command.config.configDir,
         payload,
       });
+      if (extractErrorCode(payload) === "not_found")
+        await explainPendingMailNotFound(command.config.configDir, flags.id);
       process.exitCode = 1;
       return;
     }

@@ -992,6 +992,51 @@ describe("emails get", () => {
     expect(result.code).toBe(1);
     expect(readPendingMail(configDir, "work", session)).toHaveLength(2);
   });
+
+  it("names the profile holding the notice when a not_found read used another one", async () => {
+    mkdirSync(join(configDir, "agent-connections", "profiles", "other"), {
+      recursive: true,
+      mode: 0o700,
+    });
+    await recordPendingMail(configDir, "other", session, {
+      kind: "mail",
+      email_id: emailId,
+      received_at: "2026-10-01T10:00:00.000Z",
+      sender,
+      thread_id: thread,
+      in_thread: false,
+      newer: null,
+    });
+    vi.stubEnv("CLAUDE_CODE_SESSION_ID", session);
+    for (const argv of [
+      ["--id", emailId, "--brief"],
+      ["--id", emailId],
+    ]) {
+      const result = await run(argv, {});
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain(
+        `Email ${emailId} is a pending notice for profile other, not the profile this command used. Read it with PRIMITIVE_AGENT_PROFILE=other primitive emails get --id ${emailId} --brief.`,
+      );
+    }
+    expect(readPendingMail(configDir, "other", session)).toHaveLength(1);
+  });
+
+  it("drops its own notice after repeated not_found reads, with or without --brief", async () => {
+    await seed();
+    vi.stubEnv("CLAUDE_CODE_SESSION_ID", session);
+    const first = await run(["--id", emailId, "--brief"], {});
+    expect(first.stderr).not.toContain("Dropped");
+    await run(["--id", emailId], {});
+    expect(readPendingMail(configDir, "work", session)).toHaveLength(2);
+    const third = await run(["--id", emailId], {});
+    expect(third.code).toBe(1);
+    expect(third.stderr).toContain(
+      `Dropped the pending notice for ${emailId} from profile work after 3 consecutive not_found reads`,
+    );
+    expect(
+      readPendingMail(configDir, "work", session).map((row) => row.email_id),
+    ).toEqual([otherId]);
+  });
 });
 
 describe("interaction answers in the brief", () => {

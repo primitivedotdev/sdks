@@ -312,3 +312,33 @@ export async function describeWake(input: {
     ...(interaction ? { interaction } : {}),
   };
 }
+
+const WAKE_PROFILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/;
+
+/**
+ * ` to=<address>` naming the address that received a wake, or empty when the
+ * address is unknown or outside the plain character set the hook accepts.
+ * One session can have several connected profiles, each receiving for its
+ * own address, so the wake says which one this mail arrived at.
+ */
+export function wakeRecipientField(address: unknown): string {
+  const value = typeof address === "string" ? address.toLowerCase() : "";
+  return WAKE_ADDRESS.test(value) ? ` to=${value}` : "";
+}
+
+/**
+ * The read command a wake suggests. It selects the receiving profile
+ * explicitly: the email is visible only to that profile, and its pending
+ * notice clears only when that profile reads it, so a copy-pasted command
+ * run under another profile would report not_found.
+ */
+export function wakeReadCommand(
+  emailId: string,
+  profileName?: string | null,
+): string {
+  const prefix =
+    profileName && WAKE_PROFILE.test(profileName)
+      ? `PRIMITIVE_AGENT_PROFILE=${profileName} `
+      : "";
+  return `${prefix}primitive emails get --id ${emailId} --brief`;
+}
