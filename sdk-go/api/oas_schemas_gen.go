@@ -40899,10 +40899,21 @@ type StorageStats struct {
 	UsedKB float64 `json:"used_kb"`
 	// Total storage used in megabytes (2 decimals).
 	UsedMB float64 `json:"used_mb"`
-	// Storage quota in megabytes (based on plan).
+	// The plan's included storage in megabytes, the same value as included_mb. It is an allowance, not a
+	// limit; see limit_mb.
 	QuotaMB float64 `json:"quota_mb"`
-	// Percentage of quota used (1 decimal).
+	// Storage used as a percentage of the included storage (1 decimal). Can exceed 100.
 	Percentage float64 `json:"percentage"`
+	// Storage included with the plan, in megabytes.
+	IncludedMB OptFloat64 `json:"included_mb"`
+	// Storage in megabytes past which inbound email is refused. Null when inbound email is never refused
+	// for storage.
+	LimitMB OptNilFloat64 `json:"limit_mb"`
+	// Storage past included_mb, in megabytes, counting stored email and the search index.
+	OverageMB OptFloat64 `json:"overage_mb"`
+	// Storage attributed to the semantic search index, in bytes. Counted toward included_mb and
+	// overage_mb, never toward limit_mb.
+	SearchIndexBytes OptInt `json:"search_index_bytes"`
 	// Number of stored emails.
 	EmailsCount int `json:"emails_count"`
 }
@@ -40930,6 +40941,26 @@ func (s *StorageStats) GetQuotaMB() float64 {
 // GetPercentage returns the value of Percentage.
 func (s *StorageStats) GetPercentage() float64 {
 	return s.Percentage
+}
+
+// GetIncludedMB returns the value of IncludedMB.
+func (s *StorageStats) GetIncludedMB() OptFloat64 {
+	return s.IncludedMB
+}
+
+// GetLimitMB returns the value of LimitMB.
+func (s *StorageStats) GetLimitMB() OptNilFloat64 {
+	return s.LimitMB
+}
+
+// GetOverageMB returns the value of OverageMB.
+func (s *StorageStats) GetOverageMB() OptFloat64 {
+	return s.OverageMB
+}
+
+// GetSearchIndexBytes returns the value of SearchIndexBytes.
+func (s *StorageStats) GetSearchIndexBytes() OptInt {
+	return s.SearchIndexBytes
 }
 
 // GetEmailsCount returns the value of EmailsCount.
@@ -40960,6 +40991,26 @@ func (s *StorageStats) SetQuotaMB(val float64) {
 // SetPercentage sets the value of Percentage.
 func (s *StorageStats) SetPercentage(val float64) {
 	s.Percentage = val
+}
+
+// SetIncludedMB sets the value of IncludedMB.
+func (s *StorageStats) SetIncludedMB(val OptFloat64) {
+	s.IncludedMB = val
+}
+
+// SetLimitMB sets the value of LimitMB.
+func (s *StorageStats) SetLimitMB(val OptNilFloat64) {
+	s.LimitMB = val
+}
+
+// SetOverageMB sets the value of OverageMB.
+func (s *StorageStats) SetOverageMB(val OptFloat64) {
+	s.OverageMB = val
+}
+
+// SetSearchIndexBytes sets the value of SearchIndexBytes.
+func (s *StorageStats) SetSearchIndexBytes(val OptInt) {
+	s.SearchIndexBytes = val
 }
 
 // SetEmailsCount sets the value of EmailsCount.

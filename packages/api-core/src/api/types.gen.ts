@@ -1235,13 +1235,29 @@ export type StorageStats = {
      */
     used_mb: number;
     /**
-     * Storage quota in megabytes (based on plan)
+     * The plan's included storage in megabytes, the same value as included_mb. It is an allowance, not a limit; see limit_mb.
      */
     quota_mb: number;
     /**
-     * Percentage of quota used (1 decimal)
+     * Storage used as a percentage of the included storage (1 decimal). Can exceed 100.
      */
     percentage: number;
+    /**
+     * Storage included with the plan, in megabytes.
+     */
+    included_mb?: number;
+    /**
+     * Storage in megabytes past which inbound email is refused. Null when inbound email is never refused for storage.
+     */
+    limit_mb?: number | null;
+    /**
+     * Storage past included_mb, in megabytes, counting stored email and the search index.
+     */
+    overage_mb?: number;
+    /**
+     * Storage attributed to the semantic search index, in bytes. Counted toward included_mb and overage_mb, never toward limit_mb.
+     */
+    search_index_bytes?: number;
     /**
      * Number of stored emails
      */

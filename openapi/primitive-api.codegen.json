@@ -16937,11 +16937,28 @@
           },
           "quota_mb": {
             "type": "number",
-            "description": "Storage quota in megabytes (based on plan)"
+            "description": "The plan's included storage in megabytes, the same value as included_mb. It is an allowance, not a limit; see limit_mb."
           },
           "percentage": {
             "type": "number",
-            "description": "Percentage of quota used (1 decimal)"
+            "description": "Storage used as a percentage of the included storage (1 decimal). Can exceed 100."
+          },
+          "included_mb": {
+            "type": "number",
+            "description": "Storage included with the plan, in megabytes."
+          },
+          "limit_mb": {
+            "type": "number",
+            "description": "Storage in megabytes past which inbound email is refused. Null when inbound email is never refused for storage.",
+            "nullable": true
+          },
+          "overage_mb": {
+            "type": "number",
+            "description": "Storage past included_mb, in megabytes, counting stored email and the search index."
+          },
+          "search_index_bytes": {
+            "type": "integer",
+            "description": "Storage attributed to the semantic search index, in bytes. Counted toward included_mb and overage_mb, never toward limit_mb."
           },
           "emails_count": {
             "type": "integer",
