@@ -11267,6 +11267,33 @@ type EmailDetail struct {
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilEmailDetailSenderMember `json:"sender_member"`
+	// True when the email is an informational signal (an acknowledgement, read, working or typing
+	// signal) and nothing else, so it needs no answer, not even another informational reply. Never true
+	// for mail from the reader's owner. Older servers omit it.
+	Fyi OptBool `json:"fyi"`
+	// How to place this email in a timeline without downloading it: `status`, `card`, `none` or
+	// `pending`. Not declared as a closed enum so that a value added later does not fail decoding.
+	// Decided once by the server from the message's authoritative `interaction.json` part, and only when
+	// a passing DKIM signature covering From and Content-Type authenticates the From that wrote it; the
+	// `X-Primitive-Interaction` header is never used, so an unsigned or forged message is always `none`.
+	// `status`: a pure status signal (`read`, `working`, `typing`, or an `ack` in the strict signal
+	// shape), shown as a property of the message it is about rather than as a row. `card`: an
+	// interaction that renders as its own timeline item (for example `ack-request`, `x402.payment`,
+	// `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail,
+	// including any interaction kind not listed. `pending`: the email has not finished processing; read
+	// it again later. Email processed before the field existed is `none`. Treat an unfamiliar value as
+	// `none`. Older servers omit it.
+	InteractionHint OptString `json:"interaction_hint"`
+	// The `<protocol>/<version>` that `interaction_hint` was decided from (for example `repeat.tick/1`
+	// or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.
+	InteractionKind OptNilString `json:"interaction_kind"`
+	// UNVERIFIED early signal for the `pending` window: true when the raw message carries an
+	// `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any
+	// signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to
+	// show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set
+	// that header or name a part that way, so it must not grant trust or select an interaction kind.
+	// Ignore it once `interaction_hint` is anything other than `pending`.
+	InteractionCandidate OptBool `json:"interaction_candidate"`
 }
 
 // GetID returns the value of ID.
@@ -11504,6 +11531,26 @@ func (s *EmailDetail) GetSenderMember() OptNilEmailDetailSenderMember {
 	return s.SenderMember
 }
 
+// GetFyi returns the value of Fyi.
+func (s *EmailDetail) GetFyi() OptBool {
+	return s.Fyi
+}
+
+// GetInteractionHint returns the value of InteractionHint.
+func (s *EmailDetail) GetInteractionHint() OptString {
+	return s.InteractionHint
+}
+
+// GetInteractionKind returns the value of InteractionKind.
+func (s *EmailDetail) GetInteractionKind() OptNilString {
+	return s.InteractionKind
+}
+
+// GetInteractionCandidate returns the value of InteractionCandidate.
+func (s *EmailDetail) GetInteractionCandidate() OptBool {
+	return s.InteractionCandidate
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -11737,6 +11784,26 @@ func (s *EmailDetail) SetRepeat(val OptNilEmailDetailRepeat) {
 // SetSenderMember sets the value of SenderMember.
 func (s *EmailDetail) SetSenderMember(val OptNilEmailDetailSenderMember) {
 	s.SenderMember = val
+}
+
+// SetFyi sets the value of Fyi.
+func (s *EmailDetail) SetFyi(val OptBool) {
+	s.Fyi = val
+}
+
+// SetInteractionHint sets the value of InteractionHint.
+func (s *EmailDetail) SetInteractionHint(val OptString) {
+	s.InteractionHint = val
+}
+
+// SetInteractionKind sets the value of InteractionKind.
+func (s *EmailDetail) SetInteractionKind(val OptNilString) {
+	s.InteractionKind = val
+}
+
+// SetInteractionCandidate sets the value of InteractionCandidate.
+func (s *EmailDetail) SetInteractionCandidate(val OptBool) {
+	s.InteractionCandidate = val
 }
 
 // What the message declared about being automated, verbatim:
@@ -12423,6 +12490,33 @@ type EmailSearchResult struct {
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilEmailSearchResultSenderMember `json:"sender_member"`
+	// True when the email is an informational signal (an acknowledgement, read, working or typing
+	// signal) and nothing else, so it needs no answer, not even another informational reply. Never true
+	// for mail from the reader's owner. Older servers omit it.
+	Fyi OptBool `json:"fyi"`
+	// How to place this email in a timeline without downloading it: `status`, `card`, `none` or
+	// `pending`. Not declared as a closed enum so that a value added later does not fail decoding.
+	// Decided once by the server from the message's authoritative `interaction.json` part, and only when
+	// a passing DKIM signature covering From and Content-Type authenticates the From that wrote it; the
+	// `X-Primitive-Interaction` header is never used, so an unsigned or forged message is always `none`.
+	// `status`: a pure status signal (`read`, `working`, `typing`, or an `ack` in the strict signal
+	// shape), shown as a property of the message it is about rather than as a row. `card`: an
+	// interaction that renders as its own timeline item (for example `ack-request`, `x402.payment`,
+	// `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail,
+	// including any interaction kind not listed. `pending`: the email has not finished processing; read
+	// it again later. Email processed before the field existed is `none`. Treat an unfamiliar value as
+	// `none`. Older servers omit it.
+	InteractionHint OptString `json:"interaction_hint"`
+	// The `<protocol>/<version>` that `interaction_hint` was decided from (for example `repeat.tick/1`
+	// or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.
+	InteractionKind OptNilString `json:"interaction_kind"`
+	// UNVERIFIED early signal for the `pending` window: true when the raw message carries an
+	// `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any
+	// signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to
+	// show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set
+	// that header or name a part that way, so it must not grant trust or select an interaction kind.
+	// Ignore it once `interaction_hint` is anything other than `pending`.
+	InteractionCandidate OptBool `json:"interaction_candidate"`
 	// Number of parsed attachments on the email.
 	AttachmentCount int `json:"attachment_count"`
 	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
@@ -12555,6 +12649,26 @@ func (s *EmailSearchResult) GetRepeat() OptNilEmailSearchResultRepeat {
 // GetSenderMember returns the value of SenderMember.
 func (s *EmailSearchResult) GetSenderMember() OptNilEmailSearchResultSenderMember {
 	return s.SenderMember
+}
+
+// GetFyi returns the value of Fyi.
+func (s *EmailSearchResult) GetFyi() OptBool {
+	return s.Fyi
+}
+
+// GetInteractionHint returns the value of InteractionHint.
+func (s *EmailSearchResult) GetInteractionHint() OptString {
+	return s.InteractionHint
+}
+
+// GetInteractionKind returns the value of InteractionKind.
+func (s *EmailSearchResult) GetInteractionKind() OptNilString {
+	return s.InteractionKind
+}
+
+// GetInteractionCandidate returns the value of InteractionCandidate.
+func (s *EmailSearchResult) GetInteractionCandidate() OptBool {
+	return s.InteractionCandidate
 }
 
 // GetAttachmentCount returns the value of AttachmentCount.
@@ -12700,6 +12814,26 @@ func (s *EmailSearchResult) SetRepeat(val OptNilEmailSearchResultRepeat) {
 // SetSenderMember sets the value of SenderMember.
 func (s *EmailSearchResult) SetSenderMember(val OptNilEmailSearchResultSenderMember) {
 	s.SenderMember = val
+}
+
+// SetFyi sets the value of Fyi.
+func (s *EmailSearchResult) SetFyi(val OptBool) {
+	s.Fyi = val
+}
+
+// SetInteractionHint sets the value of InteractionHint.
+func (s *EmailSearchResult) SetInteractionHint(val OptString) {
+	s.InteractionHint = val
+}
+
+// SetInteractionKind sets the value of InteractionKind.
+func (s *EmailSearchResult) SetInteractionKind(val OptNilString) {
+	s.InteractionKind = val
+}
+
+// SetInteractionCandidate sets the value of InteractionCandidate.
+func (s *EmailSearchResult) SetInteractionCandidate(val OptBool) {
+	s.InteractionCandidate = val
 }
 
 // SetAttachmentCount sets the value of AttachmentCount.
@@ -13173,6 +13307,33 @@ type EmailSummary struct {
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilEmailSummarySenderMember `json:"sender_member"`
+	// True when the email is an informational signal (an acknowledgement, read, working or typing
+	// signal) and nothing else, so it needs no answer, not even another informational reply. Never true
+	// for mail from the reader's owner. Older servers omit it.
+	Fyi OptBool `json:"fyi"`
+	// How to place this email in a timeline without downloading it: `status`, `card`, `none` or
+	// `pending`. Not declared as a closed enum so that a value added later does not fail decoding.
+	// Decided once by the server from the message's authoritative `interaction.json` part, and only when
+	// a passing DKIM signature covering From and Content-Type authenticates the From that wrote it; the
+	// `X-Primitive-Interaction` header is never used, so an unsigned or forged message is always `none`.
+	// `status`: a pure status signal (`read`, `working`, `typing`, or an `ack` in the strict signal
+	// shape), shown as a property of the message it is about rather than as a row. `card`: an
+	// interaction that renders as its own timeline item (for example `ack-request`, `x402.payment`,
+	// `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail,
+	// including any interaction kind not listed. `pending`: the email has not finished processing; read
+	// it again later. Email processed before the field existed is `none`. Treat an unfamiliar value as
+	// `none`. Older servers omit it.
+	InteractionHint OptString `json:"interaction_hint"`
+	// The `<protocol>/<version>` that `interaction_hint` was decided from (for example `repeat.tick/1`
+	// or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.
+	InteractionKind OptNilString `json:"interaction_kind"`
+	// UNVERIFIED early signal for the `pending` window: true when the raw message carries an
+	// `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any
+	// signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to
+	// show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set
+	// that header or name a part that way, so it must not grant trust or select an interaction kind.
+	// Ignore it once `interaction_hint` is anything other than `pending`.
+	InteractionCandidate OptBool `json:"interaction_candidate"`
 }
 
 // GetID returns the value of ID.
@@ -13300,6 +13461,26 @@ func (s *EmailSummary) GetSenderMember() OptNilEmailSummarySenderMember {
 	return s.SenderMember
 }
 
+// GetFyi returns the value of Fyi.
+func (s *EmailSummary) GetFyi() OptBool {
+	return s.Fyi
+}
+
+// GetInteractionHint returns the value of InteractionHint.
+func (s *EmailSummary) GetInteractionHint() OptString {
+	return s.InteractionHint
+}
+
+// GetInteractionKind returns the value of InteractionKind.
+func (s *EmailSummary) GetInteractionKind() OptNilString {
+	return s.InteractionKind
+}
+
+// GetInteractionCandidate returns the value of InteractionCandidate.
+func (s *EmailSummary) GetInteractionCandidate() OptBool {
+	return s.InteractionCandidate
+}
+
 // SetID sets the value of ID.
 func (s *EmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -13423,6 +13604,26 @@ func (s *EmailSummary) SetRepeat(val OptNilEmailSummaryRepeat) {
 // SetSenderMember sets the value of SenderMember.
 func (s *EmailSummary) SetSenderMember(val OptNilEmailSummarySenderMember) {
 	s.SenderMember = val
+}
+
+// SetFyi sets the value of Fyi.
+func (s *EmailSummary) SetFyi(val OptBool) {
+	s.Fyi = val
+}
+
+// SetInteractionHint sets the value of InteractionHint.
+func (s *EmailSummary) SetInteractionHint(val OptString) {
+	s.InteractionHint = val
+}
+
+// SetInteractionKind sets the value of InteractionKind.
+func (s *EmailSummary) SetInteractionKind(val OptNilString) {
+	s.InteractionKind = val
+}
+
+// SetInteractionCandidate sets the value of InteractionCandidate.
+func (s *EmailSummary) SetInteractionCandidate(val OptBool) {
+	s.InteractionCandidate = val
 }
 
 // What the message declared about being automated, verbatim:

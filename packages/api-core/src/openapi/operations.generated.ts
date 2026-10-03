@@ -7984,6 +7984,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "user_id",
             "name"
           ]
+        },
+        "fyi": {
+          "type": "boolean",
+          "description": "True when the email is an informational signal (an acknowledgement, read, working or typing signal) and nothing else, so it needs no answer, not even another informational reply. Never true for mail from the reader's owner. Older servers omit it.\n"
+        },
+        "interaction_hint": {
+          "type": "string",
+          "description": "How to place this email in a timeline without downloading it: `status`, `card`, `none` or `pending`. Not declared as a closed enum so that a value added later does not fail decoding. Decided once by the server from the message's authoritative `interaction.json` part, and only when a passing DKIM signature covering From and Content-Type authenticates the From that wrote it; the `X-Primitive-Interaction` header is never used, so an unsigned or forged message is always `none`. `status`: a pure status signal (`read`, `working`, `typing`, or an `ack` in the strict signal shape), shown as a property of the message it is about rather than as a row. `card`: an interaction that renders as its own timeline item (for example `ack-request`, `x402.payment`, `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail, including any interaction kind not listed. `pending`: the email has not finished processing; read it again later. Email processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers omit it.\n"
+        },
+        "interaction_kind": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The `<protocol>/<version>` that `interaction_hint` was decided from (for example `repeat.tick/1` or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.\n"
+        },
+        "interaction_candidate": {
+          "type": "boolean",
+          "description": "UNVERIFIED early signal for the `pending` window: true when the raw message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is anything other than `pending`.\n"
         }
       },
       "required": [
@@ -8353,6 +8372,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "user_id",
               "name"
             ]
+          },
+          "fyi": {
+            "type": "boolean",
+            "description": "True when the email is an informational signal (an acknowledgement, read, working or typing signal) and nothing else, so it needs no answer, not even another informational reply. Never true for mail from the reader's owner. Older servers omit it.\n"
+          },
+          "interaction_hint": {
+            "type": "string",
+            "description": "How to place this email in a timeline without downloading it: `status`, `card`, `none` or `pending`. Not declared as a closed enum so that a value added later does not fail decoding. Decided once by the server from the message's authoritative `interaction.json` part, and only when a passing DKIM signature covering From and Content-Type authenticates the From that wrote it; the `X-Primitive-Interaction` header is never used, so an unsigned or forged message is always `none`. `status`: a pure status signal (`read`, `working`, `typing`, or an `ack` in the strict signal shape), shown as a property of the message it is about rather than as a row. `card`: an interaction that renders as its own timeline item (for example `ack-request`, `x402.payment`, `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail, including any interaction kind not listed. `pending`: the email has not finished processing; read it again later. Email processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers omit it.\n"
+          },
+          "interaction_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The `<protocol>/<version>` that `interaction_hint` was decided from (for example `repeat.tick/1` or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.\n"
+          },
+          "interaction_candidate": {
+            "type": "boolean",
+            "description": "UNVERIFIED early signal for the `pending` window: true when the raw message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is anything other than `pending`.\n"
           }
         },
         "required": [
@@ -8830,6 +8868,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "user_id",
                   "name"
                 ]
+              },
+              "fyi": {
+                "type": "boolean",
+                "description": "True when the email is an informational signal (an acknowledgement, read, working or typing signal) and nothing else, so it needs no answer, not even another informational reply. Never true for mail from the reader's owner. Older servers omit it.\n"
+              },
+              "interaction_hint": {
+                "type": "string",
+                "description": "How to place this email in a timeline without downloading it: `status`, `card`, `none` or `pending`. Not declared as a closed enum so that a value added later does not fail decoding. Decided once by the server from the message's authoritative `interaction.json` part, and only when a passing DKIM signature covering From and Content-Type authenticates the From that wrote it; the `X-Primitive-Interaction` header is never used, so an unsigned or forged message is always `none`. `status`: a pure status signal (`read`, `working`, `typing`, or an `ack` in the strict signal shape), shown as a property of the message it is about rather than as a row. `card`: an interaction that renders as its own timeline item (for example `ack-request`, `x402.payment`, `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail, including any interaction kind not listed. `pending`: the email has not finished processing; read it again later. Email processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers omit it.\n"
+              },
+              "interaction_kind": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The `<protocol>/<version>` that `interaction_hint` was decided from (for example `repeat.tick/1` or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.\n"
+              },
+              "interaction_candidate": {
+                "type": "boolean",
+                "description": "UNVERIFIED early signal for the `pending` window: true when the raw message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is anything other than `pending`.\n"
               }
             },
             "required": [

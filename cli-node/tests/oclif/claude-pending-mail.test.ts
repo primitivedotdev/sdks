@@ -252,3 +252,39 @@ test("PostToolUse reads a full list, including a status notice past the mail cap
   assert.equal(read.length, PENDING_MAIL_LIMIT + 1);
   assert.equal(read.at(-1)?.emailId, statusId);
 });
+
+test("the hook reads the interaction label the listener journals", async () => {
+  const { recordPendingMail } = await import("../../src/oclif/pending-mail.js");
+  const fixtureData = fixture();
+  for (const dir of [
+    fixtureData.configDir,
+    join(fixtureData.configDir, "agent-connections"),
+    join(fixtureData.configDir, "agent-connections", "profiles"),
+    fixtureData.profileDir,
+  ])
+    chmodSync(dir, 0o700);
+  await recordPendingMail(fixtureData.configDir, "agent", session, {
+    kind: "mail",
+    email_id: email,
+    received_at: new Date().toISOString(),
+    sender: "peer@example.com",
+    thread_id: null,
+    in_thread: false,
+    newer: null,
+    interaction: "primitive.contact/1",
+  });
+  const { readPendingMail, formatPendingMail } = (await import(wrapper)) as {
+    readPendingMail: (
+      configDir: string,
+      profile: string,
+      sessionId: string,
+    ) => { interaction: string | null }[];
+    formatPendingMail: (notice: unknown) => string;
+  };
+  const [notice] = readPendingMail(fixtureData.configDir, "agent", session);
+  assert.equal(notice?.interaction, "primitive.contact/1");
+  assert.match(
+    formatPendingMail(notice),
+    / interaction=primitive\.contact\/1\. Read with /,
+  );
+});

@@ -11,6 +11,7 @@ import {
   agentProfileName,
   loadConnectedAgentProfile,
 } from "../connected-agent-profile.js";
+import { wakeInteractionSentence } from "../interaction-actions.js";
 import {
   backgroundListenStatus,
   backgroundListenToken,
@@ -703,8 +704,9 @@ export default class ListenCommand extends Command {
       // Only server-derived metadata; never subject or body text.
       const context = wake.context?.();
       const metadata = context ? ` ${formatWakeContext(context)}` : "";
+      const interaction = wakeInteractionSentence(context?.interaction);
       process.stderr.write(
-        `Primitive mail arrived: ${wake.wakeId()}${metadata}. Read with primitive emails get --id ${wake.wakeId()} --brief. ${authority}\n`,
+        `Primitive mail arrived: ${wake.wakeId()}${metadata}. Read with primitive emails get --id ${wake.wakeId()} --brief.${interaction} ${authority}\n`,
       );
       process.exitCode = 2;
       // Detached and silent: the wake line and exit status are already final.

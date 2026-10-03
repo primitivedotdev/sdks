@@ -17,6 +17,10 @@ import {
   FyiMessageError,
   uuidsFromSeed,
 } from "../fyi-message.js";
+import {
+  type InteractionWarning,
+  replyInteractionWarning,
+} from "../interaction-actions.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
@@ -66,7 +70,7 @@ class ReplyCommand extends Command {
   not a failure. --json replaces stdout with one envelope { outcome,
   exit_code, outcome_message, sent_email_id, idempotency_key, sent,
   http_status, error, follow_up_commands, prior_replies,
-  prior_replies_check } for every outcome, including failures, and
+  prior_replies_check, interaction_warning } for every outcome, including failures, and
   moves stderr notices into its warnings array, so output merged with
   2>&1 still parses. If the outcome is uncertain, reconcile with
   \`primitive sent get --idempotency-key <key>\` before retrying.
@@ -83,6 +87,16 @@ class ReplyCommand extends Command {
   it for replies that need no answer. It takes plain text only (no
   HTML or attachments, at most 2000 characters) and is refused when
   the email being answered is itself a signal or interaction.
+
+  A plain reply to an email the server classifies as an interaction
+  (for example a payment or contact request) does not complete that
+  interaction, and an informational (fyi) email or status signal needs
+  no reply. In those cases the reply is still sent, and a one-line
+  warning naming the command that answers the interaction goes to
+  stderr (with --json: interaction_warning { code, email_id, kind,
+  category, message, expected }; null otherwise). The classification
+  comes only from the server's interaction_hint, interaction_kind and
+  fyi fields.
 
   ${SEND_OUTCOME_HELP}`;
 
@@ -187,6 +201,7 @@ class ReplyCommand extends Command {
   private attemptStartedAtIso: string | null = null;
   private idempotencyKey: string | null = null;
   private priorRepliesCheck: PriorRepliesCheck | null = null;
+  private interactionWarning: InteractionWarning | null = null;
   private replyTarget: LatestInboundResolution | null = null;
   private sendRequestStarted = false;
 
@@ -207,6 +222,7 @@ class ReplyCommand extends Command {
               extraEnvelopeFields: {
                 ...priorRepliesEnvelopeFields(this.priorRepliesCheck),
                 ...replyTargetEnvelopeFields(flags, this.replyTarget),
+                interaction_warning: this.interactionWarning,
               },
               noun: "Reply",
               requestStarted: this.sendRequestStarted,
@@ -301,6 +317,23 @@ class ReplyCommand extends Command {
           : formatPriorRepliesCheckSkipped(emailId, priorRepliesCheck.reason);
       if (priorRepliesMessage !== null) {
         process.stderr.write(`${priorRepliesMessage}\n`);
+      }
+
+      // Advisory only: a prose reply to an interaction (or to mail that
+      // needs no reply) still goes out. Decided from the server's
+      // interaction_hint, interaction_kind and fyi, never from headers or
+      // filenames. --fyi has its own refusal below.
+      if (
+        !flags.fyi &&
+        priorRepliesCheck.status === "checked" &&
+        priorRepliesCheck.detail?.id === emailId
+      ) {
+        this.interactionWarning = replyInteractionWarning(
+          priorRepliesCheck.detail,
+          emailId,
+        );
+        if (this.interactionWarning && !flags.json)
+          process.stderr.write(`${this.interactionWarning.message}\n`);
       }
 
       const sessionKey = currentMailSessionKey();
@@ -435,6 +468,7 @@ class ReplyCommand extends Command {
         extraEnvelopeFields: {
           ...priorRepliesEnvelopeFields(priorRepliesCheck),
           ...replyTargetEnvelopeFields(flags, this.replyTarget),
+          interaction_warning: this.interactionWarning,
         },
         json: flags.json,
         log: (line) => this.log(line),

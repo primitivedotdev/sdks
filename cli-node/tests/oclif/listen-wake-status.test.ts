@@ -345,6 +345,32 @@ it.each([
     metadata:
       "from=unavailable relationship=other thread=none in_thread=no attachments=yes",
   },
+  {
+    relation: undefined,
+    context: {
+      sender: "peer@example.com",
+      relationship: "agent" as const,
+      threadId: null,
+      inThread: false,
+      attachments: true,
+      interaction: "x402.payment/1",
+    },
+    metadata:
+      "from=peer@example.com relationship=agent thread=none in_thread=no attachments=yes interaction=x402.payment/1",
+  },
+  {
+    relation: undefined,
+    context: {
+      sender: "peer@example.com",
+      relationship: "agent" as const,
+      threadId: null,
+      inThread: true,
+      attachments: true,
+      interaction: "fyi",
+    },
+    metadata:
+      "from=peer@example.com relationship=agent thread=none in_thread=yes attachments=yes interaction=fyi",
+  },
 ])("prints a metadata wake the Claude wrapper forwards ($metadata)", async ({
   relation,
   context,

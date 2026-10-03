@@ -745,6 +745,8 @@ describe("output", () => {
       "automated",
       "conversation",
       "reply_command",
+      "interaction",
+      "next_actions",
       "automated_awaiting",
     ]);
     expect(json.version).toBe(1);
@@ -807,12 +809,78 @@ describe("output", () => {
       automated: null,
       conversation: null,
       reply_command: null,
+      interaction: null,
+      next_actions: [],
       automated_awaiting: { total: 3, capped: false },
     });
     expect(errorJson("reply_state_unsupported", "old").error).toEqual({
       code: "reply_state_unsupported",
       message: "old",
     });
+  });
+
+  it("names the payments command for a server-classified payment request", async () => {
+    const id = "6f1e2d3c-4b5a-4968-8776-655443322110";
+    const inbox = new FakeInbox();
+    inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
+    inbox.detailOverride[id] = {
+      interaction_hint: "card",
+      interaction_kind: "x402.payment/1",
+      interaction_candidate: true,
+    };
+    const result = await findNextAwaiting({
+      apiClient,
+      includeAutomated: false,
+      api: inbox.api(),
+    });
+    if (result.outcome !== "email") throw new Error("expected email");
+    const json = toJson(result, "primitive");
+    expect(json.interaction).toMatchObject({
+      hint: "card",
+      kind: "x402.payment/1",
+      category: "payment",
+      plain_reply_completes: false,
+    });
+    expect(json.next_actions.map((action) => action.command)).toEqual([
+      `primitive payments challenge-from-email --id ${id}`,
+      `primitive payments pay-email --in-reply-to ${id}`,
+    ]);
+    // reply_command is kept for compatibility.
+    expect(json.reply_command).toBe(`primitive reply --id ${id}`);
+    const text = formatTranscript(result, "primitive");
+    const line = text
+      .split("\n")
+      .find((row) => row.startsWith("  how to answer:"));
+    expect(line).toBe(
+      `  how to answer: Payment interaction (x402.payment/1). If it requests payment, review it with primitive payments challenge-from-email --id ${id} and pay with primitive payments pay-email --in-reply-to ${id}. A plain reply does not pay or decline it.`,
+    );
+    // The line sits above the conversation, which is sender text.
+    expect(text.indexOf("how to answer:")).toBeLessThan(
+      text.indexOf("Conversation ("),
+    );
+  });
+
+  it("offers a reply for ordinary mail and prints no answer line", async () => {
+    const id = "6f1e2d3c-4b5a-4968-8776-655443322111";
+    const inbox = new FakeInbox();
+    inbox.add({ id, created_at: "2026-09-18T00:00:00.000Z" });
+    inbox.detailOverride[id] = {
+      interaction_hint: "none",
+      interaction_kind: null,
+      interaction_candidate: true,
+    };
+    const result = await findNextAwaiting({
+      apiClient,
+      includeAutomated: false,
+      api: inbox.api(),
+    });
+    if (result.outcome !== "email") throw new Error("expected email");
+    const json = toJson(result, "primitive");
+    expect(json.interaction?.category).toBe("ordinary");
+    expect(json.next_actions.map((action) => action.kind)).toEqual(["reply"]);
+    expect(formatTranscript(result, "primitive")).not.toContain(
+      "how to answer:",
+    );
   });
 
   it("renders a readable transcript with the reply command", async () => {

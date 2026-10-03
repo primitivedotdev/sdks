@@ -207,6 +207,9 @@ export async function createWakeMail(options: {
               thread_id: notice.context.threadId,
               in_thread: notice.context.inThread,
               newer: notice.context.newer ?? null,
+              ...(notice.context.interaction
+                ? { interaction: notice.context.interaction }
+                : {}),
             }
           : {
               kind: "status",

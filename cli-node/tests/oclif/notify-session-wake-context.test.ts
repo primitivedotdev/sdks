@@ -111,3 +111,47 @@ it("omits metadata it does not have instead of failing the notification", async 
   expect(payload).not.toHaveProperty("relationship");
   expect(payload).not.toHaveProperty("newer_inbound_count");
 });
+
+it("names a server-classified interaction in the wake", async () => {
+  const f = await setup(async () => ({
+    sender: "sender@example.com",
+    relationship: "contact",
+    threadId: null,
+    inThread: false,
+    attachments: true,
+    interaction: "x402.payment/1",
+  }));
+  await f.notifications.handleDetail(
+    f.detail,
+    randomUUID(),
+    new AbortController().signal,
+  );
+  const text = String(f.queue.mock.calls[0]?.[0]);
+  const payload = JSON.parse(
+    text.split("\n").find((line) => line.startsWith("{")) ?? "{}",
+  );
+  expect(payload.interaction).toBe("x402.payment/1");
+  expect(text).toContain(
+    "Primitive classifies this email as an interaction (x402.payment/1). A plain reply may not complete it; the brief names the command that answers it.",
+  );
+});
+
+it("says fyi mail needs no reply in the wake", async () => {
+  const f = await setup(async () => ({
+    sender: "sender@example.com",
+    relationship: "contact",
+    threadId: null,
+    inThread: false,
+    attachments: false,
+    interaction: "fyi",
+  }));
+  await f.notifications.handleDetail(
+    f.detail,
+    randomUUID(),
+    new AbortController().signal,
+  );
+  const text = String(f.queue.mock.calls[0]?.[0]);
+  expect(text).toContain(
+    "Primitive marks this email informational (fyi): it needs no reply.",
+  );
+});
