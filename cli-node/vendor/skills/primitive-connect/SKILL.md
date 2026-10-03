@@ -19,10 +19,18 @@ already receiving mail here), ask the owner whether to keep that address or
 disconnect that agent first, and do not create a second address without their
 answer. The connect command checks this itself: when the session is already
 connected it claims nothing and exits with status 3 and
-`status: "already_connected"`. Relay the same choice to the owner, then rerun
-the same command with `--replace-existing` (disconnect the existing agent,
-then connect) or `--keep-existing` (deliberately keep both), as they chose.
-Never switch to a separate profile on your own to get around this check.
+`status: "already_connected"` and names an address already connected here
+(there can be more than one). Tell the owner, relay the same choice, then rerun
+the same command as they chose:
+
+- `--replace-existing` disconnects every address connected to this session,
+  not just one, then connects. Say so before they choose.
+- `--keep-existing` keeps them all. If the existing address uses this
+  session's default profile, also pass a new `--profile <name>` so the second
+  address gets its own profile; otherwise the rerun is refused again.
+
+Never switch to a separate profile on your own to get around this check; only
+use a new profile as part of the owner's choice to keep both.
 
 The command validates the invitation's API origin, claims it once, answers the
 verification email, starts receiving for this exact session (or sets up
