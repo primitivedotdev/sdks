@@ -901,6 +901,54 @@ describe("primitive machine doctor", () => {
     ).toEqual(["edited 3\n", "edited 4\n"]);
   });
 
+  it("prunes backups from the earlier naming scheme first", async () => {
+    const { home, configDir, options } = machine();
+    const skill = join(home, ".claude", "skills", "primitive-connect");
+    const backups = join(configDir, "machine", "backups", "skills");
+    for (const name of [
+      "claude-20261001T090000Z",
+      "claude-20261001T090000Z-1",
+      "claude-20261001T100000Z",
+      "codex-20261001T090000Z",
+    ])
+      mkdirSync(join(backups, name), { recursive: true });
+    for (let round = 0; round < 2; round++) {
+      mkdirSync(skill, { recursive: true });
+      writeFileSync(join(skill, "SKILL.md"), `edited ${round}\n`);
+      await runMachineDoctor({
+        ...options,
+        fix: true,
+        only: new Set(["skill.claude"]),
+        now: () => new Date(Date.UTC(2026, 9, 2, 12, round)),
+      });
+    }
+    expect(readdirSync(backups).sort()).toEqual([
+      "claude-000001-20261002T120000Z",
+      "claude-000002-20261002T120100Z",
+      // Another runtime's backups are never touched.
+      "codex-20261001T090000Z",
+    ]);
+  });
+
+  it("after one replacement keeps the newest legacy backup alongside the new one", async () => {
+    const { home, configDir, options } = machine();
+    const skill = join(home, ".claude", "skills", "primitive-connect");
+    const backups = join(configDir, "machine", "backups", "skills");
+    for (const name of ["claude-20261001T090000Z", "claude-20261001T090000Z-1"])
+      mkdirSync(join(backups, name), { recursive: true });
+    mkdirSync(skill, { recursive: true });
+    writeFileSync(join(skill, "SKILL.md"), "edited\n");
+    await runMachineDoctor({
+      ...options,
+      fix: true,
+      only: new Set(["skill.claude"]),
+    });
+    expect(readdirSync(backups).sort()).toEqual([
+      "claude-000001-20261002T120000Z",
+      "claude-20261001T090000Z-1",
+    ]);
+  });
+
   it("does not repair while another repair holds the lock", async () => {
     const { configDir, options } = machine();
     const { acquireListenLock } = await import(

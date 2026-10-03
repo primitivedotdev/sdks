@@ -229,25 +229,45 @@ const SKILL_BACKUPS_KEPT = 2;
 /**
  * Skill backups are named <runtime>-<sequence>-<timestamp>. The sequence is
  * one past the highest existing one for the runtime, so names order strictly
- * by creation even when several are made within the same second.
+ * by creation even when several are made within the same second. Backups
+ * from the earlier <runtime>-<timestamp>[-<n>] naming have no sequence; they
+ * sort before every sequenced backup, oldest first, so pruning removes them
+ * first.
  */
 function skillBackups(
   directory: string,
   runtime: string,
 ): Array<{ name: string; sequence: number }> {
-  const pattern = new RegExp(`^${runtime}-(\\d{6,})-\\d{8}T\\d{6}Z$`);
+  const sequenced = new RegExp(`^${runtime}-(\\d{6,})-\\d{8}T\\d{6}Z$`);
+  const legacy = new RegExp(`^${runtime}-(\\d{8}T\\d{6}Z)(?:-(\\d+))?$`);
   let names: string[];
   try {
     names = readdirSync(directory);
   } catch {
     return [];
   }
-  return names
+  const legacyNames = names
     .flatMap((name) => {
-      const match = pattern.exec(name);
-      return match ? [{ name, sequence: Number(match[1]) }] : [];
+      const match = legacy.exec(name);
+      return match
+        ? [{ name, stamp: match[1] ?? "", suffix: Number(match[2] ?? 0) }]
+        : [];
     })
-    .sort((left, right) => left.sequence - right.sequence);
+    .sort((left, right) =>
+      left.stamp === right.stamp
+        ? left.suffix - right.suffix
+        : left.stamp < right.stamp
+          ? -1
+          : 1,
+    )
+    .map(({ name }, index, all) => ({ name, sequence: index - all.length }));
+  const sequencedNames = names.flatMap((name) => {
+    const match = sequenced.exec(name);
+    return match ? [{ name, sequence: Number(match[1]) }] : [];
+  });
+  return [...legacyNames, ...sequencedNames].sort(
+    (left, right) => left.sequence - right.sequence,
+  );
 }
 
 function nextSkillBackupName(
@@ -255,7 +275,10 @@ function nextSkillBackupName(
   runtime: string,
   now: Date,
 ): string {
-  const last = skillBackups(directory, runtime).at(-1)?.sequence ?? 0;
+  const last = Math.max(
+    0,
+    skillBackups(directory, runtime).at(-1)?.sequence ?? 0,
+  );
   return `${runtime}-${String(last + 1).padStart(6, "0")}-${backupStamp(now)}`;
 }
 
