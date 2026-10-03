@@ -141,10 +141,12 @@ export async function checkAgentMail(options: {
             thread_id: row.thread_id ?? null,
           });
       }
-      // An empty page returns a null cursor: keep the previous one.
+      // The tail is caught up only on an empty page, which returns a null
+      // cursor; keep the previous one then. A short page with a cursor may
+      // still be followed by more mail, so paging follows the cursor.
       const next = result.data.meta?.cursor ?? null;
-      if (next) cursor = next;
-      if (rows.length < MAIL_CHECK_PAGE_SIZE || !next) break;
+      if (rows.length === 0 || !next) break;
+      cursor = next;
       more = page === maxPages - 1;
     }
     const output: MailCheckResult = {

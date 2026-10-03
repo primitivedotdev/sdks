@@ -104,22 +104,15 @@ export function contactRequestSessionKey(
     }
     if (typeof raw !== "object" || Array.isArray(raw)) throw sessionRequired();
     const setup = raw as Record<string, unknown>;
-    // Poll receiving binds no session: like a bare profile, it requests and
-    // waits manually, and its agent checks for the acceptance itself.
-    if (
-      setup.receiverMode === "poll" &&
-      setup.session === null &&
-      setup.invitationHash === profile.invitation_hash
-    )
-      return null;
-    const session = mailId(setup.session);
     const receiverMode = setup.receiverMode ?? "native";
+    const poll = receiverMode === "poll" && setup.session === null;
     const receipt = setup.receipt;
+    // Every setup, poll included, must have completed its verification send.
     if (
       setup.version !== 1 ||
       setup.invitationHash !== profile.invitation_hash ||
       setup.phase !== "sent" ||
-      !["native", "external"].includes(String(receiverMode)) ||
+      !(poll || ["native", "external"].includes(String(receiverMode))) ||
       !receipt ||
       typeof receipt !== "object" ||
       Array.isArray(receipt) ||
@@ -133,6 +126,10 @@ export function contactRequestSessionKey(
     )
       throw sessionRequired();
     mailId((receipt as Record<string, unknown>).id);
+    // Poll receiving binds no session: like a bare profile, it requests and
+    // waits manually, and its agent checks for the acceptance itself.
+    if (poll) return null;
+    const session = mailId(setup.session);
     const key = `${receiverMode === "external" ? "claude" : "codex"}:${session}`;
     if (
       (hasRuntime && runtime !== key) ||

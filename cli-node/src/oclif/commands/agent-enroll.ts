@@ -1,4 +1,5 @@
 import { Command, Errors, Flags } from "@oclif/core";
+import { pollCheckCommand } from "../agent-connect-flow.js";
 import { enrollAgent } from "../agent-enroll.js";
 import {
   RECEIVER_MODES,
@@ -7,6 +8,13 @@ import {
 } from "../agent-setup.js";
 import { installClaudeWakeHook } from "../claude-wake-install.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
+
+/** npx runs the CLI from its cache; print follow-up commands the same way. */
+function invocation(entry: string | undefined): string {
+  return entry && /[\\/]_npx[\\/]/.test(entry)
+    ? "npx -y primitive@latest"
+    : "primitive";
+}
 
 export default class AgentEnrollCommand extends Command {
   static summary = "Give this coding session an address in your organization";
@@ -65,7 +73,23 @@ export default class AgentEnrollCommand extends Command {
               sessionId: flags.session,
             })
           : null;
-      const output = { ...result, externalHook };
+      // Poll receiving wakes nothing: the agent runs this check itself, so
+      // the structured result carries it as poll agent connect does.
+      const output =
+        result.receiving.state === "poll"
+          ? {
+              ...result,
+              receiving: {
+                ...result.receiving,
+                mode: "poll" as const,
+                checkCommand: pollCheckCommand(
+                  invocation(process.argv[1]),
+                  result.identity.profileName,
+                ),
+              },
+              externalHook,
+            }
+          : { ...result, externalHook };
       if (flags.json) this.log(JSON.stringify(output));
       else {
         this.log(
@@ -96,9 +120,9 @@ export default class AgentEnrollCommand extends Command {
           this.log(
             "Pairing is not yet confirmed. Rerun this command with the same options to resume the saved session; do not create another address.",
           );
-        else if (result.receiving.state === "poll")
+        else if ("checkCommand" in output.receiving)
           this.log(
-            `Nothing wakes this session for new mail. Check it at the start of each turn and after sending with: PRIMITIVE_AGENT_PROFILE=${result.identity.profileName} primitive agent check-mail --json`,
+            `Nothing wakes this session for new mail. Check it at the start of each turn and after sending with: ${output.receiving.checkCommand}`,
           );
         else if (result.receiving.state !== "healthy")
           this.log(

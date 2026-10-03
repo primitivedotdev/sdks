@@ -338,6 +338,63 @@ it.each([
   expect(output.cli.capabilities).toContain("poll_receiver");
 });
 
+it("agent connect with a profile and an explicitly empty session runs poll setup, not claim-only", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  mocks.readAgentInvitation.mockResolvedValue(pollInvitation);
+  mocks.setupAgent.mockResolvedValue(pollResult("work"));
+  await AgentConnectCommand.run(
+    ["--profile", "work", "--session", "", "--no-skill", "--json"],
+    { root },
+  );
+  expect(mocks.setupAgent).toHaveBeenCalledTimes(1);
+  expect(mocks.setupAgent.mock.calls[0][0]).toMatchObject({
+    profileName: "work",
+    receiverMode: "poll",
+    invitation: pollInvitation,
+  });
+  expect(JSON.parse(outputs[0])).toMatchObject({
+    status: "connected",
+    receiving: {
+      mode: "poll",
+      checkCommand:
+        "PRIMITIVE_AGENT_PROFILE=work primitive agent check-mail --json",
+    },
+  });
+});
+
+it("agent enroll --receiver poll carries the check command in its JSON result", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(AgentEnrollCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  mocks.enrollAgent.mockResolvedValue({
+    identity: {
+      profileName: `session-${session}`,
+      agentAddress: "enrolled@example.com",
+    },
+    connection: { status: "connected" },
+    verification: { state: "verified" },
+    receiving: { state: "poll" },
+    contactRequestPolicy: "not_requested",
+  });
+  await AgentEnrollCommand.run(
+    ["--session", session, "--receiver", "poll", "--json"],
+    { root },
+  );
+  expect(process.exitCode).toBeUndefined();
+  expect(mocks.installClaudeWakeHook).not.toHaveBeenCalled();
+  expect(JSON.parse(outputs[0])).toMatchObject({
+    receiving: {
+      state: "poll",
+      mode: "poll",
+      checkCommand: `PRIMITIVE_AGENT_PROFILE=session-${session} primitive agent check-mail --json`,
+    },
+  });
+});
+
 it("agent connect without a session names the poll resume command when setup pauses", async () => {
   vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
     () => undefined,
@@ -361,14 +418,14 @@ it("agent connect refuses native or external receiving without a session before 
   );
   mocks.readAgentInvitation.mockResolvedValue(pollInvitation);
   for (const receiver of ["native", "external"])
-    await expect(
-      AgentConnectCommand.run(
-        ["--profile", "cloud", "--receiver", receiver, "--json"],
-        { root },
-      ),
-    ).rejects.toThrow(
-      /Without one, use --receiver poll. No invitation was claimed/,
-    );
+    for (const argv of [
+      ["--profile", "cloud", "--receiver", receiver, "--json"],
+      ["--receiver", receiver, "--json"],
+      ["--session", "", "--receiver", receiver, "--json"],
+    ])
+      await expect(AgentConnectCommand.run(argv, { root })).rejects.toThrow(
+        /Without one, use --receiver poll. No invitation was claimed/,
+      );
   expect(mocks.setupAgent).not.toHaveBeenCalled();
   expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
 });

@@ -131,11 +131,12 @@ export default class AgentConnectCommand extends Command {
         return;
       }
       const session = flags.session?.trim() || undefined;
-      // Claim-only keeps its meaning: a profile with no session and no other
-      // setup option. Anything else runs the full setup, which without a
-      // session receives by polling instead of refusing to claim.
+      // Claim-only keeps its meaning: a profile with no --session at all and
+      // no other setup option. Anything else, including an explicitly empty
+      // --session, runs the full setup, which without a session receives by
+      // polling instead of refusing to claim.
       const claimOnly =
-        !session &&
+        flags.session === undefined &&
         flags.profile !== undefined &&
         flags.receiver === undefined &&
         !flags.resume &&
@@ -143,6 +144,15 @@ export default class AgentConnectCommand extends Command {
         flags.name === undefined &&
         flags.info === undefined;
       if (!claimOnly) {
+        // Refuse before stdin is read, so a wrong receiver never waits on or
+        // consumes the invitation.
+        if (
+          !session &&
+          (flags.receiver === "native" || flags.receiver === "external")
+        )
+          throw new AgentConnectionSetupError(
+            `--receiver ${flags.receiver} requires the exact loaded session UUID. Without one, use --receiver poll. No invitation was claimed.`,
+          );
         let readInvitation = () =>
           readAgentInvitation(process.stdin, process.stdin.isTTY);
         if (!session && !flags.resume) {
