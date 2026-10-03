@@ -40,7 +40,11 @@ import {
 } from "../notify-session-native.js";
 import { notificationReceiptPage } from "../notify-session-state.js";
 import { readMailJson } from "../shared-mail-files.js";
-import { formatWakeContext } from "../wake-context.js";
+import {
+  formatWakeContext,
+  wakeReadCommand,
+  wakeRecipientField,
+} from "../wake-context.js";
 import { createWakeMail } from "../wake-mail.js";
 
 const RESUME_LOCK_RETRY_MS = 4_000;
@@ -262,6 +266,7 @@ export default class ListenCommand extends Command {
     let hookSessionId: string | undefined;
     let hookEventName: "Stop" | "SessionStart" | undefined;
     let hookProfileName: string | undefined;
+    let hookAgentAddress: string | undefined;
     if (flags["hook-session"]) {
       let input = "";
       for await (const chunk of process.stdin) {
@@ -491,6 +496,7 @@ export default class ListenCommand extends Command {
         process.env.PRIMITIVE_HOOK_AGENT_ADDRESS.toLowerCase()
       )
         return;
+      hookAgentAddress = profile.agent_address;
     }
     if (
       hookSessionId &&
@@ -741,8 +747,22 @@ export default class ListenCommand extends Command {
       const context = wake.context?.();
       const metadata = context ? ` ${formatWakeContext(context)}` : "";
       const interaction = wakeInteractionSentence(context?.interaction);
+      // Name the receiving address and select its profile in the read
+      // command: a session can carry several connected profiles, and the
+      // email is readable only under the one that received it.
+      let recipient = wakeRecipientField(hookAgentAddress);
+      if (!recipient && hookProfileName) {
+        try {
+          recipient = wakeRecipientField(
+            loadConnectedAgentProfile(this.config.configDir, hookProfileName)
+              ?.agent_address,
+          );
+        } catch {
+          // The address is informational; the wake still goes out.
+        }
+      }
       process.stderr.write(
-        `Primitive mail arrived: ${wake.wakeId()}${metadata}. Read with primitive emails get --id ${wake.wakeId()} --brief.${interaction} ${authority}\n`,
+        `Primitive mail arrived: ${wake.wakeId()}${recipient}${metadata}. Read with ${wakeReadCommand(wake.wakeId() ?? "", hookProfileName)}.${interaction} ${authority}\n`,
       );
       process.exitCode = 2;
       // Detached and silent: the wake line and exit status are already final.

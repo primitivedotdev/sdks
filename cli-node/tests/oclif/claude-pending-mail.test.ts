@@ -66,6 +66,15 @@ test("PostToolUse checks the exact session and delivers trusted pending metadata
   const context = result.hookSpecificOutput.additionalContext;
   assert.match(context, new RegExp(email));
   assert.match(context, /sender=peer@example.com/);
+  // The receiving address and a read command that selects its profile, so
+  // a session with several connected profiles reads it under the right one.
+  assert.match(context, new RegExp(`${email} to=agent@example.com sender=`));
+  assert.match(
+    context,
+    new RegExp(
+      `Read with PRIMITIVE_AGENT_PROFILE=agent primitive emails get --id ${email} --brief\\.`,
+    ),
+  );
   assert.doesNotMatch(context, /must-not-reach-child/);
   const call = JSON.parse(readFileSync(fixtureData.calls, "utf8"));
   assert.deepEqual(call.args, [

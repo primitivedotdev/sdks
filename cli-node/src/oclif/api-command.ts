@@ -34,6 +34,7 @@ import {
   maybeWriteFunctionEndpointRedirect,
 } from "./endpoints-test-redirect.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
+import { explainPendingMailNotFound } from "./pending-mail-miss.js";
 import {
   assertAwaitingFilterRows,
   awaitingRejectedError,
@@ -1214,6 +1215,18 @@ export function createOperationCommand(
               process.stderr.write(chunk);
             },
           });
+          // A wake names one profile's email; read under another profile
+          // it is not_found. Say which profile holds it, or drop a notice
+          // that its own profile can no longer read.
+          if (
+            operation.sdkName === "getEmail" &&
+            extractErrorCode(errorPayload) === "not_found" &&
+            typeof parsedFlags.id === "string"
+          )
+            await explainPendingMailNotFound(
+              this.config.configDir,
+              parsedFlags.id,
+            );
           process.exitCode = 1;
           return;
         }

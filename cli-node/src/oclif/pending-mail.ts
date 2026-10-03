@@ -6,7 +6,10 @@ import {
   unlinkSync,
 } from "node:fs";
 import { join } from "node:path";
-import { agentProfileDirectory } from "./connected-agent-profile.js";
+import {
+  agentProfileDirectory,
+  agentProfilesDirectory,
+} from "./connected-agent-profile.js";
 import { isWakeInteractionLabel } from "./interaction-actions.js";
 import {
   privateMailPermissions,
@@ -41,6 +44,11 @@ export type PendingMailNotice = {
    * or `fyi`. Absent for ordinary mail.
    */
   interaction?: string;
+  /**
+   * Mail notices only: consecutive reads of this email by its own profile
+   * that the API answered not_found. Absent until the first such read.
+   */
+  not_found_reads?: number;
 };
 
 export const PENDING_MAIL_LIMIT = 50;
@@ -123,6 +131,12 @@ function notice(value: unknown): PendingMailNotice | null {
     // An unreadable label is dropped, never the notice.
     ...(kind === "mail" && isWakeInteractionLabel(row.interaction)
       ? { interaction: row.interaction }
+      : {}),
+    ...(kind === "mail" &&
+    typeof row.not_found_reads === "number" &&
+    Number.isSafeInteger(row.not_found_reads) &&
+    row.not_found_reads > 0
+      ? { not_found_reads: row.not_found_reads }
       : {}),
   };
 }
@@ -308,4 +322,85 @@ export async function clearReadPendingMail(
   );
   for (const id of sessions)
     await removePendingMail(configDir, profileName, id, [emailId]);
+}
+
+/**
+ * Consecutive not_found reads after which a mail notice is dropped. The
+ * notice is otherwise cleared only by a successful read, so an email that
+ * was deleted or is no longer visible to the profile would be announced
+ * after every tool call for as long as the session lives.
+ */
+export const PENDING_NOT_FOUND_LIMIT = 3;
+
+export type NotFoundReadOutcome =
+  | { kind: "absent" }
+  | { kind: "counted"; reads: number }
+  | { kind: "dropped"; reads: number };
+
+/**
+ * Record that this profile read one of its own pending emails and the API
+ * answered not_found. At PENDING_NOT_FOUND_LIMIT consecutive misses the
+ * notice is removed. A successful read removes the notice outright, so the
+ * count never spans a success.
+ */
+export async function recordPendingNotFoundRead(
+  configDir: string,
+  profileName: string,
+  session: string,
+  emailId: string,
+  limit = PENDING_NOT_FOUND_LIMIT,
+): Promise<NotFoundReadOutcome> {
+  const id = emailId.toLowerCase();
+  return withMailLock(lockDirectory(configDir, profileName), () => {
+    const current = readPendingMail(configDir, profileName, session, true);
+    const index = current.findIndex(
+      (row) => row.kind === "mail" && row.email_id === id,
+    );
+    const row = current[index];
+    if (!row) return { kind: "absent" } as const;
+    const reads = (row.not_found_reads ?? 0) + 1;
+    if (reads >= limit) {
+      write(
+        configDir,
+        profileName,
+        session,
+        current.filter((_, at) => at !== index),
+      );
+      return { kind: "dropped", reads } as const;
+    }
+    const next = [...current];
+    next[index] = { ...row, not_found_reads: reads };
+    write(configDir, profileName, session, next);
+    return { kind: "counted", reads } as const;
+  });
+}
+
+/**
+ * Profiles in this config directory that hold a pending mail notice for
+ * the email in the given session. A session can carry several connected
+ * profiles, each with its own notices.
+ */
+export function pendingMailProfiles(
+  configDir: string,
+  session: string,
+  emailId: string,
+): string[] {
+  const id = emailId.toLowerCase();
+  let names: string[];
+  try {
+    names = readdirSync(join(agentProfilesDirectory(configDir), "profiles"));
+  } catch {
+    return [];
+  }
+  return names
+    .filter((name) => {
+      try {
+        return readPendingMail(configDir, name, session).some(
+          (row) => row.kind === "mail" && row.email_id === id,
+        );
+      } catch {
+        return false;
+      }
+    })
+    .sort();
 }

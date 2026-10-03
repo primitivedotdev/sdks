@@ -990,8 +990,13 @@ The wake line carries only metadata the server or local listener state
 provides, never the subject or body:
 
 ```text
-Primitive mail arrived: <email-id> from=<sender> relationship=<owner|member|agent|contact|other> thread=<thread-id|none> in_thread=<yes|no> attachments=<yes|no> newer=<n> interaction=<kind|fyi>. Read with primitive emails get --id <email-id> --brief. <authority sentence>
+Primitive mail arrived: <email-id> to=<receiving-address> from=<sender> relationship=<owner|member|agent|contact|other> thread=<thread-id|none> in_thread=<yes|no> attachments=<yes|no> newer=<n> interaction=<kind|fyi>. Read with PRIMITIVE_AGENT_PROFILE=<profile> primitive emails get --id <email-id> --brief. <authority sentence>
 ```
+
+One session can have several connected profiles, each receiving for its own
+address. `to=` names the address that received the mail, and the read command
+selects that profile, because the email is visible only to the profile that
+received it.
 
 `relationship` comes from server admission and verification: `owner` and
 `member` from verified organization membership, `agent` from connected-agent
@@ -1054,7 +1059,16 @@ the session in
 Reading the email with `primitive emails get --id <id>` (with or without
 `--brief`) inside that session removes it; a read outside any Claude Code or
 Codex session leaves every session's notice in place. `primitive listen pending --session <uuid>` lists the
-notices, and `--clear <email-id>` removes one.
+notices, and `--clear <email-id>` removes one. Pending notices replayed by the
+hooks carry the same `to=` field and profile-selecting read command as the wake
+line.
+
+When `emails get --id <id>` answers `not_found` inside a session and that id
+is a pending notice for another profile bound to the same session, the CLI
+prints one line naming that profile and the command that reads it. When the
+id is a pending notice for the profile that ran the read, the CLI counts the
+miss; after 3 consecutive `not_found` reads it drops the notice and says why,
+so an email that was deleted or is no longer visible stops being announced.
 
 To stop wakes for an unrelated conversation, mute its thread:
 

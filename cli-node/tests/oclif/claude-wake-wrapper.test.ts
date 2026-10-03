@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -29,9 +30,11 @@ function runWake(
     hook_event_name: "Stop",
     session_id: session,
   },
+  prepare: (root: string) => void = () => undefined,
 ) {
   const root = mkdtempSync(join(tmpdir(), "primitive-wake-wrapper-"));
   roots.push(root);
+  prepare(root);
   const cli = join(root, "cli.mjs");
   const forwarded = join(root, "forwarded.json");
   writeFileSync(
@@ -86,6 +89,44 @@ it("forwards a bounded exact-conversation status to the Claude hook", () => {
   const { result } = runWake(notice);
   expect(result.status).toBe(2);
   expect(result.stderr).toBe(notice);
+});
+
+it("names the receiving address and profile when it replays a pending notice", () => {
+  const { result, forwarded } = runWake(
+    "unused\n",
+    { hook_event_name: "Stop", session_id: session },
+    (root) => {
+      const directory = join(
+        root,
+        "agent-connections",
+        "profiles",
+        "session-test",
+      );
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(
+        join(directory, `pending-mail-${session}.json`),
+        JSON.stringify({
+          version: 1,
+          session_id: session,
+          notices: [
+            {
+              email_id: received,
+              received_at: "2026-10-01T00:00:00.000Z",
+              sender: "peer@example.com",
+              thread_id: null,
+              in_thread: false,
+              newer: null,
+            },
+          ],
+        }),
+      );
+    },
+  );
+  expect(result.status).toBe(2);
+  expect(forwarded).toBeNull();
+  expect(result.stderr).toBe(
+    `Primitive mail arrived: ${received} to=test@example.com sender=peer@example.com thread=none in_thread=no. Read with PRIMITIVE_AGENT_PROFILE=session-test primitive emails get --id ${received} --brief. ${external}\n`,
+  );
 });
 
 it("does not forward arbitrary child errors into the Claude hook", () => {
@@ -291,6 +332,37 @@ it.each([
 
 it("rejects a wake naming a different email in its read command", () => {
   const notice = `Primitive mail arrived: ${received} from=peer@example.com relationship=agent thread=none in_thread=no attachments=no. Read with primitive emails get --id ${sent} --brief. ${external}\n`;
+  const { result } = runWake(notice);
+  expect(result.status).toBe(0);
+  expect(result.stderr).toBe("");
+});
+
+it.each([
+  {
+    head: "to=agent@example.test from=peer@example.com relationship=agent thread=none in_thread=no attachments=no",
+    profile: "session-11111111-1111-4111-8111-111111111111",
+  },
+  { head: "to=agent+ops@example.test", profile: "named.profile_1" },
+])("forwards a wake naming its receiving address and profile: $head", ({
+  head,
+  profile,
+}) => {
+  const notice = `Primitive mail arrived: ${received} ${head}. Read with PRIMITIVE_AGENT_PROFILE=${profile} primitive emails get --id ${received} --brief. ${external}\n`;
+  const { result } = runWake(notice);
+  expect(result.status).toBe(2);
+  expect(result.stderr).toBe(notice);
+});
+
+it.each([
+  // Shell text in the profile selector.
+  `Primitive mail arrived: ${received} to=agent@example.test. Read with PRIMITIVE_AGENT_PROFILE=x;rm primitive emails get --id ${received} --brief. ${external}\n`,
+  // Any other environment assignment.
+  `Primitive mail arrived: ${received}. Read with PRIMITIVE_API_KEY=x primitive emails get --id ${received} --brief. ${external}\n`,
+  // Recipient after the sender metadata.
+  `Primitive mail arrived: ${received} from=peer@example.com relationship=agent thread=none in_thread=no attachments=no to=agent@example.test. Read with primitive emails get --id ${received} --brief. ${external}\n`,
+  // Recipient outside the plain character set.
+  `Primitive mail arrived: ${received} to="a b"@example.test. Read with primitive emails get --id ${received} --brief. ${external}\n`,
+])("rejects a recipient or profile outside the fixed grammar: %s", (notice) => {
   const { result } = runWake(notice);
   expect(result.status).toBe(0);
   expect(result.stderr).toBe("");
