@@ -295,9 +295,10 @@ message.`, or `Stopped this repeating message. Reason: <reason>` when a reason i
 present. Unlike a status signal, the text may not be empty. A stop envelope next
 to any other text, HTML or part stays mixed.
 
-For informational-only content, HTML must be known absent/empty. Plain text must
-be known absent/empty or exactly the helper's canonical fallback, including the
-ACK note. Normalize CRLF to LF on both sides and allow at most one additional MIME
+For informational-only content, HTML must be known absent/empty. For a status
+signal, plain text must be known absent/empty or exactly the helper's canonical
+fallback, including the ACK note. For a repeat-stop notice, absent or empty text
+is not accepted: plain text must be exactly the notice text described above. Normalize CRLF to LF on both sides and allow at most one additional MIME
 terminal LF. No other trimming or whitespace folding occurs. Thus a single LF can
 represent an empty MIME text part, while a second added LF or additional prose
 keeps the carrier mixed. The fallback builder is shared with preparation.
