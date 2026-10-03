@@ -1,6 +1,6 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import { pollCheckCommand } from "../agent-connect-flow.js";
-import { enrollAgent } from "../agent-enroll.js";
+import { enrollAgent, enrollmentResumes } from "../agent-enroll.js";
 import {
   RECEIVER_MODES,
   type ReceiverMode,
@@ -8,9 +8,13 @@ import {
 } from "../agent-setup.js";
 import { installClaudeWakeHook } from "../claude-wake-install.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
+import { SESSION_UUID } from "../notify-session-native.js";
 import {
   ALREADY_CONNECTED_EXIT_CODE,
-  guardSessionAddress,
+  alreadyConnected,
+  type BoundAddress,
+  inspectSessionAddresses,
+  replaceSessionAddresses,
 } from "../session-address-guard.js";
 
 /** npx runs the CLI from its cache; print follow-up commands the same way. */
@@ -68,37 +72,43 @@ export default class AgentEnrollCommand extends Command {
     const { flags } = await this.parse(AgentEnrollCommand);
     try {
       // One address per session, checked before anything is requested. The
-      // session's own profile is this enrollment's resume target, not a
-      // second address.
+      // session's own profile is this enrollment's resume target only when
+      // it holds this session's enrollment; any other connection there is a
+      // second address like any other profile bound to the session.
       const session = flags.session.trim().toLowerCase();
-      const guard = await guardSessionAddress({
-        configDir: this.config.configDir,
-        session,
-        targetProfile: `session-${session}`,
-        replaceExisting: flags["replace-existing"],
-        keepExisting: flags["keep-existing"],
-        command: "enroll",
-      });
-      if (guard.status === "already_connected") {
-        if (flags.json)
-          this.log(
-            JSON.stringify({
-              status: guard.status,
-              session: guard.session,
-              existing: guard.existing,
-              bound: guard.bound,
-              detail: guard.detail,
-            }),
-          );
-        else this.log(guard.detail);
+      if (!SESSION_UUID.test(session))
+        throw new AgentConnectionSetupError(
+          "Enrollment requires the exact current session UUID. Nothing was changed.",
+        );
+      const targetProfile = `session-${session}`;
+      let bound: BoundAddress[] = [];
+      if (!flags["keep-existing"]) {
+        const check = inspectSessionAddresses({
+          configDir: this.config.configDir,
+          session,
+          targetProfile,
+        });
+        bound =
+          check.target && !enrollmentResumes(this.config.configDir, session)
+            ? [
+                ...check.others,
+                {
+                  profile: check.target.profile,
+                  address: check.target.address,
+                },
+              ]
+            : check.others;
+      }
+      if (bound.length > 0 && !flags["replace-existing"]) {
+        const refusal = alreadyConnected(session, bound, "enroll");
+        if (flags.json) this.log(JSON.stringify(refusal));
+        else this.log(refusal.detail);
         process.exitCode = ALREADY_CONNECTED_EXIT_CODE;
         return;
       }
-      if (!flags.json)
-        for (const row of guard.replaced)
-          this.log(
-            `Disconnected the existing agent ${row.address} (profile ${row.profile}).`,
-          );
+      // A replacement disconnects only once enrollment's own checks (saved
+      // login, overrides, session preflight) pass, right before creation.
+      let replaced: BoundAddress[] = [];
       const result = await enrollAgent({
         configDir: this.config.configDir,
         session: flags.session,
@@ -106,6 +116,22 @@ export default class AgentEnrollCommand extends Command {
         receiverMode: flags.receiver as ReceiverMode | undefined,
         contactRequests: flags["contact-requests"],
         continueSetup: flags["continue-setup"],
+        ...(bound.length > 0
+          ? {
+              beforeCreate: async () => {
+                replaced = await replaceSessionAddresses({
+                  configDir: this.config.configDir,
+                  rows: bound,
+                  targetProfile,
+                });
+                if (!flags.json)
+                  for (const row of replaced)
+                    this.log(
+                      `Disconnected the existing agent ${row.address} (profile ${row.profile}).`,
+                    );
+              },
+            }
+          : {}),
       });
       const externalHook =
         flags.receiver === "external" &&
@@ -136,8 +162,8 @@ export default class AgentEnrollCommand extends Command {
               externalHook,
             }
           : { ...result, externalHook };
-      const printed = guard.replaced.length
-        ? { ...output, replacedExisting: guard.replaced }
+      const printed = replaced.length
+        ? { ...output, replacedExisting: replaced }
         : output;
       if (flags.json) this.log(JSON.stringify(printed));
       else {

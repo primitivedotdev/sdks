@@ -543,7 +543,17 @@ export function connectedProfilesForSession(
     if (name === exclude) continue;
     try {
       const profile = loadConnectedAgentProfile(configDir, name);
-      if (profile && !disconnectConfirmedLocally(configDir, name))
+      // A disconnect marker counts only for this credential's invitation, so
+      // a profile reused for a new connection after a replacement is found.
+      if (
+        profile &&
+        !existsSync(
+          join(
+            agentProfileDirectory(configDir, name),
+            `disconnected-${profile.invitation_hash}.json`,
+          ),
+        )
+      )
         bound.push({ profile: name, address: profile.agent_address });
     } catch {
       /* An invalid profile name or credential is not a connected address. */

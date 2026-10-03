@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   connectAgent: vi.fn(),
   readAgentInvitation: vi.fn(),
   disconnectAgent: vi.fn(),
+  connectNativeSession: vi.fn(),
 }));
 
 vi.mock("../../src/oclif/agent-connect.js", async (original) => ({
@@ -22,14 +23,23 @@ vi.mock("../../src/oclif/agent-setup.js", async (original) => ({
   ...(await original<typeof import("../../src/oclif/agent-setup.js")>()),
   setupAgent: mocks.setupAgent,
 }));
-vi.mock("../../src/oclif/agent-enroll.js", () => ({
+vi.mock("../../src/oclif/agent-enroll.js", async (original) => ({
+  ...(await original<typeof import("../../src/oclif/agent-enroll.js")>()),
   enrollAgent: mocks.enrollAgent,
+}));
+vi.mock("../../src/oclif/notify-session-native.js", async (original) => ({
+  ...(await original<
+    typeof import("../../src/oclif/notify-session-native.js")
+  >()),
+  connectNativeSession: mocks.connectNativeSession,
 }));
 vi.mock("../../src/oclif/agent-disconnect.js", async (original) => ({
   ...(await original<typeof import("../../src/oclif/agent-disconnect.js")>()),
   disconnectAgent: mocks.disconnectAgent,
 }));
 
+import { existsSync } from "node:fs";
+import { agentInvitationHash } from "../../src/oclif/agent-connect.js";
 import AgentConnectCommand from "../../src/oclif/commands/agent-connect.js";
 import AgentEnrollCommand from "../../src/oclif/commands/agent-enroll.js";
 import {
@@ -44,13 +54,17 @@ import {
 } from "../../src/oclif/shared-mail-files.js";
 
 const root = resolve(import.meta.dirname, "../..");
-const invitation =
-  "https://api.primitive-staging-1.com/v1/agent-connections/setup#token=secret";
+const invitation = `https://api.primitive-staging-1.com/v1/agent-connections/setup#token=${["invite", "b".repeat(48)].join("_")}`;
 let home: string;
 let configDir: string;
 let outputs: string[];
 
-function savedProfile(name: string, address: string, bound: string | null) {
+function savedProfile(
+  name: string,
+  address: string,
+  bound: string | null,
+  invitationHash = "a".repeat(64),
+) {
   saveConnectedAgentProfile(configDir, name, {
     version: 1,
     auth_method: "agent_connection",
@@ -59,7 +73,7 @@ function savedProfile(name: string, address: string, bound: string | null) {
     org_id: "22222222-2222-4222-8222-222222222222",
     agent_address: address,
     owner_address: "owner@example.test",
-    invitation_hash: "a".repeat(64),
+    invitation_hash: invitationHash,
     created_at: "2026-01-01T00:00:00.000Z",
   });
   if (bound)
@@ -67,7 +81,7 @@ function savedProfile(name: string, address: string, bound: string | null) {
       version: 1,
       session: bound,
       receiverMode: "native",
-      invitationHash: "a".repeat(64),
+      invitationHash,
     });
 }
 
@@ -117,6 +131,7 @@ beforeEach(() => {
       outputs.push(String(line));
     });
   mocks.readAgentInvitation.mockResolvedValue(invitation);
+  mocks.connectNativeSession.mockResolvedValue({ close: () => {} });
   mocks.disconnectAgent.mockImplementation(
     async (params: { configDir: string; profileName: string }) => {
       removeMailFile(
@@ -205,8 +220,13 @@ describe("one address per session", () => {
     expect(mocks.setupAgent).toHaveBeenCalledWith(
       expect.objectContaining({ session, invitation }),
     );
+    // The invitation is read and checked first; the disconnect is the last
+    // step before the claim.
+    expect(mocks.readAgentInvitation.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.disconnectAgent.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(mocks.disconnectAgent.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.readAgentInvitation.mock.invocationCallOrder[0] ?? 0,
+      mocks.setupAgent.mock.invocationCallOrder[0] ?? 0,
     );
     expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
       address: "new@example.test",
@@ -224,13 +244,17 @@ describe("one address per session", () => {
         { root },
       ),
     ).rejects.toThrow(/No new address was claimed or created/);
-    expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
     expect(mocks.setupAgent).not.toHaveBeenCalled();
   });
 
   it("--replace-existing on enroll disconnects, then enrolls", async () => {
     savedProfile("work", "work@example.test", session);
-    mocks.enrollAgent.mockResolvedValue(enrollResult());
+    mocks.enrollAgent.mockImplementation(
+      async (params: { beforeCreate?: () => Promise<void> }) => {
+        await params.beforeCreate?.();
+        return enrollResult();
+      },
+    );
     await AgentEnrollCommand.run(
       ["--session", session, "--replace-existing", "--json"],
       { root },
@@ -308,7 +332,12 @@ describe("one address per session", () => {
 
   it("never refuses the profile being connected or a resume", async () => {
     process.env.CODEX_THREAD_ID = session;
-    savedProfile(`session-${session}`, "same@example.test", session);
+    savedProfile(
+      `session-${session}`,
+      "same@example.test",
+      session,
+      agentInvitationHash(invitation),
+    );
     mocks.setupAgent.mockResolvedValue(setupResult(`session-${session}`));
     await AgentConnectCommand.run(
       ["--session", session, "--no-skill", "--json"],
@@ -337,6 +366,174 @@ describe("one address per session", () => {
       { root },
     );
     expect(mocks.enrollAgent).toHaveBeenCalledTimes(1);
+  });
+
+  it("guards the explicit --session, not the runtime's, when it is empty or invalid", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    savedProfile("work", "work@example.test", session);
+    await expect(
+      AgentConnectCommand.run(
+        ["--session", "not-a-uuid", "--replace-existing", "--no-skill"],
+        { root },
+      ),
+    ).rejects.toThrow(/exact loaded session UUID/);
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
+    mocks.setupAgent.mockImplementation(
+      async (params: { profileName: string }) => ({
+        ...setupResult(params.profileName),
+        receiving: { state: "poll" },
+      }),
+    );
+    await AgentConnectCommand.run(
+      ["--session", "", "--replace-existing", "--no-skill", "--json"],
+      { root },
+    );
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(mocks.setupAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.setupAgent.mock.calls[0]?.[0]).not.toHaveProperty("session");
+    expect(connectedProfilesForSession(configDir, session)).toEqual([
+      { profile: "work", address: "work@example.test" },
+    ]);
+  });
+
+  it("--replace-existing disconnects nothing until the new setup passes its checks", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    savedProfile("work", "work@example.test", session);
+    mocks.readAgentInvitation.mockResolvedValue("not an invitation");
+    await expect(
+      AgentConnectCommand.run(
+        ["--session", session, "--replace-existing", "--no-skill"],
+        { root },
+      ),
+    ).rejects.toThrow();
+    mocks.readAgentInvitation.mockResolvedValue(invitation);
+    mocks.connectNativeSession.mockRejectedValue(new Error("not loaded"));
+    await expect(
+      AgentConnectCommand.run(
+        ["--session", session, "--replace-existing", "--no-skill"],
+        { root },
+      ),
+    ).rejects.toThrow(/not available for native receiving/);
+    // Enrollment without a saved member login fails before the disconnect.
+    const actual = await vi.importActual<
+      typeof import("../../src/oclif/agent-enroll.js")
+    >("../../src/oclif/agent-enroll.js");
+    mocks.enrollAgent.mockImplementation(actual.enrollAgent);
+    await expect(
+      AgentEnrollCommand.run(
+        ["--session", session, "--replace-existing", "--receiver", "poll"],
+        { root },
+      ),
+    ).rejects.toThrow(/primitive signin/);
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(mocks.setupAgent).not.toHaveBeenCalled();
+    expect(connectedProfilesForSession(configDir, session)).toEqual([
+      { profile: "work", address: "work@example.test" },
+    ]);
+  });
+
+  it("treats the target profile holding another invitation as the session's address", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    const target = `session-${session}`;
+    savedProfile(target, "old@example.test", session);
+    await AgentConnectCommand.run(
+      ["--session", session, "--no-skill", "--json"],
+      { root },
+    );
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "already_connected",
+      bound: [{ profile: target, address: "old@example.test" }],
+    });
+    expect(mocks.setupAgent).not.toHaveBeenCalled();
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    process.exitCode = undefined;
+    outputs = [];
+    mocks.setupAgent.mockResolvedValue(setupResult(target));
+    await AgentConnectCommand.run(
+      ["--session", session, "--replace-existing", "--no-skill", "--json"],
+      { root },
+    );
+    expect(mocks.disconnectAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ profileName: target }),
+    );
+    // The old setup binding is moved aside so the new invitation can use
+    // the same profile.
+    expect(
+      existsSync(join(agentProfileDirectory(configDir, target), "setup.json")),
+    ).toBe(false);
+    expect(mocks.setupAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ profileName: target, session, invitation }),
+    );
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      replacedExisting: [{ profile: target, address: "old@example.test" }],
+    });
+  });
+
+  it("refuses enrollment over a session profile that is not its own enrollment", async () => {
+    const target = `session-${session}`;
+    savedProfile(target, "connected@example.test", session);
+    await AgentEnrollCommand.run(["--session", session, "--json"], { root });
+    expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "already_connected",
+      bound: [{ profile: target, address: "connected@example.test" }],
+    });
+    expect(mocks.enrollAgent).not.toHaveBeenCalled();
+    process.exitCode = undefined;
+    outputs = [];
+    mocks.enrollAgent.mockImplementation(
+      async (params: { beforeCreate?: () => Promise<void> }) => {
+        await params.beforeCreate?.();
+        return enrollResult();
+      },
+    );
+    await AgentEnrollCommand.run(
+      ["--session", session, "--replace-existing", "--json"],
+      { root },
+    );
+    expect(mocks.disconnectAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ profileName: target }),
+    );
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      replacedExisting: [
+        { profile: target, address: "connected@example.test" },
+      ],
+    });
+  });
+
+  it("resumes enrollment when the session profile holds its own enrollment", async () => {
+    const target = `session-${session}`;
+    savedProfile(target, "enrolled@example.test", session);
+    writeMailJson(
+      join(
+        agentProfileDirectory(configDir, target),
+        "enrollment",
+        "state.json",
+      ),
+      {
+        version: 1,
+        session,
+        profile: target,
+        name: "Coding agent",
+        address: "enrolled@example.test",
+        orgId: "22222222-2222-4222-8222-222222222222",
+        grantId: "grant",
+        apiBaseUrl: "https://api.primitive-staging-1.com/v1",
+        receiverMode: "native",
+        contactRequests: false,
+        startedAt: "2026-01-01T00:00:00.000Z",
+        phase: "setup_attempted",
+        invitationHash: "a".repeat(64),
+        ownerAddress: "owner@example.test",
+      },
+    );
+    mocks.enrollAgent.mockResolvedValue(enrollResult());
+    await AgentEnrollCommand.run(["--session", session, "--json"], { root });
+    expect(process.exitCode).not.toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(mocks.enrollAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
   });
 });
 

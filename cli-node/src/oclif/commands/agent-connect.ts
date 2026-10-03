@@ -1,6 +1,7 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import {
   agentConnectionStatus,
+  agentInvitationHash,
   connectAgent,
   readAgentInvitation,
 } from "../agent-connect.js";
@@ -15,12 +16,15 @@ import {
   verificationReplySubmitted,
 } from "../agent-setup.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
+import { SESSION_UUID } from "../notify-session-native.js";
 import { withOwnerMemberAddress } from "../owner-member-address.js";
 import {
   ALREADY_CONNECTED_EXIT_CODE,
+  alreadyConnected,
   type BoundAddress,
   guardedSession,
-  guardSessionAddress,
+  inspectSessionAddresses,
+  replaceSessionAddresses,
 } from "../session-address-guard.js";
 
 /** npx runs the CLI from its cache; resume through npx too so the command works without a global install. */
@@ -147,6 +151,12 @@ export default class AgentConnectCommand extends Command {
         return;
       }
       const session = flags.session?.trim() || undefined;
+      // The session is validated before anything else, so the address guard
+      // below checks exactly the session this connection binds.
+      if (session !== undefined && !SESSION_UUID.test(session))
+        throw new AgentConnectionSetupError(
+          "--session requires the exact loaded session UUID. No invitation was claimed and nothing was changed.",
+        );
       // Claim-only keeps its meaning: a profile with no --session at all and
       // no other setup option. Anything else, including an explicitly empty
       // --session, runs the full setup, which without a session receives by
@@ -159,62 +169,84 @@ export default class AgentConnectCommand extends Command {
         !flags["contact-requests"] &&
         flags.name === undefined &&
         flags.info === undefined;
-      // One address per session. Checked before stdin is read, so a refusal
-      // leaves the invitation unread and unclaimed for a retry. A resume
-      // continues a claim that already happened, so it is never refused.
+      // Refuse before stdin is read, so a wrong receiver never waits on or
+      // consumes the invitation.
+      if (
+        !claimOnly &&
+        !session &&
+        (flags.receiver === "native" || flags.receiver === "external")
+      )
+        throw new AgentConnectionSetupError(
+          `--receiver ${flags.receiver} requires the exact loaded session UUID. Without one, use --receiver poll. No invitation was claimed.`,
+        );
+      let invitationText: string | undefined;
+      const readInvitationOnce = async () => {
+        invitationText ??= await readAgentInvitation(
+          process.stdin,
+          process.stdin.isTTY,
+        );
+        return invitationText;
+      };
+      // One address per session. A resume continues a claim that already
+      // happened, so it is never refused. An explicit --session (even an
+      // empty one) is the session this connection binds; only with no
+      // --session at all does the runtime's own session apply.
       let replaced: BoundAddress[] = [];
-      if (!flags.resume) {
-        const guard = await guardSessionAddress({
+      let replaceExisting: (() => Promise<void>) | undefined;
+      const guardSession = flags.resume
+        ? null
+        : flags.session !== undefined
+          ? (session?.toLowerCase() ?? null)
+          : guardedSession(undefined);
+      if (guardSession && !flags["keep-existing"]) {
+        const targetProfile =
+          flags.profile ??
+          (session ? defaultAgentProfileName(session) : undefined);
+        const check = inspectSessionAddresses({
           configDir: this.config.configDir,
-          session: guardedSession(flags.session),
-          targetProfile:
-            flags.profile ??
-            (session ? defaultAgentProfileName(session) : undefined),
-          replaceExisting: flags["replace-existing"],
-          keepExisting: flags["keep-existing"],
-          command: "connect",
+          session: guardSession,
+          targetProfile,
         });
-        if (guard.status === "already_connected") {
-          if (flags.json)
-            this.log(
-              JSON.stringify({
-                status: guard.status,
-                session: guard.session,
-                existing: guard.existing,
-                bound: guard.bound,
-                detail: guard.detail,
-              }),
-            );
-          else this.log(guard.detail);
+        let bound: BoundAddress[] = check.others;
+        // Another profile's address is refused before stdin is read, so the
+        // invitation stays unread and unclaimed for a retry. The target
+        // profile is a second address only when it holds a different
+        // invitation, which takes reading it; a replacement reads it anyway
+        // so a malformed invitation fails before anything is disconnected.
+        if (check.target && (flags["replace-existing"] || bound.length === 0)) {
+          const hash = agentInvitationHash(await readInvitationOnce());
+          if (check.target.invitationHash !== hash)
+            bound = [
+              ...bound,
+              { profile: check.target.profile, address: check.target.address },
+            ];
+        } else if (flags["replace-existing"] && bound.length > 0)
+          agentInvitationHash(await readInvitationOnce());
+        if (bound.length > 0 && !flags["replace-existing"]) {
+          const refusal = alreadyConnected(guardSession, bound, "connect");
+          if (flags.json) this.log(JSON.stringify(refusal));
+          else this.log(refusal.detail);
           process.exitCode = ALREADY_CONNECTED_EXIT_CODE;
           return;
         }
-        replaced = guard.replaced;
-        if (!flags.json)
-          for (const row of replaced)
-            this.log(
-              `Disconnected the existing agent ${row.address} (profile ${row.profile}).`,
-            );
+        if (bound.length > 0)
+          replaceExisting = async () => {
+            replaced = await replaceSessionAddresses({
+              configDir: this.config.configDir,
+              rows: bound,
+              targetProfile,
+            });
+            if (!flags.json)
+              for (const row of replaced)
+                this.log(
+                  `Disconnected the existing agent ${row.address} (profile ${row.profile}).`,
+                );
+          };
       }
       if (!claimOnly) {
-        // Refuse before stdin is read, so a wrong receiver never waits on or
-        // consumes the invitation.
-        if (
-          !session &&
-          (flags.receiver === "native" || flags.receiver === "external")
-        )
-          throw new AgentConnectionSetupError(
-            `--receiver ${flags.receiver} requires the exact loaded session UUID. Without one, use --receiver poll. No invitation was claimed.`,
-          );
-        let readInvitation = () =>
-          readAgentInvitation(process.stdin, process.stdin.isTTY);
         if (!session && !flags.resume) {
           if (flags.profile) pollProfile = flags.profile;
-          else {
-            const text = await readInvitation();
-            pollProfile = invitationProfileName(text);
-            readInvitation = async () => text;
-          }
+          else pollProfile = invitationProfileName(await readInvitationOnce());
         }
         const output = await runAgentConnect({
           configDir: this.config.configDir,
@@ -231,7 +263,8 @@ export default class AgentConnectCommand extends Command {
           info: flags.info,
           skill: flags.skill,
           project: flags.project,
-          readInvitation,
+          readInvitation: readInvitationOnce,
+          ...(replaceExisting ? { beforeSetup: replaceExisting } : {}),
         });
         const external = output.receiving.mode === "external";
         const poll = output.receiving.mode === "poll";
@@ -277,13 +310,13 @@ export default class AgentConnectCommand extends Command {
         throw new AgentConnectionSetupError("Pass --profile for claim-only.");
       // A rerun of an already configured profile refreshes the owner's
       // personal address, which may have been set up after the claim.
+      const invitation = await readInvitationOnce();
+      agentInvitationHash(invitation);
+      await replaceExisting?.();
       const claimed = await connectAgent({
         configDir: this.config.configDir,
         profileName: flags.profile,
-        invitation: await readAgentInvitation(
-          process.stdin,
-          process.stdin.isTTY,
-        ),
+        invitation,
       });
       const result = await withOwnerMemberAddress(claimed, {
         configDir: this.config.configDir,

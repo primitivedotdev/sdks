@@ -497,6 +497,16 @@ async function enableOwner(context: Context): Promise<"enabled" | "silenced"> {
     : "silenced";
 }
 
+/** Probe that this exact session is loaded and reachable for native receiving. */
+export async function nativeSessionPreflight(session: string): Promise<void> {
+  const connection = await connectNativeSession({
+    threadId: session,
+    expectedCwd: process.cwd(),
+    signal: AbortSignal.timeout(10_000),
+  });
+  connection.close();
+}
+
 function defaults(): AgentSetupDependencies {
   return {
     checkVerification,
@@ -504,14 +514,7 @@ function defaults(): AgentSetupDependencies {
     sleep: async (ms) => {
       await delay(ms);
     },
-    async preflight(session) {
-      const connection = await connectNativeSession({
-        threadId: session,
-        expectedCwd: process.cwd(),
-        signal: AbortSignal.timeout(10_000),
-      });
-      connection.close();
-    },
+    preflight: nativeSessionPreflight,
     findChallenge,
     async sendVerification(context, challenge, key) {
       const result = await sendEmail({
