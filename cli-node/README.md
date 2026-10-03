@@ -892,6 +892,24 @@ Verification submission and delivery are separate from receiver health. A queued
 verification reply is accepted for delivery. Do not claim again or resend because
 setup was interrupted. The CLI preserves its private recovery state.
 
+A session has one address. Before claiming or enrolling, `agent connect` and
+`agent enroll` look for another saved profile that still holds a credential
+and is bound to the same session (the `--session` value, or the runtime's
+session ID from the environment). If one exists, they claim nothing, create
+nothing, leave the invitation unread and unused, and exit 3. With `--json` the
+result is:
+
+```json
+{"status":"already_connected","session":"11111111-1111-4111-8111-111111111111","existing":{"profile":"session-11111111-1111-4111-8111-111111111111","address":"research@example.test"},"bound":[{"profile":"session-11111111-1111-4111-8111-111111111111","address":"research@example.test"}],"detail":"..."}
+```
+
+The agent asks the user whether to keep the existing address and not connect a
+new one, or to disconnect the existing agent first, and does not decide for
+them. To replace it, rerun with `--replace-existing`, which disconnects each
+bound profile through `agent disconnect` before claiming. To keep both on
+purpose, rerun with `--keep-existing`. `--resume` continues a claim that
+already happened and is never refused.
+
 ### Set up a machine for every coding session
 
 `primitive machine doctor` checks what lets each Claude Code, Codex and omp

@@ -322,7 +322,9 @@ describe("connected-agent setup", () => {
         ...params(request),
         invitation: setupUrl.replace(token, `${token}next`),
       }),
-    ).rejects.toThrow(/separate profile/);
+    ).rejects.toThrow(
+      /already connected as .* with a different invitation\. No invitation was claimed[\s\S]*Do not create a separate profile on your own\. Ask the user whether to keep/,
+    );
     expect(request).toHaveBeenCalledTimes(1);
     expect(loadConnectedAgentProfile(configDir, "work")).toEqual(original);
   });

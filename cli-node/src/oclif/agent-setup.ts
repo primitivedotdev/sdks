@@ -25,6 +25,7 @@ import {
   type ConnectedAgentProfile,
   connectedAgentIdentity,
   loadConnectedAgentProfile,
+  profileAlreadyConnectedMessage,
 } from "./connected-agent-profile.js";
 import { evaluateContactPolicy } from "./contact-policy.js";
 import { runContactRequest } from "./contacts.js";
@@ -649,7 +650,7 @@ function refuseSetupConflicts(
   ];
   if (conflicts.length)
     throw fail(
-      `This profile's saved setup conflicts with ${conflicts.join(" and ")}. Omit the option to reuse the saved setup${params.resume ? "" : ", or use a separate profile"}. Its session and notification preferences were not changed.`,
+      `This profile's saved setup conflicts with ${conflicts.join(" and ")}. Omit the option to reuse the saved setup. Its session and notification preferences were not changed.${params.resume ? "" : " Do not create a separate profile on your own: if this session should get a different address, ask the user whether to keep the existing one or disconnect it first."}`,
     );
 }
 
@@ -742,7 +743,11 @@ export async function setupAgent(params: {
         .digest("hex");
       if (state && state.invitationHash !== hash)
         throw fail(
-          "This setup belongs to another invitation. Use a separate profile.",
+          profileAlreadyConnectedMessage(
+            profileName,
+            loadConnectedAgentProfile(params.configDir, profileName)
+              ?.agent_address ?? null,
+          ),
         );
       if (!state) {
         // Challenges precede claiming. A single recent authenticated challenge is

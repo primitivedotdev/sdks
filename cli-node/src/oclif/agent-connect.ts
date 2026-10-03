@@ -13,6 +13,7 @@ import {
   loadConnectedAgentProfile,
   parseConnectedAgentProfile,
   parseOwnerMemberAddress,
+  profileAlreadyConnectedMessage,
   saveConnectedAgentProfile,
 } from "./connected-agent-profile.js";
 import { backgroundListenStatus } from "./listen-background.js";
@@ -343,7 +344,7 @@ export async function connectAgent(params: {
     if (existing) {
       if (existing.invitation_hash !== invitationHash)
         throw new AgentConnectionSetupError(
-          "This agent profile is already configured. Its identity and credentials were not changed. Use a separate profile for another invitation.",
+          profileAlreadyConnectedMessage(profileName, existing.agent_address),
         );
       return {
         status: "already_configured",
