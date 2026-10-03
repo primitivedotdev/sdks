@@ -1,23 +1,17 @@
-import { randomUUID } from "node:crypto";
-import {
-  closeSync,
-  existsSync,
-  lstatSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  realpathSync,
-  renameSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
+import { hasSessionReceiveHook } from "./claude-machine-hooks.js";
 import {
   agentProfileDirectory,
   agentProfileName,
 } from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
+import {
+  MachineFileError,
+  readManagedFile,
+  writeManagedFile,
+} from "./machine-files.js";
 import { SESSION_UUID } from "./notify-session-native.js";
 import { mailAddress, readMailJson } from "./shared-mail-files.js";
 
@@ -57,42 +51,24 @@ export function claudeWakeHookStatus(options: {
     const claudeDir = resolve(
       options.env?.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
     );
-    const settings = readMailJson(join(claudeDir, "settings.json"));
+    // Claude's own settings file is user-owned: it is often readable by
+    // others and larger than Primitive's private records, so it is read
+    // the way machine doctor reads it.
+    const read = readManagedFile(join(claudeDir, "settings.json"));
+    if (read.state !== "present") return unavailable;
+    const settings: unknown = JSON.parse(read.text);
     if (!record(settings) || !record(settings.hooks)) return unavailable;
     const hooks = settings.hooks;
-    const owns = (event: string, script: string, marker: string) => {
-      const entries = hooks[event];
-      return (
-        Array.isArray(entries) &&
-        entries.some(
-          (entry) =>
-            record(entry) &&
-            Array.isArray(entry.hooks) &&
-            entry.hooks.some((candidate: unknown) => {
-              if (!record(candidate) || !Array.isArray(candidate.args))
-                return false;
-              const args = candidate.args;
-              const offset = 2;
-              return (
-                candidate.type === "command" &&
-                candidate.command === process.execPath &&
-                args.length === 7 &&
-                typeof args[0] === "string" &&
-                basename(args[0]) === script &&
-                args[offset] === configDir &&
-                args[offset + 1] === profileName &&
-                args[offset + 2] === agentAddress &&
-                args[offset + 3] === sessionId &&
-                args[offset + 4] === marker
-              );
-            }),
-        )
-      );
+    const target = {
+      configDir,
+      profile: profileName,
+      address: agentAddress,
+      session: sessionId,
     };
-    const installed =
-      owns("Stop", "claude-wake.mjs", HOOK_MARKER) &&
-      owns("SessionStart", "claude-wake.mjs", HOOK_MARKER) &&
-      owns(PENDING_EVENT, "claude-pending-mail.mjs", PENDING_MARKER);
+    // The same test machine doctor uses to decide a hook is missing.
+    const installed = (["Stop", "SessionStart", "PostToolUse"] as const).every(
+      (event) => hasSessionReceiveHook(hooks, event, target, process.execPath),
+    );
     let lastFiredAt: string | null = null;
     const fired = readMailJson(
       join(
@@ -113,7 +89,11 @@ export function claudeWakeHookStatus(options: {
   }
 }
 
-function editClaudeSettings(
+/**
+ * Apply one edit to Claude's settings under the shared lock, backing up the
+ * previous file. Exported for tests.
+ */
+export function editClaudeSettings(
   claudeDir: string,
   edit: (settings: RecordValue) => RecordValue | null,
 ): boolean {
@@ -133,36 +113,28 @@ function editClaudeSettings(
   try {
     const settingsPath = join(claudeDir, "settings.json");
     for (let attempt = 0; attempt < 3; attempt++) {
-      let original: string | null = null;
+      const read = readManagedFile(settingsPath);
+      if (read.state === "invalid") return false;
       let settings: RecordValue = {};
-      if (existsSync(settingsPath)) {
-        const stat = lstatSync(settingsPath);
-        if (!stat.isFile() || stat.size > 1_048_576) return false;
-        original = readFileSync(settingsPath, "utf8");
-        const parsed: unknown = JSON.parse(original);
+      if (read.state === "present") {
+        const parsed: unknown = JSON.parse(read.text);
         if (!record(parsed)) return false;
         settings = parsed;
       }
       const next = edit(settings);
       if (next === null) return true;
-      const temporary = join(claudeDir, `.settings.json.${randomUUID()}.tmp`);
-      const fd = openSync(temporary, "wx", 0o600);
+      const content = `${JSON.stringify(next, null, 2)}\n`;
+      // Rewriting identical settings would only churn backups.
+      if (read.state === "present" && content === read.text) return true;
       try {
-        writeFileSync(fd, `${JSON.stringify(next, null, 2)}\n`, "utf8");
-      } finally {
-        closeSync(fd);
-      }
-      try {
-        // Other tools do not share our lock. Retry if one wrote settings
-        // while we prepared this replacement.
-        const current = existsSync(settingsPath)
-          ? readFileSync(settingsPath, "utf8")
-          : null;
-        if (current !== original) continue;
-        renameSync(temporary, settingsPath);
+        // The same writer machine doctor uses: it backs up the previous
+        // settings, and refuses to replace them if another tool, which does
+        // not share our lock, changed the file since it was read. The edit
+        // is then applied again to the newer content.
+        writeManagedFile({ read, content, newFileMode: 0o600 });
         return true;
-      } finally {
-        if (existsSync(temporary)) unlinkSync(temporary);
+      } catch (error) {
+        if (!(error instanceof MachineFileError)) throw error;
       }
     }
     return false;
@@ -232,9 +204,10 @@ export function installClaudeWakeHook(options: {
         ],
         timeout: 10,
       };
-      // A hook for this exact session is replaced even when an older CLI
-      // install (another path or Node binary) wrote it, so upgrades never
-      // leave a second receive hook for the same session behind.
+      // A hook for this exact profile and session is replaced even when an
+      // older CLI install (another path or Node binary) wrote it, so upgrades
+      // never leave a second receive hook behind. One session can carry
+      // several profiles, so hooks of any other profile are always kept.
       const isOwnPendingHook = (candidate: unknown) =>
         record(candidate) &&
         candidate.type === "command" &&
@@ -243,6 +216,7 @@ export function installClaudeWakeHook(options: {
         typeof candidate.args[0] === "string" &&
         basename(candidate.args[0]) === "claude-pending-mail.mjs" &&
         candidate.args[2] === configDir &&
+        candidate.args[3] === profileName &&
         candidate.args[5] === sessionId &&
         candidate.args[6] === PENDING_MARKER;
       const isOwnHook = (candidate: unknown) => {
@@ -250,7 +224,8 @@ export function installClaudeWakeHook(options: {
         if (
           typeof candidate.args[0] !== "string" ||
           basename(candidate.args[0]) !== "claude-wake.mjs" ||
-          candidate.args[2] !== configDir
+          candidate.args[2] !== configDir ||
+          candidate.args[3] !== profileName
         )
           return false;
         if (
@@ -265,9 +240,8 @@ export function installClaudeWakeHook(options: {
         if (candidate.args.length !== 6 || candidate.args[5] !== HOOK_MARKER)
           return false;
         try {
-          const profile = agentProfileName(String(candidate.args[3]));
           const state = readMailJson(
-            join(agentProfileDirectory(configDir, profile), "setup.json"),
+            join(agentProfileDirectory(configDir, profileName), "setup.json"),
           );
           return record(state) && state.session === sessionId;
         } catch {

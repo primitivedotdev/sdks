@@ -14,6 +14,7 @@ import {
 } from "./api-client.js";
 import { loadCliCredentials, type StoredCliCredentials } from "./auth.js";
 import {
+  boundSessionProfiles,
   claudeConfigDir,
   currentCliLocation,
   ephemeralCliReason,
@@ -613,7 +614,15 @@ export async function runMachineDoctor(
   // Claude settings are parsed once; every hook check reads the same copy and
   // all hook repairs land in one backed-up write.
   let settingsRead = readClaudeSettings(paths.claudeDir);
-  const hookContext = { cli, blocked: hookBlocked };
+  const hookContext = {
+    cli,
+    blocked: hookBlocked,
+    // Read on every use: the profile checks may move a revoked profile
+    // aside before the hooks are repaired, and its hooks must not return.
+    get bound() {
+      return boundSessionProfiles(options.configDir);
+    },
+  };
   const hookCheck = (id: HookCheckId): CheckRunner => ({
     inspect: () => {
       const skip = skipRuntime("claude");

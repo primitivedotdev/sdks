@@ -39,7 +39,11 @@ export type AgentConnectResult = {
 };
 
 /** Offline metadata only; a saved profile is not proof of current API or listener readiness. */
-export function agentConnectionStatus(configDir: string, profileName: string) {
+export function agentConnectionStatus(
+  configDir: string,
+  profileName: string,
+  env: NodeJS.ProcessEnv = process.env,
+) {
   agentProfileName(profileName);
   const profile = loadConnectedAgentProfile(configDir, profileName);
   const setup = profile
@@ -115,20 +119,31 @@ export function agentConnectionStatus(configDir: string, profileName: string) {
             };
           })()
         : profile && session
-          ? {
-              mode,
-              sessionId: session,
-              state: "unknown",
-              reason: "hook_liveness_unverified",
-              lastSuccessfulMailCheckAt: null,
-              liveness: "unknown",
-              hook: claudeWakeHookStatus({
+          ? (() => {
+              const hook = claudeWakeHookStatus({
                 configDir,
                 profileName,
                 agentAddress: profile.agent_address,
                 sessionId: session,
-              }),
-            }
+                env,
+              });
+              // A present hook may still not fire, so it stays unverified;
+              // a missing one is a known failure.
+              return {
+                mode,
+                sessionId: session,
+                state: hook.installed ? "unknown" : "down",
+                reason: hook.installed
+                  ? "hook_liveness_unverified"
+                  : "hook_missing",
+                detail: hook.installed
+                  ? null
+                  : "The receive hook for this session is missing, so mail will not wake this session. Run `primitive machine doctor --fix` to reinstall it.",
+                lastSuccessfulMailCheckAt: null,
+                liveness: "unknown",
+                hook,
+              };
+            })()
           : {
               mode: "unknown",
               sessionId: null,

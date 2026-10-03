@@ -152,6 +152,142 @@ describe("agent session-register", () => {
     expect(calls.hooks).toEqual([session, session]);
   });
 
+  it("reuses a connected profile already bound to the session instead of enrolling a second one", async () => {
+    const { configDir, repo } = setup();
+    const { calls, dependencies } = fakeDependencies(configDir);
+    saveConnectedAgentProfile(
+      configDir,
+      "my-agent",
+      profile("mine@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "my-agent"), "setup.json"),
+      { session, receiverMode: "external" },
+    );
+    const installed: string[] = [];
+    const options = {
+      configDir,
+      runtime: "claude" as const,
+      cwd: repo,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: {
+        ...dependencies,
+        installClaudeHook: ((hook) => {
+          installed.push(`${hook.profileName}:${hook.agentAddress}`);
+          return "installed_unverified";
+        }) as SessionRegisterDependencies["installClaudeHook"],
+      },
+    };
+    for (let run = 0; run < 3; run++) {
+      const result = await registerSession(options);
+      expect(result).toMatchObject({
+        status: "already_registered",
+        profile: "my-agent",
+        address: "mine@example.test",
+        receiving: "external_hook",
+      });
+    }
+    expect(calls.enroll).toHaveLength(0);
+    expect(calls.seeds).toHaveLength(0);
+    expect(installed).toEqual(Array(3).fill("my-agent:mine@example.test"));
+    // Ending the session leaves a profile it did not create connected.
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: {
+        disconnect: (async () => {
+          throw new Error("must not disconnect");
+        }) as unknown as typeof disconnectAgent,
+      },
+    });
+    expect(ended.status).toBe("not_managed");
+  });
+
+  it("enrolls as before when the bound profile is not connected, and stops when it cannot be checked", async () => {
+    const revoked = setup();
+    const a = fakeDependencies(revoked.configDir);
+    saveConnectedAgentProfile(
+      revoked.configDir,
+      "old-agent",
+      profile("old@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(revoked.configDir, "old-agent"), "setup.json"),
+      { session, receiverMode: "external" },
+    );
+    const registered = await registerSession({
+      configDir: revoked.configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: {
+        ...a.dependencies,
+        connectionState: async (candidate) =>
+          candidate.agent_address === "old@example.test"
+            ? "revoked"
+            : "connected",
+      },
+    });
+    expect(registered).toMatchObject({
+      status: "registered",
+      profile: `session-${session}`,
+    });
+    expect(a.calls.enroll).toHaveLength(1);
+
+    // A polling profile on the session wakes nothing, so it is not reused.
+    const polling = setup();
+    const c = fakeDependencies(polling.configDir);
+    saveConnectedAgentProfile(
+      polling.configDir,
+      "poller",
+      profile("poll@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(polling.configDir, "poller"), "setup.json"),
+      { session, receiverMode: "poll" },
+    );
+    const notReused = await registerSession({
+      configDir: polling.configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: c.dependencies,
+    });
+    expect(notReused).toMatchObject({
+      status: "registered",
+      profile: `session-${session}`,
+      receiving: "external_hook",
+    });
+    expect(c.calls.enroll).toHaveLength(1);
+    expect(c.calls.hooks).toEqual([session]);
+
+    const offline = setup();
+    const b = fakeDependencies(offline.configDir);
+    saveConnectedAgentProfile(
+      offline.configDir,
+      "my-agent",
+      profile("mine@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(offline.configDir, "my-agent"), "setup.json"),
+      { session, receiverMode: "external" },
+    );
+    const unchecked = await registerSession({
+      configDir: offline.configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: {
+        ...b.dependencies,
+        connectionState: async () => "unavailable",
+      },
+    });
+    expect(unchecked.status).toBe("offline");
+    expect(b.calls.enroll).toHaveLength(0);
+  });
+
   it("never creates a second address once the profile is gone or revoked", async () => {
     const { configDir, repo } = setup();
     const { calls, dependencies } = fakeDependencies(configDir);

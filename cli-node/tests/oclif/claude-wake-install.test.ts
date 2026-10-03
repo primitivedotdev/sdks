@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
+  chmodSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
+  statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -14,6 +18,7 @@ import { pathToFileURL } from "node:url";
 import { test } from "vitest";
 import {
   claudeWakeHookStatus,
+  editClaudeSettings,
   installClaudeWakeHook,
   uninstallClaudeWakeHook,
 } from "../../src/oclif/claude-wake-install.js";
@@ -322,8 +327,8 @@ test("two exact Claude sessions retain separate hooks and reinstallation changes
   assert.equal(
     installClaudeWakeHook({
       ...options,
-      profileName: "first-updated",
-      agentAddress: "first@example.com",
+      profileName: "first",
+      agentAddress: "first-new@example.com",
       sessionId: sessionA,
     }),
     "installed_unverified",
@@ -358,6 +363,181 @@ test("two exact Claude sessions retain separate hooks and reinstallation changes
     ).hooks[0].args[3],
     "second",
   );
+  assert.equal(
+    settings.hooks.Stop.find(
+      (entry: { hooks: Array<{ args: string[] }> }) =>
+        entry.hooks[0].args[5] === sessionA,
+    ).hooks[0].args[4],
+    "first-new@example.com",
+  );
+});
+
+test("installing one profile keeps another profile's hooks on the same session", () => {
+  const { claudeDir, configDir, cliPath } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  const base = { cliPath, configDir, env: { CLAUDE_CONFIG_DIR: claudeDir } };
+  const connected = {
+    ...base,
+    profileName: "my-agent",
+    agentAddress: "mine@example.com",
+    sessionId: sessionA,
+  };
+  const registered = {
+    ...base,
+    profileName: `session-${sessionA}`,
+    agentAddress: "session@example.com",
+    sessionId: sessionA,
+  };
+  assert.equal(installClaudeWakeHook(connected), "installed_unverified");
+  const ownHooks = (profile: string) => {
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    return ["Stop", "SessionStart", "PostToolUse"].map(
+      (event) =>
+        settings.hooks[event].filter(
+          (entry: { hooks: Array<{ args: string[] }> }) =>
+            entry.hooks[0].args[3] === profile,
+        ).length,
+    );
+  };
+  assert.deepEqual(ownHooks("my-agent"), [1, 1, 1]);
+  // Session registration runs on every start, resume, clear and compact.
+  for (let run = 0; run < 3; run++)
+    assert.equal(installClaudeWakeHook(registered), "installed_unverified");
+  assert.deepEqual(ownHooks("my-agent"), [1, 1, 1]);
+  assert.deepEqual(ownHooks(`session-${sessionA}`), [1, 1, 1]);
+  // Reinstalling the first profile is idempotent and keeps the second.
+  const before = readFileSync(settingsPath, "utf8");
+  assert.equal(installClaudeWakeHook(registered), "installed_unverified");
+  assert.equal(readFileSync(settingsPath, "utf8"), before);
+  assert.equal(installClaudeWakeHook(connected), "installed_unverified");
+  assert.deepEqual(ownHooks("my-agent"), [1, 1, 1]);
+  assert.deepEqual(ownHooks(`session-${sessionA}`), [1, 1, 1]);
+});
+
+test("every hook write leaves a backup of the previous settings, and an unchanged install writes nothing", () => {
+  const { claudeDir, configDir, cliPath } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  const original = `${JSON.stringify({ theme: "dark" })}\n`;
+  writeFileSync(settingsPath, original);
+  const options = {
+    cliPath,
+    configDir,
+    profileName: "my-agent",
+    agentAddress: "mine@example.com",
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+  };
+  const backups = () =>
+    readdirSync(claudeDir).filter((name) =>
+      name.startsWith("settings.json.primitive-bak-"),
+    );
+  assert.equal(installClaudeWakeHook(options), "installed_unverified");
+  assert.equal(backups().length, 1);
+  assert.equal(
+    readFileSync(join(claudeDir, backups()[0] as string), "utf8"),
+    original,
+  );
+  assert.equal(installClaudeWakeHook(options), "installed_unverified");
+  assert.equal(backups().length, 1);
+  assert.equal(uninstallClaudeWakeHook(options), true);
+  assert.equal(backups().length, 2);
+});
+
+test("hook status reads a shared-readable settings file larger than a private record", () => {
+  const { claudeDir, configDir, cliPath } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  writeFileSync(
+    settingsPath,
+    `${JSON.stringify({ notes: "x".repeat(40_000) })}\n`,
+    { mode: 0o644 },
+  );
+  chmodSync(settingsPath, 0o644);
+  const options = {
+    configDir,
+    profileName: "my-agent",
+    agentAddress: "mine@example.com",
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+  };
+  assert.equal(
+    installClaudeWakeHook({ ...options, cliPath }),
+    "installed_unverified",
+  );
+  assert.equal(statSync(settingsPath).mode & 0o777, 0o644);
+  assert.equal(claudeWakeHookStatus(options).installed, true);
+});
+
+test("a settings change made by another tool during an edit is merged, not overwritten", () => {
+  const { claudeDir } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  writeFileSync(settingsPath, `${JSON.stringify({ theme: "dark" })}\n`);
+  const seen: unknown[] = [];
+  assert.equal(
+    editClaudeSettings(claudeDir, (settings) => {
+      seen.push(settings);
+      // Another tool, which does not take our lock, writes while the first
+      // attempt is being prepared.
+      if (seen.length === 1)
+        writeFileSync(
+          settingsPath,
+          `${JSON.stringify({ theme: "dark", model: "opus" })}\n`,
+        );
+      return { ...settings, added: true };
+    }),
+    true,
+  );
+  assert.deepEqual(seen, [{ theme: "dark" }, { theme: "dark", model: "opus" }]);
+  assert.deepEqual(JSON.parse(readFileSync(settingsPath, "utf8")), {
+    theme: "dark",
+    model: "opus",
+    added: true,
+  });
+  const backups = readdirSync(claudeDir).filter((name) =>
+    name.startsWith("settings.json.primitive-bak-"),
+  );
+  assert.ok(backups.length >= 1);
+  assert.ok(
+    backups.some(
+      (name) =>
+        readFileSync(join(claudeDir, name), "utf8") ===
+        `${JSON.stringify({ theme: "dark", model: "opus" })}\n`,
+    ),
+  );
+});
+
+test("hook status accepts a Node path that resolves to the running binary", () => {
+  const { root, claudeDir, configDir, cliPath } = fixture();
+  const options = {
+    configDir,
+    profileName: "my-agent",
+    agentAddress: "mine@example.com",
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+  };
+  assert.equal(
+    installClaudeWakeHook({ ...options, cliPath }),
+    "installed_unverified",
+  );
+  assert.equal(claudeWakeHookStatus(options).installed, true);
+  // A repair writes a stable link to the same Node binary.
+  const link = join(root, "node-link");
+  symlinkSync(process.execPath, link);
+  const settingsPath = join(claudeDir, "settings.json");
+  const text = readFileSync(settingsPath, "utf8").replaceAll(
+    JSON.stringify(process.execPath),
+    JSON.stringify(link),
+  );
+  writeFileSync(settingsPath, text);
+  assert.ok(text.includes(JSON.stringify(link)));
+  assert.equal(claudeWakeHookStatus(options).installed, true);
+  // A different binary is not this CLI's hook.
+  const other = join(root, "other-node");
+  writeFileSync(other, "");
+  writeFileSync(
+    settingsPath,
+    text.replaceAll(JSON.stringify(link), JSON.stringify(other)),
+  );
+  assert.equal(claudeWakeHookStatus(options).installed, false);
 });
 
 test("uninstall removes only the exact profile and session and is idempotent", () => {

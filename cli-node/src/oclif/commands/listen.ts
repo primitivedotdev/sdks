@@ -52,6 +52,31 @@ function isListenLockContention(error: unknown): error is ListenStateError {
   );
 }
 
+export const CLAUDE_NOTIFY_SESSION_GUIDANCE =
+  "This is a Claude Code session. Claude Code sessions receive mail through hooks, not --notify-session. Run `primitive agent connect --status --profile <profile>` to check the hook, or `primitive machine doctor --fix` to install it.";
+
+/**
+ * The session is a Claude Code session rather than a Codex thread: it is the
+ * current Claude session, or this machine registered it as one.
+ */
+export function claudeCodeSession(
+  sessionId: string,
+  env: NodeJS.ProcessEnv,
+  configDir: string,
+): boolean {
+  const id = sessionId.toLowerCase();
+  if (env.CODEX_THREAD_ID?.toLowerCase() === id) return false;
+  if (env.CLAUDE_CODE_SESSION_ID?.toLowerCase() === id) return true;
+  try {
+    const saved = readMailJson(
+      join(configDir, "machine", "sessions", `${id}.json`),
+    ) as { runtime?: unknown; session?: unknown } | null;
+    return saved?.session === id && saved.runtime === "claude";
+  } catch {
+    return false;
+  }
+}
+
 export default class ListenCommand extends Command {
   static summary = "Receive webhook events locally without a public endpoint";
   static description =
@@ -298,6 +323,17 @@ export default class ListenCommand extends Command {
       throw new Errors.CLIError(
         "--notify-session requires an exact session UUID.",
       );
+    if (
+      flags["notify-session"] &&
+      !flags.status &&
+      !flags.stop &&
+      claudeCodeSession(
+        flags["notify-session"],
+        hookSessionId ? {} : process.env,
+        this.config.configDir,
+      )
+    )
+      throw new Errors.CLIError(CLAUDE_NOTIFY_SESSION_GUIDANCE);
     if (flags["notify-session"] && flags.transport === "poll")
       throw new Errors.CLIError(
         "--notify-session requires --transport websocket.",
