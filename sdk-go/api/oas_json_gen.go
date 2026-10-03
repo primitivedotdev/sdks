@@ -90855,18 +90855,46 @@ func (s *StorageStats) encodeFields(e *jx.Encoder) {
 		e.Float64(s.Percentage)
 	}
 	{
+		if s.IncludedMB.Set {
+			e.FieldStart("included_mb")
+			s.IncludedMB.Encode(e)
+		}
+	}
+	{
+		if s.LimitMB.Set {
+			e.FieldStart("limit_mb")
+			s.LimitMB.Encode(e)
+		}
+	}
+	{
+		if s.OverageMB.Set {
+			e.FieldStart("overage_mb")
+			s.OverageMB.Encode(e)
+		}
+	}
+	{
+		if s.SearchIndexBytes.Set {
+			e.FieldStart("search_index_bytes")
+			s.SearchIndexBytes.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("emails_count")
 		e.Int(s.EmailsCount)
 	}
 }
 
-var jsonFieldsNameOfStorageStats = [6]string{
+var jsonFieldsNameOfStorageStats = [10]string{
 	0: "used_bytes",
 	1: "used_kb",
 	2: "used_mb",
 	3: "quota_mb",
 	4: "percentage",
-	5: "emails_count",
+	5: "included_mb",
+	6: "limit_mb",
+	7: "overage_mb",
+	8: "search_index_bytes",
+	9: "emails_count",
 }
 
 // Decode decodes StorageStats from json.
@@ -90874,7 +90902,7 @@ func (s *StorageStats) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode StorageStats to nil")
 	}
-	var requiredBitSet [1]uint8
+	var requiredBitSet [2]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -90938,8 +90966,48 @@ func (s *StorageStats) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"percentage\"")
 			}
+		case "included_mb":
+			if err := func() error {
+				s.IncludedMB.Reset()
+				if err := s.IncludedMB.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"included_mb\"")
+			}
+		case "limit_mb":
+			if err := func() error {
+				s.LimitMB.Reset()
+				if err := s.LimitMB.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"limit_mb\"")
+			}
+		case "overage_mb":
+			if err := func() error {
+				s.OverageMB.Reset()
+				if err := s.OverageMB.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"overage_mb\"")
+			}
+		case "search_index_bytes":
+			if err := func() error {
+				s.SearchIndexBytes.Reset()
+				if err := s.SearchIndexBytes.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"search_index_bytes\"")
+			}
 		case "emails_count":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[1] |= 1 << 1
 			if err := func() error {
 				v, err := d.Int()
 				s.EmailsCount = int(v)
@@ -90959,8 +91027,9 @@ func (s *StorageStats) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00111111,
+	for i, mask := range [2]uint8{
+		0b00011111,
+		0b00000010,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
