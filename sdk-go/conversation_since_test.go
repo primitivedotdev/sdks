@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	conversationFirstCursor = "2026-10-03T12:00:00.123456Z"
-	conversationNextCursor  = "2026-10-03T12:05:00.654321Z"
+	conversationFirstCursor = "2026-10-03T12:00:00.000000Z|12345"
+	conversationNextCursor  = "2026-10-03T12:05:00.000000Z|12391"
 	conversationInbound     = `{"role":"user","direction":"inbound","id":"11111111-1111-4111-8111-111111111111","message_id":"<in@example.test>","from":"alice@example.test","to":"agent@example.test","subject":"Plan","text":"hello","timestamp":"2026-10-03T11:59:00Z"}`
 )
 

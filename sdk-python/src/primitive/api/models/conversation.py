@@ -43,7 +43,8 @@ class Conversation:
             subject (None | str | Unset): Normalized thread subject (Re/Fwd prefixes stripped), or the
                 email's own subject when it isn't threaded.
             cursor (str | Unset): Present only on a `since` read: the position to send as
-                `since` on the next read. Send it back verbatim.
+                `since` on the next read. An opaque string: send it back
+                verbatim and do not parse it or build one.
      """
 
     thread_id: None | UUID
