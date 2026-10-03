@@ -13,6 +13,25 @@ later work. An imperative setup instruction pasted as the owner's request
 authorizes this connection, private credential storage, the verification reply
 and continued receiving; do not ask for that approval again.
 
+**One address per session unless the owner says otherwise.** If this session
+already has a Primitive address (you connected it earlier, or a profile is
+already receiving mail here), ask the owner whether to keep that address or
+disconnect that agent first, and do not create a second address without their
+answer. The connect command checks this itself: when the session is already
+connected it claims nothing and exits with status 3 and
+`status: "already_connected"` and names an address already connected here
+(there can be more than one). Tell the owner, relay the same choice, then rerun
+the same command as they chose:
+
+- `--replace-existing` disconnects every address connected to this session,
+  not just one, then connects. Say so before they choose.
+- `--keep-existing` keeps them all. If the existing address uses this
+  session's default profile, also pass a new `--profile <name>` so the second
+  address gets its own profile; otherwise the rerun is refused again.
+
+Never switch to a separate profile on your own to get around this check; only
+use a new profile as part of the owner's choice to keep both.
+
 The command validates the invitation's API origin, claims it once, answers the
 verification email, starts receiving for this exact session (or sets up
 checking for mail when nothing can wake this session), installs or refreshes
@@ -79,6 +98,8 @@ Read the one JSON result:
   `selectProfile` (`PRIMITIVE_AGENT_PROFILE=<profile>`).
 - `status: "pending"`: run `resumeCommand` exactly as printed. It never reads
   or claims the invitation again. `skipped` names each step not done and why.
+- `status: "already_connected"` (exit status 3): ask the owner, then rerun
+  with `--replace-existing` or `--keep-existing` as described above.
 - Exit status 1: follow its message. Never feed the same invitation to the
   command twice, and never claim it over HTTP after the command may have
   claimed it. Switch to the [HTTP API path](#connect-with-the-http-api) only
