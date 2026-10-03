@@ -93,3 +93,87 @@ it("rejects unknown checks and runtimes, and --check without --fix", async () =>
   ).rejects.toThrow(/add --fix/);
   expect(mocks.runMachineDoctor).not.toHaveBeenCalled();
 });
+
+it("passes --profile through and requires --fix with it", async () => {
+  vi.spyOn(MachineDoctorCommand.prototype, "log").mockImplementation(
+    () => undefined,
+  );
+  mocks.runMachineDoctor.mockResolvedValue(report("ok"));
+  await expect(
+    MachineDoctorCommand.run(["--profile", "my-agent"], { root }),
+  ).rejects.toThrow(/add --fix/);
+  expect(mocks.runMachineDoctor).not.toHaveBeenCalled();
+  await MachineDoctorCommand.run(
+    [
+      "--fix",
+      "--check",
+      "claude.hook.stop",
+      "--profile",
+      "my-agent",
+      "--profile",
+      "other",
+    ],
+    { root },
+  );
+  const options = mocks.runMachineDoctor.mock.calls[0]?.[0];
+  expect([...options.profiles]).toEqual(["my-agent", "other"]);
+});
+
+it("prints one line per receive hook it would change or changed, capped", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(MachineDoctorCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  const session = "11111111-1111-4111-8111-111111111111";
+  const items = Array.from({ length: 12 }, (_, index) => ({
+    profile: `agent-${index}`,
+    session,
+    hook: "Stop" as const,
+    state: "missing" as const,
+  }));
+  mocks.runMachineDoctor.mockResolvedValue({
+    ...report("fail"),
+    checks: [
+      {
+        id: "claude.hook.stop",
+        title: "Claude per-session receive hooks",
+        status: "fail",
+        detail: "Per-session receive hooks need cleanup.",
+        fixable: true,
+        items,
+        changes: [
+          {
+            profile: null,
+            session: null,
+            hook: "SessionStart",
+            state: "stale",
+            action: "removed",
+          },
+          {
+            profile: "my-agent",
+            session,
+            hook: "Stop",
+            state: "outdated",
+            action: "updated",
+          },
+        ],
+      },
+    ],
+  });
+  await MachineDoctorCommand.run([], { root });
+  const lines = (outputs[0] ?? "").split("\n");
+  expect(lines[0]).toBe(
+    "[FAIL] claude.hook.stop: Per-session receive hooks need cleanup.",
+  );
+  expect(lines.slice(1, 4)).toEqual([
+    "  Changed:",
+    "    Removed SessionStart hook for a profile an old CLI did not record (session disconnected or removed)",
+    `    Rewrote Stop hook for profile my-agent, session ${session} (old CLI path)`,
+  ]);
+  expect(lines[4]).toBe("  Still needing repair:");
+  expect(lines[5]).toBe(
+    `    Stop hook for profile agent-0, session ${session}: missing`,
+  );
+  expect(lines.slice(5)).toHaveLength(11);
+  expect(lines.at(-1)).toBe("    and 2 more");
+});

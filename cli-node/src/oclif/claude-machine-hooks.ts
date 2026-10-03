@@ -224,7 +224,79 @@ export type HookFinding = {
   status: "ok" | "fail";
   detail: string;
   fixable: boolean;
+  /** For claude.hook.stop: each per-session receive hook a repair would change. */
+  items?: SessionHookItem[];
 };
+
+/** Why a per-session receive hook needs a repair. */
+export type SessionHookState =
+  | "missing"
+  | "stale"
+  | "duplicate"
+  | "outdated"
+  | "old_address";
+
+/** One per-session receive hook that --fix would add, remove or rewrite. */
+export type SessionHookItem = {
+  /** Null for hooks written by old CLI versions that did not record one. */
+  profile: string | null;
+  session: string | null;
+  hook: SessionEvent;
+  state: SessionHookState;
+};
+
+/** One per-session receive hook a repair actually changed. */
+export type SessionHookChange = SessionHookItem & {
+  action: "added" | "removed" | "updated";
+};
+
+const STATE_PHRASES: Record<SessionHookState, string> = {
+  missing: "missing",
+  stale: "session disconnected or removed",
+  duplicate: "duplicate",
+  outdated: "old CLI path",
+  old_address: "old agent address",
+};
+
+/** "profile my-agent, session 1234...": who a session hook serves. */
+export function describeSessionHookOwner(item: {
+  profile: string | null;
+  session: string | null;
+}): string {
+  const profile = item.profile
+    ? `profile ${item.profile}`
+    : "a profile an old CLI did not record";
+  return item.session ? `${profile}, session ${item.session}` : profile;
+}
+
+/** One short line naming a hook, its owner and its state. */
+export function describeSessionHookItem(item: SessionHookItem): string {
+  return `${item.hook} hook for ${describeSessionHookOwner(item)}: ${STATE_PHRASES[item.state]}`;
+}
+
+/** One short line naming what a repair did to a hook. */
+export function describeSessionHookChange(change: SessionHookChange): string {
+  const verb =
+    change.action === "added"
+      ? "Added"
+      : change.action === "removed"
+        ? "Removed"
+        : "Rewrote";
+  return `${verb} ${change.hook} hook for ${describeSessionHookOwner(change)} (${STATE_PHRASES[change.state]})`;
+}
+
+/** Group items by owner, at most `limit` owners, for a one-line detail. */
+function summarizeOwners(items: readonly SessionHookItem[], limit = 3): string {
+  const owners: string[] = [];
+  for (const item of items) {
+    const owner = describeSessionHookOwner(item);
+    if (!owners.includes(owner)) owners.push(owner);
+  }
+  const shown = owners.slice(0, limit).join("; ");
+  return owners.length > limit
+    ? `${shown}; and ${owners.length - limit} more`
+    : shown;
+}
 
 type GlobalSpec = {
   event: "SessionStart" | "SessionEnd";
@@ -566,6 +638,39 @@ function missingSessionHooks(
   );
 }
 
+/** Every hook judged for repair, in settings order, then every missing one. */
+function sessionHookItems(
+  hooks: RecordValue,
+  verdicts: Map<unknown, SessionHookVerdict>,
+  missing: ReadonlyArray<{ event: SessionEvent; bound: BoundSessionProfile }>,
+): SessionHookItem[] {
+  const items: SessionHookItem[] = missing.map(({ event, bound }) => ({
+    profile: bound.profile,
+    session: bound.session,
+    hook: event,
+    state: "missing",
+  }));
+  for (const event of SESSION_EVENTS) {
+    const entries = hooks[event];
+    if (!Array.isArray(entries)) continue;
+    for (const entry of entries) {
+      if (!record(entry) || !Array.isArray(entry.hooks)) continue;
+      for (const hook of entry.hooks) {
+        const verdict = verdicts.get(hook);
+        const parsed = parseSessionHook(hook);
+        if (!verdict || verdict === "keep" || !parsed) continue;
+        items.push({
+          profile: parsed.profile,
+          session: parsed.session?.toLowerCase() ?? null,
+          hook: event,
+          state: verdict,
+        });
+      }
+    }
+  }
+  return items;
+}
+
 /** The exact entry `agent connect` and `session-register` install. */
 function sessionHookEntry(
   event: SessionEvent,
@@ -667,13 +772,15 @@ export function inspectClaudeHooks(
     outdated: 0,
     old_address: 0,
   };
-  for (const verdict of judgeSessionHooks(hooks, context.cli, bound).values())
-    counts[verdict]++;
-  const missing = missingSessionHooks(
+  const verdicts = judgeSessionHooks(hooks, context.cli, bound);
+  for (const verdict of verdicts.values()) counts[verdict]++;
+  const missingHooks = missingSessionHooks(
     hooks,
     bound,
     context.cli?.node ?? process.execPath,
-  ).length;
+  );
+  const missing = missingHooks.length;
+  const items = sessionHookItems(hooks, verdicts, missingHooks);
   const problems = [
     missing ? `${missing} missing for connected sessions` : "",
     counts.old_address
@@ -686,11 +793,12 @@ export function inspectClaudeHooks(
   findings["claude.hook.stop"] = problems.length
     ? {
         status: "fail",
-        detail: `Per-session receive hooks need cleanup: ${problems.join(", ")}.${blockedNote}`,
+        detail: `Per-session receive hooks need cleanup: ${problems.join(", ")}. Affected: ${summarizeOwners(items)}.${blockedNote}`,
         // Removing hooks for dead sessions never needs a CLI path.
         fixable:
           canFix ||
           (counts.outdated === 0 && missing === 0 && context.blocked === null),
+        items,
       }
     : {
         status: "ok",
@@ -732,8 +840,20 @@ export function repairClaudeHooks(
   settings: RecordValue,
   context: HookContext,
   checks: ReadonlySet<HookCheckId>,
-): { settings: RecordValue; changed: Set<HookCheckId> } {
+  options: {
+    /** Only change per-session receive hooks for these profiles. */
+    profiles?: ReadonlySet<string>;
+  } = {},
+): {
+  settings: RecordValue;
+  changed: Set<HookCheckId>;
+  /** Each per-session receive hook added, removed or rewritten. */
+  changes: SessionHookChange[];
+} {
   const changed = new Set<HookCheckId>();
+  const changes: SessionHookChange[] = [];
+  const selected = (profile: string | null) =>
+    !options.profiles || (profile !== null && options.profiles.has(profile));
   const hooks: RecordValue = record(settings.hooks)
     ? { ...settings.hooks }
     : {};
@@ -785,17 +905,28 @@ export function repairClaudeHooks(
         if (entries === "invalid" || entries.length === 0) continue;
         const result = rewriteEntries(entries, (hook) => {
           const verdict = verdicts.get(hook);
+          const parsed = parseSessionHook(hook);
+          if (!verdict || verdict === "keep" || !parsed) return hook;
+          if (!selected(parsed.profile)) return hook;
+          const item = {
+            profile: parsed.profile,
+            session: parsed.session?.toLowerCase() ?? null,
+            hook: event,
+            state: verdict,
+          };
           if (
             verdict === "stale" ||
             verdict === "duplicate" ||
             verdict === "old_address"
-          )
+          ) {
+            changes.push({ ...item, action: "removed" });
             return undefined;
-          if (verdict !== "outdated" || !cli || !record(hook)) return hook;
-          const parsed = parseSessionHook(hook);
+          }
+          if (!cli || !record(hook)) return hook;
           const args = [...(hook.args as string[])];
-          args[0] = parsed?.kind === "pending" ? cli.pending : cli.wake;
+          args[0] = parsed.kind === "pending" ? cli.pending : cli.wake;
           args[1] = cli.entry;
+          changes.push({ ...item, action: "updated" });
           return { ...hook, command: cli.node, args };
         });
         if (result.changed) {
@@ -807,8 +938,16 @@ export function repairClaudeHooks(
       // `agent connect` wrote it; mail would otherwise never wake it.
       if (cli)
         for (const missing of missingSessionHooks(hooks, bound, cli.node)) {
+          if (!selected(missing.bound.profile)) continue;
           const entries = eventEntries(hooks, missing.event);
           if (entries === "invalid") continue;
+          changes.push({
+            profile: missing.bound.profile,
+            session: missing.bound.session,
+            hook: missing.event,
+            state: "missing",
+            action: "added",
+          });
           hooks[missing.event] = [
             ...entries,
             sessionHookEntry(missing.event, missing.bound, cli),
@@ -817,6 +956,6 @@ export function repairClaudeHooks(
         }
     }
   }
-  if (!changed.size) return { settings, changed };
-  return { settings: { ...settings, hooks }, changed };
+  if (!changed.size) return { settings, changed, changes };
+  return { settings: { ...settings, hooks }, changed, changes };
 }

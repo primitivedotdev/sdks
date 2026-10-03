@@ -1,11 +1,24 @@
 import { homedir } from "node:os";
 import { Command, Flags } from "@oclif/core";
 import {
+  describeSessionHookChange,
+  describeSessionHookItem,
+} from "../claude-machine-hooks.js";
+import {
   DOCTOR_CHECK_IDS,
   type DoctorCheck,
   runMachineDoctor,
 } from "../machine-doctor.js";
 import { MACHINE_RUNTIMES, type MachineRuntime } from "../machine-session.js";
+
+const ITEM_LINES = 10;
+
+/** At most `limit` indented lines, then "and N more". */
+function capped(lines: string[], limit = ITEM_LINES): string[] {
+  const shown = lines.slice(0, limit).map((line) => `    ${line}`);
+  if (lines.length > limit) shown.push(`    and ${lines.length - limit} more`);
+  return shown;
+}
 
 function renderCheck(check: DoctorCheck): string {
   const tag =
@@ -17,7 +30,18 @@ function renderCheck(check: DoctorCheck): string {
           ? "[SKIP]"
           : "[FAIL]";
   const fixed = check.fixed ? " (fixed)" : "";
-  return `${tag} ${check.id}${fixed}: ${check.detail}`;
+  const lines = [`${tag} ${check.id}${fixed}: ${check.detail}`];
+  if (check.changes?.length)
+    lines.push(
+      "  Changed:",
+      ...capped(check.changes.map(describeSessionHookChange)),
+    );
+  if (check.status !== "ok" && check.items?.length)
+    lines.push(
+      check.changes?.length ? "  Still needing repair:" : "  Would change:",
+      ...capped(check.items.map(describeSessionHookItem)),
+    );
+  return lines.join("\n");
 }
 
 export default class MachineDoctorCommand extends Command {
@@ -30,6 +54,7 @@ export default class MachineDoctorCommand extends Command {
     "<%= config.bin %> machine doctor --json",
     "<%= config.bin %> machine doctor --fix --json",
     "<%= config.bin %> machine doctor --fix --check claude.hook.stop --json",
+    "<%= config.bin %> machine doctor --fix --check claude.hook.stop --profile my-agent",
     "<%= config.bin %> machine doctor --runtime claude,codex --min-cli-version 1.38.0 --json",
   ];
   static flags = {
@@ -42,6 +67,11 @@ export default class MachineDoctorCommand extends Command {
         "With --fix, repair only this check; repeatable. Every check is still reported",
       multiple: true,
       options: [...DOCTOR_CHECK_IDS],
+    }),
+    profile: Flags.string({
+      description:
+        "With --fix, change per-session receive hooks only for this saved agent profile; repeatable. Other checks are unaffected, so combine with --check claude.hook.stop to repair nothing else",
+      multiple: true,
     }),
     runtime: Flags.string({
       description:
@@ -76,9 +106,14 @@ export default class MachineDoctorCommand extends Command {
       this.error("--check selects which checks --fix repairs; add --fix.", {
         exit: 2,
       });
+    if (flags.profile?.length && !flags.fix)
+      this.error("--profile narrows what --fix repairs; add --fix.", {
+        exit: 2,
+      });
     const report = await runMachineDoctor({
       fix: flags.fix,
       only: flags.check?.length ? new Set(flags.check) : undefined,
+      profiles: flags.profile?.length ? new Set(flags.profile) : undefined,
       runtimes,
       configDir: this.config.configDir,
       home: homedir(),

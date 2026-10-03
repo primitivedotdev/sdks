@@ -813,6 +813,163 @@ describe("primitive machine doctor", () => {
     expect(status()).toBe(true);
   });
 
+  it("names each profile and session the receive hook repair would change, and reports what it changed", async () => {
+    const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    saveConnectedAgentProfile(
+      configDir,
+      "my-agent",
+      profile("my-agent@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "my-agent"), "setup.json"),
+      { session: sessionA, receiverMode: "external" },
+    );
+    // A hook for a profile that no longer exists is stale.
+    const dead = wakeHook(
+      bin,
+      configDir,
+      "removed-agent",
+      "gone@example.test",
+      sessionB,
+    );
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({ hooks: { Stop: [{ hooks: [dead] }] } }),
+    );
+    const before = byId(await runMachineDoctor(options));
+    const stop = before["claude.hook.stop"];
+    expect(stop.status).toBe("fail");
+    expect(stop.detail).toContain(
+      `Affected: profile my-agent, session ${sessionA}; profile removed-agent, session ${sessionB}.`,
+    );
+    expect(stop.items).toEqual([
+      {
+        profile: "my-agent",
+        session: sessionA,
+        hook: "Stop",
+        state: "missing",
+      },
+      {
+        profile: "my-agent",
+        session: sessionA,
+        hook: "SessionStart",
+        state: "missing",
+      },
+      {
+        profile: "my-agent",
+        session: sessionA,
+        hook: "PostToolUse",
+        state: "missing",
+      },
+      {
+        profile: "removed-agent",
+        session: sessionB,
+        hook: "Stop",
+        state: "stale",
+      },
+    ]);
+    expect(stop.changes).toBeUndefined();
+
+    const fixed = byId(await runMachineDoctor({ ...options, fix: true }));
+    expect(fixed["claude.hook.stop"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    expect(fixed["claude.hook.stop"].items).toBeUndefined();
+    expect(fixed["claude.hook.stop"].changes).toEqual([
+      {
+        profile: "removed-agent",
+        session: sessionB,
+        hook: "Stop",
+        state: "stale",
+        action: "removed",
+      },
+      {
+        profile: "my-agent",
+        session: sessionA,
+        hook: "Stop",
+        state: "missing",
+        action: "added",
+      },
+      {
+        profile: "my-agent",
+        session: sessionA,
+        hook: "SessionStart",
+        state: "missing",
+        action: "added",
+      },
+      {
+        profile: "my-agent",
+        session: sessionA,
+        hook: "PostToolUse",
+        state: "missing",
+        action: "added",
+      },
+    ]);
+  });
+
+  it("with profiles set, repairs only those profiles' receive hooks", async () => {
+    const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    writeFileSync(settingsPath, "{}\n");
+    for (const [name, session] of [
+      ["my-agent", sessionA],
+      ["test-agent", sessionB],
+    ] as const) {
+      saveConnectedAgentProfile(
+        configDir,
+        name,
+        profile(`${name}@example.test`),
+      );
+      writeMailJson(
+        join(agentProfileDirectory(configDir, name), "setup.json"),
+        { session, receiverMode: "external" },
+      );
+    }
+    const fixed = byId(
+      await runMachineDoctor({
+        ...options,
+        fix: true,
+        only: new Set(["claude.hook.stop"]),
+        profiles: new Set(["my-agent"]),
+      }),
+    );
+    const stop = fixed["claude.hook.stop"];
+    expect(stop.status).toBe("fail");
+    expect(stop.fixed).toBe(false);
+    expect(stop.detail).toContain("Only the selected profiles were repaired.");
+    expect(stop.changes?.map((change) => change.profile)).toEqual([
+      "my-agent",
+      "my-agent",
+      "my-agent",
+    ]);
+    expect(stop.changes?.every((change) => change.action === "added")).toBe(
+      true,
+    );
+    expect(stop.items?.map((item) => [item.profile, item.state])).toEqual([
+      ["test-agent", "missing"],
+      ["test-agent", "missing"],
+      ["test-agent", "missing"],
+    ]);
+    const text = readFileSync(settingsPath, "utf8");
+    expect(text).toContain("my-agent@example.test");
+    expect(text).not.toContain("test-agent@example.test");
+    expect(JSON.parse(text).hooks.Stop).toEqual([
+      {
+        hooks: [
+          wakeHook(
+            bin,
+            configDir,
+            "my-agent",
+            "my-agent@example.test",
+            sessionA,
+          ),
+        ],
+      },
+    ]);
+  });
+
   it("reinstalls a removed receive hook for a connected session, never for an ended one", async () => {
     const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
     const settingsPath = join(home, ".claude", "settings.json");

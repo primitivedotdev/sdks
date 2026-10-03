@@ -923,6 +923,7 @@ session on this machine register itself and answer Primitive mail, and
 primitive machine doctor --json
 primitive machine doctor --fix --json
 primitive machine doctor --fix --check claude.hook.stop --json
+primitive machine doctor --fix --check claude.hook.stop --profile my-agent
 ```
 
 Each check reports `{id, title, status, detail, fixable, fixed?, action?, path?}`
@@ -941,6 +942,16 @@ approval Codex recorded matches the hook's current hash), a managed block in
 content) and `~/.omp/agent/AGENTS.md`, the bundled primitive-connect skill, and
 saved agent profiles that were disconnected in Primitive (moved aside locally;
 nothing changes server side).
+
+`claude.hook.stop` names every per-session receive hook a repair would change
+in `items: [{profile, session, hook, state}]`, where `hook` is the Claude event
+(`Stop`, `SessionStart` or `PostToolUse`) and `state` is `missing`, `stale`,
+`duplicate`, `outdated` or `old_address`; `profile` and `session` are null for
+hooks written by old CLI versions that did not record them. After `--fix` it
+also reports `changes`, the same fields plus `action` (`added`, `removed` or
+`updated`), for each hook it changed. `--profile <name>` (repeatable, with
+`--fix`) limits those per-session hook changes to the named profiles; combine it
+with `--check claude.hook.stop` so nothing else is repaired.
 
 Repairs only touch Primitive-owned hooks, blocks and skill copies. Any existing
 file is backed up beside itself as `<file>.primitive-bak-<timestamp>` before it
