@@ -592,13 +592,22 @@ export async function countAutomatedAwaiting(params: {
   api?: InboxNextApi;
 }): Promise<InboxNextAutomatedAwaiting> {
   const api = params.api ?? DEFAULT_API;
+  // Mail that needs no reply is never shown, even with --include-automated,
+  // so it must not be counted as hidden: fyi is left out by the server, and
+  // the rest (for example a repeat-stopped notice) is subtracted from the
+  // first page. Past that page the count is an upper bound.
   const page = await listPage(api, params.apiClient, {
     awaiting: "you",
     automated: "true",
-    limit: 1,
+    exclude_fyi: "true",
+    limit: SCAN_PAGE_SIZE,
   });
   assertAutomatedVerdict(page.rows, "GET /emails", true);
-  return { total: page.total ?? page.rows.length, capped: page.totalCapped };
+  const skipped = page.rows.filter(needsNoReply).length;
+  return {
+    total: Math.max(0, (page.total ?? page.rows.length) - skipped),
+    capped: page.totalCapped,
+  };
 }
 
 /**

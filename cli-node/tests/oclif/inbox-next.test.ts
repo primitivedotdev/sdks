@@ -516,8 +516,64 @@ describe("findNextAwaiting", () => {
       await countAutomatedAwaiting({ apiClient, api: inbox.api() }),
     ).toEqual({ total: 1, capped: false });
     expect(inbox.calls).toEqual([
-      { op: "list", query: { awaiting: "you", automated: "true", limit: 1 } },
+      {
+        op: "list",
+        query: {
+          awaiting: "you",
+          automated: "true",
+          exclude_fyi: "true",
+          limit: 100,
+        },
+      },
     ]);
+  });
+
+  it("does not count automated mail that inbox next would skip anyway", async () => {
+    for (const fyiFilter of ["supported", "ignored"] as const) {
+      const inbox = new FakeInbox();
+      inbox.fyiFilter = fyiFilter;
+      const automated = { precedence: "bulk" };
+      inbox.add({
+        id: "auto-fyi",
+        created_at: "2026-09-18T00:00:00.000Z",
+        automation_headers: automated,
+        server: { fyi: true, interaction_hint: "status" },
+      });
+      inbox.add({
+        id: "auto-read",
+        created_at: "2026-09-18T00:01:00.000Z",
+        automation_headers: automated,
+        server: { interaction_hint: "status", interaction_kind: "read/1" },
+      });
+      inbox.add({
+        id: "auto-stopped",
+        created_at: "2026-09-18T00:02:00.000Z",
+        automation_headers: automated,
+        server: { interaction_hint: "card", interaction_kind: "repeat.stop/1" },
+      });
+      // Every counted row would be skipped: no --include-automated hint.
+      expect(
+        await countAutomatedAwaiting({ apiClient, api: inbox.api() }),
+      ).toEqual({ total: 0, capped: false });
+      // And --include-automated indeed shows none of them.
+      expect(
+        (
+          await findNextAwaiting({
+            apiClient,
+            includeAutomated: true,
+            api: inbox.api(),
+          })
+        ).outcome,
+      ).toBe("empty");
+      inbox.add({
+        id: "auto-real",
+        created_at: "2026-09-18T00:03:00.000Z",
+        automation_headers: automated,
+      });
+      expect(
+        await countAutomatedAwaiting({ apiClient, api: inbox.api() }),
+      ).toEqual({ total: 1, capped: false });
+    }
   });
 
   it("skips an email the detail now reports automated (parsed since the list)", async () => {
