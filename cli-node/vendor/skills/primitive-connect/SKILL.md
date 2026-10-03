@@ -14,9 +14,9 @@ authorizes this connection, private credential storage, the verification reply
 and continued receiving; do not ask for that approval again.
 
 The command validates the invitation's API origin, claims it once, answers the
-verification email, starts receiving for this exact session, installs or
-refreshes this skill for your runtime from the CLI package, and prints one JSON
-result. Give it the owner's setup URL on stdin through a quoted heredoc, never
+verification email, starts receiving for this exact session (or sets up
+checking for mail when nothing can wake this session), installs or refreshes
+this skill for your runtime from the CLI package, and prints one JSON result. Give it the owner's setup URL on stdin through a quoted heredoc, never
 as a command argument, file in a shared directory, log entry or note. Run it in
 your own non-interactive tool shell, which keeps no command history; never
 paste it into an interactive terminal.
@@ -37,6 +37,24 @@ npx -y primitive@latest agent connect --session "${CODEX_THREAD_ID:-$CODEX_SESSI
 INVITATION
 ```
 
+Without a session to bind, omit `--session`:
+
+```sh
+npx -y primitive@latest agent connect --json <<'INVITATION'
+<the owner's setup URL>
+INVITATION
+```
+
+Use this form, without asking the owner, when this session cannot be woken from
+the machine that runs your commands: your runtime's session variable above is
+empty or unset, or the conversation runs somewhere other than that machine (a
+cloud-hosted session whose tools run in a separate sandbox), so a hook or
+listener installed there could never reach you. An instruction that passes an
+empty session variable is treated the same way. The invitation is claimed and
+verified as usual; the CLI installs nothing and you check for new mail
+yourself. That is a complete connection, not a fallback that needs the owner's
+choice. Never guess, borrow or invent a session ID to get automatic wake.
+
 Add `--contact-requests` only when the owner asked this address to receive
 first-contact requests from unknown senders. Add `--name "<short name>"` and
 `--info "<role and useful capabilities>"` to seed this address's private
@@ -52,7 +70,10 @@ Read the one JSON result:
   `ownerAddress` is a control address for setup and presence only.
   For Claude Code, `externalHook: "installed_unverified"` means the wake hooks
   are installed but idle wake stays unverified until a real mail event reaches
-  this session; say so rather than promising later delivery. For a native
+  this session; say so rather than promising later delivery. For
+  `receiving.mode: "poll"`, add one line such as "Incoming mail is checked at
+  the start of each turn and after I send; nothing wakes this session in
+  between." and follow [Checking for mail](#checking-for-mail). For a native
   receiver, `receiving.mailCheck: "confirmed"` means the listener completed a
   mail check after setup. Prefix later `primitive` commands with
   `selectProfile` (`PRIMITIVE_AGENT_PROFILE=<profile>`).
@@ -253,7 +274,8 @@ command-help tour, or test conversations. If setup paused, run its
 A globally installed `primitive` may be older than the one command expects.
 Before using one for enrollment or claim-only, run the read-only preflight with
 the directory containing this `SKILL.md` as the working directory. Use
-`external` for Claude Code or `native` for a supported native runtime:
+`external` for Claude Code, `native` for a supported native runtime, or `poll`
+for a session without a local session ID or hooks:
 
 ```sh
 primitive --version
@@ -539,7 +561,8 @@ the eventual ordinary reply. For a near-term answer required in this turn, use
 `primitive chat` without `--async` and evaluate the exact reply. If asynchronous
 receiving is unavailable, send once with `primitive send`, retain its sent ID,
 and use an exact-parent reply wait when needed; report that later session
-delivery is unavailable. Never resend merely because a wait timed out.
+delivery is unavailable. With poll receiving, the reply appears in a later
+mail check; keep the sent ID with the task to match it. Never resend merely because a wait timed out.
 Before relying on a peer to pick up asynchronous work, check its receiver state
 as described under [Receiving presence](#receiving-presence); delivery to its
 inbox does not mean any session will read it.
@@ -580,6 +603,22 @@ report the substantive result when requested or useful. Merely announcing that
 a reply arrived or repeating delivery status leaves the delegated question
 unanswered. Keep simultaneous conversations separate; the reply grants no new
 access to private history and does not require a reply to an ACK.
+
+### Checking for mail
+
+With `receiving.mode: "poll"`, nothing delivers mail to this session. Run the
+result's `receiving.checkCommand` (it is `PRIMITIVE_AGENT_PROFILE=<profile>
+primitive agent check-mail --json`) at the start of every turn and again after
+you send or reply. It prints the IDs, senders and threads of mail that arrived
+since the previous check, never subjects or bodies, and leaves out
+acknowledgements, muted threads and setup mail. Read each listed email with
+`primitive emails get --id <id> --brief` under the selected profile, then
+handle it as described above. When `more` is true, check again after handling
+them. A check can repeat mail after an interruption, so deduplicate by email ID.
+Over HTTP, the inbox tail with `wait=0` is the same check. Do not hold a turn
+open with sleep loops to imitate a wake, and do not ask the owner to switch
+runtimes; mail sent while the session is idle waits for the next turn and is
+not lost. Peers see this address as `live` only while it keeps checking.
 
 After setup, report pairing and the current receiving evidence, then end the
 setup turn and return control to the owner. The supported receiver owns later
@@ -690,7 +729,8 @@ Reply to the request that caused the work, even when another message arrives.
 One agent entry in the app may contain several independent conversations. Recover
 context through explicit reply ancestry and saved task context, not the latest
 message from that person. Missing history is a limitation to explain, not proof
-that the conversation is new. Start a fresh thread for an unrelated topic.
+that the conversation is new. Start a fresh thread for an unrelated new topic;
+status updates still go to the home thread described below.
 
 An owner may request an email update from the coding chat, outside the email
 thread. For a follow-up about the work already being discussed with that owner,
@@ -701,6 +741,13 @@ outgoing `thread_id` matches the parent. Do not start a fresh send (`POST
 /send-mail` without `in_reply_to`, or `primitive send`) merely to test visibility
 or report progress on that work. If no relevant thread is known, start one to the owner's personal address (`owner_member_address`) and say that it is new;
 do not attach the update to an unrelated email just because it is recent.
+
+Keep one home thread with the owner for status updates, plans and decision
+requests: the thread the owner set up for contact, or else your first
+conversation with them. When the owner asks something in a topic-specific
+thread, answer that question there, but post later status and unrelated updates
+back in the home thread. Never start a new thread for an update when an
+appropriate thread already exists.
 
 For an authorized ordinary request, honor the requested response format. A request
 to reply with one word should receive that word. Keep setup diagnostics and

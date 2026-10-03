@@ -1,8 +1,20 @@
 import { Command, Errors, Flags } from "@oclif/core";
+import { pollCheckCommand } from "../agent-connect-flow.js";
 import { enrollAgent } from "../agent-enroll.js";
-import { verificationReplySubmitted } from "../agent-setup.js";
+import {
+  RECEIVER_MODES,
+  type ReceiverMode,
+  verificationReplySubmitted,
+} from "../agent-setup.js";
 import { installClaudeWakeHook } from "../claude-wake-install.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
+
+/** npx runs the CLI from its cache; print follow-up commands the same way. */
+function invocation(entry: string | undefined): string {
+  return entry && /[\\/]_npx[\\/]/.test(entry)
+    ? "npx -y primitive@latest"
+    : "primitive";
+}
 
 export default class AgentEnrollCommand extends Command {
   static summary = "Give this coding session an address in your organization";
@@ -25,8 +37,9 @@ export default class AgentEnrollCommand extends Command {
         "Explicitly issue one invitation only if the recovered agent is still pending; never reconnect a claimed agent",
     }),
     receiver: Flags.string({
-      options: ["native", "external"],
-      description: "Native session receiver, or external runtime event hook",
+      options: [...RECEIVER_MODES],
+      description:
+        "Native session receiver, external runtime event hook, or poll: nothing is installed and the agent checks for mail itself with `agent check-mail`",
     }),
     "contact-requests": Flags.boolean({
       description:
@@ -44,7 +57,7 @@ export default class AgentEnrollCommand extends Command {
         configDir: this.config.configDir,
         session: flags.session,
         name: flags.name,
-        receiverMode: flags.receiver as "native" | "external" | undefined,
+        receiverMode: flags.receiver as ReceiverMode | undefined,
         contactRequests: flags["contact-requests"],
         continueSetup: flags["continue-setup"],
       });
@@ -60,7 +73,23 @@ export default class AgentEnrollCommand extends Command {
               sessionId: flags.session,
             })
           : null;
-      const output = { ...result, externalHook };
+      // Poll receiving wakes nothing: the agent runs this check itself, so
+      // the structured result carries it as poll agent connect does.
+      const output =
+        result.receiving.state === "poll"
+          ? {
+              ...result,
+              receiving: {
+                ...result.receiving,
+                mode: "poll" as const,
+                checkCommand: pollCheckCommand(
+                  invocation(process.argv[1]),
+                  result.identity.profileName,
+                ),
+              },
+              externalHook,
+            }
+          : { ...result, externalHook };
       if (flags.json) this.log(JSON.stringify(output));
       else {
         this.log(
@@ -91,6 +120,10 @@ export default class AgentEnrollCommand extends Command {
           this.log(
             "Pairing is not yet confirmed. Rerun this command with the same options to resume the saved session; do not create another address.",
           );
+        else if ("checkCommand" in output.receiving)
+          this.log(
+            `Nothing wakes this session for new mail. Check it at the start of each turn and after sending with: ${output.receiving.checkCommand}`,
+          );
         else if (result.receiving.state !== "healthy")
           this.log(
             "Pairing is confirmed; receiving needs separate setup or recovery.",
@@ -101,7 +134,9 @@ export default class AgentEnrollCommand extends Command {
         (flags["contact-requests"] &&
           result.contactRequestPolicy !== "enabled") ||
         result.connection.status !== "connected" ||
-        (flags.receiver !== "external" && result.receiving.state !== "healthy")
+        (flags.receiver !== "external" &&
+          flags.receiver !== "poll" &&
+          result.receiving.state !== "healthy")
       )
         process.exitCode = 2;
     } catch (error) {

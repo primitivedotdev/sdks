@@ -303,6 +303,24 @@ describe("contact request command lifecycle", () => {
     expect(f.writes.some((row) => row.path === "/v1/send-mail")).toBe(true);
   });
 
+  it("lets a verified poll setup request manually, but not while setup is unfinished", () => {
+    const f = fixture();
+    const poll = { ...f.setup, session: null, receiverMode: "poll" };
+    writeMailJson(f.setupPath, poll);
+    expect(contactRequestSessionKey(f.context, {})).toBeNull();
+    for (const unfinished of [
+      { ...poll, phase: "waiting", receipt: null },
+      { ...poll, phase: "sending", receipt: null },
+      { ...poll, receipt: { ...poll.receipt, status: "bounced" } },
+      { ...poll, invitationHash: "b".repeat(64) },
+    ]) {
+      writeMailJson(f.setupPath, unfinished);
+      expect(() => contactRequestSessionKey(f.context, {})).toThrow(
+        "exact coding session",
+      );
+    }
+  });
+
   it("uses the exact runtime identity and rejects mixed or mismatched session IDs", () => {
     const f = fixture();
     expect(contactRequestSessionKey(f.context, {})).toBe(

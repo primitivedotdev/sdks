@@ -46,6 +46,19 @@ const SUBJECT = "Connect your agent to Primitive";
 const MARKER =
   /\bprimitive-connection:([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}):([1-9]\d*)\b/g;
 const fail = (message: string) => new AgentConnectionSetupError(message);
+/**
+ * How later mail reaches the agent. `native` starts a background receiver for
+ * a session socket, `external` installs Claude hooks for one exact session, and
+ * `poll` installs nothing: the agent checks for new mail itself, for runtimes
+ * with no local session ID or hooks (for example a cloud-hosted conversation
+ * whose commands run in a separate sandbox).
+ */
+export type ReceiverMode = "native" | "external" | "poll";
+export const RECEIVER_MODES: readonly ReceiverMode[] = [
+  "native",
+  "external",
+  "poll",
+];
 type Challenge = { id: string; messageId: string; marker: string };
 type SendReceipt = { id: string; status: string };
 const RECEIPT_STATUSES = new Set<unknown>([
@@ -71,8 +84,9 @@ function parseReceipt(value: unknown): SendReceipt {
 }
 type SetupState = {
   version: 1;
-  session: string;
-  receiverMode?: "native" | "external";
+  /** Null only for poll receiving, which binds no runtime session. */
+  session: string | null;
+  receiverMode?: ReceiverMode;
   invitationHash: string;
   since: string;
   contactRequests: boolean;
@@ -253,7 +267,7 @@ function parseState(value: unknown): SetupState {
   if (
     row.version !== 1 ||
     (row.receiverMode !== undefined &&
-      !["native", "external"].includes(String(row.receiverMode))) ||
+      !RECEIVER_MODES.includes(row.receiverMode as ReceiverMode)) ||
     typeof row.contactRequests !== "boolean" ||
     !["waiting", "sending", "sent"].includes(String(row.phase))
   )
@@ -268,8 +282,11 @@ function parseState(value: unknown): SetupState {
     throw fail("Saved setup identity is invalid.");
   const state: SetupState = {
     version: 1,
-    session: mailId(row.session),
-    receiverMode: (row.receiverMode ?? "native") as "native" | "external",
+    session:
+      row.session === null && row.receiverMode === "poll"
+        ? null
+        : mailId(row.session),
+    receiverMode: (row.receiverMode ?? "native") as ReceiverMode,
     invitationHash,
     since: mailTime(row.since),
     contactRequests: row.contactRequests,
@@ -598,15 +615,24 @@ function defaults(): AgentSetupDependencies {
 function refuseSetupConflicts(
   state: SetupState,
   params: {
-    session: string;
-    receiverMode?: "native" | "external";
+    session?: string;
+    receiverMode?: ReceiverMode;
     contactRequests?: boolean;
     resume?: boolean;
   },
 ): void {
+  // Poll receiving binds no session, so its resume may omit --session.
+  const sessionConflict =
+    params.session === undefined
+      ? state.receiverMode !== "poll"
+      : state.session !== params.session;
   const conflicts = [
-    ...(state.session !== params.session
-      ? [`--session (this profile is bound to session ${state.session})`]
+    ...(sessionConflict
+      ? [
+          state.session
+            ? `--session (this profile is bound to session ${state.session})`
+            : "--session (this profile's setup binds no session)",
+        ]
       : []),
     ...(params.receiverMode !== undefined &&
     state.receiverMode !== params.receiverMode
@@ -631,8 +657,9 @@ function refuseSetupConflicts(
 export async function setupAgent(params: {
   configDir: string;
   profileName: string;
-  session: string;
-  receiverMode?: "native" | "external";
+  /** Required for native and external receiving; optional for poll. */
+  session?: string;
+  receiverMode?: ReceiverMode;
   invitation?: string;
   resume?: boolean;
   contactRequests?: boolean;
@@ -643,7 +670,7 @@ export async function setupAgent(params: {
   dependencies?: Partial<AgentSetupDependencies>;
 }) {
   const profileName = agentProfileName(params.profileName);
-  if (!SESSION_UUID.test(params.session))
+  if (params.session !== undefined && !SESSION_UUID.test(params.session))
     throw fail("--session requires the exact loaded session UUID.");
   if (
     params.resume
@@ -678,7 +705,11 @@ export async function setupAgent(params: {
   if (saved) refuseSetupConflicts(saved, params);
   const receiverMode =
     params.receiverMode ?? (params.resume ? saved?.receiverMode : undefined);
-  if ((receiverMode ?? "native") === "native") {
+  if (params.session === undefined && (receiverMode ?? "native") !== "poll")
+    throw fail(
+      "--session requires the exact loaded session UUID. Without one, use --receiver poll. No invitation was claimed.",
+    );
+  if ((receiverMode ?? "native") === "native" && params.session) {
     try {
       await dependencies.preflight(params.session);
     } catch {
@@ -718,7 +749,7 @@ export async function setupAgent(params: {
         // required; public claims do not expose a challenge ID or generation.
         state = {
           version: 1,
-          session: params.session,
+          session: params.session ?? null,
           receiverMode: params.receiverMode ?? "native",
           invitationHash: hash,
           since: new Date(dependencies.now() - 15 * 60_000).toISOString(),
@@ -778,7 +809,7 @@ export async function setupAgent(params: {
           : "challenge_pending";
     const result = (receiving: string, ownerNotifications?: string) => ({
       identity: context.identity,
-      sessionId: params.session,
+      sessionId: params.session ?? state?.session ?? null,
       verification: {
         state:
           confirmed && submittedState() === "reply_submitted"
@@ -791,7 +822,7 @@ export async function setupAgent(params: {
       },
       receiving: { state: receiving },
       ...(ownerNotifications ? { ownerNotifications } : {}),
-      resumeCommand: `primitive agent connect --profile ${profileName} --session ${params.session}${state?.receiverMode === "external" ? " --receiver external" : ""} --resume${state?.contactRequests ? " --contact-requests" : ""} --json`,
+      resumeCommand: `primitive agent connect --profile ${profileName}${state?.session ? ` --session ${state.session}` : ""}${state?.receiverMode === "external" || state?.receiverMode === "poll" ? ` --receiver ${state.receiverMode}` : ""} --resume${state?.contactRequests ? " --contact-requests" : ""} --json`,
       guidance: confirmed
         ? "Primitive verified this connection. Receiving health is reported separately. Keep this profile for all mail commands."
         : submittedState() === "reply_submitted"
@@ -841,11 +872,11 @@ export async function setupAgent(params: {
     }
     const ownerNotifications = await dependencies.enableOwner(context);
     let healthy = false;
-    if (state.receiverMode !== "external") {
+    if ((state.receiverMode ?? "native") === "native" && state.session) {
       try {
         healthy = await dependencies.startListener(
           profileName,
-          params.session,
+          state.session,
           state.contactRequests,
           params.configDir,
         );
@@ -865,9 +896,11 @@ export async function setupAgent(params: {
     return result(
       state.receiverMode === "external"
         ? "external_setup_required"
-        : healthy
-          ? "healthy"
-          : "not_ready",
+        : state.receiverMode === "poll"
+          ? "poll"
+          : healthy
+            ? "healthy"
+            : "not_ready",
       ownerNotifications,
     );
   } finally {

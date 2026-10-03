@@ -1225,3 +1225,38 @@ test("a recovered claimed identity never gets an automatic invitation or reconne
   assert.equal(continuations.length, 0);
   assert.equal(setups, 0);
 });
+
+test("poll enrollment probes no session socket and saves the poll receiver", async () => {
+  const configDir = owner();
+  const { fetcher } = server({ connectionStatuses: ["connected"] });
+  let receiverMode: string | undefined;
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "poll",
+    // No runtime session variables: the default preflight would refuse a
+    // native receiver here, and poll must not reach it.
+    env: {},
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async (params) => {
+      receiverMode = params.receiverMode;
+      return result;
+    }) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
+  assert.equal(receiverMode, "poll");
+  const journal = JSON.parse(
+    readFileSync(
+      join(
+        agentProfileDirectory(configDir, `session-${session}`),
+        "enrollment",
+        "state.json",
+      ),
+      "utf8",
+    ),
+  );
+  assert.equal(journal.receiverMode, "poll");
+});

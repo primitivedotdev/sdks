@@ -238,6 +238,51 @@ describe("one-command connected agent setup", () => {
     expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
     expect(f.fetch).toHaveBeenCalledOnce();
   });
+  it("verifies poll receiving without a session, a probe or a receiver, and resumes without one", async () => {
+    const f = fixture();
+    const { session: _none, ...withoutSession } = f.params;
+    const params = { ...withoutSession, receiverMode: "poll" as const };
+    f.dependencies.preflight.mockRejectedValue(new Error("No native socket"));
+    const result = await setupAgent(params);
+    expect(result).toMatchObject({
+      sessionId: null,
+      verification: { state: "reply_submitted" },
+      receiving: { state: "poll" },
+      ownerNotifications: "enabled",
+      resumeCommand: `primitive agent connect --profile ${f.params.profileName} --receiver poll --resume --contact-requests --json`,
+    });
+    expect(f.state()).toMatchObject({ session: null, receiverMode: "poll" });
+    expect(f.dependencies.preflight).not.toHaveBeenCalled();
+    expect(f.dependencies.startListener).not.toHaveBeenCalled();
+    // A resume needs no session and keeps the saved poll receiver.
+    expect(
+      await setupAgent({
+        ...withoutSession,
+        invitation: undefined,
+        resume: true,
+      }),
+    ).toMatchObject({ sessionId: null, receiving: { state: "poll" } });
+    // A session cannot be attached to a setup that bound none.
+    await expect(
+      setupAgent({ ...f.params, invitation: undefined, resume: true }),
+    ).rejects.toThrow("--session (this profile's setup binds no session)");
+    expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
+    expect(f.fetch).toHaveBeenCalledOnce();
+  });
+  it("refuses native and external receiving without a session before claiming", async () => {
+    const f = fixture();
+    const { session: _none, ...withoutSession } = f.params;
+    for (const receiverMode of ["native", "external"] as const)
+      await expect(
+        setupAgent({ ...withoutSession, receiverMode }),
+      ).rejects.toThrow(
+        "Without one, use --receiver poll. No invitation was claimed.",
+      );
+    await expect(setupAgent(withoutSession)).rejects.toThrow(
+      "No invitation was claimed.",
+    );
+    expect(f.fetch).not.toHaveBeenCalled();
+  });
   it("reports a recorded verification delivery failure without resending it", async () => {
     const f = fixture();
     f.dependencies.sendVerification.mockResolvedValue({

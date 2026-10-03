@@ -4,6 +4,7 @@ import {
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
 import { createOperationCommand } from "./api-command.js";
+import AgentCheckMailCommand from "./commands/agent-check-mail.js";
 import AgentConnectCommand from "./commands/agent-connect.js";
 import AgentContactsAddCommand from "./commands/agent-contacts-add.js";
 import AgentContactsListCommand from "./commands/agent-contacts-list.js";
@@ -560,6 +561,7 @@ export const COMMANDS: Record<string, typeof Command> = {
   // on top of the generated agent:claim / agent:claim-verify operations.
   "agent:upgrade": AgentUpgradeCommand,
   "agent:connect": AgentConnectCommand,
+  "agent:check-mail": AgentCheckMailCommand,
   "agent:disconnect": AgentDisconnectCommand,
   "agent:enroll": AgentEnrollCommand,
   "agent:session-register": AgentSessionRegisterCommand,

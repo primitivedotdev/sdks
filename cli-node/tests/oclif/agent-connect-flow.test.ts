@@ -10,6 +10,7 @@ import {
   type AgentConnectFlowOptions,
   agentInfoValue,
   defaultAgentProfileName,
+  invitationProfileName,
   runAgentConnect,
 } from "../../src/oclif/agent-connect-flow.js";
 import type { setupAgent } from "../../src/oclif/agent-setup.js";
@@ -112,6 +113,82 @@ function fixture(
 }
 
 describe("one-command agent connect", () => {
+  it("polls with an explicit session: no hook, no listener wait, and a check command", async () => {
+    const { options, dependencies } = fixture(
+      {
+        receiver: "poll",
+        env: { CLAUDE_CODE_SESSION_ID: session },
+        invocation: "npx -y primitive@latest",
+      },
+      setupResult({ receiving: "poll" }),
+    );
+    const output = await runAgentConnect(options);
+    expect(dependencies.setupAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profileName: `session-${session}`,
+        session,
+        receiverMode: "poll",
+      }),
+    );
+    expect(dependencies.installClaudeWakeHook).not.toHaveBeenCalled();
+    expect(dependencies.awaitMailCheck).not.toHaveBeenCalled();
+    expect(output).toMatchObject({
+      status: "connected",
+      sessionId: session,
+      externalHook: null,
+      receiving: {
+        mode: "poll",
+        state: "poll",
+        checkCommand: `PRIMITIVE_AGENT_PROFILE=session-${session} npx -y primitive@latest agent check-mail --json`,
+      },
+      resumeCommand: `npx -y primitive@latest agent connect --profile session-${session} --session ${session} --receiver poll --resume --json`,
+    });
+  });
+
+  it("defaults to poll without a session and names the profile after the invitation", async () => {
+    const { options, dependencies, readInvitation } = fixture(
+      { session: undefined, env: {}, name: "Research" },
+      setupResult({ receiving: "poll" }),
+    );
+    const output = await runAgentConnect(options);
+    const profile = invitationProfileName(invitation);
+    expect(profile).toBe(
+      `connection-${createHash("sha256").update(apiBaseUrl).update("\0").update(token).digest("hex").slice(0, 12)}`,
+    );
+    expect(readInvitation).toHaveBeenCalledTimes(1);
+    expect(dependencies.installSkill).not.toHaveBeenCalled();
+    const [setup] = dependencies.setupAgent.mock.calls[0];
+    expect(setup).toMatchObject({
+      profileName: profile,
+      receiverMode: "poll",
+      invitation,
+    });
+    expect(setup).not.toHaveProperty("session");
+    expect(dependencies.seedAgentInfo).toHaveBeenCalledWith(
+      profile,
+      "Research",
+    );
+    expect(output).toMatchObject({
+      status: "connected",
+      sessionId: null,
+      runtime: null,
+      receiving: { mode: "poll" },
+      skill: { state: "skipped", reason: "runtime_unknown" },
+    });
+  });
+
+  it("refuses a sessionless resume without a profile before reading anything", async () => {
+    const { options, dependencies, readInvitation } = fixture({
+      session: undefined,
+      resume: true,
+    });
+    await expect(runAgentConnect(options)).rejects.toThrow(
+      "Pass --profile to resume a setup that binds no session.",
+    );
+    expect(readInvitation).not.toHaveBeenCalled();
+    expect(dependencies.setupAgent).not.toHaveBeenCalled();
+  });
+
   it("runs every step for a Codex session and prints one complete result", async () => {
     const { options, dependencies, readInvitation } = fixture({
       name: "Research",

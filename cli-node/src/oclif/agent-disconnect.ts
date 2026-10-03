@@ -61,6 +61,13 @@ function boundSession(
       "Saved session setup is invalid. The connection was not changed.",
     );
   const row = raw as Record<string, unknown>;
+  // Poll receiving binds no session and runs no receiver to stop.
+  if (
+    row.receiverMode === "poll" &&
+    row.session === null &&
+    row.invitationHash === profile.invitation_hash
+  )
+    return null;
   if (
     typeof row.session !== "string" ||
     !SESSION_UUID.test(row.session) ||

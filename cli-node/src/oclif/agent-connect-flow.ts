@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
@@ -5,8 +6,15 @@ import {
   AddressNotesApiError,
   runAddressNotesRequest,
 } from "./address-notes.js";
-import { agentConnectionStatus } from "./agent-connect.js";
-import { setupAgent, verificationReplySubmitted } from "./agent-setup.js";
+import {
+  agentConnectionStatus,
+  parseAgentInvitation,
+} from "./agent-connect.js";
+import {
+  type ReceiverMode,
+  setupAgent,
+  verificationReplySubmitted,
+} from "./agent-setup.js";
 import {
   type ClaudeWakeHookResult,
   installClaudeWakeHook,
@@ -44,6 +52,7 @@ export const AGENT_CONNECT_CAPABILITIES = [
   "bundled_skill_install",
   "agent_info_seed",
   "resume",
+  "poll_receiver",
 ] as const;
 
 export const AGENT_INFO_NOTE = "AGENT_INFO";
@@ -73,7 +82,7 @@ function readPendingAgentInfo(path: string): string | null {
 function savedSetup(
   configDir: string,
   profileName: string,
-): { receiverMode: "native" | "external"; contactRequests: boolean } | null {
+): { receiverMode: ReceiverMode; contactRequests: boolean } | null {
   try {
     const saved = readMailJson(
       join(agentProfileDirectory(configDir, profileName), "setup.json"),
@@ -83,7 +92,10 @@ function savedSetup(
     const row = saved as { receiverMode?: unknown; contactRequests?: unknown };
     return {
       // Setups saved before receiver modes existed were native.
-      receiverMode: row.receiverMode === "external" ? "external" : "native",
+      receiverMode:
+        row.receiverMode === "external" || row.receiverMode === "poll"
+          ? row.receiverMode
+          : "native",
       contactRequests: row.contactRequests === true,
     };
   } catch {
@@ -140,9 +152,10 @@ export type AgentConnectFlowOptions = {
   cliPath: string;
   /** How the agent invoked this CLI, used in the resume command. */
   invocation?: string;
-  session: string;
+  /** The exact loaded session UUID. Optional only for poll receiving. */
+  session?: string;
   profileName?: string;
-  receiver?: "native" | "external";
+  receiver?: ReceiverMode;
   resume?: boolean;
   contactRequests?: boolean;
   name?: string;
@@ -159,6 +172,30 @@ export type AgentConnectFlowOptions = {
 
 export function defaultAgentProfileName(session: string): string {
   return `session-${session.toLowerCase()}`;
+}
+
+/**
+ * The profile for a setup that binds no session. It is derived from the
+ * invitation, so running the same invitation again finds the same profile and
+ * its saved claim instead of claiming twice. A one-way hash prefix reveals
+ * nothing usable about the invitation.
+ */
+export function invitationProfileName(invitation: string): string {
+  const parsed = parseAgentInvitation(invitation);
+  const hash = createHash("sha256")
+    .update(parsed.apiBaseUrl)
+    .update("\0")
+    .update(parsed.token)
+    .digest("hex");
+  return `connection-${hash.slice(0, 12)}`;
+}
+
+/** The command that checks a poll-receiving profile for new mail. */
+export function pollCheckCommand(
+  invocation: string,
+  profileName: string,
+): string {
+  return `PRIMITIVE_AGENT_PROFILE=${profileName} ${invocation} agent check-mail --json`;
 }
 
 /** A short private role note; never a transcript or secret. */
@@ -276,26 +313,44 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       ),
     ),
   } as AgentConnectFlowDependencies;
-  if (!SESSION_UUID.test(options.session))
+  const session = options.session?.trim() ? options.session : undefined;
+  if (session !== undefined && !SESSION_UUID.test(session))
     throw new AgentConnectionSetupError(
       "--session requires the exact loaded session UUID.",
     );
-  const runtime = detectAgentRuntime(options.session, env);
+  if (session === undefined && options.receiver && options.receiver !== "poll")
+    throw new AgentConnectionSetupError(
+      `--receiver ${options.receiver} requires the exact loaded session UUID. Without one, use --receiver poll. No invitation was claimed.`,
+    );
+  if (session === undefined && options.resume && !options.profileName)
+    throw new AgentConnectionSetupError(
+      "Pass --profile to resume a setup that binds no session.",
+    );
+  const runtime = session ? detectAgentRuntime(session, env) : null;
+  // Without a session, the invitation names the profile, so it is read
+  // before anything else. It is still claimed only once, below.
+  const invitation =
+    options.resume || session || options.profileName
+      ? undefined
+      : await options.readInvitation();
   const profileName = agentProfileName(
-    options.profileName ?? defaultAgentProfileName(options.session),
+    options.profileName ??
+      (session
+        ? defaultAgentProfileName(session)
+        : invitationProfileName(invitation ?? "")),
   );
   // A resumed setup keeps the receiver it was started with; only a new setup
-  // takes the runtime's default.
-  const receiver =
+  // takes the runtime's default. No session means nothing can be woken, so
+  // the agent checks for mail itself.
+  const receiver: ReceiverMode =
     options.receiver ??
     (options.resume
       ? (savedSetup(options.configDir, profileName)?.receiverMode ?? null)
       : null) ??
-    (runtime === "claude" ? "external" : "native");
+    (!session ? "poll" : runtime === "claude" ? "external" : "native");
   if (
     receiver === "external" &&
-    env.CLAUDE_CODE_SESSION_ID?.trim().toLowerCase() !==
-      options.session.toLowerCase()
+    env.CLAUDE_CODE_SESSION_ID?.trim().toLowerCase() !== session?.toLowerCase()
   )
     throw new AgentConnectionSetupError(
       "External receiving requires this exact Claude session ID. No invitation was claimed.",
@@ -341,11 +396,13 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
   const result: SetupResult = await dependencies.setupAgent({
     configDir: options.configDir,
     profileName,
-    session: options.session,
+    ...(session ? { session } : {}),
     receiverMode: receiver,
     resume: options.resume,
     contactRequests: options.contactRequests,
-    ...(options.resume ? {} : { invitation: await options.readInvitation() }),
+    ...(options.resume
+      ? {}
+      : { invitation: invitation ?? (await options.readInvitation()) }),
   });
   const verified = verificationReplySubmitted(result.verification.state);
   const ownerMemberAddress = await dependencies.refreshOwnerMemberAddress(
@@ -361,7 +418,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
         configDir: options.configDir,
         profileName: result.identity.profileName,
         agentAddress: result.identity.agentAddress,
-        sessionId: options.session,
+        sessionId: session ?? "",
         env: env as NodeJS.ProcessEnv,
       });
     else skipped.push({ step: "receiver", reason: "pending_verification" });
@@ -404,6 +461,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       skipped.push({ step: "agent_info", reason: "already_present" });
   }
 
+  const invocation = options.invocation ?? "primitive";
   const receiving =
     receiver === "external"
       ? {
@@ -411,25 +469,36 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
           mode: "external" as const,
           hook: externalHook,
         }
-      : {
-          ...result.receiving,
-          mode: "native" as const,
-          mailCheck: mailCheck?.state ?? "not_started",
-          lastSuccessfulMailCheckAt:
-            mailCheck?.lastSuccessfulMailCheckAt ?? null,
-        };
+      : receiver === "poll"
+        ? {
+            ...result.receiving,
+            mode: "poll" as const,
+            // Nothing wakes this session: the agent runs this at the start of
+            // each turn and after it sends, and handles what it prints.
+            checkCommand: pollCheckCommand(
+              invocation,
+              result.identity.profileName,
+            ),
+          }
+        : {
+            ...result.receiving,
+            mode: "native" as const,
+            mailCheck: mailCheck?.state ?? "not_started",
+            lastSuccessfulMailCheckAt:
+              mailCheck?.lastSuccessfulMailCheckAt ?? null,
+          };
   const receiverReady =
     receiver === "external"
       ? externalHook === "installed_unverified"
-      : result.receiving.state === "healthy";
+      : receiver === "poll" || result.receiving.state === "healthy";
   // Every choice that changes what a resume touches is repeated, so following
   // the command never reverses a skill opt-out, a project install or the
   // receiver. Note text is never printed; a pending note is kept privately.
   const resumeCommand = [
-    options.invocation ?? "primitive",
+    invocation,
     "agent connect",
     `--profile ${result.identity.profileName}`,
-    `--session ${options.session}`,
+    ...(session ? [`--session ${session}`] : []),
     `--receiver ${receiver}`,
     "--resume",
     // A resume reuses the saved choice, so repeat the effective one.
@@ -449,7 +518,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     ownerAddress: result.identity.ownerAddress,
     ownerMemberAddress,
     profile: result.identity.profileName,
-    sessionId: options.session,
+    sessionId: session ?? null,
     runtime,
     cli: {
       version: options.cliVersion,
