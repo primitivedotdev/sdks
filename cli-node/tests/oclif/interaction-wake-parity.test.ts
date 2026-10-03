@@ -90,6 +90,8 @@ it("keeps the hook script's recipient and read command equal to the CLI's", () =
   for (const address of [
     "agent@example.test",
     "Agent+Ops@Example.test",
+    "agent!ops@example.test",
+    "o'brien@example.test",
     "a b@example.test",
     '"quoted"@example.test',
     undefined,
@@ -117,7 +119,11 @@ it("keeps every wake line form inside the Stop hook's strict pattern", () => {
   const metadata =
     " from=peer@example.com relationship=agent thread=none in_thread=no attachments=no";
   for (const profile of [null, "work", "session-x.y_z"])
-    for (const recipient of ["", wakeRecipientField("agent@example.test")])
+    for (const recipient of [
+      "",
+      wakeRecipientField("agent@example.test"),
+      wakeRecipientField("agent!ops@example.test"),
+    ])
       for (const meta of ["", metadata])
         expect(
           pattern.test(

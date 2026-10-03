@@ -135,7 +135,8 @@ export function wakeSentence(label) {
 
 // Same form as wakeRecipientField and wakeReadCommand in
 // src/oclif/wake-context.ts; a test keeps them equal.
-const wakeAddressPattern = /^[a-z0-9._%+-]{1,64}@[a-z0-9.-]{1,253}$/;
+const wakeAddressPattern =
+  /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[a-z0-9.-]{1,253}$/;
 
 export function recipientField(address) {
   const value = typeof address === "string" ? address.toLowerCase() : "";
