@@ -13,6 +13,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { claudeWakeHookStatus } from "../../src/oclif/claude-wake-install.js";
 import { codexHookTrustHash } from "../../src/oclif/codex-machine-hooks.js";
 import {
   agentProfileDirectory,
@@ -669,6 +670,12 @@ describe("primitive machine doctor", () => {
     const { home, bin, configDir, options } = machine();
     const name = `session-${sessionA}`;
     saveConnectedAgentProfile(configDir, name, profile("revoked@example.test"));
+    // Bound to a live session, so only the move aside stops its hooks
+    // being reinstalled.
+    writeMailJson(join(agentProfileDirectory(configDir, name), "setup.json"), {
+      session: sessionA,
+      receiverMode: "external",
+    });
     saveConnectedAgentProfile(
       configDir,
       `session-${sessionB}`,
@@ -739,6 +746,71 @@ describe("primitive machine doctor", () => {
       status: "ok",
       fixed: true,
     });
+    expect(
+      readFileSync(join(home, ".claude", "settings.json"), "utf8"),
+    ).not.toContain("revoked@example.test");
+  });
+
+  it("replaces a receive hook naming an old address, agreeing with connect --status", async () => {
+    const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    saveConnectedAgentProfile(
+      configDir,
+      "my-agent",
+      profile("new@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "my-agent"), "setup.json"),
+      { session: sessionA, receiverMode: "external" },
+    );
+    const old = wakeHook(
+      bin,
+      configDir,
+      "my-agent",
+      "old@example.test",
+      sessionA,
+    );
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({
+        hooks: {
+          Stop: [{ hooks: [old] }],
+          SessionStart: [{ matcher: "resume", hooks: [old] }],
+        },
+      }),
+    );
+    const status = () =>
+      claudeWakeHookStatus({
+        configDir,
+        profileName: "my-agent",
+        agentAddress: "new@example.test",
+        sessionId: sessionA,
+        env: { CLAUDE_CONFIG_DIR: join(home, ".claude") },
+      }).installed;
+    expect(status()).toBe(false);
+    const before = byId(await runMachineDoctor(options));
+    expect(before["claude.hook.stop"].status).toBe("fail");
+    expect(before["claude.hook.stop"].detail).toContain(
+      "2 naming an old agent address",
+    );
+    expect(before["claude.hook.stop"].detail).toContain(
+      "3 missing for connected sessions",
+    );
+    const fixed = byId(await runMachineDoctor({ ...options, fix: true }));
+    expect(fixed["claude.hook.stop"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    const text = readFileSync(settingsPath, "utf8");
+    expect(text).not.toContain("old@example.test");
+    expect(JSON.parse(text).hooks.Stop).toEqual([
+      {
+        hooks: [
+          wakeHook(bin, configDir, "my-agent", "new@example.test", sessionA),
+        ],
+      },
+    ]);
+    expect(status()).toBe(true);
   });
 
   it("reinstalls a removed receive hook for a connected session, never for an ended one", async () => {

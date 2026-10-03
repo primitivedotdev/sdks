@@ -467,6 +467,7 @@ function profilesBoundToSession(
   configDir: string,
   sessionId: string,
   ownProfile: string,
+  mode: "native" | "external",
 ): Array<{ name: string; profile: ConnectedAgentProfile }> {
   let names: string[];
   try {
@@ -480,10 +481,15 @@ function profilesBoundToSession(
     try {
       const setup = readMailJson(
         join(agentProfileDirectory(configDir, name), "setup.json"),
-      ) as { session?: unknown } | null;
+      ) as { session?: unknown; receiverMode?: unknown } | null;
+      // Only a profile that receives the way this runtime's own profile
+      // would is a substitute for it; a polling profile wakes nothing.
+      const saved =
+        setup?.receiverMode === undefined ? "native" : setup.receiverMode;
       if (
         typeof setup?.session !== "string" ||
-        setup.session.toLowerCase() !== sessionId
+        setup.session.toLowerCase() !== sessionId ||
+        saved !== mode
       )
         continue;
       const profile = loadConnectedAgentProfile(configDir, name);
@@ -781,6 +787,7 @@ export async function registerSession(
         options.configDir,
         sessionId,
         ownProfile,
+        runtime === "codex" ? "native" : "external",
       )) {
         const state = await deps.connectionState(candidate.profile);
         if (state === "connected") {

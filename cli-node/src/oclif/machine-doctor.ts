@@ -617,7 +617,11 @@ export async function runMachineDoctor(
   const hookContext = {
     cli,
     blocked: hookBlocked,
-    bound: boundSessionProfiles(options.configDir),
+    // Read on every use: the profile checks may move a revoked profile
+    // aside before the hooks are repaired, and its hooks must not return.
+    get bound() {
+      return boundSessionProfiles(options.configDir);
+    },
   };
   const hookCheck = (id: HookCheckId): CheckRunner => ({
     inspect: () => {

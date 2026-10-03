@@ -276,11 +276,69 @@ function globalHookCurrent(hook: RecordValue, cli: CliLocation): boolean {
 const WAKE_MARKER = "primitive-agent-wake-v1";
 const PENDING_MARKER = "primitive-pending-mail-v1";
 const SESSION_EVENTS = ["Stop", "SessionStart", "PostToolUse"] as const;
+export type SessionEvent = (typeof SESSION_EVENTS)[number];
+
+/** Which receive hook each event carries. */
+const SESSION_HOOK_KIND = {
+  Stop: "wake",
+  SessionStart: "wake",
+  PostToolUse: "pending",
+} as const;
+
+/** The profile and session one set of receive hooks serves. */
+export type SessionHookTarget = {
+  configDir: string;
+  profile: string;
+  address: string;
+  session: string;
+};
+
+/**
+ * The one test of whether an event already carries a current receive hook
+ * for this exact profile, address and session, run by the Node binary at
+ * `node` (compared as files). `agent connect --status` and machine doctor
+ * both use it, so they never disagree about a hook being present.
+ */
+export function hasSessionReceiveHook(
+  hooks: RecordValue,
+  event: SessionEvent,
+  target: SessionHookTarget,
+  node: string,
+): boolean {
+  const entries = hooks[event];
+  if (!Array.isArray(entries)) return false;
+  const pending = SESSION_HOOK_KIND[event] === "pending";
+  const configDir = resolve(target.configDir);
+  const session = target.session.toLowerCase();
+  return entries.some(
+    (entry) =>
+      record(entry) &&
+      Array.isArray(entry.hooks) &&
+      entry.hooks.some((hook: unknown) => {
+        if (!record(hook) || hook.type !== "command") return false;
+        const args = hook.args;
+        return (
+          Array.isArray(args) &&
+          args.length === 7 &&
+          args.every((value) => typeof value === "string") &&
+          basename(args[0]) ===
+            (pending ? "claude-pending-mail.mjs" : "claude-wake.mjs") &&
+          resolve(args[2]) === configDir &&
+          args[3] === target.profile &&
+          args[4] === target.address &&
+          args[5].toLowerCase() === session &&
+          args[6] === (pending ? PENDING_MARKER : WAKE_MARKER) &&
+          samePath(hook.command, node)
+        );
+      }),
+  );
+}
 
 type SessionHook = {
   kind: "wake" | "pending";
   configDir: string;
   profile: string | null;
+  address: string | null;
   session: string | null;
 };
 
@@ -298,6 +356,7 @@ function parseSessionHook(hook: unknown): SessionHook | null {
           kind: "pending",
           configDir: strings[2] ?? "",
           profile: strings[3] ?? null,
+          address: strings[4] ?? null,
           session: strings[5] ?? null,
         }
       : null;
@@ -307,6 +366,7 @@ function parseSessionHook(hook: unknown): SessionHook | null {
       kind: "wake",
       configDir: strings[2] ?? "",
       profile: strings[3] ?? null,
+      address: strings[4] ?? null,
       session: strings[5] ?? null,
     };
   if (strings.length === 6 && strings[5] === WAKE_MARKER)
@@ -314,6 +374,7 @@ function parseSessionHook(hook: unknown): SessionHook | null {
       kind: "wake",
       configDir: strings[2] ?? "",
       profile: strings[3] ?? null,
+      address: strings[4] ?? null,
       session: null,
     };
   if (strings.length === 4 && strings[3] === WAKE_MARKER)
@@ -321,6 +382,7 @@ function parseSessionHook(hook: unknown): SessionHook | null {
       kind: "wake",
       configDir: strings[2] ?? "",
       profile: null,
+      address: null,
       session: null,
     };
   return null;
@@ -338,7 +400,12 @@ export function profileStillConnected(
   }
 }
 
-type SessionHookVerdict = "keep" | "stale" | "duplicate" | "outdated";
+type SessionHookVerdict =
+  | "keep"
+  | "stale"
+  | "duplicate"
+  | "outdated"
+  | "old_address";
 
 function sessionHookPathsCurrent(
   hook: RecordValue,
@@ -362,6 +429,7 @@ function sessionHookPathsCurrent(
 function judgeSessionHooks(
   hooks: RecordValue,
   cli: CliLocation | null,
+  bound: readonly BoundSessionProfile[] = [],
 ): Map<unknown, SessionHookVerdict> {
   const verdicts = new Map<unknown, SessionHookVerdict>();
   const seen = new Set<string>();
@@ -383,6 +451,18 @@ function judgeSessionHooks(
           : existsSync(parsed.configDir) && pathsExist;
         if (!live) {
           verdicts.set(hook, "stale");
+          continue;
+        }
+        // A hook for a connected session that names another address is
+        // replaced by one with the profile's current address.
+        const current = bound.find(
+          (item) =>
+            item.configDir === resolve(parsed.configDir) &&
+            item.profile === parsed.profile &&
+            item.session === parsed.session?.toLowerCase(),
+        );
+        if (current && parsed.address !== current.address) {
+          verdicts.set(hook, "old_address");
           continue;
         }
         const key = [
@@ -426,12 +506,7 @@ export type HookContext = {
 };
 
 /** A connected profile whose saved setup receives through Claude hooks. */
-export type BoundSessionProfile = {
-  configDir: string;
-  profile: string;
-  address: string;
-  session: string;
-};
+export type BoundSessionProfile = SessionHookTarget;
 
 /**
  * Connected profiles whose setup binds an external (hook) receiver to a
@@ -478,60 +553,22 @@ export function boundSessionProfiles(configDir: string): BoundSessionProfile[] {
   return bound;
 }
 
-const SESSION_HOOK_KIND = {
-  Stop: "wake",
-  SessionStart: "wake",
-  PostToolUse: "pending",
-} as const;
-
 /** Receive hooks each bound profile should have and does not. */
 function missingSessionHooks(
   hooks: RecordValue,
   bound: readonly BoundSessionProfile[],
-): Array<{
-  event: (typeof SESSION_EVENTS)[number];
-  bound: BoundSessionProfile;
-}> {
-  const present = new Set<string>();
-  for (const event of SESSION_EVENTS) {
-    const entries = hooks[event];
-    if (!Array.isArray(entries)) continue;
-    for (const entry of entries) {
-      if (!record(entry) || !Array.isArray(entry.hooks)) continue;
-      for (const hook of entry.hooks) {
-        const parsed = parseSessionHook(hook);
-        if (!parsed?.profile || !parsed.session) continue;
-        present.add(
-          [
-            event,
-            parsed.kind,
-            resolve(parsed.configDir),
-            parsed.profile,
-            parsed.session.toLowerCase(),
-          ].join("\0"),
-        );
-      }
-    }
-  }
+  node: string,
+): Array<{ event: SessionEvent; bound: BoundSessionProfile }> {
   return bound.flatMap((item) =>
     SESSION_EVENTS.filter(
-      (event) =>
-        !present.has(
-          [
-            event,
-            SESSION_HOOK_KIND[event],
-            item.configDir,
-            item.profile,
-            item.session,
-          ].join("\0"),
-        ),
+      (event) => !hasSessionReceiveHook(hooks, event, item, node),
     ).map((event) => ({ event, bound: item })),
   );
 }
 
 /** The exact entry `agent connect` and `session-register` install. */
 function sessionHookEntry(
-  event: (typeof SESSION_EVENTS)[number],
+  event: SessionEvent,
   item: BoundSessionProfile,
   cli: CliLocation,
 ): RecordValue {
@@ -622,12 +659,26 @@ export function inspectClaudeHooks(
     };
     return findings;
   }
-  const counts = { keep: 0, stale: 0, duplicate: 0, outdated: 0 };
-  for (const verdict of judgeSessionHooks(hooks, context.cli).values())
+  const bound = context.bound ?? [];
+  const counts = {
+    keep: 0,
+    stale: 0,
+    duplicate: 0,
+    outdated: 0,
+    old_address: 0,
+  };
+  for (const verdict of judgeSessionHooks(hooks, context.cli, bound).values())
     counts[verdict]++;
-  const missing = missingSessionHooks(hooks, context.bound ?? []).length;
+  const missing = missingSessionHooks(
+    hooks,
+    bound,
+    context.cli?.node ?? process.execPath,
+  ).length;
   const problems = [
     missing ? `${missing} missing for connected sessions` : "",
+    counts.old_address
+      ? `${counts.old_address} naming an old agent address`
+      : "",
     counts.stale ? `${counts.stale} for disconnected or removed sessions` : "",
     counts.duplicate ? `${counts.duplicate} duplicates` : "",
     counts.outdated ? `${counts.outdated} pointing at an old CLI path` : "",
@@ -727,13 +778,19 @@ export function repairClaudeHooks(
       (event) => eventEntries(hooks, event) === "invalid",
     );
     if (!invalid) {
-      const verdicts = judgeSessionHooks(hooks, context.cli);
+      const bound = context.bound ?? [];
+      const verdicts = judgeSessionHooks(hooks, context.cli, bound);
       for (const event of SESSION_EVENTS) {
         const entries = eventEntries(hooks, event);
         if (entries === "invalid" || entries.length === 0) continue;
         const result = rewriteEntries(entries, (hook) => {
           const verdict = verdicts.get(hook);
-          if (verdict === "stale" || verdict === "duplicate") return undefined;
+          if (
+            verdict === "stale" ||
+            verdict === "duplicate" ||
+            verdict === "old_address"
+          )
+            return undefined;
           if (verdict !== "outdated" || !cli || !record(hook)) return hook;
           const parsed = parseSessionHook(hook);
           const args = [...(hook.args as string[])];
@@ -749,13 +806,13 @@ export function repairClaudeHooks(
       // A connected session whose hook was removed gets it back, exactly as
       // `agent connect` wrote it; mail would otherwise never wake it.
       if (cli)
-        for (const { event, bound } of missingSessionHooks(
-          hooks,
-          context.bound ?? [],
-        )) {
-          const entries = eventEntries(hooks, event);
+        for (const missing of missingSessionHooks(hooks, bound, cli.node)) {
+          const entries = eventEntries(hooks, missing.event);
           if (entries === "invalid") continue;
-          hooks[event] = [...entries, sessionHookEntry(event, bound, cli)];
+          hooks[missing.event] = [
+            ...entries,
+            sessionHookEntry(missing.event, missing.bound, cli),
+          ];
           changed.add("claude.hook.stop");
         }
     }

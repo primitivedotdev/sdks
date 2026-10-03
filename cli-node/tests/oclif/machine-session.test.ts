@@ -236,6 +236,33 @@ describe("agent session-register", () => {
     });
     expect(a.calls.enroll).toHaveLength(1);
 
+    // A polling profile on the session wakes nothing, so it is not reused.
+    const polling = setup();
+    const c = fakeDependencies(polling.configDir);
+    saveConnectedAgentProfile(
+      polling.configDir,
+      "poller",
+      profile("poll@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(polling.configDir, "poller"), "setup.json"),
+      { session, receiverMode: "poll" },
+    );
+    const notReused = await registerSession({
+      configDir: polling.configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: c.dependencies,
+    });
+    expect(notReused).toMatchObject({
+      status: "registered",
+      profile: `session-${session}`,
+      receiving: "external_hook",
+    });
+    expect(c.calls.enroll).toHaveLength(1);
+    expect(c.calls.hooks).toEqual([session]);
+
     const offline = setup();
     const b = fakeDependencies(offline.configDir);
     saveConnectedAgentProfile(

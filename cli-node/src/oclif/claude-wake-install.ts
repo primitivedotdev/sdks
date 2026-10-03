@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { samePath } from "./claude-machine-hooks.js";
+import { hasSessionReceiveHook } from "./claude-machine-hooks.js";
 import {
   agentProfileDirectory,
   agentProfileName,
@@ -59,41 +59,16 @@ export function claudeWakeHookStatus(options: {
     const settings: unknown = JSON.parse(read.text);
     if (!record(settings) || !record(settings.hooks)) return unavailable;
     const hooks = settings.hooks;
-    const owns = (event: string, script: string, marker: string) => {
-      const entries = hooks[event];
-      return (
-        Array.isArray(entries) &&
-        entries.some(
-          (entry) =>
-            record(entry) &&
-            Array.isArray(entry.hooks) &&
-            entry.hooks.some((candidate: unknown) => {
-              if (!record(candidate) || !Array.isArray(candidate.args))
-                return false;
-              const args = candidate.args;
-              const offset = 2;
-              return (
-                candidate.type === "command" &&
-                // Doctor writes a stable PATH link to the same Node binary,
-                // so compare files rather than spellings.
-                samePath(candidate.command, process.execPath) &&
-                args.length === 7 &&
-                typeof args[0] === "string" &&
-                basename(args[0]) === script &&
-                args[offset] === configDir &&
-                args[offset + 1] === profileName &&
-                args[offset + 2] === agentAddress &&
-                args[offset + 3] === sessionId &&
-                args[offset + 4] === marker
-              );
-            }),
-        )
-      );
+    const target = {
+      configDir,
+      profile: profileName,
+      address: agentAddress,
+      session: sessionId,
     };
-    const installed =
-      owns("Stop", "claude-wake.mjs", HOOK_MARKER) &&
-      owns("SessionStart", "claude-wake.mjs", HOOK_MARKER) &&
-      owns(PENDING_EVENT, "claude-pending-mail.mjs", PENDING_MARKER);
+    // The same test machine doctor uses to decide a hook is missing.
+    const installed = (["Stop", "SessionStart", "PostToolUse"] as const).every(
+      (event) => hasSessionReceiveHook(hooks, event, target, process.execPath),
+    );
     let lastFiredAt: string | null = null;
     const fired = readMailJson(
       join(
