@@ -632,6 +632,7 @@ export async function runMachineDoctor(
     get bound() {
       return boundSessionProfiles(options.configDir);
     },
+    restoreProfiles: options.profiles,
   };
   const hookCheck = (id: HookCheckId): CheckRunner => ({
     inspect: () => {
