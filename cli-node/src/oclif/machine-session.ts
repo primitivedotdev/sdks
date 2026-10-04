@@ -766,6 +766,8 @@ function withDefined<T extends object>(
   } as T;
 }
 
+const HELD_DETAIL =
+  "This session already receives as another connected profile, so this profile's receive hooks were not added. Run `primitive machine doctor --fix --profile <profile>` to bind it deliberately.";
 const ENDED_DETAIL =
   "This session ended, so its agent was disconnected. A new address is never created for the same session.";
 const ENDED_PENDING_DETAIL =
@@ -929,18 +931,32 @@ export async function registerSession(
         (current) => (current ? { ...current, agentInfo: seeded } : current),
       );
     };
-    const installHook = (profile: ConnectedAgentProfile): boolean =>
-      runtime !== "claude" ||
-      receiverMode(agentProfileDirectory(options.configDir, profileName)) !==
-        "external" ||
-      deps.installClaudeHook({
+    // Runs on every start and resume without anyone naming the profile, so
+    // it never binds this profile beside another one the session already
+    // receives as (the owner may have removed these hooks on purpose).
+    type HookOutcome = "installed" | "held" | "failed";
+    const claudeHook = (agentAddress: string): HookOutcome => {
+      const outcome = deps.installClaudeHook({
         cliPath: options.cliPath,
         configDir: options.configDir,
         profileName,
-        agentAddress: profile.agent_address,
+        agentAddress,
         sessionId,
         env: env as NodeJS.ProcessEnv,
-      }) === "installed_unverified";
+        yieldToOtherProfiles: true,
+      });
+      return outcome === "installed_unverified"
+        ? "installed"
+        : outcome === "held_for_other_profile"
+          ? "held"
+          : "failed";
+    };
+    const installHook = (profile: ConnectedAgentProfile): HookOutcome =>
+      runtime !== "claude" ||
+      receiverMode(agentProfileDirectory(options.configDir, profileName)) !==
+        "external"
+        ? "installed"
+        : claudeHook(profile.agent_address);
 
     const existing = loadConnectedAgentProfile(options.configDir, profileName);
     if (existing) {
@@ -982,9 +998,12 @@ export async function registerSession(
           ...withAddress,
           receiving: RECEIVING[runtime],
           status: "already_registered",
-          detail: hooked
-            ? "This session is already connected."
-            : "This session is already connected, but its receive hook could not be installed. Run `primitive machine doctor`.",
+          detail:
+            hooked === "installed"
+              ? "This session is already connected."
+              : hooked === "held"
+                ? HELD_DETAIL
+                : "This session is already connected, but its receive hook could not be installed. Run `primitive machine doctor`.",
         };
       }
       // A pending enrollment this command started resumes below.
@@ -1079,26 +1098,21 @@ export async function registerSession(
     const address = result.identity.agentAddress;
     const submitted = verificationReplySubmitted(result.verification.state);
     const status = result.connection.status;
-    let hooked = true;
+    let hooked: HookOutcome = "installed";
     if (runtime === "claude" && submitted && status !== "owner_inactive")
-      hooked =
-        deps.installClaudeHook({
-          cliPath: options.cliPath,
-          configDir: options.configDir,
-          profileName,
-          agentAddress: address,
-          sessionId,
-          env: env as NodeJS.ProcessEnv,
-        }) === "installed_unverified";
+      hooked = claudeHook(address);
     if (status === "connected") await finishAgentInfo();
     const withAddress = { ...known, address, receiving: RECEIVING[runtime] };
     if (status === "connected")
       return {
         ...withAddress,
         status: "registered",
-        detail: hooked
-          ? `Connected as ${address}.`
-          : `Connected as ${address}, but the receive hook could not be installed. Run \`primitive machine doctor\`.`,
+        detail:
+          hooked === "installed"
+            ? `Connected as ${address}.`
+            : hooked === "held"
+              ? `Connected as ${address}. ${HELD_DETAIL}`
+              : `Connected as ${address}, but the receive hook could not be installed. Run \`primitive machine doctor\`.`,
       };
     if (status === "revoked" || status === "owner_inactive")
       return {

@@ -1,4 +1,11 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -6,6 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { disconnectAgent } from "../../src/oclif/agent-disconnect.js";
 import type { enrollAgent } from "../../src/oclif/agent-enroll.js";
 import { saveCliCredentials } from "../../src/oclif/auth.js";
+import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
 import {
   AgentConnectionSetupError,
   agentProfileDirectory,
@@ -203,6 +211,109 @@ describe("agent session-register", () => {
       },
     });
     expect(ended.status).toBe("not_managed");
+  });
+
+  it("does not re-add the session profile's hooks on resume while the session receives as another profile", async () => {
+    const { root, configDir, repo } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const bin = join(root, "bin");
+    const claudeDir = join(root, "claude");
+    mkdirSync(bin);
+    mkdirSync(claudeDir);
+    const cliPath = join(bin, "run.js");
+    for (const file of ["run.js", "claude-wake.mjs", "claude-pending-mail.mjs"])
+      writeFileSync(join(bin, file), "");
+    const env = {
+      CLAUDE_CODE_SESSION_ID: session,
+      CLAUDE_CONFIG_DIR: claudeDir,
+    };
+    const options = {
+      configDir,
+      runtime: "claude" as const,
+      cwd: repo,
+      env,
+      cliPath,
+      // The real installer, so the guard is exercised on real settings.
+      dependencies: {
+        ...dependencies,
+        installClaudeHook: installClaudeWakeHook,
+      },
+    };
+    const settingsPath = join(claudeDir, "settings.json");
+    const profilesIn = () =>
+      [
+        ...new Set(
+          (["SessionStart", "Stop", "PostToolUse"] as const).flatMap((event) =>
+            (
+              JSON.parse(readFileSync(settingsPath, "utf8")).hooks[event] ?? []
+            ).flatMap((entry: { hooks: Array<{ args: string[] }> }) =>
+              entry.hooks.map((hook) => hook.args[3]),
+            ),
+          ),
+        ),
+      ].sort();
+
+    // The session registers and receives as its own session-<id> profile.
+    expect((await registerSession(options)).status).toBe("registered");
+    expect(profilesIn()).toEqual([`session-${session}`]);
+
+    // The owner connects profile A to the same session and removes the
+    // session profile's hooks, so the session receives only as A.
+    saveConnectedAgentProfile(
+      configDir,
+      "profile-a",
+      profile("a@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "profile-a"), "setup.json"),
+      {
+        session,
+        receiverMode: "external",
+      },
+    );
+    expect(
+      installClaudeWakeHook({
+        cliPath,
+        configDir,
+        profileName: "profile-a",
+        agentAddress: "a@example.test",
+        sessionId: session,
+        env,
+      }),
+    ).toBe("installed_unverified");
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    for (const event of ["SessionStart", "Stop", "PostToolUse"])
+      settings.hooks[event] = settings.hooks[event].filter(
+        (entry: { hooks: Array<{ args: string[] }> }) =>
+          entry.hooks[0]?.args[3] !== `session-${session}`,
+      );
+    writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+    const chosen = readFileSync(settingsPath, "utf8");
+    expect(profilesIn()).toEqual(["profile-a"]);
+
+    // A resume (or compaction) runs session-register again. The session
+    // profile is still connected and still the session's default, but it
+    // must not be bound beside A.
+    const resumed = await registerSession(options);
+    expect(resumed).toMatchObject({
+      status: "already_registered",
+      profile: `session-${session}`,
+    });
+    expect(resumed.detail).toContain(
+      "already receives as another connected profile",
+    );
+    expect(readFileSync(settingsPath, "utf8")).toBe(chosen);
+
+    // Once A is disconnected its hooks are stale, and the session's own
+    // profile is restored as before.
+    rmSync(agentProfileDirectory(configDir, "profile-a"), {
+      recursive: true,
+      force: true,
+    });
+    expect((await registerSession(options)).detail).toBe(
+      "This session is already connected.",
+    );
+    expect(profilesIn()).toEqual(["profile-a", `session-${session}`]);
   });
 
   it("enrolls as before when the bound profile is not connected, and stops when it cannot be checked", async () => {

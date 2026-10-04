@@ -1,7 +1,10 @@
 import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { hasSessionReceiveHook } from "./claude-machine-hooks.js";
+import {
+  hasSessionReceiveHook,
+  otherSessionReceivers,
+} from "./claude-machine-hooks.js";
 import {
   agentProfileDirectory,
   agentProfileName,
@@ -28,7 +31,15 @@ function record(value: unknown): value is RecordValue {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-export type ClaudeWakeHookResult = "installed_unverified" | "unavailable";
+/**
+ * `held_for_other_profile`: nothing was written, because the session already
+ * receives as another connected profile and this profile has no receive
+ * hook there (only when `yieldToOtherProfiles` is set).
+ */
+export type ClaudeWakeHookResult =
+  | "installed_unverified"
+  | "held_for_other_profile"
+  | "unavailable";
 
 export function claudeWakeHookStatus(options: {
   configDir: string;
@@ -151,6 +162,15 @@ export function installClaudeWakeHook(options: {
   agentAddress: string;
   sessionId: string;
   env?: NodeJS.ProcessEnv;
+  /**
+   * Set by automatic installs (session-register on every start and resume),
+   * which nobody asked for by profile. When the session already receives as
+   * another connected profile and this profile has no receive hook there,
+   * nothing is written: its hooks were removed on purpose, or adding them
+   * would give the session a second address. Commands that name the profile
+   * (agent connect, agent enroll) leave it unset and always install.
+   */
+  yieldToOtherProfiles?: boolean;
 }): ClaudeWakeHookResult {
   try {
     const cliPath = realpathSync(options.cliPath);
@@ -167,6 +187,7 @@ export function installClaudeWakeHook(options: {
     const claudeDir = resolve(
       env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
     );
+    let held = false;
     const installed = editClaudeSettings(claudeDir, (settings) => {
       const hooks = settings.hooks ?? {};
       if (!record(hooks)) throw new Error("Invalid hook settings");
@@ -175,6 +196,19 @@ export function installClaudeWakeHook(options: {
           throw new Error(`Invalid ${event} hooks`);
       if (!Array.isArray(hooks[PENDING_EVENT] ?? []))
         throw new Error(`Invalid ${PENDING_EVENT} hooks`);
+      // Judged under the settings lock on the file as read, so a concurrent
+      // install for the other profile cannot slip between check and write.
+      if (
+        options.yieldToOtherProfiles &&
+        otherSessionReceivers(hooks, {
+          configDir,
+          profile: profileName,
+          session: sessionId,
+        }).length > 0
+      ) {
+        held = true;
+        return null;
+      }
       const hook = {
         type: "command",
         command: process.execPath,
@@ -283,7 +317,8 @@ export function installClaudeWakeHook(options: {
         hooks: nextHooks,
       };
     });
-    return installed ? "installed_unverified" : "unavailable";
+    if (!installed) return "unavailable";
+    return held ? "held_for_other_profile" : "installed_unverified";
   } catch {
     return "unavailable";
   }
