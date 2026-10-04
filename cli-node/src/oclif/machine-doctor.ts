@@ -381,7 +381,12 @@ async function memberCredentialsFor(
   }
 }
 
-/** Find an address in the member's connection list; null when it cannot be confirmed. */
+/**
+ * Find an address in the member's connection list, hidden agents included.
+ * "absent" means the whole list was read and the address is not in it, which
+ * is what an agent removed in the app looks like. Null when the list could not
+ * be read in full.
+ */
 async function ownerListedStatus(
   credentials: StoredCliCredentials,
   address: string,
@@ -391,6 +396,7 @@ async function ownerListedStatus(
   for (let page = 0; page < 10; page++) {
     const url = new URL(`${credentials.api_base_url}/agent-connections`);
     url.searchParams.set("limit", "50");
+    url.searchParams.set("include_hidden", "true");
     if (cursor) url.searchParams.set("cursor", cursor);
     try {
       const response = await fetchImpl(url, {
@@ -418,6 +424,7 @@ async function ownerListedStatus(
         if (row?.address === address && typeof row.status === "string")
           return row.status;
       const next = body.meta?.cursor;
+      if (next === null || next === undefined) return "absent";
       if (typeof next !== "string" || !next || next === cursor) return null;
       cursor = next;
     } catch {
@@ -802,7 +809,7 @@ export async function runMachineDoctor(
           )
         : check("profiles.orphaned", "ok", "No saved agent profiles.");
     let member: StoredCliCredentials | null | undefined;
-    let unconfirmed = 0;
+    const unconfirmed: string[] = [];
     let unknown = 0;
     let connected = 0;
     // A few requests at a time: this runs on a timer and a machine can
@@ -835,8 +842,10 @@ export async function runMachineDoctor(
                 fetchImpl,
               )
             : null;
-        if (listed === "revoked") orphans.push(entry);
-        else unconfirmed++;
+        // A rejected key whose agent is revoked, or gone from the complete
+        // list (removed in the app), can never work again.
+        if (listed === "revoked" || listed === "absent") orphans.push(entry);
+        else unconfirmed.push(entry.profile.agent_address);
       } else if (entry.state === "unavailable") unknown++;
       else connected++;
     }
@@ -844,20 +853,20 @@ export async function runMachineDoctor(
       return check(
         "profiles.orphaned",
         "fail",
-        `${orphans.length} saved profiles were disconnected in Primitive: ${orphans
+        `${orphans.length} saved profiles were disconnected or removed in Primitive: ${orphans
           .map((entry) => entry.profile.agent_address)
           .join(
             ", ",
           )}. A repair moves them aside locally; nothing changes in Primitive.`,
         { fixable: true },
       );
-    if (unconfirmed || unreadable)
+    if (unconfirmed.length || unreadable)
       return check(
         "profiles.orphaned",
         "warn",
         [
-          unconfirmed
-            ? `${unconfirmed} profiles' credentials were rejected but disconnection could not be confirmed`
+          unconfirmed.length
+            ? `${unconfirmed.length} saved profiles have credentials Primitive no longer accepts (${unconfirmed.slice(0, 5).join(", ")}${unconfirmed.length > 5 ? `, and ${unconfirmed.length - 5} more` : ""}). They cannot send or receive. To clean them up, sign in with \`primitive login\` as a member of their organization and run \`primitive machine doctor --fix\`, which confirms each one is disconnected before moving it aside`
             : "",
           unreadable ? `${unreadable} profiles could not be read` : "",
         ]
