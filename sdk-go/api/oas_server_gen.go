@@ -869,6 +869,10 @@ type Handler interface {
 	// diagnosing a specific send, e.g. inspecting the receiver's
 	// SMTP response on a `bounced` row or pulling the gate
 	// denial detail on a `gate_denied` row.
+	// Under an address-bound agent connection credential, only
+	// ids in the same scope as /sent-emails resolve: this agent's
+	// own sends, and delivered sends addressed to it with
+	// matching inbound delivery evidence. Other ids return 404.
 	//
 	// GET /sent-emails/{id}
 	GetSentEmail(ctx context.Context, params GetSentEmailParams) (GetSentEmailRes, error)
@@ -1193,6 +1197,12 @@ type Handler interface {
 	// forwards through /send-mail). Includes every recorded
 	// attempt, including gate-denied attempts that the agent
 	// never called and rows still in `queued` state.
+	// Under an address-bound agent connection credential, the
+	// list holds this agent's own sends plus delivered sends from
+	// other addresses in the org that name this agent in to, cc
+	// or bcc and have matching inbound delivery evidence at this
+	// agent. Pass `from` with the agent's own address to list
+	// only its own sends.
 	// For inbound mail received at your verified domains, see
 	// /emails. There is no unified send/receive history endpoint;
 	// the two surfaces are intentionally separate because the

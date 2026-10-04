@@ -94,6 +94,11 @@ def sync_detailed(
     SMTP response on a `bounced` row or pulling the gate
     denial detail on a `gate_denied` row.
 
+    Under an address-bound agent connection credential, only
+    ids in the same scope as /sent-emails resolve: this agent's
+    own sends, and delivered sends addressed to it with
+    matching inbound delivery evidence. Other ids return 404.
+
     Args:
         id (UUID):
 
@@ -132,6 +137,11 @@ def sync(
     SMTP response on a `bounced` row or pulling the gate
     denial detail on a `gate_denied` row.
 
+    Under an address-bound agent connection credential, only
+    ids in the same scope as /sent-emails resolve: this agent's
+    own sends, and delivered sends addressed to it with
+    matching inbound delivery evidence. Other ids return 404.
+
     Args:
         id (UUID):
 
@@ -164,6 +174,11 @@ async def asyncio_detailed(
     diagnosing a specific send, e.g. inspecting the receiver's
     SMTP response on a `bounced` row or pulling the gate
     denial detail on a `gate_denied` row.
+
+    Under an address-bound agent connection credential, only
+    ids in the same scope as /sent-emails resolve: this agent's
+    own sends, and delivered sends addressed to it with
+    matching inbound delivery evidence. Other ids return 404.
 
     Args:
         id (UUID):
@@ -202,6 +217,11 @@ async def asyncio(
     diagnosing a specific send, e.g. inspecting the receiver's
     SMTP response on a `bounced` row or pulling the gate
     denial detail on a `gate_denied` row.
+
+    Under an address-bound agent connection credential, only
+    ids in the same scope as /sent-emails resolve: this agent's
+    own sends, and delivered sends addressed to it with
+    matching inbound delivery evidence. Other ids return 404.
 
     Args:
         id (UUID):
