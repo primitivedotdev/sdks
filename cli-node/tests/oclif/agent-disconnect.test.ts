@@ -245,6 +245,42 @@ describe("connected agent self-disconnect", () => {
     }
   });
 
+  it("says a server failure kept a working credential and is safe to retry", async () => {
+    const directory = configDir();
+    saved(directory);
+    const { fetch } = server(
+      {
+        success: false,
+        error: { code: "internal_error", message: "Private detail" },
+      },
+      500,
+    );
+    const failure = disconnectAgent({
+      configDir: directory,
+      profileName: "work",
+      fetch,
+    });
+    await expect(failure).rejects.toThrow(
+      "Primitive failed while revoking this agent (HTTP 500, internal_error). The credential was preserved and still works. Retrying the same command is safe.",
+    );
+    await expect(failure).rejects.not.toThrow("Private detail");
+    expect(loadConnectedAgentProfile(directory, "work")).toMatchObject(profile);
+  });
+
+  it("names the status when Primitive refuses the revocation", async () => {
+    const directory = configDir();
+    saved(directory);
+    const { fetch } = server(
+      { success: false, error: { code: "forbidden", message: "x" } },
+      403,
+    );
+    await expect(
+      disconnectAgent({ configDir: directory, profileName: "work", fetch }),
+    ).rejects.toThrow(
+      "Revocation was refused by Primitive (HTTP 403, forbidden).",
+    );
+  });
+
   it("preserves the credential if a success response does not prove revocation", async () => {
     const directory = configDir();
     saved(directory);
