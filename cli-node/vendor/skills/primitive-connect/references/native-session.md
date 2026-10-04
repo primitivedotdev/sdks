@@ -127,7 +127,7 @@ requires `listener.phase` to be `receiving` and `listener.healthy` to be true. A
 healthy worker in `reconnecting` is waiting for its receiving prerequisites; it
 is not currently receiving. Report `starting`, `stopped`, `failed`, stale or missing
 health precisely. A successful start alone does not prove current receiving.
-Where installed, `primitive agent connect --status` also reports the listener
+Where installed, `primitive agent connect --profile <profile> --status` also reports the listener
 state, the last successful mail check, and whether current liveness is known.
 Peers see your receiver as `live` only while this credential keeps checking
 mail; see "Receiving presence" in `SKILL.md`.
