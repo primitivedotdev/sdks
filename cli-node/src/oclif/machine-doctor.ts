@@ -381,19 +381,22 @@ async function memberCredentialsFor(
   }
 }
 
+/** Pages to read before giving up on confirming absence (10,000 agents). */
+const OWNER_LIST_MAX_PAGES = 200;
+
 /**
- * Find an address in the member's connection list, hidden agents included.
- * "absent" means the whole list was read and the address is not in it, which
- * is what an agent removed in the app looks like. Null when the list could not
- * be read in full.
+ * The member's whole connection list, hidden agents included, as address to
+ * status. Read once per run. Null unless every page was read and the last one
+ * explicitly ended the list (`meta.cursor: null`), because absence from a
+ * partial list proves nothing.
  */
-async function ownerListedStatus(
+async function ownerConnectionStatuses(
   credentials: StoredCliCredentials,
-  address: string,
   fetchImpl: typeof fetch,
-): Promise<string | null> {
+): Promise<Map<string, string> | null> {
+  const statuses = new Map<string, string>();
   let cursor: string | undefined;
-  for (let page = 0; page < 10; page++) {
+  for (let page = 0; page < OWNER_LIST_MAX_PAGES; page++) {
     const url = new URL(`${credentials.api_base_url}/agent-connections`);
     url.searchParams.set("limit", "50");
     url.searchParams.set("include_hidden", "true");
@@ -421,10 +424,10 @@ async function ownerListedStatus(
       };
       if (body.success !== true || !Array.isArray(body.data)) return null;
       for (const row of body.data as Array<Record<string, unknown>>)
-        if (row?.address === address && typeof row.status === "string")
-          return row.status;
+        if (typeof row?.address === "string" && typeof row.status === "string")
+          statuses.set(row.address, row.status);
       const next = body.meta?.cursor;
-      if (next === null || next === undefined) return "absent";
+      if (next === null) return statuses;
       if (typeof next !== "string" || !next || next === cursor) return null;
       cursor = next;
     } catch {
@@ -813,6 +816,7 @@ export async function runMachineDoctor(
     // Rejected profiles the saved sign-in cannot check at all: another
     // organization or another Primitive API (such as staging).
     let elsewhere = 0;
+    let ownerList: Map<string, string> | null | undefined;
     let unknown = 0;
     let connected = 0;
     // A few requests at a time: this runs on a timer and a machine can
@@ -840,13 +844,11 @@ export async function runMachineDoctor(
           member.org_id === entry.profile.org_id &&
           member.api_base_url === entry.profile.api_base_url;
         if (member && !checkable) elsewhere++;
+        if (checkable && member && ownerList === undefined)
+          ownerList = await ownerConnectionStatuses(member, fetchImpl);
         const listed =
-          checkable && member
-            ? await ownerListedStatus(
-                member,
-                entry.profile.agent_address,
-                fetchImpl,
-              )
+          checkable && ownerList
+            ? (ownerList.get(entry.profile.agent_address) ?? "absent")
             : null;
         // A rejected key whose agent is revoked, or gone from the complete
         // list (removed in the app), can never work again.
@@ -872,7 +874,7 @@ export async function runMachineDoctor(
         "warn",
         [
           unconfirmed.length
-            ? `${unconfirmed.length} saved profiles have credentials Primitive no longer accepts (${unconfirmed.slice(0, 5).join(", ")}${unconfirmed.length > 5 ? `, and ${unconfirmed.length - 5} more` : ""}). They cannot send or receive. To clean them up, sign in with \`primitive login\` as a member of their organization and run \`primitive machine doctor --fix\`, which confirms each one is disconnected before moving it aside${elsewhere ? `. ${elsewhere} of them belong to an organization or Primitive API your current sign-in is not for, so sign in there to check them` : ""}`
+            ? `${unconfirmed.length} saved profiles have credentials Primitive no longer accepts (${unconfirmed.slice(0, 5).join(", ")}${unconfirmed.length > 5 ? `, and ${unconfirmed.length - 5} more` : ""}). They cannot send or receive. To clean them up, sign in with \`primitive login --force\` as a member of their organization and run \`primitive machine doctor --fix\`, which confirms each one is disconnected before moving it aside${elsewhere ? `. ${elsewhere} of them belong to an organization or Primitive API your current sign-in is not for, so sign in there to check them` : ""}`
             : "",
           unreadable ? `${unreadable} profiles could not be read` : "",
         ]

@@ -1519,6 +1519,61 @@ describe("primitive machine doctor", () => {
     expect(report["profiles.orphaned"].detail).toContain(
       "removed@example.test",
     );
+    const fixed = byId(
+      await runMachineDoctor({ ...options, fix: true, fetch: fetchStub }),
+    );
+    expect(fixed["profiles.orphaned"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    expect(
+      existsSync(join(configDir, "agent-connections", "profiles", removed)),
+    ).toBe(false);
+    expect(
+      readdirSync(join(configDir, "agent-connections", "orphaned")),
+    ).toEqual([`${removed}-20261002T120000Z`]);
+  });
+
+  it("never treats a page without an explicit end cursor as the whole list", async () => {
+    const { configDir, options } = machine();
+    saveConnectedAgentProfile(
+      configDir,
+      `session-${sessionA}`,
+      profile("later-page@example.test"),
+    );
+    saveCliCredentials(configDir, {
+      auth_method: "oauth",
+      access_token: ["member", "token"].join("-"),
+      refresh_token: ["inert", "refresh"].join("-"),
+      token_type: "Bearer",
+      expires_at: "2099-01-01T00:00:00.000Z",
+      oauth_grant_id: "grant",
+      oauth_client_id: "fixture",
+      org_id: "33333333-3333-4333-8333-333333333333",
+      org_name: null,
+      api_base_url: "https://api.primitive.dev/v1",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    const fetchStub = (async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/agent-connections"))
+        return new Response(
+          JSON.stringify({ success: true, data: [], meta: {} }),
+          { status: 200 },
+        );
+      return new Response(JSON.stringify({ success: false }), {
+        status: 401,
+      });
+    }) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fix: true, fetch: fetchStub }),
+    );
+    expect(report["profiles.orphaned"].status).toBe("warn");
+    expect(
+      existsSync(
+        join(configDir, "agent-connections", "profiles", `session-${sessionA}`),
+      ),
+    ).toBe(true);
   });
 
   it("says when rejected profiles belong to another API than the sign-in", async () => {
