@@ -89,6 +89,9 @@ async function run(
   });
 }
 
+/** How long `set --stdin` waits for input on a nonblocking pipe. */
+const STDIN_WAIT_MS = 30_000;
+
 /** Where `set --stdin` reads the claim from; replaced in tests. */
 export const workingClaimStdin = {
   read: (): string => {
@@ -100,15 +103,25 @@ export const workingClaimStdin = {
     // before a large file or endless stream can use memory or hang.
     const limit = CLAIM_MAX_LENGTH * 4 + 2;
     const buffer = Buffer.alloc(limit + 1);
+    // A nonblocking pipe with nothing ready answers EAGAIN: pause between
+    // attempts instead of spinning, and give up rather than wait forever.
+    const pause = new Int32Array(new SharedArrayBuffer(4));
+    const deadline = Date.now() + STDIN_WAIT_MS;
     let length = 0;
     while (length <= limit) {
       let read = 0;
       try {
         read = readSync(0, buffer, length, limit + 1 - length, null);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "EAGAIN") continue;
-        if ((error as NodeJS.ErrnoException).code === "EOF") break;
-        throw error;
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === "EOF") break;
+        if (code !== "EAGAIN") throw error;
+        if (Date.now() > deadline)
+          throw new Error(
+            "--stdin received no end of input; pipe the claim from a file.",
+          );
+        Atomics.wait(pause, 0, 0, 20);
+        continue;
       }
       if (read === 0) break;
       length += read;
