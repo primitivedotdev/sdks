@@ -46,7 +46,7 @@ export async function clearPendingAfterRead(
 }
 
 const NO_SIGNAL_DESCRIPTION =
-  "With --brief, do not report working to the sender. By default, reading mail from the verified owner or a same-organization peer that a receiver surfaced to this session reports working in the background until you answer (also disabled by PRIMITIVE_NO_AUTO_SIGNALS=1).";
+  "With --brief, do not report working to the sender. By default, reading mail from the verified owner or a same-organization member (not another agent) that a receiver surfaced to this session reports working in the background until you answer (also disabled by PRIMITIVE_NO_AUTO_SIGNALS=1).";
 
 type BriefFlags = {
   id: string;

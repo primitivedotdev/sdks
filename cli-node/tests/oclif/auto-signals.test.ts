@@ -107,6 +107,18 @@ describe("automatic signal trust gate", () => {
     ).toBe(true);
   });
 
+  it("refuses mail from a verified connected agent, even a network peer", () => {
+    const fromAgent = detail({ sender_connected_agent_verified: true });
+    expect(autoSignalEligible(fromAgent, peerIdentity, network)).toBe(false);
+    expect(
+      autoSignalEligible(
+        detail({ sender_connected_agent_verified: false }),
+        peerIdentity,
+        network,
+      ),
+    ).toBe(true);
+  });
+
   it("accepts the authenticated pinned owner admitted as a saved contact", () => {
     expect(autoSignalEligible(detail(), identity, { kind: "allowed" })).toBe(
       true,
