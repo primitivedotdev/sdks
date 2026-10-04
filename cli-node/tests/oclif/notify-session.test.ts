@@ -75,7 +75,11 @@ async function open(
   extras: Partial<
     Pick<
       Parameters<typeof openSessionNotifications>[0],
-      "readPart" | "refreshEvent" | "contactPreferences" | "senders"
+      | "readPart"
+      | "refreshEvent"
+      | "contactPreferences"
+      | "senders"
+      | "profileName"
     >
   > = {},
 ) {
@@ -171,7 +175,7 @@ describe("native email notifications", () => {
     expect(recheck).toHaveBeenCalledOnce();
   });
   it("queues a typed, content-free conversation status through the durable external tool event", async () => {
-    const first = await open();
+    const first = await open(undefined, { profileName: "session-work" });
     const detail = currentDetail();
     const sentEmailId = randomUUID();
     detail.reply_to_sent_email_id = sentEmailId;
@@ -192,6 +196,9 @@ describe("native email notifications", () => {
     ).toEqual({ disposition: "notified" });
     const output = first.queue.mock.calls[0]?.[0] ?? "";
     expect(output).toContain('"kind":"typing"');
+    // A session can carry several profiles; the status names its own.
+    expect(output).toContain(`"to":"${recipient}"`);
+    expect(output).toContain('"profile":"session-work"');
     expect(output).toContain('"sent_email_id"');
     expect(output).toContain("not a new task");
     expect(output).not.toContain(detail.body_text);

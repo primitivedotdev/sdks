@@ -167,7 +167,7 @@ describe("emails get --id", () => {
     const result = await run("emails:get", ["--id", emailId]);
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain(
-      `Email ${emailId} was not found for ${self} (profile work). This session also has ${peer} (profile session-${session}); an email is readable only under the profile that received it, so try PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.`,
+      `Email ${emailId} was not found for ${self} (profile work); an email is readable only under the profile that received it. This session also receives for: ${peer} (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.`,
     );
     expect(result.stderr).not.toContain("pconn_");
     // The hint never reads the email with another profile's credential.

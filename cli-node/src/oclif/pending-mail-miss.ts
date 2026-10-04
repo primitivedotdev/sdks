@@ -81,9 +81,11 @@ function savedConnectedProfiles(
 }
 
 /**
- * Other connected profiles that could hold the email: the ones bound to this
- * runtime session when there are any, otherwise every other saved connected
- * profile. Never makes a network call and never reads a credential out.
+ * Other connected profiles that could hold the email. Inside a runtime
+ * session only the profiles bound to that session count: a profile from
+ * another session would send the agent to a second failed read. Outside a
+ * session, every other saved connected profile. Never makes a network call
+ * and never reads a credential out.
  */
 async function otherProfiles(
   configDir: string,
@@ -95,10 +97,12 @@ async function otherProfiles(
       const { connectedProfilesForSession } = await import(
         "./machine-session.js"
       );
-      const bound = connectedProfilesForSession(configDir, session, current);
-      if (bound.length > 0) return { inSession: true, profiles: bound };
+      return {
+        inSession: true,
+        profiles: connectedProfilesForSession(configDir, session, current),
+      };
     } catch {
-      /* Fall back to the saved profiles. */
+      return { inSession: true, profiles: [] };
     }
   }
   return {
@@ -123,15 +127,15 @@ export function otherProfilesHint(
       address: wakeRecipientAddress(other.address) ?? "",
     }))
     .slice(0, HINT_PROFILE_LIMIT);
-  const first = named[0];
-  if (!first) return "";
+  if (named.length === 0) return "";
+  // Which profile received the email is unknown, so each one named gets its
+  // own command rather than one guess.
   const list = named
-    .map((other) =>
-      other.address
-        ? `${other.address} (profile ${other.profile})`
-        : `profile ${other.profile}`,
+    .map(
+      (other) =>
+        `${other.address ? `${other.address} (profile ${other.profile})` : `profile ${other.profile}`}: ${wakeReadCommand(emailId, other.profile)}`,
     )
-    .join(", ");
+    .join("; ");
   const more =
     others.profiles.length > named.length
       ? ` and ${others.profiles.length - named.length} more`
@@ -140,9 +144,9 @@ export function otherProfilesHint(
     ? `${current.address} (profile ${current.profile})`
     : `profile ${current.profile}`;
   const where = others.inSession
-    ? `This session also has ${list}${more}`
-    : `Other connected profiles saved on this machine: ${list}${more}`;
-  return `Email ${emailId} was not found for ${self}. ${where}; an email is readable only under the profile that received it, so try ${wakeReadCommand(emailId, first.profile)}.\n`;
+    ? "This session also receives for"
+    : "Other connected profiles saved on this machine";
+  return `Email ${emailId} was not found for ${self}; an email is readable only under the profile that received it. ${where}: ${list}${more}.\n`;
 }
 
 /**
@@ -157,8 +161,9 @@ export function otherProfilesHint(
  *   drop the notice after consecutive misses, with a line saying why, so an
  *   email that was deleted or is no longer visible stops being announced.
  * - Otherwise, when other connected profiles are bound to this session (or,
- *   outside a session, saved on this machine), print one line naming them
- *   and the command to try. No other credential is used automatically.
+ *   outside a session, saved on this machine), print one line naming each
+ *   with the command that reads under it. No other credential is used
+ *   automatically.
  *
  * Writes only to stderr and never throws; the read already failed.
  */

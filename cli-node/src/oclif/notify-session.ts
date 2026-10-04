@@ -270,6 +270,7 @@ export async function openSessionNotifications(
           JSON.stringify({
             email_id: input.emailId,
             to: recipient,
+            ...(options.profileName ? { profile: options.profileName } : {}),
             sender: trusted.sender,
             kind: input.status.kind,
             sent_email_id: input.status.sentEmailId,
