@@ -296,7 +296,6 @@ export default class AgentConnectCommand extends Command {
           ...identitySuggestions({
             invocation: invocation(process.argv[1]),
             profile: output.profile,
-            cwd: process.cwd(),
             connectedNow: output.status === "connected",
           }),
         };

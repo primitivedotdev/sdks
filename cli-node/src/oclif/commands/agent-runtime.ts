@@ -87,6 +87,24 @@ async function run(
   });
 }
 
+/**
+ * A missing note is the API's structured not_found. Any other 404, such as a
+ * route this API does not serve, is reported rather than shown as none.
+ */
+function noteMissing(error: unknown): boolean {
+  if (!(error instanceof AddressNotesApiError) || error.status !== 404)
+    return false;
+  const payload = extractErrorPayload(error.payload);
+  const row =
+    payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : null;
+  return (
+    row?.code === "not_found" &&
+    !(typeof row.message === "string" && /not served/i.test(row.message))
+  );
+}
+
 export class AgentRuntimeSetCommand extends Command {
   static summary = "Record where this agent runs";
   static description =
@@ -165,8 +183,7 @@ export class AgentRuntimeGetCommand extends Command {
           name: RUNTIME_NOTE_NAME,
         })) as NoteRow;
       } catch (error) {
-        if (!(error instanceof AddressNotesApiError) || error.status !== 404)
-          throw error;
+        if (!noteMissing(error)) throw error;
       }
       const value =
         note === null

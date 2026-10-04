@@ -103,7 +103,12 @@ export function defaultRuntimeNote(context: RuntimeNoteContext = {}): string {
     context.cwd ?? process.cwd(),
     context.home ?? homedir(),
   );
-  return runtimeNoteValue(`${runtime} on ${host} at ${path}`);
+  const prefix = `${runtime} on ${host} at `;
+  // A very deep directory keeps its most specific end so the line still fits.
+  const room = RUNTIME_NOTE_MAX_LENGTH - prefix.length;
+  const shown =
+    path.length <= room ? path : `...${path.slice(path.length - (room - 3))}`;
+  return runtimeNoteValue(`${prefix}${shown}`);
 }
 
 /** Validate a one-line AGENT_RUNTIME value. */

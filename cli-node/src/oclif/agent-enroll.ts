@@ -9,6 +9,7 @@ import {
   putAgentContactPolicy,
 } from "@primitivedotdev/api-core";
 import { parseAgentInvitation } from "./agent-connect.js";
+import { DEFAULT_ENROLL_NAME } from "./agent-identity-suggestions.js";
 import {
   RECEIVER_MODES,
   type ReceiverMode,
@@ -46,9 +47,6 @@ const CONFIRMATION_BUDGET_MS = 120_000;
 const CONFIRMATION_MAX_ATTEMPTS = 40;
 const CONFIRMATION_PAGE_LIMIT = 20;
 const refuse = (message: string) => new AgentConnectionSetupError(message);
-
-/** The connection name enrollment uses when none is given. */
-export const DEFAULT_ENROLL_NAME = "Coding agent";
 
 type Enrollment = {
   version: 1 | 2;
@@ -500,6 +498,7 @@ async function readOwnerConnection(
   enrollment: Enrollment,
   params: AgentEnrollOptions,
   deadline: number,
+  listed: ListedConnection,
 ): Promise<ConnectionConfirmation> {
   const saved = loadCliCredentials(params.configDir);
   if (
@@ -570,6 +569,7 @@ async function readOwnerConnection(
         throw refuse(
           "The owner connection list did not match this session's saved identity. Preserve the profile and inspect the connection in the app.",
         );
+      if (typeof connection.name === "string") listed.name = connection.name;
       if (connection.owner_active === false) return "owner_inactive";
       if (connection.status === "revoked") return "revoked";
       if (
@@ -589,14 +589,18 @@ async function readOwnerConnection(
   return "unavailable";
 }
 
+/** What the owner connection list last said about this connection. */
+type ListedConnection = { name?: string };
+
 async function confirmOwnerConnection(
   enrollment: Enrollment,
   params: AgentEnrollOptions,
+  listed: ListedConnection,
 ): Promise<ConnectionConfirmation> {
   const deadline = Date.now() + CONFIRMATION_BUDGET_MS;
   let last: ConnectionConfirmation = "unavailable";
   for (let attempt = 0; attempt < CONFIRMATION_MAX_ATTEMPTS; attempt++) {
-    last = await readOwnerConnection(enrollment, params, deadline);
+    last = await readOwnerConnection(enrollment, params, deadline, listed);
     if (last === "connected" || last === "revoked" || last === "owner_inactive")
       return last;
     const remaining = deadline - Date.now();
@@ -764,7 +768,8 @@ export async function enrollAgent(params: AgentEnrollOptions) {
             now: params.now,
           })
         : ("not_requested" as const);
-      const listed = await confirmOwnerConnection(enrollment, params);
+      const current: ListedConnection = {};
+      const listed = await confirmOwnerConnection(enrollment, params, current);
       // Setup already read a verified connection from the agent's own status.
       // An inconclusive owner-list read must not undo that; only a definite
       // revoked or departed-owner answer overrides it.
@@ -797,6 +802,9 @@ export async function enrollAgent(params: AgentEnrollOptions) {
         }`,
         contactRequestPolicy,
         connection: { status },
+        // The current display name when the owner list reported one, since
+        // the connection may have been renamed since enrollment began.
+        name: current.name ?? name,
       };
     };
     if (state?.phase === "setup_attempted") {

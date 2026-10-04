@@ -170,6 +170,20 @@ describe("default runtime note", () => {
     expect(value).toBe("Codex on box at ~/app");
   });
 
+  it("keeps the end of a very deep directory so the line fits", () => {
+    const deep = `/srv/${"nested/".repeat(100)}app`;
+    const value = defaultRuntimeNote({
+      env: {},
+      hostname: "box",
+      cwd: deep,
+      home: "/home/dev",
+      insideOmp: noOmp,
+    });
+    expect(value).toHaveLength(500);
+    expect(value.startsWith("CLI on box at ...")).toBe(true);
+    expect(value.endsWith("/nested/app")).toBe(true);
+  });
+
   it("validates an explicit value", () => {
     expect(runtimeNoteValue("  Codex on box at ~/app ")).toBe(
       "Codex on box at ~/app",
@@ -239,6 +253,24 @@ describe("agent runtime commands", () => {
       AgentRuntimeSetCommand.run(["--value", "x", "--address", peer], { root }),
     ).rejects.toThrow(/only its own address notes/);
     expect(calls).toEqual([]);
+  });
+
+  it("get reports a route 404 instead of printing none", async () => {
+    fixture({
+      status: 404,
+      body: {
+        success: false,
+        error: {
+          code: "not_found",
+          message: "GET /v1/address-notes/x is not served yet.",
+        },
+      },
+    });
+    const lines = captureLog(AgentRuntimeGetCommand);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await AgentRuntimeGetCommand.run([], { root });
+    expect(lines).toEqual([]);
+    expect(process.exitCode).toBe(1);
   });
 
   it("get prints the note, or none when absent", async () => {

@@ -1,4 +1,3 @@
-import { resolve } from "node:path";
 import { Command, Flags } from "@oclif/core";
 import {
   cliInvocation,
@@ -98,8 +97,7 @@ export default class AgentSessionRegisterCommand extends Command {
         ? identitySuggestions({
             invocation: cliInvocation(process.argv[1]),
             profile: result.profile,
-            name: result.name,
-            cwd: resolve(flags.cwd ?? process.cwd()),
+            nameIsDefault: result.nameIsDefault,
             connectedNow: true,
           })
         : {};

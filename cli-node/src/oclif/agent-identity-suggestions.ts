@@ -1,5 +1,5 @@
-import { DEFAULT_ENROLL_NAME } from "./agent-enroll.js";
-import { defaultSessionName, MACHINE_RUNTIMES } from "./machine-session.js";
+/** The connection name enrollment uses when none is given. */
+export const DEFAULT_ENROLL_NAME = "Coding agent";
 
 /**
  * A follow-up the agent can offer its owner after connecting. Neither is
@@ -18,37 +18,29 @@ export function cliInvocation(entry: string | undefined): string {
 }
 
 /**
- * Whether a connection name is one this CLI chose by itself: enrollment's
- * fallback name, or the `<runtime>-<repository>` name session registration
- * derives from the working directory.
+ * Whether an enrollment's connection name is the fallback it chose by itself.
+ * Session registration's `<runtime>-<repository>` names are reported by
+ * registration, which knows the exact name it generated.
  */
-export function generatedAgentName(name: string, cwd: string): boolean {
-  return (
-    name === DEFAULT_ENROLL_NAME ||
-    MACHINE_RUNTIMES.some(
-      (runtime) => name === defaultSessionName(runtime, cwd),
-    )
-  );
+export function generatedAgentName(name: string): boolean {
+  return name === DEFAULT_ENROLL_NAME;
 }
 
 /**
  * Additive result fields for a connect, enroll or session registration.
- * `nameIsDefault` appears only when the connection name is known. The
- * runtime note is suggested once, after a connection this run completed.
+ * `nameIsDefault` appears only when it is known whether the connection name
+ * is one this CLI generated. The runtime note is suggested once, after a
+ * connection this run completed.
  */
 export function identitySuggestions(params: {
   invocation: string;
   profile: string;
-  name?: string | null;
-  cwd: string;
+  nameIsDefault?: boolean;
   connectedNow: boolean;
 }): { nameIsDefault?: boolean; suggestions: IdentitySuggestion[] } {
   const prefix = `PRIMITIVE_AGENT_PROFILE=${params.profile} ${params.invocation}`;
   const suggestions: IdentitySuggestion[] = [];
-  const nameIsDefault =
-    typeof params.name === "string"
-      ? generatedAgentName(params.name, params.cwd)
-      : undefined;
+  const nameIsDefault = params.nameIsDefault;
   if (nameIsDefault)
     suggestions.push({
       kind: "rename",

@@ -239,11 +239,39 @@ describe("agent rename command", () => {
       status: 404,
       body: {
         success: false,
-        error: { code: "not_found", message: "Not found" },
+        error: {
+          code: "not_found",
+          message: `PATCH /v1/agent-connections/${own}/name is not served yet.`,
+        },
       },
     });
     await expect(AgentRenameCommand.run(["x"], { root })).rejects.toThrow(
       RENAME_UNSUPPORTED_MESSAGE,
+    );
+    fixture(own, { status: 404, body: "<html>Not Found</html>" });
+    await expect(AgentRenameCommand.run(["x"], { root })).rejects.toThrow(
+      RENAME_UNSUPPORTED_MESSAGE,
+    );
+  });
+
+  it("shows a generic 404 as the API error with a hint", async () => {
+    fixture(own, {
+      status: 404,
+      body: {
+        success: false,
+        error: { code: "not_found", message: "Not found" },
+      },
+    });
+    const stderr: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      stderr.push(String(chunk));
+      return true;
+    });
+    await AgentRenameCommand.run(["x"], { root });
+    expect(process.exitCode).toBe(1);
+    expect(stderr.join("")).toContain("Not found");
+    expect(stderr.join("")).toContain(
+      "If it is correct, this Primitive API may not support renaming yet.",
     );
   });
 });

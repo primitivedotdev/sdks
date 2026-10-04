@@ -64,6 +64,8 @@ export type SessionRegisterResult = {
   receiving: "external_hook" | "native" | "unsupported" | null;
   /** The connection name, on a registration this run completed. */
   name?: string;
+  /** Whether that name is still the one this command generated. */
+  nameIsDefault?: boolean;
   detail: string;
 };
 
@@ -1105,11 +1107,15 @@ export async function registerSession(
       hooked = claudeHook(address);
     if (status === "connected") await finishAgentInfo();
     const withAddress = { ...known, address, receiving: RECEIVING[runtime] };
+    // Every name this command records is generated, so the connection still
+    // has a default name unless it was renamed while setup was pending.
+    const name = result.name ?? record.name;
     if (status === "connected")
       return {
         ...withAddress,
         status: "registered",
-        name: record.name,
+        name,
+        nameIsDefault: name === record.name,
         detail:
           hooked === "installed"
             ? `Connected as ${address}.`

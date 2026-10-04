@@ -459,6 +459,8 @@ test("a renamed connection still confirms pairing through the owner list", async
     setup: (async () => result) as typeof setupAgent,
   });
   assert.equal(value.connection.status, "connected");
+  // The result reports the current name, not the one enrollment requested.
+  assert.equal(value.name, "Billing reviewer");
 });
 
 test("one enrollment survives a delayed reconciliation without recreating or reverifying", async () => {

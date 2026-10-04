@@ -85,6 +85,10 @@ export default class AgentRenameCommand extends Command {
           configDir: this.config.configDir,
           payload,
         });
+        if (error.status === 404)
+          process.stderr.write(
+            "Check the address. If it is correct, this Primitive API may not support renaming yet.\n",
+          );
         process.exitCode = 1;
       }
     });

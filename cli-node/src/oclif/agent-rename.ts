@@ -91,15 +91,14 @@ function errorMessage(payload: unknown): string {
 }
 
 /**
- * A 404 for an unknown address says the agent connection was not found. Any
- * other 404, including one that echoes the request path or says the route is
- * not served, means this API has no rename route, as on a server that
- * predates renaming.
+ * Whether a 404 shows this API has no rename route, as on a server that
+ * predates renaming: a response without a structured error, or one that says
+ * the route is not served or echoes the request path. A structured 404
+ * otherwise may be an unknown address, so it stays an API error.
  */
 function missingRoute(payload: unknown): boolean {
   const message = errorMessage(payload);
-  if (/not served|\/name\b/i.test(message)) return true;
-  return !/connection/i.test(message);
+  return message === "" || /not served|\/name\b/i.test(message);
 }
 
 export async function renameAgentConnection(
