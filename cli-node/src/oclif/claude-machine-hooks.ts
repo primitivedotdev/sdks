@@ -5,7 +5,14 @@ import {
   readdirSync,
   realpathSync,
 } from "node:fs";
-import { basename, delimiter, dirname, join, resolve } from "node:path";
+import {
+  basename,
+  delimiter,
+  dirname,
+  isAbsolute,
+  join,
+  resolve,
+} from "node:path";
 import {
   agentProfileDirectory,
   agentProfileName,
@@ -101,7 +108,14 @@ export function stableNodePath(
   execPath = process.execPath,
 ): string {
   const onPath = findOnPath("node", env);
-  if (onPath && onPath !== execPath && samePath(onPath, execPath))
+  // A relative PATH entry would resolve against whatever directory the hook
+  // later runs in, so only an absolute link is stable.
+  if (
+    onPath &&
+    isAbsolute(onPath) &&
+    onPath !== execPath &&
+    samePath(onPath, execPath)
+  )
     return onPath;
   return execPath;
 }
