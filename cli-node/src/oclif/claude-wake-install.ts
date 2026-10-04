@@ -4,6 +4,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import {
   hasSessionReceiveHook,
   otherSessionReceivers,
+  stableNodePath,
 } from "./claude-machine-hooks.js";
 import {
   agentProfileDirectory,
@@ -41,13 +42,36 @@ export type ClaudeWakeHookResult =
   | "held_for_other_profile"
   | "unavailable";
 
+/**
+ * How long after the session's receive hook last ran that run still counts
+ * as recent. It matches the longest validity the server gives a presence
+ * proof (`valid_for_ms` is at most 600000), so the CLI never calls a hook
+ * recent for longer than the server would call the session present.
+ */
+export const HOOK_FIRED_RECENT_MS = 10 * 60_000;
+
+/** Clock skew tolerated for a fired record written slightly in the future. */
+const FIRED_CLOCK_SKEW_MS = 60_000;
+
+/**
+ * `fired_recently`: the session's receive hook ran within
+ * HOOK_FIRED_RECENT_MS, which shows the hooks are wired and firing. It does
+ * not prove a wake from idle; only arriving mail shows that.
+ */
+export type ClaudeWakeHookLiveness = "fired_recently" | "unknown";
+
 export function claudeWakeHookStatus(options: {
   configDir: string;
   profileName: string;
   agentAddress: string;
   sessionId: string;
   env?: NodeJS.ProcessEnv;
-}): { installed: boolean; lastFiredAt: string | null; liveness: "unknown" } {
+  now?: number;
+}): {
+  installed: boolean;
+  lastFiredAt: string | null;
+  liveness: ClaudeWakeHookLiveness;
+} {
   const unavailable = {
     installed: false,
     lastFiredAt: null,
@@ -59,8 +83,9 @@ export function claudeWakeHookStatus(options: {
     const agentAddress = mailAddress(options.agentAddress);
     if (!SESSION_UUID.test(options.sessionId)) return unavailable;
     const sessionId = options.sessionId.toLowerCase();
+    const env = options.env ?? process.env;
     const claudeDir = resolve(
-      options.env?.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
+      env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
     );
     // Claude's own settings file is user-owned: it is often readable by
     // others and larger than Primitive's private records, so it is read
@@ -77,8 +102,9 @@ export function claudeWakeHookStatus(options: {
       session: sessionId,
     };
     // The same test machine doctor uses to decide a hook is missing.
+    const node = stableNodePath(env);
     const installed = (["Stop", "SessionStart", "PostToolUse"] as const).every(
-      (event) => hasSessionReceiveHook(hooks, event, target, process.execPath),
+      (event) => hasSessionReceiveHook(hooks, event, target, node),
     );
     let lastFiredAt: string | null = null;
     const fired = readMailJson(
@@ -94,7 +120,20 @@ export function claudeWakeHookStatus(options: {
       Number.isFinite(Date.parse(fired.at))
     )
       lastFiredAt = fired.at;
-    return { installed, lastFiredAt, liveness: "unknown" };
+    const age =
+      lastFiredAt === null
+        ? null
+        : (options.now ?? Date.now()) - Date.parse(lastFiredAt);
+    const recent =
+      installed &&
+      age !== null &&
+      age >= -FIRED_CLOCK_SKEW_MS &&
+      age <= HOOK_FIRED_RECENT_MS;
+    return {
+      installed,
+      lastFiredAt,
+      liveness: recent ? "fired_recently" : "unknown",
+    };
   } catch {
     return unavailable;
   }
@@ -187,6 +226,9 @@ export function installClaudeWakeHook(options: {
     const claudeDir = resolve(
       env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
     );
+    // A PATH link such as a package manager's bin/node survives an upgrade
+    // that replaces the versioned directory process.execPath points into.
+    const node = stableNodePath(env);
     let held = false;
     const installed = editClaudeSettings(claudeDir, (settings) => {
       const hooks = settings.hooks ?? {};
@@ -211,7 +253,7 @@ export function installClaudeWakeHook(options: {
         }).length > 0;
       const hook = {
         type: "command",
-        command: process.execPath,
+        command: node,
         args: [
           wrapperPath,
           cliPath,
@@ -226,7 +268,7 @@ export function installClaudeWakeHook(options: {
       };
       const pendingHook = {
         type: "command",
-        command: process.execPath,
+        command: node,
         args: [
           pendingPath,
           cliPath,

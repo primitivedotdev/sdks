@@ -19,6 +19,7 @@ import { test } from "vitest";
 import {
   claudeWakeHookStatus,
   editClaudeSettings,
+  HOOK_FIRED_RECENT_MS,
   installClaudeWakeHook,
   uninstallClaudeWakeHook,
 } from "../../src/oclif/claude-wake-install.js";
@@ -136,6 +137,52 @@ test("external hook installer preserves other settings and replaces only its own
     lastFiredAt: firedAt,
     liveness: "unknown",
   });
+  // A run within the freshness window shows the hooks are firing.
+  const fired = Date.parse(firedAt);
+  assert.deepEqual(claudeWakeHookStatus({ ...options, now: fired + 60_000 }), {
+    installed: true,
+    lastFiredAt: firedAt,
+    liveness: "fired_recently",
+  });
+  assert.equal(
+    claudeWakeHookStatus({ ...options, now: fired + HOOK_FIRED_RECENT_MS })
+      .liveness,
+    "fired_recently",
+  );
+  assert.equal(
+    claudeWakeHookStatus({ ...options, now: fired + HOOK_FIRED_RECENT_MS + 1 })
+      .liveness,
+    "unknown",
+  );
+  // A record far in the future is not trusted as recent.
+  assert.equal(
+    claudeWakeHookStatus({ ...options, now: fired - 5 * 60_000 }).liveness,
+    "unknown",
+  );
+});
+
+test("hooks run Node through a stable PATH link, not the versioned binary", () => {
+  const { root, claudeDir, configDir, cliPath } = fixture();
+  // A package manager's bin/node links to the versioned install directory.
+  const pathDir = join(root, "path-bin");
+  mkdirSync(pathDir);
+  const link = join(pathDir, "node");
+  symlinkSync(process.execPath, link);
+  const options = {
+    cliPath,
+    configDir,
+    profileName: "stable",
+    agentAddress: "stable@example.com",
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir, PATH: pathDir },
+  };
+  assert.equal(installClaudeWakeHook(options), "installed_unverified");
+  const settings = JSON.parse(
+    readFileSync(join(claudeDir, "settings.json"), "utf8"),
+  );
+  for (const event of ["Stop", "SessionStart", "PostToolUse"])
+    assert.equal(settings.hooks[event].at(-1).hooks[0].command, link);
+  assert.equal(claudeWakeHookStatus(options).installed, true);
 });
 
 test("external hook installer leaves malformed existing settings untouched", () => {

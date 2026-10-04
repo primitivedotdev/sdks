@@ -152,7 +152,41 @@ describe("connected-agent setup", () => {
       state: "unknown",
       reason: "hook_liveness_unverified",
       detail: null,
+      lastFiredAt: null,
+      liveness: "unknown",
       hook: { installed: true },
+    });
+
+    // The session's receive hook just ran: the hooks are firing, reported
+    // as such and not as a verified wake.
+    const firedPath = join(
+      agentProfileDirectory(configDir, "work"),
+      `pending-mail-${orgId}.fired.json`,
+    );
+    const justNow = new Date().toISOString();
+    writeMailJson(firedPath, { version: 1, at: justNow });
+    const fired = agentConnectionStatus(configDir, "work", env).receiving;
+    expect(fired).toMatchObject({
+      state: "running",
+      reason: "hook_fired_recently",
+      lastFiredAt: justNow,
+      liveness: "fired_recently",
+      hook: { installed: true, lastFiredAt: justNow },
+    });
+    expect(JSON.stringify(fired)).toContain(
+      "A wake from idle is confirmed only when new mail arrives.",
+    );
+
+    // A run older than the window says nothing about the session now.
+    const stale = new Date(Date.now() - 60 * 60_000).toISOString();
+    writeMailJson(firedPath, { version: 1, at: stale });
+    expect(
+      agentConnectionStatus(configDir, "work", env).receiving,
+    ).toMatchObject({
+      state: "unknown",
+      reason: "hook_liveness_unverified",
+      lastFiredAt: stale,
+      liveness: "unknown",
     });
   });
   it("advertises presence only for session setup and persists its trusted fixed return profile", async () => {

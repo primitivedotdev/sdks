@@ -1,14 +1,19 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import {
+import { join, resolve } from "node:path";
+import { describe, expect, it, vi } from "vitest";
+import DoctorCommand, {
   checkApiKey,
   checkNode,
   checkProxy,
   renderRow,
 } from "../../src/oclif/commands/doctor.js";
+import {
+  agentProfileDirectory,
+  saveConnectedAgentProfile,
+} from "../../src/oclif/connected-agent-profile.js";
 import { COMMANDS } from "../../src/oclif/index.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 describe("doctor command registration", () => {
   it("registers in the COMMANDS map", () => {
@@ -329,5 +334,53 @@ describe("checkApiKey", () => {
     expect(outcome.status).toBe("fail");
     if (outcome.status !== "fail") return;
     expect(outcome.message).not.toMatch(/PRIMITIVE_KEY is set/);
+  });
+});
+
+describe("doctor with a saved connected profile", () => {
+  it("points a Claude hook receiver at agent connect --status, not listen --status", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-hook-"));
+    const session = "11111111-1111-4111-8111-111111111111";
+    const stderr: string[] = [];
+    const write = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation((chunk: string | Uint8Array) => {
+        stderr.push(String(chunk));
+        return true;
+      });
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    try {
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+      vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "hooked");
+      vi.stubEnv("PRIMITIVE_API_KEY", undefined);
+      saveConnectedAgentProfile(directory, "hooked", {
+        version: 1,
+        auth_method: "agent_connection",
+        api_key: ["pconn", "a".repeat(48)].join("_"),
+        api_base_url: "https://api.primitive.dev/v1",
+        org_id: session,
+        agent_address: "hooked@example.com",
+        owner_address: "owner@example.com",
+        invitation_hash: "b".repeat(64),
+        created_at: new Date().toISOString(),
+      });
+      writeMailJson(
+        join(agentProfileDirectory(directory, "hooked"), "setup.json"),
+        { session, receiverMode: "external" },
+      );
+      await DoctorCommand.run([], {
+        root: resolve(import.meta.dirname, "../.."),
+      });
+      const text = stderr.join("");
+      expect(text).toContain(
+        "`primitive agent connect --profile hooked --status --json` for this profile's receiver",
+      );
+      expect(text).not.toContain("listen --status");
+    } finally {
+      write.mockRestore();
+      log.mockRestore();
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

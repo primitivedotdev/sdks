@@ -39,6 +39,54 @@ export type AgentConnectResult = {
   identity: ConnectedAgentIdentity;
 };
 
+/** The receiver a saved profile's setup record names. Offline. */
+export function savedReceiver(
+  configDir: string,
+  profileName: string,
+): { mode: "native" | "external" | "poll"; session: string | null } | null {
+  try {
+    const setup = readMailJson(
+      join(agentProfileDirectory(configDir, profileName), "setup.json"),
+    );
+    if (!setup || typeof setup !== "object" || Array.isArray(setup))
+      return null;
+    const saved = setup as Record<string, unknown>;
+    return {
+      mode:
+        saved.receiverMode === "external" || saved.receiverMode === "poll"
+          ? saved.receiverMode
+          : "native",
+      session:
+        typeof saved.session === "string" && SESSION_UUID.test(saved.session)
+          ? saved.session
+          : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Where to inspect a saved profile's receiver, by how it receives. Hook and
+ * poll receivers run no background listener, so `listen --status` would
+ * report one absent; they are inspected with `agent connect --status`.
+ */
+export function receiverStatusCommand(
+  configDir: string,
+  profileName: string,
+): { mode: "native" | "external" | "poll" | null; command: string } {
+  const receiver = savedReceiver(configDir, profileName);
+  if (receiver?.mode === "native" && receiver.session)
+    return {
+      mode: "native",
+      command: `PRIMITIVE_AGENT_PROFILE=${profileName} primitive listen --status --notify-session ${receiver.session}`,
+    };
+  return {
+    mode: receiver?.mode ?? null,
+    command: `primitive agent connect --profile ${profileName} --status --json`,
+  };
+}
+
 /** Offline metadata only; a saved profile is not proof of current API or listener readiness. */
 export function agentConnectionStatus(
   configDir: string,
@@ -128,20 +176,28 @@ export function agentConnectionStatus(
                 sessionId: session,
                 env,
               });
-              // A present hook may still not fire, so it stays unverified;
-              // a missing one is a known failure.
+              // A present hook that has not run recently stays unverified.
+              // One that ran recently shows the hooks fire, though only
+              // arriving mail proves a wake from idle. A missing hook is a
+              // known failure.
+              const fired = hook.liveness === "fired_recently";
               return {
                 mode,
                 sessionId: session,
-                state: hook.installed ? "unknown" : "down",
-                reason: hook.installed
-                  ? "hook_liveness_unverified"
-                  : "hook_missing",
-                detail: hook.installed
-                  ? null
-                  : "The receive hook for this session is missing, so mail will not wake this session. Run `primitive machine doctor --fix` to reinstall it.",
+                state: !hook.installed ? "down" : fired ? "running" : "unknown",
+                reason: !hook.installed
+                  ? "hook_missing"
+                  : fired
+                    ? "hook_fired_recently"
+                    : "hook_liveness_unverified",
+                detail: !hook.installed
+                  ? "The receive hook for this session is missing, so mail will not wake this session. Run `primitive machine doctor --fix` to reinstall it."
+                  : fired
+                    ? "The receive hook ran in this session recently, so its hooks are firing. A wake from idle is confirmed only when new mail arrives."
+                    : null,
                 lastSuccessfulMailCheckAt: null,
-                liveness: "unknown",
+                lastFiredAt: hook.lastFiredAt,
+                liveness: hook.liveness,
                 hook,
               };
             })()

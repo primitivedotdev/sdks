@@ -1,6 +1,7 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import type { Account } from "@primitivedotdev/api-core";
 import { getAccount, listDomains } from "@primitivedotdev/api-core";
+import { receiverStatusCommand } from "../agent-connect.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
@@ -41,7 +42,7 @@ class WhoamiCommand extends Command {
   static description =
     `Print the account currently authenticated by saved OAuth credentials or an explicit API key. For account credentials this is a live credentials smoke test. Use account whoami for the authenticated caller, their assigned member address and an address suggestion; account provision-member-address --address <email> saves your chosen personal address.
 
-  With PRIMITIVE_AGENT_PROFILE selected, print the saved connected-agent identity offline. This does not verify live authentication, app pairing, or listener readiness. Inspect the receiver separately with listen --status --notify-session <session-id> under the same profile.
+  With PRIMITIVE_AGENT_PROFILE selected, print the saved connected-agent identity offline. This does not verify live authentication, app pairing, or listener readiness. Inspect the receiver separately: the output names the command for the profile's receiver mode (agent connect --status for Claude hook and poll receivers, listen --status --notify-session for a native listener).
 
   The default output is a concise human summary. Pass --json for the full /account response or the explicit offline connected-agent identity envelope.`;
 
@@ -88,8 +89,17 @@ class WhoamiCommand extends Command {
       if (auth.connectedAgent) {
         const identity = auth.connectedAgent;
         const statusCommand = `primitive agent connect --profile ${identity.profileName} --status --json`;
-        const guidance =
-          "Saved identity only. Live authentication, app pairing, and receiving readiness are not verified. Inspect the receiver with listen --status --notify-session <session-id> under the same profile.";
+        const receiver = receiverStatusCommand(
+          this.config.configDir,
+          identity.profileName,
+        );
+        const guidance = `Saved identity only. Live authentication, app pairing, and receiving readiness are not verified. Inspect the ${
+          receiver.mode === "external"
+            ? "Claude hook receiver"
+            : receiver.mode === "poll"
+              ? "poll receiver"
+              : "receiver"
+        } with \`${receiver.command}\`.`;
         this.log(
           flags.json
             ? JSON.stringify(

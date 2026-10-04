@@ -2,11 +2,14 @@ import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { Writable } from "node:stream";
 import { Command, Errors, Flags } from "@oclif/core";
+import { savedReceiver } from "../agent-connect.js";
 import { resolveCliApiRequestConfig } from "../api-client.js";
 import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import { dispatchAutoRead } from "../auto-signals.js";
+import { boundSessionProfiles } from "../claude-machine-hooks.js";
 import {
+  AGENT_PROFILE_ENV,
   agentProfileDirectory,
   agentProfileName,
   loadConnectedAgentProfile,
@@ -94,6 +97,41 @@ function profileAgentAddress(
     // The address is informational; the wake still goes out.
     return undefined;
   }
+}
+
+/**
+ * When the session receives through Claude hooks rather than a background
+ * listener, the profile to inspect it with: the selected profile when it is
+ * bound to this session through hooks, otherwise the first profile bound to
+ * it. Null when the session does not receive through hooks.
+ */
+export function hookReceiverStatus(
+  sessionId: string,
+  env: NodeJS.ProcessEnv,
+  configDir: string,
+): { profile: string | null; statusCommand: string; guidance: string } | null {
+  const id = sessionId.toLowerCase();
+  const selected = env[AGENT_PROFILE_ENV]?.trim() || null;
+  const bound = boundSessionProfiles(configDir)
+    .filter((item) => item.session === id)
+    .map((item) => item.profile);
+  const selectedReceiver = selected ? savedReceiver(configDir, selected) : null;
+  const selectedHooks =
+    selectedReceiver?.mode === "external" &&
+    selectedReceiver.session?.toLowerCase() === id;
+  if (
+    !selectedHooks &&
+    bound.length === 0 &&
+    !claudeCodeSession(id, env, configDir)
+  )
+    return null;
+  const profile = selectedHooks ? selected : (bound[0] ?? selected);
+  const statusCommand = `primitive agent connect --profile ${profile ?? "<profile>"} --status --json`;
+  return {
+    profile,
+    statusCommand,
+    guidance: `This Claude Code session receives mail through hooks, not a background listener, so the listener here is expected to be absent. Check receiving with \`${statusCommand}\`.`,
+  };
 }
 
 export default class ListenCommand extends Command {
@@ -436,10 +474,22 @@ export default class ListenCommand extends Command {
         target.threadId,
         { limit: flags.limit, cursor: flags.cursor },
       );
+      const hookReceiver = hookReceiverStatus(
+        target.threadId,
+        process.env,
+        this.config.configDir,
+      );
       this.log(
         JSON.stringify(
           {
             sessionId: target.threadId,
+            ...(hookReceiver
+              ? {
+                  receiverMode: "external",
+                  receiverStatusCommand: hookReceiver.statusCommand,
+                  receiverGuidance: hookReceiver.guidance,
+                }
+              : {}),
             ...(flags["email-id"]
               ? {
                   email: await explainNotification({

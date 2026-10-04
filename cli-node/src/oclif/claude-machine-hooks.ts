@@ -57,6 +57,18 @@ export function samePath(a: unknown, b: string): boolean {
   return left !== null && left === realpathOrNull(b);
 }
 
+/**
+ * A hook's Node command is current when it is the chosen Node path itself,
+ * or another link to the same binary. A command that pins the versioned file
+ * behind the stable link stops working once an upgrade replaces that file,
+ * so it is not current and gets rewritten to the stable path.
+ */
+export function nodeCommandCurrent(command: unknown, node: string): boolean {
+  if (!samePath(command, node)) return false;
+  if (command === node) return true;
+  return realpathOrNull(String(command)) !== command;
+}
+
 function executable(path: string): boolean {
   try {
     accessSync(path, constants.X_OK);
@@ -344,7 +356,9 @@ function globalHookArgs(cli: CliLocation, spec: GlobalSpec): string[] {
 
 function globalHookCurrent(hook: RecordValue, cli: CliLocation): boolean {
   const args = hook.args as unknown[];
-  return samePath(hook.command, cli.node) && samePath(args[0], cli.entry);
+  return (
+    nodeCommandCurrent(hook.command, cli.node) && samePath(args[0], cli.entry)
+  );
 }
 
 const WAKE_MARKER = "primitive-agent-wake-v1";
@@ -494,7 +508,7 @@ function sessionHookPathsCurrent(
       existsSync(args[1] ?? "")
     );
   return (
-    samePath(hook.command, cli.node) &&
+    nodeCommandCurrent(hook.command, cli.node) &&
     samePath(args[0], parsed.kind === "wake" ? cli.wake : cli.pending) &&
     samePath(args[1], cli.entry)
   );

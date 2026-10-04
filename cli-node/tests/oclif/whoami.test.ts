@@ -1,5 +1,11 @@
-import { resolve } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { agentProfileDirectory } from "../../src/oclif/connected-agent-profile.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
+
+const session = "11111111-1111-4111-8111-111111111111";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), account: vi.fn() }));
 vi.mock("../../src/oclif/api-client.js", () => ({
@@ -115,6 +121,54 @@ describe("whoami command", () => {
         verification: "offline",
         auth_method: "agent_connection",
       });
+  });
+
+  it.each([
+    [
+      "external",
+      "Inspect the Claude hook receiver with `primitive agent connect --profile work --status --json`.",
+    ],
+    [
+      "native",
+      `Inspect the receiver with \`PRIMITIVE_AGENT_PROFILE=work primitive listen --status --notify-session ${session}\`.`,
+    ],
+  ])("points a %s receiver at the status command for its mode", async (receiverMode, hint) => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-whoami-"));
+    try {
+      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+      writeMailJson(
+        join(agentProfileDirectory(directory, "work"), "setup.json"),
+        { session, receiverMode },
+      );
+      mocks.auth.mockResolvedValue({
+        apiClient: { client: {} },
+        auth: {
+          apiKey: ["pconn", "test"].join("_"),
+          connectedAgent: {
+            profileName: "work",
+            agentAddress: "agent@example.test",
+            ownerAddress: "owner@example.test",
+            ownerMemberAddress: null,
+            apiBaseUrl: "https://api.primitive.dev/v1",
+            orgId: "org-1",
+          },
+        },
+      });
+      const output: string[] = [];
+      vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+        output.push(String(value));
+      });
+      await WhoamiCommand.run(["--json"], {
+        root: resolve(import.meta.dirname, "../.."),
+      });
+      const { guidance } = JSON.parse(output.join("\n"));
+      expect(guidance).toContain(hint);
+      if (receiverMode === "external")
+        expect(guidance).not.toContain("listen --status");
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it("does not call account or imply sign-in is needed for a raw connection credential", async () => {
