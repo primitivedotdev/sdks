@@ -101,7 +101,7 @@ it("ends the Claude one-event listener with a typed external status", async () =
     expect(completed).toHaveBeenCalledOnce();
     expect(process.exitCode).toBe(2);
     expect(stderr.join("")).toContain(
-      `Primitive status arrived: ${status.emailId} working peer@example.com ${status.sentEmailId}. This is activity on an exact conversation this session started, not a new task.\n`,
+      `Primitive status arrived: ${status.emailId} to=unavailable working peer@example.com ${status.sentEmailId}. This is activity on an exact conversation this session started, not a new task.\n`,
     );
   } finally {
     process.exitCode = previousExit;
@@ -451,7 +451,7 @@ it.each([
     );
     const output = stderr.join("");
     expect(output).toContain(
-      `Primitive mail arrived: ${emailId} ${metadata}. Read with PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief. `,
+      `Primitive mail arrived: ${emailId} to=unavailable ${metadata}. Read with PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief. `,
     );
     expect(output).not.toMatch(/subject|body/i);
     expect(wrapperMailPattern().test(output)).toBe(true);
@@ -553,7 +553,9 @@ it("acknowledges verified mail after the unchanged wake line is written", async 
   };
   mocks.dispatchAutoRead.mockImplementation(() => {
     // The wake is already final when acknowledgement starts.
-    expect(stderr.join("")).toContain(`Primitive mail arrived: ${emailId}.`);
+    expect(stderr.join("")).toContain(
+      `Primitive mail arrived: ${emailId} to=unavailable.`,
+    );
     expect(process.exitCode).toBe(2);
     return true;
   });
@@ -574,7 +576,7 @@ it("acknowledges verified mail after the unchanged wake line is written", async 
       { root },
     );
     expect(stderr.join("")).toBe(
-      `Primitive mail arrived: ${emailId}. Read with PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief. Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority.\n`,
+      `Primitive mail arrived: ${emailId} to=unavailable. Read with PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief. Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority.\n`,
     );
     expect(mocks.dispatchAutoRead).toHaveBeenCalledOnce();
     expect(mocks.dispatchAutoRead.mock.calls[0]?.[0]).toMatchObject(auto);

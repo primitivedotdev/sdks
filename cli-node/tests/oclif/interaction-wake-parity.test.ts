@@ -123,6 +123,8 @@ it("keeps every wake line form inside the Stop hook's strict pattern", () => {
       "",
       wakeRecipientField("agent@example.test"),
       wakeRecipientField("agent!ops@example.test"),
+      // An unknown receiving address is still named, as unavailable.
+      wakeRecipientField(undefined),
     ])
       for (const meta of ["", metadata])
         expect(
@@ -145,4 +147,12 @@ it("keeps every wake line form inside the Stop hook's strict pattern", () => {
   );
   expect(line).toContain(` to=agent@example.test sender=peer@example.com`);
   expect(line).toContain(`Read with ${wakeReadCommand(id, "work")}.`);
+});
+
+it("always names the receiving address, as unavailable when unknown", () => {
+  expect(wakeRecipientField("Agent@Example.test")).toBe(
+    " to=agent@example.test",
+  );
+  for (const address of [undefined, null, "", '"quoted"@example.test'])
+    expect(wakeRecipientField(address)).toBe(" to=unavailable");
 });

@@ -33,6 +33,7 @@ import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
 } from "./endpoints-test-redirect.js";
+import { withFlagSuggestion } from "./flag-suggestions.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
 import { explainPendingMailNotFound } from "./pending-mail-miss.js";
 import {
@@ -43,6 +44,7 @@ import {
   ReplyStateUnsupportedError,
   replyStateSurfaceForOperation,
 } from "./reply-state.js";
+import { sentListOtherSendersNote } from "./sent-list-labels.js";
 
 type OperationName = keyof typeof operations;
 export type ApiErrorCode = ErrorResponse["error"]["code"];
@@ -1043,6 +1045,7 @@ export function createOperationCommand(
     ? `${descriptionWithSchema}\n\n${hint}`
     : descriptionWithSchema;
 
+  const flagNames = Object.keys(flags);
   class OperationCommand extends Command {
     static description = fullDescription;
 
@@ -1052,7 +1055,11 @@ export function createOperationCommand(
       operation.summary ?? `${operation.method} ${operation.path}`;
 
     async run(): Promise<void> {
-      const { flags } = await this.parse(OperationCommand as never);
+      const { flags } = await this.parse(OperationCommand as never).catch(
+        (error: unknown) => {
+          throw withFlagSuggestion(error, flagNames);
+        },
+      );
       const parsedFlags = flags as Record<string, unknown>;
       if (
         [
@@ -1311,6 +1318,19 @@ export function createOperationCommand(
           if (hint && jsonOutput) {
             if (withEnvelope) summary.push(hint);
           } else if (hint) process.stderr.write(`${hint}\n`);
+        }
+
+        // A connected address's sent list also carries delivered sends
+        // other addresses made to it. Say so, so they are not read as this
+        // address's own sends.
+        if (operation.sdkName === "listSentEmails") {
+          const note = sentListOtherSendersNote(
+            envelope?.data,
+            auth.connectedAgent?.agentAddress,
+          );
+          if (note && jsonOutput) {
+            if (withEnvelope) summary.push(note);
+          } else if (note) process.stderr.write(`${note}\n`);
         }
 
         // Idempotent-replay banner. Send-mail (and any future

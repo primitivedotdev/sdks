@@ -140,7 +140,7 @@ const wakeAddressPattern =
 
 export function recipientField(address) {
   const value = typeof address === "string" ? address.toLowerCase() : "";
-  return wakeAddressPattern.test(value) ? ` to=${value}` : "";
+  return ` to=${wakeAddressPattern.test(value) ? value : "unavailable"}`;
 }
 
 export function readCommand(emailId, profile) {
@@ -158,7 +158,7 @@ export function readCommand(emailId, profile) {
  */
 export function formatPendingMail(notice, receiver = {}) {
   if (notice.kind === "status")
-    return `Primitive status arrived: ${notice.emailId} from=${notice.sender} on_sent=${notice.refSentEmailId}. This is activity on a conversation this session started, not a new task.\n`;
+    return `Primitive status arrived: ${notice.emailId}${recipientField(receiver.address)} from=${notice.sender} on_sent=${notice.refSentEmailId}. This is activity on a conversation this session started, not a new task.\n`;
   const fields = [
     `Primitive mail arrived: ${notice.emailId}${recipientField(receiver.address)}`,
     `sender=${notice.sender}`,

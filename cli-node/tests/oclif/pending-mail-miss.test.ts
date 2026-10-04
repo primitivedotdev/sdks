@@ -11,6 +11,7 @@ import {
   recordPendingNotFoundRead,
 } from "../../src/oclif/pending-mail.js";
 import { explainPendingMailNotFound } from "../../src/oclif/pending-mail-miss.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const session = "11111111-1111-4111-8111-111111111111";
 const emailId = "22222222-2222-4222-8222-222222222222";
@@ -129,18 +130,78 @@ it("resets the count when the listener records the notice again", async () => {
   );
 });
 
-it("stays silent for an email no profile in this session was told about", async () => {
+it("names the session's other address for an email no notice covers", async () => {
+  // The field case: the wake named the email but the agent read it under the
+  // wrong one of the session's two profiles, and took not_found as proof the
+  // email did not exist.
   await recordPendingMail(configDir, "named", session, notice(otherEmail));
+  process.env.PRIMITIVE_AGENT_PROFILE = "named";
+  expect(await explain()).toBe(
+    `Email ${emailId} was not found for named@example.test (profile named); an email is readable only under the profile that received it. This session also receives for: session-agent@example.test (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.\n`,
+  );
+});
+
+it("names other saved connected profiles without a runtime session, and counts no miss", async () => {
+  await recordPendingMail(configDir, "named", session, notice(emailId));
+  delete process.env.CLAUDE_CODE_SESSION_ID;
+  process.env.PRIMITIVE_AGENT_PROFILE = "named";
+  expect(await explain()).toBe(
+    `Email ${emailId} was not found for named@example.test (profile named); an email is readable only under the profile that received it. Other connected profiles saved on this machine: session-agent@example.test (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.\n`,
+  );
+  expect(readPendingMail(configDir, "named", session)[0]).not.toHaveProperty(
+    "not_found_reads",
+  );
+});
+
+it("does not name profiles from outside the session inside a session", async () => {
+  // Only `named` and an unrelated saved profile exist; neither the session's
+  // own profile nor anything bound to it, so there is nothing to suggest.
+  rmSync(
+    join(configDir, "agent-connections", "profiles", `session-${session}`),
+    {
+      recursive: true,
+      force: true,
+    },
+  );
+  connect("unrelated", "unrelated@example.test");
   process.env.PRIMITIVE_AGENT_PROFILE = "named";
   expect(await explain()).toBe("");
 });
 
-it("stays silent without a runtime session", async () => {
-  await recordPendingMail(configDir, "named", session, notice(emailId));
-  delete process.env.CLAUDE_CODE_SESSION_ID;
+it("gives every session profile its own read command", async () => {
+  connect(`session-${session}`, "session-agent@example.test");
+  connect("second", "second@example.test");
+  writeMailJson(
+    join(configDir, "agent-connections", "profiles", "second", "setup.json"),
+    { session },
+  );
+  process.env.PRIMITIVE_AGENT_PROFILE = "named";
+  const hint = await explain();
+  expect(hint).toContain(
+    "second@example.test (profile second): PRIMITIVE_AGENT_PROFILE=second primitive emails get",
+  );
+  expect(hint).toContain(
+    `session-agent@example.test (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get`,
+  );
+});
+
+it("stays silent when no other connected profile exists", async () => {
+  rmSync(
+    join(configDir, "agent-connections", "profiles", `session-${session}`),
+    {
+      recursive: true,
+      force: true,
+    },
+  );
   process.env.PRIMITIVE_AGENT_PROFILE = "named";
   expect(await explain()).toBe("");
-  expect(readPendingMail(configDir, "named", session)[0]).not.toHaveProperty(
-    "not_found_reads",
-  );
+});
+
+it("stays silent when the read did not use a connected profile", async () => {
+  expect(await explain()).toBe("");
+});
+
+it("never prints a saved credential in the hint", async () => {
+  process.env.PRIMITIVE_AGENT_PROFILE = "named";
+  expect(await explain()).not.toContain("pconn_");
 });

@@ -44,6 +44,10 @@ export type MailCheckItem = {
   received_at: string;
   sender: string;
   thread_id: string | null;
+  /** The address that received this email: the checked profile's own. */
+  to: string;
+  /** Reads this email under the profile that received it. */
+  read_command: string;
 };
 
 export type MailCheckResult = {
@@ -53,6 +57,10 @@ export type MailCheckResult = {
   more: boolean;
   /** Setup and presence mail from the control address, handled by the CLI. */
   control_skipped: number;
+  /** The checked profile and the address it receives for. */
+  profile: string;
+  to: string;
+  /** Template of each email's `read_command`, with `<id>` for the email ID. */
   read_command: string;
 };
 
@@ -108,6 +116,12 @@ export async function checkAgentMail(options: {
   );
   privateMailDirectory(directory, true);
   const release = acquireListenLock(directory, "mail-check");
+  // Every command selects the profile explicitly: a session can carry several
+  // connected profiles, and an email is readable only under the one that
+  // received it.
+  const readCommand = (id: string) =>
+    `PRIMITIVE_AGENT_PROFILE=${identity.profileName} ${options.invocation ?? "primitive"} emails get --id ${id} --brief`;
+  const to = identity.agentAddress.toLowerCase();
   try {
     const path = join(directory, CURSOR_FILE);
     const saved = readCursor(path);
@@ -139,6 +153,8 @@ export async function checkAgentMail(options: {
             received_at: row.received_at,
             sender: row.sender,
             thread_id: row.thread_id ?? null,
+            to,
+            read_command: readCommand(row.id),
           });
       }
       // The tail is caught up only on an empty page, which returns a null
@@ -154,7 +170,9 @@ export async function checkAgentMail(options: {
       emails,
       more,
       control_skipped: controlSkipped,
-      read_command: `PRIMITIVE_AGENT_PROFILE=${identity.profileName} ${options.invocation ?? "primitive"} emails get --id <id> --brief`,
+      profile: identity.profileName,
+      to,
+      read_command: readCommand("<id>"),
     };
     options.emit(output);
     if (cursor && cursor !== saved) writeMailJson(path, { version: 1, cursor });

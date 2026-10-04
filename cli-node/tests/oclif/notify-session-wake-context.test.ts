@@ -15,7 +15,10 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true });
 });
 
-async function setup(describe?: () => Promise<WakeContext | undefined>) {
+async function setup(
+  describe?: () => Promise<WakeContext | undefined>,
+  profileName?: string,
+) {
   const directory = mkdtempSync(join(tmpdir(), "primitive-notify-context-"));
   directories.push(directory);
   const event = JSON.parse(
@@ -56,6 +59,7 @@ async function setup(describe?: () => Promise<WakeContext | undefined>) {
     connect: async () => ({ queue, close() {} }),
     readPart: async () => new Uint8Array(),
     ...(describe ? { describe: vi.fn(describe) } : {}),
+    ...(profileName ? { profileName } : {}),
   });
   notifications.bindRecipient(recipient);
   resources.push(notifications);
@@ -175,4 +179,41 @@ it("says a repeat-stopped notice needs no reply, like the brief", async () => {
     "Primitive classifies this email as repeat.stop/1. It needs no reply.",
   );
   expect(text).not.toContain("names the command");
+});
+
+it("names the receiving address and selects its profile in the read command", async () => {
+  // A session can carry several connected profiles; an email is readable
+  // only under the one that received it.
+  const f = await setup(async () => undefined, "session-work");
+  await f.notifications.handleDetail(
+    f.detail,
+    randomUUID(),
+    new AbortController().signal,
+  );
+  const text = String(f.queue.mock.calls[0]?.[0]);
+  const payload = JSON.parse(
+    text.split("\n").find((line) => line.startsWith("{")) ?? "{}",
+  );
+  expect(payload).toMatchObject({
+    to: "recipient@domain.com",
+    profile: "session-work",
+  });
+  expect(text).toContain(
+    `Inspect only when relevant: PRIMITIVE_AGENT_PROFILE=session-work primitive emails get --id ${f.detail.id} --brief`,
+  );
+});
+
+it("names the receiving address even without a profile name", async () => {
+  const f = await setup(async () => undefined);
+  await f.notifications.handleDetail(
+    f.detail,
+    randomUUID(),
+    new AbortController().signal,
+  );
+  const text = String(f.queue.mock.calls[0]?.[0]);
+  const payload = JSON.parse(
+    text.split("\n").find((line) => line.startsWith("{")) ?? "{}",
+  );
+  expect(payload.to).toBe("recipient@domain.com");
+  expect(payload).not.toHaveProperty("profile");
 });
