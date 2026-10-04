@@ -570,6 +570,20 @@ describe("primitive machine doctor", () => {
     expect(readFileSync(codexMd, "utf8")).toBe(malformed);
   });
 
+  it("points runtimes that get the skill at it instead of summarizing it", () => {
+    for (const runtime of ["claude", "codex"] as const) {
+      const block = managedInstructions(runtime);
+      const rules = block.split("\n").filter((line) => line.startsWith("- "));
+      expect(rules[0]).toContain("Load the `primitive-connect` skill");
+      expect(block).not.toContain("agent working set");
+      expect(block).not.toContain("read receipts are automatic");
+    }
+    const omp = managedInstructions("omp");
+    expect(omp).not.toContain("primitive-connect");
+    expect(omp).toContain("primitive reply");
+    expect(omp).toContain("agent working clear");
+  });
+
   it("uses Codex's override file when it has content", async () => {
     const { home, options } = machine();
     writeFileSync(join(home, ".codex", "AGENTS.override.md"), "Override.\n");
