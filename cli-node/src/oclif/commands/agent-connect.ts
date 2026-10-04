@@ -10,6 +10,7 @@ import {
   invitationProfileName,
   runAgentConnect,
 } from "../agent-connect-flow.js";
+import { identitySuggestions } from "../agent-identity-suggestions.js";
 import {
   RECEIVER_MODES,
   type ReceiverMode,
@@ -288,12 +289,22 @@ export default class AgentConnectCommand extends Command {
         });
         const external = output.receiving.mode === "external";
         const poll = output.receiving.mode === "poll";
+        // The owner names the connection in the invitation, so only the
+        // runtime note is suggested here.
+        const suggested = {
+          ...output,
+          ...identitySuggestions({
+            invocation: invocation(process.argv[1]),
+            profile: output.profile,
+            connectedNow: output.status === "connected",
+          }),
+        };
         if (flags.json)
           this.log(
             JSON.stringify(
               replaced.length
-                ? { ...output, replacedExisting: replaced }
-                : output,
+                ? { ...suggested, replacedExisting: replaced }
+                : suggested,
             ),
           );
         else {

@@ -62,6 +62,10 @@ export type SessionRegisterResult = {
   address: string | null;
   /** How mail reaches this session: Claude hooks, Codex native receiver, or not supported. */
   receiving: "external_hook" | "native" | "unsupported" | null;
+  /** The connection name, on a registration this run completed. */
+  name?: string;
+  /** Whether that name is still the one this command generated. */
+  nameIsDefault?: boolean;
   detail: string;
 };
 
@@ -201,9 +205,9 @@ export function agentInfoForSession(
   );
 }
 
-type ProcessInfo = { ppid: number; started: string; command: string };
+export type ProcessInfo = { ppid: number; started: string; command: string };
 
-function psProcessInfo(pid: number): ProcessInfo | null {
+export function psProcessInfo(pid: number): ProcessInfo | null {
   try {
     const line = execFileSync(
       "ps",
@@ -230,7 +234,7 @@ function psProcessInfo(pid: number): ProcessInfo | null {
   }
 }
 
-const OMP_MAIN =
+export const OMP_MAIN =
   /(?:^|[\s/\\])omp(?:\s|$)|pi-coding-agent[\\/]dist[\\/]cli\.js(?:\s|$)/;
 
 /**
@@ -1103,10 +1107,15 @@ export async function registerSession(
       hooked = claudeHook(address);
     if (status === "connected") await finishAgentInfo();
     const withAddress = { ...known, address, receiving: RECEIVING[runtime] };
+    // Every name this command records is generated, so the connection still
+    // has a default name unless it was renamed while setup was pending.
+    const name = result.name ?? record.name;
     if (status === "connected")
       return {
         ...withAddress,
         status: "registered",
+        name,
+        nameIsDefault: name === record.name,
         detail:
           hooked === "installed"
             ? `Connected as ${address}.`

@@ -120,6 +120,31 @@ function fakeDependencies(configDir: string) {
 }
 
 describe("agent session-register", () => {
+  it("reports a name renamed while setup was pending as not default", async () => {
+    const { configDir, repo } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const enroll = dependencies.enroll as typeof enrollAgent;
+    const result = await registerSession({
+      configDir,
+      runtime: "claude",
+      cwd: join(repo, "src"),
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: {
+        ...dependencies,
+        enroll: (async (options: Parameters<typeof enrollAgent>[0]) => ({
+          ...(await enroll(options)),
+          name: "Billing reviewer",
+        })) as typeof enrollAgent,
+      },
+    });
+    expect(result).toMatchObject({
+      status: "registered",
+      name: "Billing reviewer",
+      nameIsDefault: false,
+    });
+  });
+
   it("registers once and a resume only re-verifies", async () => {
     const { configDir, repo } = setup();
     const { calls, dependencies } = fakeDependencies(configDir);
@@ -142,6 +167,8 @@ describe("agent session-register", () => {
       profile: `session-${session}`,
       address: "agent@example.test",
       receiving: "external_hook",
+      name: "claude-my-repo",
+      nameIsDefault: true,
     });
     expect(calls.enroll).toHaveLength(1);
     expect(calls.enroll[0]?.name).toBe("claude-my-repo");
@@ -154,6 +181,8 @@ describe("agent session-register", () => {
 
     const resumed = await registerSession(options);
     expect(resumed.status).toBe("already_registered");
+    // Only a registration this run completed reports the name it chose.
+    expect(resumed.name).toBeUndefined();
     expect(calls.enroll).toHaveLength(1);
     expect(calls.seeds).toHaveLength(1);
     // The resume reinstalls the same exact-session hook (idempotent).
