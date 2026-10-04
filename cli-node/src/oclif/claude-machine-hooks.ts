@@ -644,11 +644,17 @@ function boundKey(item: BoundSessionProfile): string {
  * session a second address. A profile that still has any receive hook for
  * the session, or the only profile bound to a session, is restored as usual.
  */
-function heldSessionProfiles(
+/**
+ * For each session, the connected profiles it receives as through the
+ * per-session receive hooks in `hooks`, keyed like `boundKey`. A hook for a
+ * disconnected or removed profile is stale (machine doctor removes it), so
+ * the session does not receive through it.
+ */
+function receivingProfilesBySession(
   hooks: RecordValue,
-  bound: readonly BoundSessionProfile[],
-  restore: ReadonlySet<string> | undefined,
-): Map<string, { item: BoundSessionProfile; receivingAs: string[] }> {
+  /** A key counted even when its profile is not saved as connected. */
+  always?: string,
+): Map<string, Set<string>> {
   const receiving = new Map<string, Set<string>>();
   for (const event of SESSION_EVENTS) {
     const entries = hooks[event];
@@ -658,22 +664,51 @@ function heldSessionProfiles(
       for (const hook of entry.hooks) {
         const parsed = parseSessionHook(hook);
         if (!parsed?.profile || !parsed.session) continue;
-        // A hook for a disconnected or removed profile is stale and is
-        // removed by this repair, so the session does not receive through it.
+        const session = parsed.session.toLowerCase();
+        const key = [resolve(parsed.configDir), parsed.profile, session].join(
+          "\0",
+        );
         if (
-          !existsSync(parsed.configDir) ||
-          !profileStillConnected(parsed.configDir, parsed.profile)
+          key !== always &&
+          (!existsSync(parsed.configDir) ||
+            !profileStillConnected(parsed.configDir, parsed.profile))
         )
           continue;
-        const session = parsed.session.toLowerCase();
         const profiles = receiving.get(session) ?? new Set<string>();
-        profiles.add(
-          [resolve(parsed.configDir), parsed.profile, session].join("\0"),
-        );
+        profiles.add(key);
         receiving.set(session, profiles);
       }
     }
   }
+  return receiving;
+}
+
+/**
+ * The other connected profiles a session already receives as, when `target`
+ * itself has no receive hook for it. Adding `target`'s hooks then would give
+ * the session a second address; an empty list means it would not (the
+ * session receives as nobody else, or `target` already has hooks there and
+ * only needs them repaired). Uses the same rule as machine doctor, so an
+ * automatic install never binds a profile doctor would leave alone.
+ */
+export function otherSessionReceivers(
+  hooks: RecordValue,
+  target: { configDir: string; profile: string; session: string },
+): string[] {
+  const session = target.session.toLowerCase();
+  const own = [resolve(target.configDir), target.profile, session].join("\0");
+  const present =
+    receivingProfilesBySession(hooks, own).get(session) ?? new Set<string>();
+  if (present.has(own)) return [];
+  return [...present].map((other) => other.split("\0")[1] ?? "").sort();
+}
+
+function heldSessionProfiles(
+  hooks: RecordValue,
+  bound: readonly BoundSessionProfile[],
+  restore: ReadonlySet<string> | undefined,
+): Map<string, { item: BoundSessionProfile; receivingAs: string[] }> {
+  const receiving = receivingProfilesBySession(hooks);
   const held = new Map<
     string,
     { item: BoundSessionProfile; receivingAs: string[] }

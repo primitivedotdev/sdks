@@ -22,7 +22,10 @@ import {
   installClaudeWakeHook,
   uninstallClaudeWakeHook,
 } from "../../src/oclif/claude-wake-install.js";
-import { agentProfileDirectory } from "../../src/oclif/connected-agent-profile.js";
+import {
+  agentProfileDirectory,
+  saveConnectedAgentProfile,
+} from "../../src/oclif/connected-agent-profile.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const sessionA = "11111111-1111-4111-8111-111111111111";
@@ -846,4 +849,163 @@ test("reinstalling replaces this session's hooks written by an older CLI path", 
     settings.hooks.PostToolUse[0].hooks[0].args[1],
     realpathSync(cliPath),
   );
+});
+
+test("an automatic install yields to another connected profile the session already receives as", () => {
+  const { claudeDir, configDir, cliPath } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  saveConnectedAgentProfile(configDir, "profile-a", {
+    version: 1,
+    auth_method: "agent_connection",
+    api_key: ["pconn", "fixture", "x"].join("_"),
+    api_base_url: "https://api.primitive.dev/v1",
+    org_id: "22222222-2222-4222-8222-222222222222",
+    agent_address: "a@example.com",
+    owner_address: "owner@example.com",
+    invitation_hash: "a".repeat(64),
+    created_at: "2026-01-01T00:00:00.000Z",
+  });
+  const common = {
+    cliPath,
+    configDir,
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+  };
+  const a = {
+    ...common,
+    profileName: "profile-a",
+    agentAddress: "a@example.com",
+  };
+  const b = {
+    ...common,
+    profileName: "profile-b",
+    agentAddress: "b@example.com",
+    yieldToOtherProfiles: true,
+  };
+  // The session receives as A.
+  assert.equal(installClaudeWakeHook(a), "installed_unverified");
+  const onlyA = readFileSync(settingsPath, "utf8");
+  // An automatic install of B writes nothing.
+  assert.equal(installClaudeWakeHook(b), "held_for_other_profile");
+  assert.equal(readFileSync(settingsPath, "utf8"), onlyA);
+  // Another session is unaffected.
+  assert.equal(
+    installClaudeWakeHook({ ...b, sessionId: sessionB }),
+    "installed_unverified",
+  );
+  // Naming B explicitly (agent connect, agent enroll) still binds it.
+  assert.equal(
+    installClaudeWakeHook({ ...b, yieldToOtherProfiles: false }),
+    "installed_unverified",
+  );
+  const both = JSON.parse(readFileSync(settingsPath, "utf8"));
+  // B keeps any hook it still has, so a partly removed B is repaired.
+  both.hooks.Stop = both.hooks.Stop.filter(
+    (entry: { hooks: Array<{ args: string[] }> }) =>
+      !(
+        entry.hooks[0]?.args[3] === "profile-b" &&
+        entry.hooks[0]?.args[5] === sessionA
+      ),
+  );
+  writeFileSync(settingsPath, JSON.stringify(both));
+  assert.equal(installClaudeWakeHook(b), "installed_unverified");
+  const repaired = JSON.parse(readFileSync(settingsPath, "utf8"));
+  assert.ok(
+    repaired.hooks.Stop.some(
+      (entry: { hooks: Array<{ args: string[] }> }) =>
+        entry.hooks[0]?.args[3] === "profile-b" &&
+        entry.hooks[0]?.args[5] === sessionA,
+    ),
+  );
+});
+
+test("a held install still removes the profile's own legacy hook for the session", () => {
+  const { claudeDir, configDir, cliPath } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  saveConnectedAgentProfile(configDir, "profile-a", {
+    version: 1,
+    auth_method: "agent_connection",
+    api_key: ["pconn", "fixture", "x"].join("_"),
+    api_base_url: "https://api.primitive.dev/v1",
+    org_id: "22222222-2222-4222-8222-222222222222",
+    agent_address: "a@example.com",
+    owner_address: "owner@example.com",
+    invitation_hash: "a".repeat(64),
+    created_at: "2026-01-01T00:00:00.000Z",
+  });
+  // B's saved setup ties it to session A, and B still has an older
+  // six-argument wake hook, which names no session.
+  writeMailJson(
+    join(agentProfileDirectory(configDir, "profile-b"), "setup.json"),
+    { session: sessionA, receiverMode: "external" },
+  );
+  const legacy = {
+    type: "command",
+    command: process.execPath,
+    args: [
+      join(dirname(cliPath), "claude-wake.mjs"),
+      cliPath,
+      configDir,
+      "profile-b",
+      "b@example.com",
+      "primitive-agent-wake-v1",
+    ],
+  };
+  const unrelated = { type: "command", command: "true" };
+  writeFileSync(
+    settingsPath,
+    JSON.stringify({
+      hooks: {
+        Stop: [{ hooks: [legacy, unrelated] }],
+        SessionStart: [{ matcher: "resume", hooks: [legacy] }],
+      },
+    }),
+  );
+  const common = {
+    cliPath,
+    configDir,
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+  };
+  // The session receives as A through current hooks.
+  assert.equal(
+    installClaudeWakeHook({
+      ...common,
+      profileName: "profile-a",
+      agentAddress: "a@example.com",
+    }),
+    "installed_unverified",
+  );
+  assert.equal(
+    installClaudeWakeHook({
+      ...common,
+      profileName: "profile-b",
+      agentAddress: "b@example.com",
+      yieldToOtherProfiles: true,
+    }),
+    "held_for_other_profile",
+  );
+  const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+  const profiles = (["Stop", "SessionStart", "PostToolUse"] as const).flatMap(
+    (event) =>
+      (settings.hooks[event] ?? []).flatMap(
+        (entry: { hooks: Array<{ args?: string[] }> }) =>
+          entry.hooks.flatMap((hook) => (hook.args ? [hook.args[3]] : [])),
+      ),
+  );
+  // Only A receives; B's legacy hook is gone and unrelated hooks are kept.
+  assert.deepEqual([...new Set(profiles)], ["profile-a"]);
+  assert.deepEqual(settings.hooks.Stop[0].hooks, [unrelated]);
+  // A second held run finds nothing of B's to remove and writes nothing.
+  const after = readFileSync(settingsPath, "utf8");
+  assert.equal(
+    installClaudeWakeHook({
+      ...common,
+      profileName: "profile-b",
+      agentAddress: "b@example.com",
+      yieldToOtherProfiles: true,
+    }),
+    "held_for_other_profile",
+  );
+  assert.equal(readFileSync(settingsPath, "utf8"), after);
 });
