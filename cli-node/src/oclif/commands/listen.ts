@@ -137,7 +137,9 @@ export function hookReceiverStatus(
     !claudeCodeSession(id, env, configDir)
   )
     return null;
-  const profile = selectedHooks ? selected : (bound[0] ?? selected);
+  // Never name a profile saved for another session: its status would
+  // describe that session, not this one.
+  const profile = selectedHooks ? selected : (bound[0] ?? null);
   const statusCommand = `primitive agent connect --profile ${profile ?? "<profile>"} --status --json`;
   return {
     profile,

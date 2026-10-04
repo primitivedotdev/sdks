@@ -164,6 +164,20 @@ describe("native listener command transport", () => {
         join(agentProfileDirectory(directory, "other-mode"), "setup.json"),
         { session: otherSession, receiverMode: "native" },
       );
+      expect(
+        hookReceiverStatus(
+          session,
+          {
+            CLAUDE_CODE_SESSION_ID: session,
+            PRIMITIVE_AGENT_PROFILE: "other-mode",
+          },
+          directory,
+        ),
+      ).toMatchObject({
+        profile: null,
+        statusCommand:
+          "primitive agent connect --profile <profile> --status --json",
+      });
       saveConnectedAgentProfile(directory, "bound", {
         version: 1,
         auth_method: "agent_connection",
