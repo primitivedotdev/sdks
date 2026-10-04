@@ -46,7 +46,7 @@ export async function clearPendingAfterRead(
 }
 
 const NO_SIGNAL_DESCRIPTION =
-  "With --brief, do not report working to the sender. By default, reading mail from the verified owner or a same-organization peer that a receiver surfaced to this session reports working in the background until you answer (also disabled by PRIMITIVE_NO_AUTO_SIGNALS=1).";
+  "With --brief, do not report working to the sender. By default, reading mail from the verified owner or a same-organization member (not another agent) that a receiver surfaced to this session reports working in the background until you answer (also disabled by PRIMITIVE_NO_AUTO_SIGNALS=1).";
 
 type BriefFlags = {
   id: string;
@@ -102,7 +102,9 @@ async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
     );
     await clearPendingAfterRead(command.config.configDir, detail.id);
     // Detached and silent, so stdout stays one document and stderr empty.
-    if (!flags["no-signal"])
+    // Recheck the sender here: a claim saved before agent senders stopped
+    // qualifying must not start Working toward another agent.
+    if (!flags["no-signal"] && detail.sender_connected_agent_verified !== true)
       dispatchAutoWorking({
         configDir: command.config.configDir,
         emailId: detail.id,

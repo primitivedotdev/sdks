@@ -21,7 +21,7 @@ import {
 
 /**
  * Automatic communication signals. When mail from the verified owner or a
- * verified same-organization peer is surfaced to an agent session, the CLI
+ * verified same-organization member is surfaced to an agent session, the CLI
  * reports `read` once; when the session opens it with `emails get --brief`, the
  * CLI reports `working` and renews it until the agent answers. Every step is
  * best effort: nothing here may block, delay or fail the wake or the read.
@@ -92,7 +92,9 @@ const lower = (value: unknown) =>
  * authenticated (aligned DMARC) and either be this agent's pinned owner or
  * have been admitted by the organization network policy (an active member or
  * a same-organization agent). The email must be a fully parsed plain email
- * addressed only to this agent, which did not send it. Signals, fyi
+ * addressed only to this agent, which did not send it. Mail from a connected
+ * agent never qualifies: automatic read and working signals are for people,
+ * and between agents they only fill the thread. Signals, fyi
  * acknowledgements, interactions, presence checks, contact requests and
  * unverified or external senders never qualify.
  */
@@ -110,6 +112,7 @@ export function autoSignalEligible(
     if (admission.source !== "network" && !(owner && sender === owner))
       return false;
     if (!scopedChatSenderTrust(detail, sender).trusted) return false;
+    if (detail.sender_connected_agent_verified === true) return false;
     if (lower(detail.recipient) !== agent || lower(detail.to_email) !== agent)
       return false;
     if (!["accepted", "completed"].includes(detail.status)) return false;
