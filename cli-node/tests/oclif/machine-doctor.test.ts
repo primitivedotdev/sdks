@@ -1521,6 +1521,38 @@ describe("primitive machine doctor", () => {
     );
   });
 
+  it("says when rejected profiles belong to another API than the sign-in", async () => {
+    const { configDir, options } = machine();
+    saveConnectedAgentProfile(configDir, `session-${sessionA}`, {
+      ...profile("staging-agent@example.test"),
+      api_base_url: "https://api.primitive-staging-1.com/v1",
+    });
+    saveCliCredentials(configDir, {
+      auth_method: "oauth",
+      access_token: ["member", "token"].join("-"),
+      refresh_token: ["inert", "refresh"].join("-"),
+      token_type: "Bearer",
+      expires_at: "2099-01-01T00:00:00.000Z",
+      oauth_grant_id: "grant",
+      oauth_client_id: "fixture",
+      org_id: "33333333-3333-4333-8333-333333333333",
+      org_name: null,
+      api_base_url: "https://api.primitive.dev/v1",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    const fetchStub = (async () =>
+      new Response(JSON.stringify({ success: false }), {
+        status: 401,
+      })) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fetch: fetchStub }),
+    );
+    expect(report["profiles.orphaned"].status).toBe("warn");
+    expect(report["profiles.orphaned"].detail).toContain(
+      "1 of them belong to an organization or Primitive API your current sign-in is not for",
+    );
+  });
+
   it("names rejected profiles it cannot confirm and says how to clean them up", async () => {
     const { configDir, options } = machine();
     saveConnectedAgentProfile(

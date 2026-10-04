@@ -810,6 +810,9 @@ export async function runMachineDoctor(
         : check("profiles.orphaned", "ok", "No saved agent profiles.");
     let member: StoredCliCredentials | null | undefined;
     const unconfirmed: string[] = [];
+    // Rejected profiles the saved sign-in cannot check at all: another
+    // organization or another Primitive API (such as staging).
+    let elsewhere = 0;
     let unknown = 0;
     let connected = 0;
     // A few requests at a time: this runs on a timer and a machine can
@@ -832,10 +835,13 @@ export async function runMachineDoctor(
       if (entry.state === "revoked") orphans.push(entry);
       else if (entry.state === "rejected") {
         member ??= await memberCredentialsFor(options);
-        const listed =
-          member &&
+        const checkable =
+          !!member &&
           member.org_id === entry.profile.org_id &&
-          member.api_base_url === entry.profile.api_base_url
+          member.api_base_url === entry.profile.api_base_url;
+        if (member && !checkable) elsewhere++;
+        const listed =
+          checkable && member
             ? await ownerListedStatus(
                 member,
                 entry.profile.agent_address,
@@ -866,7 +872,7 @@ export async function runMachineDoctor(
         "warn",
         [
           unconfirmed.length
-            ? `${unconfirmed.length} saved profiles have credentials Primitive no longer accepts (${unconfirmed.slice(0, 5).join(", ")}${unconfirmed.length > 5 ? `, and ${unconfirmed.length - 5} more` : ""}). They cannot send or receive. To clean them up, sign in with \`primitive login\` as a member of their organization and run \`primitive machine doctor --fix\`, which confirms each one is disconnected before moving it aside`
+            ? `${unconfirmed.length} saved profiles have credentials Primitive no longer accepts (${unconfirmed.slice(0, 5).join(", ")}${unconfirmed.length > 5 ? `, and ${unconfirmed.length - 5} more` : ""}). They cannot send or receive. To clean them up, sign in with \`primitive login\` as a member of their organization and run \`primitive machine doctor --fix\`, which confirms each one is disconnected before moving it aside${elsewhere ? `. ${elsewhere} of them belong to an organization or Primitive API your current sign-in is not for, so sign in there to check them` : ""}`
             : "",
           unreadable ? `${unreadable} profiles could not be read` : "",
         ]
