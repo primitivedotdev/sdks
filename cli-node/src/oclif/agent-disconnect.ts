@@ -159,13 +159,17 @@ async function revoke(
   }
   if (result.error !== undefined) {
     const status = result.response?.status;
+    if (status === undefined)
+      throw new AgentDisconnectError(
+        "Revocation outcome is unknown: no response was received from Primitive. The profile and credential were preserved. Check your connection, then retry or check the agent in the app.",
+      );
     const code = errorCode(result.error);
-    const label = `HTTP ${status ?? "unknown"}${code ? `, ${code}` : ""}`;
+    const label = `HTTP ${status}${code ? `, ${code}` : ""}`;
     throw new AgentDisconnectError(
       status === 401
         ? `Revocation was not confirmed (${label}). The credential was preserved; it may already be invalid. Check the agent in the app before retrying.`
-        : status !== undefined && status >= 500
-          ? `Primitive failed while revoking this agent (${label}). The credential was preserved and still works. Retrying the same command is safe.`
+        : status >= 500
+          ? `Primitive returned a server error while revoking this agent (${label}), so revocation is unconfirmed. The profile was preserved. Retry the same command; a 401 on retry means the credential was already revoked.`
           : `Revocation was refused by Primitive (${label}). The credential was preserved. Check the agent in the app before retrying.`,
     );
   }

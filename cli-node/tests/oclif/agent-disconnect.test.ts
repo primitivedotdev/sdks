@@ -245,7 +245,7 @@ describe("connected agent self-disconnect", () => {
     }
   });
 
-  it("says a server failure kept a working credential and is safe to retry", async () => {
+  it("reports a server failure as unconfirmed and says how to read a retry", async () => {
     const directory = configDir();
     saved(directory);
     const { fetch } = server(
@@ -261,7 +261,7 @@ describe("connected agent self-disconnect", () => {
       fetch,
     });
     await expect(failure).rejects.toThrow(
-      "Primitive failed while revoking this agent (HTTP 500, internal_error). The credential was preserved and still works. Retrying the same command is safe.",
+      "Primitive returned a server error while revoking this agent (HTTP 500, internal_error), so revocation is unconfirmed. The profile was preserved. Retry the same command; a 401 on retry means the credential was already revoked.",
     );
     await expect(failure).rejects.not.toThrow("Private detail");
     expect(loadConnectedAgentProfile(directory, "work")).toMatchObject(profile);
