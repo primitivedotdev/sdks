@@ -120,6 +120,19 @@ function confirmedLocally(
   return true;
 }
 
+/** The API error code from an error envelope, when it has one. */
+function errorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const inner = (error as Record<string, unknown>).error;
+  const code =
+    inner && typeof inner === "object"
+      ? (inner as Record<string, unknown>).code
+      : (error as Record<string, unknown>).code;
+  return typeof code === "string" && /^[a-z0-9_]{1,64}$/.test(code)
+    ? code
+    : undefined;
+}
+
 async function revoke(
   profile: ConnectedAgentProfile,
   fetcher?: typeof fetch,
@@ -146,10 +159,18 @@ async function revoke(
   }
   if (result.error !== undefined) {
     const status = result.response?.status;
+    if (status === undefined)
+      throw new AgentDisconnectError(
+        "Revocation outcome is unknown: no response was received from Primitive. The profile and credential were preserved. Check your connection, then retry or check the agent in the app.",
+      );
+    const code = errorCode(result.error);
+    const label = `HTTP ${status}${code ? `, ${code}` : ""}`;
     throw new AgentDisconnectError(
       status === 401
-        ? "Revocation was not confirmed (401). The credential was preserved; it may already be invalid. Check the agent in the app before retrying."
-        : "Revocation was not confirmed by Primitive. The credential was preserved. Check the agent in the app before retrying.",
+        ? `Revocation was not confirmed (${label}). The credential was preserved; it may already be invalid. Check the agent in the app before retrying.`
+        : status >= 500
+          ? `Primitive returned a server error while revoking this agent (${label}), so revocation is unconfirmed. The profile was preserved. Retry the same command; a 401 on retry means the credential was already revoked.`
+          : `Revocation was refused by Primitive (${label}). The credential was preserved. Check the agent in the app before retrying.`,
     );
   }
   const envelope = result.data;
