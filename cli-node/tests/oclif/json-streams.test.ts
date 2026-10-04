@@ -1009,7 +1009,20 @@ describe("collaboration commands with --json", () => {
     ["starts automatic working", [], 1],
     ["--no-signal skips automatic working", ["--no-signal"], 0],
   ] as const)("emails get --brief %s and still prints one document", async (_label, extra, expected) => {
-    responder = mailApi;
+    // A member (a person), not a connected agent: only people get automatic working.
+    responder = (url, init, request) => {
+      const path = url.pathname.replace(/^\/v1/, "");
+      if (
+        (request?.method ?? "GET") !== "GET" ||
+        !/^\/emails\/[^/]+$/.test(path)
+      )
+        return mailApi(url, init, request);
+      const email = path.split("/")[2] as string;
+      return jsonResponse(200, {
+        success: true,
+        data: { ...detail(email), sender_connected_agent_verified: false },
+      });
+    };
     workers.length = 0;
     const configDir = process.env.PRIMITIVE_CONFIG_DIR as string;
     claimAutoRead(configDir, {
@@ -1035,6 +1048,41 @@ describe("collaboration commands with --json", () => {
         PRIMITIVE_AUTO_SIGNAL_EMAIL: emailId,
         PRIMITIVE_AGENT_PROFILE: "work",
       });
+  });
+
+  it("emails get --brief never starts working from an old claim on agent mail", async () => {
+    responder = (url, init, request) => {
+      const response = mailApi(url, init, request);
+      const path = url.pathname.replace(/^\/v1/, "");
+      if (
+        (request?.method ?? "GET") !== "GET" ||
+        !/^\/emails\/[^/]+$/.test(path)
+      )
+        return response;
+      const email = path.split("/")[2] as string;
+      return jsonResponse(200, {
+        success: true,
+        data: { ...detail(email), sender_connected_agent_verified: true },
+      });
+    };
+    workers.length = 0;
+    const configDir = process.env.PRIMITIVE_CONFIG_DIR as string;
+    claimAutoRead(configDir, {
+      emailId,
+      profileName: "work",
+      sender: peer,
+      threadId,
+    });
+    const result = await runMerged("emails:get", [
+      "--id",
+      emailId,
+      "--brief",
+      "--json",
+    ]);
+    expect(result.exitCode).toBe(0);
+    expectOneDocument(result);
+    expect(workers).toHaveLength(0);
+    expect(readWorkingLease(configDir, emailId)).toBeNull();
   });
 
   it("emails get --brief never starts working for mail no receiver surfaced", async () => {
