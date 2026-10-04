@@ -198,17 +198,17 @@ export function installClaudeWakeHook(options: {
         throw new Error(`Invalid ${PENDING_EVENT} hooks`);
       // Judged under the settings lock on the file as read, so a concurrent
       // install for the other profile cannot slip between check and write.
-      if (
-        options.yieldToOtherProfiles &&
+      // A held profile still loses any older hook of its own for this
+      // session (such as a legacy hook without a session argument, which
+      // the check cannot attribute), so the session ends up receiving only
+      // as the other profile.
+      held =
+        options.yieldToOtherProfiles === true &&
         otherSessionReceivers(hooks, {
           configDir,
           profile: profileName,
           session: sessionId,
-        }).length > 0
-      ) {
-        held = true;
-        return null;
-      }
+        }).length > 0;
       const hook = {
         type: "command",
         command: process.execPath,
@@ -293,25 +293,35 @@ export function installClaudeWakeHook(options: {
           if (siblings.length === entry.hooks.length) return [entry];
           return siblings.length ? [{ ...entry, hooks: siblings }] : [];
         });
-        nextHooks[event] = [
-          ...retained,
-          event === "SessionStart"
-            ? { matcher: "resume", hooks: [hook] }
-            : { hooks: [hook] },
-        ];
+        if (held) {
+          if (entries) nextHooks[event] = retained;
+        } else
+          nextHooks[event] = [
+            ...retained,
+            event === "SessionStart"
+              ? { matcher: "resume", hooks: [hook] }
+              : { hooks: [hook] },
+          ];
       }
       const pendingEntries = hooks[PENDING_EVENT] as unknown[] | undefined;
-      nextHooks[PENDING_EVENT] = [
-        ...(pendingEntries ?? []).flatMap((entry) => {
-          if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
-          const siblings = entry.hooks.filter(
-            (candidate) => !isOwnPendingHook(candidate),
-          );
-          if (siblings.length === entry.hooks.length) return [entry];
-          return siblings.length ? [{ ...entry, hooks: siblings }] : [];
-        }),
-        { hooks: [pendingHook] },
-      ];
+      const pendingRetained = (pendingEntries ?? []).flatMap((entry) => {
+        if (!record(entry) || !Array.isArray(entry.hooks)) return [entry];
+        const siblings = entry.hooks.filter(
+          (candidate) => !isOwnPendingHook(candidate),
+        );
+        if (siblings.length === entry.hooks.length) return [entry];
+        return siblings.length ? [{ ...entry, hooks: siblings }] : [];
+      });
+      if (held) {
+        if (pendingEntries) nextHooks[PENDING_EVENT] = pendingRetained;
+      } else
+        nextHooks[PENDING_EVENT] = [
+          ...pendingRetained,
+          { hooks: [pendingHook] },
+        ];
+      // A hold that removed nothing leaves the file untouched.
+      if (held && JSON.stringify(nextHooks) === JSON.stringify(hooks))
+        return null;
       return {
         ...settings,
         hooks: nextHooks,
