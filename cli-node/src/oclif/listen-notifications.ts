@@ -108,6 +108,7 @@ export async function runSharedNotificationListen(
   const readPart = notificationPartReader(async () => auth.apiClient.client);
   const native = await openSessionNotifications({
     ...notify,
+    profileName: auth.auth.connectedAgent?.profileName,
     configDir: options.configDir,
     scope,
     signal,

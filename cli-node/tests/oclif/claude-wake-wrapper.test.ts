@@ -91,6 +91,18 @@ it("forwards a bounded exact-conversation status to the Claude hook", () => {
   expect(result.stderr).toBe(notice);
 });
 
+it("forwards a status that names the receiving address", () => {
+  const notice =
+    "Primitive status arrived: " +
+    received +
+    " to=agent@example.test working peer@example.com " +
+    sent +
+    ". This is activity on an exact conversation this session started, not a new task.\n";
+  const { result } = runWake(notice);
+  expect(result.status).toBe(2);
+  expect(result.stderr).toBe(notice);
+});
+
 it("names the receiving address and profile when it replays a pending notice", () => {
   const { result, forwarded } = runWake(
     "unused\n",
@@ -343,6 +355,10 @@ it.each([
     profile: "session-11111111-1111-4111-8111-111111111111",
   },
   { head: "to=agent+ops@example.test", profile: "named.profile_1" },
+  {
+    head: "to=unavailable from=peer@example.com relationship=agent thread=none in_thread=no attachments=no",
+    profile: "work",
+  },
 ])("forwards a wake naming its receiving address and profile: $head", ({
   head,
   profile,

@@ -319,15 +319,21 @@ export async function describeWake(input: {
 
 const WAKE_PROFILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/;
 
+/** The receiving address fit to print in a wake line, or null. */
+export function wakeRecipientAddress(address: unknown): string | null {
+  const value = typeof address === "string" ? address.toLowerCase() : "";
+  return WAKE_RECIPIENT.test(value) ? value : null;
+}
+
 /**
- * ` to=<address>` naming the address that received a wake, or empty when the
- * address is unknown or outside the plain character set the hook accepts.
- * One session can have several connected profiles, each receiving for its
- * own address, so the wake says which one this mail arrived at.
+ * ` to=<address>` naming the address that received a wake. It is always
+ * present: one session can have several connected profiles, each receiving
+ * for its own address, and an email is readable only under the profile that
+ * received it. An address that is unknown or outside the plain character set
+ * the hook accepts prints as `to=unavailable`.
  */
 export function wakeRecipientField(address: unknown): string {
-  const value = typeof address === "string" ? address.toLowerCase() : "";
-  return WAKE_RECIPIENT.test(value) ? ` to=${value}` : "";
+  return ` to=${wakeRecipientAddress(address) ?? "unavailable"}`;
 }
 
 /**

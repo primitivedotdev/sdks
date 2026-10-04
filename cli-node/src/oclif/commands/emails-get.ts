@@ -11,9 +11,12 @@ import {
 import { resolveCliAuth } from "../auth.js";
 import { dispatchAutoWorking } from "../auto-signals.js";
 import { buildEmailBrief, renderEmailBrief } from "../email-brief.js";
+import { withFlagSuggestion } from "../flag-suggestions.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { clearReadPendingMail } from "../pending-mail.js";
 import { explainPendingMailNotFound } from "../pending-mail-miss.js";
+
+const EMAIL_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
 const BRIEF_DESCRIPTION =
   "Print a compact brief instead of the raw email: a trusted envelope (sender, relationship, verification, thread, whether you have sent in the thread, newer messages when the API reports them, attachments, the sender's active work claim, the sender's latest signal on your last message, and for a repeating message its cadence and how to stop it), then the sender-authored subject and body_text fenced and labelled untrusted. With --json, prints one object with `envelope`, `subject` and `body_text`.";
@@ -127,10 +130,24 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
     } as never;
 
     async run(): Promise<void> {
-      const { flags } = await this.parse(EmailsGetCommand as never);
+      const { flags } = await this.parse(EmailsGetCommand as never).catch(
+        (error: unknown) => {
+          throw withFlagSuggestion(
+            error,
+            Object.keys(EmailsGetCommand.flags as Record<string, unknown>),
+          );
+        },
+      );
       const parsed = flags as BriefFlags & { brief?: boolean };
       if (typeof parsed.id !== "string")
         throw new Errors.CLIError("Missing required flag --id.");
+      // The API answers a malformed id with a misleading scope error, so
+      // reject it here before any request is made.
+      if (!EMAIL_ID.test(parsed.id))
+        throw new Errors.CLIError(
+          "--id must be an email UUID (for example the id in a wake line, agent check-mail output, or emails latest).",
+          { exit: 1 },
+        );
       if (parsed.brief) {
         await runBrief(this, parsed);
         return;

@@ -129,18 +129,46 @@ it("resets the count when the listener records the notice again", async () => {
   );
 });
 
-it("stays silent for an email no profile in this session was told about", async () => {
+it("names the session's other address for an email no notice covers", async () => {
+  // The field case: the wake named the email but the agent read it under the
+  // wrong one of the session's two profiles, and took not_found as proof the
+  // email did not exist.
   await recordPendingMail(configDir, "named", session, notice(otherEmail));
+  process.env.PRIMITIVE_AGENT_PROFILE = "named";
+  expect(await explain()).toBe(
+    `Email ${emailId} was not found for named@example.test (profile named). This session also has session-agent@example.test (profile session-${session}); an email is readable only under the profile that received it, so try PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.\n`,
+  );
+});
+
+it("names other saved connected profiles without a runtime session, and counts no miss", async () => {
+  await recordPendingMail(configDir, "named", session, notice(emailId));
+  delete process.env.CLAUDE_CODE_SESSION_ID;
+  process.env.PRIMITIVE_AGENT_PROFILE = "named";
+  expect(await explain()).toBe(
+    `Email ${emailId} was not found for named@example.test (profile named). Other connected profiles saved on this machine: session-agent@example.test (profile session-${session}); an email is readable only under the profile that received it, so try PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.\n`,
+  );
+  expect(readPendingMail(configDir, "named", session)[0]).not.toHaveProperty(
+    "not_found_reads",
+  );
+});
+
+it("stays silent when no other connected profile exists", async () => {
+  rmSync(
+    join(configDir, "agent-connections", "profiles", `session-${session}`),
+    {
+      recursive: true,
+      force: true,
+    },
+  );
   process.env.PRIMITIVE_AGENT_PROFILE = "named";
   expect(await explain()).toBe("");
 });
 
-it("stays silent without a runtime session", async () => {
-  await recordPendingMail(configDir, "named", session, notice(emailId));
-  delete process.env.CLAUDE_CODE_SESSION_ID;
-  process.env.PRIMITIVE_AGENT_PROFILE = "named";
+it("stays silent when the read did not use a connected profile", async () => {
   expect(await explain()).toBe("");
-  expect(readPendingMail(configDir, "named", session)[0]).not.toHaveProperty(
-    "not_found_reads",
-  );
+});
+
+it("never prints a saved credential in the hint", async () => {
+  process.env.PRIMITIVE_AGENT_PROFILE = "named";
+  expect(await explain()).not.toContain("pconn_");
 });

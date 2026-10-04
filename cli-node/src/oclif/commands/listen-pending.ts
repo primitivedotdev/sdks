@@ -7,6 +7,7 @@ import {
   readPendingMail,
   removePendingMail,
 } from "../pending-mail.js";
+import { wakeReadCommand } from "../wake-context.js";
 
 const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
@@ -34,8 +35,10 @@ export default class ListenPendingCommand extends Command {
 
   async run(): Promise<void> {
     const { flags } = await this.parse(ListenPendingCommand);
-    const profileName = resolveCliAuth({ configDir: this.config.configDir })
-      .connectedAgent?.profileName;
+    const connected = resolveCliAuth({
+      configDir: this.config.configDir,
+    }).connectedAgent;
+    const profileName = connected?.profileName;
     if (!profileName)
       this.error(
         "Pending notices belong to a connected agent profile. Set PRIMITIVE_AGENT_PROFILE.",
@@ -61,6 +64,10 @@ export default class ListenPendingCommand extends Command {
       JSON.stringify(
         {
           session_id: session.toLowerCase(),
+          // Notices are readable only under this profile.
+          profile: profileName,
+          to: connected?.agentAddress.toLowerCase(),
+          read_command: wakeReadCommand("<id>", profileName),
           path: pendingMailPath(this.config.configDir, profileName, session),
           // At the cap, newer mail waits in the queue until notices are read.
           full: notices.length >= PENDING_MAIL_LIMIT,

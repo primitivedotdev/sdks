@@ -82,6 +82,20 @@ export function claudeCodeSession(
   }
 }
 
+/** The address a saved profile receives for; undefined when unreadable. */
+function profileAgentAddress(
+  configDir: string,
+  profileName: string | undefined,
+): string | undefined {
+  if (!profileName) return undefined;
+  try {
+    return loadConnectedAgentProfile(configDir, profileName)?.agent_address;
+  } catch {
+    // The address is informational; the wake still goes out.
+    return undefined;
+  }
+}
+
 export default class ListenCommand extends Command {
   static summary = "Receive webhook events locally without a public endpoint";
   static description =
@@ -727,12 +741,22 @@ export default class ListenCommand extends Command {
       process.removeListener("SIGINT", cancel);
       process.removeListener("SIGTERM", cancel);
     }
+    // Name the receiving address and select its profile in the read
+    // command: a session can carry several connected profiles, and the
+    // email is readable only under the one that received it.
+    const recipient =
+      wake?.status() || wake?.wakeId()
+        ? wakeRecipientField(
+            hookAgentAddress ??
+              profileAgentAddress(this.config.configDir, hookProfileName),
+          )
+        : "";
     if (wake?.status()) {
       const status = wake.status();
       if (!status)
         throw new ListenStateError("Conversation status disappeared.");
       process.stderr.write(
-        `Primitive status arrived: ${status.emailId} ${status.kind} ${status.peer} ${status.sentEmailId}. This is activity on an exact conversation this session started, not a new task.\n`,
+        `Primitive status arrived: ${status.emailId}${recipient} ${status.kind} ${status.peer} ${status.sentEmailId}. This is activity on an exact conversation this session started, not a new task.\n`,
       );
       process.exitCode = 2;
     } else if (wake?.wakeId()) {
@@ -747,20 +771,6 @@ export default class ListenCommand extends Command {
       const context = wake.context?.();
       const metadata = context ? ` ${formatWakeContext(context)}` : "";
       const interaction = wakeInteractionSentence(context?.interaction);
-      // Name the receiving address and select its profile in the read
-      // command: a session can carry several connected profiles, and the
-      // email is readable only under the one that received it.
-      let recipient = wakeRecipientField(hookAgentAddress);
-      if (!recipient && hookProfileName) {
-        try {
-          recipient = wakeRecipientField(
-            loadConnectedAgentProfile(this.config.configDir, hookProfileName)
-              ?.agent_address,
-          );
-        } catch {
-          // The address is informational; the wake still goes out.
-        }
-      }
       process.stderr.write(
         `Primitive mail arrived: ${wake.wakeId()}${recipient}${metadata}. Read with ${wakeReadCommand(wake.wakeId() ?? "", hookProfileName)}.${interaction} ${authority}\n`,
       );
