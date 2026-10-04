@@ -150,6 +150,13 @@ def sync_detailed(
     attempt, including gate-denied attempts that the agent
     never called and rows still in `queued` state.
 
+    Under an address-bound agent connection credential, the
+    list holds this agent's own sends plus delivered sends from
+    other addresses in the org that name this agent in to, cc
+    or bcc and have matching inbound delivery evidence at this
+    agent. Pass `from` with the agent's own address to list
+    only its own sends.
+
     For inbound mail received at your verified domains, see
     /emails. There is no unified send/receive history endpoint;
     the two surfaces are intentionally separate because the
@@ -247,6 +254,13 @@ def sync(
     attempt, including gate-denied attempts that the agent
     never called and rows still in `queued` state.
 
+    Under an address-bound agent connection credential, the
+    list holds this agent's own sends plus delivered sends from
+    other addresses in the org that name this agent in to, cc
+    or bcc and have matching inbound delivery evidence at this
+    agent. Pass `from` with the agent's own address to list
+    only its own sends.
+
     For inbound mail received at your verified domains, see
     /emails. There is no unified send/receive history endpoint;
     the two surfaces are intentionally separate because the
@@ -338,6 +352,13 @@ async def asyncio_detailed(
     forwards through /send-mail). Includes every recorded
     attempt, including gate-denied attempts that the agent
     never called and rows still in `queued` state.
+
+    Under an address-bound agent connection credential, the
+    list holds this agent's own sends plus delivered sends from
+    other addresses in the org that name this agent in to, cc
+    or bcc and have matching inbound delivery evidence at this
+    agent. Pass `from` with the agent's own address to list
+    only its own sends.
 
     For inbound mail received at your verified domains, see
     /emails. There is no unified send/receive history endpoint;
@@ -435,6 +456,13 @@ async def asyncio(
     forwards through /send-mail). Includes every recorded
     attempt, including gate-denied attempts that the agent
     never called and rows still in `queued` state.
+
+    Under an address-bound agent connection credential, the
+    list holds this agent's own sends plus delivered sends from
+    other addresses in the org that name this agent in to, cc
+    or bcc and have matching inbound delivery evidence at this
+    agent. Pass `from` with the agent's own address to list
+    only its own sends.
 
     For inbound mail received at your verified domains, see
     /emails. There is no unified send/receive history endpoint;
