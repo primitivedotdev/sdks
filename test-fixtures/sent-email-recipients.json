@@ -1,0 +1,26 @@
+[
+  {
+    "name": "populated",
+    "fields": {
+      "to_addresses": ["recipient@example.com", "second@example.com"],
+      "cc": ["copied@example.com"],
+      "bcc": ["hidden@example.com"],
+      "reply_to": ["replies@example.com"],
+      "tags": [{ "name": "campaign", "value": "fixture" }]
+    }
+  },
+  {
+    "name": "explicit nulls",
+    "fields": {
+      "to_addresses": null,
+      "cc": null,
+      "bcc": null,
+      "reply_to": null,
+      "tags": null
+    }
+  },
+  {
+    "name": "omitted",
+    "fields": {}
+  }
+]
