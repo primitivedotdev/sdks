@@ -1095,6 +1095,230 @@ describe("primitive machine doctor", () => {
     expect(again["claude.hook.stop"].fixed).toBeFalsy();
   });
 
+  it("does not bind a second profile to a session that receives through another", async () => {
+    const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    // The session is connected as prod-agent. other-agent was connected to
+    // the same session earlier and its hooks were removed afterwards; it is
+    // still used for one-off commands with PRIMITIVE_AGENT_PROFILE.
+    for (const name of ["prod-agent", "other-agent"]) {
+      saveConnectedAgentProfile(
+        configDir,
+        name,
+        profile(`${name}@example.test`),
+      );
+      writeMailJson(
+        join(agentProfileDirectory(configDir, name), "setup.json"),
+        { session: sessionA, receiverMode: "external" },
+      );
+    }
+    const prod = wakeHook(
+      bin,
+      configDir,
+      "prod-agent",
+      "prod-agent@example.test",
+      sessionA,
+    );
+    const pending = {
+      type: "command",
+      command: process.execPath,
+      args: [
+        join(bin, "claude-pending-mail.mjs"),
+        join(bin, "run.js"),
+        configDir,
+        "prod-agent",
+        "prod-agent@example.test",
+        sessionA,
+        "primitive-pending-mail-v1",
+      ],
+      timeout: 10,
+    };
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({
+        hooks: {
+          Stop: [{ hooks: [prod] }],
+          SessionStart: [{ matcher: "resume", hooks: [prod] }],
+          PostToolUse: [{ hooks: [pending] }],
+        },
+      }),
+    );
+    const only = new Set<DoctorCheckId>(["claude.hook.stop"]);
+    const before = byId(await runMachineDoctor({ ...options, only }));
+    expect(before["claude.hook.stop"].status).toBe("ok");
+    expect(before["claude.hook.stop"].detail).toContain(
+      `profile other-agent is bound to session ${sessionA}, which receives as prod-agent`,
+    );
+
+    const text = readFileSync(settingsPath, "utf8");
+    const fixed = byId(await runMachineDoctor({ ...options, fix: true, only }));
+    expect(fixed["claude.hook.stop"].status).toBe("ok");
+    expect(fixed["claude.hook.stop"].changes).toBeUndefined();
+    expect(readFileSync(settingsPath, "utf8")).toBe(text);
+
+    // Naming the profile is the deliberate choice that binds it.
+    const chosen = byId(
+      await runMachineDoctor({
+        ...options,
+        fix: true,
+        only,
+        profiles: new Set(["other-agent"]),
+      }),
+    );
+    expect(
+      chosen["claude.hook.stop"].changes?.map((change) => [
+        change.profile,
+        change.action,
+      ]),
+    ).toEqual([
+      ["other-agent", "added"],
+      ["other-agent", "added"],
+      ["other-agent", "added"],
+    ]);
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    expect(JSON.stringify(settings.hooks.Stop)).toContain("prod-agent");
+    expect(JSON.stringify(settings.hooks.Stop)).toContain("other-agent");
+  });
+
+  it("restores a profile that lost only some receive hooks, even beside another profile", async () => {
+    const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    for (const name of ["prod-agent", "other-agent"]) {
+      saveConnectedAgentProfile(
+        configDir,
+        name,
+        profile(`${name}@example.test`),
+      );
+      writeMailJson(
+        join(agentProfileDirectory(configDir, name), "setup.json"),
+        { session: sessionA, receiverMode: "external" },
+      );
+    }
+    const prod = wakeHook(
+      bin,
+      configDir,
+      "prod-agent",
+      "prod-agent@example.test",
+      sessionA,
+    );
+    // prod-agent still has its Stop hook; the other two were lost.
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({ hooks: { Stop: [{ hooks: [prod] }] } }),
+    );
+    const fixed = byId(
+      await runMachineDoctor({
+        ...options,
+        fix: true,
+        only: new Set(["claude.hook.stop"]),
+      }),
+    );
+    expect(
+      fixed["claude.hook.stop"].changes?.map((change) => [
+        change.profile,
+        change.hook,
+        change.action,
+      ]),
+    ).toEqual([
+      ["prod-agent", "SessionStart", "added"],
+      ["prod-agent", "PostToolUse", "added"],
+    ]);
+    expect(readFileSync(settingsPath, "utf8")).not.toContain("other-agent");
+  });
+
+  it("restores the only connected profile when the session's other hook is stale", async () => {
+    const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    saveConnectedAgentProfile(
+      configDir,
+      "live-agent",
+      profile("live-agent@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "live-agent"), "setup.json"),
+      { session: sessionA, receiverMode: "external" },
+    );
+    // The only hook left for the session belongs to a removed profile.
+    const dead = wakeHook(
+      bin,
+      configDir,
+      "removed-agent",
+      "gone@example.test",
+      sessionA,
+    );
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({ hooks: { Stop: [{ hooks: [dead] }] } }),
+    );
+    const fixed = byId(
+      await runMachineDoctor({
+        ...options,
+        fix: true,
+        only: new Set(["claude.hook.stop"]),
+      }),
+    );
+    expect(fixed["claude.hook.stop"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    expect(
+      fixed["claude.hook.stop"].changes?.map((change) => [
+        change.profile,
+        change.hook,
+        change.action,
+      ]),
+    ).toEqual([
+      ["removed-agent", "Stop", "removed"],
+      ["live-agent", "Stop", "added"],
+      ["live-agent", "SessionStart", "added"],
+      ["live-agent", "PostToolUse", "added"],
+    ]);
+    const text = readFileSync(settingsPath, "utf8");
+    expect(text).not.toContain("removed-agent");
+    expect(JSON.parse(text).hooks.Stop).toEqual([
+      {
+        hooks: [
+          wakeHook(
+            bin,
+            configDir,
+            "live-agent",
+            "live-agent@example.test",
+            sessionA,
+          ),
+        ],
+      },
+    ]);
+  });
+
+  it("restores none of several profiles bound to a session that receives as none", async () => {
+    const { home, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    writeFileSync(settingsPath, "{}\n");
+    for (const name of ["prod-agent", "other-agent"]) {
+      saveConnectedAgentProfile(
+        configDir,
+        name,
+        profile(`${name}@example.test`),
+      );
+      writeMailJson(
+        join(agentProfileDirectory(configDir, name), "setup.json"),
+        { session: sessionA, receiverMode: "external" },
+      );
+    }
+    const fixed = byId(
+      await runMachineDoctor({
+        ...options,
+        fix: true,
+        only: new Set(["claude.hook.stop"]),
+      }),
+    );
+    expect(fixed["claude.hook.stop"].status).toBe("ok");
+    expect(fixed["claude.hook.stop"].detail).toContain(
+      "has several bound profiles and receives as none",
+    );
+    expect(readFileSync(settingsPath, "utf8")).toBe("{}\n");
+  });
+
   it("checks every saved profile, however many there are", async () => {
     const { configDir, options } = machine();
     for (let index = 0; index < 205; index++)

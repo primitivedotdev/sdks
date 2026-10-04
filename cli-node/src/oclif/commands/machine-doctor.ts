@@ -79,7 +79,7 @@ export default class MachineDoctorCommand extends Command {
     }),
     profile: Flags.string({
       description:
-        "With --fix, change per-session receive hooks only for this saved agent profile; repeatable. Other checks are unaffected, so combine with --check claude.hook.stop to repair nothing else",
+        "With --fix, change per-session receive hooks only for this saved agent profile; repeatable. Naming a profile is also the only way --fix restores hooks for a profile bound to a session that already receives as another profile. Other checks are unaffected, so combine with --check claude.hook.stop to repair nothing else",
       multiple: true,
     }),
     runtime: Flags.string({

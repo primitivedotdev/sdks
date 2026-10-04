@@ -577,6 +577,11 @@ export type HookContext = {
   blocked: string | null;
   /** Connected profiles that receive through hooks in a live Claude session. */
   bound?: BoundSessionProfile[];
+  /**
+   * Profiles named explicitly (machine doctor --profile). Only these are
+   * restored when their session already receives through another profile.
+   */
+  restoreProfiles?: ReadonlySet<string>;
 };
 
 /** A connected profile whose saved setup receives through Claude hooks. */
@@ -625,6 +630,66 @@ export function boundSessionProfiles(configDir: string): BoundSessionProfile[] {
     }
   }
   return bound;
+}
+
+function boundKey(item: BoundSessionProfile): string {
+  return [resolve(item.configDir), item.profile, item.session].join("\0");
+}
+
+/**
+ * Bound profiles whose receive hooks are entirely absent while the same
+ * session receives through another connected profile, or while several profiles are
+ * bound to it and none receives. Such a profile is not restored without
+ * being named: its hooks were removed on purpose, or it would give the
+ * session a second address. A profile that still has any receive hook for
+ * the session, or the only profile bound to a session, is restored as usual.
+ */
+function heldSessionProfiles(
+  hooks: RecordValue,
+  bound: readonly BoundSessionProfile[],
+  restore: ReadonlySet<string> | undefined,
+): Map<string, { item: BoundSessionProfile; receivingAs: string[] }> {
+  const receiving = new Map<string, Set<string>>();
+  for (const event of SESSION_EVENTS) {
+    const entries = hooks[event];
+    if (!Array.isArray(entries)) continue;
+    for (const entry of entries) {
+      if (!record(entry) || !Array.isArray(entry.hooks)) continue;
+      for (const hook of entry.hooks) {
+        const parsed = parseSessionHook(hook);
+        if (!parsed?.profile || !parsed.session) continue;
+        // A hook for a disconnected or removed profile is stale and is
+        // removed by this repair, so the session does not receive through it.
+        if (
+          !existsSync(parsed.configDir) ||
+          !profileStillConnected(parsed.configDir, parsed.profile)
+        )
+          continue;
+        const session = parsed.session.toLowerCase();
+        const profiles = receiving.get(session) ?? new Set<string>();
+        profiles.add(
+          [resolve(parsed.configDir), parsed.profile, session].join("\0"),
+        );
+        receiving.set(session, profiles);
+      }
+    }
+  }
+  const held = new Map<
+    string,
+    { item: BoundSessionProfile; receivingAs: string[] }
+  >();
+  for (const item of bound) {
+    const key = boundKey(item);
+    const present = receiving.get(item.session) ?? new Set<string>();
+    if (present.has(key) || restore?.has(item.profile)) continue;
+    const others = [...present].map((other) => other.split("\0")[1] ?? "");
+    const siblings = bound.filter(
+      (candidate) => candidate.session === item.session,
+    );
+    if (others.length > 0 || siblings.length > 1)
+      held.set(key, { item, receivingAs: others.sort() });
+  }
+  return held;
 }
 
 /** Receive hooks each bound profile should have and does not. */
@@ -766,7 +831,28 @@ export function inspectClaudeHooks(
     };
     return findings;
   }
-  const bound = context.bound ?? [];
+  const held = heldSessionProfiles(
+    hooks,
+    context.bound ?? [],
+    context.restoreProfiles,
+  );
+  const bound = (context.bound ?? []).filter(
+    (item) => !held.has(boundKey(item)),
+  );
+  const heldNote = held.size
+    ? ` Left alone: ${[...held.values()]
+        .map(
+          ({ item, receivingAs }) =>
+            `profile ${item.profile} is bound to session ${item.session}, which ${
+              receivingAs.length
+                ? `receives as ${receivingAs.join(", ")}`
+                : "has several bound profiles and receives as none"
+            }`,
+        )
+        .join(
+          "; ",
+        )}. Run \`primitive machine doctor --fix --profile <profile>\` to restore one deliberately.`
+    : "";
   const counts = {
     keep: 0,
     stale: 0,
@@ -795,7 +881,7 @@ export function inspectClaudeHooks(
   findings["claude.hook.stop"] = problems.length
     ? {
         status: "fail",
-        detail: `Per-session receive hooks need cleanup: ${problems.join(", ")}. Affected: ${summarizeOwners(items)}.${blockedNote}`,
+        detail: `Per-session receive hooks need cleanup: ${problems.join(", ")}. Affected: ${summarizeOwners(items)}.${blockedNote}${heldNote}`,
         // Removing hooks for dead sessions never needs a CLI path.
         fixable:
           canFix ||
@@ -804,9 +890,11 @@ export function inspectClaudeHooks(
       }
     : {
         status: "ok",
-        detail: counts.keep
-          ? `${counts.keep} per-session receive hooks, each present once and current.`
-          : "No per-session receive hooks; each registered session adds its own exact-session hooks.",
+        detail: `${
+          counts.keep
+            ? `${counts.keep} per-session receive hooks, each present once and current.`
+            : "No per-session receive hooks; each registered session adds its own exact-session hooks."
+        }${heldNote}`,
         fixable: false,
       };
   return findings;
@@ -900,7 +988,16 @@ export function repairClaudeHooks(
       (event) => eventEntries(hooks, event) === "invalid",
     );
     if (!invalid) {
-      const bound = context.bound ?? [];
+      // Judged on the settings as found, before any hook below is removed
+      // or rewritten, so a hook being replaced still counts as present.
+      const held = heldSessionProfiles(
+        hooks,
+        context.bound ?? [],
+        context.restoreProfiles,
+      );
+      const bound = (context.bound ?? []).filter(
+        (item) => !held.has(boundKey(item)),
+      );
       const verdicts = judgeSessionHooks(hooks, context.cli, bound);
       for (const event of SESSION_EVENTS) {
         const entries = eventEntries(hooks, event);
