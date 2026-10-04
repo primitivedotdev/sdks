@@ -19,8 +19,9 @@ import { test } from "vitest";
 import {
   claudeWakeHookStatus,
   editClaudeSettings,
-  HOOK_FIRED_RECENT_MS,
+  HOOK_RECENT_MS,
   installClaudeWakeHook,
+  recordHookMailCheck,
   uninstallClaudeWakeHook,
 } from "../../src/oclif/claude-wake-install.js";
 import {
@@ -122,9 +123,12 @@ test("external hook installer preserves other settings and replaces only its own
   assert.deepEqual(claudeWakeHookStatus(options), {
     installed: true,
     lastFiredAt: null,
+    lastMailCheckAt: null,
+    firedRecently: false,
     liveness: "unknown",
   });
   const firedAt = "2026-10-01T15:00:00.000Z";
+  const fired = Date.parse(firedAt);
   writeMailJson(
     join(
       agentProfileDirectory(configDir, "session-a"),
@@ -132,26 +136,49 @@ test("external hook installer preserves other settings and replaces only its own
     ),
     { version: 1, at: firedAt },
   );
-  assert.deepEqual(claudeWakeHookStatus(options), {
-    installed: true,
-    lastFiredAt: firedAt,
-    liveness: "unknown",
-  });
-  // A run within the freshness window shows the hooks are firing.
-  const fired = Date.parse(firedAt);
+  assert.deepEqual(
+    claudeWakeHookStatus({ ...options, now: fired + HOOK_RECENT_MS + 1 }),
+    {
+      installed: true,
+      lastFiredAt: firedAt,
+      lastMailCheckAt: null,
+      firedRecently: false,
+      liveness: "unknown",
+    },
+  );
+  // A hook that just ran is not live on its own: its mail check may fail.
   assert.deepEqual(claudeWakeHookStatus({ ...options, now: fired + 60_000 }), {
     installed: true,
     lastFiredAt: firedAt,
-    liveness: "fired_recently",
+    lastMailCheckAt: null,
+    firedRecently: true,
+    liveness: "unknown",
+  });
+  // A completed mail check within the window is.
+  recordHookMailCheck({
+    configDir,
+    profileName: "session-a",
+    sessionId: sessionA,
+    at: fired + 2_000,
+  });
+  const checkedAt = new Date(fired + 2_000).toISOString();
+  assert.deepEqual(claudeWakeHookStatus({ ...options, now: fired + 60_000 }), {
+    installed: true,
+    lastFiredAt: firedAt,
+    lastMailCheckAt: checkedAt,
+    firedRecently: true,
+    liveness: "checked_recently",
   });
   assert.equal(
-    claudeWakeHookStatus({ ...options, now: fired + HOOK_FIRED_RECENT_MS })
+    claudeWakeHookStatus({ ...options, now: fired + 2_000 + HOOK_RECENT_MS })
       .liveness,
-    "fired_recently",
+    "checked_recently",
   );
   assert.equal(
-    claudeWakeHookStatus({ ...options, now: fired + HOOK_FIRED_RECENT_MS + 1 })
-      .liveness,
+    claudeWakeHookStatus({
+      ...options,
+      now: fired + 2_000 + HOOK_RECENT_MS + 1,
+    }).liveness,
     "unknown",
   );
   // A record far in the future is not trusted as recent.

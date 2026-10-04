@@ -17,7 +17,11 @@ import {
   writeManagedFile,
 } from "./machine-files.js";
 import { SESSION_UUID } from "./notify-session-native.js";
-import { mailAddress, readMailJson } from "./shared-mail-files.js";
+import {
+  mailAddress,
+  readMailJson,
+  writeMailJson,
+} from "./shared-mail-files.js";
 
 const HOOK_MARKER = "primitive-agent-wake-v1";
 const WAKE_EVENTS = ["Stop", "SessionStart"] as const;
@@ -43,22 +47,71 @@ export type ClaudeWakeHookResult =
   | "unavailable";
 
 /**
- * How long after the session's receive hook last ran that run still counts
- * as recent. It matches the longest validity the server gives a presence
- * proof (`valid_for_ms` is at most 600000), so the CLI never calls a hook
+ * How long a hook run or a hook mail check still counts as recent. It
+ * matches the longest validity the server gives a presence proof
+ * (`valid_for_ms` is at most 600000), so the CLI never calls a hook receiver
  * recent for longer than the server would call the session present.
  */
-export const HOOK_FIRED_RECENT_MS = 10 * 60_000;
+export const HOOK_RECENT_MS = 10 * 60_000;
 
-/** Clock skew tolerated for a fired record written slightly in the future. */
-const FIRED_CLOCK_SKEW_MS = 60_000;
+/** Clock skew tolerated for a record written slightly in the future. */
+const RECORD_CLOCK_SKEW_MS = 60_000;
+
+function hookMailCheckPath(
+  configDir: string,
+  profileName: string,
+  sessionId: string,
+): string {
+  return join(
+    agentProfileDirectory(configDir, profileName),
+    `pending-mail-${sessionId}.mail-check.json`,
+  );
+}
 
 /**
- * `fired_recently`: the session's receive hook ran within
- * HOOK_FIRED_RECENT_MS, which shows the hooks are wired and firing. It does
- * not prove a wake from idle; only arriving mail shows that.
+ * Record that a listener run by this session's receive hook just completed a
+ * mail check with the server. Fails open: receiving never depends on it.
  */
-export type ClaudeWakeHookLiveness = "fired_recently" | "unknown";
+export function recordHookMailCheck(options: {
+  configDir: string;
+  profileName: string;
+  sessionId: string;
+  at?: number;
+}): void {
+  try {
+    if (!SESSION_UUID.test(options.sessionId)) return;
+    writeMailJson(
+      hookMailCheckPath(
+        resolve(options.configDir),
+        agentProfileName(options.profileName),
+        options.sessionId.toLowerCase(),
+      ),
+      {
+        version: 1,
+        at: new Date(options.at ?? Date.now()).toISOString(),
+      },
+    );
+  } catch {
+    /* Status falls back to unverified. */
+  }
+}
+
+function recordedAt(value: unknown): string | null {
+  return record(value) &&
+    value.version === 1 &&
+    typeof value.at === "string" &&
+    Number.isFinite(Date.parse(value.at))
+    ? value.at
+    : null;
+}
+
+/**
+ * `checked_recently`: a listener run by this session's receive hook
+ * completed a mail check with the server within HOOK_RECENT_MS. It shows the
+ * hook receiver works; it does not prove a wake from idle, which only
+ * arriving mail shows.
+ */
+export type ClaudeWakeHookLiveness = "checked_recently" | "unknown";
 
 export function claudeWakeHookStatus(options: {
   configDir: string;
@@ -69,12 +122,18 @@ export function claudeWakeHookStatus(options: {
   now?: number;
 }): {
   installed: boolean;
+  /** When the session's PostToolUse receive hook last started. */
   lastFiredAt: string | null;
+  /** When a hook-run listener last completed a mail check. */
+  lastMailCheckAt: string | null;
+  firedRecently: boolean;
   liveness: ClaudeWakeHookLiveness;
 } {
   const unavailable = {
     installed: false,
     lastFiredAt: null,
+    lastMailCheckAt: null,
+    firedRecently: false,
     liveness: "unknown" as const,
   };
   try {
@@ -106,33 +165,32 @@ export function claudeWakeHookStatus(options: {
     const installed = (["Stop", "SessionStart", "PostToolUse"] as const).every(
       (event) => hasSessionReceiveHook(hooks, event, target, node),
     );
-    let lastFiredAt: string | null = null;
-    const fired = readMailJson(
-      join(
-        agentProfileDirectory(configDir, profileName),
-        `pending-mail-${sessionId}.fired.json`,
+    const lastFiredAt = recordedAt(
+      readMailJson(
+        join(
+          agentProfileDirectory(configDir, profileName),
+          `pending-mail-${sessionId}.fired.json`,
+        ),
       ),
     );
-    if (
-      record(fired) &&
-      fired.version === 1 &&
-      typeof fired.at === "string" &&
-      Number.isFinite(Date.parse(fired.at))
-    )
-      lastFiredAt = fired.at;
-    const age =
-      lastFiredAt === null
-        ? null
-        : (options.now ?? Date.now()) - Date.parse(lastFiredAt);
-    const recent =
-      installed &&
-      age !== null &&
-      age >= -FIRED_CLOCK_SKEW_MS &&
-      age <= HOOK_FIRED_RECENT_MS;
+    const lastMailCheckAt = recordedAt(
+      readMailJson(hookMailCheckPath(configDir, profileName, sessionId)),
+    );
+    const now = options.now ?? Date.now();
+    const recent = (at: string | null) => {
+      if (at === null) return false;
+      const age = now - Date.parse(at);
+      return age >= -RECORD_CLOCK_SKEW_MS && age <= HOOK_RECENT_MS;
+    };
     return {
       installed,
       lastFiredAt,
-      liveness: recent ? "fired_recently" : "unknown",
+      lastMailCheckAt,
+      firedRecently: installed && recent(lastFiredAt),
+      // A hook that runs is not enough: its mail check may fail. Only a
+      // completed check counts.
+      liveness:
+        installed && recent(lastMailCheckAt) ? "checked_recently" : "unknown",
     };
   } catch {
     return unavailable;

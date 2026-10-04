@@ -24,7 +24,10 @@ import {
   resolveCliApiRequestConfig,
 } from "../../src/oclif/api-client.js";
 import { resolveCliAuth } from "../../src/oclif/auth.js";
-import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
+import {
+  installClaudeWakeHook,
+  recordHookMailCheck,
+} from "../../src/oclif/claude-wake-install.js";
 import {
   agentProfileDirectory,
   agentProfilesDirectory,
@@ -157,35 +160,57 @@ describe("connected-agent setup", () => {
       hook: { installed: true },
     });
 
-    // The session's receive hook just ran: the hooks are firing, reported
-    // as such and not as a verified wake.
+    // The session's receive hook just ran, but a run alone is not receiving:
+    // its mail check may have failed.
     const firedPath = join(
       agentProfileDirectory(configDir, "work"),
       `pending-mail-${orgId}.fired.json`,
     );
     const justNow = new Date().toISOString();
     writeMailJson(firedPath, { version: 1, at: justNow });
-    const fired = agentConnectionStatus(configDir, "work", env).receiving;
-    expect(fired).toMatchObject({
-      state: "running",
-      reason: "hook_fired_recently",
+    const unconfirmed = agentConnectionStatus(configDir, "work", env).receiving;
+    expect(unconfirmed).toMatchObject({
+      state: "unknown",
+      reason: "hook_mail_check_unconfirmed",
       lastFiredAt: justNow,
-      liveness: "fired_recently",
+      lastSuccessfulMailCheckAt: null,
+      liveness: "unknown",
+    });
+    expect(JSON.stringify(unconfirmed)).toContain(
+      "no completed mail check has been recorded",
+    );
+
+    // A hook-run listener completed a mail check: receiving is running,
+    // reported without claiming a verified wake.
+    recordHookMailCheck({ configDir, profileName: "work", sessionId: orgId });
+    const checked = agentConnectionStatus(configDir, "work", env).receiving;
+    expect(checked).toMatchObject({
+      state: "running",
+      reason: "hook_mail_check_recent",
+      lastFiredAt: justNow,
+      lastSuccessfulMailCheckAt: expect.any(String),
+      liveness: "checked_recently",
       hook: { installed: true, lastFiredAt: justNow },
     });
-    expect(JSON.stringify(fired)).toContain(
+    expect(JSON.stringify(checked)).toContain(
       "A wake from idle is confirmed only when new mail arrives.",
     );
 
-    // A run older than the window says nothing about the session now.
-    const stale = new Date(Date.now() - 60 * 60_000).toISOString();
-    writeMailJson(firedPath, { version: 1, at: stale });
+    // Records older than the window say nothing about the session now.
+    const stale = Date.now() - 60 * 60_000;
+    writeMailJson(firedPath, { version: 1, at: new Date(stale).toISOString() });
+    recordHookMailCheck({
+      configDir,
+      profileName: "work",
+      sessionId: orgId,
+      at: stale,
+    });
     expect(
       agentConnectionStatus(configDir, "work", env).receiving,
     ).toMatchObject({
       state: "unknown",
       reason: "hook_liveness_unverified",
-      lastFiredAt: stale,
+      lastFiredAt: new Date(stale).toISOString(),
       liveness: "unknown",
     });
   });

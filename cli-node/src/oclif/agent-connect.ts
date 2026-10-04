@@ -176,26 +176,36 @@ export function agentConnectionStatus(
                 sessionId: session,
                 env,
               });
-              // A present hook that has not run recently stays unverified.
-              // One that ran recently shows the hooks fire, though only
-              // arriving mail proves a wake from idle. A missing hook is a
-              // known failure.
-              const fired = hook.liveness === "fired_recently";
+              // A missing hook is a known failure. A present hook runs only
+              // when the session is active, and running alone proves nothing:
+              // receiving counts as running only after a hook-run listener
+              // completed a mail check recently. Even then only arriving
+              // mail proves a wake from idle.
+              const checked = hook.liveness === "checked_recently";
+              const unconfirmed = !checked && hook.firedRecently;
               return {
                 mode,
                 sessionId: session,
-                state: !hook.installed ? "down" : fired ? "running" : "unknown",
+                state: !hook.installed
+                  ? "down"
+                  : checked
+                    ? "running"
+                    : "unknown",
                 reason: !hook.installed
                   ? "hook_missing"
-                  : fired
-                    ? "hook_fired_recently"
-                    : "hook_liveness_unverified",
+                  : checked
+                    ? "hook_mail_check_recent"
+                    : unconfirmed
+                      ? "hook_mail_check_unconfirmed"
+                      : "hook_liveness_unverified",
                 detail: !hook.installed
                   ? "The receive hook for this session is missing, so mail will not wake this session. Run `primitive machine doctor --fix` to reinstall it."
-                  : fired
-                    ? "The receive hook ran in this session recently, so its hooks are firing. A wake from idle is confirmed only when new mail arrives."
-                    : null,
-                lastSuccessfulMailCheckAt: null,
+                  : checked
+                    ? "A listener run by this session's receive hook completed a mail check recently. A wake from idle is confirmed only when new mail arrives."
+                    : unconfirmed
+                      ? "The receive hook ran recently, but no completed mail check has been recorded in that time. Mail may not be arriving; check this session's Primitive connection."
+                      : null,
+                lastSuccessfulMailCheckAt: hook.lastMailCheckAt,
                 lastFiredAt: hook.lastFiredAt,
                 liveness: hook.liveness,
                 hook,

@@ -124,6 +124,24 @@ describe("native listener command transport", () => {
         statusCommand:
           "primitive agent connect --profile <profile> --status --json",
       });
+      // A Claude session whose selected profile polls or runs the native
+      // listener does not receive through hooks.
+      for (const receiverMode of ["poll", "native"]) {
+        writeMailJson(
+          join(agentProfileDirectory(directory, "other-mode"), "setup.json"),
+          { session, receiverMode },
+        );
+        expect(
+          hookReceiverStatus(
+            session,
+            {
+              CLAUDE_CODE_SESSION_ID: session,
+              PRIMITIVE_AGENT_PROFILE: "other-mode",
+            },
+            directory,
+          ),
+        ).toBeNull();
+      }
       saveConnectedAgentProfile(directory, "bound", {
         version: 1,
         auth_method: "agent_connection",

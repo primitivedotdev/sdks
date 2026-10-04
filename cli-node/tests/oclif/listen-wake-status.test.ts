@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Readable } from "node:stream";
@@ -50,6 +50,7 @@ vi.mock("../../src/oclif/shared-mail-files.js", async (original) => ({
 }));
 
 import ListenCommand from "../../src/oclif/commands/listen.js";
+import { agentProfileDirectory } from "../../src/oclif/connected-agent-profile.js";
 import {
   ListenStateError,
   resolveListenSubscription,
@@ -616,5 +617,57 @@ it("does not acknowledge mail the wake did not mark as verified", async () => {
     expect(mocks.dispatchAutoRead).not.toHaveBeenCalled();
   } finally {
     process.exitCode = previousExit;
+  }
+});
+
+it.each([
+  [true, "records"],
+  [false, "does not record"],
+])("a hook-run listener that completes a mail check (%s) %s it for status", async (completed) => {
+  const directory = mkdtempSync(join(tmpdir(), "primitive-hook-check-"));
+  vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+  const stdin = Readable.from([JSON.stringify(stopInput)]);
+  vi.spyOn(process, "stdin", "get").mockReturnValue(
+    stdin as typeof process.stdin,
+  );
+  vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  mocks.readMailJson.mockReturnValue({
+    session,
+    receiverMode: "external",
+    phase: "sent",
+    receipt: { status: "delivered" },
+  });
+  mocks.createWakeMail.mockResolvedValue({
+    handler: vi.fn(),
+    close: vi.fn(),
+    receiving: vi.fn(),
+    completed: vi.fn(),
+    wakeId: () => "44444444-4444-4444-8444-444444444444",
+    status: () => undefined,
+  });
+  mocks.runListen.mockImplementation(
+    async (options: { onReceivingState?: (ready: boolean) => void }) => {
+      options.onReceivingState?.(false);
+      if (completed) options.onReceivingState?.(true);
+    },
+  );
+  const before = Date.now();
+  try {
+    await ListenCommand.run(
+      ["--once", "--wake", "--hook-session", "--events", "email.received"],
+      { root },
+    );
+    const path = join(
+      agentProfileDirectory(directory, `session-${session}`),
+      `pending-mail-${session}.mail-check.json`,
+    );
+    if (completed) {
+      const saved = JSON.parse(readFileSync(path, "utf8"));
+      expect(saved.version).toBe(1);
+      expect(Date.parse(saved.at)).toBeGreaterThanOrEqual(before - 1000);
+    } else expect(existsSync(path)).toBe(false);
+  } finally {
+    vi.unstubAllEnvs();
+    rmSync(directory, { recursive: true, force: true });
   }
 });

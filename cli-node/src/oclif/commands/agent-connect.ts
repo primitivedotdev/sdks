@@ -153,6 +153,7 @@ export default class AgentConnectCommand extends Command {
             failureCode?: string | null;
             detail?: string | null;
             lastFiredAt?: string | null;
+            lastSuccessfulMailCheckAt?: string | null;
           } = result.receiving;
           const why = [
             receiving.reason,
@@ -161,7 +162,7 @@ export default class AgentConnectCommand extends Command {
               : null,
           ].filter(Boolean);
           this.log(
-            `Agent profile ${profileName} is configured for ${result.identity.agentAddress}. Local receiving: ${receiving.state}${why.length ? ` (${why.join(", ")})` : ""}.${receiving.detail ? ` ${receiving.detail}` : ""}${receiving.lastFiredAt ? ` Receive hook last ran at ${receiving.lastFiredAt}.` : ""}`,
+            `Agent profile ${profileName} is configured for ${result.identity.agentAddress}. Local receiving: ${receiving.state}${why.length ? ` (${why.join(", ")})` : ""}.${receiving.detail ? ` ${receiving.detail}` : ""}${receiving.lastFiredAt ? ` Receive hook last ran at ${receiving.lastFiredAt}.` : ""}${receiving.lastSuccessfulMailCheckAt ? ` Last completed mail check at ${receiving.lastSuccessfulMailCheckAt}.` : ""}`,
           );
         }
         return;
