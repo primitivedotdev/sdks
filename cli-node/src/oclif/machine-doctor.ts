@@ -385,16 +385,17 @@ async function memberCredentialsFor(
 const OWNER_LIST_MAX_PAGES = 200;
 
 /**
- * The member's whole connection list, hidden agents included, as address to
- * status. Read once per run. Null unless every page was read and the last one
- * explicitly ended the list (`meta.cursor: null`), because absence from a
- * partial list proves nothing.
+ * The member's connection list, hidden agents included, as address to status.
+ * Read once per run. `complete` is true only when every page was read and the
+ * last one explicitly ended the list (`meta.cursor: null`): a status found on
+ * any page stands, but absence is proof only from a complete list.
  */
 async function ownerConnectionStatuses(
   credentials: StoredCliCredentials,
   fetchImpl: typeof fetch,
-): Promise<Map<string, string> | null> {
+): Promise<{ statuses: Map<string, string>; complete: boolean }> {
   const statuses = new Map<string, string>();
+  const partial = () => ({ statuses, complete: false });
   let cursor: string | undefined;
   for (let page = 0; page < OWNER_LIST_MAX_PAGES; page++) {
     const url = new URL(`${credentials.api_base_url}/agent-connections`);
@@ -413,28 +414,29 @@ async function ownerConnectionStatuses(
       });
       if (response.status !== 200) {
         await response.body?.cancel().catch(() => undefined);
-        return null;
+        return partial();
       }
       const text = await response.text();
-      if (text.length > 1_048_576) return null;
+      if (text.length > 1_048_576) return partial();
       const body = JSON.parse(text) as {
         success?: unknown;
         data?: unknown;
         meta?: { cursor?: unknown };
       };
-      if (body.success !== true || !Array.isArray(body.data)) return null;
+      if (body.success !== true || !Array.isArray(body.data)) return partial();
       for (const row of body.data as Array<Record<string, unknown>>)
         if (typeof row?.address === "string" && typeof row.status === "string")
           statuses.set(row.address, row.status);
       const next = body.meta?.cursor;
-      if (next === null) return statuses;
-      if (typeof next !== "string" || !next || next === cursor) return null;
+      if (next === null) return { statuses, complete: true };
+      if (typeof next !== "string" || !next || next === cursor)
+        return partial();
       cursor = next;
     } catch {
-      return null;
+      return partial();
     }
   }
-  return null;
+  return partial();
 }
 
 type CheckRunner = {
@@ -816,7 +818,9 @@ export async function runMachineDoctor(
     // Rejected profiles the saved sign-in cannot check at all: another
     // organization or another Primitive API (such as staging).
     let elsewhere = 0;
-    let ownerList: Map<string, string> | null | undefined;
+    let ownerList:
+      | { statuses: Map<string, string>; complete: boolean }
+      | undefined;
     let unknown = 0;
     let connected = 0;
     // A few requests at a time: this runs on a timer and a machine can
@@ -848,7 +852,8 @@ export async function runMachineDoctor(
           ownerList = await ownerConnectionStatuses(member, fetchImpl);
         const listed =
           checkable && ownerList
-            ? (ownerList.get(entry.profile.agent_address) ?? "absent")
+            ? (ownerList.statuses.get(entry.profile.agent_address) ??
+              (ownerList.complete ? "absent" : null))
             : null;
         // A rejected key whose agent is revoked, or gone from the complete
         // list (removed in the app), can never work again.
