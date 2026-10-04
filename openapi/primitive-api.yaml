@@ -16286,6 +16286,66 @@ components:
                 and is available for download. Download authorization is checked
                 separately; address-bound agent connection keys cannot download
                 archives.
+            to_addresses:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+              description: |
+                Every normalized To recipient of the send. Always populated on
+                new sends (a single-recipient send carries a one-element array);
+                null only on records that predate this field. `to_address` keeps
+                carrying the first recipient.
+            cc:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+              description: |
+                Normalized Cc address list. Null when the send had no Cc
+                recipients.
+            bcc:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+              description: |
+                Normalized Bcc address list, surfaced on the sending
+                organization's own record. Bcc recipients are never written
+                into the transmitted message. Null when the send had no Bcc
+                recipients. Also null when the request uses an address-bound
+                agent connection key whose address is not the sender, because
+                Bcc is withheld from recipients.
+            reply_to:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+              description: |
+                Normalized Reply-To address list. Null when the send had none.
+            tags:
+              type:
+                - array
+                - "null"
+              description: |
+                Customer metadata tags stored verbatim at send time. Null when
+                the send had none. Also null when the request uses an
+                address-bound agent connection key whose address is not the
+                sender, because tags are withheld from recipients.
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: string
+                required:
+                  - name
+                  - value
       properties:
         presence_control:
           $ref: "#/components/schemas/PresenceControl"

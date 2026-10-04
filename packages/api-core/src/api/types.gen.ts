@@ -3172,6 +3172,46 @@ export type SentEmailDetail = SentEmailSummary & {
      * Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives.
      */
     attachments_download_available?: boolean;
+    /**
+     * Every normalized To recipient of the send. Always populated on
+     * new sends (a single-recipient send carries a one-element array);
+     * null only on records that predate this field. `to_address` keeps
+     * carrying the first recipient.
+     *
+     */
+    to_addresses?: Array<string> | null;
+    /**
+     * Normalized Cc address list. Null when the send had no Cc
+     * recipients.
+     *
+     */
+    cc?: Array<string> | null;
+    /**
+     * Normalized Bcc address list, surfaced on the sending
+     * organization's own record. Bcc recipients are never written
+     * into the transmitted message. Null when the send had no Bcc
+     * recipients. Also null when the request uses an address-bound
+     * agent connection key whose address is not the sender, because
+     * Bcc is withheld from recipients.
+     *
+     */
+    bcc?: Array<string> | null;
+    /**
+     * Normalized Reply-To address list. Null when the send had none.
+     *
+     */
+    reply_to?: Array<string> | null;
+    /**
+     * Customer metadata tags stored verbatim at send time. Null when
+     * the send had none. Also null when the request uses an
+     * address-bound agent connection key whose address is not the
+     * sender, because tags are withheld from recipients.
+     *
+     */
+    tags?: Array<{
+        name: string;
+        value: string;
+    }> | null;
 } & {
     presence_control?: PresenceControl;
     /**
