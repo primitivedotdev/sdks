@@ -578,6 +578,9 @@ describe("primitive machine doctor", () => {
       expect(block).not.toContain("agent working set");
       expect(block).not.toContain("read receipts are automatic");
     }
+    const unbundled = managedInstructions("claude", { skillBundled: false });
+    expect(unbundled).not.toContain("primitive-connect");
+    expect(unbundled).toContain("agent working clear");
     const omp = managedInstructions("omp");
     expect(omp).not.toContain("primitive-connect");
     expect(omp).toContain("primitive reply");
@@ -616,6 +619,20 @@ describe("primitive machine doctor", () => {
     expect(
       readFileSync(join(present.home, ".omp", "agent", "AGENTS.md"), "utf8"),
     ).toContain("--runtime omp");
+  });
+
+  it("keeps the short rules when no skill is bundled to install", async () => {
+    const { home, options } = machine({ runtimes: ["claude"] });
+    await runMachineDoctor({
+      ...options,
+      fix: true,
+      bundle: () => {
+        throw new Error("no bundled skill");
+      },
+    });
+    const written = readFileSync(join(home, ".claude", "CLAUDE.md"), "utf8");
+    expect(written).not.toContain("primitive-connect");
+    expect(written).toContain("agent working clear");
   });
 
   it("with --check repairs only the named check and still reports all of them", async () => {
