@@ -6,9 +6,9 @@ import {
   detectRuntimeLabel,
   insideOmp,
   RUNTIME_NOTE_NAME,
+  runtimeFolderLabel,
   runtimeHostLabel,
   runtimeNoteValue,
-  runtimePathLabel,
 } from "../../src/oclif/agent-runtime-note.js";
 import {
   AgentRuntimeGetCommand,
@@ -92,18 +92,15 @@ afterEach(() => {
 });
 
 describe("default runtime note", () => {
-  it("formats runtime, host and home-relative path", () => {
+  it("formats runtime, host and folder name", () => {
     expect(
       defaultRuntimeNote({
         env: { CLAUDE_CODE_SESSION_ID: "11111111-1111-4111-8111-111111111111" },
         hostname: "Ethan-Mac.local",
         cwd: "/Users/ethan/Desktop/currentProjects/primitive-mono-repo-5",
-        home: "/Users/ethan",
         insideOmp: noOmp,
       }),
-    ).toBe(
-      "Claude Code on ethan-mac at ~/Desktop/currentProjects/primitive-mono-repo-5",
-    );
+    ).toBe("Claude Code on ethan-mac in primitive-mono-repo-5");
   });
 
   it("detects the runtime from its marker variables", () => {
@@ -145,48 +142,44 @@ describe("default runtime note", () => {
     expect(runtimeHostLabel("  ")).toBe("unknown-host");
   });
 
-  it("writes the home directory as ~ only for paths inside it", () => {
-    expect(runtimePathLabel("/Users/ethan", "/Users/ethan")).toBe("~");
-    expect(runtimePathLabel("/Users/ethan/src/app", "/Users/ethan")).toBe(
-      "~/src/app",
-    );
-    expect(runtimePathLabel("/Users/ethan/..cache", "/Users/ethan")).toBe(
-      "~/..cache",
-    );
-    expect(runtimePathLabel("/Users/ethanb/src", "/Users/ethan")).toBe(
-      "/Users/ethanb/src",
-    );
-    expect(runtimePathLabel("/srv/app", "/Users/ethan")).toBe("/srv/app");
+  it("uses only the folder name, never the path", () => {
+    expect(runtimeFolderLabel("/Users/ethan/src/app")).toBe("app");
+    expect(runtimeFolderLabel("/Users/ethan/src/app/")).toBe("app");
+    expect(runtimeFolderLabel("/")).toBe("/");
+    expect(runtimeFolderLabel("/srv/odd\nname")).toBe("oddname");
   });
 
-  it("never includes environment values", () => {
+  it("never includes environment values or the full path", () => {
     const value = defaultRuntimeNote({
       env: { CODEX_THREAD_ID: "secret-thread", PRIMITIVE_API_KEY: "prim_x" },
       hostname: "box",
       cwd: "/home/dev/app",
-      home: "/home/dev",
       insideOmp: noOmp,
     });
-    expect(value).toBe("Codex on box at ~/app");
+    expect(value).toBe("Codex on box in app");
   });
 
-  it("keeps the end of a very deep directory so the line fits", () => {
-    const deep = `/srv/${"nested/".repeat(100)}app`;
+  it("shortens a very long folder name without splitting a character", () => {
     const value = defaultRuntimeNote({
       env: {},
       hostname: "box",
-      cwd: deep,
-      home: "/home/dev",
+      cwd: `/srv/${"\u{1F600}".repeat(300)}`,
       insideOmp: noOmp,
     });
-    expect(value).toHaveLength(500);
-    expect(value.startsWith("CLI on box at ...")).toBe(true);
-    expect(value.endsWith("/nested/app")).toBe(true);
+    expect(value.length).toBeLessThanOrEqual(500);
+    expect(value.startsWith("CLI on box in ...")).toBe(true);
+    expect(value.endsWith("\u{1F600}")).toBe(true);
+    // No lone surrogate halves remain after the cut.
+    const lone = Array.from(value).filter((character) => {
+      const code = character.charCodeAt(0);
+      return character.length === 1 && code >= 0xd800 && code <= 0xdfff;
+    });
+    expect(lone).toEqual([]);
   });
 
   it("validates an explicit value", () => {
-    expect(runtimeNoteValue("  Codex on box at ~/app ")).toBe(
-      "Codex on box at ~/app",
+    expect(runtimeNoteValue("  Codex on box in app ")).toBe(
+      "Codex on box in app",
     );
     expect(() => runtimeNoteValue("")).toThrow(/must not be empty/);
     expect(() => runtimeNoteValue("a\nb")).toThrow(/one line/);
@@ -203,7 +196,7 @@ describe("agent runtime commands", () => {
   it("set creates a private AGENT_RUNTIME note on the profile's own address", async () => {
     const calls = fixture(missing, ok(note("v", "1")));
     const lines = captureLog(AgentRuntimeSetCommand);
-    await AgentRuntimeSetCommand.run(["--value", "Codex on box at ~/app"], {
+    await AgentRuntimeSetCommand.run(["--value", "Codex on box in app"], {
       root,
     });
     expect(calls.map((call) => call.method)).toEqual(["GET", "PUT"]);
@@ -211,29 +204,29 @@ describe("agent runtime commands", () => {
       `/v1/address-notes/${own}/AGENT_RUNTIME`,
     );
     expect(calls[1]?.body).toEqual({
-      value: "Codex on box at ~/app",
+      value: "Codex on box in app",
       if_absent: true,
       visibility: "private",
     });
-    expect(lines).toEqual(["AGENT_RUNTIME set: Codex on box at ~/app"]);
+    expect(lines).toEqual(["AGENT_RUNTIME set: Codex on box in app"]);
   });
 
   it("set updates an existing note with its version and prints JSON", async () => {
     const calls = fixture(ok(note("old", "7", "public")), ok(note("new", "8")));
     const lines = captureLog(AgentRuntimeSetCommand);
     await AgentRuntimeSetCommand.run(
-      ["--value", "Claude Code on box at ~", "--json"],
+      ["--value", "Claude Code on box in home", "--json"],
       { root },
     );
     expect(calls[1]?.body).toEqual({
-      value: "Claude Code on box at ~",
+      value: "Claude Code on box in home",
       if_version: "7",
       visibility: "private",
     });
     expect(JSON.parse(lines.join("\n"))).toEqual({
       address: own,
       name: "AGENT_RUNTIME",
-      value: "Claude Code on box at ~",
+      value: "Claude Code on box in home",
       visibility: "private",
       version: "8",
     });
@@ -244,7 +237,7 @@ describe("agent runtime commands", () => {
     captureLog(AgentRuntimeSetCommand);
     await AgentRuntimeSetCommand.run([], { root });
     const written = (calls[1]?.body as { value: string }).value;
-    expect(written).toMatch(/^(Claude Code|Codex|omp|CLI) on \S+ at \S/);
+    expect(written).toMatch(/^(Claude Code|Codex|omp|CLI) on \S+ in \S/);
   });
 
   it("set refuses another address from a connected profile", async () => {
@@ -274,17 +267,17 @@ describe("agent runtime commands", () => {
   });
 
   it("get prints the note, or none when absent", async () => {
-    fixture(ok(note("Codex on box at ~/app")));
+    fixture(ok(note("Codex on box in app")));
     const lines = captureLog(AgentRuntimeGetCommand);
     await AgentRuntimeGetCommand.run([], { root });
     fixture(missing);
     await AgentRuntimeGetCommand.run([], { root });
-    expect(lines).toEqual(["Codex on box at ~/app", "none"]);
+    expect(lines).toEqual(["Codex on box in app", "none"]);
     expect(process.exitCode).toBeUndefined();
   });
 
   it("get reads a peer's note as JSON", async () => {
-    const calls = fixture(ok({ ...note("omp on box at ~/x"), address: peer }));
+    const calls = fixture(ok({ ...note("omp on box in x"), address: peer }));
     const lines = captureLog(AgentRuntimeGetCommand);
     await AgentRuntimeGetCommand.run(["--address", peer, "--json"], { root });
     expect(decodeURIComponent(calls[0]?.url.pathname ?? "")).toBe(
@@ -293,7 +286,7 @@ describe("agent runtime commands", () => {
     expect(JSON.parse(lines.join("\n"))).toEqual({
       address: peer,
       name: "AGENT_RUNTIME",
-      value: "omp on box at ~/x",
+      value: "omp on box in x",
       visibility: "private",
       updated_at: "2026-10-02T00:00:00Z",
     });

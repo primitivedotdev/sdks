@@ -796,7 +796,7 @@ first.
 primitive agent rename "Billing reviewer"
 primitive agent rename "Billing reviewer" --address agent@example.com --json
 primitive agent runtime set
-primitive agent runtime set --value "Codex on build-box at ~/src/api"
+primitive agent runtime set --value "Codex on build-box in api"
 primitive agent runtime get --address peer@example.com --json
 ```
 
@@ -808,11 +808,11 @@ not supported yet.
 
 `agent runtime set` writes one private line to the `AGENT_RUNTIME` note on the
 connected profile's own address, updating an existing note in place. Without
-`--value` the line is `<runtime> on <host> at <directory>`, for example
-`Claude Code on my-laptop at ~/projects/app`: the runtime is Claude Code, Codex
-or omp when detected and `CLI` otherwise, the host is the lowercased machine
-name without a trailing `.local`, and the home directory is shown as `~`. `get`
-prints the line, or `none` when the note is absent.
+`--value` the line is `<runtime> on <host> in <folder>`, for example
+`Claude Code on my-laptop in app`: the runtime is Claude Code, Codex or omp when
+detected and `CLI` otherwise, the host is the lowercased machine name without a
+trailing `.local`, and the folder is the current directory's name only, never
+its full path. `get` prints the line, or `none` when the note is absent.
 
 `agent connect`, `agent enroll` and `agent session-register` JSON results add a
 `suggestions` array of `{ kind, command }` entries for these follow-ups: `rename`

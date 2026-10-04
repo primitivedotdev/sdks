@@ -162,7 +162,7 @@
         "description": "Short, expiring work claims stored in the AGENT_WORKING address note. Set a claim when work starts, clear it when work ends, and check a peer's claim with get --address before editing a shared file. Claims are advisory, not locks."
       },
       "agent:runtime": {
-        "description": "One private line in the AGENT_RUNTIME address note saying where an agent runs and what it is, such as `Claude Code on my-laptop at ~/projects/app`. Use set to write it (a default is computed when --value is omitted) and get to read it; offer it to the owner before writing."
+        "description": "One private line in the AGENT_RUNTIME address note saying where an agent runs and what it is, such as `Claude Code on my-laptop in app`. Use set to write it (a default is computed when --value is omitted) and get to read it; offer it to the owner before writing."
       }
     },
     "topicSeparator": " "

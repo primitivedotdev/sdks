@@ -108,10 +108,10 @@ function noteMissing(error: unknown): boolean {
 export class AgentRuntimeSetCommand extends Command {
   static summary = "Record where this agent runs";
   static description =
-    `Write the private ${RUNTIME_NOTE_NAME} address note: one line saying where this agent runs and what it is, so its owner and peers can tell sessions apart. Without --value the line is \`<runtime> on <host> at <directory>\`, for example "Claude Code on my-laptop at ~/projects/app". The runtime is Claude Code, Codex or omp when detected, otherwise CLI; the host is the machine name without a trailing .local; the directory is the current one, with the home directory shown as ~. No environment values or credentials are included. The note is private to the organization, and an existing note is updated in place. Offer this to your owner before writing it.`;
+    `Write the private ${RUNTIME_NOTE_NAME} address note: one line saying where this agent runs and what it is, so its owner and peers can tell sessions apart. Without --value the line is \`<runtime> on <host> in <folder>\`, for example "Claude Code on my-laptop in app". The runtime is Claude Code, Codex or omp when detected, otherwise CLI; the host is the machine name without a trailing .local; the folder is the current directory's name only, never its full path. No environment values or credentials are included. The note is private to the organization, and an existing note is updated in place. Offer this to your owner before writing it.`;
   static examples = [
     "<%= config.bin %> agent runtime set",
-    '<%= config.bin %> agent runtime set --value "Codex on build-box at ~/src/api" --json',
+    '<%= config.bin %> agent runtime set --value "Codex on build-box in api" --json',
   ];
   static flags = {
     ...commonFlags,

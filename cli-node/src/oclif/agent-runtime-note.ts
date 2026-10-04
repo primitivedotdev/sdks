@@ -1,5 +1,5 @@
-import { homedir, hostname } from "node:os";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { hostname } from "node:os";
+import { basename, resolve } from "node:path";
 import { controlCharacter } from "./agent-rename.js";
 import {
   OMP_MAIN,
@@ -18,7 +18,6 @@ export type RuntimeNoteContext = {
   env?: Env;
   hostname?: string;
   cwd?: string;
-  home?: string;
   /** Whether this command runs inside omp, which sets no marker variable. */
   insideOmp?: () => boolean;
 };
@@ -71,27 +70,23 @@ export function runtimeHostLabel(name: string): string {
   return host || "unknown-host";
 }
 
-/** The working directory, with the home directory written as `~`. */
-export function runtimePathLabel(cwd: string, home: string): string {
-  const path = resolve(cwd);
-  if (!home) return path;
-  const base = resolve(home);
-  if (path === base) return "~";
-  const inside = relative(base, path);
-  if (
-    inside &&
-    inside !== ".." &&
-    !inside.startsWith(`..${sep}`) &&
-    !isAbsolute(inside)
-  )
-    return `~/${inside.split(sep).join("/")}`;
-  return path;
+/**
+ * The working directory's folder name only, never its full path, with any
+ * control characters dropped so the note stays one line.
+ */
+export function runtimeFolderLabel(cwd: string): string {
+  const folder = Array.from(basename(resolve(cwd)))
+    .filter((character) => !controlCharacter(character))
+    .join("")
+    .trim();
+  return folder || "/";
 }
 
 /**
- * The default AGENT_RUNTIME value: `<Runtime> on <host> at <path>`. It is
+ * The default AGENT_RUNTIME value: `<Runtime> on <host> in <folder>`. It is
  * built only from the runtime's name, the machine name and the working
- * directory; no environment values or credentials are included.
+ * directory's folder name; no environment values, paths or credentials are
+ * included.
  */
 export function defaultRuntimeNote(context: RuntimeNoteContext = {}): string {
   const runtime = detectRuntimeLabel(
@@ -99,16 +94,25 @@ export function defaultRuntimeNote(context: RuntimeNoteContext = {}): string {
     context.insideOmp ?? (() => insideOmp()),
   );
   const host = runtimeHostLabel(context.hostname ?? hostname());
-  const path = runtimePathLabel(
-    context.cwd ?? process.cwd(),
-    context.home ?? homedir(),
-  );
-  const prefix = `${runtime} on ${host} at `;
-  // A very deep directory keeps its most specific end so the line still fits.
+  const folder = runtimeFolderLabel(context.cwd ?? process.cwd());
+  const prefix = `${runtime} on ${host} in `;
+  // An unusually long folder name keeps its end so the line still fits.
   const room = RUNTIME_NOTE_MAX_LENGTH - prefix.length;
   const shown =
-    path.length <= room ? path : `...${path.slice(path.length - (room - 3))}`;
+    folder.length <= room ? folder : `...${textTail(folder, room - 3)}`;
   return runtimeNoteValue(`${prefix}${shown}`);
+}
+
+/** The end of a text, at most `limit` UTF-16 units, never splitting a character. */
+function textTail(text: string, limit: number): string {
+  const characters = Array.from(text);
+  let tail = "";
+  for (let index = characters.length - 1; index >= 0; index--) {
+    const next = `${characters[index]}${tail}`;
+    if (next.length > limit) break;
+    tail = next;
+  }
+  return tail;
 }
 
 /** Validate a one-line AGENT_RUNTIME value. */
