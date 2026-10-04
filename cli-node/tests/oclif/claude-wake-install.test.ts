@@ -19,7 +19,9 @@ import { test } from "vitest";
 import {
   claudeWakeHookStatus,
   editClaudeSettings,
+  HOOK_RECENT_MS,
   installClaudeWakeHook,
+  recordHookMailCheck,
   uninstallClaudeWakeHook,
 } from "../../src/oclif/claude-wake-install.js";
 import {
@@ -121,9 +123,12 @@ test("external hook installer preserves other settings and replaces only its own
   assert.deepEqual(claudeWakeHookStatus(options), {
     installed: true,
     lastFiredAt: null,
+    lastMailCheckAt: null,
+    firedRecently: false,
     liveness: "unknown",
   });
   const firedAt = "2026-10-01T15:00:00.000Z";
+  const fired = Date.parse(firedAt);
   writeMailJson(
     join(
       agentProfileDirectory(configDir, "session-a"),
@@ -131,11 +136,80 @@ test("external hook installer preserves other settings and replaces only its own
     ),
     { version: 1, at: firedAt },
   );
-  assert.deepEqual(claudeWakeHookStatus(options), {
+  assert.deepEqual(
+    claudeWakeHookStatus({ ...options, now: fired + HOOK_RECENT_MS + 1 }),
+    {
+      installed: true,
+      lastFiredAt: firedAt,
+      lastMailCheckAt: null,
+      firedRecently: false,
+      liveness: "unknown",
+    },
+  );
+  // A hook that just ran is not live on its own: its mail check may fail.
+  assert.deepEqual(claudeWakeHookStatus({ ...options, now: fired + 60_000 }), {
     installed: true,
     lastFiredAt: firedAt,
+    lastMailCheckAt: null,
+    firedRecently: true,
     liveness: "unknown",
   });
+  // A completed mail check within the window is.
+  recordHookMailCheck({
+    configDir,
+    profileName: "session-a",
+    sessionId: sessionA,
+    at: fired + 2_000,
+  });
+  const checkedAt = new Date(fired + 2_000).toISOString();
+  assert.deepEqual(claudeWakeHookStatus({ ...options, now: fired + 60_000 }), {
+    installed: true,
+    lastFiredAt: firedAt,
+    lastMailCheckAt: checkedAt,
+    firedRecently: true,
+    liveness: "checked_recently",
+  });
+  assert.equal(
+    claudeWakeHookStatus({ ...options, now: fired + 2_000 + HOOK_RECENT_MS })
+      .liveness,
+    "checked_recently",
+  );
+  assert.equal(
+    claudeWakeHookStatus({
+      ...options,
+      now: fired + 2_000 + HOOK_RECENT_MS + 1,
+    }).liveness,
+    "unknown",
+  );
+  // A record far in the future is not trusted as recent.
+  assert.equal(
+    claudeWakeHookStatus({ ...options, now: fired - 5 * 60_000 }).liveness,
+    "unknown",
+  );
+});
+
+test("hooks run Node through a stable PATH link, not the versioned binary", () => {
+  const { root, claudeDir, configDir, cliPath } = fixture();
+  // A package manager's bin/node links to the versioned install directory.
+  const pathDir = join(root, "path-bin");
+  mkdirSync(pathDir);
+  const link = join(pathDir, "node");
+  symlinkSync(process.execPath, link);
+  const options = {
+    cliPath,
+    configDir,
+    profileName: "stable",
+    agentAddress: "stable@example.com",
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir, PATH: pathDir },
+  };
+  assert.equal(installClaudeWakeHook(options), "installed_unverified");
+  const settings = JSON.parse(
+    readFileSync(join(claudeDir, "settings.json"), "utf8"),
+  );
+  for (const event of ["Stop", "SessionStart", "PostToolUse"])
+    assert.equal(settings.hooks[event].at(-1).hooks[0].command, link);
+  assert.equal(claudeWakeHookStatus(options).installed, true);
 });
 
 test("external hook installer leaves malformed existing settings untouched", () => {

@@ -2,11 +2,15 @@ import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { Writable } from "node:stream";
 import { Command, Errors, Flags } from "@oclif/core";
+import { savedReceiver } from "../agent-connect.js";
 import { resolveCliApiRequestConfig } from "../api-client.js";
 import { API_BASE_URL_FLAG_DESCRIPTION } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import { dispatchAutoRead } from "../auto-signals.js";
+import { boundSessionProfiles } from "../claude-machine-hooks.js";
+import { recordHookMailCheck } from "../claude-wake-install.js";
 import {
+  AGENT_PROFILE_ENV,
   agentProfileDirectory,
   agentProfileName,
   loadConnectedAgentProfile,
@@ -48,6 +52,7 @@ import {
 import { createWakeMail } from "../wake-mail.js";
 
 const RESUME_LOCK_RETRY_MS = 4_000;
+const MAIL_CHECK_RECORD_MS = 5_000;
 const RESUME_LOCK_RETRY_STEP_MS = 250;
 
 function isListenLockContention(error: unknown): error is ListenStateError {
@@ -94,6 +99,53 @@ function profileAgentAddress(
     // The address is informational; the wake still goes out.
     return undefined;
   }
+}
+
+/**
+ * When the session receives through Claude hooks rather than a background
+ * listener, the profile to inspect it with: the selected profile when it is
+ * bound to this session through hooks, otherwise the first profile bound to
+ * it. Null when the session does not receive through hooks, including a
+ * Claude session whose selected profile was set up to poll or to use the
+ * native listener.
+ */
+export function hookReceiverStatus(
+  sessionId: string,
+  env: NodeJS.ProcessEnv,
+  configDir: string,
+): { profile: string | null; statusCommand: string; guidance: string } | null {
+  const id = sessionId.toLowerCase();
+  const selected = env[AGENT_PROFILE_ENV]?.trim() || null;
+  const bound = boundSessionProfiles(configDir)
+    .filter((item) => item.session === id)
+    .map((item) => item.profile);
+  const selectedReceiver = selected ? savedReceiver(configDir, selected) : null;
+  // The saved receiver mode decides, not the runtime: a Claude session can
+  // be set up to poll or to run the native listener. The selected profile
+  // speaks for this session only when it names it, or names no session at
+  // all (a sessionless poll profile); one set up for another session says
+  // nothing about this one.
+  const selectedApplies =
+    selectedReceiver !== null &&
+    (selectedReceiver.session === null ||
+      selectedReceiver.session.toLowerCase() === id);
+  if (selectedApplies && selectedReceiver.mode !== "external") return null;
+  const selectedHooks = selectedApplies && selectedReceiver.mode === "external";
+  if (
+    !selectedHooks &&
+    bound.length === 0 &&
+    !claudeCodeSession(id, env, configDir)
+  )
+    return null;
+  // Never name a profile saved for another session: its status would
+  // describe that session, not this one.
+  const profile = selectedHooks ? selected : (bound[0] ?? null);
+  const statusCommand = `primitive agent connect --profile ${profile ?? "<profile>"} --status --json`;
+  return {
+    profile,
+    statusCommand,
+    guidance: `This Claude Code session receives mail through hooks, not a background listener, so the listener here is expected to be absent. Check receiving with \`${statusCommand}\`.`,
+  };
 }
 
 export default class ListenCommand extends Command {
@@ -436,10 +488,22 @@ export default class ListenCommand extends Command {
         target.threadId,
         { limit: flags.limit, cursor: flags.cursor },
       );
+      const hookReceiver = hookReceiverStatus(
+        target.threadId,
+        process.env,
+        this.config.configDir,
+      );
       this.log(
         JSON.stringify(
           {
             sessionId: target.threadId,
+            ...(hookReceiver
+              ? {
+                  receiverMode: "external",
+                  receiverStatusCommand: hookReceiver.statusCommand,
+                  receiverGuidance: hookReceiver.guidance,
+                }
+              : {}),
             ...(flags["email-id"]
               ? {
                   email: await explainNotification({
@@ -558,6 +622,7 @@ export default class ListenCommand extends Command {
       forwardTo: flags["forward-to"],
     });
     let timedOut = false;
+    let lastMailCheckRecord = Number.NEGATIVE_INFINITY;
     const timer =
       flags.timeout === undefined
         ? undefined
@@ -621,7 +686,24 @@ export default class ListenCommand extends Command {
             })
           : undefined,
         signal: controller.signal,
-        onReceivingState: (ready) => wake?.receiving(ready),
+        onReceivingState: (ready) => {
+          wake?.receiving(ready);
+          // A hook-run listener records each successful mail check, at most
+          // every few seconds, so status can tell a working hook receiver
+          // from one that only runs.
+          if (ready && hookSessionId && hookProfileName) {
+            const at = Date.now();
+            if (at - lastMailCheckRecord >= MAIL_CHECK_RECORD_MS) {
+              lastMailCheckRecord = at;
+              recordHookMailCheck({
+                configDir: this.config.configDir,
+                profileName: hookProfileName,
+                sessionId: hookSessionId,
+                at,
+              });
+            }
+          }
+        },
       };
       if (!target || !options.notifySession || !requestConfig) {
         let resumeLockDeadline: number | undefined;

@@ -8,6 +8,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -781,6 +782,86 @@ describe("primitive machine doctor", () => {
     expect(
       readFileSync(join(home, ".claude", "settings.json"), "utf8"),
     ).not.toContain("revoked@example.test");
+  });
+
+  it("rewrites receive hooks that pin the versioned Node binary to the stable PATH link", async () => {
+    const { root, home, bin, configDir, options } = machine({
+      runtimes: ["claude"],
+    });
+    const settingsPath = join(home, ".claude", "settings.json");
+    // A package manager's bin/node links to the versioned binary that an
+    // upgrade replaces.
+    const versioned = realpathSync(process.execPath);
+    const pathDir = join(root, "path-bin");
+    mkdirSync(pathDir);
+    const link = join(pathDir, "node");
+    symlinkSync(versioned, link);
+    const env = { PATH: pathDir };
+    saveConnectedAgentProfile(
+      configDir,
+      "my-agent",
+      profile("my-agent@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "my-agent"), "setup.json"),
+      { session: sessionA, receiverMode: "external" },
+    );
+    const wake = {
+      ...wakeHook(
+        bin,
+        configDir,
+        "my-agent",
+        "my-agent@example.test",
+        sessionA,
+      ),
+      command: versioned,
+    };
+    const pending = {
+      type: "command",
+      command: versioned,
+      args: [
+        join(bin, "claude-pending-mail.mjs"),
+        join(bin, "run.js"),
+        configDir,
+        "my-agent",
+        "my-agent@example.test",
+        sessionA,
+        "primitive-pending-mail-v1",
+      ],
+      timeout: 10,
+    };
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({
+        hooks: {
+          Stop: [{ hooks: [wake] }],
+          SessionStart: [{ matcher: "resume", hooks: [wake] }],
+          PostToolUse: [{ hooks: [pending] }],
+        },
+      }),
+    );
+    const before = byId(await runMachineDoctor({ ...options, env }));
+    expect(before["claude.hook.stop"].status).toBe("fail");
+    expect(before["claude.hook.stop"].detail).toContain(
+      "3 pointing at an old CLI path",
+    );
+    const fixed = byId(
+      await runMachineDoctor({
+        ...options,
+        env,
+        fix: true,
+        only: new Set(["claude.hook.stop"]),
+      }),
+    );
+    expect(fixed["claude.hook.stop"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    const hooks = JSON.parse(readFileSync(settingsPath, "utf8")).hooks;
+    for (const event of ["Stop", "SessionStart", "PostToolUse"])
+      expect(hooks[event][0].hooks[0].command).toBe(link);
+    const again = byId(await runMachineDoctor({ ...options, env }));
+    expect(again["claude.hook.stop"].status).toBe("ok");
   });
 
   it("replaces a receive hook naming an old address, agreeing with connect --status", async () => {

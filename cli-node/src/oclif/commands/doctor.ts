@@ -7,6 +7,7 @@ import {
   listDomains,
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
+import { receiverStatusCommand } from "../agent-connect.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import { detectPrimitiveKeyEnvMisname, resolveCliAuth } from "../auth.js";
 import { AGENT_PROFILE_ENV } from "../connected-agent-profile.js";
@@ -355,7 +356,10 @@ class DoctorCommand extends Command {
       ? {
           status: "warn",
           message: `Saved connected profile ${connected.profileName} for ${connected.agentAddress} (offline; live authentication and receiving not verified)`,
-          hint: "Use primitive whoami --json for saved identity and primitive listen --status --notify-session <session-id> for the exact receiver under the same PRIMITIVE_AGENT_PROFILE.",
+          hint: `Use primitive whoami --json for saved identity and \`${
+            receiverStatusCommand(this.config.configDir, connected.profileName)
+              .command
+          }\` for this profile's receiver.`,
         }
       : checkApiKey({
           apiKey: flags["api-key"],

@@ -67,6 +67,7 @@ afterEach(() => {
   delete process.env.CODEX_HOME;
   rmSync(home, { recursive: true, force: true });
   process.exitCode = undefined;
+  vi.unstubAllEnvs();
 });
 
 it("agent enroll reports failed external hook installation as incomplete", async () => {
@@ -265,15 +266,82 @@ it("agent connect --session runs the whole flow with a default profile and one J
   expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
 });
 
-it("agent connect requires --profile for --status", async () => {
+it("agent connect --status needs --profile or PRIMITIVE_AGENT_PROFILE", async () => {
+  vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "");
   vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
     () => undefined,
   );
   await expect(AgentConnectCommand.run(["--status"], { root })).rejects.toThrow(
-    /--profile with --status/,
+    "Pass --profile <name> or set PRIMITIVE_AGENT_PROFILE.",
   );
   expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
   expect(existsSync(join(home, "codex"))).toBe(false);
+});
+
+it("agent connect --status reads the profile selected by PRIMITIVE_AGENT_PROFILE", async () => {
+  const configDir = join(home, "config");
+  vi.stubEnv("PRIMITIVE_CONFIG_DIR", configDir);
+  vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "work");
+  const { connectAgent } = await import("../../src/oclif/agent-connect.js");
+  await connectAgent({
+    configDir,
+    profileName: "work",
+    invitation: pollInvitation,
+    fetch: async () =>
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            org_id: "22222222-2222-4222-8222-222222222222",
+            api_base_url: "https://api.primitive.dev/v1",
+            api_key: ["pconn", "d".repeat(48)].join("_"),
+            owner_address: "owner@example.com",
+            connection: {
+              address: "env@example.com",
+              owner_address: "owner@example.com",
+              status: "claimed",
+            },
+          },
+        }),
+      ),
+  });
+  const outputs: string[] = [];
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  await AgentConnectCommand.run(["--status", "--json"], { root });
+  expect(process.exitCode).toBeUndefined();
+  expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+    status: "configured",
+    identity: { profileName: "work", agentAddress: "env@example.com" },
+  });
+  // An explicit --profile still wins over the environment.
+  outputs.length = 0;
+  await AgentConnectCommand.run(["--status", "--profile", "other"], { root });
+  expect(outputs[0]).toContain("Agent profile other is not configured.");
+});
+
+it("agent connect --status exits 1 for a profile that is not configured", async () => {
+  vi.stubEnv("PRIMITIVE_CONFIG_DIR", join(home, "config"));
+  const outputs: string[] = [];
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  await AgentConnectCommand.run(["--profile", "nope", "--status", "--json"], {
+    root,
+  });
+  expect(process.exitCode).toBe(1);
+  expect(JSON.parse(outputs[0] ?? "")).toEqual({
+    status: "not_configured",
+    profileName: "nope",
+    detail:
+      "Agent profile nope is not configured. Run `primitive agent connect` with the owner's invitation to connect it.",
+  });
+  process.exitCode = undefined;
+  outputs.length = 0;
+  await AgentConnectCommand.run(["--profile", "nope", "--status"], { root });
+  expect(process.exitCode).toBe(1);
+  expect(outputs[0]).toContain("primitive agent connect");
 });
 
 const pollInvitation = `https://api.primitive.dev/v1/agent-connections/setup#token=${["invitation", "c".repeat(48)].join("_")}`;
