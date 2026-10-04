@@ -143,25 +143,39 @@ const TITLES: Record<DoctorCheckId, string> = {
   "profiles.orphaned": "Saved agent profiles",
 };
 
-const WORKING_LINE =
-  'Keep AGENT_WORKING current: `primitive agent working set "<task>: <files>"` when work starts and `primitive agent working clear` when it ends.';
+const SKILL_LINE =
+  "Load the `primitive-connect` skill before running any `primitive` command, including in a session that is already connected. It covers replies, `--fyi` acknowledgements, automatic signals, work claims, thread muting and peer presence; this block only points to it.";
+// Runtimes without the installed skill keep these short rules instead.
 const REPLY_LINE =
   "Answer Primitive mail on Primitive with `primitive reply`; read receipts are automatic.";
+const WORKING_LINE =
+  'Keep AGENT_WORKING current: `primitive agent working set "<task>: <files>"` when work starts and `primitive agent working clear` when it ends.';
 const SECRET_LINE = "Never print invitation tokens or credentials.";
 
-/** The managed instruction block for one runtime. Kept short on purpose. */
-export function managedInstructions(runtime: MachineRuntime): string {
+/**
+ * The managed instruction block for one runtime. Kept short on purpose: where
+ * machine doctor installs the primitive-connect skill, the block points to it
+ * rather than summarizing it, since agents follow a summary in always-loaded
+ * instructions over a skill that is only listed. Without a bundled skill to
+ * install, every runtime keeps the short rules.
+ */
+export function managedInstructions(
+  runtime: MachineRuntime,
+  options: { skillBundled?: boolean } = {},
+): string {
   const register =
     runtime === "claude" || runtime === "codex"
       ? `A Primitive SessionStart hook registers this session with \`primitive agent session-register --runtime ${runtime} --quiet\`; if it has not run, run that command once.`
       : `At session start, if this session is not registered yet, run \`primitive agent session-register --runtime ${runtime} --quiet\`.`;
+  const rules =
+    (runtime === "claude" || runtime === "codex") &&
+    options.skillBundled !== false
+      ? [SKILL_LINE, register]
+      : [register, REPLY_LINE, WORKING_LINE];
   return [
     "## Primitive",
     "",
-    `- ${register}`,
-    `- ${REPLY_LINE}`,
-    `- ${WORKING_LINE}`,
-    `- ${SECRET_LINE}`,
+    ...[...rules, SECRET_LINE].map((line) => `- ${line}`),
   ].join("\n");
 }
 
@@ -488,7 +502,9 @@ export async function runMachineDoctor(
       const skip = skipRuntime(runtime);
       if (skip) return check(id, "skip", skip);
       const target = path();
-      const body = managedInstructions(runtime);
+      const body = managedInstructions(runtime, {
+        skillBundled: loadBundle() !== null,
+      });
       const read = readManagedFile(target);
       if (read.state === "invalid")
         return check(id, "fail", read.detail, {
@@ -526,7 +542,10 @@ export async function runMachineDoctor(
       const read = readManagedFile(target);
       if (read.state === "invalid") return false;
       const text = read.state === "present" ? read.text : "";
-      const next = upsertManagedBlock(text, managedInstructions(runtime));
+      const next = upsertManagedBlock(
+        text,
+        managedInstructions(runtime, { skillBundled: loadBundle() !== null }),
+      );
       if (read.state === "present" && next === read.text) return false;
       writeManagedFile({ read, content: next, now });
       return true;
