@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readSync } from "node:fs";
 import { Args, Command, Flags } from "@oclif/core";
 import {
   AddressNotesApiError,
@@ -96,7 +96,28 @@ export const workingClaimStdin = {
       throw new Error(
         "--stdin needs the claim piped in, not typed at a terminal.",
       );
-    return readFileSync(0, "utf8");
+    // A claim is at most CLAIM_MAX_LENGTH characters; stop reading well
+    // before a large file or endless stream can use memory or hang.
+    const limit = CLAIM_MAX_LENGTH * 4 + 2;
+    const buffer = Buffer.alloc(limit + 1);
+    let length = 0;
+    while (length <= limit) {
+      let read = 0;
+      try {
+        read = readSync(0, buffer, length, limit + 1 - length, null);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EAGAIN") continue;
+        if ((error as NodeJS.ErrnoException).code === "EOF") break;
+        throw error;
+      }
+      if (read === 0) break;
+      length += read;
+    }
+    if (length > limit)
+      throw new Error(
+        `The claim must be at most ${CLAIM_MAX_LENGTH} characters.`,
+      );
+    return buffer.subarray(0, length).toString("utf8");
   },
 };
 
@@ -111,13 +132,16 @@ export class AgentWorkingSetCommand extends Command {
   static examples = [
     '<%= config.bin %> agent working set "phone composer: apps/mobile/src/message-composer.tsx"',
     '<%= config.bin %> agent working set "billing export: src/billing/" --until 2026-10-01T18:00:00Z',
-    "printf '%s' \"billing export: src/billing/\" | <%= config.bin %> agent working set --stdin",
+    "<%= config.bin %> agent working set --stdin < ./private-claim.txt",
   ];
   static args = {
     claim: Args.string({
       description:
         "One line naming the task and the files or areas changed (or use --stdin)",
       required: false,
+      // Only --stdin reads stdin, through the bounded reader below; oclif's
+      // own stdin fallback would race a 10 ms timeout and read without limit.
+      ignoreStdin: true,
     }),
   };
   static flags = {
