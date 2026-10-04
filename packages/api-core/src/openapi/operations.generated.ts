@@ -17955,6 +17955,68 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "attachments_download_available": {
               "type": "boolean",
               "description": "Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives."
+            },
+            "to_addresses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Every normalized To recipient of the send. Always populated on\nnew sends (a single-recipient send carries a one-element array);\nnull only on records that predate this field. `to_address` keeps\ncarrying the first recipient.\n"
+            },
+            "cc": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Cc address list. Null when the send had no Cc\nrecipients.\n"
+            },
+            "bcc": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Bcc address list, surfaced on the sending\norganization's own record. Bcc recipients are never written\ninto the transmitted message. Null when the send had no Bcc\nrecipients. Also null when the request uses an address-bound\nagent connection key whose address is not the sender, because\nBcc is withheld from recipients.\n"
+            },
+            "reply_to": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Reply-To address list. Null when the send had none.\n"
+            },
+            "tags": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "description": "Customer metadata tags stored verbatim at send time. Null when\nthe send had none. Also null when the request uses an\naddress-bound agent connection key whose address is not the\nsender, because tags are withheld from recipients.\n",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ]
+              }
             }
           }
         }
@@ -18832,6 +18894,68 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "attachments_download_available": {
               "type": "boolean",
               "description": "Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives."
+            },
+            "to_addresses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Every normalized To recipient of the send. Always populated on\nnew sends (a single-recipient send carries a one-element array);\nnull only on records that predate this field. `to_address` keeps\ncarrying the first recipient.\n"
+            },
+            "cc": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Cc address list. Null when the send had no Cc\nrecipients.\n"
+            },
+            "bcc": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Bcc address list, surfaced on the sending\norganization's own record. Bcc recipients are never written\ninto the transmitted message. Null when the send had no Bcc\nrecipients. Also null when the request uses an address-bound\nagent connection key whose address is not the sender, because\nBcc is withheld from recipients.\n"
+            },
+            "reply_to": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Reply-To address list. Null when the send had none.\n"
+            },
+            "tags": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "description": "Customer metadata tags stored verbatim at send time. Null when\nthe send had none. Also null when the request uses an\naddress-bound agent connection key whose address is not the\nsender, because tags are withheld from recipients.\n",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ]
+              }
             }
           }
         }
@@ -20070,6 +20194,68 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "attachments_download_available": {
               "type": "boolean",
               "description": "Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives."
+            },
+            "to_addresses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Every normalized To recipient of the send. Always populated on\nnew sends (a single-recipient send carries a one-element array);\nnull only on records that predate this field. `to_address` keeps\ncarrying the first recipient.\n"
+            },
+            "cc": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Cc address list. Null when the send had no Cc\nrecipients.\n"
+            },
+            "bcc": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Bcc address list, surfaced on the sending\norganization's own record. Bcc recipients are never written\ninto the transmitted message. Null when the send had no Bcc\nrecipients. Also null when the request uses an address-bound\nagent connection key whose address is not the sender, because\nBcc is withheld from recipients.\n"
+            },
+            "reply_to": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Reply-To address list. Null when the send had none.\n"
+            },
+            "tags": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "description": "Customer metadata tags stored verbatim at send time. Null when\nthe send had none. Also null when the request uses an\naddress-bound agent connection key whose address is not the\nsender, because tags are withheld from recipients.\n",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ]
+              }
             }
           }
         }

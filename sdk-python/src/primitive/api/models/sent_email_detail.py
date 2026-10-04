@@ -18,6 +18,7 @@ if TYPE_CHECKING:
   from ..models.gate_denial import GateDenial
   from ..models.presence_control_type_0 import PresenceControlType0
   from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
+  from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item
   from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
   from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
 
@@ -170,6 +171,24 @@ class SentEmailDetail:
             attachments_download_available (bool | Unset): Whether an inline attachment archive has been successfully
                 retained and is available for download. Download authorization is checked separately; address-bound agent
                 connection keys cannot download archives.
+            to_addresses (list[str] | None | Unset): Every normalized To recipient of the send. Always populated on
+                new sends (a single-recipient send carries a one-element array);
+                null only on records that predate this field. `to_address` keeps
+                carrying the first recipient.
+            cc (list[str] | None | Unset): Normalized Cc address list. Null when the send had no Cc
+                recipients.
+            bcc (list[str] | None | Unset): Normalized Bcc address list, surfaced on the sending
+                organization's own record. Bcc recipients are never written
+                into the transmitted message. Null when the send had no Bcc
+                recipients. Also null when the request uses an address-bound
+                agent connection key whose address is not the sender, because
+                Bcc is withheld from recipients.
+            reply_to (list[str] | None | Unset): Normalized Reply-To address list. Null when the send had none.
+            tags (list[SentEmailDetailTagsType0Item] | None | Unset): Customer metadata tags stored verbatim at send time.
+                Null when
+                the send had none. Also null when the request uses an
+                address-bound agent connection key whose address is not the
+                sender, because tags are withheld from recipients.
      """
 
     id: UUID
@@ -212,6 +231,11 @@ class SentEmailDetail:
     attachments_size_bytes: int | Unset = UNSET
     attachments_complete: bool | Unset = UNSET
     attachments_download_available: bool | Unset = UNSET
+    to_addresses: list[str] | None | Unset = UNSET
+    cc: list[str] | None | Unset = UNSET
+    bcc: list[str] | None | Unset = UNSET
+    reply_to: list[str] | None | Unset = UNSET
+    tags: list[SentEmailDetailTagsType0Item] | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -222,6 +246,7 @@ class SentEmailDetail:
         from ..models.gate_denial import GateDenial
         from ..models.presence_control_type_0 import PresenceControlType0
         from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
+        from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item
         from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
         id = str(self.id)
@@ -430,6 +455,59 @@ class SentEmailDetail:
 
         attachments_download_available = self.attachments_download_available
 
+        to_addresses: list[str] | None | Unset
+        if isinstance(self.to_addresses, Unset):
+            to_addresses = UNSET
+        elif isinstance(self.to_addresses, list):
+            to_addresses = self.to_addresses
+
+
+        else:
+            to_addresses = self.to_addresses
+
+        cc: list[str] | None | Unset
+        if isinstance(self.cc, Unset):
+            cc = UNSET
+        elif isinstance(self.cc, list):
+            cc = self.cc
+
+
+        else:
+            cc = self.cc
+
+        bcc: list[str] | None | Unset
+        if isinstance(self.bcc, Unset):
+            bcc = UNSET
+        elif isinstance(self.bcc, list):
+            bcc = self.bcc
+
+
+        else:
+            bcc = self.bcc
+
+        reply_to: list[str] | None | Unset
+        if isinstance(self.reply_to, Unset):
+            reply_to = UNSET
+        elif isinstance(self.reply_to, list):
+            reply_to = self.reply_to
+
+
+        else:
+            reply_to = self.reply_to
+
+        tags: list[dict[str, Any]] | None | Unset
+        if isinstance(self.tags, Unset):
+            tags = UNSET
+        elif isinstance(self.tags, list):
+            tags = []
+            for tags_type_0_item_data in self.tags:
+                tags_type_0_item = tags_type_0_item_data.to_dict()
+                tags.append(tags_type_0_item)
+
+
+        else:
+            tags = self.tags
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -503,6 +581,16 @@ class SentEmailDetail:
             field_dict["attachments_complete"] = attachments_complete
         if attachments_download_available is not UNSET:
             field_dict["attachments_download_available"] = attachments_download_available
+        if to_addresses is not UNSET:
+            field_dict["to_addresses"] = to_addresses
+        if cc is not UNSET:
+            field_dict["cc"] = cc
+        if bcc is not UNSET:
+            field_dict["bcc"] = bcc
+        if reply_to is not UNSET:
+            field_dict["reply_to"] = reply_to
+        if tags is not UNSET:
+            field_dict["tags"] = tags
 
         return field_dict
 
@@ -513,6 +601,7 @@ class SentEmailDetail:
         from ..models.gate_denial import GateDenial
         from ..models.presence_control_type_0 import PresenceControlType0
         from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
+        from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item
         from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
         d = dict(src_dict)
@@ -908,6 +997,103 @@ class SentEmailDetail:
 
         attachments_download_available = d.pop("attachments_download_available", UNSET)
 
+        def _parse_to_addresses(data: object) -> list[str] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                to_addresses_type_0 = cast(list[str], data)
+
+                return to_addresses_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | None | Unset, data)
+
+        to_addresses = _parse_to_addresses(d.pop("to_addresses", UNSET))
+
+
+        def _parse_cc(data: object) -> list[str] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                cc_type_0 = cast(list[str], data)
+
+                return cc_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | None | Unset, data)
+
+        cc = _parse_cc(d.pop("cc", UNSET))
+
+
+        def _parse_bcc(data: object) -> list[str] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                bcc_type_0 = cast(list[str], data)
+
+                return bcc_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | None | Unset, data)
+
+        bcc = _parse_bcc(d.pop("bcc", UNSET))
+
+
+        def _parse_reply_to(data: object) -> list[str] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                reply_to_type_0 = cast(list[str], data)
+
+                return reply_to_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[str] | None | Unset, data)
+
+        reply_to = _parse_reply_to(d.pop("reply_to", UNSET))
+
+
+        def _parse_tags(data: object) -> list[SentEmailDetailTagsType0Item] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                tags_type_0 = []
+                _tags_type_0 = data
+                for tags_type_0_item_data in (_tags_type_0):
+                    tags_type_0_item = SentEmailDetailTagsType0Item.from_dict(tags_type_0_item_data)
+
+
+
+                    tags_type_0.append(tags_type_0_item)
+
+                return tags_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[SentEmailDetailTagsType0Item] | None | Unset, data)
+
+        tags = _parse_tags(d.pop("tags", UNSET))
+
+
         sent_email_detail = cls(
             id=id,
             status=status,
@@ -949,6 +1135,11 @@ class SentEmailDetail:
             attachments_size_bytes=attachments_size_bytes,
             attachments_complete=attachments_complete,
             attachments_download_available=attachments_download_available,
+            to_addresses=to_addresses,
+            cc=cc,
+            bcc=bcc,
+            reply_to=reply_to,
+            tags=tags,
         )
 
 

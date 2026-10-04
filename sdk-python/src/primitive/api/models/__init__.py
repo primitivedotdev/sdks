@@ -511,6 +511,7 @@ from .sent_email_detail import SentEmailDetail
 from .sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
 from .sent_email_detail_repeat_type_0 import SentEmailDetailRepeatType0
 from .sent_email_detail_sender_member_type_0 import SentEmailDetailSenderMemberType0
+from .sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item
 from .sent_email_reschedule_input import SentEmailRescheduleInput
 from .sent_email_status import SentEmailStatus
 from .sent_email_summary import SentEmailSummary
@@ -1164,6 +1165,7 @@ __all__ = (
     "SentEmailDetailAttachmentsItem",
     "SentEmailDetailRepeatType0",
     "SentEmailDetailSenderMemberType0",
+    "SentEmailDetailTagsType0Item",
     "SentEmailRescheduleInput",
     "SentEmailStatus",
     "SentEmailSummary",

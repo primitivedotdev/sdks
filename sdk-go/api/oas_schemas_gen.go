@@ -28180,6 +28180,69 @@ func (o OptNilSentEmailDetailSenderMember) Or(d SentEmailDetailSenderMember) Sen
 	return d
 }
 
+// NewOptNilSentEmailDetailTagsItemArray returns new OptNilSentEmailDetailTagsItemArray with value set to v.
+func NewOptNilSentEmailDetailTagsItemArray(v []SentEmailDetailTagsItem) OptNilSentEmailDetailTagsItemArray {
+	return OptNilSentEmailDetailTagsItemArray{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilSentEmailDetailTagsItemArray is optional nullable []SentEmailDetailTagsItem.
+type OptNilSentEmailDetailTagsItemArray struct {
+	Value []SentEmailDetailTagsItem
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilSentEmailDetailTagsItemArray was set.
+func (o OptNilSentEmailDetailTagsItemArray) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilSentEmailDetailTagsItemArray) Reset() {
+	var v []SentEmailDetailTagsItem
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilSentEmailDetailTagsItemArray) SetTo(v []SentEmailDetailTagsItem) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilSentEmailDetailTagsItemArray) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilSentEmailDetailTagsItemArray) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v []SentEmailDetailTagsItem
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilSentEmailDetailTagsItemArray) Get() (v []SentEmailDetailTagsItem, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilSentEmailDetailTagsItemArray) Or(d []SentEmailDetailTagsItem) []SentEmailDetailTagsItem {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilSentEmailSummaryPresenceControl returns new OptNilSentEmailSummaryPresenceControl with value set to v.
 func NewOptNilSentEmailSummaryPresenceControl(v SentEmailSummaryPresenceControl) OptNilSentEmailSummaryPresenceControl {
 	return OptNilSentEmailSummaryPresenceControl{
@@ -38646,6 +38709,28 @@ type SentEmailDetail struct {
 	// Download authorization is checked separately; address-bound agent connection keys cannot download
 	// archives.
 	AttachmentsDownloadAvailable OptBool `json:"attachments_download_available"`
+	// Every normalized To recipient of the send. Always populated on
+	// new sends (a single-recipient send carries a one-element array);
+	// null only on records that predate this field. `to_address` keeps
+	// carrying the first recipient.
+	ToAddresses OptNilStringArray `json:"to_addresses"`
+	// Normalized Cc address list. Null when the send had no Cc
+	// recipients.
+	Cc OptNilStringArray `json:"cc"`
+	// Normalized Bcc address list, surfaced on the sending
+	// organization's own record. Bcc recipients are never written
+	// into the transmitted message. Null when the send had no Bcc
+	// recipients. Also null when the request uses an address-bound
+	// agent connection key whose address is not the sender, because
+	// Bcc is withheld from recipients.
+	Bcc OptNilStringArray `json:"bcc"`
+	// Normalized Reply-To address list. Null when the send had none.
+	ReplyTo OptNilStringArray `json:"reply_to"`
+	// Customer metadata tags stored verbatim at send time. Null when
+	// the send had none. Also null when the request uses an
+	// address-bound agent connection key whose address is not the
+	// sender, because tags are withheld from recipients.
+	Tags OptNilSentEmailDetailTagsItemArray `json:"tags"`
 }
 
 // GetID returns the value of ID.
@@ -38848,6 +38933,31 @@ func (s *SentEmailDetail) GetAttachmentsDownloadAvailable() OptBool {
 	return s.AttachmentsDownloadAvailable
 }
 
+// GetToAddresses returns the value of ToAddresses.
+func (s *SentEmailDetail) GetToAddresses() OptNilStringArray {
+	return s.ToAddresses
+}
+
+// GetCc returns the value of Cc.
+func (s *SentEmailDetail) GetCc() OptNilStringArray {
+	return s.Cc
+}
+
+// GetBcc returns the value of Bcc.
+func (s *SentEmailDetail) GetBcc() OptNilStringArray {
+	return s.Bcc
+}
+
+// GetReplyTo returns the value of ReplyTo.
+func (s *SentEmailDetail) GetReplyTo() OptNilStringArray {
+	return s.ReplyTo
+}
+
+// GetTags returns the value of Tags.
+func (s *SentEmailDetail) GetTags() OptNilSentEmailDetailTagsItemArray {
+	return s.Tags
+}
+
 // SetID sets the value of ID.
 func (s *SentEmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -39046,6 +39156,31 @@ func (s *SentEmailDetail) SetAttachmentsComplete(val OptBool) {
 // SetAttachmentsDownloadAvailable sets the value of AttachmentsDownloadAvailable.
 func (s *SentEmailDetail) SetAttachmentsDownloadAvailable(val OptBool) {
 	s.AttachmentsDownloadAvailable = val
+}
+
+// SetToAddresses sets the value of ToAddresses.
+func (s *SentEmailDetail) SetToAddresses(val OptNilStringArray) {
+	s.ToAddresses = val
+}
+
+// SetCc sets the value of Cc.
+func (s *SentEmailDetail) SetCc(val OptNilStringArray) {
+	s.Cc = val
+}
+
+// SetBcc sets the value of Bcc.
+func (s *SentEmailDetail) SetBcc(val OptNilStringArray) {
+	s.Bcc = val
+}
+
+// SetReplyTo sets the value of ReplyTo.
+func (s *SentEmailDetail) SetReplyTo(val OptNilStringArray) {
+	s.ReplyTo = val
+}
+
+// SetTags sets the value of Tags.
+func (s *SentEmailDetail) SetTags(val OptNilSentEmailDetailTagsItemArray) {
+	s.Tags = val
 }
 
 // Metadata for one submitted inline attachment.
@@ -39277,6 +39412,31 @@ func (s *SentEmailDetailSenderMember) SetUserID(val string) {
 // SetName sets the value of Name.
 func (s *SentEmailDetailSenderMember) SetName(val NilString) {
 	s.Name = val
+}
+
+type SentEmailDetailTagsItem struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// GetName returns the value of Name.
+func (s *SentEmailDetailTagsItem) GetName() string {
+	return s.Name
+}
+
+// GetValue returns the value of Value.
+func (s *SentEmailDetailTagsItem) GetValue() string {
+	return s.Value
+}
+
+// SetName sets the value of Name.
+func (s *SentEmailDetailTagsItem) SetName(val string) {
+	s.Name = val
+}
+
+// SetValue sets the value of Value.
+func (s *SentEmailDetailTagsItem) SetValue(val string) {
+	s.Value = val
 }
 
 // Ref: #/components/schemas/SentEmailRescheduleInput

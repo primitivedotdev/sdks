@@ -62158,6 +62158,67 @@ func (s *OptNilSentEmailDetailSenderMember) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes []SentEmailDetailTagsItem as json.
+func (o OptNilSentEmailDetailTagsItemArray) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.ArrStart()
+	for _, elem := range o.Value {
+		elem.Encode(e)
+	}
+	e.ArrEnd()
+}
+
+// Decode decodes []SentEmailDetailTagsItem from json.
+func (o *OptNilSentEmailDetailTagsItemArray) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptNilSentEmailDetailTagsItemArray to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v []SentEmailDetailTagsItem
+		o.Value = v
+		o.Set = true
+		o.Null = true
+		return nil
+	}
+	o.Set = true
+	o.Null = false
+	o.Value = make([]SentEmailDetailTagsItem, 0)
+	if err := d.Arr(func(d *jx.Decoder) error {
+		var elem SentEmailDetailTagsItem
+		if err := elem.Decode(d); err != nil {
+			return err
+		}
+		o.Value = append(o.Value, elem)
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptNilSentEmailDetailTagsItemArray) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptNilSentEmailDetailTagsItemArray) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes SentEmailSummaryPresenceControl as json.
 func (o OptNilSentEmailSummaryPresenceControl) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -84759,9 +84820,39 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 			s.AttachmentsDownloadAvailable.Encode(e)
 		}
 	}
+	{
+		if s.ToAddresses.Set {
+			e.FieldStart("to_addresses")
+			s.ToAddresses.Encode(e)
+		}
+	}
+	{
+		if s.Cc.Set {
+			e.FieldStart("cc")
+			s.Cc.Encode(e)
+		}
+	}
+	{
+		if s.Bcc.Set {
+			e.FieldStart("bcc")
+			s.Bcc.Encode(e)
+		}
+	}
+	{
+		if s.ReplyTo.Set {
+			e.FieldStart("reply_to")
+			s.ReplyTo.Encode(e)
+		}
+	}
+	{
+		if s.Tags.Set {
+			e.FieldStart("tags")
+			s.Tags.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfSentEmailDetail = [40]string{
+var jsonFieldsNameOfSentEmailDetail = [45]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -84802,6 +84893,11 @@ var jsonFieldsNameOfSentEmailDetail = [40]string{
 	37: "attachments_size_bytes",
 	38: "attachments_complete",
 	39: "attachments_download_available",
+	40: "to_addresses",
+	41: "cc",
+	42: "bcc",
+	43: "reply_to",
+	44: "tags",
 }
 
 // Decode decodes SentEmailDetail from json.
@@ -84809,7 +84905,7 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode SentEmailDetail to nil")
 	}
-	var requiredBitSet [5]uint8
+	var requiredBitSet [6]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -85242,6 +85338,56 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"attachments_download_available\"")
 			}
+		case "to_addresses":
+			if err := func() error {
+				s.ToAddresses.Reset()
+				if err := s.ToAddresses.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"to_addresses\"")
+			}
+		case "cc":
+			if err := func() error {
+				s.Cc.Reset()
+				if err := s.Cc.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"cc\"")
+			}
+		case "bcc":
+			if err := func() error {
+				s.Bcc.Reset()
+				if err := s.Bcc.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"bcc\"")
+			}
+		case "reply_to":
+			if err := func() error {
+				s.ReplyTo.Reset()
+				if err := s.ReplyTo.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reply_to\"")
+			}
+		case "tags":
+			if err := func() error {
+				s.Tags.Reset()
+				if err := s.Tags.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"tags\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -85251,9 +85397,10 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [5]uint8{
+	for i, mask := range [6]uint8{
 		0b11011111,
 		0b00011111,
+		0b00000000,
 		0b00000000,
 		0b00000000,
 		0b00000000,
@@ -85948,6 +86095,119 @@ func (s *SentEmailDetailSenderMember) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SentEmailDetailSenderMember) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *SentEmailDetailTagsItem) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SentEmailDetailTagsItem) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("name")
+		e.Str(s.Name)
+	}
+	{
+		e.FieldStart("value")
+		e.Str(s.Value)
+	}
+}
+
+var jsonFieldsNameOfSentEmailDetailTagsItem = [2]string{
+	0: "name",
+	1: "value",
+}
+
+// Decode decodes SentEmailDetailTagsItem from json.
+func (s *SentEmailDetailTagsItem) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SentEmailDetailTagsItem to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "name":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.Name = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"name\"")
+			}
+		case "value":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Value = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"value\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SentEmailDetailTagsItem")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000011,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSentEmailDetailTagsItem) {
+					name = jsonFieldsNameOfSentEmailDetailTagsItem[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SentEmailDetailTagsItem) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SentEmailDetailTagsItem) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
