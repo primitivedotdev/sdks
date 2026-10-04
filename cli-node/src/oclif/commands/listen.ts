@@ -121,11 +121,16 @@ export function hookReceiverStatus(
     .map((item) => item.profile);
   const selectedReceiver = selected ? savedReceiver(configDir, selected) : null;
   // The saved receiver mode decides, not the runtime: a Claude session can
-  // be set up to poll or to run the native listener.
-  if (selectedReceiver && selectedReceiver.mode !== "external") return null;
-  const selectedHooks =
-    selectedReceiver?.mode === "external" &&
-    selectedReceiver.session?.toLowerCase() === id;
+  // be set up to poll or to run the native listener. The selected profile
+  // speaks for this session only when it names it, or names no session at
+  // all (a sessionless poll profile); one set up for another session says
+  // nothing about this one.
+  const selectedApplies =
+    selectedReceiver !== null &&
+    (selectedReceiver.session === null ||
+      selectedReceiver.session.toLowerCase() === id);
+  if (selectedApplies && selectedReceiver.mode !== "external") return null;
+  const selectedHooks = selectedApplies && selectedReceiver.mode === "external";
   if (
     !selectedHooks &&
     bound.length === 0 &&

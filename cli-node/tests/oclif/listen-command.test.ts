@@ -15,6 +15,7 @@ import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const root = resolve(import.meta.dirname, "../..");
 const session = "11111111-1111-4111-8111-111111111111";
+const otherSession = "22222222-2222-4222-8222-222222222222";
 describe("native listener command transport", () => {
   it("accepts explicit JSON status without changing the default offline output", async () => {
     const directory = mkdtempSync(join(tmpdir(), "primitive-listen-json-"));
@@ -142,6 +143,27 @@ describe("native listener command transport", () => {
           ),
         ).toBeNull();
       }
+      // A sessionless poll profile also speaks for this session.
+      writeMailJson(
+        join(agentProfileDirectory(directory, "other-mode"), "setup.json"),
+        { receiverMode: "poll" },
+      );
+      expect(
+        hookReceiverStatus(
+          session,
+          {
+            CLAUDE_CODE_SESSION_ID: session,
+            PRIMITIVE_AGENT_PROFILE: "other-mode",
+          },
+          directory,
+        ),
+      ).toBeNull();
+      // A selected profile set up for another session says nothing about
+      // this one, so the session's own hook profile is still named.
+      writeMailJson(
+        join(agentProfileDirectory(directory, "other-mode"), "setup.json"),
+        { session: otherSession, receiverMode: "native" },
+      );
       saveConnectedAgentProfile(directory, "bound", {
         version: 1,
         auth_method: "agent_connection",
@@ -162,6 +184,13 @@ describe("native listener command transport", () => {
         statusCommand:
           "primitive agent connect --profile bound --status --json",
       });
+      expect(
+        hookReceiverStatus(
+          session,
+          { PRIMITIVE_AGENT_PROFILE: "other-mode" },
+          directory,
+        ),
+      ).toMatchObject({ profile: "bound" });
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
