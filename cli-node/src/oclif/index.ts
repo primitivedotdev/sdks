@@ -18,6 +18,11 @@ import {
   AgentNotesListCommand,
   AgentNotesSetCommand,
 } from "./commands/agent-notes.js";
+import AgentRenameCommand from "./commands/agent-rename.js";
+import {
+  AgentRuntimeGetCommand,
+  AgentRuntimeSetCommand,
+} from "./commands/agent-runtime.js";
 import AgentSessionEndCommand from "./commands/agent-session-end.js";
 import AgentSessionRegisterCommand from "./commands/agent-session-register.js";
 import AgentUpgradeCommand from "./commands/agent-upgrade.js";
@@ -585,6 +590,9 @@ export const COMMANDS: Record<string, typeof Command> = {
   "agent:working:set": AgentWorkingSetCommand,
   "agent:working:get": AgentWorkingGetCommand,
   "agent:working:clear": AgentWorkingClearCommand,
+  "agent:rename": AgentRenameCommand,
+  "agent:runtime:set": AgentRuntimeSetCommand,
+  "agent:runtime:get": AgentRuntimeGetCommand,
   network: NetworkCommand,
   "network:list": NetworkListCommand,
   "network:members": NetworkMembersCommand,

@@ -62,6 +62,8 @@ export type SessionRegisterResult = {
   address: string | null;
   /** How mail reaches this session: Claude hooks, Codex native receiver, or not supported. */
   receiving: "external_hook" | "native" | "unsupported" | null;
+  /** The connection name, on a registration this run completed. */
+  name?: string;
   detail: string;
 };
 
@@ -201,9 +203,9 @@ export function agentInfoForSession(
   );
 }
 
-type ProcessInfo = { ppid: number; started: string; command: string };
+export type ProcessInfo = { ppid: number; started: string; command: string };
 
-function psProcessInfo(pid: number): ProcessInfo | null {
+export function psProcessInfo(pid: number): ProcessInfo | null {
   try {
     const line = execFileSync(
       "ps",
@@ -230,7 +232,7 @@ function psProcessInfo(pid: number): ProcessInfo | null {
   }
 }
 
-const OMP_MAIN =
+export const OMP_MAIN =
   /(?:^|[\s/\\])omp(?:\s|$)|pi-coding-agent[\\/]dist[\\/]cli\.js(?:\s|$)/;
 
 /**
@@ -1107,6 +1109,7 @@ export async function registerSession(
       return {
         ...withAddress,
         status: "registered",
+        name: record.name,
         detail:
           hooked === "installed"
             ? `Connected as ${address}.`

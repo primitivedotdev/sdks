@@ -1,4 +1,9 @@
+import { resolve } from "node:path";
 import { Command, Flags } from "@oclif/core";
+import {
+  cliInvocation,
+  identitySuggestions,
+} from "../agent-identity-suggestions.js";
 import {
   headlessClaudeRun,
   MACHINE_RUNTIMES,
@@ -88,7 +93,17 @@ export default class AgentSessionRegisterCommand extends Command {
     });
     // Status first, so a person reading the JSON sees the outcome at once.
     const { status, ...rest } = result;
-    if (flags.json) this.log(JSON.stringify({ status, ...rest }));
+    const identity =
+      status === "registered" && result.profile
+        ? identitySuggestions({
+            invocation: cliInvocation(process.argv[1]),
+            profile: result.profile,
+            name: result.name,
+            cwd: resolve(flags.cwd ?? process.cwd()),
+            connectedNow: true,
+          })
+        : {};
+    if (flags.json) this.log(JSON.stringify({ status, ...rest, ...identity }));
     else if (!flags.quiet) this.log(`${result.status}: ${result.detail}`);
   }
 }

@@ -786,6 +786,39 @@ until }` where `state` is `active`, `legacy` or `none`. Address rules and
 visibility follow `agent notes`: new claims are private to the organization and
 an update keeps the note's visibility unless `--public` or `--private` is given.
 
+### Agent name and runtime note
+
+An agent's display name and its `AGENT_RUNTIME` note help its owner and peers
+tell sessions apart. Neither is written automatically; offer them to the owner
+first.
+
+```sh
+primitive agent rename "Billing reviewer"
+primitive agent rename "Billing reviewer" --address agent@example.com --json
+primitive agent runtime set
+primitive agent runtime set --value "Codex on build-box at ~/src/api"
+primitive agent runtime get --address peer@example.com --json
+```
+
+`agent rename` changes only the display name; the address never changes. A
+connected profile renames its own address, and an owner login passes
+`--address`. The name is trimmed and must be 1-64 characters on one line without
+control characters. An API without the rename route reports that renaming is
+not supported yet.
+
+`agent runtime set` writes one private line to the `AGENT_RUNTIME` note on the
+connected profile's own address, updating an existing note in place. Without
+`--value` the line is `<runtime> on <host> at <directory>`, for example
+`Claude Code on my-laptop at ~/projects/app`: the runtime is Claude Code, Codex
+or omp when detected and `CLI` otherwise, the host is the lowercased machine
+name without a trailing `.local`, and the home directory is shown as `~`. `get`
+prints the line, or `none` when the note is absent.
+
+`agent connect`, `agent enroll` and `agent session-register` JSON results add a
+`suggestions` array of `{ kind, command }` entries for these follow-ups: `rename`
+when the CLI chose the connection name itself, which is also reported as
+`nameIsDefault`, and `runtime_note` after a connection the run completed.
+
 Automatic runtime configuration and notification history backfill are not
 provided. Reply waits use targeted recovery for their
 exact sent parent. Existing server queue retention and delivery-gap reporting

@@ -47,6 +47,9 @@ const CONFIRMATION_MAX_ATTEMPTS = 40;
 const CONFIRMATION_PAGE_LIMIT = 20;
 const refuse = (message: string) => new AgentConnectionSetupError(message);
 
+/** The connection name enrollment uses when none is given. */
+export const DEFAULT_ENROLL_NAME = "Coding agent";
+
 type Enrollment = {
   version: 1 | 2;
   session: string;
@@ -561,10 +564,9 @@ async function readOwnerConnection(
     for (const candidate of envelope.data) {
       const connection = plainRecord(candidate);
       if (connection?.address !== enrollment.address) continue;
-      if (
-        connection.name !== enrollment.name ||
-        connection.owner_address !== enrollment.ownerAddress
-      )
+      // The display name is not compared: the agent or its owner may rename
+      // it, and the address alone identifies the connection.
+      if (connection.owner_address !== enrollment.ownerAddress)
         throw refuse(
           "The owner connection list did not match this session's saved identity. Preserve the profile and inspect the connection in the app.",
         );
@@ -643,7 +645,7 @@ export function enrollmentResumes(configDir: string, session: string): boolean {
 export async function enrollAgent(params: AgentEnrollOptions) {
   if (!SESSION_UUID.test(params.session))
     throw refuse("Enrollment requires the exact current session UUID.");
-  let name = params.name ?? "Coding agent";
+  let name = params.name ?? DEFAULT_ENROLL_NAME;
   if (!validName(name))
     throw refuse(
       "Agent name must be 1-80 characters without control characters.",
@@ -740,7 +742,8 @@ export async function enrollAgent(params: AgentEnrollOptions) {
       });
       const identity = { ...setup.identity, ownerMemberAddress };
       const report = ownerReportGuidance(identity);
-      const result = { ...setup, identity };
+      // The display name this enrollment gave the connection.
+      const result = { ...setup, identity, name };
       if (!verificationReplySubmitted(result.verification.state))
         return {
           ...result,

@@ -142,6 +142,7 @@ describe("agent session-register", () => {
       profile: `session-${session}`,
       address: "agent@example.test",
       receiving: "external_hook",
+      name: "claude-my-repo",
     });
     expect(calls.enroll).toHaveLength(1);
     expect(calls.enroll[0]?.name).toBe("claude-my-repo");
@@ -154,6 +155,8 @@ describe("agent session-register", () => {
 
     const resumed = await registerSession(options);
     expect(resumed.status).toBe("already_registered");
+    // Only a registration this run completed reports the name it chose.
+    expect(resumed.name).toBeUndefined();
     expect(calls.enroll).toHaveLength(1);
     expect(calls.seeds).toHaveLength(1);
     // The resume reinstalls the same exact-session hook (idempotent).

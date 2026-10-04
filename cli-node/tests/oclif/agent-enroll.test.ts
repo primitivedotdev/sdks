@@ -78,6 +78,8 @@ function server(
     continuationFailure?: boolean;
     claimedRecovery?: boolean;
     expectedName?: string;
+    /** The name the owner list reports, as after a rename. */
+    listedName?: string;
     firstCreateStatus?: 400 | 401 | 403 | 409;
     domains?: string[];
     createDenials?: Array<{ status: number; code: string } | null>;
@@ -323,7 +325,7 @@ function server(
         data: [
           {
             address,
-            name: options.expectedName ?? "Research",
+            name: options.listedName ?? options.expectedName ?? "Research",
             owner_address: "owner@example.test",
             owner_active: options.ownerActive ?? true,
             status,
@@ -392,6 +394,8 @@ test("owner OAuth creates one readable address and keeps the invitation out of s
     guidance: `The owner connection list confirms pairing. Receiving is separate; configure and verify this session's external hook if external mode was selected. No personal owner address is known, so reply to the member who wrote to you; never send reports to ${result.identity.ownerAddress}, the setup and presence control address.`,
     contactRequestPolicy: "enabled",
     connection: { status: "connected" },
+    // The display name this enrollment gave the connection.
+    name: "Research",
   });
   assert.equal(connectionListReads(), 1);
   assert.equal(setupCalls, 1);
@@ -438,6 +442,23 @@ test("one enrollment command confirms pairing through the owner list without an 
   assert.equal(value.connection.status, "connected");
   assert.equal(connectionListReads(), 2);
   assert.equal(creates.length, 1);
+});
+
+test("a renamed connection still confirms pairing through the owner list", async () => {
+  const configDir = owner();
+  const { fetcher } = server({ listedName: "Billing reviewer" });
+  const value = await enrollAgent({
+    configDir,
+    session,
+    name: "Research",
+    receiverMode: "external",
+    env: { CLAUDE_CODE_SESSION_ID: session },
+    fetch: fetcher,
+    now: () => clock,
+    confirmationSleep: async () => undefined,
+    setup: (async () => result) as typeof setupAgent,
+  });
+  assert.equal(value.connection.status, "connected");
 });
 
 test("one enrollment survives a delayed reconciliation without recreating or reverifying", async () => {

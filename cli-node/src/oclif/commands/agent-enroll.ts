@@ -1,6 +1,7 @@
 import { Command, Errors, Flags } from "@oclif/core";
 import { pollCheckCommand } from "../agent-connect-flow.js";
 import { enrollAgent, enrollmentResumes } from "../agent-enroll.js";
+import { identitySuggestions } from "../agent-identity-suggestions.js";
 import {
   RECEIVER_MODES,
   type ReceiverMode,
@@ -162,9 +163,16 @@ export default class AgentEnrollCommand extends Command {
               externalHook,
             }
           : { ...result, externalHook };
+      const identity = identitySuggestions({
+        invocation: invocation(process.argv[1]),
+        profile: result.identity.profileName,
+        name: result.name,
+        cwd: process.cwd(),
+        connectedNow: result.connection.status === "connected",
+      });
       const printed = replaced.length
-        ? { ...output, replacedExisting: replaced }
-        : output;
+        ? { ...output, ...identity, replacedExisting: replaced }
+        : { ...output, ...identity };
       if (flags.json) this.log(JSON.stringify(printed));
       else {
         this.log(
