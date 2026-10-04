@@ -638,7 +638,7 @@ function boundKey(item: BoundSessionProfile): string {
 
 /**
  * Bound profiles whose receive hooks are entirely absent while the same
- * session receives through another profile, or while several profiles are
+ * session receives through another connected profile, or while several profiles are
  * bound to it and none receives. Such a profile is not restored without
  * being named: its hooks were removed on purpose, or it would give the
  * session a second address. A profile that still has any receive hook for
@@ -658,6 +658,13 @@ function heldSessionProfiles(
       for (const hook of entry.hooks) {
         const parsed = parseSessionHook(hook);
         if (!parsed?.profile || !parsed.session) continue;
+        // A hook for a disconnected or removed profile is stale and is
+        // removed by this repair, so the session does not receive through it.
+        if (
+          !existsSync(parsed.configDir) ||
+          !profileStillConnected(parsed.configDir, parsed.profile)
+        )
+          continue;
         const session = parsed.session.toLowerCase();
         const profiles = receiving.get(session) ?? new Set<string>();
         profiles.add(

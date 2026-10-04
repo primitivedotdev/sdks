@@ -1226,6 +1226,70 @@ describe("primitive machine doctor", () => {
     expect(readFileSync(settingsPath, "utf8")).not.toContain("other-agent");
   });
 
+  it("restores the only connected profile when the session's other hook is stale", async () => {
+    const { home, bin, configDir, options } = machine({ runtimes: ["claude"] });
+    const settingsPath = join(home, ".claude", "settings.json");
+    saveConnectedAgentProfile(
+      configDir,
+      "live-agent",
+      profile("live-agent@example.test"),
+    );
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "live-agent"), "setup.json"),
+      { session: sessionA, receiverMode: "external" },
+    );
+    // The only hook left for the session belongs to a removed profile.
+    const dead = wakeHook(
+      bin,
+      configDir,
+      "removed-agent",
+      "gone@example.test",
+      sessionA,
+    );
+    writeFileSync(
+      settingsPath,
+      JSON.stringify({ hooks: { Stop: [{ hooks: [dead] }] } }),
+    );
+    const fixed = byId(
+      await runMachineDoctor({
+        ...options,
+        fix: true,
+        only: new Set(["claude.hook.stop"]),
+      }),
+    );
+    expect(fixed["claude.hook.stop"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    expect(
+      fixed["claude.hook.stop"].changes?.map((change) => [
+        change.profile,
+        change.hook,
+        change.action,
+      ]),
+    ).toEqual([
+      ["removed-agent", "Stop", "removed"],
+      ["live-agent", "Stop", "added"],
+      ["live-agent", "SessionStart", "added"],
+      ["live-agent", "PostToolUse", "added"],
+    ]);
+    const text = readFileSync(settingsPath, "utf8");
+    expect(text).not.toContain("removed-agent");
+    expect(JSON.parse(text).hooks.Stop).toEqual([
+      {
+        hooks: [
+          wakeHook(
+            bin,
+            configDir,
+            "live-agent",
+            "live-agent@example.test",
+            sessionA,
+          ),
+        ],
+      },
+    ]);
+  });
+
   it("restores none of several profiles bound to a session that receives as none", async () => {
     const { home, configDir, options } = machine({ runtimes: ["claude"] });
     const settingsPath = join(home, ".claude", "settings.json");
