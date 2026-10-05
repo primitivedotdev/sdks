@@ -8,8 +8,10 @@ import {
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 import {
+  OWNER_MEMBER_REFRESH_INTERVAL_MS,
   ownerReportGuidance,
   refreshOwnerMemberAddress,
+  refreshOwnerMemberAddressPeriodically,
   withOwnerMemberAddress,
 } from "../../src/oclif/owner-member-address.js";
 
@@ -183,5 +185,88 @@ describe("the owner's personal address", () => {
     });
     expect(none).toContain("reply to the member who wrote to you");
     expect(none).toContain(`never send reports to ${ownerAddress}`);
+  });
+
+  it("replaces a stale saved null on a routine path, at most once per interval", async () => {
+    // Paired before the owner had a personal address: the profile says null.
+    await refresh(async () => me({ owner_member_address: null }));
+    expect(
+      loadConnectedAgentProfile(configDir, "work")?.owner_member_address,
+    ).toBeNull();
+    let now = Date.parse("2026-10-04T12:00:00.000Z");
+    const fetch = vi.fn<typeof globalThis.fetch>(async () =>
+      me({ owner_member_address: personal }),
+    );
+    const periodic = () =>
+      refreshOwnerMemberAddressPeriodically({
+        configDir,
+        profileName: "work",
+        fetch,
+        now: () => now,
+      });
+    // The owner has since set one up; the next routine call learns it.
+    expect(await periodic()).toBe(personal);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(
+      loadConnectedAgentProfile(configDir, "work")?.owner_member_address,
+    ).toBe(personal);
+
+    // Within the interval the saved value answers without a request.
+    now += OWNER_MEMBER_REFRESH_INTERVAL_MS - 1;
+    expect(await periodic()).toBe(personal);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    // After it, the record is read again and follows the server.
+    now += 1;
+    fetch.mockImplementation(async () => me({ owner_member_address: null }));
+    expect(await periodic()).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not ask a failing server again on every routine call", async () => {
+    await refresh(async () => me({ owner_member_address: personal }));
+    const now = Date.parse("2026-10-04T12:00:00.000Z");
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () => new Response("down", { status: 503 }),
+    );
+    for (let i = 0; i < 3; i++)
+      expect(
+        await refreshOwnerMemberAddressPeriodically({
+          configDir,
+          profileName: "work",
+          fetch,
+          now: () => now,
+        }),
+      ).toBe(personal);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads again when the saved attempt time is in the future", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () =>
+      me({ owner_member_address: personal }),
+    );
+    const at = (now: number) =>
+      refreshOwnerMemberAddressPeriodically({
+        configDir,
+        profileName: "work",
+        fetch,
+        now: () => now,
+      });
+    await at(Date.parse("2026-10-05T00:00:00.000Z"));
+    // A clock that moved backwards must not suppress reads indefinitely.
+    await at(Date.parse("2026-10-04T00:00:00.000Z"));
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns null for a missing profile without a request", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>();
+    expect(
+      await refreshOwnerMemberAddressPeriodically({
+        configDir,
+        profileName: "missing",
+        fetch,
+      }),
+    ).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

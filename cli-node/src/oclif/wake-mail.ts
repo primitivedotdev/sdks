@@ -35,6 +35,7 @@ import {
   readConversationStatusContent,
 } from "./notify-session-content.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import { refreshOwnerMemberAddressPeriodically } from "./owner-member-address.js";
 import { recordPendingMail, removePendingMail } from "./pending-mail.js";
 import { openPresenceControls } from "./presence-control.js";
 import { isPlainChatReply, scopedChatSenderTrust } from "./scoped-chat.js";
@@ -66,6 +67,13 @@ export async function createWakeMail(options: {
   });
   const identity = auth.connectedAgent;
   const recipient = identity?.agentAddress;
+  // Learn an owner's personal address set up after pairing without a
+  // reconnect. Throttled per profile, best effort and never awaited here.
+  if (identity)
+    void refreshOwnerMemberAddressPeriodically({
+      configDir: options.configDir,
+      profileName: identity.profileName,
+    });
   const policy = recipient
     ? apiContactPolicy(apiClient.client, recipient, options.contactRequests)
     : undefined;

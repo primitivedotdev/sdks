@@ -47,7 +47,10 @@ function email(sender: string, extra: Record<string, unknown> = {}) {
 
 type Page = { rows: ReturnType<typeof email>[]; cursor: string | null };
 
-function harness(pages: Array<Page | Response>) {
+function harness(
+  pages: Array<Page | Response>,
+  ownerMemberAddress: () => Promise<string | null> = async () => null,
+) {
   const configDir = mkdtempSync(join(tmpdir(), "agent-mail-check-"));
   directories.push(configDir);
   const queries: URLSearchParams[] = [];
@@ -74,6 +77,7 @@ function harness(pages: Array<Page | Response>) {
       configDir,
       identity,
       client,
+      ownerMemberAddress,
       emit: (result) => {
         emit(result);
       },
@@ -96,7 +100,9 @@ describe("agent check-mail", () => {
     const h = harness([
       {
         rows: [
-          email(identity.ownerAddress),
+          email(identity.ownerAddress, {
+            subject: "Connect your agent to Primitive",
+          }),
           email("other@example.com", { presence_control: { kind: "probe" } }),
           peer,
         ],
@@ -125,6 +131,7 @@ describe("agent check-mail", () => {
       ],
       more: false,
       control_skipped: 2,
+      owner_member_address: null,
       profile: identity.profileName,
       to: identity.agentAddress,
       read_command: `PRIMITIVE_AGENT_PROFILE=${identity.profileName} primitive emails get --id <id> --brief`,
@@ -216,5 +223,58 @@ describe("agent check-mail", () => {
     expect(result.more).toBe(true);
     expect(h.fetch).toHaveBeenCalledTimes(5);
     expect(h.savedCursor()).toBe(last);
+  });
+
+  it("lists mail a person wrote from the control address and counts only setup and presence mail", async () => {
+    // The owner wrote from the control address before they had a personal
+    // one. That email awaits an answer, so it must never be hidden as
+    // control mail; only the fixed-subject setup and presence mail is.
+    const fromOwner = email(identity.ownerAddress.toUpperCase(), {
+      subject: "Can you look at the deploy?",
+    });
+    const h = harness([
+      {
+        rows: [
+          email(identity.ownerAddress, {
+            subject: "Connect your agent to Primitive",
+          }),
+          email(identity.ownerAddress, { subject: "Receiver presence check" }),
+          email(identity.ownerAddress, {
+            subject: "Receiver presence check",
+            presence_control: { status: "pending", valid_for_ms: 0 },
+          }),
+          fromOwner,
+          email(identity.ownerAddress, { subject: null }),
+        ],
+        cursor: "c1",
+      },
+      { rows: [], cursor: null },
+    ]);
+    const result = await h.check();
+    expect(result.outcome).toBe("mail");
+    expect(result.control_skipped).toBe(3);
+    expect(result.emails).toHaveLength(2);
+    expect(result.emails[0]).toMatchObject({
+      id: fromOwner.id,
+      sender: fromOwner.sender,
+    });
+  });
+
+  it("reports the owner's personal address read beside the mail", async () => {
+    const h = harness(
+      [{ rows: [], cursor: null }],
+      async () => "ada@example.com",
+    );
+    const result = await h.check();
+    expect(result.outcome).toBe("empty");
+    expect(result.owner_member_address).toBe("ada@example.com");
+  });
+
+  it("still reports the mail when reading the owner address fails", async () => {
+    const h = harness([{ rows: [], cursor: null }], async () => {
+      throw new Error("offline");
+    });
+    const result = await h.check();
+    expect(result.owner_member_address).toBeNull();
   });
 });

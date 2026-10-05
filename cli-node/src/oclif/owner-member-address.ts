@@ -1,9 +1,15 @@
+import { join } from "node:path";
 import {
+  agentProfileDirectory,
   loadConnectedAgentProfile,
   parseOwnerMemberAddress,
   saveConnectedAgentProfile,
 } from "./connected-agent-profile.js";
-import { mailAddress } from "./shared-mail-files.js";
+import {
+  mailAddress,
+  readMailJson,
+  writeMailJson,
+} from "./shared-mail-files.js";
 
 const REFRESH_TIMEOUT_MS = 5_000;
 const MAX_RESPONSE_BYTES = 64 * 1024;
@@ -85,6 +91,66 @@ export async function refreshOwnerMemberAddress(params: {
     return current;
   } catch {
     return saved;
+  }
+}
+
+/** How often a routine command reads the owner's personal address again. */
+export const OWNER_MEMBER_REFRESH_INTERVAL_MS = 10 * 60_000;
+const REFRESH_STAMP_FILE = "owner-member-refresh.json";
+
+function lastRefreshAttempt(path: string): number | null {
+  try {
+    const saved = readMailJson(path) as { version?: unknown; at?: unknown };
+    if (saved?.version !== 1 || typeof saved.at !== "string") return null;
+    const at = Date.parse(saved.at);
+    return Number.isFinite(at) ? at : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * refreshOwnerMemberAddress for routine paths (each mail check, each start of
+ * a wake receiver): reads the connection's record at most once per interval,
+ * so an owner who sets up a personal address after pairing is learned without
+ * a reconnect. Between reads it returns the saved value without a request.
+ * The time of each attempt is saved with the profile, so a failing server is
+ * not asked again on every turn. Never throws.
+ */
+export async function refreshOwnerMemberAddressPeriodically(params: {
+  configDir: string;
+  profileName: string;
+  fetch?: typeof fetch;
+  timeoutMs?: number;
+  intervalMs?: number;
+  now?: () => number;
+}): Promise<string | null> {
+  try {
+    const profile = loadConnectedAgentProfile(
+      params.configDir,
+      params.profileName,
+    );
+    if (!profile) return null;
+    const now = (params.now ?? Date.now)();
+    const stamp = join(
+      agentProfileDirectory(params.configDir, params.profileName),
+      REFRESH_STAMP_FILE,
+    );
+    const last = lastRefreshAttempt(stamp);
+    if (
+      last !== null &&
+      last <= now &&
+      now - last < (params.intervalMs ?? OWNER_MEMBER_REFRESH_INTERVAL_MS)
+    )
+      return profile.owner_member_address ?? null;
+    try {
+      writeMailJson(stamp, { version: 1, at: new Date(now).toISOString() });
+    } catch {
+      /* Without a stamp the next routine call reads again. */
+    }
+    return await refreshOwnerMemberAddress(params);
+  } catch {
+    return null;
   }
 }
 

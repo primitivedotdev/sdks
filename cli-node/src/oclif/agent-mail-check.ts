@@ -5,11 +5,13 @@ import {
   listEmails,
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
+import { SETUP_CHALLENGE_SUBJECT } from "./agent-setup.js";
 import {
   agentProfileDirectory,
   type ConnectedAgentIdentity,
 } from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
+import { refreshOwnerMemberAddressPeriodically } from "./owner-member-address.js";
 import {
   privateMailDirectory,
   readMailJson,
@@ -55,8 +57,17 @@ export type MailCheckResult = {
   emails: MailCheckItem[];
   /** More new mail remains; run the check again after handling these. */
   more: boolean;
-  /** Setup and presence mail from the control address, handled by the CLI. */
+  /**
+   * Setup challenges and presence probes from the control address, handled
+   * by the CLI. Other mail from that address is listed in `emails`.
+   */
   control_skipped: number;
+  /**
+   * The owner's personal address, where reports and questions go; null when
+   * none is known. Read from the server at most every few minutes and saved
+   * with the profile, so it follows an owner who sets one up after pairing.
+   */
+  owner_member_address: string | null;
   /** The checked profile and the address it receives for. */
   profile: string;
   to: string;
@@ -87,15 +98,30 @@ function readCursor(path: string): string | null {
   return null;
 }
 
-/** Setup challenges and presence probes come from the control address. */
-function isControlMail(
-  email: EmailSummary,
-  identity: ConnectedAgentIdentity,
+/** Subject of the receiver presence probes the control address sends. */
+const PRESENCE_PROBE_SUBJECT = "Receiver presence check";
+
+/**
+ * Setup challenges and presence probes, which the CLI handles. A presence
+ * probe carries `presence_control`; a setup challenge, or a probe the server
+ * no longer recognises, is the control address writing with its fixed
+ * subject. Anything else from the control address is mail a person wrote
+ * (the owner can send from it), so it is reported like any other email.
+ */
+export function isControlMail(
+  email: Pick<EmailSummary, "sender" | "subject" | "presence_control">,
+  identity: Pick<ConnectedAgentIdentity, "ownerAddress">,
 ): boolean {
+  if (email.presence_control !== undefined && email.presence_control !== null)
+    return true;
+  if (
+    email.sender.trim().toLowerCase() !==
+    identity.ownerAddress.trim().toLowerCase()
+  )
+    return false;
+  const subject = email.subject?.trim();
   return (
-    email.presence_control !== undefined ||
-    email.sender.trim().toLowerCase() ===
-      identity.ownerAddress.trim().toLowerCase()
+    subject === SETUP_CHALLENGE_SUBJECT || subject === PRESENCE_PROBE_SUBJECT
   );
 }
 
@@ -106,6 +132,8 @@ export async function checkAgentMail(options: {
   /** How the agent invokes this CLI, used in `read_command`. */
   invocation?: string;
   maxPages?: number;
+  /** Reads the owner's personal address; defaults to a throttled refresh. */
+  ownerMemberAddress?: () => Promise<string | null>;
   /** Delivers the result; the cursor advances only after it returns. */
   emit(result: MailCheckResult): void;
 }): Promise<MailCheckResult> {
@@ -122,6 +150,15 @@ export async function checkAgentMail(options: {
   const readCommand = (id: string) =>
     `PRIMITIVE_AGENT_PROFILE=${identity.profileName} ${options.invocation ?? "primitive"} emails get --id ${id} --brief`;
   const to = identity.agentAddress.toLowerCase();
+  // Runs beside the mail read; it never throws and is bounded by its timeout.
+  const ownerMember = (
+    options.ownerMemberAddress ??
+    (() =>
+      refreshOwnerMemberAddressPeriodically({
+        configDir: options.configDir,
+        profileName: identity.profileName,
+      }))
+  )().catch(() => identity.ownerMemberAddress ?? null);
   try {
     const path = join(directory, CURSOR_FILE);
     const saved = readCursor(path);
@@ -170,6 +207,7 @@ export async function checkAgentMail(options: {
       emails,
       more,
       control_skipped: controlSkipped,
+      owner_member_address: await ownerMember,
       profile: identity.profileName,
       to,
       read_command: readCommand("<id>"),
