@@ -4,8 +4,10 @@ import {
   agentInvitationHash,
   connectAgent,
   readAgentInvitation,
+  refusalAfterReplacement,
 } from "../agent-connect.js";
 import {
+  connectWarnings,
   defaultAgentProfileName,
   invitationProfileName,
   runAgentConnect,
@@ -125,6 +127,9 @@ export default class AgentConnectCommand extends Command {
     // Set once a sessionless setup has named its profile, so a failure can
     // print the exact resume command.
     let pollProfile: string | undefined;
+    // Addresses disconnected by --replace-existing, so a later refusal can
+    // say so instead of claiming nothing changed.
+    let replaced: BoundAddress[] = [];
     try {
       if (flags.status) {
         // Status only reads, so the selected profile may come from the
@@ -209,7 +214,6 @@ export default class AgentConnectCommand extends Command {
       // happened, so it is never refused. An explicit --session (even an
       // empty one) is the session this connection binds; only with no
       // --session at all does the runtime's own session apply.
-      let replaced: BoundAddress[] = [];
       let replaceExisting: (() => Promise<void>) | undefined;
       const guardSession = flags.resume
         ? null
@@ -372,12 +376,16 @@ export default class AgentConnectCommand extends Command {
         configDir: this.config.configDir,
         onlyIfUnknown: claimed.status === "claimed",
       });
+      const warnings = connectWarnings(
+        this.config.configDir,
+        result.identity.profileName,
+      );
       if (flags.json)
         this.log(
           JSON.stringify(
             replaced.length
-              ? { ...result, replacedExisting: replaced }
-              : result,
+              ? { ...result, warnings, replacedExisting: replaced }
+              : { ...result, warnings },
           ),
         );
       else {
@@ -390,8 +398,10 @@ export default class AgentConnectCommand extends Command {
           `Select it with PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}.`,
         );
         this.log(result.ownerReportGuidance);
+        for (const warning of warnings) this.log(warning.message);
       }
-    } catch (error) {
+    } catch (caught) {
+      const error = refusalAfterReplacement(caught, replaced);
       throw new Errors.CLIError(
         error instanceof AgentConnectionSetupError
           ? error.message

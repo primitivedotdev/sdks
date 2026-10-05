@@ -56,6 +56,28 @@ export class AgentInvitationRejectedError extends AgentConnectionSetupError {
   }
 }
 
+const NOTHING_CHANGED = "Nothing was changed on this machine.";
+
+/**
+ * Restates a refusal that followed a replacement: the agent being replaced
+ * was disconnected before the claim, so "nothing was changed" is not true.
+ */
+export function refusalAfterReplacement(
+  error: unknown,
+  replaced: readonly { address: string }[],
+): unknown {
+  if (!(error instanceof AgentInvitationRejectedError) || !replaced.length)
+    return error;
+  const names = replaced.map((row) => row.address).join(", ");
+  return new AgentInvitationRejectedError(
+    error.message.replace(
+      NOTHING_CHANGED,
+      `The agent this was replacing (${names}) was already disconnected before the claim and stays disconnected.`,
+    ),
+    error.reason,
+  );
+}
+
 /** The error code of a refused claim, read without keeping the body. */
 async function claimErrorCode(response: Response): Promise<string | null> {
   try {

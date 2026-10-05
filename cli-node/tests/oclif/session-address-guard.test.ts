@@ -39,7 +39,10 @@ vi.mock("../../src/oclif/agent-disconnect.js", async (original) => ({
 }));
 
 import { existsSync } from "node:fs";
-import { agentInvitationHash } from "../../src/oclif/agent-connect.js";
+import {
+  AgentInvitationRejectedError,
+  agentInvitationHash,
+} from "../../src/oclif/agent-connect.js";
 import AgentConnectCommand from "../../src/oclif/commands/agent-connect.js";
 import AgentEnrollCommand from "../../src/oclif/commands/agent-enroll.js";
 import {
@@ -233,6 +236,71 @@ describe("one address per session", () => {
       replacedExisting: [{ profile: "work", address: "work@example.test" }],
     });
     expect(connectedProfilesForSession(configDir, session)).toEqual([]);
+  });
+
+  it("--replace-existing names the disconnected agent when the new invitation is refused", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    savedProfile("work", "work@example.test", session);
+    mocks.setupAgent.mockRejectedValue(
+      new AgentInvitationRejectedError(
+        "This invitation was already used. Nothing was changed on this machine.",
+        "invitation_unavailable",
+      ),
+    );
+    const error = await AgentConnectCommand.run(
+      ["--session", session, "--replace-existing", "--no-skill", "--json"],
+      { root },
+    ).catch((e) => e);
+    expect(String(error)).toContain(
+      "The agent this was replacing (work@example.test) was already disconnected",
+    );
+    expect(String(error)).not.toContain("Nothing was changed");
+    // The same refusal without a replacement keeps its message.
+    mocks.setupAgent.mockClear();
+    const plain = await AgentConnectCommand.run(
+      ["--session", session, "--keep-existing", "--no-skill", "--json"],
+      { root },
+    ).catch((e) => e);
+    expect(String(plain)).toContain("Nothing was changed on this machine");
+  });
+
+  it("warns a claim-only connect when the owner has no personal address", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("offline");
+      }),
+    );
+    mocks.connectAgent.mockImplementation(async () => {
+      saveConnectedAgentProfile(configDir, "solo", {
+        version: 1,
+        auth_method: "agent_connection",
+        api_key: ["pconn", "fixture", "solo"].join("_"),
+        api_base_url: "https://api.primitive-staging-1.com/v1",
+        org_id: "22222222-2222-4222-8222-222222222222",
+        agent_address: "solo@example.test",
+        owner_address: "owner@example.test",
+        owner_member_address: null,
+        invitation_hash: "c".repeat(64),
+        created_at: "2026-01-01T00:00:00.000Z",
+      });
+      return {
+        status: "claimed",
+        identity: {
+          profileName: "solo",
+          agentAddress: "solo@example.test",
+          ownerAddress: "owner@example.test",
+          orgId: "22222222-2222-4222-8222-222222222222",
+          apiBaseUrl: "https://api.primitive-staging-1.com/v1",
+        },
+      };
+    });
+    await AgentConnectCommand.run(["--profile", "solo", "--json"], { root });
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "claimed",
+      warnings: [{ kind: "owner_member_address_missing" }],
+    });
+    vi.unstubAllGlobals();
   });
 
   it("--replace-existing stops and claims nothing when disconnect fails", async () => {

@@ -24,6 +24,7 @@ import {
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 import { notificationScope } from "../../src/oclif/notify-session.js";
+import { NativeSessionDisconnectedError } from "../../src/oclif/notify-session-native.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const session = "11111111-1111-4111-8111-111111111111";
@@ -878,6 +879,20 @@ describe("native receiving unavailable in this runtime", () => {
     expect(codexVersion).not.toHaveBeenCalled();
     expect(beforeSetup).not.toHaveBeenCalled();
     expect(dependencies.setupAgent).not.toHaveBeenCalled();
+  });
+
+  it("falls back when a leftover socket accepts no connection", async () => {
+    const { options, preflight } = unavailable({}, true, "0.158.0");
+    preflight.mockRejectedValue(new NativeSessionDisconnectedError());
+    const output = await runAgentConnect(options);
+    expect(output.receiving).toMatchObject({
+      mode: "poll",
+      fallbackReason: "session_socket_unavailable",
+    });
+    expect(output.receiving).toHaveProperty(
+      "fallbackDetail",
+      expect.stringContaining("app-server is not running"),
+    );
   });
 
   it("does not probe on resume, so a saved native setup keeps its receiver", async () => {

@@ -37,7 +37,11 @@ import {
   agentProfileName,
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
-import { defaultSessionSocket, SESSION_UUID } from "./notify-session-native.js";
+import {
+  defaultSessionSocket,
+  NativeSessionDisconnectedError,
+  SESSION_UUID,
+} from "./notify-session-native.js";
 import {
   ownerReportGuidance,
   refreshOwnerMemberAddress,
@@ -75,7 +79,8 @@ export const CODEX_NATIVE_MIN_VERSION = "0.158.0";
 /** Why a defaulted native receiver became poll receiving. */
 export type NativeFallbackReason =
   | "codex_version_unsupported"
-  | "session_socket_missing";
+  | "session_socket_missing"
+  | "session_socket_unavailable";
 
 /** The `major.minor.patch` triple in a `codex --version` line, if any. */
 export function parseCodexVersion(text: string): string | null {
@@ -499,26 +504,34 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
   if (receiver === "native" && session && !options.resume) {
     try {
       await dependencies.nativePreflight(session);
-    } catch {
-      // A present socket means the runtime supports native receiving and
-      // this exact session is the problem, which poll receiving would hide.
-      // Only a missing socket falls back; the version only names the cause.
+    } catch (error) {
+      // A socket that accepts connections means the runtime supports native
+      // receiving and this exact session is the problem, which poll
+      // receiving would hide. A missing socket, or one nothing answers (an
+      // app-server that stopped and left it behind), falls back; the
+      // version only names the cause.
       const socketPresent = dependencies.nativeSocketPresent();
+      const socketDead =
+        socketPresent && error instanceof NativeSessionDisconnectedError;
       const codexVersion =
-        socketPresent || runtime === "claude"
+        (socketPresent && !socketDead) || runtime === "claude"
           ? null
           : await dependencies.codexVersion();
-      const reason: NativeFallbackReason | null = socketPresent
-        ? null
-        : codexVersion !== null && !codexSupportsNativeReceiving(codexVersion)
-          ? "codex_version_unsupported"
-          : "session_socket_missing";
+      const reason: NativeFallbackReason | null = socketDead
+        ? "session_socket_unavailable"
+        : socketPresent
+          ? null
+          : codexVersion !== null && !codexSupportsNativeReceiving(codexVersion)
+            ? "codex_version_unsupported"
+            : "session_socket_missing";
       const why =
         reason === "codex_version_unsupported"
           ? `Native receiving needs Codex ${CODEX_NATIVE_MIN_VERSION} or newer; this machine has Codex ${codexVersion}.`
-          : reason === "session_socket_missing"
-            ? `Native receiving needs the local Codex session socket (Codex ${CODEX_NATIVE_MIN_VERSION} or newer with its shared app-server running), and none was found${codexVersion ? ` for Codex ${codexVersion}` : ""}.`
-            : `The local session socket exists but did not accept session ${session}: it may not be loaded in this terminal, or the ID may not be this session's.`;
+          : reason === "session_socket_unavailable"
+            ? "The local Codex session socket exists but nothing accepted the connection, so its app-server is not running."
+            : reason === "session_socket_missing"
+              ? `Native receiving needs the local Codex session socket (Codex ${CODEX_NATIVE_MIN_VERSION} or newer with its shared app-server running), and none was found${codexVersion ? ` for Codex ${codexVersion}` : ""}.`
+              : `The local session socket exists but did not accept session ${session}: it may not be loaded in this terminal, or the ID may not be this session's.`;
       if (reason && options.receiver === undefined) {
         receiver = "poll";
         fallback = {
