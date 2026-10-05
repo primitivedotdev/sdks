@@ -7,6 +7,7 @@ import {
   identitySuggestions,
   LOAD_SKILL_LINE,
   loadSkillLine,
+  receivingOutcome,
 } from "../../src/oclif/agent-identity-suggestions.js";
 import { skillFirstLine } from "../../src/oclif/wake-context.js";
 
@@ -188,5 +189,16 @@ describe("connect next steps with an installed skill", () => {
     expect(steps.at(-1)).toBe(
       `Load the primitive-connect skill before handling any mail. If your skill tool does not list primitive-connect, read ${file} in full.`,
     );
+  });
+});
+
+describe("receiving outcome", () => {
+  it("never states installed hooks as confirmed wake before a real delivery", () => {
+    const text = receivingOutcome({
+      state: "hooks_installed",
+      mode: "external",
+    });
+    expect(text).toContain("unconfirmed until the first real delivery");
+    expect(text).not.toMatch(/\bconfirmed by\b/);
   });
 });

@@ -1005,6 +1005,20 @@ describe("output", () => {
       `  primitive reply --id ${id} --body "..."`,
       "Then run `primitive inbox next` again.",
     ]);
+    // Under a connected profile both footer commands name it.
+    vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "session-1");
+    try {
+      expect(
+        await footer({ interaction_hint: "none", interaction_kind: null }),
+      ).toEqual([
+        "",
+        "Reply with:",
+        `  PRIMITIVE_AGENT_PROFILE=session-1 primitive reply --id ${id} --body "..."`,
+        "Then run `PRIMITIVE_AGENT_PROFILE=session-1 primitive inbox next` again.",
+      ]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("agrees with the brief on a repeat only the sender can stop", async () => {
