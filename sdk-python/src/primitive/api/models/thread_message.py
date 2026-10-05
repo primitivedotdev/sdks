@@ -46,6 +46,12 @@ class ThreadMessage:
                 servers that predate repeating sends.
             sender_member (None | ThreadMessageSenderMemberType0 | Unset): Verified human authorship, projected only within
                 the member organization. Historical attribution is not current sending or owner authority.
+            fyi (bool | Unset): Outbound messages only. True when the send was an informational signal (a read, working or
+                typing signal, or an acknowledgement) and nothing else, so it is not a reply that takes part in the
+                conversation. Absent on inbound messages. Older servers omit it.
+            interaction_hint (str | Unset): Outbound messages only. How to place this send in a timeline: `status` (a pure
+                status signal), `card` or `none`. Not declared as a closed enum so that a value added later does not fail
+                decoding; treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.
      """
 
     direction: ThreadMessageDirection
@@ -58,6 +64,8 @@ class ThreadMessage:
     timestamp: datetime.datetime | None | Unset = UNSET
     repeat: None | ThreadMessageRepeatType0 | Unset = UNSET
     sender_member: None | ThreadMessageSenderMemberType0 | Unset = UNSET
+    fyi: bool | Unset = UNSET
+    interaction_hint: str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -125,6 +133,10 @@ class ThreadMessage:
         else:
             sender_member = self.sender_member
 
+        fyi = self.fyi
+
+        interaction_hint = self.interaction_hint
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -148,6 +160,10 @@ class ThreadMessage:
             field_dict["repeat"] = repeat
         if sender_member is not UNSET:
             field_dict["sender_member"] = sender_member
+        if fyi is not UNSET:
+            field_dict["fyi"] = fyi
+        if interaction_hint is not UNSET:
+            field_dict["interaction_hint"] = interaction_hint
 
         return field_dict
 
@@ -278,6 +294,10 @@ class ThreadMessage:
         sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
 
 
+        fyi = d.pop("fyi", UNSET)
+
+        interaction_hint = d.pop("interaction_hint", UNSET)
+
         thread_message = cls(
             direction=direction,
             id=id,
@@ -289,6 +309,8 @@ class ThreadMessage:
             timestamp=timestamp,
             repeat=repeat,
             sender_member=sender_member,
+            fyi=fyi,
+            interaction_hint=interaction_hint,
         )
 
 

@@ -296,6 +296,53 @@ describe("thread context", () => {
     expect(sentInThread(signalOnly, self, () => false)).toBe(true);
   });
 
+  it("does not count outbound messages the server marks as status signals", async () => {
+    const onlyOutbound = (fields: Record<string, unknown>) =>
+      client(() =>
+        threadBody({
+          message_count: 1,
+          messages: [
+            {
+              direction: "outbound",
+              id: "33333333-3333-4333-8333-333333333333",
+              from: `Agent <${self}>`,
+              ...fields,
+            },
+          ],
+        }),
+      );
+    const fyi = await readThreadContext(
+      onlyOutbound({ fyi: true }).client,
+      thread,
+      email,
+      signal,
+    );
+    expect(fyi?.messages[0]?.fyi).toBe(true);
+    expect(sentInThread(fyi, self)).toBe(false);
+    const status = await readThreadContext(
+      onlyOutbound({ interaction_hint: "status" }).client,
+      thread,
+      email,
+      signal,
+    );
+    expect(status?.messages[0]?.interaction_hint).toBe("status");
+    expect(sentInThread(status, self)).toBe(false);
+    const reply = await readThreadContext(
+      onlyOutbound({ fyi: false, interaction_hint: "none" }).client,
+      thread,
+      email,
+      signal,
+    );
+    expect(sentInThread(reply, self)).toBe(true);
+    const unknownHint = await readThreadContext(
+      onlyOutbound({ interaction_hint: "later-kind" }).client,
+      thread,
+      email,
+      signal,
+    );
+    expect(sentInThread(unknownHint, self)).toBe(true);
+  });
+
   it("describes a wake from one thread read, falling back to local evidence", async () => {
     const detail = {
       id: email,

@@ -7195,6 +7195,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "user_id",
                   "name"
                 ]
+              },
+              "fyi": {
+                "type": "boolean",
+                "description": "Outbound messages only. True when the send was an informational signal (a read, working or typing signal, or an acknowledgement) and nothing else, so it is not a reply that takes part in the conversation. Absent on inbound messages. Older servers omit it.\n"
+              },
+              "interaction_hint": {
+                "type": "string",
+                "description": "Outbound messages only. How to place this send in a timeline: `status` (a pure status signal), `card` or `none`. Not declared as a closed enum so that a value added later does not fail decoding; treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.\n"
               }
             },
             "required": [
@@ -21618,6 +21626,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "user_id",
                   "name"
                 ]
+              },
+              "fyi": {
+                "type": "boolean",
+                "description": "Outbound messages only. True when the send was an informational signal (a read, working or typing signal, or an acknowledgement) and nothing else, so it is not a reply that takes part in the conversation. Absent on inbound messages. Older servers omit it.\n"
+              },
+              "interaction_hint": {
+                "type": "string",
+                "description": "Outbound messages only. How to place this send in a timeline: `status` (a pure status signal), `card` or `none`. Not declared as a closed enum so that a value added later does not fail decoding; treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.\n"
               }
             },
             "required": [

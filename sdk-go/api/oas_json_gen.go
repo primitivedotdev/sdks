@@ -11935,9 +11935,21 @@ func (s *ConversationMessage) encodeFields(e *jx.Encoder) {
 			s.SenderMember.Encode(e)
 		}
 	}
+	{
+		if s.Fyi.Set {
+			e.FieldStart("fyi")
+			s.Fyi.Encode(e)
+		}
+	}
+	{
+		if s.InteractionHint.Set {
+			e.FieldStart("interaction_hint")
+			s.InteractionHint.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfConversationMessage = [13]string{
+var jsonFieldsNameOfConversationMessage = [15]string{
 	0:  "role",
 	1:  "direction",
 	2:  "id",
@@ -11951,6 +11963,8 @@ var jsonFieldsNameOfConversationMessage = [13]string{
 	10: "presence_control",
 	11: "repeat",
 	12: "sender_member",
+	13: "fyi",
+	14: "interaction_hint",
 }
 
 // Decode decodes ConversationMessage from json.
@@ -12095,6 +12109,26 @@ func (s *ConversationMessage) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sender_member\"")
+			}
+		case "fyi":
+			if err := func() error {
+				s.Fyi.Reset()
+				if err := s.Fyi.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"fyi\"")
+			}
+		case "interaction_hint":
+			if err := func() error {
+				s.InteractionHint.Reset()
+				if err := s.InteractionHint.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_hint\"")
 			}
 		default:
 			return d.Skip()
@@ -96333,19 +96367,33 @@ func (s *ThreadMessage) encodeFields(e *jx.Encoder) {
 			s.SenderMember.Encode(e)
 		}
 	}
+	{
+		if s.Fyi.Set {
+			e.FieldStart("fyi")
+			s.Fyi.Encode(e)
+		}
+	}
+	{
+		if s.InteractionHint.Set {
+			e.FieldStart("interaction_hint")
+			s.InteractionHint.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfThreadMessage = [10]string{
-	0: "direction",
-	1: "id",
-	2: "message_id",
-	3: "from",
-	4: "to",
-	5: "subject",
-	6: "status",
-	7: "timestamp",
-	8: "repeat",
-	9: "sender_member",
+var jsonFieldsNameOfThreadMessage = [12]string{
+	0:  "direction",
+	1:  "id",
+	2:  "message_id",
+	3:  "from",
+	4:  "to",
+	5:  "subject",
+	6:  "status",
+	7:  "timestamp",
+	8:  "repeat",
+	9:  "sender_member",
+	10: "fyi",
+	11: "interaction_hint",
 }
 
 // Decode decodes ThreadMessage from json.
@@ -96458,6 +96506,26 @@ func (s *ThreadMessage) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sender_member\"")
+			}
+		case "fyi":
+			if err := func() error {
+				s.Fyi.Reset()
+				if err := s.Fyi.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"fyi\"")
+			}
+		case "interaction_hint":
+			if err := func() error {
+				s.InteractionHint.Reset()
+				if err := s.InteractionHint.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"interaction_hint\"")
 			}
 		default:
 			return d.Skip()
