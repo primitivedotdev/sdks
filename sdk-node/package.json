@@ -1,6 +1,6 @@
 {
   "name": "@primitivedotdev/sdk",
-  "version": "1.35.0",
+  "version": "1.35.1",
   "description": "Official Primitive Node.js SDK: webhook, api, openapi, contract, and parser runtime modules.",
   "type": "module",
   "module": "./dist/index.js",
@@ -102,8 +102,8 @@
   },
   "dependencies": {
     "ajv": "^8.17.1",
-    "mailparser": "^3.9.14",
-    "nodemailer": "^9.1.1",
+    "mailparser": "^3.9.36",
+    "nodemailer": "^10.0.15",
     "sanitize-html": "^2.17.5",
     "tar-stream": "^3.1.8",
     "validator": "^13.15.35",
