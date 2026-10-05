@@ -25,6 +25,7 @@ import {
 } from "./commands/agent-runtime.js";
 import AgentSessionEndCommand from "./commands/agent-session-end.js";
 import AgentSessionRegisterCommand from "./commands/agent-session-register.js";
+import AgentStatusCommand from "./commands/agent-status.js";
 import AgentUpgradeCommand from "./commands/agent-upgrade.js";
 import {
   AgentWorkingClearCommand,
@@ -566,6 +567,8 @@ export const COMMANDS: Record<string, typeof Command> = {
   // on top of the generated agent:claim / agent:claim-verify operations.
   "agent:upgrade": AgentUpgradeCommand,
   "agent:connect": AgentConnectCommand,
+  // Hidden: the command agents guess for `agent connect --status`.
+  "agent:status": AgentStatusCommand,
   "agent:check-mail": AgentCheckMailCommand,
   "agent:disconnect": AgentDisconnectCommand,
   "agent:enroll": AgentEnrollCommand,

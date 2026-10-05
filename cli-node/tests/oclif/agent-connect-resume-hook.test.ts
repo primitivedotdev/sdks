@@ -26,6 +26,13 @@ vi.mock("../../src/oclif/agent-enroll.js", () => ({
 vi.mock("../../src/oclif/claude-wake-install.js", () => ({
   installClaudeWakeHook: mocks.installClaudeWakeHook,
 }));
+// The exact session is reachable for native receiving.
+vi.mock("../../src/oclif/notify-session-native.js", async (original) => ({
+  ...(await original<
+    typeof import("../../src/oclif/notify-session-native.js")
+  >()),
+  connectNativeSession: async () => ({ close() {}, queue: async () => {} }),
+}));
 // Install from a bundle built by the real build step into scratch space, so
 // this suite never depends on (or writes from) a local dist build.
 vi.mock("../../src/oclif/connect-skill.js", async (original) => {
@@ -82,7 +89,7 @@ it("agent enroll reports failed external hook installation as incomplete", async
     },
     connection: { status: "connected" },
     verification: { state: "reply_submitted" },
-    receiving: { state: "external_setup_required" },
+    receiving: { state: "hooks_pending" },
     contactRequestPolicy: "unchanged",
   });
   mocks.installClaudeWakeHook
@@ -97,10 +104,13 @@ it("agent enroll reports failed external hook installation as incomplete", async
   expect(mocks.enrollAgent).toHaveBeenCalledTimes(2);
   expect(JSON.parse(outputs[0])).toMatchObject({
     connection: { status: "connected" },
-    receiving: { state: "external_setup_required" },
+    receiving: { state: "hook_unavailable" },
     externalHook: "unavailable",
   });
-  expect(JSON.parse(outputs[1]).externalHook).toBe("installed_unverified");
+  expect(JSON.parse(outputs[1])).toMatchObject({
+    externalHook: "installed_unverified",
+    receiving: { state: "hooks_installed" },
+  });
   expect(mocks.installClaudeWakeHook.mock.calls[1][0]).toMatchObject({
     profileName: `session-${session}`,
     agentAddress: "enrolled@example.com",
@@ -124,7 +134,7 @@ it("agent connect --resume retries only failed hook installation", async () => {
     },
     sessionId: session,
     verification: { state: "reply_submitted", deliveryStatus: "queued" },
-    receiving: { state: "external_setup_required" },
+    receiving: { state: "hooks_pending" },
     resumeCommand: "primitive agent connect --resume",
   };
   mocks.setupAgent.mockResolvedValue(result);
@@ -149,10 +159,13 @@ it("agent connect --resume retries only failed hook installation", async () => {
   expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
   expect(JSON.parse(outputs[0])).toMatchObject({
     verification: { state: "reply_submitted" },
-    receiving: { state: "external_setup_required" },
+    receiving: { state: "hook_unavailable" },
     externalHook: "unavailable",
   });
-  expect(JSON.parse(outputs[1]).externalHook).toBe("installed_unverified");
+  expect(JSON.parse(outputs[1])).toMatchObject({
+    externalHook: "installed_unverified",
+    receiving: { state: "hooks_installed" },
+  });
   expect(mocks.setupAgent).toHaveBeenCalledTimes(2);
   for (const [options] of mocks.setupAgent.mock.calls) {
     expect(options).toMatchObject({
@@ -547,7 +560,7 @@ it("agent connect --json prints one document reporting verification and nothing 
       verifiedAt: "2026-09-28T19:00:04.000Z",
       deliveryStatus: "queued",
     },
-    receiving: { state: "external_setup_required" },
+    receiving: { state: "hooks_pending" },
     resumeCommand: "primitive agent connect --resume",
     guidance: "Primitive verified this connection.",
   });

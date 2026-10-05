@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  AgentInvitationRejectedError,
   agentConnectionStatus,
   connectAgent,
   parseAgentInvitation,
@@ -414,6 +415,73 @@ describe("connected-agent setup", () => {
     resume?.();
     await first;
     expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it("names a spent invitation plainly and leaves no profile or attempt behind", async () => {
+    const request = vi.fn<typeof fetch>(async () =>
+      response(
+        {
+          success: false,
+          error: {
+            code: "connection_invitation_unavailable",
+            message: `${token} ${credential}`,
+          },
+        },
+        409,
+      ),
+    );
+    const error = await connectAgent(params(request)).catch((e) => e);
+    expect(error).toBeInstanceOf(AgentInvitationRejectedError);
+    expect(error.reason).toBe("invitation_unavailable");
+    expect(String(error)).toContain("already used");
+    expect(String(error)).toContain("fresh setup instruction");
+    expect(String(error)).toContain("Nothing was changed on this machine");
+    expect(String(error)).not.toContain(token);
+    expect(String(error)).not.toContain(credential);
+    expect(existsSync(agentProfileDirectory(configDir, "work"))).toBe(false);
+    expect(
+      readdirSync(join(agentProfilesDirectory(configDir), "claims")),
+    ).toEqual([]);
+    // Retrying asks the server again rather than reporting uncertainty.
+    await expect(connectAgent(params(request))).rejects.toThrow(/already used/);
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets a rate-limited claim retry the same invitation", async () => {
+    let limited = true;
+    const request = vi.fn<typeof fetch>(async () => {
+      if (!limited) return response();
+      limited = false;
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: { code: "rate_limit_exceeded", message: "slow down" },
+        }),
+        { status: 429, headers: { "retry-after": "30" } },
+      );
+    });
+    await expect(connectAgent(params(request))).rejects.toThrow(
+      /was not claimed; wait 30 seconds and rerun the same command/,
+    );
+    await expect(connectAgent(params(request))).resolves.toMatchObject({
+      status: "claimed",
+    });
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+
+  it("maps an invalid invitation to a plain message", async () => {
+    const request = vi.fn<typeof fetch>(async () =>
+      response(
+        {
+          success: false,
+          error: { code: "validation_error", message: "bad token" },
+        },
+        400,
+      ),
+    );
+    await expect(connectAgent(params(request))).rejects.toThrow(
+      /rejected this invitation as invalid/,
+    );
   });
 
   it.each([

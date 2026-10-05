@@ -68,17 +68,31 @@ try {
     assert.ok(help.stdout.includes(flag), `agent connect --help lacks ${flag}`);
   assert.match(help.stdout, /in one call/);
 
-  // Codex without a native session socket: the skill installs, then setup
-  // stops before any claim.
+  // Codex without a native session socket and an explicit native receiver:
+  // the skill installs, then setup stops before any claim and names the
+  // poll rerun.
   const codexHome = join(temp, "codex");
   const codex = await invoke(
-    ["agent", "connect", "--session", session, "--json"],
+    ["agent", "connect", "--session", session, "--receiver", "native", "--json"],
     { CODEX_THREAD_ID: session, CODEX_HOME: codexHome },
     "https://api.primitive.dev/v1/agent-connections/setup#token=smoke\n",
   );
   assert.notEqual(codex.exit, 0);
   assert.match(codex.stdout, /No invitation was claimed/);
+  assert.match(codex.stdout, /--receiver poll --json/);
   assert.doesNotMatch(codex.stdout + codex.stderr, /token=smoke/);
+  // With the default receiver it falls back to poll receiving instead, so
+  // it gets as far as reading the invitation (this one is malformed, so
+  // nothing is sent).
+  const fallback = await invoke(
+    ["agent", "connect", "--session", session, "--no-skill", "--json"],
+    { CODEX_THREAD_ID: session, CODEX_HOME: codexHome },
+    "https://api.primitive.dev/v1/agent-connections/setup#token=smoke\n",
+  );
+  assert.notEqual(fallback.exit, 0);
+  assert.doesNotMatch(fallback.stdout, /not available for native receiving/);
+  assert.match(fallback.stdout, /Pipe the private Primitive setup URL/);
+  assert.doesNotMatch(fallback.stdout + fallback.stderr, /token=smoke/);
   const codexSkill = join(codexHome, "skills", "primitive-connect");
   assert.deepEqual(tree(codexSkill), bundled);
   const firstMtime = statSync(join(codexSkill, "SKILL.md")).mtimeMs;

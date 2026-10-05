@@ -1,5 +1,7 @@
+import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -9,16 +11,23 @@ import {
   type AgentConnectFlowDependencies,
   type AgentConnectFlowOptions,
   agentInfoValue,
+  CODEX_NATIVE_MIN_VERSION,
+  codexSupportsNativeReceiving,
+  connectWarnings,
   defaultAgentProfileName,
   invitationProfileName,
+  parseCodexVersion,
   runAgentConnect,
+  socketRefusesConnections,
 } from "../../src/oclif/agent-connect-flow.js";
 import type { setupAgent } from "../../src/oclif/agent-setup.js";
 import {
   AgentConnectionSetupError,
   agentProfileDirectory,
+  saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 import { notificationScope } from "../../src/oclif/notify-session.js";
+import { NativeSessionDisconnectedError } from "../../src/oclif/notify-session-native.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const session = "11111111-1111-4111-8111-111111111111";
@@ -96,6 +105,18 @@ function fixture(
     refreshOwnerMemberAddress: vi.fn<
       AgentConnectFlowDependencies["refreshOwnerMemberAddress"]
     >(async () => "ada_123456789@example.test"),
+    nativePreflight: vi.fn<AgentConnectFlowDependencies["nativePreflight"]>(
+      async () => undefined,
+    ),
+    nativeSocketPresent: vi.fn<
+      AgentConnectFlowDependencies["nativeSocketPresent"]
+    >(() => true),
+    nativeSocketRefuses: vi.fn<
+      AgentConnectFlowDependencies["nativeSocketRefuses"]
+    >(async () => false),
+    codexVersion: vi.fn<AgentConnectFlowDependencies["codexVersion"]>(
+      async () => "0.158.0",
+    ),
   };
   const readInvitation = vi.fn(async () => invitation);
   const options: AgentConnectFlowOptions = {
@@ -270,7 +291,7 @@ describe("one-command agent connect", () => {
   it("defaults a Claude session to external hooks and skips the mail check", async () => {
     const { options, dependencies } = fixture(
       { env: { CLAUDE_CODE_SESSION_ID: session } },
-      setupResult({ receiving: "external_setup_required" }),
+      setupResult({ receiving: "hooks_pending" }),
     );
     const output = await runAgentConnect(options);
     expect(dependencies.installSkill).toHaveBeenCalledWith("claude");
@@ -289,7 +310,11 @@ describe("one-command agent connect", () => {
     expect(output).toMatchObject({
       status: "connected",
       runtime: "claude",
-      receiving: { mode: "external", hook: "installed_unverified" },
+      receiving: {
+        mode: "external",
+        state: "hooks_installed",
+        hook: "installed_unverified",
+      },
       externalHook: "installed_unverified",
       agentInfo: "not_requested",
       skipped: [{ step: "agent_info", reason: "not_requested" }],
@@ -299,12 +324,13 @@ describe("one-command agent connect", () => {
   it("reports an unavailable Claude hook as pending", async () => {
     const { options, dependencies } = fixture(
       { env: { CLAUDE_CODE_SESSION_ID: session } },
-      setupResult({ receiving: "external_setup_required" }),
+      setupResult({ receiving: "hooks_pending" }),
     );
     dependencies.installClaudeWakeHook.mockReturnValue("unavailable");
     const output = await runAgentConnect({ ...options, dependencies });
     expect(output.status).toBe("pending");
     expect(output.externalHook).toBe("unavailable");
+    expect(output.receiving.state).toBe("hook_unavailable");
   });
 
   it("refuses external receiving outside the exact Claude session before reading the invitation", async () => {
@@ -728,7 +754,7 @@ describe("review follow-ups", () => {
         session: session.toUpperCase(),
         env: { CLAUDE_CODE_SESSION_ID: session },
       },
-      setupResult({ receiving: "external_setup_required" }),
+      setupResult({ receiving: "hooks_pending" }),
     );
     const output = await runAgentConnect(options);
     expect(output.runtime).toBe("claude");
@@ -757,5 +783,236 @@ describe("review follow-ups", () => {
       expect(output.receiving.mode).toBe("native");
       expect(output.resumeCommand).toContain("--receiver native");
     }
+  });
+});
+
+describe("native receiving unavailable in this runtime", () => {
+  function unavailable(
+    overrides: Partial<AgentConnectFlowOptions> = {},
+    socketPresent = false,
+    version: string | null = "0.157.0",
+  ) {
+    const built = fixture(overrides, setupResult({ receiving: "poll" }));
+    const { dependencies } = built.options;
+    const preflight = vi.fn<AgentConnectFlowDependencies["nativePreflight"]>(
+      async () => {
+        throw new Error("no socket");
+      },
+    );
+    const codexVersion = vi.fn<AgentConnectFlowDependencies["codexVersion"]>(
+      async () => version,
+    );
+    built.options.dependencies = {
+      ...dependencies,
+      nativePreflight: preflight,
+      nativeSocketPresent: () => socketPresent,
+      codexVersion,
+    };
+    return { ...built, preflight, codexVersion };
+  }
+
+  it("falls back to poll receiving for a Codex without the session socket and says why", async () => {
+    const { options, dependencies, readInvitation } = unavailable();
+    const output = await runAgentConnect(options);
+    expect(dependencies.setupAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profileName: `session-${session}`,
+        session,
+        receiverMode: "poll",
+        invitation,
+      }),
+    );
+    expect(readInvitation).toHaveBeenCalledTimes(1);
+    expect(dependencies.awaitMailCheck).not.toHaveBeenCalled();
+    expect(output).toMatchObject({
+      status: "connected",
+      runtime: "codex",
+      receiving: {
+        mode: "poll",
+        state: "poll",
+        fallbackReason: "codex_version_unsupported",
+        codexVersion: "0.157.0",
+        checkCommand: `PRIMITIVE_AGENT_PROFILE=session-${session} primitive agent check-mail --json`,
+      },
+      skipped: expect.arrayContaining([
+        { step: "native_receiver", reason: "codex_version_unsupported" },
+      ]),
+    });
+    expect(output.receiving).toHaveProperty(
+      "fallbackDetail",
+      expect.stringContaining(`Codex ${CODEX_NATIVE_MIN_VERSION} or newer`),
+    );
+    expect(output.resumeCommand).toContain("--receiver poll --resume");
+  });
+
+  it("names a missing socket when the Codex version is new enough or unknown", async () => {
+    for (const version of ["0.158.0", null]) {
+      const { options } = unavailable({}, false, version);
+      const output = await runAgentConnect(options);
+      expect(output.receiving).toMatchObject({
+        mode: "poll",
+        fallbackReason: "session_socket_missing",
+      });
+    }
+  });
+
+  it("refuses an explicit native receiver with the version requirement and the poll rerun", async () => {
+    const { options, dependencies, readInvitation } = unavailable({
+      receiver: "native",
+    });
+    const error = await runAgentConnect(options).catch((e) => e);
+    expect(error).toBeInstanceOf(AgentConnectionSetupError);
+    expect(error.message).toContain(
+      `needs Codex ${CODEX_NATIVE_MIN_VERSION} or newer; this machine has Codex 0.157.0`,
+    );
+    expect(error.message).toContain("No invitation was claimed");
+    expect(error.message).toContain(
+      `primitive agent connect --session ${session} --receiver poll --json`,
+    );
+    expect(dependencies.setupAgent).not.toHaveBeenCalled();
+    expect(readInvitation).not.toHaveBeenCalled();
+  });
+
+  it("refuses without a fallback when the socket exists but the session is not reachable", async () => {
+    const beforeSetup = vi.fn(async () => {});
+    const { options, dependencies, codexVersion } = unavailable(
+      { beforeSetup },
+      true,
+    );
+    await expect(runAgentConnect(options)).rejects.toThrow(
+      /did not accept session .*--receiver poll --json/,
+    );
+    expect(codexVersion).not.toHaveBeenCalled();
+    expect(beforeSetup).not.toHaveBeenCalled();
+    expect(dependencies.setupAgent).not.toHaveBeenCalled();
+  });
+
+  it("falls back when a leftover socket accepts no connection", async () => {
+    const { options, preflight } = unavailable({}, true, "0.158.0");
+    preflight.mockRejectedValue(new NativeSessionDisconnectedError());
+    options.dependencies = {
+      ...options.dependencies,
+      nativeSocketRefuses: async () => true,
+    };
+    const output = await runAgentConnect(options);
+    expect(output.receiving).toMatchObject({
+      mode: "poll",
+      fallbackReason: "session_socket_unavailable",
+    });
+    expect(output.receiving).toHaveProperty(
+      "fallbackDetail",
+      expect.stringContaining("app-server is not running"),
+    );
+  });
+
+  it("refuses when the socket accepts connections but dropped the session check", async () => {
+    const { options, preflight, dependencies } = unavailable(
+      {},
+      true,
+      "0.158.0",
+    );
+    preflight.mockRejectedValue(new NativeSessionDisconnectedError());
+    await expect(runAgentConnect(options)).rejects.toThrow(
+      /did not accept session/,
+    );
+    expect(dependencies.setupAgent).not.toHaveBeenCalled();
+  });
+
+  // Unix domain sockets; Windows named pipes behave differently.
+  it.skipIf(process.platform === "win32")(
+    "probes a real socket: a served one is not refused",
+    async () => {
+      // A short path: socket paths are length-limited and tmpdir() can be long.
+      const directory = mkdtempSync(join("/tmp", "pc-"));
+      directories.push(directory);
+      const path = join(directory, "s.sock");
+      const server = createServer((socket) => socket.end());
+      await new Promise<void>((resolve) => server.listen(path, resolve));
+      expect(await socketRefusesConnections(path)).toBe(false);
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      // A missing path is a different case (no socket), never "refused".
+      expect(await socketRefusesConnections(join(directory, "none.sock"))).toBe(
+        false,
+      );
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "probes a real socket: one left behind by a killed server is refused",
+    async () => {
+      const directory = mkdtempSync(join("/tmp", "pc-"));
+      directories.push(directory);
+      const path = join(directory, "stale.sock");
+      // A server that dies without closing leaves its socket file behind.
+      const child = spawn(process.execPath, [
+        "-e",
+        `require("node:net").createServer().listen(${JSON.stringify(path)}, () => process.stdout.write("up"))`,
+      ]);
+      await new Promise<void>((resolve) => child.stdout.once("data", resolve));
+      child.kill("SIGKILL");
+      await new Promise<void>((resolve) => child.once("exit", () => resolve()));
+      expect(existsSync(path)).toBe(true);
+      expect(await socketRefusesConnections(path)).toBe(true);
+    },
+  );
+
+  it("does not probe on resume, so a saved native setup keeps its receiver", async () => {
+    const { options, preflight } = unavailable({ resume: true });
+    await runAgentConnect(options);
+    expect(preflight).not.toHaveBeenCalled();
+  });
+
+  it("compares Codex versions numerically", () => {
+    expect(parseCodexVersion("codex-cli 0.157.2\n")).toBe("0.157.2");
+    expect(parseCodexVersion("unknown")).toBeNull();
+    expect(codexSupportsNativeReceiving("0.157.9")).toBe(false);
+    expect(codexSupportsNativeReceiving("0.158.0")).toBe(true);
+    expect(codexSupportsNativeReceiving("0.1000.0")).toBe(true);
+    expect(codexSupportsNativeReceiving("1.0.0")).toBe(true);
+  });
+});
+
+describe("connect warnings", () => {
+  function profile(configDir: string, ownerMember?: string | null) {
+    saveConnectedAgentProfile(configDir, identity.profileName, {
+      version: 1,
+      auth_method: "agent_connection",
+      api_key: credential,
+      api_base_url: apiBaseUrl,
+      org_id: identity.orgId,
+      agent_address: identity.agentAddress,
+      owner_address: identity.ownerAddress,
+      ...(ownerMember === undefined
+        ? {}
+        : { owner_member_address: ownerMember }),
+      invitation_hash: "a".repeat(64),
+      created_at: "2026-10-01T00:00:00.000Z",
+    });
+  }
+
+  it("warns when the owner definitely has no personal address, without failing", async () => {
+    const { options, configDir, dependencies } = fixture();
+    profile(configDir, null);
+    dependencies.refreshOwnerMemberAddress.mockResolvedValue(null);
+    const output = await runAgentConnect(options);
+    expect(output.status).toBe("connected");
+    expect(output.warnings).toEqual([
+      {
+        kind: "owner_member_address_missing",
+        message: expect.stringContaining(
+          "primitive account provision-member-address --address",
+        ),
+      },
+    ]);
+  });
+
+  it("warns nothing when the personal address is known or unknown", () => {
+    const configDir = mkdtempSync(join(tmpdir(), "connect-warnings-"));
+    directories.push(configDir);
+    expect(connectWarnings(configDir, identity.profileName)).toEqual([]);
+    profile(configDir);
+    expect(connectWarnings(configDir, identity.profileName)).toEqual([]);
+    profile(configDir, "ada_123456789@example.test");
+    expect(connectWarnings(configDir, identity.profileName)).toEqual([]);
   });
 });

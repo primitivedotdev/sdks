@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EmailDetail } from "@primitivedotdev/api-core";
@@ -207,7 +207,7 @@ describe("one-command connected agent setup", () => {
     f.dependencies.preflight.mockRejectedValue(new Error("No native socket"));
     expect(await setupAgent(params)).toMatchObject({
       verification: { state: "reply_submitted" },
-      receiving: { state: "external_setup_required" },
+      receiving: { state: "hooks_pending" },
       ownerNotifications: "enabled",
     });
     expect(f.dependencies.preflight).not.toHaveBeenCalled();
@@ -217,12 +217,12 @@ describe("one-command connected agent setup", () => {
       await setupAgent({ ...params, invitation: undefined, resume: true }),
     ).toMatchObject({
       verification: { state: "reply_submitted" },
-      receiving: { state: "external_setup_required" },
+      receiving: { state: "hooks_pending" },
     });
     // Omitting --receiver on resume reuses the saved external receiver and
     // never probes a native socket.
     expect(await f.resume()).toMatchObject({
-      receiving: { state: "external_setup_required" },
+      receiving: { state: "hooks_pending" },
     });
     expect(f.dependencies.preflight).not.toHaveBeenCalled();
     // The conflicting option is named even though native preflight would fail.
@@ -1083,5 +1083,42 @@ describe("verification after the setup reply", () => {
     expect(verificationReplySubmitted("verified")).toBe(true);
     expect(verificationReplySubmitted("reply_submitted")).toBe(true);
     expect(verificationReplySubmitted("send_unknown")).toBe(false);
+  });
+});
+
+describe("a definitely refused claim", () => {
+  it("leaves no stub profile behind and names the spent invitation", async () => {
+    const f = fixture();
+    f.fetch.mockImplementation(async () =>
+      Response.json(
+        {
+          success: false,
+          error: {
+            code: "connection_invitation_unavailable",
+            message:
+              "The invitation expired, was revoked, or has already been claimed.",
+          },
+        },
+        { status: 409 },
+      ),
+    );
+    await expect(setupAgent(f.params)).rejects.toThrow(
+      /already used.*Nothing was changed on this machine/,
+    );
+    expect(
+      existsSync(agentProfileDirectory(f.configDir, "private-session")),
+    ).toBe(false);
+    expect(f.dependencies.findChallenge).not.toHaveBeenCalled();
+  });
+
+  it("keeps the saved setup when the claim outcome is uncertain", async () => {
+    const f = fixture();
+    f.fetch.mockImplementation(async () => {
+      throw new Error("socket closed");
+    });
+    await expect(setupAgent(f.params)).rejects.toThrow(
+      /may have been consumed/,
+    );
+    expect(f.state()).toMatchObject({ phase: "waiting" });
   });
 });

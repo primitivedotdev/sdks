@@ -358,7 +358,7 @@ const result = {
     apiBaseUrl: stage,
   },
   verification: { state: "reply_submitted" as const },
-  receiving: { state: "external_setup_required" },
+  receiving: { state: "hooks_pending" },
   sessionId: session,
   resumeCommand: `primitive agent connect --profile session-${session} --session ${session} --receiver external --resume --json`,
   guidance: "Receiving needs the external hook.",
