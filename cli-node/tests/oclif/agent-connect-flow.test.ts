@@ -288,6 +288,25 @@ describe("one-command agent connect", () => {
     );
   });
 
+  it("reports the claimed name and whether it is a generated default", async () => {
+    const local = identity.agentAddress.split("@")[0] ?? "";
+    const generated = fixture({}, { ...setupResult(), connectionName: local });
+    const output = await runAgentConnect(generated.options);
+    expect(output).toMatchObject({ name: local, nameIsDefault: true });
+    const chosen = fixture(
+      {},
+      { ...setupResult(), connectionName: "Research agent" },
+    );
+    expect(await runAgentConnect(chosen.options)).toMatchObject({
+      name: "Research agent",
+      nameIsDefault: false,
+    });
+    // No name known (an older claim), so both are omitted.
+    const resumed = await runAgentConnect(fixture().options);
+    expect(resumed).not.toHaveProperty("name");
+    expect(resumed).not.toHaveProperty("nameIsDefault");
+  });
+
   it("defaults a Claude session to external hooks and skips the mail check", async () => {
     const { options, dependencies } = fixture(
       { env: { CLAUDE_CODE_SESSION_ID: session } },

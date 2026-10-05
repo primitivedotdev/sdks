@@ -1,9 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { EmailDetail } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AgentInvitationRejectedError } from "../../src/oclif/agent-connect.js";
 import {
   type AgentSetupDependencies,
   parseVerificationCheck,
@@ -12,7 +20,10 @@ import {
   VERIFICATION_BACKOFF_MS,
   verificationReplySubmitted,
 } from "../../src/oclif/agent-setup.js";
-import { agentProfileDirectory } from "../../src/oclif/connected-agent-profile.js";
+import {
+  agentProfileDirectory,
+  agentProfilesDirectory,
+} from "../../src/oclif/connected-agent-profile.js";
 
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
@@ -326,7 +337,9 @@ describe("one-command connected agent setup", () => {
     f.fetch.mockRejectedValue(new Error(f.credential));
     await expect(setupAgent(f.params)).rejects.toThrow("fresh invitation");
     await expect(f.resume()).rejects.toThrow("fresh invitation");
-    await expect(setupAgent(f.params)).rejects.toThrow("fresh invitation");
+    await expect(setupAgent(f.params)).rejects.toThrow(
+      "fresh setup instruction",
+    );
     expect(f.fetch).toHaveBeenCalledOnce();
     expect(f.dependencies.sendVerification).not.toHaveBeenCalled();
   });
@@ -1109,6 +1122,83 @@ describe("a definitely refused claim", () => {
       existsSync(agentProfileDirectory(f.configDir, "private-session")),
     ).toBe(false);
     expect(f.dependencies.findChallenge).not.toHaveBeenCalled();
+  });
+
+  it("names an invitation another session on this machine already used, without a request or a stub", async () => {
+    // A second session pasting an invitation a first session already claimed
+    // here never reaches the server: the local claim record answers first.
+    // It must say so plainly and leave no setup record for the new session.
+    const f = fixture();
+    await setupAgent(f.params);
+    expect(f.fetch).toHaveBeenCalledOnce();
+    const other = { ...f.params, profileName: "other-session" };
+    const error = await setupAgent({ ...other, session: randomUUID() }).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(AgentInvitationRejectedError);
+    expect(String(error)).toContain(
+      "already used on this machine to connect agent@example.com",
+    );
+    expect(String(error)).toContain("fresh setup instruction");
+    expect(String(error)).toContain("Nothing was changed on this machine");
+    expect(String(error)).not.toMatch(/may have been consumed/);
+    expect(f.fetch).toHaveBeenCalledOnce();
+    expect(
+      existsSync(agentProfileDirectory(f.configDir, "other-session")),
+    ).toBe(false);
+  });
+
+  it("reports the claimed connection name on the claim and on a later resume", async () => {
+    const f = fixture();
+    f.fetch.mockImplementation(async () =>
+      Response.json({
+        success: true,
+        data: {
+          api_key: f.credential,
+          api_base_url: "https://api.primitive-staging-1.com/v1",
+          org_id: f.identity.orgId,
+          owner_address: f.identity.ownerAddress,
+          connection: {
+            address: f.identity.agentAddress,
+            owner_address: f.identity.ownerAddress,
+            status: "claimed",
+            name: "agent",
+          },
+        },
+      }),
+    );
+    expect(await setupAgent(f.params)).toMatchObject({
+      connectionName: "agent",
+    });
+    expect(await f.resume()).toMatchObject({ connectionName: "agent" });
+    expect(f.fetch).toHaveBeenCalledOnce();
+  });
+
+  it("reports the claim journal written by an older CLI as a used invitation", async () => {
+    // Older versions left the record at "attempted" even after a successful
+    // claim; the saved profile shows the claim finished.
+    const f = fixture();
+    await setupAgent(f.params);
+    const claims = join(agentProfilesDirectory(f.configDir), "claims");
+    const [record] = readdirSync(claims);
+    if (!record) throw new Error("Missing claim record");
+    writeFileSync(
+      join(claims, record),
+      JSON.stringify({
+        version: 1,
+        profile_name: "private-session",
+        status: "attempted",
+      }),
+      { mode: 0o600 },
+    );
+    await expect(
+      setupAgent({
+        ...f.params,
+        profileName: "other-session",
+        session: randomUUID(),
+      }),
+    ).rejects.toThrow(/already used on this machine to connect agent@/);
+    expect(f.fetch).toHaveBeenCalledOnce();
   });
 
   it("keeps the saved setup when the claim outcome is uncertain", async () => {

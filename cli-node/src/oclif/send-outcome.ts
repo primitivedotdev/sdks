@@ -5,8 +5,9 @@ import type {
   EmailDetailReply,
   GetEmailResponse,
   SendMailResult,
+  ThreadMessage,
 } from "@primitivedotdev/api-core";
-import { getEmail } from "@primitivedotdev/api-core";
+import { getEmail, getThread } from "@primitivedotdev/api-core";
 import { extractErrorPayload } from "./api-command.js";
 import { formatAlreadySentNotice } from "./idempotent-replay-banner.js";
 
@@ -230,10 +231,69 @@ export function formatPriorRepliesCheckSkipped(
 }
 
 export type PriorRepliesCheck =
-  | { status: "checked"; prior: EmailDetailReply[]; detail?: EmailDetail }
+  | {
+      status: "checked";
+      prior: EmailDetailReply[];
+      /**
+       * Automatic status signals (read, working) and fyi acknowledgements
+       * this CLI sent to the same email. They are not answers, so they are
+       * counted here and left out of `prior`.
+       */
+      signals?: number;
+      detail?: EmailDetail;
+    }
   | { status: "skipped"; reason: string };
 
+/**
+ * Whether a reply entry is a status signal rather than an answer. The API's
+ * own marking wins when it carries one; otherwise the CLI's private record
+ * of the signals it sent decides.
+ */
+export function isSignalReply(
+  reply: EmailDetailReply,
+  isLocalSignal: (sentId: string) => boolean,
+): boolean {
+  const marked = reply as EmailDetailReply & {
+    interaction_hint?: unknown;
+    fyi?: unknown;
+  };
+  if (marked.interaction_hint === "status" || marked.fyi === true) return true;
+  return isLocalSignal(reply.id);
+}
+
 type EmailFetchClient = Parameters<typeof getEmail>[0]["client"];
+
+/**
+ * IDs of the thread's outbound messages the server marks as status signals
+ * or fyi acknowledgements. Best effort: an unreadable thread marks nothing.
+ */
+async function threadSignalIds(
+  client: EmailFetchClient,
+  threadId: string,
+): Promise<Set<string>> {
+  try {
+    const result = await getThread({
+      client,
+      path: { id: threadId },
+      responseStyle: "fields",
+    });
+    const messages = (
+      result.data as { data?: { messages?: unknown } } | undefined
+    )?.data?.messages;
+    if (result.error || !Array.isArray(messages)) return new Set();
+    return new Set(
+      (messages as ThreadMessage[])
+        .filter(
+          (message) =>
+            message.direction === "outbound" &&
+            (message.fyi === true || message.interaction_hint === "status"),
+        )
+        .map((message) => message.id),
+    );
+  } catch {
+    return new Set();
+  }
+}
 
 /**
  * Look up the inbound email and report replies to it that already
@@ -244,6 +304,8 @@ type EmailFetchClient = Parameters<typeof getEmail>[0]["client"];
 export async function checkPriorReplies(params: {
   client: EmailFetchClient;
   emailId: string;
+  /** Recognizes a send ID as one of this CLI's own status signals. */
+  isLocalSignal?: (sentId: string) => boolean;
 }): Promise<PriorRepliesCheck> {
   try {
     const result = await getEmail({
@@ -274,9 +336,20 @@ export async function checkPriorReplies(params: {
         reason: "the email lookup returned no reply history",
       };
     }
+    const wentOut = priorRepliesThatWentOut(detail.replies);
+    const isLocalSignal = params.isLocalSignal ?? (() => false);
+    let prior = wentOut.filter((reply) => !isSignalReply(reply, isLocalSignal));
+    // Reply entries carry no signal marking, and a signal sent from another
+    // machine has no local record. The thread's outbound entries do carry
+    // it, so one thread read settles whatever is left.
+    if (prior.length > 0 && detail.thread_id) {
+      const signals = await threadSignalIds(params.client, detail.thread_id);
+      prior = prior.filter((reply) => !signals.has(reply.id));
+    }
     return {
       status: "checked",
-      prior: priorRepliesThatWentOut(detail.replies),
+      prior,
+      signals: wentOut.length - prior.length,
       detail,
     };
   } catch (error) {
@@ -361,6 +434,14 @@ export function assertValidIdempotencyKey(key: string): string {
     );
   }
   return key;
+}
+
+/** The longest delivery wait the send endpoint accepts. */
+export const MAX_SEND_WAIT_TIMEOUT_MS = 30_000;
+
+/** Says a requested delivery wait was shortened, and how to wait for a reply. */
+export function sendWaitClampNotice(requestedMs: number): string {
+  return `--wait-timeout-ms ${requestedMs} is longer than the ${MAX_SEND_WAIT_TIMEOUT_MS}ms the server allows, so the delivery wait uses ${MAX_SEND_WAIT_TIMEOUT_MS}ms. --wait covers delivery only; to wait for a reply, run \`primitive emails wait --reply-to-sent-email-id <sent id> --from <recipient> --timeout ${Math.ceil(requestedMs / 1000)}\` after this send.`;
 }
 
 // Fields that change how long the CLI waits, not what is sent. They

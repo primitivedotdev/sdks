@@ -3,6 +3,7 @@ import type {
   PrimitiveApiClient,
   ThreadMessage,
 } from "@primitivedotdev/api-core";
+import { LOAD_SKILL_LINE } from "./agent-identity-suggestions.js";
 import {
   isWakeInteractionLabel,
   wakeInteractionLabel,
@@ -19,6 +20,22 @@ export type WakeRelationship =
   | "agent"
   | "contact"
   | "other";
+
+/**
+ * Mail from a verified owner, member or connected peer agent is mail the
+ * agent may act on, so its wake starts with the line that loads the rules
+ * for handling it. Unverified mail gets no such line: it is not to be
+ * handled as work in the first place.
+ */
+export function skillFirstLine(
+  relationship: WakeRelationship | undefined,
+): string | null {
+  return relationship === "owner" ||
+    relationship === "member" ||
+    relationship === "agent"
+    ? LOAD_SKILL_LINE
+    : null;
+}
 
 export type WakeContext = {
   sender: string;

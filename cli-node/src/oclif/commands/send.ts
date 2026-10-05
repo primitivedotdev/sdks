@@ -30,9 +30,11 @@ import {
   deriveSendIdempotencyKey,
   formatSendFailureSummary,
   IDEMPOTENCY_KEY_FLAG_DESCRIPTION,
+  MAX_SEND_WAIT_TIMEOUT_MS,
   reportSendCommandResult,
   SEND_OUTCOME_HELP,
   sendOutcomeExitCode,
+  sendWaitClampNotice,
 } from "../send-outcome.js";
 
 // `primitive send` is the agent-grade shortcut for the most common
@@ -185,8 +187,8 @@ class SendCommand extends Command {
         "Block until the receiving MTA returns an outcome. Without --wait, the call returns once Primitive has accepted the message for delivery.",
     }),
     "wait-timeout-ms": Flags.integer({
-      description:
-        "Maximum time to wait when --wait is set. Defaults to 30000ms.",
+      description: `Maximum time to wait for the delivery outcome when --wait is set. Defaults to 30000ms; the server waits at most ${MAX_SEND_WAIT_TIMEOUT_MS}ms, so a longer value is shortened to that with a notice. This waits for delivery, not for a reply: to wait for the recipient's answer, run \`primitive emails wait --reply-to-sent-email-id <sent id> --from <recipient> --timeout <seconds>\` after sending.`,
+      min: 1,
     }),
     "idempotency-key": Flags.string({
       description: IDEMPOTENCY_KEY_FLAG_DESCRIPTION,
@@ -207,6 +209,8 @@ class SendCommand extends Command {
   private attemptStartedAtIso: string | null = null;
   private idempotencyKey: string | null = null;
   private sendRequestStarted = false;
+  /** Set when --wait-timeout-ms was shortened to the server's limit. */
+  private waitNotice: string | null = null;
 
   async run(): Promise<void> {
     const { flags } = await this.parse(SendCommand);
@@ -224,6 +228,9 @@ class SendCommand extends Command {
               idempotencyKey: this.idempotencyKey,
               noun: "Message",
               requestStarted: this.sendRequestStarted,
+              ...(this.waitNotice
+                ? { extraEnvelopeFields: { wait_notice: this.waitNotice } }
+                : {}),
             }),
             null,
             2,
@@ -311,13 +318,29 @@ class SendCommand extends Command {
         ...(flags.bcc !== undefined ? { bcc: flags.bcc } : {}),
         subject,
       };
+      // The server rejects a longer delivery wait outright, which would
+      // cost a turn before anything is sent. Shorten it and say so.
+      const requestedWait = flags["wait-timeout-ms"];
+      const waitTimeoutMs =
+        requestedWait === undefined
+          ? undefined
+          : Math.min(requestedWait, MAX_SEND_WAIT_TIMEOUT_MS);
+      // Without --wait nothing waits, so the shortened value goes unnoticed.
+      if (
+        flags.wait &&
+        requestedWait !== undefined &&
+        requestedWait > MAX_SEND_WAIT_TIMEOUT_MS
+      )
+        this.waitNotice = sendWaitClampNotice(requestedWait);
+      if (this.waitNotice && !flags.json)
+        process.stderr.write(`${this.waitNotice}\n`);
       const threading = {
         ...(flags["in-reply-to"] !== undefined
           ? { in_reply_to: flags["in-reply-to"] }
           : {}),
         ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
-        ...(flags["wait-timeout-ms"] !== undefined
-          ? { wait_timeout_ms: flags["wait-timeout-ms"] }
+        ...(waitTimeoutMs !== undefined
+          ? { wait_timeout_ms: waitTimeoutMs }
           : {}),
         ...(repeat !== undefined ? { repeat } : {}),
       };
@@ -389,6 +412,9 @@ class SendCommand extends Command {
       // is summarised on stderr and in the exit code.
       const outcome = reportSendCommandResult({
         attemptStartedAtIso,
+        ...(this.waitNotice
+          ? { extraEnvelopeFields: { wait_notice: this.waitNotice } }
+          : {}),
         idempotencyKey,
         json: flags.json,
         log: (line) => this.log(line),

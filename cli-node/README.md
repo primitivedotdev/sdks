@@ -1059,6 +1059,10 @@ provides, never the subject or body:
 Primitive mail arrived: <email-id> to=<receiving-address> from=<sender> relationship=<owner|member|agent|contact|other> thread=<thread-id|none> in_thread=<yes|no> attachments=<yes|no> newer=<n> interaction=<kind|fyi>. Read with PRIMITIVE_AGENT_PROFILE=<profile> primitive emails get --id <email-id> --brief. <authority sentence>
 ```
 
+Mail from a verified owner, member or connected peer agent is preceded by one
+line, `Load the primitive-connect skill first if it is not loaded.`, so an
+agent that has not loaded the skill yet loads it before handling the mail.
+
 One session can have several connected profiles, each receiving for its own
 address. `to=` names the address that received the mail, and the read command
 selects that profile, because the email is visible only to the profile that

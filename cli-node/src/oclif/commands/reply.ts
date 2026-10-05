@@ -8,7 +8,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
-import { haltAutoWorking, restoreAutoWorking } from "../auto-signals.js";
+import {
+  haltAutoWorking,
+  isSentSignal,
+  restoreAutoWorking,
+} from "../auto-signals.js";
 import { followEmailConversation } from "../conversation-follow.js";
 import {
   buildFyiMessageContent,
@@ -309,6 +313,7 @@ class ReplyCommand extends Command {
       const priorRepliesCheck = await checkPriorReplies({
         client: apiClient.client,
         emailId,
+        isLocalSignal: (sentId) => isSentSignal(this.config.configDir, sentId),
       });
       this.priorRepliesCheck = priorRepliesCheck;
       const priorRepliesMessage =
@@ -507,7 +512,12 @@ function priorRepliesEnvelopeFields(
   return check.status === "checked"
     ? {
         prior_replies: check.prior,
-        prior_replies_check: { status: "checked" },
+        // Status signals and fyi acknowledgements are not answers; they are
+        // counted apart so prior_replies lists only real replies.
+        prior_replies_check: {
+          status: "checked",
+          signals_excluded: check.signals ?? 0,
+        },
       }
     : {
         prior_replies: null,

@@ -2,6 +2,7 @@ import { Command, Errors, Flags } from "@oclif/core";
 import { connectWarnings, pollCheckCommand } from "../agent-connect-flow.js";
 import { enrollAgent, enrollmentResumes } from "../agent-enroll.js";
 import {
+  connectNextSteps,
   generatedAgentName,
   identitySuggestions,
 } from "../agent-identity-suggestions.js";
@@ -190,9 +191,36 @@ export default class AgentEnrollCommand extends Command {
         nameIsDefault: generatedAgentName(result.name),
         connectedNow: result.connection.status === "connected",
       });
-      const printed = replaced.length
-        ? { ...output, ...identity, replacedExisting: replaced }
+      // Agents act on this output even before loading the skill, so a
+      // completed enrollment carries what to do next, in order.
+      const nextSteps =
+        result.connection.status === "connected"
+          ? connectNextSteps({
+              address: result.identity.agentAddress,
+              receiving: {
+                state: output.receiving.state,
+                mode:
+                  "mode" in output.receiving
+                    ? String(output.receiving.mode)
+                    : flags.receiver === "external"
+                      ? "external"
+                      : "native",
+              },
+              name: result.name,
+              suggestions: identity.suggestions,
+            })
+          : [];
+      const guided = nextSteps.length
+        ? {
+            ...output,
+            ...identity,
+            nextSteps,
+            guidance: `${output.guidance} Next: ${nextSteps.join(" ")}`,
+          }
         : { ...output, ...identity };
+      const printed = replaced.length
+        ? { ...guided, replacedExisting: replaced }
+        : guided;
       if (flags.json) this.log(JSON.stringify(printed));
       else {
         this.log(
@@ -232,6 +260,12 @@ export default class AgentEnrollCommand extends Command {
           this.log(
             "Pairing is confirmed; receiving needs separate setup or recovery.",
           );
+        if (nextSteps.length) {
+          this.log("Next steps:");
+          nextSteps.forEach((step, index) => {
+            this.log(`${index + 1}. ${step}`);
+          });
+        }
       }
       if (
         externalHook === "unavailable" ||

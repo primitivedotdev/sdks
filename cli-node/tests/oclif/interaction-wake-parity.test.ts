@@ -81,7 +81,10 @@ function wrapperMailPattern(): RegExp {
     join(import.meta.dirname, "../../bin/claude-wake.mjs"),
     "utf8",
   );
-  const literal = /\/(\^Primitive mail arrived: .*?\$)\/\.exec\(/s.exec(source);
+  const literal =
+    /\/(\^\(\?:Load the primitive-connect skill[^/]*?\)\?Primitive mail arrived: .*?\$)\/\.exec\(/s.exec(
+      source,
+    );
   if (!literal?.[1]) throw new Error("wake pattern not found");
   return new RegExp(literal[1]);
 }

@@ -5,6 +5,7 @@ import {
   listEmails,
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
+import { LOAD_SKILL_LINE } from "./agent-identity-suggestions.js";
 import {
   agentProfileDirectory,
   type ConnectedAgentIdentity,
@@ -53,6 +54,12 @@ export type MailCheckItem = {
 };
 
 export type MailCheckResult = {
+  /**
+   * Present only with mail: one line, ahead of the emails, that loads the
+   * rules for handling them. Agents act on this output even when they have
+   * not loaded the skill.
+   */
+  guidance?: string;
   outcome: "mail" | "empty";
   emails: MailCheckItem[];
   /** More new mail remains; run the check again after handling these. */
@@ -208,6 +215,7 @@ export async function checkAgentMail(options: {
       more = page === maxPages - 1;
     }
     const output: MailCheckResult = {
+      ...(emails.length > 0 ? { guidance: LOAD_SKILL_LINE } : {}),
       outcome: emails.length > 0 ? "mail" : "empty",
       emails,
       more,

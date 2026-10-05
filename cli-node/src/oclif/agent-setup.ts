@@ -19,6 +19,7 @@ import {
   connectAgent,
   parseAgentInvitation,
   removeEmptyDirectory,
+  savedConnectionName,
 } from "./agent-connect.js";
 import { readSetupApi, type SetupReadBudget } from "./agent-setup-read.js";
 import type { ClaudeWakeHookResult } from "./claude-wake-install.js";
@@ -762,6 +763,8 @@ export async function setupAgent(params: {
   // Set when the server definitely refused the claim: this run's setup
   // record is removed and, once the lock is released, an empty directory.
   let discardStub = false;
+  // The connection's display name, known only when this run claimed it.
+  let claimedName: string | undefined;
   try {
     const path = join(directory, "setup.json");
     const value = readMailJson(path);
@@ -808,13 +811,15 @@ export async function setupAgent(params: {
         writeMailJson(path, state);
       }
       try {
-        await connectAgent({
-          configDir: params.configDir,
-          profileName,
-          invitation: params.invitation ?? "",
-          fetch: params.fetch,
-          presence: true,
-        });
+        claimedName = (
+          await connectAgent({
+            configDir: params.configDir,
+            profileName,
+            invitation: params.invitation ?? "",
+            fetch: params.fetch,
+            presence: true,
+          })
+        ).name;
       } catch (error) {
         if (error instanceof AgentInvitationRejectedError && created) {
           discardStub = true;
@@ -866,8 +871,11 @@ export async function setupAgent(params: {
         : state?.phase === "sending"
           ? "send_unknown"
           : "challenge_pending";
+    // A resume did not claim; the name its claim saved still applies.
+    claimedName ??= savedConnectionName(params.configDir, profileName);
     const result = (receiving: string, ownerNotifications?: string) => ({
       identity: context.identity,
+      ...(claimedName === undefined ? {} : { connectionName: claimedName }),
       sessionId: params.session ?? state?.session ?? null,
       verification: {
         state:

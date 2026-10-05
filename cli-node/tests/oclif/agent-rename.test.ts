@@ -1,6 +1,12 @@
-import { resolve } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  saveConnectionName,
+  savedConnectionName,
+} from "../../src/oclif/agent-connect.js";
 import {
   AgentRenameUnsupportedError,
   agentDisplayName,
@@ -203,6 +209,26 @@ describe("agent rename command", () => {
     expect(lines).toEqual([
       `Renamed ${own} to "Billing reviewer". The address is unchanged.`,
     ]);
+  });
+
+  it("keeps the name a resumed connect reports in step with the rename", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "agent-rename-"));
+    process.env.PRIMITIVE_CONFIG_DIR = configDir;
+    try {
+      saveConnectionName(configDir, "work", "agent");
+      fixture(own, ok("Billing reviewer"));
+      const created = auth.create.getMockImplementation();
+      auth.create.mockImplementation(async (...args: unknown[]) => ({
+        ...(await created?.(...args)),
+        auth: { connectedAgent: { agentAddress: own, profileName: "work" } },
+      }));
+      captureLog();
+      await AgentRenameCommand.run(["Billing reviewer"], { root });
+      expect(savedConnectionName(configDir, "work")).toBe("Billing reviewer");
+    } finally {
+      delete process.env.PRIMITIVE_CONFIG_DIR;
+      rmSync(configDir, { recursive: true, force: true });
+    }
   });
 
   it("lets an owner login rename an address and print JSON", async () => {

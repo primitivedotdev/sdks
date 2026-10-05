@@ -267,6 +267,66 @@ describe("connected-agent setup", () => {
       owner_member_address: "ada_123456789@example.test",
     });
   });
+  it("reports the connection name a claim returns, and drops an unusable one", async () => {
+    const named = claim();
+    Object.assign(named.data.connection, { name: "  Research agent  " });
+    const outcome = await connectAgent({
+      configDir,
+      profileName: "work",
+      invitation: setupUrl,
+      fetch: vi.fn<typeof globalThis.fetch>(async () => response(named)),
+    });
+    expect(outcome.name).toBe("Research agent");
+    const otherConfig = mkdtempSync(join(tmpdir(), "agent-connect-test-"));
+    try {
+      const unusable = claim();
+      Object.assign(unusable.data.connection, { name: "line\nbreak" });
+      const result = await connectAgent({
+        configDir: otherConfig,
+        profileName: "work",
+        invitation: setupUrl,
+        fetch: vi.fn<typeof globalThis.fetch>(async () => response(unusable)),
+      });
+      expect(result.status).toBe("claimed");
+      expect(result).not.toHaveProperty("name");
+    } finally {
+      rmSync(otherConfig, { force: true, recursive: true });
+    }
+  });
+  it("marks a finished claim so another profile learns where the invitation went", async () => {
+    const request = vi.fn<typeof fetch>(async () => response(claim()));
+    await connectAgent({
+      configDir,
+      profileName: "session-first",
+      invitation: setupUrl,
+      fetch: request,
+    });
+    const claims = join(agentProfilesDirectory(configDir), "claims");
+    const [record] = readdirSync(claims);
+    if (!record) throw new Error("Missing claim record");
+    expect(JSON.parse(readFileSync(join(claims, record), "utf8"))).toEqual({
+      version: 1,
+      profile_name: "session-first",
+      status: "claimed",
+      agent_address: agentAddress,
+    });
+    const error = await connectAgent({
+      configDir,
+      profileName: "session-second",
+      invitation: setupUrl,
+      fetch: request,
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(AgentInvitationRejectedError);
+    expect((error as AgentInvitationRejectedError).reason).toBe(
+      "invitation_used_here",
+    );
+    expect(String(error)).toContain(`to connect ${agentAddress}`);
+    expect(String(error)).not.toContain("session-first");
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(existsSync(agentProfileDirectory(configDir, "session-second"))).toBe(
+      false,
+    );
+  });
   it("records an explicit null and never loses the credential to an unusable personal address", async () => {
     const none = claim();
     Object.assign(none.data, { owner_member_address: null });
@@ -394,7 +454,9 @@ describe("connected-agent setup", () => {
     await connectAgent(params(request));
     await expect(
       connectAgent({ ...params(request), profileName: "other" }),
-    ).rejects.toThrow(/fresh invitation/);
+    ).rejects.toThrow(
+      /already used on this machine to connect [^ ]+ under another profile[\s\S]*fresh setup instruction/,
+    );
     expect(request).toHaveBeenCalledTimes(1);
     expect(loadConnectedAgentProfile(configDir, "other")).toBeNull();
   });
@@ -516,7 +578,7 @@ describe("connected-agent setup", () => {
       expect(String(error)).not.toContain(credential);
     }
     await expect(connectAgent(params(request))).rejects.toThrow(
-      /fresh invitation/,
+      /did not finish, so it was not submitted again[\s\S]*fresh setup instruction/,
     );
     expect(request).toHaveBeenCalledTimes(1);
     expect(loadConnectedAgentProfile(configDir, "work")).toBeNull();
