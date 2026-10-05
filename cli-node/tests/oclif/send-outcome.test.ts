@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildFollowUpCommand,
   DEFINITIVE_SEND_REJECTION_STATUSES,
+  followUpCommandPrefix,
   followUpInvocation,
   formatPriorRepliesWarning,
   formatSendRecordFailureSummary,
@@ -229,14 +230,34 @@ describe("follow-up commands", () => {
     expect(command).not.toHaveProperty("env");
   });
 
-  it("leaves a command that is not the CLI unchanged", () => {
+  it("leaves a command that is not the CLI unchanged and never gives it the profile", () => {
     const command = buildFollowUpCommand(
       "other",
       "Other",
       ["curl", "https://example.test"],
       {},
-      followUpInvocation(NPX_ENTRY, {}),
+      followUpInvocation(NPX_ENTRY, { PRIMITIVE_AGENT_PROFILE: "session-1" }),
     );
     expect(command.argv).toEqual(["curl", "https://example.test"]);
+    expect(command.command).toBe("curl https://example.test");
+    expect(command).not.toHaveProperty("env");
+  });
+
+  it("starts string-built command lines the same way", () => {
+    expect(
+      followUpCommandPrefix("primitive", followUpInvocation(GLOBAL_ENTRY, {})),
+    ).toBe("primitive");
+    expect(
+      followUpCommandPrefix(
+        "primitive",
+        followUpInvocation(NPX_ENTRY, { PRIMITIVE_AGENT_PROFILE: "session-1" }),
+      ),
+    ).toBe("PRIMITIVE_AGENT_PROFILE=session-1 npx -y primitive@latest");
+    expect(
+      followUpCommandPrefix(
+        "primcli",
+        followUpInvocation(GLOBAL_ENTRY, { PRIMITIVE_AGENT_PROFILE: "work" }),
+      ),
+    ).toBe("PRIMITIVE_AGENT_PROFILE=work primcli");
   });
 });

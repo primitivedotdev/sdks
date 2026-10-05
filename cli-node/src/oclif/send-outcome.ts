@@ -405,6 +405,26 @@ const FOLLOW_UP_PROFILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/;
  * missing or an older global install), and under the connected profile this
  * process was selected with, since another profile cannot see the same mail.
  */
+function envPrefix(env: Record<string, string> | undefined): string {
+  return Object.entries(env ?? {})
+    .map(([name, value]) => `${name}=${value} `)
+    .join("");
+}
+
+/**
+ * The start of a printed CLI command line, for text that builds commands as
+ * strings rather than argv: the profile prefix, then npx's form when this
+ * process runs from npx's cache, else `bin`.
+ */
+export function followUpCommandPrefix(
+  bin = "primitive",
+  invocation: ReturnType<typeof followUpInvocation> = followUpInvocation(),
+): string {
+  const program =
+    invocation.program[0] === "npx" ? invocation.program.join(" ") : bin;
+  return `${envPrefix(invocation.env)}${program}`;
+}
+
 export function followUpInvocation(
   entry: string | undefined = process.argv[1],
   env: NodeJS.ProcessEnv = process.env,
@@ -433,16 +453,16 @@ export function buildFollowUpCommand<Kind extends string>(
   invocation: ReturnType<typeof followUpInvocation> = followUpInvocation(),
 ): FollowUpCommand<Kind> {
   const requiresMessage = options.requiresMessage ?? false;
-  const resolved =
-    argv[0] === "primitive" ? [...invocation.program, ...argv.slice(1)] : argv;
-  const prefix = Object.entries(invocation.env ?? {})
-    .map(([name, value]) => `${name}=${value} `)
-    .join("");
+  // Only this CLI's own commands take its program and profile; any other
+  // program is printed as given and never receives the profile.
+  const cli = argv[0] === "primitive";
+  const resolved = cli ? [...invocation.program, ...argv.slice(1)] : argv;
+  const env = cli ? invocation.env : undefined;
   return {
     argv: resolved,
     description,
-    command: `${prefix}${commandFromArgv(resolved)}`,
-    ...(invocation.env ? { env: invocation.env } : {}),
+    command: `${envPrefix(env)}${commandFromArgv(resolved)}`,
+    ...(env ? { env } : {}),
     kind,
     placeholders: requiresMessage
       ? [
