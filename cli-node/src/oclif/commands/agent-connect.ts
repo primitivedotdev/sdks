@@ -21,6 +21,7 @@ import {
   type ReceiverMode,
   verificationReplySubmitted,
 } from "../agent-setup.js";
+import { installedConnectSkillFile } from "../connect-skill.js";
 import {
   AGENT_PROFILE_ENV,
   AgentConnectionSetupError,
@@ -331,6 +332,10 @@ export default class AgentConnectCommand extends Command {
                 receiving: output.receiving,
                 ...("name" in output ? { name: output.name } : {}),
                 suggestions: identity.suggestions,
+                skillFile: installedConnectSkillFile({
+                  runtime: output.skill.runtime,
+                  installedPath: output.skill.path,
+                }),
               })
             : [];
         const suggested = {

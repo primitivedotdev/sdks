@@ -1,5 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -33,8 +39,11 @@ const sender = "sender@example.com";
 const recipient = "recipient@domain.com";
 const scope = "test-credential-scope";
 const resources: Array<{ close: () => void }> = [];
+const previousCodexHome = process.env.CODEX_HOME;
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "primitive-notification-"));
+  // The skill line names an installed SKILL.md; keep this machine's out of it.
+  process.env.CODEX_HOME = join(directory, "codex");
   event = JSON.parse(
     readFileSync(
       new URL(
@@ -65,6 +74,8 @@ beforeEach(() => {
   };
 });
 afterEach(() => {
+  if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
+  else process.env.CODEX_HOME = previousCodexHome;
   for (const resource of resources.splice(0)) resource.close();
   rmSync(directory, { recursive: true, force: true });
 });
@@ -200,6 +211,25 @@ describe("native email notifications", () => {
     );
     expect(text).not.toContain("untrusted external mail");
     expect(text).not.toContain(detail.body_text);
+  });
+  it("names the installed Codex SKILL.md on the skill line", async () => {
+    const skill = join(directory, "codex", "skills", "primitive-connect");
+    mkdirSync(skill, { recursive: true });
+    writeFileSync(join(skill, "SKILL.md"), "---\nname: primitive-connect\n");
+    const first = await open(undefined, {
+      contactPreferences: true,
+      senders: [],
+    });
+    await first.notifications.handleDetail(
+      currentDetail(),
+      delivery.event_id,
+      signal,
+      { sender, network: true, recheck: vi.fn(async () => () => {}) },
+    );
+    const text = first.queue.mock.calls[0]?.[0] ?? "";
+    expect(text.split("\n")[0]).toBe(
+      `Load the primitive-connect skill first if it is not loaded. If your skill tool does not list primitive-connect, read ${join(skill, "SKILL.md")} in full.`,
+    );
   });
   it("queues a typed, content-free conversation status through the durable external tool event", async () => {
     const first = await open(undefined, { profileName: "session-work" });

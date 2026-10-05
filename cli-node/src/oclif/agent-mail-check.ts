@@ -5,12 +5,17 @@ import {
   listEmails,
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
-import { LOAD_SKILL_LINE } from "./agent-identity-suggestions.js";
+import { loadSkillLine } from "./agent-identity-suggestions.js";
+import {
+  type AgentRuntime,
+  installedConnectSkillFile,
+} from "./connect-skill.js";
 import {
   agentProfileDirectory,
   type ConnectedAgentIdentity,
 } from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
+import { currentMailSessionKey } from "./mail-session.js";
 import { refreshOwnerMemberAddressPeriodically } from "./owner-member-address.js";
 import { presenceDisposition } from "./presence-provenance.js";
 import {
@@ -215,7 +220,13 @@ export async function checkAgentMail(options: {
       more = page === maxPages - 1;
     }
     const output: MailCheckResult = {
-      ...(emails.length > 0 ? { guidance: LOAD_SKILL_LINE } : {}),
+      ...(emails.length > 0
+        ? {
+            guidance: loadSkillLine(
+              installedConnectSkillFile({ runtime: mailCheckRuntime() }),
+            ),
+          }
+        : {}),
       outcome: emails.length > 0 ? "mail" : "empty",
       emails,
       more,
@@ -231,4 +242,14 @@ export async function checkAgentMail(options: {
   } finally {
     release();
   }
+}
+
+/** The runtime this mail check runs in, from the runtime's own session variable. */
+function mailCheckRuntime(): AgentRuntime | null {
+  const key = currentMailSessionKey();
+  return key?.startsWith("claude:")
+    ? "claude"
+    : key?.startsWith("codex:")
+      ? "codex"
+      : null;
 }

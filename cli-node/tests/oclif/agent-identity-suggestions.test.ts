@@ -6,6 +6,7 @@ import {
   generatedAgentName,
   identitySuggestions,
   LOAD_SKILL_LINE,
+  loadSkillLine,
 } from "../../src/oclif/agent-identity-suggestions.js";
 import { skillFirstLine } from "../../src/oclif/wake-context.js";
 
@@ -160,6 +161,32 @@ describe("skill-first wake line", () => {
     expect(skillFirstLine(undefined)).toBeNull();
     expect(LOAD_SKILL_LINE).toBe(
       "Load the primitive-connect skill first if it is not loaded.",
+    );
+  });
+
+  it("names the installed SKILL.md on the same line when it is known", () => {
+    const file = "/home/agent/.claude/skills/primitive-connect/SKILL.md";
+    const line = skillFirstLine("agent", file);
+    expect(line).toBe(
+      `${LOAD_SKILL_LINE} If your skill tool does not list primitive-connect, read ${file} in full.`,
+    );
+    expect(line).not.toContain("\n");
+    expect(loadSkillLine(null)).toBe(LOAD_SKILL_LINE);
+    expect(skillFirstLine("other", file)).toBeNull();
+  });
+});
+
+describe("connect next steps with an installed skill", () => {
+  it("tells an agent whose skill tool lacks the new skill to read the file in full", () => {
+    const file = "/home/agent/.claude/skills/primitive-connect/SKILL.md";
+    const steps = connectNextSteps({
+      address: "agent@example.test",
+      receiving: { state: "hooks_installed", mode: "external" },
+      suggestions: [],
+      skillFile: file,
+    });
+    expect(steps.at(-1)).toBe(
+      `Load the primitive-connect skill before handling any mail. If your skill tool does not list primitive-connect, read ${file} in full.`,
     );
   });
 });

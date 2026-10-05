@@ -544,6 +544,43 @@ describe("Claude mail wake", () => {
     }
   });
 
+  it.each([
+    ["a connected peer agent", { kind: "allowed", source: "network" }],
+    ["the owner", { kind: "allowed", senderRelation: "owner" }],
+  ])("does not wake again for a chat reply from %s that chat already consumed", async (_label, admission) => {
+    for (const [disposition, succeeded, woke] of [
+      ["observed", true, false],
+      ["waiting", false, false],
+      ["available", true, true],
+    ] as const) {
+      const f = fixture(true, true, "chat");
+      const wake = await createWakeMail({
+        configDir: "/tmp/test",
+        sessionKey: `claude:${f.sessionId}`,
+        sessionId: f.sessionId,
+        contactRequests: false,
+      });
+      const policy = mocks.policy.mock.results.at(-1)?.value;
+      policy.admit.mockResolvedValue(admission);
+      f.store.wakeDisposition.mockResolvedValue(disposition);
+      const handled = await wake.handler(
+        f.delivery as never,
+        new AbortController().signal,
+      );
+      wake.completed();
+      expect(handled.succeeded).toBe(succeeded);
+      expect(f.store.wakeDisposition).toHaveBeenCalledWith(
+        f.emailId,
+        f.parentId,
+      );
+      // An admitted sender keeps its own admission; it is not downgraded
+      // to an exact-reply response.
+      expect(policy.admitResponse).not.toHaveBeenCalled();
+      expect(wake.wakeId()).toBe(woke ? f.emailId : undefined);
+      await wake.close();
+    }
+  });
+
   it("surfaces exact authenticated activity as status without a new task wake", async () => {
     const f = fixture(true, true, "chat");
     mocks.plain.mockReturnValue(false);
@@ -776,6 +813,9 @@ describe("Claude wake metadata, mutes and pending notices", () => {
         thread_id: thread,
         in_thread: true,
         newer: 2,
+        // Recorded so a replayed notice prints the live wake line.
+        relationship: "agent",
+        attachments: false,
       },
     ]);
     await wake.close();

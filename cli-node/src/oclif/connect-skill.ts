@@ -62,6 +62,56 @@ export function connectSkillTarget(options: {
   return join(root, "skills", CONNECT_SKILL_NAME);
 }
 
+/** A path printed into agent instructions stays on one line. */
+export function printablePath(value: string): boolean {
+  if (value.length === 0 || value.length > 1024) return false;
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f) return false;
+  }
+  return true;
+}
+
+function skillFileIn(directory: string | null | undefined): string | null {
+  if (!directory) return null;
+  const file = join(directory, "SKILL.md");
+  try {
+    return printablePath(file) && statSync(file).isFile() ? file : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The absolute SKILL.md path of an installed primitive-connect skill, or
+ * null when none is found. `installedPath` (the directory an install just
+ * wrote) is preferred; otherwise the runtime's user-level and project-level
+ * install locations are checked. A runtime loads its skill list when a
+ * session starts, so a skill installed mid-session is reachable only by
+ * reading this file.
+ */
+export function installedConnectSkillFile(options: {
+  runtime: AgentRuntime | null;
+  installedPath?: string | null;
+  cwd?: string;
+  env?: Record<string, string | undefined>;
+}): string | null {
+  const explicit = skillFileIn(options.installedPath);
+  if (explicit || !options.runtime) return explicit;
+  for (const project of [false, true]) {
+    const file = skillFileIn(
+      connectSkillTarget({
+        runtime: options.runtime,
+        project,
+        cwd: options.cwd,
+        env: options.env,
+      }),
+    );
+    if (file) return file;
+  }
+  return null;
+}
+
 /** Mirrors scripts/skill-files.mjs so installed and bundled versions compare equal. */
 function included(relativePath: string): boolean {
   const parts = relativePath.split("/");

@@ -14,6 +14,7 @@ import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import {
+  clearConsumedPendingMail,
   clearReadPendingMail,
   PENDING_MAIL_LIMIT,
   PENDING_STATUS_HEADROOM,
@@ -356,4 +357,56 @@ describe("pending mail notices", () => {
     );
     expect(new Set(ids).size).toBe(writers * perWriter);
   }, 30_000);
+});
+
+describe("pending notices for consumed replies", () => {
+  it("keeps the live wake's relationship and attachments, dropping unknown values", async () => {
+    await recordPendingMail(
+      configDir,
+      profile,
+      session,
+      mail(1, { relationship: "agent", attachments: true }),
+    );
+    expect(readPendingMail(configDir, profile, session)).toEqual([
+      mail(1, { relationship: "agent", attachments: true }),
+    ]);
+    writeFileSync(
+      pendingMailPath(configDir, profile, session),
+      JSON.stringify({
+        version: 1,
+        session_id: session,
+        notices: [{ ...mail(2), relationship: "boss", attachments: "yes" }],
+      }),
+      { mode: 0o600 },
+    );
+    expect(readPendingMail(configDir, profile, session)).toEqual([mail(2)]);
+  });
+
+  it("clears a reply chat consumed from every profile of that session only", async () => {
+    mkdirSync(join(configDir, "agent-connections", "profiles", "second"), {
+      recursive: true,
+      mode: 0o700,
+    });
+    await recordPendingMail(configDir, profile, session, mail(1));
+    await recordPendingMail(configDir, profile, session, mail(2));
+    await recordPendingMail(configDir, "second", session, mail(1));
+    await recordPendingMail(configDir, profile, otherSession, mail(1));
+    await clearConsumedPendingMail(configDir, `claude:${session}`, id(1));
+    expect(readPendingMail(configDir, profile, session)).toEqual([mail(2)]);
+    expect(readPendingMail(configDir, "second", session)).toEqual([]);
+    expect(readPendingMail(configDir, profile, otherSession)).toEqual([
+      mail(1),
+    ]);
+  });
+
+  it.each([
+    null,
+    undefined,
+    "",
+    "async:not-a-session",
+  ])("clears nothing for a wait with no runtime session (%s)", async (key) => {
+    await recordPendingMail(configDir, profile, session, mail(1));
+    await clearConsumedPendingMail(configDir, key, id(1));
+    expect(readPendingMail(configDir, profile, session)).toEqual([mail(1)]);
+  });
 });

@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -644,6 +651,72 @@ it("agent connect tells the agent what to do next when a connection completes", 
   const text = outputs.join("\n");
   expect(text).toContain("Next steps:\n1. Report to the owner");
   expect(text).toContain("\n3. Load the primitive-connect skill");
+});
+
+it("agent connect names the installed SKILL.md for a session whose skill tool does not list it", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  process.env.CODEX_THREAD_ID = session;
+  const skill = join(home, "codex", "skills", "primitive-connect");
+  mkdirSync(skill, { recursive: true });
+  writeFileSync(join(skill, "SKILL.md"), "---\nname: primitive-connect\n");
+  mocks.readAgentInvitation.mockResolvedValue(
+    "https://api.primitive.dev/v1/agent-connections/setup#token=secret",
+  );
+  mocks.setupAgent.mockResolvedValue({
+    identity: {
+      profileName: `session-${session}`,
+      agentAddress: "codex-1@example.com",
+      orgId: "22222222-2222-4222-8222-222222222222",
+      ownerAddress: "owner@example.com",
+      apiBaseUrl: "https://api.primitive.dev/v1",
+    },
+    connectionName: "codex-1",
+    sessionId: session,
+    verification: { state: "verified", verifiedAt: null },
+    receiving: { state: "poll" },
+    ownerNotifications: "enabled",
+    resumeCommand: "primitive agent connect --resume",
+    guidance: "Primitive verified this connection.",
+  });
+  await AgentConnectCommand.run(
+    ["--session", session, "--receiver", "poll", "--no-skill", "--json"],
+    { root },
+  );
+  const output = JSON.parse(outputs[0] ?? "");
+  const step = `Load the primitive-connect skill before handling any mail. If your skill tool does not list primitive-connect, read ${join(skill, "SKILL.md")} in full.`;
+  expect(output.nextSteps.at(-1)).toBe(step);
+  expect(output.guidance).toContain(step);
+});
+
+it("agent enroll names the installed SKILL.md in its next steps", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(AgentEnrollCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  process.env.CLAUDE_CODE_SESSION_ID = session;
+  const skill = join(home, "claude", "skills", "primitive-connect");
+  mkdirSync(skill, { recursive: true });
+  writeFileSync(join(skill, "SKILL.md"), "---\nname: primitive-connect\n");
+  mocks.enrollAgent.mockResolvedValue({
+    identity: {
+      profileName: `session-${session}`,
+      agentAddress: "enrolled@example.com",
+    },
+    name: "Coding agent",
+    connection: { status: "connected" },
+    verification: { state: "verified" },
+    receiving: { state: "healthy" },
+    contactRequestPolicy: "not_requested",
+    guidance: "Pairing verified.",
+  });
+  await AgentEnrollCommand.run(["--session", session, "--json"], { root });
+  const output = JSON.parse(outputs[0] ?? "");
+  expect(output.nextSteps.at(-1)).toBe(
+    `Load the primitive-connect skill before handling any mail. If your skill tool does not list primitive-connect, read ${join(skill, "SKILL.md")} in full.`,
+  );
 });
 
 it("agent enroll tells the agent what to do next when pairing completes", async () => {

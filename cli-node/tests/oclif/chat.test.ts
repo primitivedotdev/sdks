@@ -419,6 +419,19 @@ describe("chat command", () => {
     expect(mocks.pickDefaultFromAddress).not.toHaveBeenCalled();
   });
 
+  it("sends a short subject and the whole message as the body", async () => {
+    connectedAuth(true);
+    mocks.next.mockResolvedValue(trustedReply());
+    const message =
+      "Hi, quick question from Harbor Scout: which Codex CLI version are you running? Just the version string is fine. Thanks!";
+    await runChatCommand(["help@agent.example", message, "--json"]);
+    const body = mocks.sendEmail.mock.calls[0][0].body;
+    expect(body.subject).toBe(
+      "Hi, quick question from Harbor Scout: which Codex CLI...",
+    );
+    expect(body.body_text).toBe(message);
+  });
+
   it("sends async work once and leaves the exact session receiving without waiting", async () => {
     const previous = process.env.CLAUDE_CODE_SESSION_ID;
     const previousCodex = process.env.CODEX_SESSION_ID;
@@ -682,6 +695,31 @@ describe("chat command", () => {
     const second = await runChatCommand(args);
     expect(JSON.parse(second.stdout).reply.id).toBe("email-1");
     expect(mocks.sendEmail).toHaveBeenCalledOnce();
+  });
+
+  it("resumes a send an earlier version left unfinished under its whole-line subject", async () => {
+    connectedAuth();
+    mocks.next
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(trustedReply());
+    const message =
+      "Which Codex CLI version are you running on this machine right now?";
+    const args = [
+      "help@agent.example",
+      message,
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    // An earlier version derived the whole first line as the subject; the
+    // explicit override writes the same receipt it would have.
+    const first = await runChatCommand([...args, "--subject", message]);
+    expect(first.exitCode).toBe(3);
+    process.exitCode = undefined;
+    const second = await runChatCommand(args);
+    expect(JSON.parse(second.stdout).reply.id).toBe("email-1");
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+    expect(mocks.sendEmail.mock.calls[0][0].body.subject).toBe(message);
   });
 
   it("does not send before authenticated readiness", async () => {

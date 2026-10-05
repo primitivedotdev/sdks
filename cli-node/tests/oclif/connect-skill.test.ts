@@ -22,6 +22,7 @@ import {
   connectSkillVersion,
   detectAgentRuntime,
   installConnectSkill,
+  installedConnectSkillFile,
   readBundledConnectSkill,
 } from "../../src/oclif/connect-skill.js";
 
@@ -425,5 +426,78 @@ describe("skill install", () => {
     }
     expect(readFileSync(join(target, "SKILL.md"), "utf8")).toBe("previous");
     expect(leftovers(target)).toEqual([]);
+  });
+});
+
+describe("installed skill file", () => {
+  function skillAt(directory: string) {
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(
+      join(directory, "SKILL.md"),
+      "---\nname: primitive-connect\n",
+    );
+    return join(directory, "SKILL.md");
+  }
+
+  it("prefers the directory an install just wrote", () => {
+    const installed = skillAt(
+      join(temp("skill-installed-"), "primitive-connect"),
+    );
+    expect(
+      installedConnectSkillFile({
+        runtime: "claude",
+        installedPath: installed.slice(0, -"/SKILL.md".length),
+        env: {},
+      }),
+    ).toBe(installed);
+  });
+
+  it("finds the runtime's user-level, then project-level install", () => {
+    const home = temp("skill-home-");
+    const cwd = temp("skill-project-");
+    const env = {
+      CLAUDE_CONFIG_DIR: join(home, "claude"),
+      CODEX_HOME: join(home, "codex"),
+    };
+    expect(
+      installedConnectSkillFile({ runtime: "claude", cwd, env }),
+    ).toBeNull();
+    const project = skillAt(join(cwd, ".claude", "skills", CONNECT_SKILL_NAME));
+    expect(installedConnectSkillFile({ runtime: "claude", cwd, env })).toBe(
+      project,
+    );
+    const user = skillAt(join(home, "claude", "skills", CONNECT_SKILL_NAME));
+    expect(installedConnectSkillFile({ runtime: "claude", cwd, env })).toBe(
+      user,
+    );
+    const codex = skillAt(join(home, "codex", "skills", CONNECT_SKILL_NAME));
+    expect(installedConnectSkillFile({ runtime: "codex", cwd, env })).toBe(
+      codex,
+    );
+  });
+
+  it("names nothing without a runtime, a SKILL.md, or a one-line path", () => {
+    const home = temp("skill-none-");
+    expect(
+      installedConnectSkillFile({ runtime: null, env: {}, cwd: home }),
+    ).toBeNull();
+    // A directory without SKILL.md is not an installed skill.
+    mkdirSync(join(home, "claude", "skills", CONNECT_SKILL_NAME), {
+      recursive: true,
+    });
+    expect(
+      installedConnectSkillFile({
+        runtime: "claude",
+        env: { CLAUDE_CONFIG_DIR: join(home, "claude") },
+        cwd: home,
+      }),
+    ).toBeNull();
+    const odd = skillAt(join(temp("skill-odd-"), "line\nbreak"));
+    expect(
+      installedConnectSkillFile({
+        runtime: null,
+        installedPath: odd.slice(0, -"/SKILL.md".length),
+      }),
+    ).toBeNull();
   });
 });

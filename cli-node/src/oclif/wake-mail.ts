@@ -218,6 +218,8 @@ export async function createWakeMail(options: {
               ...(notice.context.interaction
                 ? { interaction: notice.context.interaction }
                 : {}),
+              relationship: notice.context.relationship,
+              attachments: notice.context.attachments,
             }
           : {
               kind: "status",
@@ -426,11 +428,12 @@ export async function createWakeMail(options: {
         }
         return outcome(true);
       }
-      if (
-        (!admission || admission.kind === "request") &&
-        requested &&
-        detail.reply_to_sent_email_id
-      ) {
+      // An exact reply to a send this profile is waiting on belongs to that
+      // wait (`primitive chat`, `primitive emails wait`). Once the wait has
+      // consumed it, a redelivery (a restarted listener, a replayed event)
+      // must not wake the session for it again, however the sender is
+      // admitted; while the wait may still consume it, the event is retried.
+      if (requested && detail.reply_to_sent_email_id) {
         const exact =
           ["bound", "completed"].includes(requested.status) &&
           requested.sentEmailId === detail.reply_to_sent_email_id &&
@@ -451,12 +454,13 @@ export async function createWakeMail(options: {
               )
             : isPlainChatReply(detail);
           if (isResponse) {
-            admission = await policy.admitResponse(
-              sender,
-              detail.received_at,
-              signal,
-              detail.id,
-            );
+            if (!admission || admission.kind === "request")
+              admission = await policy.admitResponse(
+                sender,
+                detail.received_at,
+                signal,
+                detail.id,
+              );
             if (admission) {
               const disposition = await store.wakeDisposition(
                 detail.id,

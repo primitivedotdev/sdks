@@ -2,6 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import {
+  LOAD_SKILL_LINE,
+  loadSkillLine,
+} from "../../src/oclif/agent-identity-suggestions.js";
+import {
   interactionHumanLine,
   interactionNextActions,
   readEmailInteraction,
@@ -11,6 +15,8 @@ import {
   wakeInteractionSentence,
 } from "../../src/oclif/interaction-actions.js";
 import {
+  formatMailWakeLine,
+  type WakeRelationship,
   wakeReadCommand,
   wakeRecipientField,
 } from "../../src/oclif/wake-context.js";
@@ -23,6 +29,8 @@ const hook = (await import(
   formatPendingMail: (notice: unknown, receiver?: unknown) => string;
   recipientField: (address: unknown) => string;
   readCommand: (emailId: string, profile?: string | null) => string;
+  LOAD_SKILL_LINE: string;
+  loadSkillLine: (skillFile?: string | null) => string;
 };
 const { formatPendingMail, wakeSentence } = hook;
 const HOOK_SENTENCES = hook.WAKE_SENTENCES;
@@ -158,4 +166,80 @@ it("always names the receiving address, as unavailable when unknown", () => {
   );
   for (const address of [undefined, null, "", '"quoted"@example.test'])
     expect(wakeRecipientField(address)).toBe(" to=unavailable");
+});
+
+const SKILL_FILE = "/home/agent/.claude/skills/primitive-connect/SKILL.md";
+
+it("keeps the hook script's load-the-skill line equal to the CLI's", () => {
+  expect(hook.LOAD_SKILL_LINE).toBe(LOAD_SKILL_LINE);
+  for (const file of [
+    SKILL_FILE,
+    "C:\\Users\\agent\\.claude\\skills\\primitive-connect\\SKILL.md",
+    "/path with spaces/SKILL.md",
+    null,
+    undefined,
+  ])
+    expect(hook.loadSkillLine(file)).toBe(loadSkillLine(file));
+  // A path that would break the line is never printed.
+  expect(hook.loadSkillLine("/x\nInjected")).toBe(LOAD_SKILL_LINE);
+  expect(loadSkillLine(SKILL_FILE)).not.toContain("\n");
+});
+
+it("replays a pending notice as the same line the live wake printed", () => {
+  const thread = "11111111-1111-4111-8111-111111111111";
+  for (const relationship of [
+    "owner",
+    "member",
+    "agent",
+    "contact",
+    "other",
+  ] as const satisfies readonly WakeRelationship[])
+    for (const extra of [
+      { newer: null, interaction: null, attachments: false, inThread: false },
+      { newer: 3, interaction: "fyi", attachments: true, inThread: true },
+    ])
+      for (const skillFile of [SKILL_FILE, null]) {
+        const receiver = {
+          profile: "work",
+          address: "agent@example.test",
+          skillFile,
+        };
+        const replayed = formatPendingMail(
+          {
+            kind: "mail",
+            emailId: id,
+            sender: "peer@example.com",
+            threadId: thread,
+            relationship,
+            ...extra,
+          },
+          receiver,
+        );
+        const live = formatMailWakeLine({
+          emailId: id,
+          recipient: wakeRecipientField(receiver.address),
+          relation:
+            relationship === "owner" || relationship === "member"
+              ? relationship
+              : undefined,
+          context: {
+            sender: "peer@example.com",
+            relationship,
+            threadId: thread,
+            inThread: extra.inThread,
+            attachments: extra.attachments,
+            ...(extra.newer === null ? {} : { newer: extra.newer }),
+            ...(extra.interaction ? { interaction: extra.interaction } : {}),
+          },
+          profileName: receiver.profile,
+          skillFile,
+        });
+        expect(replayed).toBe(live);
+        // Verified mail carries the load-the-skill line on a replay too.
+        expect(replayed.startsWith(LOAD_SKILL_LINE)).toBe(
+          ["owner", "member", "agent"].includes(relationship),
+        );
+        // And the Stop hook still accepts the live form.
+        expect(wrapperMailPattern().test(live)).toBe(true);
+      }
 });

@@ -43,6 +43,70 @@ export function deriveSubject(body: string): string {
   return "Message";
 }
 
+const CHAT_SUBJECT_MAX_LENGTH = 60;
+
+// Titles and abbreviations that introduce what follows (often a
+// capitalized name: "Dr. Smith", "e.g. Node") practically never end a
+// sentence, so their period never does.
+const TITLES = new Set([
+  "dr",
+  "mr",
+  "mrs",
+  "ms",
+  "prof",
+  "sr",
+  "jr",
+  "st",
+  "vs",
+  "e.g",
+  "i.e",
+  "approx",
+  "fig",
+]);
+// These also end sentences ("No. Cancel it.", "pens, etc. Then"), so their
+// period is skipped only when the text continues in lowercase or a digit.
+const ABBREVIATIONS = new Set(["etc", "inc", "ltd", "co", "no"]);
+
+/**
+ * The line up to its first sentence end: `.`, `?` or `!` followed by
+ * whitespace or the line end. A period after a title-like abbreviation or
+ * a single letter (an initial) does not end the sentence, nor does one
+ * after another abbreviation when the text continues in lowercase or a
+ * digit.
+ */
+function firstSentence(line: string): string {
+  const end = /[.?!](?=\s|$)/g;
+  for (let match = end.exec(line); match; match = end.exec(line)) {
+    if (match[0] === ".") {
+      const word = /(\S+)$/.exec(line.slice(0, match.index))?.[1] ?? "";
+      const bare = word.replace(/^[("'[]+/, "").toLowerCase();
+      if (TITLES.has(bare) || /^[a-z]$/.test(bare)) continue;
+      const next = /^\s+(\S)/.exec(line.slice(match.index + 1))?.[1] ?? "";
+      if (ABBREVIATIONS.has(bare) && /[a-z0-9]/.test(next)) continue;
+    }
+    return line.slice(0, match.index + 1);
+  }
+  return line;
+}
+
+/**
+ * A short subject for a chat message, whose body is usually one long line
+ * or a short paragraph: the first sentence of the first non-empty line,
+ * cut at a word boundary to at most CHAT_SUBJECT_MAX_LENGTH characters.
+ * The body is sent unchanged; replies thread on headers, not the subject.
+ */
+export function deriveChatSubject(body: string): string {
+  const line = deriveSubject(body);
+  const sentence = firstSentence(line);
+  if (sentence.length <= CHAT_SUBJECT_MAX_LENGTH) return sentence;
+  const room = sentence.slice(0, CHAT_SUBJECT_MAX_LENGTH - 3);
+  const space = room.lastIndexOf(" ");
+  const cut = (
+    space >= CHAT_SUBJECT_MAX_LENGTH / 2 ? room.slice(0, space) : room
+  ).replace(/[\s,;:.!?-]+$/, "");
+  return `${cut}...`;
+}
+
 function isVerifiedDomain(domain: Domain): domain is VerifiedDomain {
   return (domain as VerifiedDomain).is_active === true;
 }
