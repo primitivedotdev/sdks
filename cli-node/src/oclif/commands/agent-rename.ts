@@ -1,4 +1,5 @@
 import { Args, Command, Errors, Flags } from "@oclif/core";
+import { saveConnectionName } from "../agent-connect.js";
 import {
   AGENT_NAME_MAX_LENGTH,
   AgentRenameApiError,
@@ -68,6 +69,17 @@ export default class AgentRenameCommand extends Command {
           address,
           name,
         });
+        // Keep the name a resumed connect reports in step with this rename.
+        const own = auth.connectedAgent;
+        if (
+          own &&
+          own.agentAddress.toLowerCase() === connection.address.toLowerCase()
+        )
+          saveConnectionName(
+            this.config.configDir,
+            own.profileName,
+            connection.name,
+          );
         if (flags.json) this.log(JSON.stringify({ connection }, null, 2));
         else
           this.log(

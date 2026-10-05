@@ -213,6 +213,26 @@ export function savedConnectionName(
   }
 }
 
+/**
+ * Saves the connection's current display name beside its profile: from the
+ * claim, and again after `agent rename`. Best effort: without it a resume
+ * omits the name, as for a claim made by an older version.
+ */
+export function saveConnectionName(
+  configDir: string,
+  profileName: string,
+  name: string,
+): void {
+  try {
+    writeMailJson(
+      join(agentProfileDirectory(configDir, profileName), CONNECTION_NAME_FILE),
+      { version: 1, name },
+    );
+  } catch {
+    /* Reported as unknown on a later resume. */
+  }
+}
+
 /** The display name a claim response reports, or undefined when unusable. */
 function claimedConnectionName(value: unknown): string | undefined {
   const name = (value as { data?: { connection?: { name?: unknown } } } | null)
@@ -698,14 +718,7 @@ export async function connectAgent(params: {
       }
       // A resumed setup reports the name the claim returned.
       if (name !== undefined)
-        try {
-          writeMailJson(join(profileDirectory, CONNECTION_NAME_FILE), {
-            version: 1,
-            name,
-          });
-        } catch {
-          /* A resume then omits the name, as for an older claim. */
-        }
+        saveConnectionName(params.configDir, profileName, name);
       return {
         status: "claimed",
         identity: connectedAgentIdentity(profileName, profile),
