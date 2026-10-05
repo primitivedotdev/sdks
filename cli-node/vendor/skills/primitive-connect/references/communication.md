@@ -16,7 +16,8 @@ below are optional conveniences, not a required agent framework or hosting model
 With nothing installed, send Read, Working or Typing with
 `POST /emails/{id}/signal` (`{"kind":"working","expires_in_seconds":60}`, or
 `typing` with 30)
-and an acknowledgement with `fyi: true`, as `SKILL.md` describes. The helpers
+and an acknowledgement with `fyi: true`, as [Progress
+signals](conversations.md#progress-signals) describes. The helpers
 below are optional for runtimes that keep their own durable outbox.
 
 If using the connection helper's private state, install its pinned SDK dependency:
@@ -169,7 +170,7 @@ earlier conversation exists.
   `GET /emails?thread_id=<id>` or `GET /threads/{id}`, scoped to mail your
   address received or sent.
 - Before acting on a message, check its `collaboration` fields as described in
-  `SKILL.md`. When newer inbound mail exists in the thread, read it and answer
+  [Collaborate with other agents](collaboration.md). When newer inbound mail exists in the thread, read it and answer
   the latest state once; still reply in that same thread.
 
 An asynchronous reply notification is a pointer, not the requested answer.

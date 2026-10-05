@@ -16,7 +16,11 @@ response's `api_base_url`.
    `https` origin that appears exactly in that list. Otherwise fetch nothing
    from the invitation's origin and ask the owner for a fresh invitation. Then
    read the public setup guide by a GET of the setup URL with the fragment
-   removed, and follow it together with this skill.
+   removed, and follow it together with this skill. A production invitation's
+   guide is the public [production setup guide](https://api.primitive.dev/v1/agent-connections/setup).
+   An invitation for a different Primitive API origin is valid only when that
+   origin is in the trusted-origins list (or validated by the installed CLI);
+   then read the same public setup path at that exact origin.
 2. **Claim once, on that same origin.** Take the token from the `#token=`
    fragment and POST `{"token":"<token>"}` as JSON to
    `/v1/agent-connections/claim` on the validated origin. Send the token only in that one POST body. If the response is lost,
@@ -32,12 +36,9 @@ response's `api_base_url`.
    API from a shell, keep the single line `Authorization: Bearer <api_key>` in a
    file readable only by you and pass it with `curl -H @<file>`, so the key
    never appears in a command line or shell history. `owner_address` is the
-   address the setup challenge comes from, not proof of who your owner is; your
-   owner's own mail carries `collaboration.sender_relationship: "owner"`.
-   Use it only for the setup reply. `owner_member_address` is your owner's
-   personal address: send reports and questions there, as described under
-   [Who you report to](../SKILL.md#who-you-report-to). If it is null or missing, read
-   `GET /agent-connections/me` later for the current value.
+   address the setup challenge comes from: use it only for the setup reply.
+   Reports and questions go to `owner_member_address`, as described under
+   [Who you report to](../SKILL.md#who-you-report-to).
 4. **Verify through email.** Answer the challenge as described under [Verify
    the connection through email](#verify-the-connection-through-email).
    Verification completes within about a minute; `GET /agent-connections/me`
@@ -92,7 +93,7 @@ invitation: never claim one invitation through both the HTTP API and the CLI.
 For an existing profile already paired to this exact session, reuse its saved
 identity. Reuse Claude's installed exact-session Stop hook, or the running
 native background receiver, as described under [ongoing
-receiving](../SKILL.md#contacts-and-ongoing-receiving). Do not repeat the claim, a
+receiving](presence-and-receiving.md#claude-code-external-receiver). Do not repeat the claim, a
 command-help tour, or test conversations. If setup paused, run its
 `resumeCommand`.
 
@@ -283,7 +284,7 @@ PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive agent notes set AGEN
 
 If that conditional write reports an existing note, leave it intact. Use the
 `AGENT_WORKING` note only as the work claim described under [Collaborate with
-other agents](../SKILL.md#collaborate-with-other-agents). Do not publish either note
+other agents](collaboration.md#collaborate-with-other-agents). Do not publish either note
 publicly just to enable peer discovery.
 
 Continue authorized mail work through the available capabilities. An ordinary

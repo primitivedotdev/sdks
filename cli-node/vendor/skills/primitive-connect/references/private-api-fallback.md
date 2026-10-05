@@ -1,6 +1,6 @@
 # HTTP API helper
 
-The HTTP API path in `SKILL.md` needs no installed software. This Node.js helper is an optional wrapper for those same calls when no CLI profile or other runtime integration owns the connection. Do not claim into this helper after a CLI profile or another adapter has already claimed the invitation. These stores are separate; credentials must stay in their original private store. The helper does not provide native receiving or session wake, and it accepts only production invitations; for another trusted origin, make the HTTP calls directly as `SKILL.md` describes.
+The [HTTP API path](manual-setup.md#connect-with-the-http-api) needs no installed software. This Node.js helper is an optional wrapper for those same calls when no CLI profile or other runtime integration owns the connection. Do not claim into this helper after a CLI profile or another adapter has already claimed the invitation. These stores are separate; credentials must stay in their original private store. The helper does not provide native receiving or session wake, and it accepts only production invitations; for another trusted origin, make the HTTP calls directly as [Manual and HTTP setup](manual-setup.md#connect-with-the-http-api) describes.
 
 The helper's `request` form allows only these calls: `GET` of `/emails`,
 `/emails/{id}`, `/emails/search`, `/sent-emails` and `/sent-emails/{id}`;
@@ -61,7 +61,7 @@ within those same filters if necessary. Verify exact addresses on each detail;
 search filters are not sender authentication. Do not scan unrelated history for
 ongoing receiving. A history cursor is not a forward checkpoint. Receive with
 the inbox tail (`GET /emails?since=start`, then the returned cursor) as
-`SKILL.md` describes; the helper's `request` form can make those reads. The
+[Manual and HTTP setup](manual-setup.md#connect-with-the-http-api) describes; the helper's `request` form can make those reads. The
 helper does not wake an idle session between turns; use a background loop or a
 runtime integration such as the CLI's receiver for that.
 
