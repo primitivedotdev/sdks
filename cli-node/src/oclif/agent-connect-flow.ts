@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
+import { createConnection } from "node:net";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { promisify } from "node:util";
@@ -98,6 +99,25 @@ export function codexSupportsNativeReceiving(version: string): boolean {
     if (a !== b) return a > b;
   }
   return true;
+}
+
+/** True only when connecting to the socket is refused (nothing serves it). */
+export function socketRefusesConnections(
+  path: string,
+  timeoutMs = 2_000,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = createConnection({ path });
+    const done = (refused: boolean) => {
+      socket.destroy();
+      resolve(refused);
+    };
+    socket.setTimeout(timeoutMs, () => done(false));
+    socket.once("connect", () => done(false));
+    socket.once("error", (error: NodeJS.ErrnoException) =>
+      done(error.code === "ECONNREFUSED"),
+    );
+  });
 }
 
 async function installedCodexVersion(): Promise<string | null> {
@@ -223,6 +243,12 @@ export type AgentConnectFlowDependencies = {
   nativePreflight(session: string): Promise<void>;
   /** Whether the local session socket native receiving connects to exists. */
   nativeSocketPresent(): boolean;
+  /**
+   * Whether a plain connection to that socket is refused outright, which
+   * means nothing is serving it. False when it accepts or the probe is
+   * inconclusive.
+   */
+  nativeSocketRefuses(): Promise<boolean>;
   /** The installed Codex version, or null when it cannot be read. */
   codexVersion(): Promise<string | null>;
   installClaudeWakeHook: typeof installClaudeWakeHook;
@@ -326,6 +352,7 @@ function defaults(
     setupAgent,
     nativePreflight: nativeSessionPreflight,
     nativeSocketPresent: () => existsSync(defaultSessionSocket()),
+    nativeSocketRefuses: () => socketRefusesConnections(defaultSessionSocket()),
     codexVersion: installedCodexVersion,
     installClaudeWakeHook,
     installSkill(runtime) {
@@ -511,8 +538,13 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       // app-server that stopped and left it behind), falls back; the
       // version only names the cause.
       const socketPresent = dependencies.nativeSocketPresent();
+      // A transport loss alone is not enough: a socket that accepted and
+      // then dropped the check may still be served. Only a socket that
+      // refuses a fresh connection counts as abandoned.
       const socketDead =
-        socketPresent && error instanceof NativeSessionDisconnectedError;
+        socketPresent &&
+        error instanceof NativeSessionDisconnectedError &&
+        (await dependencies.nativeSocketRefuses());
       const codexVersion =
         (socketPresent && !socketDead) || runtime === "claude"
           ? null

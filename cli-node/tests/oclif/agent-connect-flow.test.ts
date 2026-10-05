@@ -1,5 +1,7 @@
+import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +18,7 @@ import {
   invitationProfileName,
   parseCodexVersion,
   runAgentConnect,
+  socketRefusesConnections,
 } from "../../src/oclif/agent-connect-flow.js";
 import type { setupAgent } from "../../src/oclif/agent-setup.js";
 import {
@@ -108,6 +111,9 @@ function fixture(
     nativeSocketPresent: vi.fn<
       AgentConnectFlowDependencies["nativeSocketPresent"]
     >(() => true),
+    nativeSocketRefuses: vi.fn<
+      AgentConnectFlowDependencies["nativeSocketRefuses"]
+    >(async () => false),
     codexVersion: vi.fn<AgentConnectFlowDependencies["codexVersion"]>(
       async () => "0.158.0",
     ),
@@ -884,6 +890,10 @@ describe("native receiving unavailable in this runtime", () => {
   it("falls back when a leftover socket accepts no connection", async () => {
     const { options, preflight } = unavailable({}, true, "0.158.0");
     preflight.mockRejectedValue(new NativeSessionDisconnectedError());
+    options.dependencies = {
+      ...options.dependencies,
+      nativeSocketRefuses: async () => true,
+    };
     const output = await runAgentConnect(options);
     expect(output.receiving).toMatchObject({
       mode: "poll",
@@ -893,6 +903,49 @@ describe("native receiving unavailable in this runtime", () => {
       "fallbackDetail",
       expect.stringContaining("app-server is not running"),
     );
+  });
+
+  it("refuses when the socket accepts connections but dropped the session check", async () => {
+    const { options, preflight, dependencies } = unavailable(
+      {},
+      true,
+      "0.158.0",
+    );
+    preflight.mockRejectedValue(new NativeSessionDisconnectedError());
+    await expect(runAgentConnect(options)).rejects.toThrow(
+      /did not accept session/,
+    );
+    expect(dependencies.setupAgent).not.toHaveBeenCalled();
+  });
+
+  it("probes a real socket: a served one is not refused", async () => {
+    const directory = mkdtempSync(join("/tmp", "pc-"));
+    directories.push(directory);
+    const path = join(directory, "s.sock");
+    const server = createServer((socket) => socket.end());
+    await new Promise<void>((resolve) => server.listen(path, resolve));
+    expect(await socketRefusesConnections(path)).toBe(false);
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    // A missing path is a different case (no socket), never "refused".
+    expect(await socketRefusesConnections(join(directory, "none.sock"))).toBe(
+      false,
+    );
+  });
+
+  it("probes a real socket: one left behind by a killed server is refused", async () => {
+    const directory = mkdtempSync(join("/tmp", "pc-"));
+    directories.push(directory);
+    const path = join(directory, "stale.sock");
+    // A server that dies without closing leaves its socket file behind.
+    const child = spawn(process.execPath, [
+      "-e",
+      `require("node:net").createServer().listen(${JSON.stringify(path)}, () => process.stdout.write("up"))`,
+    ]);
+    await new Promise<void>((resolve) => child.stdout.once("data", resolve));
+    child.kill("SIGKILL");
+    await new Promise<void>((resolve) => child.once("exit", () => resolve()));
+    expect(existsSync(path)).toBe(true);
+    expect(await socketRefusesConnections(path)).toBe(true);
   });
 
   it("does not probe on resume, so a saved native setup keeps its receiver", async () => {
