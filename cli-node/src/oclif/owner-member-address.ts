@@ -5,6 +5,7 @@ import {
   parseOwnerMemberAddress,
   saveConnectedAgentProfile,
 } from "./connected-agent-profile.js";
+import { acquireListenLock } from "./listen-state.js";
 import {
   mailAddress,
   readMailJson,
@@ -83,9 +84,23 @@ export async function refreshOwnerMemberAddress(params: {
       profile.owner_address,
       profile.agent_address,
     );
-    if (profile.owner_member_address !== current)
+    // Save onto the profile as it is now, not as it was before the request:
+    // another command may have rewritten it meanwhile. A profile that now
+    // names another credential or identity is left alone.
+    const latest = loadConnectedAgentProfile(
+      params.configDir,
+      params.profileName,
+    );
+    if (
+      !latest ||
+      latest.api_key !== profile.api_key ||
+      latest.agent_address !== profile.agent_address ||
+      latest.owner_address !== profile.owner_address
+    )
+      return latest?.owner_member_address ?? null;
+    if (latest.owner_member_address !== current)
       saveConnectedAgentProfile(params.configDir, params.profileName, {
-        ...profile,
+        ...latest,
         owner_member_address: current,
       });
     return current;
@@ -125,24 +140,36 @@ export async function refreshOwnerMemberAddressPeriodically(params: {
   intervalMs?: number;
   now?: () => number;
 }): Promise<string | null> {
+  let saved: string | null = null;
+  let release: (() => void) | undefined;
   try {
     const profile = loadConnectedAgentProfile(
       params.configDir,
       params.profileName,
     );
     if (!profile) return null;
-    const now = (params.now ?? Date.now)();
-    const stamp = join(
-      agentProfileDirectory(params.configDir, params.profileName),
-      REFRESH_STAMP_FILE,
+    saved = profile.owner_member_address ?? null;
+    const directory = agentProfileDirectory(
+      params.configDir,
+      params.profileName,
     );
+    // One refresh per profile at a time, so two overlapping reads cannot
+    // finish out of order and save the older answer last. A busy lock means
+    // another process is refreshing now; the saved value answers meanwhile.
+    try {
+      release = acquireListenLock(directory, "owner-member-refresh");
+    } catch {
+      return saved;
+    }
+    const now = (params.now ?? Date.now)();
+    const stamp = join(directory, REFRESH_STAMP_FILE);
     const last = lastRefreshAttempt(stamp);
     if (
       last !== null &&
       last <= now &&
       now - last < (params.intervalMs ?? OWNER_MEMBER_REFRESH_INTERVAL_MS)
     )
-      return profile.owner_member_address ?? null;
+      return saved;
     try {
       writeMailJson(stamp, { version: 1, at: new Date(now).toISOString() });
     } catch {
@@ -150,7 +177,9 @@ export async function refreshOwnerMemberAddressPeriodically(params: {
     }
     return await refreshOwnerMemberAddress(params);
   } catch {
-    return null;
+    return saved;
+  } finally {
+    release?.();
   }
 }
 

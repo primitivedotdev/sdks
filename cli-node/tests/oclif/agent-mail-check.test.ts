@@ -11,6 +11,7 @@ import {
   type MailCheckResult,
 } from "../../src/oclif/agent-mail-check.js";
 import { agentProfileDirectory } from "../../src/oclif/connected-agent-profile.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const apiBaseUrl = "https://api.primitive.dev/v1";
 const identity = {
@@ -50,9 +51,20 @@ type Page = { rows: ReturnType<typeof email>[]; cursor: string | null };
 function harness(
   pages: Array<Page | Response>,
   ownerMemberAddress: () => Promise<string | null> = async () => null,
+  setupChallengeId?: string,
 ) {
   const configDir = mkdtempSync(join(tmpdir(), "agent-mail-check-"));
   directories.push(configDir);
+  if (setupChallengeId)
+    // Only the challenge ID matters to the check; the rest of setup.json is
+    // owned by agent setup.
+    writeMailJson(
+      join(
+        agentProfileDirectory(configDir, identity.profileName),
+        "setup.json",
+      ),
+      { version: 1, challenge: { id: setupChallengeId } },
+    );
   const queries: URLSearchParams[] = [];
   const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
     const request = input instanceof Request ? input : new Request(input);
@@ -97,20 +109,27 @@ function harness(
 describe("agent check-mail", () => {
   it("tails from the start, skips control mail, and resumes from the saved cursor", async () => {
     const peer = email("peer@example.com");
-    const h = harness([
-      {
-        rows: [
-          email(identity.ownerAddress, {
-            subject: "Connect your agent to Primitive",
-          }),
-          email("other@example.com", { presence_control: { kind: "probe" } }),
-          peer,
-        ],
-        cursor: "c1",
-      },
-      { rows: [], cursor: null },
-      { rows: [], cursor: null },
-    ]);
+    const challenge = email(identity.ownerAddress, {
+      subject: "Connect your agent to Primitive",
+    });
+    const h = harness(
+      [
+        {
+          rows: [
+            challenge,
+            email("other@example.com", {
+              presence_control: { kind: "probe" },
+            }),
+            peer,
+          ],
+          cursor: "c1",
+        },
+        { rows: [], cursor: null },
+        { rows: [], cursor: null },
+      ],
+      undefined,
+      challenge.id,
+    );
     const first = await h.check();
     expect(h.queries[0].get("since")).toBe("start");
     expect(h.queries[0].get("exclude_fyi")).toBe("true");
@@ -228,36 +247,70 @@ describe("agent check-mail", () => {
   it("lists mail a person wrote from the control address and counts only setup and presence mail", async () => {
     // The owner wrote from the control address before they had a personal
     // one. That email awaits an answer, so it must never be hidden as
-    // control mail; only the fixed-subject setup and presence mail is.
+    // control mail, whatever its subject; only the recorded setup challenge
+    // and presence probes the server marks as control are skipped.
+    const challenge = email(identity.ownerAddress, {
+      subject: "Connect your agent to Primitive",
+    });
     const fromOwner = email(identity.ownerAddress.toUpperCase(), {
       subject: "Can you look at the deploy?",
     });
-    const h = harness([
-      {
-        rows: [
-          email(identity.ownerAddress, {
-            subject: "Connect your agent to Primitive",
-          }),
-          email(identity.ownerAddress, { subject: "Receiver presence check" }),
-          email(identity.ownerAddress, {
-            subject: "Receiver presence check",
-            presence_control: { status: "pending", valid_for_ms: 0 },
-          }),
-          fromOwner,
-          email(identity.ownerAddress, { subject: null }),
-        ],
-        cursor: "c1",
-      },
-      { rows: [], cursor: null },
-    ]);
+    const sameSubjects = [
+      email(identity.ownerAddress, {
+        subject: "Connect your agent to Primitive",
+      }),
+      email(identity.ownerAddress, { subject: "Receiver presence check" }),
+    ];
+    const rejected = email(identity.ownerAddress, {
+      subject: "Receiver presence check",
+      presence_control: { status: "rejected", valid_for_ms: 0 },
+    });
+    const h = harness(
+      [
+        {
+          rows: [
+            challenge,
+            email(identity.ownerAddress, {
+              subject: "Receiver presence check",
+              presence_control: { status: "pending", valid_for_ms: 0 },
+            }),
+            email(identity.ownerAddress, {
+              presence_control: { status: "verified", valid_for_ms: 1000 },
+            }),
+            fromOwner,
+            ...sameSubjects,
+            rejected,
+          ],
+          cursor: "c1",
+        },
+        { rows: [], cursor: null },
+      ],
+      undefined,
+      challenge.id,
+    );
     const result = await h.check();
     expect(result.outcome).toBe("mail");
     expect(result.control_skipped).toBe(3);
-    expect(result.emails).toHaveLength(2);
-    expect(result.emails[0]).toMatchObject({
-      id: fromOwner.id,
-      sender: fromOwner.sender,
+    // A rejected presence projection is ordinary mail, as the receiver
+    // treats it; a matching subject alone proves nothing.
+    expect(result.emails.map((row) => row.id)).toEqual([
+      fromOwner.id,
+      ...sameSubjects.map((row) => row.id),
+      rejected.id,
+    ]);
+  });
+
+  it("lists a setup-subject email when no setup challenge was recorded", async () => {
+    const lookalike = email(identity.ownerAddress, {
+      subject: "Connect your agent to Primitive",
     });
+    const h = harness([
+      { rows: [lookalike], cursor: "c1" },
+      { rows: [], cursor: null },
+    ]);
+    const result = await h.check();
+    expect(result.control_skipped).toBe(0);
+    expect(result.emails.map((row) => row.id)).toEqual([lookalike.id]);
   });
 
   it("reports the owner's personal address read beside the mail", async () => {

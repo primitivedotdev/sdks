@@ -5,13 +5,13 @@ import {
   listEmails,
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
-import { SETUP_CHALLENGE_SUBJECT } from "./agent-setup.js";
 import {
   agentProfileDirectory,
   type ConnectedAgentIdentity,
 } from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
 import { refreshOwnerMemberAddressPeriodically } from "./owner-member-address.js";
+import { presenceDisposition } from "./presence-provenance.js";
 import {
   privateMailDirectory,
   readMailJson,
@@ -58,8 +58,8 @@ export type MailCheckResult = {
   /** More new mail remains; run the check again after handling these. */
   more: boolean;
   /**
-   * Setup challenges and presence probes from the control address, handled
-   * by the CLI. Other mail from that address is listed in `emails`.
+   * Presence probes and this profile's setup challenge, handled by the CLI.
+   * Other mail from the control address is listed in `emails`.
    */
   control_skipped: number;
   /**
@@ -98,31 +98,35 @@ function readCursor(path: string): string | null {
   return null;
 }
 
-/** Subject of the receiver presence probes the control address sends. */
-const PRESENCE_PROBE_SUBJECT = "Receiver presence check";
-
 /**
- * Setup challenges and presence probes, which the CLI handles. A presence
- * probe carries `presence_control`; a setup challenge, or a probe the server
- * no longer recognises, is the control address writing with its fixed
- * subject. Anything else from the control address is mail a person wrote
- * (the owner can send from it), so it is reported like any other email.
+ * Mail the CLI handles itself: a presence probe whose authenticated
+ * projection marks it as control mail (verified, or pending while its proof
+ * settles; a rejected one is ordinary mail), and the exact setup challenge
+ * this profile's setup recorded. Nothing is judged by sender or subject: the
+ * owner can write from the control address, and that email is listed like
+ * any other.
  */
 export function isControlMail(
-  email: Pick<EmailSummary, "sender" | "subject" | "presence_control">,
-  identity: Pick<ConnectedAgentIdentity, "ownerAddress">,
+  email: Pick<EmailSummary, "id" | "presence_control">,
+  setupChallengeId: string | null,
 ): boolean {
-  if (email.presence_control !== undefined && email.presence_control !== null)
-    return true;
-  if (
-    email.sender.trim().toLowerCase() !==
-    identity.ownerAddress.trim().toLowerCase()
-  )
-    return false;
-  const subject = email.subject?.trim();
   return (
-    subject === SETUP_CHALLENGE_SUBJECT || subject === PRESENCE_PROBE_SUBJECT
+    presenceDisposition(email) !== "ordinary" ||
+    (setupChallengeId !== null && email.id === setupChallengeId)
   );
+}
+
+/** The setup challenge's email ID saved by this profile's setup, if any. */
+function savedSetupChallengeId(directory: string): string | null {
+  try {
+    const saved = readMailJson(join(directory, "setup.json")) as {
+      challenge?: { id?: unknown } | null;
+    } | null;
+    const id = saved?.challenge?.id;
+    return typeof id === "string" && id.length > 0 ? id : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function checkAgentMail(options: {
@@ -162,6 +166,7 @@ export async function checkAgentMail(options: {
   try {
     const path = join(directory, CURSOR_FILE);
     const saved = readCursor(path);
+    const setupChallenge = savedSetupChallengeId(directory);
     let cursor = saved;
     const emails: MailCheckItem[] = [];
     let controlSkipped = 0;
@@ -183,7 +188,7 @@ export async function checkAgentMail(options: {
         throw new MailCheckApiError(result.error);
       const rows = result.data.data ?? [];
       for (const row of rows) {
-        if (isControlMail(row, identity)) controlSkipped++;
+        if (isControlMail(row, setupChallenge)) controlSkipped++;
         else
           emails.push({
             id: row.id,

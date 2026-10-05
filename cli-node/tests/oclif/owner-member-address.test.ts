@@ -269,4 +269,66 @@ describe("the owner's personal address", () => {
     ).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it("saves onto the profile as it is after the request, not before it", async () => {
+    // Another command rewrites the profile while the read is in flight.
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => {
+      const profile = loadConnectedAgentProfile(configDir, "work");
+      if (!profile) throw new Error("profile missing");
+      saveConnectedAgentProfile(configDir, "work", {
+        ...profile,
+        created_at: "2026-10-02T00:00:00.000Z",
+      });
+      return me({ owner_member_address: personal });
+    });
+    expect(await refresh(fetch)).toBe(personal);
+    expect(loadConnectedAgentProfile(configDir, "work")).toMatchObject({
+      created_at: "2026-10-02T00:00:00.000Z",
+      owner_member_address: personal,
+    });
+  });
+
+  it("leaves a profile that changed credential during the request alone", async () => {
+    const replaced = ["pconn", "d".repeat(48)].join("_");
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => {
+      const profile = loadConnectedAgentProfile(configDir, "work");
+      if (!profile) throw new Error("profile missing");
+      saveConnectedAgentProfile(configDir, "work", {
+        ...profile,
+        api_key: replaced,
+        owner_member_address: null,
+      });
+      return me({ owner_member_address: personal });
+    });
+    expect(await refresh(fetch)).toBeNull();
+    expect(loadConnectedAgentProfile(configDir, "work")).toMatchObject({
+      api_key: replaced,
+      owner_member_address: null,
+    });
+  });
+
+  it("runs one routine refresh per profile at a time", async () => {
+    await refresh(async () => me({ owner_member_address: null }));
+    let finish: (response: Response) => void = () => undefined;
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      () =>
+        new Promise<Response>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const periodic = () =>
+      refreshOwnerMemberAddressPeriodically({
+        configDir,
+        profileName: "work",
+        fetch,
+      });
+    const first = periodic();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    // While the first read is in flight, a second answers from the saved
+    // value instead of racing it.
+    expect(await periodic()).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    finish(me({ owner_member_address: personal }));
+    expect(await first).toBe(personal);
+  });
 });

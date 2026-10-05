@@ -43,9 +43,7 @@ import {
   writeMailJson,
 } from "./shared-mail-files.js";
 
-/** Subject of the setup challenge the control address sends. */
-export const SETUP_CHALLENGE_SUBJECT = "Connect your agent to Primitive";
-const SUBJECT = SETUP_CHALLENGE_SUBJECT;
+const SUBJECT = "Connect your agent to Primitive";
 const MARKER =
   /\bprimitive-connection:([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}):([1-9]\d*)\b/g;
 const fail = (message: string) => new AgentConnectionSetupError(message);
