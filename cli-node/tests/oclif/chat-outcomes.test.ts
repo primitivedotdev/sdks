@@ -777,7 +777,7 @@ describe("chat send outcomes", () => {
     ]);
 
     expect(result.stderr).toContain(
-      "This email already has 1 outgoing email, most recently at 2026-05-25T00:00:05.000Z (sent id sent-earlier). These may include activity updates and do not prove a completed answer. Sending this reply.",
+      "This email already has 1 outgoing email, most recently at 2026-05-25T00:00:05.000Z (sent id sent-earlier). Status signals are not counted, and an earlier reply does not prove the request was completed. Sending this reply.",
     );
     expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
     const envelope = JSON.parse(result.stdout);

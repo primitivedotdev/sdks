@@ -299,7 +299,7 @@ describe("reply outcomes", () => {
     // --json moves the warning from stderr into the envelope.
     expect(result.stderr).toBe("");
     expect(envelope.warnings).toContain(
-      "This email already has 1 outgoing email, most recently at 2026-09-01T11:00:00.000Z (sent id sent-prior). These may include activity updates and do not prove a completed answer. Sending this reply.",
+      "This email already has 1 outgoing email, most recently at 2026-09-01T11:00:00.000Z (sent id sent-prior). Status signals are not counted, and an earlier reply does not prove the request was completed. Sending this reply.",
     );
     expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
     expect(result.exitCode).toBeUndefined();
@@ -347,7 +347,7 @@ describe("reply outcomes", () => {
       signals_excluded: 2,
     });
     expect(envelope.warnings).toContain(
-      "This email already has 1 outgoing email, most recently at 2026-09-01T11:00:00.000Z (sent id sent-answer). These may include activity updates and do not prove a completed answer. Sending this reply.",
+      "This email already has 1 outgoing email, most recently at 2026-09-01T11:00:00.000Z (sent id sent-answer). Status signals are not counted, and an earlier reply does not prove the request was completed. Sending this reply.",
     );
   });
 
@@ -464,7 +464,7 @@ describe("reply outcomes", () => {
     const result = await run("reply", replyArgs());
 
     expect(result.stderr).toContain(
-      "This email already has 2 outgoing emails, most recently at 2026-09-01T11:00:00.000Z (sent id sent-b). These may include activity updates and do not prove a completed answer. Sending this reply.",
+      "This email already has 2 outgoing emails, most recently at 2026-09-01T11:00:00.000Z (sent id sent-b). Status signals are not counted, and an earlier reply does not prove the request was completed. Sending this reply.",
     );
   });
 

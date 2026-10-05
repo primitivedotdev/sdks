@@ -216,11 +216,11 @@ export function formatPriorRepliesWarning(
 ): string | null {
   const latest = prior.at(-1);
   if (!latest) return null;
-  // The reply summary has no interaction metadata. Do not label activity
-  // emails as completed answers or fetch each message just for this notice.
+  // Status signals are filtered out before this is called, so these are real
+  // replies; still, a reply is not proof that the request was completed.
   const count =
     prior.length === 1 ? "1 outgoing email" : `${prior.length} outgoing emails`;
-  return `This email already has ${count}, most recently at ${latest.created_at} (sent id ${latest.id}). These may include activity updates and do not prove a completed answer. Sending this reply.`;
+  return `This email already has ${count}, most recently at ${latest.created_at} (sent id ${latest.id}). Status signals are not counted, and an earlier reply does not prove the request was completed. Sending this reply.`;
 }
 
 export function formatPriorRepliesCheckSkipped(
