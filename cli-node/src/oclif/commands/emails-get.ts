@@ -9,7 +9,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
-import { dispatchAutoWorking } from "../auto-signals.js";
+import { dispatchAutoWorking, isSentSignal } from "../auto-signals.js";
 import { buildEmailBrief, renderEmailBrief } from "../email-brief.js";
 import { withFlagSuggestion } from "../flag-suggestions.js";
 import { currentMailSessionKey } from "../mail-session.js";
@@ -95,6 +95,7 @@ async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
       client: apiClient.client,
       detail,
       connected,
+      isOwnSignal: (sentId) => isSentSignal(command.config.configDir, sentId),
       signal: AbortSignal.timeout(30_000),
     });
     command.log(

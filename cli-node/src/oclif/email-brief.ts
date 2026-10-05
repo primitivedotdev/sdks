@@ -387,6 +387,8 @@ export async function buildEmailBrief(input: {
   client: Client;
   detail: EmailDetail;
   connected?: { agentAddress: string; ownerAddress: string };
+  /** Excludes signals this CLI sent automatically from `in_thread`. */
+  isOwnSignal?: (sentId: string) => boolean;
   signal: AbortSignal;
 }): Promise<EmailBrief> {
   const { client, detail, signal } = input;
@@ -448,7 +450,7 @@ export async function buildEmailBrief(input: {
           detail.sender_connected_agent_verified === true,
       },
       thread_id: threadId,
-      in_thread: sentInThread(thread, self) ?? null,
+      in_thread: sentInThread(thread, self, input.isOwnSignal) ?? null,
       ...alsoAddressed(otherParticipants(detail, self)),
       attachments: briefAttachments(detail, {
         hideInteractionPart:

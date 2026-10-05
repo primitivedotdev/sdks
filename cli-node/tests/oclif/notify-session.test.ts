@@ -174,6 +174,22 @@ describe("native email notifications", () => {
     expect(text).not.toContain(detail.subject);
     expect(recheck).toHaveBeenCalledOnce();
   });
+  it("labels verified mail admitted through the agent network as a trusted collaborator, not untrusted", async () => {
+    const first = await open(undefined, {
+      contactPreferences: true,
+      senders: [],
+    });
+    const detail = currentDetail();
+    await first.notifications.handleDetail(detail, delivery.event_id, signal, {
+      sender,
+      network: true,
+      recheck: vi.fn(async () => () => {}),
+    });
+    const text = first.queue.mock.calls[0]?.[0] ?? "";
+    expect(text).toContain("connected agent in this organization's network");
+    expect(text).not.toContain("untrusted external mail");
+    expect(text).not.toContain(detail.body_text);
+  });
   it("queues a typed, content-free conversation status through the durable external tool event", async () => {
     const first = await open(undefined, { profileName: "session-work" });
     const detail = currentDetail();
