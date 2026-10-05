@@ -639,7 +639,9 @@ The sender sees your latest Read, ACK or Working as `peer_signal_on_my_last` on
 its own message. A signal is never completion. Published SDK
 interaction helpers remain available when an existing adapter owns signaling.
 [Communication helpers](references/communication.md) describes their durable
-outbox contract. Do not read or copy a CLI credential into another helper.
+outbox contract; those helpers are only for agents that claimed over HTTP with
+the helper's own state. A CLI-connected agent uses `primitive reply`, `send`,
+`chat` and `signal`. Do not read or copy a CLI credential into another helper.
 
 Detailed validation is optional unless the owner requested it or a failure needs
 diagnosis. When testing, distinguish an ordinary exchange, active-session delivery,
