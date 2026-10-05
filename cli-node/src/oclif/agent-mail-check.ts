@@ -10,6 +10,8 @@ import {
   type ConnectedAgentIdentity,
 } from "./connected-agent-profile.js";
 import { acquireListenLock } from "./listen-state.js";
+import { refreshOwnerMemberAddressPeriodically } from "./owner-member-address.js";
+import { presenceDisposition } from "./presence-provenance.js";
 import {
   privateMailDirectory,
   readMailJson,
@@ -55,8 +57,17 @@ export type MailCheckResult = {
   emails: MailCheckItem[];
   /** More new mail remains; run the check again after handling these. */
   more: boolean;
-  /** Setup and presence mail from the control address, handled by the CLI. */
+  /**
+   * Presence probes and this profile's setup challenge, handled by the CLI.
+   * Other mail from the control address is listed in `emails`.
+   */
   control_skipped: number;
+  /**
+   * The owner's personal address, where reports and questions go; null when
+   * none is known. Read from the server at most every few minutes and saved
+   * with the profile, so it follows an owner who sets one up after pairing.
+   */
+  owner_member_address: string | null;
   /** The checked profile and the address it receives for. */
   profile: string;
   to: string;
@@ -87,16 +98,35 @@ function readCursor(path: string): string | null {
   return null;
 }
 
-/** Setup challenges and presence probes come from the control address. */
-function isControlMail(
-  email: EmailSummary,
-  identity: ConnectedAgentIdentity,
+/**
+ * Mail the CLI handles itself: a presence probe whose authenticated
+ * projection marks it as control mail (verified, or pending while its proof
+ * settles; a rejected one is ordinary mail), and the exact setup challenge
+ * this profile's setup recorded. Nothing is judged by sender or subject: the
+ * owner can write from the control address, and that email is listed like
+ * any other.
+ */
+export function isControlMail(
+  email: Pick<EmailSummary, "id" | "presence_control">,
+  setupChallengeId: string | null,
 ): boolean {
   return (
-    email.presence_control !== undefined ||
-    email.sender.trim().toLowerCase() ===
-      identity.ownerAddress.trim().toLowerCase()
+    presenceDisposition(email) !== "ordinary" ||
+    (setupChallengeId !== null && email.id === setupChallengeId)
   );
+}
+
+/** The setup challenge's email ID saved by this profile's setup, if any. */
+function savedSetupChallengeId(directory: string): string | null {
+  try {
+    const saved = readMailJson(join(directory, "setup.json")) as {
+      challenge?: { id?: unknown } | null;
+    } | null;
+    const id = saved?.challenge?.id;
+    return typeof id === "string" && id.length > 0 ? id : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function checkAgentMail(options: {
@@ -106,6 +136,8 @@ export async function checkAgentMail(options: {
   /** How the agent invokes this CLI, used in `read_command`. */
   invocation?: string;
   maxPages?: number;
+  /** Reads the owner's personal address; defaults to a throttled refresh. */
+  ownerMemberAddress?: () => Promise<string | null>;
   /** Delivers the result; the cursor advances only after it returns. */
   emit(result: MailCheckResult): void;
 }): Promise<MailCheckResult> {
@@ -122,9 +154,19 @@ export async function checkAgentMail(options: {
   const readCommand = (id: string) =>
     `PRIMITIVE_AGENT_PROFILE=${identity.profileName} ${options.invocation ?? "primitive"} emails get --id ${id} --brief`;
   const to = identity.agentAddress.toLowerCase();
+  // Runs beside the mail read; it never throws and is bounded by its timeout.
+  const ownerMember = (
+    options.ownerMemberAddress ??
+    (() =>
+      refreshOwnerMemberAddressPeriodically({
+        configDir: options.configDir,
+        profileName: identity.profileName,
+      }))
+  )().catch(() => identity.ownerMemberAddress ?? null);
   try {
     const path = join(directory, CURSOR_FILE);
     const saved = readCursor(path);
+    const setupChallenge = savedSetupChallengeId(directory);
     let cursor = saved;
     const emails: MailCheckItem[] = [];
     let controlSkipped = 0;
@@ -146,7 +188,7 @@ export async function checkAgentMail(options: {
         throw new MailCheckApiError(result.error);
       const rows = result.data.data ?? [];
       for (const row of rows) {
-        if (isControlMail(row, identity)) controlSkipped++;
+        if (isControlMail(row, setupChallenge)) controlSkipped++;
         else
           emails.push({
             id: row.id,
@@ -170,6 +212,7 @@ export async function checkAgentMail(options: {
       emails,
       more,
       control_skipped: controlSkipped,
+      owner_member_address: await ownerMember,
       profile: identity.profileName,
       to,
       read_command: readCommand("<id>"),

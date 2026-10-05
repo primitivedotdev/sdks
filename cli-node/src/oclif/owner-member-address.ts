@@ -1,9 +1,16 @@
+import { join } from "node:path";
 import {
+  agentProfileDirectory,
   loadConnectedAgentProfile,
   parseOwnerMemberAddress,
   saveConnectedAgentProfile,
 } from "./connected-agent-profile.js";
-import { mailAddress } from "./shared-mail-files.js";
+import { acquireListenLock } from "./listen-state.js";
+import {
+  mailAddress,
+  readMailJson,
+  writeMailJson,
+} from "./shared-mail-files.js";
 
 const REFRESH_TIMEOUT_MS = 5_000;
 const MAX_RESPONSE_BYTES = 64 * 1024;
@@ -77,14 +84,102 @@ export async function refreshOwnerMemberAddress(params: {
       profile.owner_address,
       profile.agent_address,
     );
-    if (profile.owner_member_address !== current)
+    // Save onto the profile as it is now, not as it was before the request:
+    // another command may have rewritten it meanwhile. A profile that now
+    // names another credential or identity is left alone.
+    const latest = loadConnectedAgentProfile(
+      params.configDir,
+      params.profileName,
+    );
+    if (
+      !latest ||
+      latest.api_key !== profile.api_key ||
+      latest.agent_address !== profile.agent_address ||
+      latest.owner_address !== profile.owner_address
+    )
+      return latest?.owner_member_address ?? null;
+    if (latest.owner_member_address !== current)
       saveConnectedAgentProfile(params.configDir, params.profileName, {
-        ...profile,
+        ...latest,
         owner_member_address: current,
       });
     return current;
   } catch {
     return saved;
+  }
+}
+
+/** How often a routine command reads the owner's personal address again. */
+export const OWNER_MEMBER_REFRESH_INTERVAL_MS = 10 * 60_000;
+const REFRESH_STAMP_FILE = "owner-member-refresh.json";
+
+function lastRefreshAttempt(path: string): number | null {
+  try {
+    const saved = readMailJson(path) as { version?: unknown; at?: unknown };
+    if (saved?.version !== 1 || typeof saved.at !== "string") return null;
+    const at = Date.parse(saved.at);
+    return Number.isFinite(at) ? at : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * refreshOwnerMemberAddress for routine paths (each mail check, each start of
+ * a wake receiver): reads the connection's record at most once per interval,
+ * so an owner who sets up a personal address after pairing is learned without
+ * a reconnect. Between reads it returns the saved value without a request.
+ * The time of each attempt is saved with the profile, so a failing server is
+ * not asked again on every turn. Never throws.
+ */
+export async function refreshOwnerMemberAddressPeriodically(params: {
+  configDir: string;
+  profileName: string;
+  fetch?: typeof fetch;
+  timeoutMs?: number;
+  intervalMs?: number;
+  now?: () => number;
+}): Promise<string | null> {
+  let saved: string | null = null;
+  let release: (() => void) | undefined;
+  try {
+    const profile = loadConnectedAgentProfile(
+      params.configDir,
+      params.profileName,
+    );
+    if (!profile) return null;
+    saved = profile.owner_member_address ?? null;
+    const directory = agentProfileDirectory(
+      params.configDir,
+      params.profileName,
+    );
+    // One refresh per profile at a time, so two overlapping reads cannot
+    // finish out of order and save the older answer last. A busy lock means
+    // another process is refreshing now; the saved value answers meanwhile.
+    try {
+      release = acquireListenLock(directory, "owner-member-refresh");
+    } catch {
+      return saved;
+    }
+    const now = (params.now ?? Date.now)();
+    const stamp = join(directory, REFRESH_STAMP_FILE);
+    const last = lastRefreshAttempt(stamp);
+    if (
+      last !== null &&
+      last <= now &&
+      now - last < (params.intervalMs ?? OWNER_MEMBER_REFRESH_INTERVAL_MS)
+    )
+      return saved;
+    try {
+      writeMailJson(stamp, { version: 1, at: new Date(now).toISOString() });
+    } catch {
+      /* Without a stamp the next routine call reads again. */
+    }
+    return await refreshOwnerMemberAddress(params);
+  } catch {
+    return saved;
+  } finally {
+    release?.();
   }
 }
 
