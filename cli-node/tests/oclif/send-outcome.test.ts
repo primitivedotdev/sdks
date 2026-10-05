@@ -154,8 +154,8 @@ describe("prior replies", () => {
     const warning = formatPriorRepliesWarning(prior);
     expect(warning).toContain("3 outgoing emails");
     expect(warning).toContain("sent id typing");
-    expect(warning).toContain("may include activity updates");
-    expect(warning).toContain("do not prove a completed answer");
+    expect(warning).toContain("Status signals are not counted");
+    expect(warning).toContain("does not prove the request was completed");
     expect(warning).not.toContain("already replied");
     expect(formatPriorRepliesWarning(prior.slice(0, 1))).toContain(
       "1 outgoing email,",

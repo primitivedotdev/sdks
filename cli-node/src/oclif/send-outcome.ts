@@ -216,11 +216,11 @@ export function formatPriorRepliesWarning(
 ): string | null {
   const latest = prior.at(-1);
   if (!latest) return null;
-  // The reply summary has no interaction metadata. Do not label activity
-  // emails as completed answers or fetch each message just for this notice.
+  // Status signals are filtered out before this is called, so these are real
+  // replies; still, a reply is not proof that the request was completed.
   const count =
     prior.length === 1 ? "1 outgoing email" : `${prior.length} outgoing emails`;
-  return `This email already has ${count}, most recently at ${latest.created_at} (sent id ${latest.id}). These may include activity updates and do not prove a completed answer. Sending this reply.`;
+  return `This email already has ${count}, most recently at ${latest.created_at} (sent id ${latest.id}). Status signals are not counted, and an earlier reply does not prove the request was completed. Sending this reply.`;
 }
 
 export function formatPriorRepliesCheckSkipped(
@@ -301,6 +301,30 @@ async function threadSignalIds(
  * send, so every failure comes back as `skipped` with a reason the
  * caller surfaces.
  */
+/**
+ * Drop status signals (this CLI's own automatic Read or Working, or any send
+ * the thread marks as a signal) from a list of replies that went out. Reply
+ * entries carry no signal marking, and a signal sent from another machine has
+ * no local record, but the thread's outbound entries do carry it, so one
+ * thread read settles whatever the local record leaves.
+ */
+export async function excludeSignalReplies(params: {
+  client: EmailFetchClient;
+  replies: EmailDetailReply[];
+  threadId?: string | null;
+  isLocalSignal?: (sentId: string) => boolean;
+}): Promise<EmailDetailReply[]> {
+  const isLocalSignal = params.isLocalSignal ?? (() => false);
+  let prior = params.replies.filter(
+    (reply) => !isSignalReply(reply, isLocalSignal),
+  );
+  if (prior.length > 0 && params.threadId) {
+    const signals = await threadSignalIds(params.client, params.threadId);
+    prior = prior.filter((reply) => !signals.has(reply.id));
+  }
+  return prior;
+}
+
 export async function checkPriorReplies(params: {
   client: EmailFetchClient;
   emailId: string;
@@ -337,15 +361,12 @@ export async function checkPriorReplies(params: {
       };
     }
     const wentOut = priorRepliesThatWentOut(detail.replies);
-    const isLocalSignal = params.isLocalSignal ?? (() => false);
-    let prior = wentOut.filter((reply) => !isSignalReply(reply, isLocalSignal));
-    // Reply entries carry no signal marking, and a signal sent from another
-    // machine has no local record. The thread's outbound entries do carry
-    // it, so one thread read settles whatever is left.
-    if (prior.length > 0 && detail.thread_id) {
-      const signals = await threadSignalIds(params.client, detail.thread_id);
-      prior = prior.filter((reply) => !signals.has(reply.id));
-    }
+    const prior = await excludeSignalReplies({
+      client: params.client,
+      replies: wentOut,
+      threadId: detail.thread_id,
+      isLocalSignal: params.isLocalSignal,
+    });
     return {
       status: "checked",
       prior,
