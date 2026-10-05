@@ -19,6 +19,13 @@ import {
   agentProfilesDirectory,
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
+import {
+  cliPackageVersion,
+  hookLauncherPath,
+  hookLauncherScript,
+  hookLauncherSupported,
+  writeHookLauncher,
+} from "./hook-launcher.js";
 import { acquireListenLock } from "./listen-state.js";
 import {
   jsonIndentation,
@@ -38,8 +45,15 @@ function record(value: unknown): value is RecordValue {
 
 /** Where this CLI is installed, as written into Claude hooks. */
 export type CliLocation = {
-  /** Node binary written into new hooks; a stable PATH link when one resolves to the same file. */
+  /**
+   * Command written into new Claude hooks: the hook launcher where launchers
+   * apply, otherwise the same as `runtimeNode`.
+   */
   node: string;
+  /** Node binary running this CLI; a stable PATH link when one resolves to the same file. */
+  runtimeNode: string;
+  /** The launcher Claude hooks run through, and its exact content; null on Windows. */
+  launcher: { path: string; content: string } | null;
   /** Real path of bin/run.js. */
   entry: string;
   /** Real path of bin/claude-wake.mjs. */
@@ -120,11 +134,16 @@ export function stableNodePath(
   return execPath;
 }
 
-/** Locate the running CLI. Null when its files are not where a package install puts them. */
+/**
+ * Locate the running CLI. Null when its files are not where a package install
+ * puts them. With a config directory, Claude hooks run through the hook
+ * launcher in it (except on Windows).
+ */
 export function currentCliLocation(
   entryArg: string,
   env: Record<string, string | undefined>,
   execPath = process.execPath,
+  options: { configDir?: string; platform?: NodeJS.Platform } = {},
 ): CliLocation | null {
   const entry = realpathOrNull(entryArg);
   if (!entry) return null;
@@ -133,7 +152,33 @@ export function currentCliLocation(
     join(dirname(entry), "claude-pending-mail.mjs"),
   );
   if (!wake || !pending) return null;
-  return { node: stableNodePath(env, execPath), entry, wake, pending };
+  const runtimeNode = stableNodePath(env, execPath);
+  const launcher =
+    options.configDir !== undefined && hookLauncherSupported(options.platform)
+      ? {
+          path: hookLauncherPath(options.configDir),
+          content: hookLauncherScript({
+            node: runtimeNode,
+            version: cliPackageVersion(entry),
+            configDir: options.configDir,
+          }),
+        }
+      : null;
+  return {
+    node: launcher?.path ?? runtimeNode,
+    runtimeNode,
+    launcher,
+    entry,
+    wake,
+    pending,
+  };
+}
+
+/** Write the hook launcher a CLI location names. True when it changed. */
+export function ensureHookLauncher(cli: CliLocation): boolean {
+  return cli.launcher
+    ? writeHookLauncher(cli.launcher.path, cli.launcher.content)
+    : false;
 }
 
 /** Package-runner caches are cleaned up behind the user's back. */
@@ -364,6 +409,26 @@ function isGlobalManaged(hook: unknown, spec: GlobalSpec): hook is RecordValue {
   );
 }
 
+/**
+ * Whether settings carry either machine-wide session hook (SessionStart
+ * session-register or SessionEnd session-end), from any CLI path or version.
+ */
+export function hasMachineSessionHooks(settings: RecordValue): boolean {
+  const hooks = record(settings.hooks) ? settings.hooks : {};
+  return Object.values(GLOBAL_HOOKS).some((spec) => {
+    const entries = eventEntries(hooks, spec.event);
+    return (
+      entries !== "invalid" &&
+      entries.some(
+        (entry) =>
+          record(entry) &&
+          Array.isArray(entry.hooks) &&
+          entry.hooks.some((hook) => isGlobalManaged(hook, spec)),
+      )
+    );
+  });
+}
+
 function globalHookArgs(cli: CliLocation, spec: GlobalSpec): string[] {
   return [cli.entry, "agent", spec.subcommand, "--runtime", "claude", "--hook"];
 }
@@ -405,7 +470,8 @@ export function hasSessionReceiveHook(
   hooks: RecordValue,
   event: SessionEvent,
   target: SessionHookTarget,
-  node: string,
+  /** Null accepts any command: the hook exists, current or not. */
+  node: string | null,
 ): boolean {
   const entries = hooks[event];
   if (!Array.isArray(entries)) return false;
@@ -430,7 +496,7 @@ export function hasSessionReceiveHook(
           args[4] === target.address &&
           args[5].toLowerCase() === session &&
           args[6] === (pending ? PENDING_MARKER : WAKE_MARKER) &&
-          samePath(hook.command, node)
+          (node === null || samePath(hook.command, node))
         );
       }),
   );
@@ -755,15 +821,18 @@ function heldSessionProfiles(
   return held;
 }
 
-/** Receive hooks each bound profile should have and does not. */
+/**
+ * Receive hooks each bound profile has in no form at all. A hook that exists
+ * but names an old Node or CLI path is outdated, not missing, so one hook is
+ * never reported (or repaired) as both.
+ */
 function missingSessionHooks(
   hooks: RecordValue,
   bound: readonly BoundSessionProfile[],
-  node: string,
 ): Array<{ event: SessionEvent; bound: BoundSessionProfile }> {
   return bound.flatMap((item) =>
     SESSION_EVENTS.filter(
-      (event) => !hasSessionReceiveHook(hooks, event, item, node),
+      (event) => !hasSessionReceiveHook(hooks, event, item, null),
     ).map((event) => ({ event, bound: item })),
   );
 }
@@ -925,11 +994,7 @@ export function inspectClaudeHooks(
   };
   const verdicts = judgeSessionHooks(hooks, context.cli, bound);
   for (const verdict of verdicts.values()) counts[verdict]++;
-  const missingHooks = missingSessionHooks(
-    hooks,
-    bound,
-    context.cli?.node ?? process.execPath,
-  );
+  const missingHooks = missingSessionHooks(hooks, bound);
   const missing = missingHooks.length;
   const items = sessionHookItems(hooks, verdicts, missingHooks);
   const problems = [
@@ -1099,7 +1164,7 @@ export function repairClaudeHooks(
       // A connected session whose hook was removed gets it back, exactly as
       // `agent connect` wrote it; mail would otherwise never wake it.
       if (cli)
-        for (const missing of missingSessionHooks(hooks, bound, cli.node)) {
+        for (const missing of missingSessionHooks(hooks, bound)) {
           if (!selected(missing.bound.profile)) continue;
           const entries = eventEntries(hooks, missing.event);
           if (entries === "invalid") continue;

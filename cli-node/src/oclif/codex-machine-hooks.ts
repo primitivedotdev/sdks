@@ -22,7 +22,7 @@ export function shellQuote(value: string): string {
 const MANAGED_SUFFIX = /\bagent session-register --runtime codex --hook\s*$/;
 
 export function codexHookCommand(cli: CliLocation): string {
-  return `${shellQuote(cli.node)} ${shellQuote(cli.entry)} agent session-register --runtime codex --hook`;
+  return `${shellQuote(cli.runtimeNode)} ${shellQuote(cli.entry)} agent session-register --runtime codex --hook`;
 }
 
 /** A SessionStart hook this CLI installed, from any CLI path or version. */
@@ -309,6 +309,11 @@ export function repairCodexHook(
     settings: { ...settings, hooks: { ...hooks, SessionStart: entries } },
     changed,
   };
+}
+
+/** Whether Codex hooks.json carries the SessionStart hook, from any CLI path. */
+export function hasCodexSessionHook(settings: RecordValue): boolean {
+  return managedPositions(settings).length > 0;
 }
 
 export function writeCodexHooks(params: {

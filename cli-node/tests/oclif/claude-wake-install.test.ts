@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -188,7 +189,7 @@ test("external hook installer preserves other settings and replaces only its own
   );
 });
 
-test("hooks run Node through a stable PATH link, not the versioned binary", () => {
+test("on Windows hooks run Node through a stable PATH link, not the versioned binary", () => {
   const { root, claudeDir, configDir, cliPath } = fixture();
   // A package manager's bin/node links to the versioned install directory.
   const pathDir = join(root, "path-bin");
@@ -202,6 +203,7 @@ test("hooks run Node through a stable PATH link, not the versioned binary", () =
     agentAddress: "stable@example.com",
     sessionId: sessionA,
     env: { CLAUDE_CONFIG_DIR: claudeDir, PATH: pathDir },
+    platform: "win32" as const,
   };
   assert.equal(installClaudeWakeHook(options), "installed_unverified");
   const settings = JSON.parse(
@@ -209,6 +211,37 @@ test("hooks run Node through a stable PATH link, not the versioned binary", () =
   );
   for (const event of ["Stop", "SessionStart", "PostToolUse"])
     assert.equal(settings.hooks[event].at(-1).hooks[0].command, link);
+  assert.equal(claudeWakeHookStatus(options).installed, true);
+  assert.equal(existsSync(join(configDir, "bin", "primitive-node")), false);
+});
+
+test("hooks run through the launcher, which pins the stable Node link", () => {
+  const { root, claudeDir, configDir, cliPath } = fixture();
+  const pathDir = join(root, "path-bin");
+  mkdirSync(pathDir);
+  const link = join(pathDir, "node");
+  symlinkSync(process.execPath, link);
+  const options = {
+    cliPath,
+    configDir,
+    profileName: "stable",
+    agentAddress: "stable@example.com",
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir, PATH: pathDir },
+    platform: "linux" as const,
+  };
+  assert.equal(installClaudeWakeHook(options), "installed_unverified");
+  const launcher = join(configDir, "bin", "primitive-node");
+  const settings = JSON.parse(
+    readFileSync(join(claudeDir, "settings.json"), "utf8"),
+  );
+  for (const event of ["Stop", "SessionStart", "PostToolUse"]) {
+    const hook = settings.hooks[event].at(-1).hooks[0];
+    assert.equal(hook.command, launcher);
+    assert.equal(hook.args[1], realpathSync(cliPath));
+  }
+  assert.equal(statSync(launcher).mode & 0o777, 0o755);
+  assert.ok(readFileSync(launcher, "utf8").includes(`pinned_node='${link}'`));
   assert.equal(claudeWakeHookStatus(options).installed, true);
 });
 
@@ -590,6 +623,8 @@ test("hook status accepts a Node path that resolves to the running binary", () =
     agentAddress: "mine@example.com",
     sessionId: sessionA,
     env: { CLAUDE_CONFIG_DIR: claudeDir },
+    // Hooks that name Node directly, as on Windows and from older CLIs.
+    platform: "win32" as const,
   };
   assert.equal(
     installClaudeWakeHook({ ...options, cliPath }),
@@ -615,6 +650,39 @@ test("hook status accepts a Node path that resolves to the running binary", () =
     text.replaceAll(JSON.stringify(link), JSON.stringify(other)),
   );
   assert.equal(claudeWakeHookStatus(options).installed, false);
+});
+
+test("reinstalling (as agent connect --resume does) moves a hook pinned to a removed Node onto the launcher", () => {
+  const { claudeDir, configDir, cliPath } = fixture();
+  const settingsPath = join(claudeDir, "settings.json");
+  const options = {
+    cliPath,
+    configDir,
+    profileName: "session-a",
+    agentAddress: "a@example.com",
+    sessionId: sessionA,
+    env: { CLAUDE_CONFIG_DIR: claudeDir },
+    platform: "linux" as const,
+  };
+  assert.equal(installClaudeWakeHook(options), "installed_unverified");
+  const launcher = join(configDir, "bin", "primitive-node");
+  // An older CLI pinned an nvm version that has since been removed.
+  const removed = "/usr/local/nvm/versions/node/v24.21.0/bin/node";
+  writeFileSync(
+    settingsPath,
+    readFileSync(settingsPath, "utf8").replaceAll(
+      JSON.stringify(launcher),
+      JSON.stringify(removed),
+    ),
+  );
+  assert.equal(claudeWakeHookStatus(options).installed, false);
+  assert.equal(installClaudeWakeHook(options), "installed_unverified");
+  const hooks = JSON.parse(readFileSync(settingsPath, "utf8")).hooks;
+  for (const event of ["Stop", "SessionStart", "PostToolUse"]) {
+    assert.equal(hooks[event].length, 1);
+    assert.equal(hooks[event][0].hooks[0].command, launcher);
+  }
+  assert.equal(claudeWakeHookStatus(options).installed, true);
 });
 
 test("uninstall removes only the exact profile and session and is idempotent", () => {

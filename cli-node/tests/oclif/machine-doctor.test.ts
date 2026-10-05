@@ -15,13 +15,17 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { saveCliCredentials } from "../../src/oclif/auth.js";
-import { claudeWakeHookStatus } from "../../src/oclif/claude-wake-install.js";
+import {
+  claudeWakeHookStatus,
+  installClaudeWakeHook,
+} from "../../src/oclif/claude-wake-install.js";
 import { codexHookTrustHash } from "../../src/oclif/codex-machine-hooks.js";
 import {
   agentProfileDirectory,
   type ConnectedAgentProfile,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
+import { hookLauncherWarningPath } from "../../src/oclif/hook-launcher.js";
 import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import {
   type DoctorCheckId,
@@ -65,6 +69,9 @@ function machine(options: { runtimes?: string[] } = {}) {
   const configDir = join(home, ".config", "primitive");
   mkdirSync(bin, { recursive: true });
   mkdirSync(configDir, { recursive: true, mode: 0o700 });
+  // The hook launcher a previous run left in place.
+  mkdirSync(join(configDir, "bin"), { recursive: true });
+  writeFileSync(launcherPath(configDir), "#!/bin/sh\n", { mode: 0o755 });
   for (const file of ["run.js", "claude-wake.mjs", "claude-pending-mail.mjs"])
     writeFileSync(join(bin, file), "", { mode: 0o755 });
   for (const runtime of options.runtimes ?? ["claude", "codex"])
@@ -108,6 +115,10 @@ function machine(options: { runtimes?: string[] } = {}) {
   return { root, home, bin, configDir, options: options_ };
 }
 
+function launcherPath(configDir: string): string {
+  return join(configDir, "bin", "primitive-node");
+}
+
 function byId(report: DoctorReport) {
   return Object.fromEntries(
     report.checks.map((item) => [item.id, item]),
@@ -140,7 +151,7 @@ function wakeHook(
 ) {
   return {
     type: "command",
-    command: process.execPath,
+    command: launcherPath(configDir),
     args: [
       join(bin, "claude-wake.mjs"),
       join(bin, "run.js"),
@@ -676,7 +687,7 @@ describe("primitive machine doctor", () => {
     expect(offline["cli.version"].status).toBe("skip");
   });
 
-  it("refuses to point hooks at a package-runner cache", async () => {
+  it("on Windows refuses to point hooks at a package-runner cache", async () => {
     const { root, options } = machine();
     const npx = join(root, "_npx", "abc", "node_modules", "primitive", "bin");
     mkdirSync(npx, { recursive: true });
@@ -686,6 +697,7 @@ describe("primitive machine doctor", () => {
       await runMachineDoctor({
         ...options,
         cliEntry: join(npx, "run.js"),
+        platform: "win32",
         fix: true,
       }),
     );
@@ -793,6 +805,9 @@ describe("primitive machine doctor", () => {
     // A package manager's bin/node links to the versioned binary that an
     // upgrade replaces.
     const versioned = realpathSync(process.execPath);
+    // Hooks from an older CLI named Node directly; with the launcher in its
+    // place they run through it.
+    rmSync(launcherPath(configDir));
     const pathDir = join(root, "path-bin");
     mkdirSync(pathDir);
     const link = join(pathDir, "node");
@@ -860,7 +875,12 @@ describe("primitive machine doctor", () => {
     });
     const hooks = JSON.parse(readFileSync(settingsPath, "utf8")).hooks;
     for (const event of ["Stop", "SessionStart", "PostToolUse"])
-      expect(hooks[event][0].hooks[0].command).toBe(link);
+      expect(hooks[event][0].hooks[0].command).toBe(launcherPath(configDir));
+    // The launcher pins the stable link, not the versioned binary.
+    expect(readFileSync(launcherPath(configDir), "utf8")).toContain(
+      `pinned_node='${link}'`,
+    );
+    expect(lstatSync(launcherPath(configDir)).mode & 0o777).toBe(0o755);
     const again = byId(await runMachineDoctor({ ...options, env }));
     expect(again["claude.hook.stop"].status).toBe("ok");
   });
@@ -1054,9 +1074,8 @@ describe("primitive machine doctor", () => {
     expect(stop.detail).toContain(
       "Repair failed: Another Primitive command is editing Claude settings",
     );
-    expect(report["claude.hook.session_start"].detail).toContain(
-      "Repair failed",
-    );
+    // Connected per session with no member login: no machine-wide hooks.
+    expect(report["claude.hook.session_start"].status).toBe("skip");
     expect(readFileSync(settingsPath, "utf8")).toBe("{}\n");
   }, 20_000);
 
@@ -1186,7 +1205,7 @@ describe("primitive machine doctor", () => {
         hooks: [
           {
             type: "command",
-            command: process.execPath,
+            command: launcherPath(configDir),
             args: [
               join(bin, "claude-pending-mail.mjs"),
               join(bin, "run.js"),
@@ -1234,7 +1253,7 @@ describe("primitive machine doctor", () => {
     );
     const pending = {
       type: "command",
-      command: process.execPath,
+      command: launcherPath(configDir),
       args: [
         join(bin, "claude-pending-mail.mjs"),
         join(bin, "run.js"),
@@ -1873,3 +1892,200 @@ describe("primitive machine doctor", () => {
     }
   }, 20_000);
 });
+
+describe.runIf(process.platform !== "win32")(
+  "machine doctor after a one-command agent connect",
+  () => {
+    /**
+     * What `npx -y primitive agent connect` leaves on a fresh machine: one
+     * connected profile bound to a Claude session, its receive hooks written
+     * from the npx cache, no member login, and no machine-wide setup. Codex is
+     * installed but was never set up.
+     */
+    function saveMemberLogin(configDir: string) {
+      saveCliCredentials(configDir, {
+        auth_method: "oauth",
+        access_token: ["member", "token"].join("-"),
+        refresh_token: ["inert", "refresh"].join("-"),
+        token_type: "Bearer",
+        expires_at: "2099-01-01T00:00:00.000Z",
+        oauth_grant_id: "grant",
+        oauth_client_id: "fixture",
+        org_id: "33333333-3333-4333-8333-333333333333",
+        org_name: null,
+        api_base_url: "https://api.primitive.dev/v1",
+        created_at: "2026-01-01T00:00:00.000Z",
+      });
+    }
+
+    function connectedFromNpx() {
+      const fixture = machine();
+      const { root, home, configDir, options } = fixture;
+      rmSync(join(configDir, "bin"), { recursive: true, force: true });
+      const npx = join(root, "_npx", "abc", "node_modules", "primitive", "bin");
+      mkdirSync(npx, { recursive: true });
+      for (const file of [
+        "run.js",
+        "claude-wake.mjs",
+        "claude-pending-mail.mjs",
+      ])
+        writeFileSync(join(npx, file), "", { mode: 0o755 });
+      const name = `session-${sessionA}`;
+      saveConnectedAgentProfile(configDir, name, profile("npx@example.test"));
+      writeMailJson(
+        join(agentProfileDirectory(configDir, name), "setup.json"),
+        {
+          session: sessionA,
+          receiverMode: "external",
+        },
+      );
+      expect(
+        installClaudeWakeHook({
+          cliPath: join(npx, "run.js"),
+          configDir,
+          profileName: name,
+          agentAddress: "npx@example.test",
+          sessionId: sessionA,
+          env: { CLAUDE_CONFIG_DIR: join(home, ".claude") },
+        }),
+      ).toBe("installed_unverified");
+      return {
+        ...fixture,
+        npx,
+        name,
+        options: { ...options, cliEntry: join(npx, "run.js") },
+      };
+    }
+
+    it("reports only what connect set up, and exits clean", async () => {
+      const { options } = connectedFromNpx();
+      const report = await runMachineDoctor(options);
+      const checks = byId(report);
+      for (const id of [
+        "auth.member_login",
+        "claude.hook.session_start",
+        "claude.hook.session_end",
+        "claude.instructions",
+        "codex.hook.session_start",
+        "codex.instructions",
+        "skill.claude",
+        "skill.codex",
+      ] as const)
+        expect(checks[id], id).toMatchObject({
+          status: "skip",
+          fixable: false,
+        });
+      expect(checks["claude.hook.session_start"].detail).toContain(
+        "primitive login",
+      );
+      // Hooks run through the launcher, so an npx install is not a problem.
+      expect(checks["cli.path_stable"].status).toBe("ok");
+      expect(checks["cli.path_stable"].detail).toContain("primitive-node");
+      expect(checks["claude.hook.stop"].status).toBe("ok");
+      expect(report.summary.fail).toBe(0);
+      expect(report.summary.warn).toBe(0);
+    });
+
+    it("--fix adds no machine-wide setup the machine does not use", async () => {
+      const { home, options } = connectedFromNpx();
+      const settingsPath = join(home, ".claude", "settings.json");
+      const before = readFileSync(settingsPath, "utf8");
+      const report = await runMachineDoctor({ ...options, fix: true });
+      expect(report.fixedCount).toBe(0);
+      expect(readFileSync(settingsPath, "utf8")).toBe(before);
+      expect(existsSync(join(home, ".claude", "CLAUDE.md"))).toBe(false);
+    });
+
+    it("still checks machine-wide setup once a member login is saved", async () => {
+      const { configDir, options } = connectedFromNpx();
+      saveMemberLogin(configDir);
+      const checks = byId(await runMachineDoctor(options));
+      expect(checks["claude.hook.session_start"]).toMatchObject({
+        status: "fail",
+        fixable: true,
+      });
+      expect(checks["claude.instructions"].status).toBe("fail");
+    });
+
+    it("reports a hook pinned to a removed Node as outdated, never also missing, and --fix moves it to the launcher", async () => {
+      const { home, configDir, npx, name, options } = connectedFromNpx();
+      const settingsPath = join(home, ".claude", "settings.json");
+      // Written by an older CLI that named an nvm version since removed.
+      const removed = "/usr/local/nvm/versions/node/v24.21.0/bin/node";
+      const launcher = launcherPath(configDir);
+      writeFileSync(
+        settingsPath,
+        readFileSync(settingsPath, "utf8").replaceAll(
+          JSON.stringify(launcher),
+          JSON.stringify(removed),
+        ),
+      );
+      const before = byId(await runMachineDoctor(options))["claude.hook.stop"];
+      expect(before.status).toBe("fail");
+      expect(before.detail).toContain("3 pointing at an old CLI path");
+      expect(before.detail).not.toContain("missing");
+      expect(before.items?.map((item) => item.state)).toEqual([
+        "outdated",
+        "outdated",
+        "outdated",
+      ]);
+      const fixed = byId(await runMachineDoctor({ ...options, fix: true }));
+      expect(fixed["claude.hook.stop"]).toMatchObject({
+        status: "ok",
+        fixed: true,
+      });
+      const hooks = JSON.parse(readFileSync(settingsPath, "utf8")).hooks;
+      for (const event of ["Stop", "SessionStart", "PostToolUse"]) {
+        expect(hooks[event]).toHaveLength(1);
+        expect(hooks[event][0].hooks[0].command).toBe(launcher);
+        expect(hooks[event][0].hooks[0].args[3]).toBe(name);
+        expect(hooks[event][0].hooks[0].args[1]).toBe(join(npx, "run.js"));
+      }
+      expect(lstatSync(launcher).mode & 0o111).not.toBe(0);
+    });
+
+    it("rewrites a deleted launcher", async () => {
+      const { configDir, options } = connectedFromNpx();
+      rmSync(launcherPath(configDir));
+      const before = byId(await runMachineDoctor(options))["claude.hook.stop"];
+      expect(before).toMatchObject({ status: "fail", fixable: true });
+      const fixed = byId(await runMachineDoctor({ ...options, fix: true }));
+      expect(fixed["claude.hook.stop"]).toMatchObject({
+        status: "ok",
+        fixed: true,
+      });
+      expect(readFileSync(launcherPath(configDir), "utf8")).toContain(
+        "primitive-hook-launcher-v1",
+      );
+    });
+
+    it("surfaces the warning the launcher wrote when it found no Node", async () => {
+      const { configDir, options } = connectedFromNpx();
+      writeFileSync(
+        hookLauncherWarningPath(configDir),
+        "Primitive wake hooks could not find Node.js.\n",
+      );
+      const stop = byId(await runMachineDoctor(options))["claude.hook.stop"];
+      expect(stop.status).toBe("warn");
+      expect(stop.detail).toContain(
+        "The last hook run reported: Primitive wake hooks could not find Node.js.",
+      );
+    });
+
+    it("warns that the Codex hook still needs a stable install when Codex is set up from npx", async () => {
+      const { home, configDir, options } = connectedFromNpx();
+      saveMemberLogin(configDir);
+      const checks = byId(await runMachineDoctor(options));
+      expect(checks["cli.path_stable"]).toMatchObject({
+        status: "warn",
+        action: "install_cli",
+      });
+      expect(checks["codex.hook.session_start"]).toMatchObject({
+        status: "fail",
+        fixable: false,
+        action: "install_cli",
+      });
+      expect(existsSync(join(home, ".codex", "hooks.json"))).toBe(false);
+    });
+  },
+);

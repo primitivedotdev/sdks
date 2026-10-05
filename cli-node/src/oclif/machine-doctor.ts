@@ -17,9 +17,11 @@ import {
   boundSessionProfiles,
   claudeConfigDir,
   currentCliLocation,
+  ensureHookLauncher,
   ephemeralCliReason,
   findOnPath,
   type HookCheckId,
+  hasMachineSessionHooks,
   inspectClaudeHooks,
   readClaudeSettings,
   repairClaudeHooks,
@@ -29,6 +31,7 @@ import {
   writeClaudeSettings,
 } from "./claude-machine-hooks.js";
 import {
+  hasCodexSessionHook,
   inspectCodexHook,
   readCodexHooks,
   repairCodexHook,
@@ -49,6 +52,7 @@ import {
   type ConnectedAgentProfile,
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
+import { readHookLauncherWarning } from "./hook-launcher.js";
 import {
   type BackgroundListenStatus,
   type BackgroundListenTarget,
@@ -196,6 +200,8 @@ export type MachineDoctorOptions = {
   /** process.argv[1] of the running CLI. */
   cliEntry: string;
   execPath?: string;
+  /** Platform hooks are written for; Windows hooks name Node directly. */
+  platform?: NodeJS.Platform;
   minCliVersion?: string;
   fetch?: typeof fetch;
   now?: () => Date;
@@ -439,6 +445,32 @@ async function ownerConnectionStatuses(
   return partial();
 }
 
+/** Whether any saved agent profile still holds a credential. */
+function connectedProfileSaved(configDir: string): boolean {
+  let names: string[];
+  try {
+    names = readdirSync(join(agentProfilesDirectory(configDir), "profiles"));
+  } catch {
+    return false;
+  }
+  return names.some((name) => {
+    try {
+      agentProfileName(name);
+      return loadConnectedAgentProfile(configDir, name) !== null;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * Why a machine-wide check does not apply: agents on this machine were
+ * connected one session at a time with `agent connect`, and no member login
+ * (which machine-wide session registration needs) is saved.
+ */
+const PER_CONNECTION_SKIP =
+  "Not set up: agents on this machine were connected one session at a time with `primitive agent connect`, which does not need it. To register every session on this machine automatically, sign in with `primitive login`, then run `primitive machine doctor --fix`.";
+
 type CheckRunner = {
   inspect: () => Promise<DoctorCheck> | DoctorCheck;
   repair?: (check: DoctorCheck) => Promise<boolean> | boolean;
@@ -480,13 +512,38 @@ export async function runMachineDoctor(
       : !present[runtime]
         ? `${runtime === "claude" ? "Claude Code" : runtime === "codex" ? "Codex" : "omp"} was not found on this machine.`
         : null;
-  const cli = currentCliLocation(options.cliEntry, env, options.execPath);
+  const cli = currentCliLocation(options.cliEntry, env, options.execPath, {
+    configDir: options.configDir,
+    platform: options.platform,
+  });
   const ephemeral = cli ? ephemeralCliReason(cli.entry) : null;
+  const ephemeralBlocked = ephemeral
+    ? `This CLI runs from ${ephemeral}, which can be deleted; install it with \`npm install -g primitive\` before repairing hooks.`
+    : null;
+  // Claude hooks run through the hook launcher, which finds another copy of
+  // the CLI when a package-runner cache is cleaned, so only a missing CLI or
+  // a platform without the launcher blocks repairing them. Codex hooks name
+  // the CLI directly.
   const hookBlocked = !cli
     ? "This CLI's hook scripts were not found next to it."
-    : ephemeral
-      ? `This CLI runs from ${ephemeral}, which can be deleted; install it with \`npm install -g primitive\` before repairing hooks.`
-      : null;
+    : cli.launcher
+      ? null
+      : ephemeralBlocked;
+  const codexBlocked = !cli
+    ? "This CLI's hook scripts were not found next to it."
+    : ephemeralBlocked;
+  // Machine-wide setup (member login, session hooks, instruction blocks) is
+  // only checked when it is in use or could be: a machine whose agents were
+  // all connected per session, with no member login, has none of it by design.
+  const memberLoginSaved = (() => {
+    try {
+      return loadCliCredentials(options.configDir) !== null;
+    } catch {
+      return true;
+    }
+  })();
+  const perConnection =
+    !memberLoginSaved && connectedProfileSaved(options.configDir);
   const skillEnv = {
     ...env,
     CLAUDE_CONFIG_DIR: paths.claudeDir,
@@ -523,6 +580,12 @@ export async function runMachineDoctor(
           path: target,
           action: "edit_file",
         });
+      if (
+        perConnection &&
+        (read.state === "absent" ||
+          inspectManagedBlock(read.text, body).state === "missing")
+      )
+        return check(id, "skip", PER_CONNECTION_SKIP, { path: target });
       if (read.state === "absent")
         return check(id, "fail", `${target} does not exist yet.`, {
           path: target,
@@ -585,6 +648,8 @@ export async function runMachineDoctor(
       } catch {
         info = null;
       }
+      if (!info && perConnection)
+        return check(id, "skip", PER_CONNECTION_SKIP, { path: target });
       if (!info)
         return check(id, "fail", `Not installed at ${target}.`, {
           path: target,
@@ -676,9 +741,29 @@ export async function runMachineDoctor(
           "Claude settings.json is invalid; repair it first.",
           { path: join(paths.claudeDir, "settings.json") },
         );
+      if (
+        perConnection &&
+        id !== "claude.hook.stop" &&
+        !hasMachineSessionHooks(settingsRead.settings)
+      )
+        return check(id, "skip", PER_CONNECTION_SKIP, {
+          path: join(paths.claudeDir, "settings.json"),
+        });
       const finding = inspectClaudeHooks(settingsRead.settings, hookContext)[
         id
       ];
+      // The launcher records when it last found no Node or CLI to run.
+      const launcherWarning =
+        id === "claude.hook.stop" && cli?.launcher
+          ? readHookLauncherWarning(options.configDir)
+          : null;
+      if (launcherWarning && finding.status === "ok")
+        return check(
+          id,
+          "warn",
+          `${finding.detail} The last hook run reported: ${launcherWarning}`,
+          { path: join(paths.claudeDir, "settings.json") },
+        );
       return check(id, finding.status, finding.detail, {
         fixable: finding.fixable,
         path: join(paths.claudeDir, "settings.json"),
@@ -709,8 +794,13 @@ export async function runMachineDoctor(
       if (!settingsRead.ok) return false;
       // Repair every wanted, failing hook check in one backed-up write.
       const findings = inspectClaudeHooks(settingsRead.settings, hookContext);
+      // Machine-wide session hooks a per-connection machine does not use
+      // are skipped, so a repair never adds them either.
+      const machineHooksSkipped =
+        perConnection && !hasMachineSessionHooks(settingsRead.settings);
       const ids = HOOK_CHECK_IDS.filter(
         (hook) =>
+          (hook === "claude.hook.stop" || !machineHooksSkipped) &&
           (hook === id || !options.only || options.only.has(hook)) &&
           findings[hook].status === "fail" &&
           findings[hook].fixable,
@@ -722,6 +812,15 @@ export async function runMachineDoctor(
         { profiles: options.profiles },
       );
       if (!repaired.changed.size) return false;
+      // Hooks run through the launcher, so it is in place before they name it.
+      if (cli && hookBlocked === null)
+        try {
+          ensureHookLauncher(cli);
+        } catch {
+          throw new MachineFileError(
+            `The hook launcher ${cli.launcher?.path ?? ""} could not be written.`,
+          );
+        }
       // A failed write throws before anything is recorded, so no later check
       // reports a change that was never saved.
       writeClaudeSettings({
@@ -748,23 +847,25 @@ export async function runMachineDoctor(
           path: read.path,
           action: "edit_file",
         });
+      if (perConnection && !hasCodexSessionHook(read.settings))
+        return check(id, "skip", PER_CONNECTION_SKIP, { path: read.path });
       const configToml = readManagedFile(join(paths.codexHome, "config.toml"));
       const finding = inspectCodexHook(
         read,
-        hookContext,
+        { cli, blocked: codexBlocked },
         configToml.state === "present" ? configToml.text : null,
       );
       return check(id, finding.status, finding.detail, {
         fixable: finding.fixable,
         path: read.path,
-        ...(finding.status === "fail" && !finding.fixable && hookBlocked
+        ...(finding.status === "fail" && !finding.fixable && codexBlocked
           ? { action: "install_cli" as const }
           : {}),
       });
     },
     repair: () => {
       const read = readCodexHooks(paths.codexHome);
-      if (!read.ok || !cli || hookBlocked) return false;
+      if (!read.ok || !cli || codexBlocked) return false;
       const repaired = repairCodexHook(read.settings, cli);
       if (!repaired.changed) return false;
       writeCodexHooks({ read: read.read, settings: repaired.settings, now });
@@ -1014,13 +1115,35 @@ export async function runMachineDoctor(
             "The running CLI's files could not be located.",
             { action: "install_cli" },
           );
-        if (ephemeral)
+        if (ephemeral && !cli.launcher)
           return check(
             "cli.path_stable",
             "fail",
             `This CLI runs from ${ephemeral}; hooks pointing at it would break. Install it globally with \`npm install -g primitive\`.`,
             { action: "install_cli", path: cli.entry },
           );
+        if (ephemeral) {
+          const launcherNote = `This CLI runs from ${ephemeral}. Claude Code hooks run through ${cli.launcher?.path}, which uses the \`primitive\` on PATH or fetches this version again with npx if the cache is removed.`;
+          // Codex hooks name the CLI directly, so they still need a stable
+          // install when this machine has (or is getting) one.
+          const codexRead = readCodexHooks(paths.codexHome);
+          const codexInUse =
+            selected("codex") &&
+            present.codex &&
+            !(
+              perConnection &&
+              codexRead.ok &&
+              !hasCodexSessionHook(codexRead.settings)
+            );
+          return codexInUse
+            ? check(
+                "cli.path_stable",
+                "warn",
+                `${launcherNote} The Codex SessionStart hook names the CLI directly; install it globally with \`npm install -g primitive\` so that hook keeps working.`,
+                { action: "install_cli", path: cli.entry },
+              )
+            : check("cli.path_stable", "ok", launcherNote, { path: cli.entry });
+        }
         const onPath = findOnPath("primitive", env);
         if (onPath && !samePath(onPath, cli.entry))
           return check(
@@ -1051,12 +1174,18 @@ export async function runMachineDoctor(
           );
         }
         if (!saved)
-          return check(
-            "auth.member_login",
-            "fail",
-            "No saved member login on this machine.",
-            { action: "login" },
-          );
+          return perConnection
+            ? check(
+                "auth.member_login",
+                "skip",
+                "No member login is saved. Agents on this machine were connected with `primitive agent connect` and use their own saved credentials; sign in with `primitive login` only to register every session on this machine automatically.",
+              )
+            : check(
+                "auth.member_login",
+                "fail",
+                "No saved member login on this machine.",
+                { action: "login" },
+              );
         let credentials: StoredCliCredentials;
         try {
           credentials = await refreshStoredCliCredentials({
