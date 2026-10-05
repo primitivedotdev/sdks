@@ -4879,6 +4879,14 @@ type ConversationMessage struct {
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilConversationMessageSenderMember `json:"sender_member"`
+	// Outbound messages only. True when the send was an informational signal (a read, working or typing
+	// signal, or an acknowledgement) and nothing else, so it is not a reply that takes part in the
+	// conversation. Absent on inbound messages. Older servers omit it.
+	Fyi OptBool `json:"fyi"`
+	// Outbound messages only. How to place this send in a timeline: `status` (a pure status signal),
+	// `card` or `none`. Not declared as a closed enum so that a value added later does not fail decoding;
+	//  treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.
+	InteractionHint OptString `json:"interaction_hint"`
 }
 
 // GetRole returns the value of Role.
@@ -4946,6 +4954,16 @@ func (s *ConversationMessage) GetSenderMember() OptNilConversationMessageSenderM
 	return s.SenderMember
 }
 
+// GetFyi returns the value of Fyi.
+func (s *ConversationMessage) GetFyi() OptBool {
+	return s.Fyi
+}
+
+// GetInteractionHint returns the value of InteractionHint.
+func (s *ConversationMessage) GetInteractionHint() OptString {
+	return s.InteractionHint
+}
+
 // SetRole sets the value of Role.
 func (s *ConversationMessage) SetRole(val ConversationMessageRole) {
 	s.Role = val
@@ -5009,6 +5027,16 @@ func (s *ConversationMessage) SetRepeat(val OptNilConversationMessageRepeat) {
 // SetSenderMember sets the value of SenderMember.
 func (s *ConversationMessage) SetSenderMember(val OptNilConversationMessageSenderMember) {
 	s.SenderMember = val
+}
+
+// SetFyi sets the value of Fyi.
+func (s *ConversationMessage) SetFyi(val OptBool) {
+	s.Fyi = val
+}
+
+// SetInteractionHint sets the value of InteractionHint.
+func (s *ConversationMessage) SetInteractionHint(val OptString) {
+	s.InteractionHint = val
 }
 
 // `inbound` for a received email (`/emails/{id}`), `outbound`
@@ -43338,6 +43366,14 @@ type ThreadMessage struct {
 	// Verified human authorship, projected only within the member organization. Historical attribution
 	// is not current sending or owner authority.
 	SenderMember OptNilThreadMessageSenderMember `json:"sender_member"`
+	// Outbound messages only. True when the send was an informational signal (a read, working or typing
+	// signal, or an acknowledgement) and nothing else, so it is not a reply that takes part in the
+	// conversation. Absent on inbound messages. Older servers omit it.
+	Fyi OptBool `json:"fyi"`
+	// Outbound messages only. How to place this send in a timeline: `status` (a pure status signal),
+	// `card` or `none`. Not declared as a closed enum so that a value added later does not fail decoding;
+	//  treat an unknown value as `none`. Absent on inbound messages. Older servers omit it.
+	InteractionHint OptString `json:"interaction_hint"`
 }
 
 // GetDirection returns the value of Direction.
@@ -43390,6 +43426,16 @@ func (s *ThreadMessage) GetSenderMember() OptNilThreadMessageSenderMember {
 	return s.SenderMember
 }
 
+// GetFyi returns the value of Fyi.
+func (s *ThreadMessage) GetFyi() OptBool {
+	return s.Fyi
+}
+
+// GetInteractionHint returns the value of InteractionHint.
+func (s *ThreadMessage) GetInteractionHint() OptString {
+	return s.InteractionHint
+}
+
 // SetDirection sets the value of Direction.
 func (s *ThreadMessage) SetDirection(val ThreadMessageDirection) {
 	s.Direction = val
@@ -43438,6 +43484,16 @@ func (s *ThreadMessage) SetRepeat(val OptNilThreadMessageRepeat) {
 // SetSenderMember sets the value of SenderMember.
 func (s *ThreadMessage) SetSenderMember(val OptNilThreadMessageSenderMember) {
 	s.SenderMember = val
+}
+
+// SetFyi sets the value of Fyi.
+func (s *ThreadMessage) SetFyi(val OptBool) {
+	s.Fyi = val
+}
+
+// SetInteractionHint sets the value of InteractionHint.
+func (s *ThreadMessage) SetInteractionHint(val OptString) {
+	s.InteractionHint = val
 }
 
 // `inbound` for a received email (`/emails/{id}`), `outbound`

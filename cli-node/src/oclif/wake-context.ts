@@ -163,9 +163,18 @@ export async function readThreadContext(
 }
 
 /**
+ * True when the server marks an outbound message as a pure status signal
+ * (`fyi`, or an `interaction_hint` of `status`). Older servers omit both.
+ */
+function isServerSignal(message: ThreadMessage): boolean {
+  return message.fyi === true || message.interaction_hint === "status";
+}
+
+/**
  * Whether `self` has an outbound message in the thread; undefined if
- * unknowable. `isOwnSignal` excludes signals this CLI sent on the agent's
- * behalf (automatic Read or Working), which are not the agent taking part.
+ * unknowable. Status signals are not the agent taking part: those the server
+ * marks as such, and those `isOwnSignal` recognizes from this CLI's local
+ * record (automatic Read or Working), which covers older servers.
  */
 export function sentInThread(
   context: ThreadContext | null,
@@ -179,6 +188,7 @@ export function sentInThread(
       (message) =>
         message.direction === "outbound" &&
         bareAddress(message.from) === address &&
+        !isServerSignal(message) &&
         !isOwnSignal?.(message.id),
     )
   )
