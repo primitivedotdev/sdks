@@ -135,6 +135,8 @@ describe("agent check-mail", () => {
     expect(h.queries[0].get("exclude_fyi")).toBe("true");
     expect(h.queries[0].get("exclude_muted")).toBe("true");
     expect(first).toEqual({
+      // One line ahead of the batch, not repeated per email.
+      guidance: "Load the primitive-connect skill first if it is not loaded.",
       outcome: "mail",
       emails: [
         {
@@ -165,6 +167,8 @@ describe("agent check-mail", () => {
     const second = await h.check();
     expect(h.queries[2].get("since")).toBe("c1");
     expect(second.outcome).toBe("empty");
+    // Nothing to handle, so no instruction to load anything.
+    expect(second).not.toHaveProperty("guidance");
     expect(h.savedCursor()).toBe("c1");
   });
 

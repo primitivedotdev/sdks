@@ -46,6 +46,7 @@ import { notificationReceiptPage } from "../notify-session-state.js";
 import { readMailJson } from "../shared-mail-files.js";
 import {
   formatWakeContext,
+  skillFirstLine,
   wakeReadCommand,
   wakeRecipientField,
 } from "../wake-context.js";
@@ -853,8 +854,11 @@ export default class ListenCommand extends Command {
       const context = wake.context?.();
       const metadata = context ? ` ${formatWakeContext(context)}` : "";
       const interaction = wakeInteractionSentence(context?.interaction);
+      // Verified mail is handled under the skill's rules; an agent acts on
+      // this line even when it has not loaded them yet.
+      const skillFirst = skillFirstLine(relation ?? context?.relationship);
       process.stderr.write(
-        `Primitive mail arrived: ${wake.wakeId()}${recipient}${metadata}. Read with ${wakeReadCommand(wake.wakeId() ?? "", hookProfileName)}.${interaction} ${authority}\n`,
+        `${skillFirst ? `${skillFirst}\n` : ""}Primitive mail arrived: ${wake.wakeId()}${recipient}${metadata}. Read with ${wakeReadCommand(wake.wakeId() ?? "", hookProfileName)}.${interaction} ${authority}\n`,
       );
       process.exitCode = 2;
       // Detached and silent: the wake line and exit status are already final.

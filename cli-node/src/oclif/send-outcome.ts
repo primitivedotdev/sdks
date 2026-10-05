@@ -230,8 +230,35 @@ export function formatPriorRepliesCheckSkipped(
 }
 
 export type PriorRepliesCheck =
-  | { status: "checked"; prior: EmailDetailReply[]; detail?: EmailDetail }
+  | {
+      status: "checked";
+      prior: EmailDetailReply[];
+      /**
+       * Automatic status signals (read, working) and fyi acknowledgements
+       * this CLI sent to the same email. They are not answers, so they are
+       * counted here and left out of `prior`.
+       */
+      signals?: number;
+      detail?: EmailDetail;
+    }
   | { status: "skipped"; reason: string };
+
+/**
+ * Whether a reply entry is a status signal rather than an answer. The API's
+ * own marking wins when it carries one; otherwise the CLI's private record
+ * of the signals it sent decides.
+ */
+export function isSignalReply(
+  reply: EmailDetailReply,
+  isLocalSignal: (sentId: string) => boolean,
+): boolean {
+  const marked = reply as EmailDetailReply & {
+    interaction_hint?: unknown;
+    fyi?: unknown;
+  };
+  if (marked.interaction_hint === "status" || marked.fyi === true) return true;
+  return isLocalSignal(reply.id);
+}
 
 type EmailFetchClient = Parameters<typeof getEmail>[0]["client"];
 
@@ -244,6 +271,8 @@ type EmailFetchClient = Parameters<typeof getEmail>[0]["client"];
 export async function checkPriorReplies(params: {
   client: EmailFetchClient;
   emailId: string;
+  /** Recognizes a send ID as one of this CLI's own status signals. */
+  isLocalSignal?: (sentId: string) => boolean;
 }): Promise<PriorRepliesCheck> {
   try {
     const result = await getEmail({
@@ -274,9 +303,15 @@ export async function checkPriorReplies(params: {
         reason: "the email lookup returned no reply history",
       };
     }
+    const wentOut = priorRepliesThatWentOut(detail.replies);
+    const isLocalSignal = params.isLocalSignal ?? (() => false);
+    const prior = wentOut.filter(
+      (reply) => !isSignalReply(reply, isLocalSignal),
+    );
     return {
       status: "checked",
-      prior: priorRepliesThatWentOut(detail.replies),
+      prior,
+      signals: wentOut.length - prior.length,
       detail,
     };
   } catch (error) {
@@ -361,6 +396,14 @@ export function assertValidIdempotencyKey(key: string): string {
     );
   }
   return key;
+}
+
+/** The longest delivery wait the send endpoint accepts. */
+export const MAX_SEND_WAIT_TIMEOUT_MS = 30_000;
+
+/** Says a requested delivery wait was shortened, and how to wait for a reply. */
+export function sendWaitClampNotice(requestedMs: number): string {
+  return `--wait-timeout-ms ${requestedMs} is longer than the ${MAX_SEND_WAIT_TIMEOUT_MS}ms the server allows, so the delivery wait uses ${MAX_SEND_WAIT_TIMEOUT_MS}ms. --wait covers delivery only; to wait for a reply, run \`primitive emails wait --reply-to-sent-email-id <sent id> --from <recipient> --timeout ${Math.ceil(requestedMs / 1000)}\` after this send.`;
 }
 
 // Fields that change how long the CLI waits, not what is sent. They

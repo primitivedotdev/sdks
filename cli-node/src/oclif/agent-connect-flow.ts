@@ -14,6 +14,7 @@ import {
   agentConnectionStatus,
   parseAgentInvitation,
 } from "./agent-connect.js";
+import { defaultConnectionName } from "./agent-identity-suggestions.js";
 import {
   externalReceivingState,
   nativeSessionPreflight,
@@ -717,6 +718,16 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     ownerAddress: result.identity.ownerAddress,
     ownerMemberAddress,
     profile: result.identity.profileName,
+    // Known only when this run claimed the invitation; a resume omits both.
+    ...(result.connectionName === undefined
+      ? {}
+      : {
+          name: result.connectionName,
+          nameIsDefault: defaultConnectionName(
+            result.connectionName,
+            result.identity.agentAddress,
+          ),
+        }),
     sessionId: session ?? null,
     runtime,
     cli: {

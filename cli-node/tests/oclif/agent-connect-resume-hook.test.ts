@@ -591,3 +591,84 @@ it("agent connect --json prints one document reporting verification and nothing 
   expect(stderr).toEqual([]);
   expect(mocks.installClaudeWakeHook).toHaveBeenCalledOnce();
 });
+
+it("agent connect tells the agent what to do next when a connection completes", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  process.env.CODEX_THREAD_ID = session;
+  mocks.readAgentInvitation.mockResolvedValue(
+    "https://api.primitive.dev/v1/agent-connections/setup#token=secret",
+  );
+  mocks.setupAgent.mockResolvedValue({
+    identity: {
+      profileName: `session-${session}`,
+      agentAddress: "codex-1@example.com",
+      orgId: "22222222-2222-4222-8222-222222222222",
+      ownerAddress: "owner@example.com",
+      apiBaseUrl: "https://api.primitive.dev/v1",
+    },
+    connectionName: "codex-1",
+    sessionId: session,
+    verification: { state: "verified", verifiedAt: null },
+    receiving: { state: "poll" },
+    ownerNotifications: "enabled",
+    resumeCommand: "primitive agent connect --resume",
+    guidance: "Primitive verified this connection.",
+  });
+  const argv = ["--session", session, "--receiver", "poll", "--no-skill"];
+  await AgentConnectCommand.run([...argv, "--json"], { root });
+  const output = JSON.parse(outputs[0] ?? "");
+  expect(output).toMatchObject({
+    status: "connected",
+    name: "codex-1",
+    nameIsDefault: true,
+  });
+  expect(output.suggestions.map((s: { kind: string }) => s.kind)).toEqual([
+    "rename",
+    "runtime_note",
+  ]);
+  expect(output.nextSteps).toHaveLength(3);
+  expect(output.nextSteps[0]).toMatch(
+    /^Report to the owner in two short sentences: that this agent is connected as codex-1@example\.com/,
+  );
+  expect(output.nextSteps[1]).toContain('generated name "codex-1"');
+  expect(output.nextSteps[2]).toBe(
+    "Load the primitive-connect skill before handling any mail.",
+  );
+  expect(output.guidance).toContain(`Next: ${output.nextSteps[0]}`);
+
+  outputs.length = 0;
+  await AgentConnectCommand.run(argv, { root });
+  const text = outputs.join("\n");
+  expect(text).toContain("Next steps:\n1. Report to the owner");
+  expect(text).toContain("\n3. Load the primitive-connect skill");
+});
+
+it("agent enroll tells the agent what to do next when pairing completes", async () => {
+  const outputs: string[] = [];
+  vi.spyOn(AgentEnrollCommand.prototype, "log").mockImplementation((line) => {
+    outputs.push(String(line));
+  });
+  mocks.enrollAgent.mockResolvedValue({
+    identity: {
+      profileName: `session-${session}`,
+      agentAddress: "enrolled@example.com",
+    },
+    name: "Coding agent",
+    connection: { status: "connected" },
+    verification: { state: "verified" },
+    receiving: { state: "healthy" },
+    contactRequestPolicy: "not_requested",
+    guidance: "Pairing verified.",
+  });
+  await AgentEnrollCommand.run(["--session", session, "--json"], { root });
+  const output = JSON.parse(outputs[0] ?? "");
+  expect(output.nameIsDefault).toBe(true);
+  expect(output.nextSteps[0]).toContain(
+    "a background listener receives new mail",
+  );
+  expect(output.nextSteps[1]).toContain('generated name "Coding agent"');
+  expect(output.guidance).toMatch(/^Pairing verified\. Next: Report/);
+});

@@ -36,6 +36,8 @@ const UNCERTAIN_CLAIM =
   "Setup did not complete safely. The invitation may have been consumed. Request a fresh invitation from the owner; do not retry this invitation.";
 const INVITATION_UNAVAILABLE =
   "This invitation was already used, has expired, or was revoked, so it cannot connect this agent. Ask the owner to copy a fresh setup instruction from the app. Nothing was changed on this machine.";
+const INVITATION_ATTEMPTED_HERE =
+  "An earlier setup on this machine already submitted this invitation and did not finish, so it was not submitted again; it may already be used. Ask the owner to copy a fresh setup instruction from the app. Nothing was changed on this machine.";
 const INVITATION_INVALID =
   "Primitive rejected this invitation as invalid. Ask the owner to copy a fresh setup instruction from the app. Nothing was changed on this machine.";
 
@@ -49,6 +51,8 @@ export class AgentInvitationRejectedError extends AgentConnectionSetupError {
     message: string,
     readonly reason:
       | "invitation_unavailable"
+      | "invitation_used_here"
+      | "invitation_attempted_here"
       | "invitation_invalid"
       | "rate_limited",
   ) {
@@ -125,6 +129,53 @@ async function definiteClaimRefusal(
 
 type Invitation = { token: string; apiBaseUrl: string };
 
+/** The message for an invitation another profile on this machine already claimed. */
+export function invitationUsedHereMessage(address: string | null): string {
+  return `This invitation was already used on this machine${address ? ` to connect ${address}` : ""} under another profile, so it cannot connect this agent. Ask the owner to copy a fresh setup instruction from the app. Nothing was changed on this machine.`;
+}
+
+/**
+ * A local record says this invitation was submitted before. It is never
+ * submitted again: the claim is one-use, and a second submission could not
+ * recover a credential lost with an earlier response. The refusal names the
+ * address when the earlier attempt finished, and is a definite local refusal
+ * either way, so a caller may discard whatever it created for this run.
+ */
+function earlierAttemptRefusal(
+  configDir: string,
+  journal: unknown,
+  invitationHash: string,
+): AgentInvitationRejectedError {
+  const record = journal as {
+    profile_name?: unknown;
+    status?: unknown;
+    agent_address?: unknown;
+  } | null;
+  let address: string | null = null;
+  if (record?.status === "claimed" && typeof record.agent_address === "string")
+    address = record.agent_address;
+  else if (typeof record?.profile_name === "string") {
+    try {
+      const earlier = loadConnectedAgentProfile(configDir, record.profile_name);
+      // Records written before claims were marked complete stay "attempted"
+      // even after success; the saved profile shows the claim finished.
+      if (earlier?.invitation_hash === invitationHash)
+        address = earlier.agent_address;
+    } catch {
+      /* Unreadable: report the attempt as unfinished. */
+    }
+  }
+  return address !== null || record?.status === "claimed"
+    ? new AgentInvitationRejectedError(
+        invitationUsedHereMessage(address),
+        "invitation_used_here",
+      )
+    : new AgentInvitationRejectedError(
+        INVITATION_ATTEMPTED_HERE,
+        "invitation_attempted_here",
+      );
+}
+
 /** Removes a directory only when it is empty. Best effort. */
 export function removeEmptyDirectory(path: string): void {
   try {
@@ -136,7 +187,29 @@ export function removeEmptyDirectory(path: string): void {
 export type AgentConnectResult = {
   status: "claimed" | "already_configured";
   identity: ConnectedAgentIdentity;
+  /** The connection's display name, when this run's claim reported one. */
+  name?: string;
 };
+
+/** The display name a claim response reports, or undefined when unusable. */
+function claimedConnectionName(value: unknown): string | undefined {
+  const name = (value as { data?: { connection?: { name?: unknown } } } | null)
+    ?.data?.connection?.name;
+  if (typeof name !== "string") return undefined;
+  const trimmed = name.trim();
+  const printable = Array.from(trimmed).every((character) => {
+    const code = character.charCodeAt(0);
+    return (
+      code >= 32 &&
+      !(code >= 127 && code <= 159) &&
+      code !== 0x2028 &&
+      code !== 0x2029
+    );
+  });
+  return trimmed.length > 0 && trimmed.length <= 80 && printable
+    ? trimmed
+    : undefined;
+}
 
 /** The receiver a saved profile's setup record names. Offline. */
 export function savedReceiver(
@@ -522,16 +595,24 @@ export async function connectAgent(params: {
         identity: connectedAgentIdentity(profileName, existing),
       };
     }
+    const journal = join(directory, "claims", `${invitationHash}.json`);
+    privateMailDirectory(join(directory, "claims"), true);
+    // Checked before this run creates a profile directory, so a refusal
+    // leaves nothing behind.
+    let earlier: unknown;
+    try {
+      earlier = readMailJson(journal);
+    } catch {
+      throw new AgentConnectionSetupError(UNCERTAIN_CLAIM);
+    }
+    if (earlier !== null)
+      throw earlierAttemptRefusal(params.configDir, earlier, invitationHash);
     privateMailDirectory(join(directory, "profiles"), true);
     const profileDirectory = agentProfileDirectory(
       params.configDir,
       profileName,
     );
     privateMailDirectory(profileDirectory, true);
-    const journal = join(directory, "claims", `${invitationHash}.json`);
-    privateMailDirectory(join(directory, "claims"), true);
-    if (readMailJson(journal) !== null)
-      throw new AgentConnectionSetupError(UNCERTAIN_CLAIM);
     // Durable before dispatch. A crash or lost response must not replay a one-use claim.
     writeMailJson(journal, {
       version: 1,
@@ -573,16 +654,30 @@ export async function connectAgent(params: {
         removeEmptyDirectory(profileDirectory);
         throw refusal;
       }
+      const body = await readClaimResponse(response);
       const profile = profileFromClaim(
-        await readClaimResponse(response),
+        body,
         invitation,
         invitationHash,
         params.now ?? Date.now,
       );
+      const name = claimedConnectionName(body);
       saveConnectedAgentProfile(params.configDir, profileName, profile);
+      // Lets a later run with the same invitation say plainly where it went.
+      try {
+        writeMailJson(journal, {
+          version: 1,
+          profile_name: profileName,
+          status: "claimed",
+          agent_address: profile.agent_address,
+        });
+      } catch {
+        /* The saved profile still identifies the finished claim. */
+      }
       return {
         status: "claimed",
         identity: connectedAgentIdentity(profileName, profile),
+        ...(name === undefined ? {} : { name }),
       };
     } catch (error) {
       if (error instanceof AgentInvitationRejectedError) throw error;

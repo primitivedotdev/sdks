@@ -139,6 +139,10 @@ describe("native email notifications", () => {
       await first.notifications.handleDetail(detail, delivery.event_id, signal),
     ).toEqual({ disposition: "notified" });
     expect(first.queue).toHaveBeenCalledTimes(1);
+    // Unverified mail is not work to handle, so it gets no skill line.
+    expect(first.queue.mock.calls[0]?.[0]).not.toContain(
+      "Load the primitive-connect skill",
+    );
     expect(first.queue.mock.calls[0]?.[0]).not.toContain(detail.body_text);
     expect(first.queue.mock.calls[0]?.[0]).not.toContain(detail.subject);
     expect(
@@ -161,6 +165,10 @@ describe("native email notifications", () => {
       recheck,
     });
     const text = first.queue.mock.calls[0]?.[0] ?? "";
+    // The first line loads the handling rules before anything else.
+    expect(text.split("\n")[0]).toBe(
+      "Load the primitive-connect skill first if it is not loaded.",
+    );
     expect(text).toContain(`"sender_relation":"${relation}"`);
     expect(text).toContain(
       relation === "owner"
@@ -187,6 +195,9 @@ describe("native email notifications", () => {
     });
     const text = first.queue.mock.calls[0]?.[0] ?? "";
     expect(text).toContain("connected agent in this organization's network");
+    expect(text.split("\n")[0]).toBe(
+      "Load the primitive-connect skill first if it is not loaded.",
+    );
     expect(text).not.toContain("untrusted external mail");
     expect(text).not.toContain(detail.body_text);
   });

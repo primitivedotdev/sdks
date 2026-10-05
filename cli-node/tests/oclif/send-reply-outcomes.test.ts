@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   replyToEmail: vi.fn(),
   sendEmail: vi.fn(),
   followEmailConversation: vi.fn(),
+  isSentSignal: vi.fn((_configDir: string, _sentId?: string | null) => false),
 }));
 
 vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
@@ -23,6 +24,10 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
 
 vi.mock("../../src/oclif/api-client.js", () => ({
   createAuthenticatedCliApiClient: mocks.createAuthenticatedCliApiClient,
+}));
+vi.mock("../../src/oclif/auto-signals.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/oclif/auto-signals.js")>()),
+  isSentSignal: mocks.isSentSignal,
 }));
 vi.mock("../../src/oclif/conversation-follow.js", () => ({
   followEmailConversation: mocks.followEmailConversation,
@@ -143,6 +148,7 @@ beforeEach(() => {
   mocks.replyToEmail.mockResolvedValue({ data: { data: sendResult() } });
   mocks.sendEmail.mockResolvedValue({ data: { data: sendResult() } });
   mocks.followEmailConversation.mockReset().mockResolvedValue(null);
+  mocks.isSentSignal.mockReset().mockReturnValue(false);
 });
 
 afterEach(() => {
@@ -258,7 +264,7 @@ describe("reply outcomes", () => {
         }),
       ],
       prior_replies: [],
-      prior_replies_check: { status: "checked" },
+      prior_replies_check: { status: "checked", signals_excluded: 0 },
       interaction_warning: null,
     });
   });
@@ -298,6 +304,66 @@ describe("reply outcomes", () => {
     expect(envelope.prior_replies).toEqual([
       expect.objectContaining({ id: "sent-prior" }),
     ]);
+  });
+
+  it("leaves this CLI's own status signals out of prior_replies and counts them apart", async () => {
+    mocks.isSentSignal.mockImplementation(
+      (_configDir: string, sentId?: string | null) => sentId === "sent-read",
+    );
+    mocks.getEmail.mockResolvedValue(
+      inboundWithReplies([
+        {
+          created_at: "2026-09-01T10:00:00.000Z",
+          id: "sent-read",
+          status: "delivered",
+          to_address: "alice@example.com",
+        },
+        {
+          created_at: "2026-09-01T10:01:00.000Z",
+          id: "sent-working",
+          status: "delivered",
+          to_address: "alice@example.com",
+          // A server that marks signals is believed without the local record.
+          interaction_hint: "status",
+        },
+        {
+          created_at: "2026-09-01T11:00:00.000Z",
+          id: "sent-answer",
+          status: "delivered",
+          to_address: "alice@example.com",
+        },
+      ]),
+    );
+    const result = await run("reply", replyArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+    expect(envelope.prior_replies).toEqual([
+      expect.objectContaining({ id: "sent-answer" }),
+    ]);
+    expect(envelope.prior_replies_check).toEqual({
+      status: "checked",
+      signals_excluded: 2,
+    });
+    expect(envelope.warnings).toContain(
+      "This email already has 1 outgoing email, most recently at 2026-09-01T11:00:00.000Z (sent id sent-answer). These may include activity updates and do not prove a completed answer. Sending this reply.",
+    );
+  });
+
+  it("reports no prior replies when every earlier send was a signal", async () => {
+    mocks.isSentSignal.mockImplementation(() => true);
+    mocks.getEmail.mockResolvedValue(
+      inboundWithReplies([
+        {
+          created_at: "2026-09-01T10:00:00.000Z",
+          id: "sent-read",
+          status: "delivered",
+          to_address: "alice@example.com",
+        },
+      ]),
+    );
+    const result = await run("reply", replyArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+    expect(envelope.prior_replies).toEqual([]);
+    expect(envelope.warnings ?? []).toEqual([]);
   });
 
   it("counts prior outgoing emails without claiming they are answers", async () => {
@@ -492,6 +558,46 @@ describe("send outcomes", () => {
     expect(result.stderr).toBe(
       "Message sent (delivered, id sent-1). Do not resend.\n",
     );
+  });
+
+  it("shortens a delivery wait past the server limit instead of failing the send", async () => {
+    // The server refuses wait_timeout_ms above 30000 with a 400, which cost
+    // an agent a turn before anything went out.
+    const result = await run(
+      "send",
+      sendArgs("--wait", "--wait-timeout-ms", "180000", "--json"),
+    );
+    const envelope = JSON.parse(result.stdout);
+    expect(mocks.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ wait: true, wait_timeout_ms: 30000 }),
+      }),
+    );
+    expect(envelope.outcome).toBe("sent");
+    expect(envelope.wait_notice).toContain(
+      "--wait-timeout-ms 180000 is longer than the 30000ms the server allows",
+    );
+    expect(envelope.wait_notice).toContain(
+      "primitive emails wait --reply-to-sent-email-id <sent id> --from <recipient> --timeout 180",
+    );
+    expect(result.stderr).toBe("");
+
+    const plain = await run(
+      "send",
+      sendArgs("--wait", "--wait-timeout-ms", "180000"),
+    );
+    expect(plain.stderr).toContain("the delivery wait uses 30000ms");
+
+    const within = await run(
+      "send",
+      sendArgs("--wait", "--wait-timeout-ms", "20000", "--json"),
+    );
+    expect(mocks.sendEmail).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ wait_timeout_ms: 20000 }),
+      }),
+    );
+    expect(JSON.parse(within.stdout)).not.toHaveProperty("wait_notice");
   });
 
   it("emits an envelope without prior-reply fields", async () => {
