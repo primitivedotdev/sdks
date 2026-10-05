@@ -1,7 +1,9 @@
-import { existsSync, mkdirSync, realpathSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import {
+  currentCliLocation,
+  ensureHookLauncher,
   hasSessionReceiveHook,
   otherSessionReceivers,
   stableNodePath,
@@ -10,6 +12,7 @@ import {
   agentProfileDirectory,
   agentProfileName,
 } from "./connected-agent-profile.js";
+import { hookLauncherPath, hookLauncherSupported } from "./hook-launcher.js";
 import { acquireListenLock } from "./listen-state.js";
 import {
   MachineFileError,
@@ -120,6 +123,7 @@ export function claudeWakeHookStatus(options: {
   sessionId: string;
   env?: NodeJS.ProcessEnv;
   now?: number;
+  platform?: NodeJS.Platform;
 }): {
   installed: boolean;
   /** When the session's PostToolUse receive hook last started. */
@@ -160,10 +164,20 @@ export function claudeWakeHookStatus(options: {
       address: agentAddress,
       session: sessionId,
     };
-    // The same test machine doctor uses to decide a hook is missing.
-    const node = stableNodePath(env);
+    // A hook is current when it runs through the hook launcher, or (from an
+    // older CLI, or on Windows) names this machine's Node directly, which
+    // still runs while that Node exists.
+    const commands = [
+      ...(hookLauncherSupported(options.platform)
+        ? [hookLauncherPath(configDir)]
+        : []),
+      stableNodePath(env),
+    ];
     const installed = (["Stop", "SessionStart", "PostToolUse"] as const).every(
-      (event) => hasSessionReceiveHook(hooks, event, target, node),
+      (event) =>
+        commands.some((node) =>
+          hasSessionReceiveHook(hooks, event, target, node),
+        ),
     );
     const lastFiredAt = recordedAt(
       readMailJson(
@@ -268,25 +282,36 @@ export function installClaudeWakeHook(options: {
    * (agent connect, agent enroll) leave it unset and always install.
    */
   yieldToOtherProfiles?: boolean;
+  platform?: NodeJS.Platform;
 }): ClaudeWakeHookResult {
   try {
-    const cliPath = realpathSync(options.cliPath);
-    const wrapperPath = realpathSync(join(dirname(cliPath), "claude-wake.mjs"));
-    const pendingPath = realpathSync(
-      join(dirname(cliPath), "claude-pending-mail.mjs"),
-    );
     const configDir = resolve(options.configDir);
+    const env = options.env ?? process.env;
+    const cli = currentCliLocation(options.cliPath, env, process.execPath, {
+      configDir,
+      platform: options.platform,
+    });
+    if (!cli) return "unavailable";
+    const cliPath = cli.entry;
+    const wrapperPath = cli.wake;
+    const pendingPath = cli.pending;
     const profileName = agentProfileName(options.profileName);
     const agentAddress = mailAddress(options.agentAddress);
     if (!SESSION_UUID.test(options.sessionId)) return "unavailable";
     const sessionId = options.sessionId.toLowerCase();
-    const env = options.env ?? process.env;
     const claudeDir = resolve(
       env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"),
     );
-    // A PATH link such as a package manager's bin/node survives an upgrade
-    // that replaces the versioned directory process.execPath points into.
-    const node = stableNodePath(env);
+    // Hooks run through the launcher, which survives the removal of the Node
+    // version or package-runner cache this CLI runs from. Should it not be
+    // writable, the hook names Node directly (a PATH link such as a package
+    // manager's bin/node when one resolves to the same file).
+    let node = cli.node;
+    try {
+      ensureHookLauncher(cli);
+    } catch {
+      node = cli.runtimeNode;
+    }
     let held = false;
     const installed = editClaudeSettings(claudeDir, (settings) => {
       const hooks = settings.hooks ?? {};
