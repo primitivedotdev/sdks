@@ -1714,9 +1714,8 @@ type Invoker interface {
 	StartAgentClaim(ctx context.Context, request *StartAgentClaimInput) (StartAgentClaimRes, error)
 	// StartAgentSignup invokes startAgentSignup operation.
 	//
-	// Starts an agent-native signup session. `signup_code` is optional;
-	// omit it to sign up without one. The API creates a pending signup
-	// session, sends an email verification code, and returns an opaque
+	// Starts an agent-native signup session. The API creates a pending
+	// signup session, sends an email verification code, and returns an opaque
 	// signup token used by the resend and verify steps. This endpoint
 	// does not require an API key.
 	//
@@ -1732,9 +1731,8 @@ type Invoker interface {
 	StartCliLogin(ctx context.Context, request OptStartCliLoginInput) (StartCliLoginRes, error)
 	// StartCliSignup invokes startCliSignup operation.
 	//
-	// Starts a terminal-native CLI signup. `signup_code` is optional;
-	// omit it to sign up without one. The API creates a pending signup
-	// session, sends an email verification code, and returns an opaque
+	// Starts a terminal-native CLI signup. The API creates a pending
+	// signup session, sends an email verification code, and returns an opaque
 	// signup token used by the resend and verify steps. This endpoint
 	// does not require an API key.
 	//
@@ -1934,25 +1932,19 @@ type Invoker interface {
 	// VerifyAgentSignup invokes verifyAgentSignup operation.
 	//
 	// Verifies the email code for an agent signup session and creates
-	// the account when needed. When the session was started with a
-	// `signup_code`, the reserved code is redeemed; sessions started
-	// without a code skip the redemption step. An org-scoped OAuth
-	// session for CLI authentication is minted and the raw tokens are
-	// returned exactly once. For existing users, the optional `org_id`
-	// selects which accessible workspace should receive the new
-	// session (no signup-code redemption is performed for existing
-	// users regardless of how the session was started).
+	// the account when needed. An org-scoped OAuth session for CLI
+	// authentication is minted and the raw tokens are returned exactly
+	// once. For existing users, the optional `org_id` selects which
+	// accessible workspace should receive the new session.
 	//
 	// POST /agent/signup/verify
 	VerifyAgentSignup(ctx context.Context, request *VerifyAgentSignupInput) (VerifyAgentSignupRes, error)
 	// VerifyCliSignup invokes verifyCliSignup operation.
 	//
 	// Verifies the email code for a CLI signup session and creates the
-	// account. When the session was started with a `signup_code`, the
-	// reserved code is redeemed; sessions started without a code skip
-	// the redemption step. Either way an org-scoped OAuth CLI session
-	// is created and the token set is returned exactly once. This
-	// endpoint does not require an API key.
+	// account. An org-scoped OAuth CLI session is created and the
+	// token set is returned exactly once. This endpoint does not
+	// require an API key.
 	//
 	// POST /cli/signup/verify
 	VerifyCliSignup(ctx context.Context, request *VerifyCliSignupInput) (VerifyCliSignupRes, error)
@@ -20930,9 +20922,8 @@ func (c *Client) sendStartAgentClaim(ctx context.Context, request *StartAgentCla
 
 // StartAgentSignup invokes startAgentSignup operation.
 //
-// Starts an agent-native signup session. `signup_code` is optional;
-// omit it to sign up without one. The API creates a pending signup
-// session, sends an email verification code, and returns an opaque
+// Starts an agent-native signup session. The API creates a pending
+// signup session, sends an email verification code, and returns an opaque
 // signup token used by the resend and verify steps. This endpoint
 // does not require an API key.
 //
@@ -21090,9 +21081,8 @@ func (c *Client) sendStartCliLogin(ctx context.Context, request OptStartCliLogin
 
 // StartCliSignup invokes startCliSignup operation.
 //
-// Starts a terminal-native CLI signup. `signup_code` is optional;
-// omit it to sign up without one. The API creates a pending signup
-// session, sends an email verification code, and returns an opaque
+// Starts a terminal-native CLI signup. The API creates a pending
+// signup session, sends an email verification code, and returns an opaque
 // signup token used by the resend and verify steps. This endpoint
 // does not require an API key.
 //
@@ -23642,14 +23632,10 @@ func (c *Client) sendVerifyAgentClaim(ctx context.Context, request *VerifyAgentC
 // VerifyAgentSignup invokes verifyAgentSignup operation.
 //
 // Verifies the email code for an agent signup session and creates
-// the account when needed. When the session was started with a
-// `signup_code`, the reserved code is redeemed; sessions started
-// without a code skip the redemption step. An org-scoped OAuth
-// session for CLI authentication is minted and the raw tokens are
-// returned exactly once. For existing users, the optional `org_id`
-// selects which accessible workspace should receive the new
-// session (no signup-code redemption is performed for existing
-// users regardless of how the session was started).
+// the account when needed. An org-scoped OAuth session for CLI
+// authentication is minted and the raw tokens are returned exactly
+// once. For existing users, the optional `org_id` selects which
+// accessible workspace should receive the new session.
 //
 // POST /agent/signup/verify
 func (c *Client) VerifyAgentSignup(ctx context.Context, request *VerifyAgentSignupInput) (VerifyAgentSignupRes, error) {
@@ -23727,11 +23713,9 @@ func (c *Client) sendVerifyAgentSignup(ctx context.Context, request *VerifyAgent
 // VerifyCliSignup invokes verifyCliSignup operation.
 //
 // Verifies the email code for a CLI signup session and creates the
-// account. When the session was started with a `signup_code`, the
-// reserved code is redeemed; sessions started without a code skip
-// the redemption step. Either way an org-scoped OAuth CLI session
-// is created and the token set is returned exactly once. This
-// endpoint does not require an API key.
+// account. An org-scoped OAuth CLI session is created and the
+// token set is returned exactly once. This endpoint does not
+// require an API key.
 //
 // POST /cli/signup/verify
 func (c *Client) VerifyCliSignup(ctx context.Context, request *VerifyCliSignupInput) (VerifyCliSignupRes, error) {

@@ -41,7 +41,6 @@ class ErrorResponseErrorCode(str, Enum):
     INBOUND_NOT_REPLIABLE = "inbound_not_repliable"
     INTERNAL_ERROR = "internal_error"
     INVALID_DEVICE_CODE = "invalid_device_code"
-    INVALID_SIGNUP_CODE = "invalid_signup_code"
     INVALID_SIGNUP_TOKEN = "invalid_signup_token"
     INVALID_VARIABLES = "invalid_variables"
     INVALID_VERIFICATION_CODE = "invalid_verification_code"

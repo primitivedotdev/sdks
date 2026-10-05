@@ -95,10 +95,7 @@ describe("root signup hint", () => {
     expect(writes.join("")).toContain(
       "primitive signup <email> --accept-terms",
     );
-    // The hint mentions the optional --signup-code flag in a separate
-    // line so a user who has one knows to pass it, but the primary
-    // suggestion is the no-code invocation.
-    expect(writes.join("")).toContain("--signup-code <code>");
+    expect(writes.join("")).not.toContain("--signup-code");
     expect(loggedOutSignupHint()).toMatch(/^New to Primitive\?/);
   });
 

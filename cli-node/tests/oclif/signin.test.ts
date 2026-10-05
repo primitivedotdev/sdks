@@ -49,7 +49,7 @@ describe("signin commands", () => {
     expect(SigninCommand.description).toContain("primitive otp <email>");
     expect(SigninCommand.description).toContain("primitive signup <email>");
     expect(SigninCommand.examples).toContain(
-      "<%= config.bin %> signin user@example.com --signup-code invite-code --accept-terms",
+      "<%= config.bin %> signin user@example.com --accept-terms",
     );
     expect(SigninCommand.examples).toContain(
       "<%= config.bin %> signin confirm user@example.com 123456",
@@ -58,7 +58,7 @@ describe("signin commands", () => {
       "<%= config.bin %> signin otp confirm user@example.com 123456",
     );
     expect(SigninCommand.args.email.description).toContain("email-code");
-    expect(SigninCommand.flags["signup-code"]).toBeDefined();
+    expect(Object.hasOwn(SigninCommand.flags, "signup-code")).toBe(false);
     expect(SigninCommand.flags.force.description).toContain(
       "without first verifying the existing session",
     );
@@ -69,7 +69,7 @@ describe("signin commands", () => {
     expect(LoginCommand.description).toContain("primitive signin");
     expect(LoginCommand.description).toContain("primitive otp <email>");
     expect(LoginCommand.examples).toContain(
-      "<%= config.bin %> login user@example.com --signup-code invite-code --accept-terms",
+      "<%= config.bin %> login user@example.com --accept-terms",
     );
     expect(LoginCommand.flags.force.description).toContain(
       "without first verifying the existing session",
@@ -78,7 +78,7 @@ describe("signin commands", () => {
 
   it("documents the OTP sign-in command family", () => {
     expect(SigninOtpCommand.description).toContain("signup/auth OTP flow");
-    expect(SigninOtpCommand.description).toContain("Requires a signup code");
+    expect(SigninOtpCommand.description).not.toContain("signup code");
     expect(SigninOtpConfirmCommand.description).toContain(
       "Confirm a pending OTP sign-in",
     );
@@ -108,15 +108,15 @@ describe("signin commands", () => {
   });
 
   it("keeps OTP start flags aligned with the signup/auth contract", () => {
-    expect(SigninCommand.flags["signup-code"]).toBeDefined();
+    expect(Object.hasOwn(SigninCommand.flags, "signup-code")).toBe(false);
     expect(SigninCommand.flags["accept-terms"]).toBeDefined();
-    expect(LoginCommand.flags["signup-code"]).toBeDefined();
+    expect(Object.hasOwn(LoginCommand.flags, "signup-code")).toBe(false);
     expect(LoginCommand.flags["accept-terms"]).toBeDefined();
-    expect(SigninOtpCommand.flags["signup-code"]).toBeDefined();
+    expect(Object.hasOwn(SigninOtpCommand.flags, "signup-code")).toBe(false);
     expect(SigninOtpCommand.flags["accept-terms"]).toBeDefined();
-    expect(LoginOtpCommand.flags["signup-code"]).toBeDefined();
+    expect(Object.hasOwn(LoginOtpCommand.flags, "signup-code")).toBe(false);
     expect(LoginOtpCommand.flags["accept-terms"]).toBeDefined();
-    expect(OtpCommand.flags["signup-code"]).toBeDefined();
+    expect(Object.hasOwn(OtpCommand.flags, "signup-code")).toBe(false);
     expect(OtpCommand.flags["accept-terms"]).toBeDefined();
     expect(SigninConfirmCommand.flags["org-id"]).toBeDefined();
     expect(LoginConfirmCommand.flags["org-id"]).toBeDefined();

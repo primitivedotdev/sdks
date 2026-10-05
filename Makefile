@@ -186,7 +186,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	lock_root="$$lock_home/.config" && \
 	lock_dir="$$lock_root/primitive" && \
 	mkdir -p "$$lock_dir/credentials.lock" && \
-	if HOME="$$lock_home" XDG_CONFIG_HOME="$$lock_root" PRIMITIVE_CONFIG_DIR= "$$bin" signin smoke@example.com --signup-code invite --accept-terms >"$$smoke_dir/auth-lock.out" 2>"$$smoke_dir/auth-lock.err"; then echo "signin should fail while credentials lock exists"; exit 1; fi && \
+	if HOME="$$lock_home" XDG_CONFIG_HOME="$$lock_root" PRIMITIVE_CONFIG_DIR= "$$bin" signin smoke@example.com --accept-terms >"$$smoke_dir/auth-lock.out" 2>"$$smoke_dir/auth-lock.err"; then echo "signin should fail while credentials lock exists"; exit 1; fi && \
 	grep -q -- "primitive logout --force" "$$smoke_dir/auth-lock.err" && \
 	"$$bin" chat --help | grep -q -- "follow-up commands" && \
 	if "$$bin" chat --help | grep -q -- "--subject"; then echo "chat help must not advertise --subject"; exit 1; fi && \
@@ -217,7 +217,7 @@ cli-smoke: cli-build cli-tarball-isolation
 	root_help_config="$$smoke_dir/root-help-config" && \
 	HOME="$$root_help_config" XDG_CONFIG_HOME="$$root_help_config/.config" PRIMITIVE_CONFIG_DIR= PRIMITIVE_API_KEY= PRIMITIVE_HIDE_SIGNUP_HINT= "$$bin" >"$$smoke_dir/root-help.txt" && \
 	grep -qF -- 'primitive signup <email> --accept-terms' "$$smoke_dir/root-help.txt" && \
-	grep -qF -- 'Add `--signup-code <code>` if you have one.' "$$smoke_dir/root-help.txt" && \
+	if grep -qF -- '--signup-code' "$$smoke_dir/root-help.txt"; then echo "root help must not mention --signup-code"; exit 1; fi && \
 	root_auth_home="$$smoke_dir/root-auth-home" && \
 	root_auth_config="$$root_auth_home/.config/primitive" && \
 	root_auth_port_file="$$smoke_dir/root-auth-port" && \

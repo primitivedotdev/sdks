@@ -9181,8 +9181,6 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "invalid_device_code":
 		return nil
-	case "invalid_signup_code":
-		return nil
 	case "invalid_signup_token":
 		return nil
 	case "invalid_verification_code":
@@ -21817,36 +21815,6 @@ func (s *StartAgentSignupInput) Validate() error {
 		})
 	}
 	if err := func() error {
-		if value, ok := s.SignupCode.Get(); ok {
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     128,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "signup_code",
-			Error: err,
-		})
-	}
-	if err := func() error {
 		if value, ok := s.DeviceName.Get(); ok {
 			if err := func() error {
 				if err := (validate.String{
@@ -22042,36 +22010,6 @@ func (s *StartCliSignupInput) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "email",
-			Error: err,
-		})
-	}
-	if err := func() error {
-		if value, ok := s.SignupCode.Get(); ok {
-			if err := func() error {
-				if err := (validate.String{
-					MinLength:     1,
-					MinLengthSet:  true,
-					MaxLength:     128,
-					MaxLengthSet:  true,
-					Email:         false,
-					Hostname:      false,
-					Regex:         nil,
-					MinNumeric:    0,
-					MinNumericSet: false,
-					MaxNumeric:    0,
-					MaxNumericSet: false,
-				}).Validate(string(value)); err != nil {
-					return errors.Wrap(err, "string")
-				}
-				return nil
-			}(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}(); err != nil {
-		failures = append(failures, validate.FieldError{
-			Name:  "signup_code",
 			Error: err,
 		})
 	}

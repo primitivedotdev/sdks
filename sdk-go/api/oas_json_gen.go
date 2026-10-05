@@ -36195,8 +36195,6 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeExpiredToken
 	case ErrorResponseErrorCodeInvalidDeviceCode:
 		*s = ErrorResponseErrorCodeInvalidDeviceCode
-	case ErrorResponseErrorCodeInvalidSignupCode:
-		*s = ErrorResponseErrorCodeInvalidSignupCode
 	case ErrorResponseErrorCodeInvalidSignupToken:
 		*s = ErrorResponseErrorCodeInvalidSignupToken
 	case ErrorResponseErrorCodeInvalidVerificationCode:
@@ -90234,12 +90232,6 @@ func (s *StartAgentSignupInput) encodeFields(e *jx.Encoder) {
 		e.Str(s.Email)
 	}
 	{
-		if s.SignupCode.Set {
-			e.FieldStart("signup_code")
-			s.SignupCode.Encode(e)
-		}
-	}
-	{
 		e.FieldStart("terms_accepted")
 		e.Bool(true)
 	}
@@ -90257,12 +90249,11 @@ func (s *StartAgentSignupInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfStartAgentSignupInput = [5]string{
+var jsonFieldsNameOfStartAgentSignupInput = [4]string{
 	0: "email",
-	1: "signup_code",
-	2: "terms_accepted",
-	3: "device_name",
-	4: "metadata",
+	1: "terms_accepted",
+	2: "device_name",
+	3: "metadata",
 }
 
 // Decode decodes StartAgentSignupInput from json.
@@ -90286,18 +90277,8 @@ func (s *StartAgentSignupInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"email\"")
 			}
-		case "signup_code":
-			if err := func() error {
-				s.SignupCode.Reset()
-				if err := s.SignupCode.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"signup_code\"")
-			}
 		case "terms_accepted":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := d.Bool()
 				s.TermsAccepted = bool(v)
@@ -90338,7 +90319,7 @@ func (s *StartAgentSignupInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000101,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -90816,12 +90797,6 @@ func (s *StartCliSignupInput) encodeFields(e *jx.Encoder) {
 		e.Str(s.Email)
 	}
 	{
-		if s.SignupCode.Set {
-			e.FieldStart("signup_code")
-			s.SignupCode.Encode(e)
-		}
-	}
-	{
 		e.FieldStart("terms_accepted")
 		e.Bool(true)
 	}
@@ -90839,12 +90814,11 @@ func (s *StartCliSignupInput) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfStartCliSignupInput = [5]string{
+var jsonFieldsNameOfStartCliSignupInput = [4]string{
 	0: "email",
-	1: "signup_code",
-	2: "terms_accepted",
-	3: "device_name",
-	4: "metadata",
+	1: "terms_accepted",
+	2: "device_name",
+	3: "metadata",
 }
 
 // Decode decodes StartCliSignupInput from json.
@@ -90868,18 +90842,8 @@ func (s *StartCliSignupInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"email\"")
 			}
-		case "signup_code":
-			if err := func() error {
-				s.SignupCode.Reset()
-				if err := s.SignupCode.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"signup_code\"")
-			}
 		case "terms_accepted":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
 				v, err := d.Bool()
 				s.TermsAccepted = bool(v)
@@ -90920,7 +90884,7 @@ func (s *StartCliSignupInput) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000101,
+		0b00000011,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

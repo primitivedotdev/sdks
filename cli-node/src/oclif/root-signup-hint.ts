@@ -199,7 +199,6 @@ export function loggedOutSignupHint(): string {
     "  You or your user don't have an account yet?",
     "  Run `primitive signup <email> --accept-terms`",
     "  to create an account and get started.",
-    "  Add `--signup-code <code>` if you have one.",
     "",
   ].join("\n");
 }

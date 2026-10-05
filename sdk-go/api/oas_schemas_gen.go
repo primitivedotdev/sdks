@@ -14592,7 +14592,6 @@ const (
 	ErrorResponseErrorCodeAccessDenied                        ErrorResponseErrorCode = "access_denied"
 	ErrorResponseErrorCodeExpiredToken                        ErrorResponseErrorCode = "expired_token"
 	ErrorResponseErrorCodeInvalidDeviceCode                   ErrorResponseErrorCode = "invalid_device_code"
-	ErrorResponseErrorCodeInvalidSignupCode                   ErrorResponseErrorCode = "invalid_signup_code"
 	ErrorResponseErrorCodeInvalidSignupToken                  ErrorResponseErrorCode = "invalid_signup_token"
 	ErrorResponseErrorCodeInvalidVerificationCode             ErrorResponseErrorCode = "invalid_verification_code"
 	ErrorResponseErrorCodeEmailDeliveryFailed                 ErrorResponseErrorCode = "email_delivery_failed"
@@ -14690,7 +14689,6 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeAccessDenied,
 		ErrorResponseErrorCodeExpiredToken,
 		ErrorResponseErrorCodeInvalidDeviceCode,
-		ErrorResponseErrorCodeInvalidSignupCode,
 		ErrorResponseErrorCodeInvalidSignupToken,
 		ErrorResponseErrorCodeInvalidVerificationCode,
 		ErrorResponseErrorCodeEmailDeliveryFailed,
@@ -14825,8 +14823,6 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 	case ErrorResponseErrorCodeExpiredToken:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInvalidDeviceCode:
-		return []byte(s), nil
-	case ErrorResponseErrorCodeInvalidSignupCode:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInvalidSignupToken:
 		return []byte(s), nil
@@ -15056,9 +15052,6 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 		return nil
 	case ErrorResponseErrorCodeInvalidDeviceCode:
 		*s = ErrorResponseErrorCodeInvalidDeviceCode
-		return nil
-	case ErrorResponseErrorCodeInvalidSignupCode:
-		*s = ErrorResponseErrorCodeInvalidSignupCode
 		return nil
 	case ErrorResponseErrorCodeInvalidSignupToken:
 		*s = ErrorResponseErrorCodeInvalidSignupToken
@@ -41020,8 +41013,6 @@ func (*StartAgentSignupCreatedHeaders) startAgentSignupRes() {}
 // Ref: #/components/schemas/StartAgentSignupInput
 type StartAgentSignupInput struct {
 	Email string `json:"email"`
-	// Optional signup code. Omit if you do not have one.
-	SignupCode OptString `json:"signup_code"`
 	// Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy.
 	TermsAccepted bool `json:"terms_accepted"`
 	// Human-readable device name used for the created agent OAuth session.
@@ -41034,11 +41025,6 @@ type StartAgentSignupInput struct {
 // GetEmail returns the value of Email.
 func (s *StartAgentSignupInput) GetEmail() string {
 	return s.Email
-}
-
-// GetSignupCode returns the value of SignupCode.
-func (s *StartAgentSignupInput) GetSignupCode() OptString {
-	return s.SignupCode
 }
 
 // GetTermsAccepted returns the value of TermsAccepted.
@@ -41059,11 +41045,6 @@ func (s *StartAgentSignupInput) GetMetadata() OptStartAgentSignupInputMetadata {
 // SetEmail sets the value of Email.
 func (s *StartAgentSignupInput) SetEmail(val string) {
 	s.Email = val
-}
-
-// SetSignupCode sets the value of SignupCode.
-func (s *StartAgentSignupInput) SetSignupCode(val OptString) {
-	s.SignupCode = val
 }
 
 // SetTermsAccepted sets the value of TermsAccepted.
@@ -41245,8 +41226,6 @@ func (*StartCliSignupCreatedHeaders) startCliSignupRes() {}
 // Ref: #/components/schemas/StartCliSignupInput
 type StartCliSignupInput struct {
 	Email string `json:"email"`
-	// Optional signup code. Omit if you do not have one.
-	SignupCode OptString `json:"signup_code"`
 	// Must be true to confirm acceptance of Primitive's Terms of Service and Privacy Policy.
 	TermsAccepted bool `json:"terms_accepted"`
 	// Human-readable device name used for the created CLI OAuth grant.
@@ -41259,11 +41238,6 @@ type StartCliSignupInput struct {
 // GetEmail returns the value of Email.
 func (s *StartCliSignupInput) GetEmail() string {
 	return s.Email
-}
-
-// GetSignupCode returns the value of SignupCode.
-func (s *StartCliSignupInput) GetSignupCode() OptString {
-	return s.SignupCode
 }
 
 // GetTermsAccepted returns the value of TermsAccepted.
@@ -41284,11 +41258,6 @@ func (s *StartCliSignupInput) GetMetadata() OptStartCliSignupInputMetadata {
 // SetEmail sets the value of Email.
 func (s *StartCliSignupInput) SetEmail(val string) {
 	s.Email = val
-}
-
-// SetSignupCode sets the value of SignupCode.
-func (s *StartCliSignupInput) SetSignupCode(val OptString) {
-	s.SignupCode = val
 }
 
 // SetTermsAccepted sets the value of TermsAccepted.
