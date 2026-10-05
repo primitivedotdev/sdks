@@ -228,6 +228,9 @@ class SendCommand extends Command {
               idempotencyKey: this.idempotencyKey,
               noun: "Message",
               requestStarted: this.sendRequestStarted,
+              ...(this.waitNotice
+                ? { extraEnvelopeFields: { wait_notice: this.waitNotice } }
+                : {}),
             }),
             null,
             2,
@@ -322,7 +325,9 @@ class SendCommand extends Command {
         requestedWait === undefined
           ? undefined
           : Math.min(requestedWait, MAX_SEND_WAIT_TIMEOUT_MS);
+      // Without --wait nothing waits, so the shortened value goes unnoticed.
       if (
+        flags.wait &&
         requestedWait !== undefined &&
         requestedWait > MAX_SEND_WAIT_TIMEOUT_MS
       )

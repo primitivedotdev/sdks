@@ -301,7 +301,7 @@ describe("one-command agent connect", () => {
       name: "Research agent",
       nameIsDefault: false,
     });
-    // A resume did not claim, so the name is unknown and both are omitted.
+    // No name known (an older claim), so both are omitted.
     const resumed = await runAgentConnect(fixture().options);
     expect(resumed).not.toHaveProperty("name");
     expect(resumed).not.toHaveProperty("nameIsDefault");

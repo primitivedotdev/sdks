@@ -5,8 +5,9 @@ import type {
   EmailDetailReply,
   GetEmailResponse,
   SendMailResult,
+  ThreadMessage,
 } from "@primitivedotdev/api-core";
-import { getEmail } from "@primitivedotdev/api-core";
+import { getEmail, getThread } from "@primitivedotdev/api-core";
 import { extractErrorPayload } from "./api-command.js";
 import { formatAlreadySentNotice } from "./idempotent-replay-banner.js";
 
@@ -263,6 +264,38 @@ export function isSignalReply(
 type EmailFetchClient = Parameters<typeof getEmail>[0]["client"];
 
 /**
+ * IDs of the thread's outbound messages the server marks as status signals
+ * or fyi acknowledgements. Best effort: an unreadable thread marks nothing.
+ */
+async function threadSignalIds(
+  client: EmailFetchClient,
+  threadId: string,
+): Promise<Set<string>> {
+  try {
+    const result = await getThread({
+      client,
+      path: { id: threadId },
+      responseStyle: "fields",
+    });
+    const messages = (
+      result.data as { data?: { messages?: unknown } } | undefined
+    )?.data?.messages;
+    if (result.error || !Array.isArray(messages)) return new Set();
+    return new Set(
+      (messages as ThreadMessage[])
+        .filter(
+          (message) =>
+            message.direction === "outbound" &&
+            (message.fyi === true || message.interaction_hint === "status"),
+        )
+        .map((message) => message.id),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+/**
  * Look up the inbound email and report replies to it that already
  * went out. Never throws: the check is advisory and must not block a
  * send, so every failure comes back as `skipped` with a reason the
@@ -305,9 +338,14 @@ export async function checkPriorReplies(params: {
     }
     const wentOut = priorRepliesThatWentOut(detail.replies);
     const isLocalSignal = params.isLocalSignal ?? (() => false);
-    const prior = wentOut.filter(
-      (reply) => !isSignalReply(reply, isLocalSignal),
-    );
+    let prior = wentOut.filter((reply) => !isSignalReply(reply, isLocalSignal));
+    // Reply entries carry no signal marking, and a signal sent from another
+    // machine has no local record. The thread's outbound entries do carry
+    // it, so one thread read settles whatever is left.
+    if (prior.length > 0 && detail.thread_id) {
+      const signals = await threadSignalIds(params.client, detail.thread_id);
+      prior = prior.filter((reply) => !signals.has(reply.id));
+    }
     return {
       status: "checked",
       prior,

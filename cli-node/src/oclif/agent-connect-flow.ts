@@ -718,7 +718,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     ownerAddress: result.identity.ownerAddress,
     ownerMemberAddress,
     profile: result.identity.profileName,
-    // Known only when this run claimed the invitation; a resume omits both.
+    // Known when this profile's claim reported a name; omitted otherwise.
     ...(result.connectionName === undefined
       ? {}
       : {

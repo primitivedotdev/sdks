@@ -1148,6 +1148,32 @@ describe("a definitely refused claim", () => {
     ).toBe(false);
   });
 
+  it("reports the claimed connection name on the claim and on a later resume", async () => {
+    const f = fixture();
+    f.fetch.mockImplementation(async () =>
+      Response.json({
+        success: true,
+        data: {
+          api_key: f.credential,
+          api_base_url: "https://api.primitive-staging-1.com/v1",
+          org_id: f.identity.orgId,
+          owner_address: f.identity.ownerAddress,
+          connection: {
+            address: f.identity.agentAddress,
+            owner_address: f.identity.ownerAddress,
+            status: "claimed",
+            name: "agent",
+          },
+        },
+      }),
+    );
+    expect(await setupAgent(f.params)).toMatchObject({
+      connectionName: "agent",
+    });
+    expect(await f.resume()).toMatchObject({ connectionName: "agent" });
+    expect(f.fetch).toHaveBeenCalledOnce();
+  });
+
   it("reports the claim journal written by an older CLI as a used invitation", async () => {
     // Older versions left the record at "attempted" even after a successful
     // claim; the saved profile shows the claim finished.

@@ -191,6 +191,28 @@ export type AgentConnectResult = {
   name?: string;
 };
 
+const CONNECTION_NAME_FILE = "connection-name.json";
+
+/**
+ * The display name this profile's claim reported, saved beside the profile
+ * so a resumed setup can report it too. Undefined when none was saved.
+ */
+export function savedConnectionName(
+  configDir: string,
+  profileName: string,
+): string | undefined {
+  try {
+    const saved = readMailJson(
+      join(agentProfileDirectory(configDir, profileName), CONNECTION_NAME_FILE),
+    ) as { version?: unknown; name?: unknown } | null;
+    return saved?.version === 1
+      ? claimedConnectionName({ data: { connection: { name: saved.name } } })
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** The display name a claim response reports, or undefined when unusable. */
 function claimedConnectionName(value: unknown): string | undefined {
   const name = (value as { data?: { connection?: { name?: unknown } } } | null)
@@ -674,6 +696,16 @@ export async function connectAgent(params: {
       } catch {
         /* The saved profile still identifies the finished claim. */
       }
+      // A resumed setup reports the name the claim returned.
+      if (name !== undefined)
+        try {
+          writeMailJson(join(profileDirectory, CONNECTION_NAME_FILE), {
+            version: 1,
+            name,
+          });
+        } catch {
+          /* A resume then omits the name, as for an older claim. */
+        }
       return {
         status: "claimed",
         identity: connectedAgentIdentity(profileName, profile),

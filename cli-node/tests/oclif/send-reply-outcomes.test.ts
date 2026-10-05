@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   createAuthenticatedCliApiClient: vi.fn(),
   getEmail: vi.fn(),
+  getThread: vi.fn(),
   replyToEmail: vi.fn(),
   sendEmail: vi.fn(),
   followEmailConversation: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
   return {
     ...actual,
     getEmail: mocks.getEmail,
+    getThread: mocks.getThread,
     replyToEmail: mocks.replyToEmail,
     sendEmail: mocks.sendEmail,
   };
@@ -149,6 +151,7 @@ beforeEach(() => {
   mocks.sendEmail.mockResolvedValue({ data: { data: sendResult() } });
   mocks.followEmailConversation.mockReset().mockResolvedValue(null);
   mocks.isSentSignal.mockReset().mockReturnValue(false);
+  mocks.getThread.mockReset().mockResolvedValue({ data: { data: {} } });
 });
 
 afterEach(() => {
@@ -346,6 +349,80 @@ describe("reply outcomes", () => {
     expect(envelope.warnings).toContain(
       "This email already has 1 outgoing email, most recently at 2026-09-01T11:00:00.000Z (sent id sent-answer). These may include activity updates and do not prove a completed answer. Sending this reply.",
     );
+  });
+
+  it("uses the thread's signal marking for signals this machine did not send", async () => {
+    mocks.getEmail.mockResolvedValue({
+      data: {
+        data: {
+          id: "email-1",
+          thread_id: "thread-1",
+          replies: [
+            {
+              created_at: "2026-09-01T10:00:00.000Z",
+              id: "sent-elsewhere-read",
+              status: "delivered",
+              to_address: "alice@example.com",
+            },
+            {
+              created_at: "2026-09-01T11:00:00.000Z",
+              id: "sent-answer",
+              status: "delivered",
+              to_address: "alice@example.com",
+            },
+          ],
+        },
+      },
+    });
+    mocks.getThread.mockResolvedValue({
+      data: {
+        data: {
+          messages: [
+            {
+              direction: "outbound",
+              id: "sent-elsewhere-read",
+              interaction_hint: "status",
+            },
+            { direction: "outbound", id: "sent-answer" },
+          ],
+        },
+      },
+    });
+    const result = await run("reply", replyArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+    expect(mocks.getThread).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { id: "thread-1" } }),
+    );
+    expect(envelope.prior_replies).toEqual([
+      expect.objectContaining({ id: "sent-answer" }),
+    ]);
+    expect(envelope.prior_replies_check.signals_excluded).toBe(1);
+  });
+
+  it("keeps prior replies when the thread cannot be read", async () => {
+    mocks.getEmail.mockResolvedValue({
+      data: {
+        data: {
+          id: "email-1",
+          thread_id: "thread-1",
+          replies: [
+            {
+              created_at: "2026-09-01T11:00:00.000Z",
+              id: "sent-answer",
+              status: "delivered",
+              to_address: "alice@example.com",
+            },
+          ],
+        },
+      },
+    });
+    mocks.getThread.mockRejectedValue(new Error("network down"));
+    const result = await run("reply", replyArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+    expect(envelope.outcome).toBe("sent");
+    expect(envelope.prior_replies).toEqual([
+      expect.objectContaining({ id: "sent-answer" }),
+    ]);
   });
 
   it("reports no prior replies when every earlier send was a signal", async () => {
@@ -598,6 +675,29 @@ describe("send outcomes", () => {
       }),
     );
     expect(JSON.parse(within.stdout)).not.toHaveProperty("wait_notice");
+  });
+
+  it("shortens an unused wait silently and keeps the notice when the send throws", async () => {
+    // Without --wait nothing waits, so there is no delivery wait to describe.
+    const unused = await run(
+      "send",
+      sendArgs("--wait-timeout-ms", "180000", "--json"),
+    );
+    expect(mocks.sendEmail).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ wait_timeout_ms: 30000 }),
+      }),
+    );
+    expect(JSON.parse(unused.stdout)).not.toHaveProperty("wait_notice");
+
+    mocks.sendEmail.mockRejectedValueOnce(new Error("socket hang up"));
+    const thrown = await run(
+      "send",
+      sendArgs("--wait", "--wait-timeout-ms", "180000", "--json"),
+    );
+    const envelope = JSON.parse(thrown.stdout);
+    expect(envelope.outcome).toBe("uncertain");
+    expect(envelope.wait_notice).toContain("the delivery wait uses 30000ms");
   });
 
   it("emits an envelope without prior-reply fields", async () => {

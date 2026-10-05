@@ -19,6 +19,7 @@ import {
   connectAgent,
   parseAgentInvitation,
   removeEmptyDirectory,
+  savedConnectionName,
 } from "./agent-connect.js";
 import { readSetupApi, type SetupReadBudget } from "./agent-setup-read.js";
 import type { ClaudeWakeHookResult } from "./claude-wake-install.js";
@@ -870,6 +871,8 @@ export async function setupAgent(params: {
         : state?.phase === "sending"
           ? "send_unknown"
           : "challenge_pending";
+    // A resume did not claim; the name its claim saved still applies.
+    claimedName ??= savedConnectionName(params.configDir, profileName);
     const result = (receiving: string, ownerNotifications?: string) => ({
       identity: context.identity,
       ...(claimedName === undefined ? {} : { connectionName: claimedName }),
