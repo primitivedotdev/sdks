@@ -419,6 +419,19 @@ describe("chat command", () => {
     expect(mocks.pickDefaultFromAddress).not.toHaveBeenCalled();
   });
 
+  it("sends a short subject and the whole message as the body", async () => {
+    connectedAuth(true);
+    mocks.next.mockResolvedValue(trustedReply());
+    const message =
+      "Hi, quick question from Harbor Scout: which Codex CLI version are you running? Just the version string is fine. Thanks!";
+    await runChatCommand(["help@agent.example", message, "--json"]);
+    const body = mocks.sendEmail.mock.calls[0][0].body;
+    expect(body.subject).toBe(
+      "Hi, quick question from Harbor Scout: which Codex CLI...",
+    );
+    expect(body.body_text).toBe(message);
+  });
+
   it("sends async work once and leaves the exact session receiving without waiting", async () => {
     const previous = process.env.CLAUDE_CODE_SESSION_ID;
     const previousCodex = process.env.CODEX_SESSION_ID;

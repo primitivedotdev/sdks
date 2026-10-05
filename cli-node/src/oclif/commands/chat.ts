@@ -53,7 +53,10 @@ import {
 import { contactRequestSessionKey } from "../contact-request-commands.js";
 import { formatAlreadySentNotice } from "../idempotent-replay-banner.js";
 import { currentMailSessionKey } from "../mail-session.js";
-import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
+import {
+  deriveChatSubject,
+  pickDefaultFromAddress,
+} from "../outbound-defaults.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
 import { reconcileChatSend } from "../reconcile-chat-send.js";
 import {
@@ -1743,7 +1746,7 @@ class ChatCommand extends Command {
           from =
             selectedFrom ??
             (await pickDefaultFromAddress(apiClient, authFailureContext));
-          subject = flags.subject ?? deriveSubject(message);
+          subject = flags.subject ?? deriveChatSubject(message);
         }
 
         const requestHash = chatRequestHash({

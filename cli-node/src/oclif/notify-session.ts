@@ -5,6 +5,7 @@ import {
   isEmailReceivedEvent,
   parseWebhookEvent,
 } from "@primitivedotdev/sdk/webhook";
+import { installedConnectSkillFile } from "./connect-skill.js";
 import type { ConversationStatus } from "./conversation-status.js";
 import { wakeInteractionSentence } from "./interaction-actions.js";
 import { ListenStateError, listenIdentity } from "./listen-state.js";
@@ -287,6 +288,7 @@ export async function openSessionNotifications(
             skillFirstLine(
               input.authorization?.senderRelation ??
                 (input.authorization?.network ? "agent" : undefined),
+              installedConnectSkillFile({ runtime: "codex" }),
             ),
           ].filter((line): line is string => line !== null),
           input.authorization?.senderRelation === "owner"

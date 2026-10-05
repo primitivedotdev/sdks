@@ -43,6 +43,26 @@ export function deriveSubject(body: string): string {
   return "Message";
 }
 
+const CHAT_SUBJECT_MAX_LENGTH = 60;
+
+/**
+ * A short subject for a chat message, whose body is usually one long line
+ * or a short paragraph: the first sentence of the first non-empty line,
+ * cut at a word boundary to at most CHAT_SUBJECT_MAX_LENGTH characters.
+ * The body is sent unchanged; replies thread on headers, not the subject.
+ */
+export function deriveChatSubject(body: string): string {
+  const line = deriveSubject(body);
+  const sentence = /^.+?[.?!](?=\s|$)/.exec(line)?.[0] ?? line;
+  if (sentence.length <= CHAT_SUBJECT_MAX_LENGTH) return sentence;
+  const room = sentence.slice(0, CHAT_SUBJECT_MAX_LENGTH - 3);
+  const space = room.lastIndexOf(" ");
+  const cut = (
+    space >= CHAT_SUBJECT_MAX_LENGTH / 2 ? room.slice(0, space) : room
+  ).replace(/[\s,;:.!?-]+$/, "");
+  return `${cut}...`;
+}
+
 function isVerifiedDomain(domain: Domain): domain is VerifiedDomain {
   return (domain as VerifiedDomain).is_active === true;
 }

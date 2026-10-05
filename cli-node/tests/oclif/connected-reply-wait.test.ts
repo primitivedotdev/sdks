@@ -13,6 +13,10 @@ import {
   prepareContactRequest,
 } from "../../src/oclif/contact-interactions.js";
 import { readConversationFollow } from "../../src/oclif/conversation-follow.js";
+import {
+  readPendingMail,
+  recordPendingMail,
+} from "../../src/oclif/pending-mail.js";
 import { openSharedMailStore } from "../../src/oclif/shared-mail-state.js";
 
 const hooks = vi.hoisted(() => ({
@@ -375,6 +379,34 @@ describe("connected pushed reply waits", () => {
       `/v1/emails/${f.state.detail.id}`,
     ]);
   });
+  it("clears this session's wake notice for a reply it consumed, so a restart does not announce it again", async () => {
+    const f = fixture();
+    const session = randomUUID();
+    const other = randomUUID();
+    const notice = {
+      kind: "mail" as const,
+      email_id: f.state.detail.id,
+      received_at: f.state.detail.received_at,
+      sender: target.recipient,
+      thread_id: null,
+      in_thread: true,
+      newer: null,
+    };
+    for (const id of [session, other])
+      await recordPendingMail(f.options.configDir, "work", id, notice);
+    const waiter = await openConnectedReplyWait({
+      ...f.options,
+      sessionKey: `claude:${session}`,
+    });
+    expect((await waiter.next())?.id).toBe(f.state.detail.id);
+    await waiter.observed(f.state.detail.id);
+    await waiter.finish();
+    await waiter.close();
+    expect(readPendingMail(f.options.configDir, "work", session)).toEqual([]);
+    // Another session has not seen the reply and keeps its notice.
+    expect(readPendingMail(f.options.configDir, "work", other)).toHaveLength(1);
+  });
+
   it("recovers an available exact reply before reading unrelated retained history", async () => {
     const f = fixture();
     const waiter = await openConnectedReplyWait(f.options);

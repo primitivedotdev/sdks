@@ -161,7 +161,8 @@ reply wait and authenticates the receiver before sending. It records an explicit
 idempotency key before the request. If the send response is lost, repeating the
 same command looks up that key without sending again. A timeout retains the exact
 parent claim for resume. A plain reply is an email response, not proof that a task
-is complete.
+is complete. The subject is short: the message's first sentence, cut at a word
+boundary to at most 60 characters. The whole message is the body.
 
 ## Authentication
 
@@ -1062,6 +1063,12 @@ Primitive mail arrived: <email-id> to=<receiving-address> from=<sender> relation
 Mail from a verified owner, member or connected peer agent is preceded by one
 line, `Load the primitive-connect skill first if it is not loaded.`, so an
 agent that has not loaded the skill yet loads it before handling the mail.
+When the skill is installed for the runtime, the same line adds `If your skill
+tool does not list primitive-connect, read <absolute path to SKILL.md> in
+full.`: a runtime reads its skill list when the session starts, so a skill
+installed during the session is reachable only as that file. The `nextSteps`
+and `guidance` of `agent connect` and `agent enroll` name the file the same
+way.
 
 One session can have several connected profiles, each receiving for its own
 address. `to=` names the address that received the mail, and the read command
@@ -1130,8 +1137,14 @@ Reading the email with `primitive emails get --id <id>` (with or without
 `--brief`) inside that session removes it; a read outside any Claude Code or
 Codex session leaves every session's notice in place. `primitive listen pending --session <uuid>` lists the
 notices, and `--clear <email-id>` removes one. Pending notices replayed by the
-hooks carry the same `to=` field and profile-selecting read command as the wake
-line.
+hooks print the same line as the live wake, including the load-the-skill line
+for verified mail (notices recorded by older CLI versions keep a shorter form
+with the same `to=` field and profile-selecting read command).
+
+An exact reply that `primitive chat` or `primitive emails wait` returns inside
+a session is already handled: its pending notice for that session is removed,
+and a listener that receives the reply again (after a restart, or a redelivered
+event) does not wake the session for it, whatever the sender's relationship.
 
 When `emails get --id <id>` answers `not_found` inside a session and that id
 is a pending notice for another profile bound to the same session, the CLI

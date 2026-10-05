@@ -17,6 +17,15 @@ import {
   withMailLock,
   writeMailJson,
 } from "./shared-mail-files.js";
+import type { WakeRelationship } from "./wake-context.js";
+
+const RELATIONSHIPS: readonly string[] = [
+  "owner",
+  "member",
+  "agent",
+  "contact",
+  "other",
+];
 
 /**
  * Durable per-session notices for mail a wake listener accepted. A notice is
@@ -44,6 +53,14 @@ export type PendingMailNotice = {
    * or `fyi`. Absent for ordinary mail.
    */
   interaction?: string;
+  /**
+   * Mail notices only: the sender relationship the live wake reported, so a
+   * replayed notice prints the same line (and load-the-skill line) as the
+   * live wake did. Absent on notices written before it was recorded.
+   */
+  relationship?: WakeRelationship;
+  /** Mail notices only: whether the email has attachments, as the live wake reported. */
+  attachments?: boolean;
   /**
    * Mail notices only: consecutive reads of this email by its own profile
    * that the API answered not_found. Absent until the first such read.
@@ -131,6 +148,14 @@ function notice(value: unknown): PendingMailNotice | null {
     // An unreadable label is dropped, never the notice.
     ...(kind === "mail" && isWakeInteractionLabel(row.interaction)
       ? { interaction: row.interaction }
+      : {}),
+    ...(kind === "mail" &&
+    typeof row.relationship === "string" &&
+    RELATIONSHIPS.includes(row.relationship)
+      ? { relationship: row.relationship as WakeRelationship }
+      : {}),
+    ...(kind === "mail" && typeof row.attachments === "boolean"
+      ? { attachments: row.attachments }
       : {}),
     ...(kind === "mail" &&
     typeof row.not_found_reads === "number" &&
@@ -322,6 +347,25 @@ export async function clearReadPendingMail(
   );
   for (const id of sessions)
     await removePendingMail(configDir, profileName, id, [emailId]);
+}
+
+/**
+ * Clear one email's notices for a session after the session consumed it
+ * without reading it by id: an exact reply that `primitive chat` or
+ * `primitive emails wait` returned. Every profile of the session holding a
+ * notice for the email is cleared, so a restarted wake does not announce a
+ * reply the session already has. A key with no runtime session clears
+ * nothing.
+ */
+export async function clearConsumedPendingMail(
+  configDir: string,
+  sessionKey: string | null | undefined,
+  emailId: string,
+): Promise<void> {
+  const session = sessionKey?.slice(sessionKey.indexOf(":") + 1).toLowerCase();
+  if (!session || !UUID.test(session)) return;
+  for (const profile of pendingMailProfiles(configDir, session, emailId))
+    await removePendingMail(configDir, profile, session, [emailId]);
 }
 
 /**

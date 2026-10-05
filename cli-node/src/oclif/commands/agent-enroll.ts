@@ -13,6 +13,10 @@ import {
   verificationReplySubmitted,
 } from "../agent-setup.js";
 import { installClaudeWakeHook } from "../claude-wake-install.js";
+import {
+  detectAgentRuntime,
+  installedConnectSkillFile,
+} from "../connect-skill.js";
 import { AgentConnectionSetupError } from "../connected-agent-profile.js";
 import { SESSION_UUID } from "../notify-session-native.js";
 import {
@@ -208,6 +212,9 @@ export default class AgentEnrollCommand extends Command {
               },
               name: result.name,
               suggestions: identity.suggestions,
+              skillFile: installedConnectSkillFile({
+                runtime: detectAgentRuntime(flags.session),
+              }),
             })
           : [];
       const guided = nextSteps.length

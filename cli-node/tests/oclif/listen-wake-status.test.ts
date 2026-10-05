@@ -1,8 +1,15 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Readable } from "node:stream";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const session = "11111111-1111-4111-8111-111111111111";
 const stopInput = { hook_event_name: "Stop", session_id: session };
@@ -57,7 +64,17 @@ import {
 } from "../../src/oclif/listen-state.js";
 
 const root = resolve(import.meta.dirname, "../..");
+// The skill line names an installed SKILL.md; keep this machine's out of it.
+const previousClaudeConfig = process.env.CLAUDE_CONFIG_DIR;
+let claudeConfig: string;
+beforeEach(() => {
+  claudeConfig = mkdtempSync(join(tmpdir(), "listen-wake-claude-"));
+  process.env.CLAUDE_CONFIG_DIR = claudeConfig;
+});
 afterEach(() => {
+  if (previousClaudeConfig === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+  else process.env.CLAUDE_CONFIG_DIR = previousClaudeConfig;
+  rmSync(claudeConfig, { recursive: true, force: true });
   vi.restoreAllMocks();
   vi.clearAllMocks();
   mocks.loadConnectedAgentProfile.mockReset();
@@ -590,6 +607,62 @@ it("acknowledges verified mail after the unchanged wake line is written", async 
     );
     expect(mocks.dispatchAutoRead).toHaveBeenCalledOnce();
     expect(mocks.dispatchAutoRead.mock.calls[0]?.[0]).toMatchObject(auto);
+  } finally {
+    process.exitCode = previousExit;
+  }
+});
+
+it("names the installed SKILL.md on the skill line of a verified wake", async () => {
+  const previousExit = process.exitCode;
+  const stderr: string[] = [];
+  const stdin = Readable.from([JSON.stringify(stopInput)]);
+  vi.spyOn(process, "stdin", "get").mockReturnValue(
+    stdin as typeof process.stdin,
+  );
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    stderr.push(String(chunk));
+    return true;
+  });
+  const skill = join(claudeConfig, "skills", "primitive-connect");
+  mkdirSync(skill, { recursive: true });
+  writeFileSync(join(skill, "SKILL.md"), "---\nname: primitive-connect\n");
+  mocks.readMailJson.mockReturnValue({
+    session,
+    receiverMode: "external",
+    phase: "sent",
+    receipt: { status: "delivered" },
+  });
+  const emailId = "44444444-4444-4444-8444-444444444444";
+  mocks.createWakeMail.mockResolvedValue({
+    handler: vi.fn(),
+    close: vi.fn(),
+    receiving: vi.fn(),
+    completed: vi.fn(),
+    wakeId: () => emailId,
+    senderRelation: () => undefined,
+    context: () => ({
+      sender: "peer@example.com",
+      relationship: "agent",
+      threadId: null,
+      inThread: true,
+      attachments: false,
+    }),
+    autoSignal: () => undefined,
+    status: () => undefined,
+  });
+  mocks.runListen.mockResolvedValue(undefined);
+  try {
+    await ListenCommand.run(
+      ["--once", "--wake", "--hook-session", "--events", "email.received"],
+      { root },
+    );
+    const [skillLine, mailLine] = stderr.join("").split("\n");
+    expect(skillLine).toBe(
+      `Load the primitive-connect skill first if it is not loaded. If your skill tool does not list primitive-connect, read ${join(skill, "SKILL.md")} in full.`,
+    );
+    expect(mailLine).toMatch(
+      new RegExp(`^Primitive mail arrived: ${emailId} to=unavailable from=`),
+    );
   } finally {
     process.exitCode = previousExit;
   }

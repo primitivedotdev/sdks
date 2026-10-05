@@ -5,6 +5,7 @@ import type {
 } from "@primitivedotdev/api-core";
 import type { ContactRequestReference } from "./contact-interactions.js";
 import { followEmailConversation } from "./conversation-follow.js";
+import { clearConsumedPendingMail } from "./pending-mail.js";
 import {
   openSharedMailReceiver,
   sharedMailScope,
@@ -308,6 +309,17 @@ export async function openConnectedReplyWait(options: {
       )
         return;
       await store.markWaitObserved(emailId, requestId);
+      // The session now has this reply; a wake notice a listener journaled
+      // for it would only announce it again after a restart.
+      try {
+        await clearConsumedPendingMail(
+          options.configDir,
+          options.sessionKey,
+          emailId,
+        );
+      } catch {
+        // Best effort: the reply was consumed either way.
+      }
     },
     finish: () => store.finishWait(requestId),
     close() {

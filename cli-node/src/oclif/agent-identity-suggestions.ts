@@ -41,6 +41,22 @@ export function defaultConnectionName(name: string, address: string): boolean {
 export const LOAD_SKILL_LINE =
   "Load the primitive-connect skill first if it is not loaded.";
 
+/**
+ * The fallback for a session whose skill tool does not list the skill: a
+ * runtime reads its skill list when the session starts, so a skill installed
+ * during the session is reachable only as a file. Empty without a path.
+ */
+export function skillFileFallback(skillFile?: string | null): string {
+  return skillFile
+    ? ` If your skill tool does not list primitive-connect, read ${skillFile} in full.`
+    : "";
+}
+
+/** LOAD_SKILL_LINE, naming the installed SKILL.md when it is known. Still one line. */
+export function loadSkillLine(skillFile?: string | null): string {
+  return `${LOAD_SKILL_LINE}${skillFileFallback(skillFile)}`;
+}
+
 /** One short clause saying how this session will receive mail. */
 export function receivingOutcome(receiving: {
   state: string;
@@ -68,6 +84,8 @@ export function connectNextSteps(params: {
   name?: string;
   nameIsDefault?: boolean;
   suggestions: IdentitySuggestion[];
+  /** Absolute path of the installed SKILL.md, when known. */
+  skillFile?: string | null;
 }): string[] {
   const rename = params.suggestions.find((s) => s.kind === "rename")?.command;
   const runtime = params.suggestions.find(
@@ -86,7 +104,7 @@ export function connectNextSteps(params: {
           `In the same message, make one offer to ${offers.join(" and to ")}. Run either only after the owner answers.`,
         ]
       : []),
-    "Load the primitive-connect skill before handling any mail.",
+    `Load the primitive-connect skill before handling any mail.${skillFileFallback(params.skillFile)}`,
   ];
 }
 
