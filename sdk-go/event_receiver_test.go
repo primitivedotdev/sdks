@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -62,7 +63,7 @@ func TestEventsWaitReceiptLifecycle(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "data": data})
 	}))
 	defer server.Close()
-	client, err := NewClientWithOptions("test", ClientOptions{APIBaseURL1: "http://127.0.0.1:1/v1"})
+	client, err := NewClientWithOptions("pconn_test", ClientOptions{APIBaseURL1: "http://127.0.0.1:1/v1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,6 +119,58 @@ func TestEventsWaitReceiptLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+func TestEventsRefuseAccountKeyBeforeRequest(t *testing.T) {
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+	client, err := NewClientWithOptions("prim_account", ClientOptions{APIBaseURL1: server.URL + "/v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for range 2 {
+		_, err = client.Events.Wait(ctx, EventOptions{Subscription: "agent", Transport: "poll"})
+		var receiverErr *EventReceiverError
+		if !errors.As(err, &receiverErr) || receiverErr.Code != AgentConnectionRequired || receiverErr.Status != http.StatusForbidden {
+			t.Fatalf("expected account key refusal, got %v", err)
+		}
+		if !strings.Contains(err.Error(), "connected agent credential") {
+			t.Fatalf("refusal does not explain the credential: %v", err)
+		}
+	}
+	if requests != 0 {
+		t.Fatalf("made %d requests for an account key", requests)
+	}
+}
+
+func TestEventsExplainServerRefusal(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": map[string]string{"code": AgentConnectionRequired, "message": "refused"}})
+	}))
+	defer server.Close()
+	client, err := NewClientWithOptions("pconn_test", ClientOptions{APIBaseURL1: server.URL + "/v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	override, err := url.Parse(server.URL + "/v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.Events.Wait(primitiveapi.WithServerURL(ctx, override), EventOptions{Subscription: "agent", Transport: "poll"})
+	var receiverErr *EventReceiverError
+	if !errors.As(err, &receiverErr) || receiverErr.Code != AgentConnectionRequired || !strings.Contains(err.Error(), "GET /emails") {
+		t.Fatalf("expected explained server refusal, got %v", err)
+	}
+}
+
 func TestEventsWebSocketLostReceipt(t *testing.T) {
 	fixture := loadReceiverFixture(t)
 	var mu sync.Mutex
@@ -140,7 +193,7 @@ func TestEventsWebSocketLostReceipt(t *testing.T) {
 				}
 				switch frame.Type {
 				case "authenticate":
-					if frame.Token != "test" {
+					if frame.Token != "pconn_test" {
 						t.Error("missing token")
 					}
 					err = wsjson.Write(r.Context(), socket, map[string]string{"type": "ready", "protocol": "primitive.events.v1"})
@@ -170,7 +223,7 @@ func TestEventsWebSocketLostReceipt(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "data": data})
 	}))
 	defer server.Close()
-	client, err := NewClientWithOptions("test", ClientOptions{APIBaseURL1: "http://127.0.0.1:1/v1"})
+	client, err := NewClientWithOptions("pconn_test", ClientOptions{APIBaseURL1: "http://127.0.0.1:1/v1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +260,7 @@ func TestEventsWaitDeadline(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	client, err := NewClientWithOptions("test", ClientOptions{APIBaseURL1: server.URL + "/v1"})
+	client, err := NewClientWithOptions("pconn_test", ClientOptions{APIBaseURL1: server.URL + "/v1"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,7 +316,7 @@ func TestEventsWebSocketHeartbeatDuringHandler(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "data": data})
 	}))
 	defer server.Close()
-	client, err := NewClientWithOptions("test", ClientOptions{APIBaseURL1: server.URL + "/v1"})
+	client, err := NewClientWithOptions("pconn_test", ClientOptions{APIBaseURL1: server.URL + "/v1"})
 	if err != nil {
 		t.Fatal(err)
 	}

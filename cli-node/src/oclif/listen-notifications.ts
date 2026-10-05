@@ -21,6 +21,10 @@ import {
   readBoundSentMessageId,
   reserveConversationStatus,
 } from "./conversation-status.js";
+import {
+  AGENT_CONNECTION_REQUIRED_MESSAGE,
+  isConnectedAgentKey,
+} from "./listen-credential.js";
 import type { ListenOptions } from "./listen-runner.js";
 import { ListenStateError } from "./listen-state.js";
 import {
@@ -99,6 +103,8 @@ export async function runSharedNotificationListen(
     apiKey: options.apiKey,
     apiBaseUrl: options.apiBaseUrl,
   });
+  if (!isConnectedAgentKey(auth.auth.apiKey))
+    throw new ListenStateError(AGENT_CONNECTION_REQUIRED_MESSAGE);
   if (
     options.expectedNotificationScope !== undefined &&
     notificationScope(auth.auth.apiBaseUrl, auth.auth.apiKey) !==

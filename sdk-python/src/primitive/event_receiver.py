@@ -29,9 +29,21 @@ Transport = Literal["websocket", "poll"]
 StatusCallback = Callable[["EventStatus"], None]
 
 
+AGENT_CONNECTION_REQUIRED = "pull_subscription_requires_agent_connection"
+AGENT_CONNECTION_REQUIRED_MESSAGE = (
+    "Event subscriptions require a connected agent credential (an API key starting with"
+    " pconn_), which limits them to one address. With an account API key, receive mail"
+    " with GET /emails?since=<cursor>&wait=30 or an HTTP webhook endpoint instead."
+)
+
+
 class EventReceiverError(Exception):
     def __init__(self, code: str, status: int = 0, retry_after: float = 0) -> None:
-        super().__init__(f"Event receiver failed ({code}, HTTP {status})")
+        super().__init__(
+            AGENT_CONNECTION_REQUIRED_MESSAGE
+            if code == AGENT_CONNECTION_REQUIRED
+            else f"Event receiver failed ({code}, HTTP {status})"
+        )
         self.code, self.status, self.retry_after = code, status, retry_after
 
 
@@ -514,6 +526,11 @@ class EventsResource:
         on_status: StatusCallback | None,
         on_gap: Literal["report", "error"],
     ) -> _Connection:
+        # Only connected-agent credentials can create subscriptions. Refuse an
+        # account key here instead of spending a request on the same answer.
+        token = self._client.token
+        if token and not token.startswith("pconn_"):
+            raise EventReceiverError(AGENT_CONNECTION_REQUIRED, 403)
         connection = _Connection(
             self._client.get_async_httpx_client(),
             self._client.token,

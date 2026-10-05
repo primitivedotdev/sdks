@@ -2,12 +2,16 @@ import { scryptSync } from "node:crypto";
 import {
   completeWebhookEvent,
   createEndpoint,
-  getAccount,
   type PrimitiveApiClient,
   pullWebhookEvent,
 } from "@primitivedotdev/api-core";
 import { EventConnection, EventReceiverError } from "@primitivedotdev/sdk/api";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
+import {
+  AGENT_CONNECTION_REQUIRED,
+  AGENT_CONNECTION_REQUIRED_MESSAGE,
+  isConnectedAgentKey,
+} from "./listen-credential.js";
 import { runSharedNotificationListen } from "./listen-notifications.js";
 import {
   ListenStateError,
@@ -26,13 +30,15 @@ class RequestFailure extends ListenError {
     readonly retryAfter: number,
   ) {
     super(
-      code === "agent_connection_scope_forbidden"
-        ? "This operation is outside the connected address grant. Use inbound email events and this credential’s own subscription."
-        : status === 401 || status === 403
-          ? "Listener authorization failed. Run primitive signin or check your API key and account permissions."
-          : status === 409 && code === "subscription_conflict"
-            ? "This subscription has different event filters. Omit --events to resume it, or use primitive listen --subscription new-subscription (add your --events selection)."
-            : `Listener API request failed (HTTP ${status || "transport"}, ${code}).`,
+      code === AGENT_CONNECTION_REQUIRED
+        ? AGENT_CONNECTION_REQUIRED_MESSAGE
+        : code === "agent_connection_scope_forbidden"
+          ? "This operation is outside the connected address grant. Use inbound email events and this credential’s own subscription."
+          : status === 401 || status === 403
+            ? "Listener authorization failed. Run primitive signin or check your API key and account permissions."
+            : status === 409 && code === "subscription_conflict"
+              ? "This subscription has different event filters. Omit --events to resume it, or use primitive listen --subscription new-subscription (add your --events selection)."
+              : `Listener API request failed (HTTP ${status || "transport"}, ${code}).`,
     );
   }
 }
@@ -152,7 +158,6 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
   let accountId: string | undefined;
   let verifiedKey: string | undefined;
   let verified = false;
-  let connectedCredential = false;
   let confirmed = 0;
   let release: (() => void) | undefined;
   let stream: EventConnection | undefined;
@@ -226,40 +231,25 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
       );
     origin = base;
     if (!verified || auth.auth.apiKey !== verifiedKey) {
-      if (auth.auth.apiKey?.startsWith("pconn_")) {
-        connectedCredential = true;
-        // Connected credentials cannot read account settings. Keep local state
-        // private to this credential; registration and every receive authenticate
-        // it on the server before any event is returned.
-        const identity = `connection:${scryptSync(
-          auth.auth.apiKey,
-          "primitive-listener-identity-v1",
-          32,
-        ).toString("hex")}`;
-        if (accountId !== undefined && accountId !== identity)
-          throw new ListenError(
-            "The connected credential changed while listening. Restart the listener.",
-          );
-        accountId = identity;
-        verifiedKey = auth.auth.apiKey;
-        verified = true;
-        return auth.apiClient.client;
-      }
-      const account = await retry(() =>
-        getAccount({
-          client: auth.apiClient.client,
-          responseStyle: "fields",
-          signal: AbortSignal.any([signal, AbortSignal.timeout(30_000)]),
-        }),
-      );
-      if (account.success !== true || typeof account.data?.id !== "string")
-        throw new ListenError("The API returned an invalid account response.");
-      if (accountId !== undefined && accountId !== account.data.id)
+      // Only connected credentials can create a subscription, so refuse an
+      // account login before reading or reserving any local listener state.
+      const apiKey = auth.auth.apiKey;
+      if (!isConnectedAgentKey(apiKey))
+        throw new ListenError(AGENT_CONNECTION_REQUIRED_MESSAGE);
+      // Connected credentials cannot read account settings. Keep local state
+      // private to this credential; registration and every receive authenticate
+      // it on the server before any event is returned.
+      const identity = `connection:${scryptSync(
+        apiKey,
+        "primitive-listener-identity-v1",
+        32,
+      ).toString("hex")}`;
+      if (accountId !== undefined && accountId !== identity)
         throw new ListenError(
-          "The authenticated account changed while listening. Restart the listener.",
+          "The connected credential changed while listening. Restart the listener.",
         );
-      accountId = account.data.id;
-      verifiedKey = auth.auth.apiKey;
+      accountId = identity;
+      verifiedKey = apiKey;
       verified = true;
     }
     return auth.apiClient.client;
@@ -426,11 +416,7 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
       };
       // Forwarding acknowledges delivery; an address grant never authorizes
       // deleting canonical mail, even if the local server requests it.
-      if (
-        (connectedCredential || endpoint.recipient) &&
-        completion.mode === "http"
-      )
-        completion.confirmed = false;
+      if (completion.mode === "http") completion.confirmed = false;
       try {
         // Keep this evidence in memory until confirmed. Never rerun the hook to retry an acknowledgement.
         const receipt = await retry(async () => {
