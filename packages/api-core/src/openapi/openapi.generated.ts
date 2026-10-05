@@ -327,7 +327,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "startCliSignup",
         "summary": "Start CLI account signup",
-        "description": "Starts a terminal-native CLI signup. `signup_code` is optional;\nomit it to sign up without one. The API creates a pending signup\nsession, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
+        "description": "Starts a terminal-native CLI signup. The API creates a pending\nsignup session, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
         "tags": [
           "CLI"
         ],
@@ -467,7 +467,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "verifyCliSignup",
         "summary": "Verify CLI signup and create OAuth session",
-        "description": "Verifies the email code for a CLI signup session and creates the\naccount. When the session was started with a `signup_code`, the\nreserved code is redeemed; sessions started without a code skip\nthe redemption step. Either way an org-scoped OAuth CLI session\nis created and the token set is returned exactly once. This\nendpoint does not require an API key.\n",
+        "description": "Verifies the email code for a CLI signup session and creates the\naccount. An org-scoped OAuth CLI session is created and the\ntoken set is returned exactly once. This endpoint does not\nrequire an API key.\n",
         "tags": [
           "CLI"
         ],
@@ -514,7 +514,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "400": {
-            "description": "Invalid request, invalid verification code, expired token, invalid signup code, rejected password, or account creation failure",
+            "description": "Invalid request, invalid verification code, expired token, rejected password, or account creation failure",
             "content": {
               "application/json": {
                 "schema": {
@@ -533,7 +533,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "startAgentSignup",
         "summary": "Start agent account signup",
-        "description": "Starts an agent-native signup session. `signup_code` is optional;\nomit it to sign up without one. The API creates a pending signup\nsession, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
+        "description": "Starts an agent-native signup session. The API creates a pending\nsignup session, sends an email verification code, and returns an opaque\nsignup token used by the resend and verify steps. This endpoint\ndoes not require an API key.\n",
         "tags": [
           "Agent"
         ],
@@ -673,7 +673,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "verifyAgentSignup",
         "summary": "Verify agent signup and create OAuth tokens",
-        "description": "Verifies the email code for an agent signup session and creates\nthe account when needed. When the session was started with a\n`signup_code`, the reserved code is redeemed; sessions started\nwithout a code skip the redemption step. An org-scoped OAuth\nsession for CLI authentication is minted and the raw tokens are\nreturned exactly once. For existing users, the optional `org_id`\nselects which accessible workspace should receive the new\nsession (no signup-code redemption is performed for existing\nusers regardless of how the session was started).\n",
+        "description": "Verifies the email code for an agent signup session and creates\nthe account when needed. An org-scoped OAuth session for CLI\nauthentication is minted and the raw tokens are returned exactly\nonce. For existing users, the optional `org_id` selects which\naccessible workspace should receive the new session.\n",
         "tags": [
           "Agent"
         ],
@@ -720,7 +720,7 @@ export const openapiDocument: Record<string, unknown> = {
             }
           },
           "400": {
-            "description": "Invalid request, invalid verification code, expired token, invalid signup code, or account creation failure",
+            "description": "Invalid request, invalid verification code, expired token, or account creation failure",
             "content": {
               "application/json": {
                 "schema": {
@@ -15997,7 +15997,6 @@ export const openapiDocument: Record<string, unknown> = {
                   "access_denied",
                   "expired_token",
                   "invalid_device_code",
-                  "invalid_signup_code",
                   "invalid_signup_token",
                   "invalid_verification_code",
                   "email_delivery_failed",
@@ -16340,12 +16339,6 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "email",
             "maxLength": 254
           },
-          "signup_code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "description": "Optional signup code. Omit if you do not have one."
-          },
           "terms_accepted": {
             "type": "boolean",
             "const": true,
@@ -16545,12 +16538,6 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "format": "email",
             "maxLength": 254
-          },
-          "signup_code": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 128,
-            "description": "Optional signup code. Omit if you do not have one."
           },
           "terms_accepted": {
             "type": "boolean",

@@ -87,9 +87,8 @@ def sync_detailed(
 ) -> Response[ErrorResponse | StartCliSignupResponse201]:
     """ Start CLI account signup
 
-     Starts a terminal-native CLI signup. `signup_code` is optional;
-    omit it to sign up without one. The API creates a pending signup
-    session, sends an email verification code, and returns an opaque
+     Starts a terminal-native CLI signup. The API creates a pending
+    signup session, sends an email verification code, and returns an opaque
     signup token used by the resend and verify steps. This endpoint
     does not require an API key.
 
@@ -124,9 +123,8 @@ def sync(
 ) -> ErrorResponse | StartCliSignupResponse201 | None:
     """ Start CLI account signup
 
-     Starts a terminal-native CLI signup. `signup_code` is optional;
-    omit it to sign up without one. The API creates a pending signup
-    session, sends an email verification code, and returns an opaque
+     Starts a terminal-native CLI signup. The API creates a pending
+    signup session, sends an email verification code, and returns an opaque
     signup token used by the resend and verify steps. This endpoint
     does not require an API key.
 
@@ -156,9 +154,8 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | StartCliSignupResponse201]:
     """ Start CLI account signup
 
-     Starts a terminal-native CLI signup. `signup_code` is optional;
-    omit it to sign up without one. The API creates a pending signup
-    session, sends an email verification code, and returns an opaque
+     Starts a terminal-native CLI signup. The API creates a pending
+    signup session, sends an email verification code, and returns an opaque
     signup token used by the resend and verify steps. This endpoint
     does not require an API key.
 
@@ -193,9 +190,8 @@ async def asyncio(
 ) -> ErrorResponse | StartCliSignupResponse201 | None:
     """ Start CLI account signup
 
-     Starts a terminal-native CLI signup. `signup_code` is optional;
-    omit it to sign up without one. The API creates a pending signup
-    session, sends an email verification code, and returns an opaque
+     Starts a terminal-native CLI signup. The API creates a pending
+    signup session, sends an email verification code, and returns an opaque
     signup token used by the resend and verify steps. This endpoint
     does not require an API key.
 

@@ -265,7 +265,6 @@ describe("agent signup commands", () => {
       email: "test@example.com",
       flags: {
         "accept-terms": true,
-        "signup-code": "signup-code",
       },
     });
 
@@ -274,7 +273,6 @@ describe("agent signup commands", () => {
       expect.objectContaining({
         body: expect.objectContaining({
           email: "test@example.com",
-          signup_code: "signup-code",
           terms_accepted: true,
         }),
       }),
@@ -287,13 +285,9 @@ describe("agent signup commands", () => {
     );
   });
 
-  it("does not prompt for a signup code when DEFAULT_SIGNUP_COMMAND_COPY is in use", async () => {
-    // DEFAULT_SIGNUP_COMMAND_COPY sets codeRequired: false (signup
-    // accepts requests without one). A user with no email is still
-    // prompted for that (it's required for the verification round
-    // trip), and terms are still confirmed. The signin / login / otp
-    // copies in cli-node/src/oclif/commands/signin.ts set codeRequired
-    // true and still prompt; that path has its own coverage.
+  it("never prompts for or sends a signup code", async () => {
+    // A user with no email is still prompted for that (it's required
+    // for the verification round trip), and terms are still confirmed.
     const deps = flowDeps({
       promptAnswers: ["test@example.com"],
     });
@@ -342,7 +336,6 @@ describe("agent signup commands", () => {
       email: "test@example.com",
       flags: {
         "accept-terms": true,
-        "signup-code": "signup-code",
       },
     });
 
@@ -500,7 +493,6 @@ describe("agent signup commands", () => {
         email: "test@example.com",
         flags: {
           "accept-terms": true,
-          "signup-code": "signup-code",
         },
       }),
     ).rejects.toThrow(/Already logged in/);

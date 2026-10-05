@@ -102,14 +102,10 @@ def sync_detailed(
     """ Verify agent signup and create OAuth tokens
 
      Verifies the email code for an agent signup session and creates
-    the account when needed. When the session was started with a
-    `signup_code`, the reserved code is redeemed; sessions started
-    without a code skip the redemption step. An org-scoped OAuth
-    session for CLI authentication is minted and the raw tokens are
-    returned exactly once. For existing users, the optional `org_id`
-    selects which accessible workspace should receive the new
-    session (no signup-code redemption is performed for existing
-    users regardless of how the session was started).
+    the account when needed. An org-scoped OAuth session for CLI
+    authentication is minted and the raw tokens are returned exactly
+    once. For existing users, the optional `org_id` selects which
+    accessible workspace should receive the new session.
 
     Args:
         body (VerifyAgentSignupInput):
@@ -143,14 +139,10 @@ def sync(
     """ Verify agent signup and create OAuth tokens
 
      Verifies the email code for an agent signup session and creates
-    the account when needed. When the session was started with a
-    `signup_code`, the reserved code is redeemed; sessions started
-    without a code skip the redemption step. An org-scoped OAuth
-    session for CLI authentication is minted and the raw tokens are
-    returned exactly once. For existing users, the optional `org_id`
-    selects which accessible workspace should receive the new
-    session (no signup-code redemption is performed for existing
-    users regardless of how the session was started).
+    the account when needed. An org-scoped OAuth session for CLI
+    authentication is minted and the raw tokens are returned exactly
+    once. For existing users, the optional `org_id` selects which
+    accessible workspace should receive the new session.
 
     Args:
         body (VerifyAgentSignupInput):
@@ -179,14 +171,10 @@ async def asyncio_detailed(
     """ Verify agent signup and create OAuth tokens
 
      Verifies the email code for an agent signup session and creates
-    the account when needed. When the session was started with a
-    `signup_code`, the reserved code is redeemed; sessions started
-    without a code skip the redemption step. An org-scoped OAuth
-    session for CLI authentication is minted and the raw tokens are
-    returned exactly once. For existing users, the optional `org_id`
-    selects which accessible workspace should receive the new
-    session (no signup-code redemption is performed for existing
-    users regardless of how the session was started).
+    the account when needed. An org-scoped OAuth session for CLI
+    authentication is minted and the raw tokens are returned exactly
+    once. For existing users, the optional `org_id` selects which
+    accessible workspace should receive the new session.
 
     Args:
         body (VerifyAgentSignupInput):
@@ -220,14 +208,10 @@ async def asyncio(
     """ Verify agent signup and create OAuth tokens
 
      Verifies the email code for an agent signup session and creates
-    the account when needed. When the session was started with a
-    `signup_code`, the reserved code is redeemed; sessions started
-    without a code skip the redemption step. An org-scoped OAuth
-    session for CLI authentication is minted and the raw tokens are
-    returned exactly once. For existing users, the optional `org_id`
-    selects which accessible workspace should receive the new
-    session (no signup-code redemption is performed for existing
-    users regardless of how the session was started).
+    the account when needed. An org-scoped OAuth session for CLI
+    authentication is minted and the raw tokens are returned exactly
+    once. For existing users, the optional `org_id` selects which
+    accessible workspace should receive the new session.
 
     Args:
         body (VerifyAgentSignupInput):

@@ -14,17 +14,13 @@ function cliError(message: string): Errors.CLIError {
 }
 
 // The email-code auth flows (signin / login / otp) reuse the signup
-// helper but the underlying start endpoint still requires a signup
-// code for these verbs. codeRequired: true makes the helper prompt
-// when the flag is unset (matching the previous shape), so opening
-// signup doesn't silently open sign-in.
+// start helper with their own command copy.
 const SIGNIN_OTP_COPY: SignupCommandCopy = {
   actionNoun: "sign-in",
   actionGerund: "signing in",
   confirmCommand: (email) => `signin otp confirm ${email} <code>`,
   resendCommand: (email) => `signin otp resend ${email}`,
   startCommand: (email) => `signin otp ${email}`,
-  codeRequired: true,
 };
 
 const SIGNIN_EMAIL_COPY: SignupCommandCopy = {
@@ -33,7 +29,6 @@ const SIGNIN_EMAIL_COPY: SignupCommandCopy = {
   confirmCommand: (email) => `signin confirm ${email} <code>`,
   resendCommand: (email) => `signin resend ${email}`,
   startCommand: (email) => `signin ${email}`,
-  codeRequired: true,
 };
 
 const LOGIN_EMAIL_COPY: SignupCommandCopy = {
@@ -42,7 +37,6 @@ const LOGIN_EMAIL_COPY: SignupCommandCopy = {
   confirmCommand: (email) => `login confirm ${email} <code>`,
   resendCommand: (email) => `login resend ${email}`,
   startCommand: (email) => `login ${email}`,
-  codeRequired: true,
 };
 
 const LOGIN_OTP_COPY: SignupCommandCopy = {
@@ -51,7 +45,6 @@ const LOGIN_OTP_COPY: SignupCommandCopy = {
   confirmCommand: (email) => `login otp confirm ${email} <code>`,
   resendCommand: (email) => `login otp resend ${email}`,
   startCommand: (email) => `login otp ${email}`,
-  codeRequired: true,
 };
 
 const OTP_COPY: SignupCommandCopy = {
@@ -60,7 +53,6 @@ const OTP_COPY: SignupCommandCopy = {
   confirmCommand: (email) => `otp confirm ${email} <code>`,
   resendCommand: (email) => `otp resend ${email}`,
   startCommand: (email) => `otp ${email}`,
-  codeRequired: true,
 };
 
 function acquireCredentialsLock(configDir: string): () => void {
@@ -92,10 +84,6 @@ function commonOtpStartFlags() {
       description:
         "Replace saved credentials or pending email-code auth state when needed",
     }),
-    "signup-code": Flags.string({
-      description: "Signup code required to start email-code sign-in",
-      env: "PRIMITIVE_SIGNUP_CODE",
-    }),
   };
 }
 
@@ -111,7 +99,7 @@ export class SigninCommand extends BrowserLoginCommand {
   static description =
     `Sign in or log in to an existing Primitive account and save an org-scoped OAuth session locally.
 
-Run \`primitive signin <email> --signup-code <code> --accept-terms\` for email-code sign-in, then \`primitive signin confirm <email> <code>\`. Run \`primitive signin\` with no email to use browser approval; \`primitive signin browser\` is the explicit browser form. \`primitive login\` supports the same flows with login-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`.`;
+Run \`primitive signin <email> --accept-terms\` for email-code sign-in, then \`primitive signin confirm <email> <code>\`. Run \`primitive signin\` with no email to use browser approval; \`primitive signin browser\` is the explicit browser form. \`primitive login\` supports the same flows with login-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`.`;
 
   static summary = "Sign in to an existing account";
 
@@ -119,9 +107,9 @@ Run \`primitive signin <email> --signup-code <code> --accept-terms\` for email-c
     "<%= config.bin %> signin",
     "<%= config.bin %> signin browser",
     "<%= config.bin %> signin --no-browser",
-    "<%= config.bin %> signin user@example.com --signup-code invite-code --accept-terms",
+    "<%= config.bin %> signin user@example.com --accept-terms",
     "<%= config.bin %> signin confirm user@example.com 123456",
-    "<%= config.bin %> signin otp user@example.com --signup-code invite-code --accept-terms",
+    "<%= config.bin %> signin otp user@example.com --accept-terms",
     "<%= config.bin %> signin otp confirm user@example.com 123456",
   ];
 
@@ -140,9 +128,9 @@ Run \`primitive signin <email> --signup-code <code> --accept-terms\` for email-c
     const { args, flags } = await this.parse(commandClass);
 
     if (!args.email) {
-      if (flags["signup-code"] || flags["accept-terms"]) {
+      if (flags["accept-terms"]) {
         throw cliError(
-          `Email-code auth needs an email address. Run \`primitive ${this.emailCodeCopy().startCommand("<email>")} --signup-code <code> --accept-terms\`.`,
+          `Email-code auth needs an email address. Run \`primitive ${this.emailCodeCopy().startCommand("<email>")} --accept-terms\`.`,
         );
       }
       await this.runBrowserLogin(flags as LoginFlags, this.retryCommand());
@@ -179,7 +167,7 @@ export class LoginCommand extends SigninCommand {
   static description =
     `Log in or sign in to an existing Primitive account and save an org-scoped OAuth session locally.
 
-Run \`primitive login <email> --signup-code <code> --accept-terms\` for email-code login, then \`primitive login confirm <email> <code>\`. Run \`primitive login\` with no email to use browser approval; \`primitive login browser\` is the explicit browser form. \`primitive signin\` supports the same flows with signin-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`.`;
+Run \`primitive login <email> --accept-terms\` for email-code login, then \`primitive login confirm <email> <code>\`. Run \`primitive login\` with no email to use browser approval; \`primitive login browser\` is the explicit browser form. \`primitive signin\` supports the same flows with signin-shaped commands. \`primitive otp <email>\` is the shortest email-code auth form. For new account creation, use \`primitive signup <email>\`.`;
 
   static summary = "Log in to an existing account";
 
@@ -187,9 +175,9 @@ Run \`primitive login <email> --signup-code <code> --accept-terms\` for email-co
     "<%= config.bin %> login",
     "<%= config.bin %> login browser",
     "<%= config.bin %> login --no-browser",
-    "<%= config.bin %> login user@example.com --signup-code invite-code --accept-terms",
+    "<%= config.bin %> login user@example.com --accept-terms",
     "<%= config.bin %> login confirm user@example.com 123456",
-    "<%= config.bin %> login otp user@example.com --signup-code invite-code --accept-terms",
+    "<%= config.bin %> login otp user@example.com --accept-terms",
     "<%= config.bin %> login otp confirm user@example.com 123456",
   ];
 
@@ -249,12 +237,12 @@ export class SigninOtpCommand extends Command {
   };
 
   static description =
-    "Start email-code sign-in using Primitive's signup/auth OTP flow, send a verification code, and save the pending token locally. Requires a signup code.";
+    "Start email-code sign-in using Primitive's signup/auth OTP flow, send a verification code, and save the pending token locally.";
 
   static summary = "Start OTP sign-in";
 
   static examples = [
-    "<%= config.bin %> signin otp user@example.com --signup-code invite-code --accept-terms",
+    "<%= config.bin %> signin otp user@example.com --accept-terms",
     "<%= config.bin %> signin otp confirm user@example.com 123456",
   ];
 
@@ -287,12 +275,12 @@ export class LoginOtpCommand extends SigninOtpCommand {
   static args = SigninOtpCommand.args;
 
   static description =
-    "Start email-code login using Primitive's signup/auth OTP flow, send a verification code, and save the pending token locally. Requires a signup code.";
+    "Start email-code login using Primitive's signup/auth OTP flow, send a verification code, and save the pending token locally.";
 
   static summary = "Start OTP login";
 
   static examples = [
-    "<%= config.bin %> login otp user@example.com --signup-code invite-code --accept-terms",
+    "<%= config.bin %> login otp user@example.com --accept-terms",
     "<%= config.bin %> login otp confirm user@example.com 123456",
   ];
 
@@ -307,12 +295,12 @@ export class OtpCommand extends SigninOtpCommand {
   static args = SigninOtpCommand.args;
 
   static description =
-    "Start email-code authentication, send a verification code, and save the pending token locally. Requires a signup code.";
+    "Start email-code authentication, send a verification code, and save the pending token locally.";
 
   static summary = "Start email-code auth";
 
   static examples = [
-    "<%= config.bin %> otp user@example.com --signup-code invite-code --accept-terms",
+    "<%= config.bin %> otp user@example.com --accept-terms",
     "<%= config.bin %> otp confirm user@example.com 123456",
   ];
 
