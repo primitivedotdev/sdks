@@ -314,6 +314,9 @@ export async function refreshStoredCliCredentials(params: {
   }
 }
 
+/** Thrown before any request or token refresh when a command needs a connected agent key. */
+export class ConnectedAgentKeyRequiredError extends Error {}
+
 export async function createAuthenticatedCliApiClient(params: {
   configDir: string;
   apiKey?: string;
@@ -322,6 +325,8 @@ export async function createAuthenticatedCliApiClient(params: {
   fetch?: FetchFn;
   now?: () => number;
   credentialsLockHeld?: boolean;
+  /** Refuse any other credential before it is refreshed or sent. */
+  requireConnectedAgentKey?: boolean;
 }) {
   const requestConfig = resolveCliApiRequestConfig(params);
   let auth = resolveCliAuth({
@@ -341,6 +346,13 @@ export async function createAuthenticatedCliApiClient(params: {
     );
     if (hint) process.stderr.write(`${hint}\n`);
   }
+  if (
+    params.requireConnectedAgentKey &&
+    (auth.source === "stored" || !auth.apiKey?.startsWith("pconn_"))
+  )
+    throw new ConnectedAgentKeyRequiredError(
+      "A connected agent credential is required.",
+    );
   if (auth.source === "stored" && auth.credentials) {
     const refreshed = await refreshStoredCliCredentials({
       apiBaseUrl: auth.apiBaseUrl,

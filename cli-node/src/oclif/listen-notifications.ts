@@ -1,5 +1,8 @@
 import { type EmailDetail, getEmail } from "@primitivedotdev/api-core";
-import { createAuthenticatedCliApiClient } from "./api-client.js";
+import {
+  ConnectedAgentKeyRequiredError,
+  createAuthenticatedCliApiClient,
+} from "./api-client.js";
 import {
   autoSignalEligible,
   dispatchAutoRead,
@@ -21,10 +24,7 @@ import {
   readBoundSentMessageId,
   reserveConversationStatus,
 } from "./conversation-status.js";
-import {
-  AGENT_CONNECTION_REQUIRED_MESSAGE,
-  isConnectedAgentKey,
-} from "./listen-credential.js";
+import { AGENT_CONNECTION_REQUIRED_MESSAGE } from "./listen-credential.js";
 import type { ListenOptions } from "./listen-runner.js";
 import { ListenStateError } from "./listen-state.js";
 import {
@@ -102,9 +102,12 @@ export async function runSharedNotificationListen(
     configDir: options.configDir,
     apiKey: options.apiKey,
     apiBaseUrl: options.apiBaseUrl,
+    requireConnectedAgentKey: true,
+  }).catch((error: unknown) => {
+    if (error instanceof ConnectedAgentKeyRequiredError)
+      throw new ListenStateError(AGENT_CONNECTION_REQUIRED_MESSAGE);
+    throw error;
   });
-  if (!isConnectedAgentKey(auth.auth.apiKey))
-    throw new ListenStateError(AGENT_CONNECTION_REQUIRED_MESSAGE);
   if (
     options.expectedNotificationScope !== undefined &&
     notificationScope(auth.auth.apiBaseUrl, auth.auth.apiKey) !==

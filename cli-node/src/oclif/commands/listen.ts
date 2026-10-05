@@ -147,7 +147,7 @@ export function hookReceiverStatus(
 export default class ListenCommand extends Command {
   static summary = "Receive webhook events locally without a public endpoint";
   static description =
-    "Subscribe once and reconnect using the same durable server queue. Connected-agent credentials automatically receive only their assigned address. Use --notify-session with an exact loaded session UUID and --contacts for saved contact preferences and eligible same-org network peers, or approved --sender addresses, for external mail events at tool-output authority, never synthetic user messages. Explicit silence still wins. Use a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Add --background to keep native receiving independent of the calling terminal process; --status reports receiver health and receipts, add --email-id for one email's routing evidence, and --stop stops that receiver. Status is JSON and stdout events are JSONL by default; --json is accepted explicitly without changing delivery mode. Notifications require an existing native local-session socket; the CLI subscribes only to the exact already-loaded thread and never launches a terminal or creates a session. Verified presence controls are handled without model turns and do not consume --once or --number. Claude hook capability: primitive-hook-profile-bound-v2.";
+    "Subscribe once and reconnect using the same durable server queue. Requires a connected agent credential (primitive agent connect, or a pconn_ key in PRIMITIVE_API_KEY); the subscription receives only that agent's address. An account API key or saved sign-in is refused before any request; use primitive emails watch or an HTTP webhook endpoint for those. Use --notify-session with an exact loaded session UUID and --contacts for saved contact preferences and eligible same-org network peers, or approved --sender addresses, for external mail events at tool-output authority, never synthetic user messages. Explicit silence still wins. Use a short --exec hook to durably accept an event, --forward-to for a local webhook, or newline-delimited JSON on stdout. Add --background to keep native receiving independent of the calling terminal process; --status reports receiver health and receipts, add --email-id for one email's routing evidence, and --stop stops that receiver. Status is JSON and stdout events are JSONL by default; --json is accepted explicitly without changing delivery mode. Notifications require an existing native local-session socket; the CLI subscribes only to the exact already-loaded thread and never launches a terminal or creates a session. Verified presence controls are handled without model turns and do not consume --once or --number. Claude hook capability: primitive-hook-profile-bound-v2.";
   static examples = [
     "<%= config.bin %> listen",
     '<%= config.bin %> listen --subscription my-agent --exec "python3 accept.py"',
@@ -314,7 +314,8 @@ export default class ListenCommand extends Command {
       min: 1,
     }),
     "api-key": Flags.string({
-      description: "API key override; otherwise use saved login credentials.",
+      description:
+        "Connected agent API key (pconn_) override; otherwise use the selected connected-agent profile.",
       env: "PRIMITIVE_API_KEY",
     }),
     "api-base-url": Flags.string({

@@ -6,7 +6,10 @@ import {
   pullWebhookEvent,
 } from "@primitivedotdev/api-core";
 import { EventConnection, EventReceiverError } from "@primitivedotdev/sdk/api";
-import { createAuthenticatedCliApiClient } from "./api-client.js";
+import {
+  ConnectedAgentKeyRequiredError,
+  createAuthenticatedCliApiClient,
+} from "./api-client.js";
 import {
   AGENT_CONNECTION_REQUIRED,
   AGENT_CONNECTION_REQUIRED_MESSAGE,
@@ -209,6 +212,7 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
         configDir: options.configDir,
         apiKey: options.apiKey,
         apiBaseUrl: options.apiBaseUrl,
+        requireConnectedAgentKey: true,
         fetch: (input, init) =>
           fetch(input, {
             ...init,
@@ -219,7 +223,9 @@ async function runStandaloneListen(options: ListenOptions): Promise<number> {
             ]),
           }),
       });
-    } catch {
+    } catch (error) {
+      if (error instanceof ConnectedAgentKeyRequiredError)
+        throw new ListenError(AGENT_CONNECTION_REQUIRED_MESSAGE);
       throw new ListenError(
         "Could not refresh listener credentials. Run primitive signin and retry.",
       );
