@@ -301,6 +301,30 @@ async function threadSignalIds(
  * send, so every failure comes back as `skipped` with a reason the
  * caller surfaces.
  */
+/**
+ * Drop status signals (this CLI's own automatic Read or Working, or any send
+ * the thread marks as a signal) from a list of replies that went out. Reply
+ * entries carry no signal marking, and a signal sent from another machine has
+ * no local record, but the thread's outbound entries do carry it, so one
+ * thread read settles whatever the local record leaves.
+ */
+export async function excludeSignalReplies(params: {
+  client: EmailFetchClient;
+  replies: EmailDetailReply[];
+  threadId?: string | null;
+  isLocalSignal?: (sentId: string) => boolean;
+}): Promise<EmailDetailReply[]> {
+  const isLocalSignal = params.isLocalSignal ?? (() => false);
+  let prior = params.replies.filter(
+    (reply) => !isSignalReply(reply, isLocalSignal),
+  );
+  if (prior.length > 0 && params.threadId) {
+    const signals = await threadSignalIds(params.client, params.threadId);
+    prior = prior.filter((reply) => !signals.has(reply.id));
+  }
+  return prior;
+}
+
 export async function checkPriorReplies(params: {
   client: EmailFetchClient;
   emailId: string;
@@ -337,15 +361,12 @@ export async function checkPriorReplies(params: {
       };
     }
     const wentOut = priorRepliesThatWentOut(detail.replies);
-    const isLocalSignal = params.isLocalSignal ?? (() => false);
-    let prior = wentOut.filter((reply) => !isSignalReply(reply, isLocalSignal));
-    // Reply entries carry no signal marking, and a signal sent from another
-    // machine has no local record. The thread's outbound entries do carry
-    // it, so one thread read settles whatever is left.
-    if (prior.length > 0 && detail.thread_id) {
-      const signals = await threadSignalIds(params.client, detail.thread_id);
-      prior = prior.filter((reply) => !signals.has(reply.id));
-    }
+    const prior = await excludeSignalReplies({
+      client: params.client,
+      replies: wentOut,
+      threadId: detail.thread_id,
+      isLocalSignal: params.isLocalSignal,
+    });
     return {
       status: "checked",
       prior,

@@ -8,6 +8,7 @@ import type {
   SendMailResult,
 } from "@primitivedotdev/api-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { recordSentSignal } from "../../src/oclif/auto-signals.js";
 import {
   agentProfileDirectory,
   saveConnectedAgentProfile,
@@ -780,6 +781,44 @@ describe("chat send outcomes", () => {
       "This email already has 1 outgoing email, most recently at 2026-05-25T00:00:05.000Z (sent id sent-earlier). Status signals are not counted, and an earlier reply does not prove the request was completed. Sending this reply.",
     );
     expect(mocks.replyToEmail).toHaveBeenCalledTimes(1);
+    const envelope = JSON.parse(result.stdout);
+    expect(envelope.prior_replies).toEqual([priorReply()]);
+  });
+
+  it("leaves this CLI's own status signals out of the prior replies warning", async () => {
+    const signalId = randomUUID();
+    recordSentSignal(join(tempConfigHome, "primitive"), signalId);
+    mocks.replyToEmail.mockResolvedValue({ data: { data: sentEmail() } });
+    mocks.getEmail.mockImplementation(
+      async ({ path }: { path: { id: string } }) =>
+        path.id === "parent-1"
+          ? {
+              data: {
+                data: inboundEmail({
+                  id: "parent-1",
+                  replies: [priorReply({ id: signalId }), priorReply()],
+                }),
+              },
+            }
+          : { data: { data: inboundEmail() } },
+    );
+    mocks.fetchEmailSearchPage.mockResolvedValue({
+      cursor: null,
+      ok: true,
+      rows: [searchRow()],
+    });
+
+    const result = await run("chat", [
+      "help@agent.example",
+      "--reply",
+      "one more thing",
+      "--reply-to-email-id",
+      "parent-1",
+      "--json",
+    ]);
+
+    expect(result.stderr).toContain("This email already has 1 outgoing email,");
+    expect(result.stderr).not.toContain(signalId);
     const envelope = JSON.parse(result.stdout);
     expect(envelope.prior_replies).toEqual([priorReply()]);
   });

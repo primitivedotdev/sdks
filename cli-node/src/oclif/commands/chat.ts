@@ -25,6 +25,7 @@ import { readAttachmentFiles } from "../attachments.js";
 import {
   type HaltedAutoWorking,
   haltAutoWorking,
+  isSentSignal,
   restoreAutoWorking,
 } from "../auto-signals.js";
 import {
@@ -71,6 +72,7 @@ import {
   buildFollowUpCommand,
   classifySendError,
   deriveSendIdempotencyKey,
+  excludeSignalReplies,
   type FollowUpCommand,
   formatDeletedEarlierSendNotice,
   formatPriorRepliesWarning,
@@ -1960,9 +1962,17 @@ class ChatCommand extends Command {
         this.chatProgress.sendStartedAtIso = sentAtIso;
 
         if (parentReply !== undefined) {
+          // Status signals (this CLI's own automatic Read or Working, or any
+          // send the thread marks as one) are not replies; the warning says so.
           const priorReplies = Array.isArray(parentReply.replies)
-            ? priorRepliesThatWentOut(parentReply.replies, {
-                excludeSentId: receipt.data.sent?.id,
+            ? await excludeSignalReplies({
+                client: apiClient.client,
+                replies: priorRepliesThatWentOut(parentReply.replies, {
+                  excludeSentId: receipt.data.sent?.id,
+                }),
+                threadId: parentReply.thread_id,
+                isLocalSignal: (sentId) =>
+                  isSentSignal(this.config.configDir, sentId),
               })
             : null;
           this.chatProgress.priorReplies = priorReplies;

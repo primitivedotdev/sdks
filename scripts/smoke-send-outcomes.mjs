@@ -101,7 +101,7 @@ try {
   // stderr stays empty, so a merged stream still parses.
   assert.equal(result.stderr, "");
   assert.match(JSON.parse(result.stdout).warnings.join("\n"), /1 outgoing email, most recently at 2026-09-01T11:00:00\.000Z \(sent id sent-prior\)/);
-  assert.match(JSON.parse(result.stdout).warnings.join("\n"), /may include activity updates and do not prove a completed answer/);
+  assert.match(JSON.parse(result.stdout).warnings.join("\n"), /Status signals are not counted, and an earlier reply does not prove the request was completed/);
   assert.equal(posts(), 1, "The prior-reply warning must not block the send");
   let envelope = JSON.parse(result.stdout);
   assert.equal(envelope.outcome, "sent");
