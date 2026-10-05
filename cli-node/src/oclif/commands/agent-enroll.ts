@@ -1,11 +1,12 @@
 import { Command, Errors, Flags } from "@oclif/core";
-import { pollCheckCommand } from "../agent-connect-flow.js";
+import { connectWarnings, pollCheckCommand } from "../agent-connect-flow.js";
 import { enrollAgent, enrollmentResumes } from "../agent-enroll.js";
 import {
   generatedAgentName,
   identitySuggestions,
 } from "../agent-identity-suggestions.js";
 import {
+  externalReceivingState,
   RECEIVER_MODES,
   type ReceiverMode,
   verificationReplySubmitted,
@@ -149,8 +150,13 @@ export default class AgentEnrollCommand extends Command {
               sessionId: flags.session,
             })
           : null;
+      const warnings = connectWarnings(
+        this.config.configDir,
+        result.identity.profileName,
+      );
       // Poll receiving wakes nothing: the agent runs this check itself, so
-      // the structured result carries it as poll agent connect does.
+      // the structured result carries it as poll agent connect does. An
+      // external receiver reports the hook install outcome as its state.
       const output =
         result.receiving.state === "poll"
           ? {
@@ -164,8 +170,20 @@ export default class AgentEnrollCommand extends Command {
                 ),
               },
               externalHook,
+              warnings,
             }
-          : { ...result, externalHook };
+          : flags.receiver === "external" &&
+              result.connection.status !== "owner_inactive"
+            ? {
+                ...result,
+                receiving: {
+                  ...result.receiving,
+                  state: externalReceivingState(externalHook),
+                },
+                externalHook,
+                warnings,
+              }
+            : { ...result, externalHook, warnings };
       const identity = identitySuggestions({
         invocation: invocation(process.argv[1]),
         profile: result.identity.profileName,
@@ -178,11 +196,12 @@ export default class AgentEnrollCommand extends Command {
       if (flags.json) this.log(JSON.stringify(printed));
       else {
         this.log(
-          `Agent ${result.identity.agentAddress}: pairing ${result.connection.status}; verification ${result.verification.state}; receiving ${result.receiving.state}.`,
+          `Agent ${result.identity.agentAddress}: pairing ${result.connection.status}; verification ${result.verification.state}; receiving ${output.receiving.state}.`,
         );
         this.log(
           `Select it with PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}.`,
         );
+        for (const warning of warnings) this.log(warning.message);
         if (flags["contact-requests"])
           this.log(`Contact requests: ${result.contactRequestPolicy}.`);
         if (result.contactRequestPolicy === "owner_disabled")

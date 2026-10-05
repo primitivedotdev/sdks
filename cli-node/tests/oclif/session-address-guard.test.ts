@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -495,6 +495,13 @@ describe("one address per session", () => {
         { root },
       ),
     ).rejects.toThrow();
+    // The runtime has a session socket, so the failure is this session's
+    // and no poll fallback applies.
+    mkdirSync(join(home, "codex", "app-server-control"), { recursive: true });
+    writeFileSync(
+      join(home, "codex", "app-server-control", "app-server-control.sock"),
+      "",
+    );
     mocks.readAgentInvitation.mockResolvedValue(invitation);
     mocks.connectNativeSession.mockRejectedValue(new Error("not loaded"));
     await expect(

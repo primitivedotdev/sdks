@@ -14,8 +14,14 @@ import {
   searchEmails,
   sendEmail,
 } from "@primitivedotdev/api-core";
-import { connectAgent, parseAgentInvitation } from "./agent-connect.js";
+import {
+  AgentInvitationRejectedError,
+  connectAgent,
+  parseAgentInvitation,
+  removeEmptyDirectory,
+} from "./agent-connect.js";
 import { readSetupApi, type SetupReadBudget } from "./agent-setup-read.js";
+import type { ClaudeWakeHookResult } from "./claude-wake-install.js";
 import {
   AGENT_PROFILE_ENV,
   AgentConnectionSetupError,
@@ -40,6 +46,7 @@ import {
   mailTime,
   privateMailDirectory,
   readMailJson,
+  removeMailFile,
   writeMailJson,
 } from "./shared-mail-files.js";
 
@@ -142,6 +149,34 @@ export const VERIFICATION_BACKOFF_MS = [
   1_000, 1_000, 2_000, 2_000, 3_000, 5_000,
 ];
 export const DEFAULT_VERIFICATION_TIMEOUT_MS = 60_000;
+
+/**
+ * Setup's receiving state for an external receiver: setup itself installs no
+ * hooks, so the caller installs them and restates the outcome with
+ * {@link externalReceivingState}.
+ */
+export const EXTERNAL_HOOKS_PENDING = "hooks_pending";
+
+/**
+ * The printed receiving state for an external receiver, from the hook
+ * install outcome. `hooks_installed` is a finished setup: idle wake is only
+ * proven by real mail, which `externalHook: "installed_unverified"` says.
+ */
+export function externalReceivingState(
+  hook: ClaudeWakeHookResult | null,
+):
+  | "hooks_installed"
+  | "hook_unavailable"
+  | "held_for_other_profile"
+  | "pending_verification" {
+  return hook === "installed_unverified"
+    ? "hooks_installed"
+    : hook === "unavailable"
+      ? "hook_unavailable"
+      : hook === "held_for_other_profile"
+        ? "held_for_other_profile"
+        : "pending_verification";
+}
 
 /** Both states mean the setup reply was accepted for sending. */
 export function verificationReplySubmitted(state: string): boolean {
@@ -718,12 +753,15 @@ export async function setupAgent(params: {
       await dependencies.preflight(params.session);
     } catch {
       throw fail(
-        "This exact session is not available for native receiving. No invitation was claimed. Open a supported session and retry setup.",
+        "This exact session is not available for native receiving. No invitation was claimed. Open a supported session and retry setup, or rerun with --receiver poll, which needs no session socket.",
       );
     }
   }
   privateMailDirectory(directory, true);
   const release = acquireListenLock(directory, "setup");
+  // Set when the server definitely refused the claim: this run's setup
+  // record is removed and, once the lock is released, an empty directory.
+  let discardStub = false;
   try {
     const path = join(directory, "setup.json");
     const value = readMailJson(path);
@@ -752,6 +790,7 @@ export async function setupAgent(params: {
               ?.agent_address ?? null,
           ),
         );
+      const created = !state;
       if (!state) {
         // Challenges precede claiming. A single recent authenticated challenge is
         // required; public claims do not expose a challenge ID or generation.
@@ -768,13 +807,25 @@ export async function setupAgent(params: {
         };
         writeMailJson(path, state);
       }
-      await connectAgent({
-        configDir: params.configDir,
-        profileName,
-        invitation: params.invitation ?? "",
-        fetch: params.fetch,
-        presence: true,
-      });
+      try {
+        await connectAgent({
+          configDir: params.configDir,
+          profileName,
+          invitation: params.invitation ?? "",
+          fetch: params.fetch,
+          presence: true,
+        });
+      } catch (error) {
+        if (error instanceof AgentInvitationRejectedError && created) {
+          discardStub = true;
+          try {
+            removeMailFile(path);
+          } catch {
+            discardStub = false;
+          }
+        }
+        throw error;
+      }
     }
     const profile = loadConnectedAgentProfile(params.configDir, profileName);
     if (!profile || !state || profile.invitation_hash !== state.invitationHash)
@@ -903,7 +954,7 @@ export async function setupAgent(params: {
     }
     return result(
       state.receiverMode === "external"
-        ? "external_setup_required"
+        ? EXTERNAL_HOOKS_PENDING
         : state.receiverMode === "poll"
           ? "poll"
           : healthy
@@ -913,5 +964,6 @@ export async function setupAgent(params: {
     );
   } finally {
     release();
+    if (discardStub) removeEmptyDirectory(directory);
   }
 }

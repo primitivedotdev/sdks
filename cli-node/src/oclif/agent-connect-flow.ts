@@ -1,6 +1,9 @@
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { promisify } from "node:util";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import {
   AddressNotesApiError,
@@ -11,6 +14,7 @@ import {
   parseAgentInvitation,
 } from "./agent-connect.js";
 import {
+  externalReceivingState,
   nativeSessionPreflight,
   type ReceiverMode,
   setupAgent,
@@ -33,7 +37,7 @@ import {
   agentProfileName,
   loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
-import { SESSION_UUID } from "./notify-session-native.js";
+import { defaultSessionSocket, SESSION_UUID } from "./notify-session-native.js";
 import {
   ownerReportGuidance,
   refreshOwnerMemberAddress,
@@ -61,6 +65,47 @@ const MAX_NAME_LENGTH = 80;
 const MAX_INFO_LENGTH = 1000;
 const MAIL_CHECK_WAIT_MS = 20_000;
 const PENDING_AGENT_INFO_FILE = "agent-info-pending.json";
+
+/**
+ * The first Codex release whose shared app-server daemon exposes the local
+ * session socket that native receiving connects to.
+ */
+export const CODEX_NATIVE_MIN_VERSION = "0.158.0";
+
+/** Why a defaulted native receiver became poll receiving. */
+export type NativeFallbackReason =
+  | "codex_version_unsupported"
+  | "session_socket_missing";
+
+/** The `major.minor.patch` triple in a `codex --version` line, if any. */
+export function parseCodexVersion(text: string): string | null {
+  const match = /(\d+)\.(\d+)\.(\d+)/.exec(text);
+  return match ? `${match[1]}.${match[2]}.${match[3]}` : null;
+}
+
+/** True when this Codex version has the session socket native receiving needs. */
+export function codexSupportsNativeReceiving(version: string): boolean {
+  const have = version.split(".").map(Number);
+  const need = CODEX_NATIVE_MIN_VERSION.split(".").map(Number);
+  for (let index = 0; index < need.length; index++) {
+    const a = have[index] ?? 0;
+    const b = need[index] ?? 0;
+    if (a !== b) return a > b;
+  }
+  return true;
+}
+
+async function installedCodexVersion(): Promise<string | null> {
+  try {
+    const { stdout } = await promisify(execFile)("codex", ["--version"], {
+      timeout: 3_000,
+      maxBuffer: 4_096,
+    });
+    return parseCodexVersion(String(stdout));
+  } catch {
+    return null;
+  }
+}
 
 function readPendingAgentInfo(path: string): string | null {
   try {
@@ -123,6 +168,38 @@ function clearPendingAgentInfo(path: string): void {
 
 type SetupResult = Awaited<ReturnType<typeof setupAgent>>;
 
+/** A condition worth telling the owner about that does not fail the connection. */
+export type ConnectWarning = {
+  kind: "owner_member_address_missing";
+  message: string;
+};
+
+/**
+ * Warns when the connection's own record says the owner has no personal
+ * address in the organization. An unknown value (an older server, or a
+ * failed read) warns nothing.
+ */
+export function connectWarnings(
+  configDir: string,
+  profileName: string,
+): ConnectWarning[] {
+  let profile: ReturnType<typeof loadConnectedAgentProfile> = null;
+  try {
+    profile = loadConnectedAgentProfile(configDir, profileName);
+  } catch {
+    return [];
+  }
+  return profile?.owner_member_address === null
+    ? [
+        {
+          kind: "owner_member_address_missing",
+          message:
+            "Your owner has no personal address in this organization, so mail they send from their own address will not wake this agent and reports have nowhere to go. Ask them to open the Primitive app once (it sets one), or to run `primitive account provision-member-address --address <their address>` signed in as themselves.",
+        },
+      ]
+    : [];
+}
+
 export type AgentInfoSeed =
   | "created"
   | "already_present"
@@ -137,8 +214,12 @@ export type MailCheck = {
 
 export type AgentConnectFlowDependencies = {
   setupAgent: typeof setupAgent;
-  /** Probe the exact session for native receiving before a beforeSetup hook. */
+  /** Probe the exact session for native receiving before anything is claimed. */
   nativePreflight(session: string): Promise<void>;
+  /** Whether the local session socket native receiving connects to exists. */
+  nativeSocketPresent(): boolean;
+  /** The installed Codex version, or null when it cannot be read. */
+  codexVersion(): Promise<string | null>;
   installClaudeWakeHook: typeof installClaudeWakeHook;
   installSkill(runtime: AgentRuntime): ConnectSkillInstall;
   seedAgentInfo(profileName: string, value: string): Promise<AgentInfoSeed>;
@@ -239,6 +320,8 @@ function defaults(
   return {
     setupAgent,
     nativePreflight: nativeSessionPreflight,
+    nativeSocketPresent: () => existsSync(defaultSessionSocket()),
+    codexVersion: installedCodexVersion,
     installClaudeWakeHook,
     installSkill(runtime) {
       const bundle = readBundledConnectSkill(options.packageRoot);
@@ -351,7 +434,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
   // A resumed setup keeps the receiver it was started with; only a new setup
   // takes the runtime's default. No session means nothing can be woken, so
   // the agent checks for mail itself.
-  const receiver: ReceiverMode =
+  let receiver: ReceiverMode =
     options.receiver ??
     (options.resume
       ? (savedSetup(options.configDir, profileName)?.receiverMode ?? null)
@@ -402,24 +485,59 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
 
   const startedAt = Date.now();
 
+  const invocation = options.invocation ?? "primitive";
+  // Probe native receiving before the invitation is read or claimed, and
+  // before a beforeSetup hook can change state (such as disconnecting the
+  // agent this one replaces). When the runtime simply has no session socket
+  // to connect to, a defaulted receiver falls back to poll receiving, which
+  // needs no socket; any other failure is refused with the way forward.
+  let fallback: {
+    reason: NativeFallbackReason;
+    detail: string;
+    codexVersion: string | null;
+  } | null = null;
+  if (receiver === "native" && session && !options.resume) {
+    try {
+      await dependencies.nativePreflight(session);
+    } catch {
+      // A present socket means the runtime supports native receiving and
+      // this exact session is the problem, which poll receiving would hide.
+      // Only a missing socket falls back; the version only names the cause.
+      const socketPresent = dependencies.nativeSocketPresent();
+      const codexVersion =
+        socketPresent || runtime === "claude"
+          ? null
+          : await dependencies.codexVersion();
+      const reason: NativeFallbackReason | null = socketPresent
+        ? null
+        : codexVersion !== null && !codexSupportsNativeReceiving(codexVersion)
+          ? "codex_version_unsupported"
+          : "session_socket_missing";
+      const why =
+        reason === "codex_version_unsupported"
+          ? `Native receiving needs Codex ${CODEX_NATIVE_MIN_VERSION} or newer; this machine has Codex ${codexVersion}.`
+          : reason === "session_socket_missing"
+            ? `Native receiving needs the local Codex session socket (Codex ${CODEX_NATIVE_MIN_VERSION} or newer with its shared app-server running), and none was found${codexVersion ? ` for Codex ${codexVersion}` : ""}.`
+            : `The local session socket exists but did not accept session ${session}: it may not be loaded in this terminal, or the ID may not be this session's.`;
+      if (reason && options.receiver === undefined) {
+        receiver = "poll";
+        fallback = {
+          reason,
+          codexVersion,
+          detail: `${why} Connected with poll receiving instead: nothing wakes this session, so check for mail with receiving.checkCommand at the start of each turn and after sending.`,
+        };
+      } else
+        throw new AgentConnectionSetupError(
+          `This exact session is not available for native receiving. ${why} No invitation was claimed and nothing was changed. To connect with poll receiving instead, pipe the same invitation to: ${invocation} agent connect --session ${session} --receiver poll --json`,
+        );
+    }
+  }
+  if (fallback)
+    skipped.push({ step: "native_receiver", reason: fallback.reason });
   const setupInvitation = options.resume
     ? undefined
     : (invitation ?? (await options.readInvitation()));
-  if (options.beforeSetup) {
-    // The last point before the claim. Probe what can still fail locally
-    // first, so a hook that changes state (such as disconnecting the agent
-    // this one replaces) runs only when the new setup can start.
-    if (receiver === "native" && session) {
-      try {
-        await dependencies.nativePreflight(session);
-      } catch {
-        throw new AgentConnectionSetupError(
-          "This exact session is not available for native receiving. No invitation was claimed and nothing was changed. Open a supported session and retry setup.",
-        );
-      }
-    }
-    await options.beforeSetup();
-  }
+  if (options.beforeSetup) await options.beforeSetup();
   const result: SetupResult = await dependencies.setupAgent({
     configDir: options.configDir,
     profileName,
@@ -434,6 +552,10 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
     result.identity.profileName,
   );
   const identity = { ...result.identity, ownerMemberAddress };
+  const warnings = connectWarnings(
+    options.configDir,
+    result.identity.profileName,
+  );
 
   let externalHook: ClaudeWakeHookResult | null = null;
   if (receiver === "external") {
@@ -486,11 +608,11 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       skipped.push({ step: "agent_info", reason: "already_present" });
   }
 
-  const invocation = options.invocation ?? "primitive";
   const receiving =
     receiver === "external"
       ? {
           ...result.receiving,
+          state: externalReceivingState(externalHook),
           mode: "external" as const,
           hook: externalHook,
         }
@@ -504,6 +626,13 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
               invocation,
               result.identity.profileName,
             ),
+            ...(fallback
+              ? {
+                  fallbackReason: fallback.reason,
+                  fallbackDetail: fallback.detail,
+                  codexVersion: fallback.codexVersion,
+                }
+              : {}),
           }
         : {
             ...result.receiving,
@@ -557,6 +686,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       : {}),
     agentInfo: agentInfoState,
     skipped,
+    warnings,
     selectProfile: `PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}`,
     resumeCommand,
     guidance: `${result.guidance} ${ownerReportGuidance(identity)}`,

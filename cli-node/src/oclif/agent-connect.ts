@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { rmdirSync } from "node:fs";
 import { join } from "node:path";
 import { claudeWakeHookStatus } from "./claude-wake-install.js";
 import {
@@ -24,6 +25,7 @@ import {
   mailAddress,
   privateMailDirectory,
   readMailJson,
+  removeMailFile,
   writeMailJson,
 } from "./shared-mail-files.js";
 import { readSharedMailOwner } from "./shared-mail-watch.js";
@@ -32,8 +34,83 @@ const MAX_INVITATION_BYTES = 4096;
 const MAX_RESPONSE_BYTES = 32_768;
 const UNCERTAIN_CLAIM =
   "Setup did not complete safely. The invitation may have been consumed. Request a fresh invitation from the owner; do not retry this invitation.";
+const INVITATION_UNAVAILABLE =
+  "This invitation was already used, has expired, or was revoked, so it cannot connect this agent. Ask the owner to copy a fresh setup instruction from the app. Nothing was changed on this machine.";
+const INVITATION_INVALID =
+  "Primitive rejected this invitation as invalid. Ask the owner to copy a fresh setup instruction from the app. Nothing was changed on this machine.";
+
+/**
+ * The server answered the claim with a definite refusal, so nothing was
+ * claimed and no credential exists. Unlike a lost or malformed response, it
+ * is safe to discard every local trace of the attempt.
+ */
+export class AgentInvitationRejectedError extends AgentConnectionSetupError {
+  constructor(
+    message: string,
+    readonly reason:
+      | "invitation_unavailable"
+      | "invitation_invalid"
+      | "rate_limited",
+  ) {
+    super(message);
+  }
+}
+
+/** The error code of a refused claim, read without keeping the body. */
+async function claimErrorCode(response: Response): Promise<string | null> {
+  try {
+    const body = (await readClaimResponse(response)) as {
+      success?: unknown;
+      error?: { code?: unknown };
+    } | null;
+    return body?.success === false && typeof body.error?.code === "string"
+      ? body.error.code
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A definite refusal of the claim, or null when the outcome is uncertain. */
+async function definiteClaimRefusal(
+  response: Response,
+): Promise<AgentInvitationRejectedError | null> {
+  if (![400, 409, 429].includes(response.status)) return null;
+  const code = await claimErrorCode(response);
+  if (response.status === 409 && code === "connection_invitation_unavailable")
+    return new AgentInvitationRejectedError(
+      INVITATION_UNAVAILABLE,
+      "invitation_unavailable",
+    );
+  if (response.status === 400 && code === "validation_error")
+    return new AgentInvitationRejectedError(
+      INVITATION_INVALID,
+      "invitation_invalid",
+    );
+  if (response.status === 429 && code === "rate_limit_exceeded") {
+    const seconds = Number(response.headers.get("retry-after"));
+    const wait =
+      Number.isSafeInteger(seconds) && seconds > 0 && seconds <= 3600
+        ? `${seconds} seconds`
+        : "a minute";
+    return new AgentInvitationRejectedError(
+      `Primitive is limiting connection attempts from this network. The invitation was not claimed; wait ${wait} and rerun the same command with the same invitation. Nothing was changed on this machine.`,
+      "rate_limited",
+    );
+  }
+  return null;
+}
 
 type Invitation = { token: string; apiBaseUrl: string };
+
+/** Removes a directory only when it is empty. Best effort. */
+export function removeEmptyDirectory(path: string): void {
+  try {
+    rmdirSync(path);
+  } catch {
+    /* Not empty, already gone, or unavailable: leave it. */
+  }
+}
 export type AgentConnectResult = {
   status: "claimed" | "already_configured";
   identity: ConnectedAgentIdentity;
@@ -424,10 +501,11 @@ export async function connectAgent(params: {
       };
     }
     privateMailDirectory(join(directory, "profiles"), true);
-    privateMailDirectory(
-      agentProfileDirectory(params.configDir, profileName),
-      true,
+    const profileDirectory = agentProfileDirectory(
+      params.configDir,
+      profileName,
     );
+    privateMailDirectory(profileDirectory, true);
     const journal = join(directory, "claims", `${invitationHash}.json`);
     privateMailDirectory(join(directory, "claims"), true);
     if (readMailJson(journal) !== null)
@@ -458,8 +536,20 @@ export async function connectAgent(params: {
         },
       );
       if (response.status !== 200) {
-        await response.body?.cancel();
-        throw new Error();
+        const refusal = await definiteClaimRefusal(response);
+        if (!refusal) {
+          await response.body?.cancel().catch(() => undefined);
+          throw new Error();
+        }
+        // Nothing was claimed: drop the attempt so a rate-limited invitation
+        // can be retried, and leave no empty profile behind.
+        try {
+          removeMailFile(journal);
+        } catch {
+          /* A stale attempt record only makes a retry report uncertainty. */
+        }
+        removeEmptyDirectory(profileDirectory);
+        throw refusal;
       }
       const profile = profileFromClaim(
         await readClaimResponse(response),
@@ -472,7 +562,8 @@ export async function connectAgent(params: {
         status: "claimed",
         identity: connectedAgentIdentity(profileName, profile),
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof AgentInvitationRejectedError) throw error;
       // Never attach transport errors or response bodies: either can contain credentials.
       throw new AgentConnectionSetupError(UNCERTAIN_CLAIM);
     }
