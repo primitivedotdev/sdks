@@ -200,10 +200,10 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@oclif/core": "^4.10.5",
-    "@oclif/plugin-autocomplete": "^3.2.45",
+    "@oclif/core": "^5.1.2",
+    "@oclif/plugin-autocomplete": "^4.0.2",
     "@oclif/plugin-help": "^7.0.2",
-    "@oclif/plugin-warn-if-update-available": "^3.1.65",
+    "@oclif/plugin-warn-if-update-available": "^4.0.1",
     "viem": "^2.57.2",
     "ws": "^8.22.0"
   },
