@@ -1,3 +1,4 @@
+import { readSync } from "node:fs";
 import { Args, Command, Flags } from "@oclif/core";
 import {
   AddressNotesApiError,
@@ -88,6 +89,51 @@ async function run(
   });
 }
 
+/** How long `set --stdin` waits for input on a nonblocking pipe. */
+const STDIN_WAIT_MS = 30_000;
+
+/** Where `set --stdin` reads the claim from; replaced in tests. */
+export const workingClaimStdin = {
+  read: (): string => {
+    if (process.stdin.isTTY)
+      throw new Error(
+        "--stdin needs the claim piped in, not typed at a terminal.",
+      );
+    // A claim is at most CLAIM_MAX_LENGTH characters; stop reading well
+    // before a large file or endless stream can use memory or hang.
+    const limit = CLAIM_MAX_LENGTH * 4 + 2;
+    const buffer = Buffer.alloc(limit + 1);
+    // A nonblocking pipe with nothing ready answers EAGAIN: pause between
+    // attempts instead of spinning, and give up rather than wait forever.
+    const pause = new Int32Array(new SharedArrayBuffer(4));
+    const deadline = Date.now() + STDIN_WAIT_MS;
+    let length = 0;
+    while (length <= limit) {
+      let read = 0;
+      try {
+        read = readSync(0, buffer, length, limit + 1 - length, null);
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === "EOF") break;
+        if (code !== "EAGAIN") throw error;
+        if (Date.now() > deadline)
+          throw new Error(
+            "--stdin received no end of input; pipe the claim from a file.",
+          );
+        Atomics.wait(pause, 0, 0, 20);
+        continue;
+      }
+      if (read === 0) break;
+      length += read;
+    }
+    if (length > limit)
+      throw new Error(
+        `The claim must be at most ${CLAIM_MAX_LENGTH} characters.`,
+      );
+    return buffer.subarray(0, length).toString("utf8");
+  },
+};
+
 function isNotFound(error: unknown): boolean {
   return error instanceof AddressNotesApiError && error.status === 404;
 }
@@ -95,20 +141,29 @@ function isNotFound(error: unknown): boolean {
 export class AgentWorkingSetCommand extends Command {
   static summary = "Set this agent's work claim";
   static description =
-    `Record what this agent is working on, with an expiry, in the ${WORKING_NOTE_NAME} address note. A claim is one short line naming the task and the files or areas being changed. Set it when work starts and clear it when work ends; peers read it before editing a shared file. Claims are advisory, not locks. The claim expires 4 hours from now unless --until is given. The note is stored as JSON { claim, until }. New notes are private to the organization; an update keeps the note's visibility unless --public or --private is given.`;
+    `Record what this agent is working on, with an expiry, in the ${WORKING_NOTE_NAME} address note. A claim is one short line naming the task and the files or areas being changed. Pass it as an argument, or with --stdin to keep it out of process listings and shell history. Set it when work starts and clear it when work ends; peers read it before editing a shared file. Claims are advisory, not locks. The claim expires 4 hours from now unless --until is given. The note is stored as JSON { claim, until }. New notes are private to the organization; an update keeps the note's visibility unless --public or --private is given.`;
   static examples = [
     '<%= config.bin %> agent working set "phone composer: apps/mobile/src/message-composer.tsx"',
     '<%= config.bin %> agent working set "billing export: src/billing/" --until 2026-10-01T18:00:00Z',
+    "<%= config.bin %> agent working set --stdin < ./private-claim.txt",
   ];
   static args = {
     claim: Args.string({
-      description: "One line naming the task and the files or areas changed",
-      required: true,
+      description:
+        "One line naming the task and the files or areas changed (or use --stdin)",
+      required: false,
+      // Only --stdin reads stdin, through the bounded reader below; oclif's
+      // own stdin fallback would race a 10 ms timeout and read without limit.
+      ignoreStdin: true,
     }),
   };
   static flags = {
     ...commonFlags,
     address: writeAddressFlag,
+    stdin: Flags.boolean({
+      description:
+        "Read the claim from stdin instead of an argument, so it stays out of process listings and shell history",
+    }),
     until: Flags.string({
       description:
         "Expiry as an ISO 8601 time with a timezone (default: 4 hours from now)",
@@ -124,7 +179,19 @@ export class AgentWorkingSetCommand extends Command {
   };
   async run(): Promise<void> {
     const { args, flags } = await this.parse(AgentWorkingSetCommand);
-    const value = buildWorkingClaim({ claim: args.claim, until: flags.until });
+    if (flags.stdin && args.claim !== undefined)
+      this.error("Pass the claim as an argument or with --stdin, not both.", {
+        exit: 2,
+      });
+    if (!flags.stdin && args.claim === undefined)
+      this.error("Pass the claim as an argument, or pipe it in with --stdin.", {
+        exit: 2,
+      });
+    // A trailing newline from a pipe or heredoc is not part of the claim.
+    const claim = flags.stdin
+      ? workingClaimStdin.read().replace(/\r?\n$/, "")
+      : (args.claim as string);
+    const value = buildWorkingClaim({ claim, until: flags.until });
     await run(this, flags, true, async ({ client, address }) => {
       const note = (await runAddressNotesRequest(client, {
         action: "set",

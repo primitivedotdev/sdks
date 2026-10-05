@@ -5,6 +5,7 @@ import {
   AgentWorkingClearCommand,
   AgentWorkingGetCommand,
   AgentWorkingSetCommand,
+  workingClaimStdin,
 } from "../../src/oclif/commands/agent-working.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 import {
@@ -223,6 +224,34 @@ describe("agent working commands", () => {
       until: "2026-10-01T18:00:00.000Z",
       visibility: "public",
     });
+  });
+
+  it("set --stdin reads the claim from stdin, not an argument", async () => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    vi.spyOn(workingClaimStdin, "read").mockReturnValue(
+      "composer: src/composer.tsx\n",
+    );
+    const calls = fixture(missing, ok(note({})));
+    captureLog(AgentWorkingSetCommand);
+    await AgentWorkingSetCommand.run(["--stdin"], { root });
+    expect(calls[1]?.body).toEqual({
+      value: {
+        claim: "composer: src/composer.tsx",
+        until: new Date(NOW + DEFAULT_CLAIM_MS).toISOString(),
+      },
+      if_absent: true,
+    });
+  });
+
+  it("set refuses both an argument and --stdin, and neither", async () => {
+    const calls = fixture();
+    await expect(
+      AgentWorkingSetCommand.run(["x", "--stdin"], { root }),
+    ).rejects.toThrow(/not both/);
+    await expect(AgentWorkingSetCommand.run([], { root })).rejects.toThrow(
+      /--stdin/,
+    );
+    expect(calls).toEqual([]);
   });
 
   it("set refuses another address from a connected profile", async () => {
