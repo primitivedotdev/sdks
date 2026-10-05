@@ -28,7 +28,11 @@ const hook = (await import(
   wakeSentence: (label: string | null) => string;
   formatPendingMail: (notice: unknown, receiver?: unknown) => string;
   recipientField: (address: unknown) => string;
-  readCommand: (emailId: string, profile?: string | null) => string;
+  readCommand: (
+    emailId: string,
+    profile?: string | null,
+    cli?: string,
+  ) => string;
   LOAD_SKILL_LINE: string;
   loadSkillLine: (skillFile?: string | null) => string;
 };
@@ -120,7 +124,37 @@ it("keeps the hook script's recipient and read command equal to the CLI's", () =
     null,
     undefined,
   ])
-    expect(hook.readCommand(id, profile)).toBe(wakeReadCommand(id, profile));
+    for (const entry of [GLOBAL_ENTRY, NPX_ENTRY, undefined])
+      expect(hook.readCommand(id, profile, entry)).toBe(
+        wakeReadCommand(id, profile, entry),
+      );
+});
+
+const GLOBAL_ENTRY = "/usr/local/lib/node_modules/primitive/bin/run.js";
+const NPX_ENTRY =
+  "/home/agent/.npm/_npx/0123456789abcdef/node_modules/primitive/bin/run.js";
+
+it("reads mail through npx when the receiver runs from npx's cache", () => {
+  expect(wakeReadCommand(id, "work", NPX_ENTRY)).toBe(
+    `PRIMITIVE_AGENT_PROFILE=work npx -y primitive@latest emails get --id ${id} --brief`,
+  );
+  expect(wakeReadCommand(id, "work", GLOBAL_ENTRY)).toBe(
+    `PRIMITIVE_AGENT_PROFILE=work primitive emails get --id ${id} --brief`,
+  );
+  expect(
+    formatPendingMail(
+      {
+        kind: "mail",
+        emailId: id,
+        sender: "peer@example.com",
+        threadId: null,
+        inThread: false,
+        newer: null,
+        interaction: null,
+      },
+      { profile: "work", address: "agent@example.test", cli: NPX_ENTRY },
+    ),
+  ).toContain(`Read with ${wakeReadCommand(id, "work", NPX_ENTRY)}.`);
 });
 
 it("keeps every wake line form inside the Stop hook's strict pattern", () => {
@@ -143,6 +177,11 @@ it("keeps every wake line form inside the Stop hook's strict pattern", () => {
             `Primitive mail arrived: ${id}${recipient}${meta}. Read with ${wakeReadCommand(id, profile)}.${tail}\n`,
           ),
         ).toBe(true);
+  expect(
+    pattern.test(
+      `Primitive mail arrived: ${id}. Read with ${wakeReadCommand(id, "work", NPX_ENTRY)}.${tail}\n`,
+    ),
+  ).toBe(true);
   // The pending notice line shares the read command and recipient field.
   const line = formatPendingMail(
     {

@@ -3,7 +3,7 @@ import type {
   PrimitiveApiClient,
   ThreadMessage,
 } from "@primitivedotdev/api-core";
-import { loadSkillLine } from "./agent-identity-suggestions.js";
+import { cliInvocation, loadSkillLine } from "./agent-identity-suggestions.js";
 import {
   isWakeInteractionLabel,
   wakeInteractionLabel,
@@ -379,17 +379,20 @@ export function wakeRecipientField(address: unknown): string {
  * The read command a wake suggests. It selects the receiving profile
  * explicitly: the email is visible only to that profile, and its pending
  * notice clears only when that profile reads it, so a copy-pasted command
- * run under another profile would report not_found.
+ * run under another profile would report not_found. A receiver started
+ * from npx prints the npx form, like connect's other follow-up commands: a
+ * bare `primitive` may be missing or an older global install.
  */
 export function wakeReadCommand(
   emailId: string,
   profileName?: string | null,
+  entry: string | undefined = process.argv[1],
 ): string {
   const prefix =
     profileName && WAKE_PROFILE.test(profileName)
       ? `PRIMITIVE_AGENT_PROFILE=${profileName} `
       : "";
-  return `${prefix}primitive emails get --id ${emailId} --brief`;
+  return `${prefix}${cliInvocation(entry)} emails get --id ${emailId} --brief`;
 }
 
 /**
