@@ -140,10 +140,14 @@ export default class AgentConnectCommand extends Command {
         // Status only reads, so the selected profile may come from the
         // environment or the session's one connected address. Disconnect
         // still requires an explicit --profile.
-        const statusSession = flags.session?.trim() || undefined;
+        // An empty --session means a sessionless connection to connect, whose
+        // profile no session names, so status needs the profile instead.
+        const statusSession = flags.session?.trim();
         if (statusSession !== undefined && !SESSION_UUID.test(statusSession))
           throw new AgentConnectionSetupError(
-            "--session requires the exact loaded session UUID.",
+            statusSession === ""
+              ? "--status with an empty --session has no session to look in. Pass --profile <name> for a sessionless connection."
+              : "--session requires the exact loaded session UUID.",
           );
         const picked = statusProfile({
           configDir: this.config.configDir,

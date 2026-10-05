@@ -188,9 +188,10 @@ export async function replaceSessionAddresses(params: {
 }
 
 /**
- * Picks the profile a status read inspects: an explicit --profile, then
- * PRIMITIVE_AGENT_PROFILE, then the one address connected for the session
- * (an explicit --session, else the runtime's own session ID). Null when none
+ * Picks the profile a status read inspects: an explicit --profile, then the
+ * one address connected for an explicit --session, then
+ * PRIMITIVE_AGENT_PROFILE, then the one address connected for the runtime's
+ * own session ID. Null when none
  * applies or the session has several addresses; `session` is null when no
  * session was available to look in.
  */
@@ -203,8 +204,11 @@ export function statusProfile(params: {
   | { profile: string }
   | { profile: null; session: string | null; bound: string[] } {
   const env = params.env ?? process.env;
+  // An explicit session asks about that session, so it outranks the
+  // environment's profile; only an explicit --profile outranks it.
   const chosen =
-    params.profile ?? (env[AGENT_PROFILE_ENV]?.trim() || undefined);
+    params.profile ??
+    (params.session ? undefined : env[AGENT_PROFILE_ENV]?.trim() || undefined);
   if (chosen) return { profile: chosen };
   const session = guardedSession(params.session, env);
   if (!session) return { profile: null, session: null, bound: [] };
