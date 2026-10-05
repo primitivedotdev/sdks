@@ -202,7 +202,7 @@
   "dependencies": {
     "@oclif/core": "^4.10.5",
     "@oclif/plugin-autocomplete": "^3.2.45",
-    "@oclif/plugin-help": "^6.2.44",
+    "@oclif/plugin-help": "^7.0.2",
     "@oclif/plugin-warn-if-update-available": "^3.1.65",
     "viem": "^2.21.0",
     "ws": "^8.21.0"
