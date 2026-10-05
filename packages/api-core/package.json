@@ -22,7 +22,7 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "0.99.0",
     "@types/node": "^26.6.4",
-    "tsx": "^4.23.15",
+    "tsx": "4.23.14",
     "typescript": "^5.7.2",
     "yaml": "^2.9.1"
   }
