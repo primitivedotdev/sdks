@@ -5,7 +5,7 @@ import {
   parseWebhookEvent,
 } from "@primitivedotdev/sdk/webhook";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
-import { autoSignalEligible } from "./auto-signals.js";
+import { autoSignalEligible, isSentSignal } from "./auto-signals.js";
 import {
   isContactAcceptance,
   readContactInteraction,
@@ -546,6 +546,7 @@ export async function createWakeMail(options: {
           contact: admission.kind === "allowed",
         }),
         localInThread: Boolean(requested || followed),
+        isOwnSignal: (sentId) => isSentSignal(options.configDir, sentId),
         signal,
       });
       // A mail notice is written before the event is acknowledged. If it

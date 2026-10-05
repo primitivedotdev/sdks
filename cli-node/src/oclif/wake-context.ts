@@ -162,10 +162,15 @@ export async function readThreadContext(
   }
 }
 
-/** Whether `self` has an outbound message in the thread; undefined if unknowable. */
+/**
+ * Whether `self` has an outbound message in the thread; undefined if
+ * unknowable. `isOwnSignal` excludes signals this CLI sent on the agent's
+ * behalf (automatic Read or Working), which are not the agent taking part.
+ */
 export function sentInThread(
   context: ThreadContext | null,
   self: string,
+  isOwnSignal?: (sentId: string) => boolean,
 ): boolean | undefined {
   if (!context) return undefined;
   const address = self.toLowerCase();
@@ -173,7 +178,8 @@ export function sentInThread(
     context.messages.some(
       (message) =>
         message.direction === "outbound" &&
-        bareAddress(message.from) === address,
+        bareAddress(message.from) === address &&
+        !isOwnSignal?.(message.id),
     )
   )
     return true;
@@ -293,6 +299,7 @@ export async function describeWake(input: {
   self: string;
   relationship: WakeRelationship;
   localInThread: boolean;
+  isOwnSignal?: (sentId: string) => boolean;
   signal: AbortSignal;
 }): Promise<WakeContext> {
   const { detail } = input;
@@ -308,7 +315,9 @@ export async function describeWake(input: {
     sender: detail.from_email.trim().toLowerCase(),
     relationship: serverRelationship(detail) ?? input.relationship,
     threadId,
-    inThread: input.localInThread || sentInThread(thread, input.self) === true,
+    inThread:
+      input.localInThread ||
+      sentInThread(thread, input.self, input.isOwnSignal) === true,
     attachments: hasAttachments(detail),
     ...(thread?.newerInboundCount === undefined
       ? {}

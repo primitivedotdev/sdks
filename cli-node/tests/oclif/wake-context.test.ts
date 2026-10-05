@@ -277,6 +277,25 @@ describe("thread context", () => {
     ).toBe(false);
   });
 
+  it("does not count the CLI's own automatic signals as taking part", () => {
+    const signalOnly = {
+      threadId: thread,
+      truncated: false,
+      messages: [
+        {
+          direction: "outbound" as const,
+          id: "signal-1",
+          from: self,
+        },
+      ],
+    } as Parameters<typeof sentInThread>[0];
+    expect(sentInThread(signalOnly, self)).toBe(true);
+    expect(sentInThread(signalOnly, self, (id) => id === "signal-1")).toBe(
+      false,
+    );
+    expect(sentInThread(signalOnly, self, () => false)).toBe(true);
+  });
+
   it("describes a wake from one thread read, falling back to local evidence", async () => {
     const detail = {
       id: email,
