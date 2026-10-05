@@ -41,6 +41,18 @@ describe("chat subject", () => {
     );
   });
 
+  it("does not end the sentence at an abbreviation or an initial", () => {
+    expect(deriveChatSubject("Dr. Smith can help. Ask her first.")).toBe(
+      "Dr. Smith can help.",
+    );
+    expect(
+      deriveChatSubject("Use a tool, e.g. ripgrep. Then report back."),
+    ).toBe("Use a tool, e.g. ripgrep.");
+    expect(deriveChatSubject("Ask J. Doe now. Thanks.")).toBe(
+      "Ask J. Doe now.",
+    );
+  });
+
   it("falls back like the send subject for an empty body", () => {
     expect(deriveChatSubject("   \n ")).toBe(deriveSubject("   \n "));
   });

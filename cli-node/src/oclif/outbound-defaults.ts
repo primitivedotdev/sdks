@@ -45,6 +45,46 @@ export function deriveSubject(body: string): string {
 
 const CHAT_SUBJECT_MAX_LENGTH = 60;
 
+// Words whose trailing period does not end a sentence.
+const ABBREVIATIONS = new Set([
+  "dr",
+  "mr",
+  "mrs",
+  "ms",
+  "prof",
+  "sr",
+  "jr",
+  "st",
+  "vs",
+  "etc",
+  "e.g",
+  "i.e",
+  "approx",
+  "inc",
+  "ltd",
+  "co",
+  "no",
+  "fig",
+]);
+
+/**
+ * The line up to its first sentence end: `.`, `?` or `!` followed by
+ * whitespace or the line end. A period after a common abbreviation or a
+ * single letter (an initial) does not end the sentence.
+ */
+function firstSentence(line: string): string {
+  const end = /[.?!](?=\s|$)/g;
+  for (let match = end.exec(line); match; match = end.exec(line)) {
+    if (match[0] === ".") {
+      const word = /(\S+)$/.exec(line.slice(0, match.index))?.[1] ?? "";
+      const bare = word.replace(/^[("'[]+/, "").toLowerCase();
+      if (ABBREVIATIONS.has(bare) || /^[a-z]$/.test(bare)) continue;
+    }
+    return line.slice(0, match.index + 1);
+  }
+  return line;
+}
+
 /**
  * A short subject for a chat message, whose body is usually one long line
  * or a short paragraph: the first sentence of the first non-empty line,
@@ -53,7 +93,7 @@ const CHAT_SUBJECT_MAX_LENGTH = 60;
  */
 export function deriveChatSubject(body: string): string {
   const line = deriveSubject(body);
-  const sentence = /^.+?[.?!](?=\s|$)/.exec(line)?.[0] ?? line;
+  const sentence = firstSentence(line);
   if (sentence.length <= CHAT_SUBJECT_MAX_LENGTH) return sentence;
   const room = sentence.slice(0, CHAT_SUBJECT_MAX_LENGTH - 3);
   const space = room.lastIndexOf(" ");

@@ -119,6 +119,33 @@ function parseReceipt(raw: string): ReceiptData {
   return value;
 }
 
+/**
+ * True when a receipt exists for `scope` and is not completed. An unreadable
+ * receipt counts as unfinished: beginChatReceipt then reports it instead of
+ * a retry quietly starting a second send beside it.
+ */
+export function hasUnfinishedChatReceipt(
+  configDir: string,
+  scope: string,
+): boolean {
+  const path = join(
+    configDir,
+    "chat-receipts",
+    `${chatRequestHash(scope)}.json`,
+  );
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf8");
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== "ENOENT";
+  }
+  try {
+    return !parseReceipt(raw).completed;
+  } catch {
+    return true;
+  }
+}
+
 /** Caller holds the request/parent lock until completion. Unknown POSTs never retry. */
 export function beginChatReceipt(
   configDir: string,

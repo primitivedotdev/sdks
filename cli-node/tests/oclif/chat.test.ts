@@ -697,6 +697,31 @@ describe("chat command", () => {
     expect(mocks.sendEmail).toHaveBeenCalledOnce();
   });
 
+  it("resumes a send an earlier version left unfinished under its whole-line subject", async () => {
+    connectedAuth();
+    mocks.next
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(trustedReply());
+    const message =
+      "Which Codex CLI version are you running on this machine right now?";
+    const args = [
+      "help@agent.example",
+      message,
+      "--from",
+      "agent@sender.example",
+      "--json",
+    ];
+    // An earlier version derived the whole first line as the subject; the
+    // explicit override writes the same receipt it would have.
+    const first = await runChatCommand([...args, "--subject", message]);
+    expect(first.exitCode).toBe(3);
+    process.exitCode = undefined;
+    const second = await runChatCommand(args);
+    expect(JSON.parse(second.stdout).reply.id).toBe("email-1");
+    expect(mocks.sendEmail).toHaveBeenCalledOnce();
+    expect(mocks.sendEmail.mock.calls[0][0].body.subject).toBe(message);
+  });
+
   it("does not send before authenticated readiness", async () => {
     connectedAuth();
     mocks.ready.mockRejectedValueOnce(new Error("receiver failed"));

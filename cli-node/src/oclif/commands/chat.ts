@@ -37,6 +37,7 @@ import {
   type ChatReceipt,
   chatCredentialIdentity,
   chatRequestHash,
+  hasUnfinishedChatReceipt,
   saveChatReceipt,
   UncertainChatSendError,
 } from "../chat-receipt.js";
@@ -55,6 +56,7 @@ import { formatAlreadySentNotice } from "../idempotent-replay-banner.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import {
   deriveChatSubject,
+  deriveSubject,
   pickDefaultFromAddress,
 } from "../outbound-defaults.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
@@ -1749,18 +1751,32 @@ class ChatCommand extends Command {
           subject = flags.subject ?? deriveChatSubject(message);
         }
 
-        const requestHash = chatRequestHash({
-          api: auth.apiBaseUrl,
-          account:
-            auth.credentials?.org_id ??
-            chatCredentialIdentity(auth.apiKey, auth.apiBaseUrl),
-          from,
-          recipient: args.recipient,
-          subject,
-          message,
-          parent: parentReply?.id ?? flags["in-reply-to"],
-          attachments,
-        });
+        const hashFor = (value: string) =>
+          chatRequestHash({
+            api: auth.apiBaseUrl,
+            account:
+              auth.credentials?.org_id ??
+              chatCredentialIdentity(auth.apiKey, auth.apiBaseUrl),
+            from,
+            recipient: args.recipient,
+            subject: value,
+            message,
+            parent: parentReply?.id ?? flags["in-reply-to"],
+            attachments,
+          });
+        // Earlier versions used the whole first line as the subject, and
+        // the subject is part of the receipt key. A retry of a send those
+        // versions left unfinished keeps their subject so it resumes that
+        // receipt instead of sending the message a second time.
+        if (!parentReply && flags.subject === undefined) {
+          const previous = deriveSubject(message);
+          if (
+            previous !== subject &&
+            hasUnfinishedChatReceipt(this.config.configDir, hashFor(previous))
+          )
+            subject = previous;
+        }
+        const requestHash = hashFor(subject);
         const scope = parentReply
           ? chatRequestHash({
               api: auth.apiBaseUrl,
