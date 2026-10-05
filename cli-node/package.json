@@ -205,14 +205,14 @@
     "@oclif/plugin-help": "^6.2.44",
     "@oclif/plugin-warn-if-update-available": "^3.1.65",
     "viem": "^2.21.0",
-    "ws": "^8.21.0"
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.10",
     "@primitivedotdev/api-core": "workspace:*",
     "@primitivedotdev/sdk": "workspace:*",
     "@types/node": "^22.10.2",
-    "@types/ws": "^8.18.1",
+    "@types/ws": "^8.18.2",
     "@vitest/coverage-v8": "^4.1.11",
     "oclif": "^4.23.0",
     "tsdown": "^0.21.10",
