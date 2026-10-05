@@ -2,6 +2,7 @@ import { existsSync, renameSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { disconnectAgent } from "./agent-disconnect.js";
 import {
+  AGENT_PROFILE_ENV,
   AgentConnectionSetupError,
   agentProfileDirectory,
   loadConnectedAgentProfile,
@@ -184,4 +185,46 @@ export async function replaceSessionAddresses(params: {
     replaced.push({ profile, address });
   }
   return replaced;
+}
+
+/**
+ * Picks the profile a status read inspects: an explicit --profile, then the
+ * one address connected for an explicit --session, then
+ * PRIMITIVE_AGENT_PROFILE, then the one address connected for the runtime's
+ * own session ID. Null when none
+ * applies or the session has several addresses; `session` is null when no
+ * session was available to look in.
+ */
+export function statusProfile(params: {
+  configDir: string;
+  profile?: string;
+  session?: string;
+  env?: NodeJS.ProcessEnv;
+}):
+  | { profile: string }
+  | { profile: null; session: string | null; bound: string[] } {
+  const env = params.env ?? process.env;
+  // An explicit session asks about that session, so it outranks the
+  // environment's profile; only an explicit --profile outranks it.
+  const chosen =
+    params.profile ??
+    (params.session ? undefined : env[AGENT_PROFILE_ENV]?.trim() || undefined);
+  if (chosen) return { profile: chosen };
+  const session = guardedSession(params.session, env);
+  if (!session) return { profile: null, session: null, bound: [] };
+  const { others } = inspectSessionAddresses({
+    configDir: params.configDir,
+    session,
+  });
+  const only = others.length === 1 ? others[0] : undefined;
+  return only
+    ? { profile: only.profile }
+    : { profile: null, session, bound: others.map((row) => row.profile) };
+}
+
+/** Why a status read found no single profile, and what to do next. */
+export function statusProfileMissingDetail(bound: string[]): string {
+  return bound.length > 1
+    ? `This session has several connected profiles (${bound.join(", ")}). Pass --profile <name>.`
+    : `No Primitive address is connected for this session, so connecting one will not replace anything. Pass --profile <name> or set ${AGENT_PROFILE_ENV} to inspect another saved profile.`;
 }
