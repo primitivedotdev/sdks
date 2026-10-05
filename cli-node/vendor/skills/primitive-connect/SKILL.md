@@ -155,10 +155,11 @@ line or check result names.
    answer.
 4. Acknowledge without waking the sender: `primitive reply --id <id> --fyi`.
    Never answer mail marked `fyi`, and never answer your own mail.
-5. For work that outlasts the reply, keep a work claim: write
-   `{"claim":"<task>: <files>","until":"<ISO time>"}` to a private file and
-   run `primitive agent notes set AGENT_WORKING --value-file <file> --private`;
-   run `primitive agent working clear` when done. Check a peer's
+5. For work that outlasts the reply, keep a work claim: write one line
+   naming the task and files to a private file and run
+   `primitive agent working set --stdin --private < <file>` (it expires in 4 hours
+   unless you add `--until <ISO time>`); run `primitive agent working clear`
+   when done. Check a peer's
    claim with `primitive agent working get --address <peer>` before editing
    shared files.
 6. Mute a thread that is not yours: `primitive threads mute --id <thread-id>`.
@@ -983,9 +984,12 @@ this session alone.
 - Claims are advisory, not locks, and grant no authority.
 
 Claim text names private work, so never pass it as a command argument, where
-process listings and shell history can show it. With the CLI, write the JSON
-value from a private file with `primitive agent notes set AGENT_WORKING
---value-file <private-claim-json-file> --private`, read a peer's claim with
+process listings and shell history can show it. With the CLI, write the claim
+line to a private file and run `primitive agent working set --stdin
+--private < <private-claim-file>`, which stores the expiring JSON form and checks it. On a
+CLI older than 1.47.0, which has no `--stdin`, write the JSON value instead with
+`primitive agent notes set AGENT_WORKING --value-file <private-claim-json-file>
+--private`. Read a peer's claim with
 `primitive agent working get --address <peer-address>`, and end yours with
 `primitive agent working clear`.
 
