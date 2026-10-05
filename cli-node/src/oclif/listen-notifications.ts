@@ -1,6 +1,10 @@
 import { type EmailDetail, getEmail } from "@primitivedotdev/api-core";
 import { createAuthenticatedCliApiClient } from "./api-client.js";
-import { autoSignalEligible, dispatchAutoRead, isSentSignal } from "./auto-signals.js";
+import {
+  autoSignalEligible,
+  dispatchAutoRead,
+  isSentSignal,
+} from "./auto-signals.js";
 import {
   isContactAcceptance,
   readContactInteraction,
