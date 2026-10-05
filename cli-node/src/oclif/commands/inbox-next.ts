@@ -755,7 +755,7 @@ export function formatTranscript(
     ),
     "",
     ...transcriptFooter(interaction, actions, email.id, bin),
-    `Then run \`${bin} inbox next\` again.`,
+    `Then run \`${followUpCommandPrefix(bin)} inbox next\` again.`,
   ];
   return lines.join("\n");
 }

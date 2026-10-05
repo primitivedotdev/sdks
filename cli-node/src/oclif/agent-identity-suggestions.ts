@@ -66,7 +66,7 @@ export function receivingOutcome(receiving: {
     return "nothing wakes this session for new mail, so it checks at the start of each turn and after sending";
   if (receiving.mode === "external")
     return receiving.state === "hooks_installed"
-      ? "new mail wakes this session through its installed hooks, confirmed by the first real delivery"
+      ? "its installed hooks should wake this session for new mail, which stays unconfirmed until the first real delivery arrives"
       : "receiving is not set up yet, so new mail will not wake this session";
   return receiving.state === "healthy"
     ? "a background listener receives new mail for this session"
