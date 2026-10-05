@@ -176,8 +176,7 @@ function emailDirectory(configDir: string, emailId: string): string {
 function parseClaim(value: unknown): AutoSignalClaim | null {
   const row = value as Partial<AutoSignalClaim> | null;
   if (
-    !row ||
-    row.version !== 1 ||
+    row?.version !== 1 ||
     typeof row.profile !== "string" ||
     !profilePattern.test(row.profile) ||
     (row.thread_id !== null && typeof row.thread_id !== "string")
@@ -307,8 +306,7 @@ export function readWorkingLease(
       64 * 1024,
     ) as Partial<AutoWorkingLease> | null;
     if (
-      !row ||
-      row.version !== 1 ||
+      row?.version !== 1 ||
       typeof row.profile !== "string" ||
       !profilePattern.test(row.profile) ||
       typeof row.started_at !== "number" ||

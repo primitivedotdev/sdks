@@ -39,48 +39,51 @@ it("does not query recipient-bound network admission for an org-key listener", a
   expect(requests).toHaveBeenCalledTimes(2);
 });
 
-describe.each([
-  "policy",
-  "contacts",
-])("%s read failure classification", (operation) => {
-  it.each([
-    429,
-    500,
-    502,
-    503,
-    "network",
-    "body-reset",
-    "body-socket",
-  ] as const)("defers a transient %s without exposing response or transport details", async (failure) => {
-    const { policy, requests, privateDetail } = fixture(operation, failure);
-    const error = await policy
-      .admit(sender, receivedAt, new AbortController().signal)
-      .catch((error: unknown) => error);
-    expect(error).toBeInstanceOf(ContactPolicyReadRetryError);
-    expect((error as Error).message).not.toContain(privateDetail);
-    expect(requests).toHaveBeenCalledTimes(operation === "policy" ? 1 : 2);
-  });
+describe.each(["policy", "contacts"])(
+  "%s read failure classification",
+  (operation) => {
+    it.each([
+      429,
+      500,
+      502,
+      503,
+      "network",
+      "body-reset",
+      "body-socket",
+    ] as const)(
+      "defers a transient %s without exposing response or transport details",
+      async (failure) => {
+        const { policy, requests, privateDetail } = fixture(operation, failure);
+        const error = await policy
+          .admit(sender, receivedAt, new AbortController().signal)
+          .catch((error: unknown) => error);
+        expect(error).toBeInstanceOf(ContactPolicyReadRetryError);
+        expect((error as Error).message).not.toContain(privateDetail);
+        expect(requests).toHaveBeenCalledTimes(operation === "policy" ? 1 : 2);
+      },
+    );
 
-  it.each([
-    400,
-    401,
-    403,
-    "invalid-json",
-    "invalid-schema",
-    "body-unknown",
-    "unauthorized-body-reset",
-    "forbidden-body-reset",
-  ] as const)("keeps %s terminal", async (failure) => {
-    const { policy, requests, privateDetail } = fixture(operation, failure);
-    const error = await policy
-      .admit(sender, receivedAt, new AbortController().signal)
-      .catch((error: unknown) => error);
-    expect(error).toBeInstanceOf(ListenStateError);
-    expect(error).not.toBeInstanceOf(ContactPolicyReadRetryError);
-    expect((error as Error).message).not.toContain(privateDetail);
-    expect(requests).toHaveBeenCalledTimes(operation === "policy" ? 1 : 2);
-  });
-});
+    it.each([
+      400,
+      401,
+      403,
+      "invalid-json",
+      "invalid-schema",
+      "body-unknown",
+      "unauthorized-body-reset",
+      "forbidden-body-reset",
+    ] as const)("keeps %s terminal", async (failure) => {
+      const { policy, requests, privateDetail } = fixture(operation, failure);
+      const error = await policy
+        .admit(sender, receivedAt, new AbortController().signal)
+        .catch((error: unknown) => error);
+      expect(error).toBeInstanceOf(ListenStateError);
+      expect(error).not.toBeInstanceOf(ContactPolicyReadRetryError);
+      expect((error as Error).message).not.toContain(privateDetail);
+      expect(requests).toHaveBeenCalledTimes(operation === "policy" ? 1 : 2);
+    });
+  },
+);
 
 function fixture(operation: string, failure: number | string) {
   const privateDetail = "private upstream error detail";
@@ -151,53 +154,54 @@ function fixture(operation: string, failure: number | string) {
 }
 
 describe("exact-mail proof failures hold all dispatch", () => {
-  it.each([
-    403, 404, 422,
-  ])("holds unsolicited and solicited mail on %s", async (status) => {
-    const requests = vi.fn(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
-        const path = new URL(new Request(input, init).url).pathname;
-        if (path.startsWith("/v1/agent-contact-policy/"))
-          return Response.json({
-            success: true,
-            data: emptyContactPolicy(recipient),
-          });
-        if (path.startsWith("/v1/agent-contacts/"))
-          return Response.json({
-            success: true,
-            data: [],
-            meta: { cursor: null },
-          });
-        if (path === "/v1/agent-networks/default/contact-admission")
-          return Response.json(
-            { success: false, error: "private upstream response" },
-            { status },
-          );
-        throw new Error("Unexpected fixture route");
-      },
-    );
-    const api = new PrimitiveApiClient({
-      apiKey: "fixture",
-      apiBaseUrl: "https://example.test/v1",
-      fetch: requests,
-    });
-    const policy = apiContactPolicy(api.client, recipient);
-    const signal = new AbortController().signal;
-    await expect(
-      policy.admit(
-        sender,
-        receivedAt,
-        signal,
-        "11111111-1111-4111-8111-111111111111",
-      ),
-    ).rejects.toThrow("could not be read");
-    await expect(
-      policy.admitResponse(
-        sender,
-        receivedAt,
-        signal,
-        "11111111-1111-4111-8111-111111111111",
-      ),
-    ).rejects.toThrow("could not be read");
-  });
+  it.each([403, 404, 422])(
+    "holds unsolicited and solicited mail on %s",
+    async (status) => {
+      const requests = vi.fn(
+        async (input: RequestInfo | URL, init?: RequestInit) => {
+          const path = new URL(new Request(input, init).url).pathname;
+          if (path.startsWith("/v1/agent-contact-policy/"))
+            return Response.json({
+              success: true,
+              data: emptyContactPolicy(recipient),
+            });
+          if (path.startsWith("/v1/agent-contacts/"))
+            return Response.json({
+              success: true,
+              data: [],
+              meta: { cursor: null },
+            });
+          if (path === "/v1/agent-networks/default/contact-admission")
+            return Response.json(
+              { success: false, error: "private upstream response" },
+              { status },
+            );
+          throw new Error("Unexpected fixture route");
+        },
+      );
+      const api = new PrimitiveApiClient({
+        apiKey: "fixture",
+        apiBaseUrl: "https://example.test/v1",
+        fetch: requests,
+      });
+      const policy = apiContactPolicy(api.client, recipient);
+      const signal = new AbortController().signal;
+      await expect(
+        policy.admit(
+          sender,
+          receivedAt,
+          signal,
+          "11111111-1111-4111-8111-111111111111",
+        ),
+      ).rejects.toThrow("could not be read");
+      await expect(
+        policy.admitResponse(
+          sender,
+          receivedAt,
+          signal,
+          "11111111-1111-4111-8111-111111111111",
+        ),
+      ).rejects.toThrow("could not be read");
+    },
+  );
 });

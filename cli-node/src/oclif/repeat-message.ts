@@ -62,8 +62,7 @@ async function readTickPart(input: {
   );
   const part = parts.length === 1 ? parts[0] : undefined;
   if (
-    !part ||
-    part.content_type?.split(";")[0]?.trim().toLowerCase() !==
+    part?.content_type?.split(";")[0]?.trim().toLowerCase() !==
       "application/json" ||
     part.part_index === undefined ||
     !Number.isSafeInteger(part.part_index) ||

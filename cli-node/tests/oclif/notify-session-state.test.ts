@@ -62,28 +62,26 @@ const write = (path: string, value: unknown) =>
   writeFileSync(path, JSON.stringify(value), { mode: 0o600 });
 
 describe("indexed notification receipts", () => {
-  it.each([
-    "journal",
-    "email",
-    "index",
-    "complete",
-  ])("recovers an interrupted submitting write at %s without authorizing resend", (phase) => {
-    const r = makeReceipt(),
-      store = open();
-    store.save(r);
-    store.release();
-    const p = paths(r);
-    if (phase !== "complete")
-      write(p.pending, { receipt: r, eventId: r.eventId });
-    if (phase === "journal") unlinkSync(p.email);
-    if (phase === "journal" || phase === "email") unlinkSync(p.event);
-    const recovered = open();
-    expect(recovered.find(r.emailId, r.eventId)).toEqual(r);
-    expect(existsSync(p.pending)).toBe(false);
-    expect(
-      notificationReceiptPage(directory, scope, threadId).receipts,
-    ).toEqual([r]);
-  });
+  it.each(["journal", "email", "index", "complete"])(
+    "recovers an interrupted submitting write at %s without authorizing resend",
+    (phase) => {
+      const r = makeReceipt(),
+        store = open();
+      store.save(r);
+      store.release();
+      const p = paths(r);
+      if (phase !== "complete")
+        write(p.pending, { receipt: r, eventId: r.eventId });
+      if (phase === "journal") unlinkSync(p.email);
+      if (phase === "journal" || phase === "email") unlinkSync(p.event);
+      const recovered = open();
+      expect(recovered.find(r.emailId, r.eventId)).toEqual(r);
+      expect(existsSync(p.pending)).toBe(false);
+      expect(
+        notificationReceiptPage(directory, scope, threadId).receipts,
+      ).toEqual([r]);
+    },
+  );
   it("recovers explicit non-submission and permits only that state to retry", () => {
     const r = makeReceipt();
     const store = open();
@@ -99,24 +97,23 @@ describe("indexed notification receipts", () => {
     recovered.save({ ...r, state: "accepted" });
     expect(() => recovered.save(r)).toThrow("inconsistent");
   });
-  it.each([
-    "journal",
-    "email",
-    "complete",
-  ])("retains accepted evidence after an interrupted update at %s", (phase) => {
-    const r = makeReceipt(),
-      store = open();
-    store.save(r);
-    store.release();
-    const accepted = { ...r, state: "accepted" as const },
-      p = paths(r);
-    if (phase !== "complete")
-      write(p.pending, { receipt: accepted, eventId: r.eventId });
-    if (phase !== "journal") write(p.email, accepted);
-    const recovered = open();
-    expect(recovered.find(r.emailId, r.eventId)?.state).toBe("accepted");
-    expect(() => recovered.save(r)).toThrow("inconsistent");
-  });
+  it.each(["journal", "email", "complete"])(
+    "retains accepted evidence after an interrupted update at %s",
+    (phase) => {
+      const r = makeReceipt(),
+        store = open();
+      store.save(r);
+      store.release();
+      const accepted = { ...r, state: "accepted" as const },
+        p = paths(r);
+      if (phase !== "complete")
+        write(p.pending, { receipt: accepted, eventId: r.eventId });
+      if (phase !== "journal") write(p.email, accepted);
+      const recovered = open();
+      expect(recovered.find(r.emailId, r.eventId)?.state).toBe("accepted");
+      expect(() => recovered.save(r)).toThrow("inconsistent");
+    },
+  );
   it("fails closed on conflicting indexes before journal recovery", () => {
     const r = makeReceipt(),
       store = open();
@@ -132,22 +129,21 @@ describe("indexed notification receipts", () => {
     expect(() => open()).toThrow("inconsistent");
     expect(existsSync(p.pending)).toBe(true);
   });
-  it.each([
-    "email",
-    "event",
-    "pending",
-  ] as const)("rejects on-disk null in %s", (kind) => {
-    const r = makeReceipt(),
-      store = open();
-    store.save(r);
-    store.release();
-    const p = paths(r);
-    write(p[kind], null);
-    expect(() => {
-      const reopened = open();
-      reopened.find(r.emailId, r.eventId);
-    }).toThrow("inconsistent");
-  });
+  it.each(["email", "event", "pending"] as const)(
+    "rejects on-disk null in %s",
+    (kind) => {
+      const r = makeReceipt(),
+        store = open();
+      store.save(r);
+      store.release();
+      const p = paths(r);
+      write(p[kind], null);
+      expect(() => {
+        const reopened = open();
+        reopened.find(r.emailId, r.eventId);
+      }).toThrow("inconsistent");
+    },
+  );
   it("rejects coerced states and public journal permissions", () => {
     const r = makeReceipt(),
       store = open();
@@ -163,43 +159,45 @@ describe("indexed notification receipts", () => {
     chmodSync(p.pending, 0o644);
     expect(() => open()).toThrow("inconsistent");
   });
-  it.each([
-    "journal-present",
-    "journal-cleared",
-  ])("reads status across a concurrent write with %s", (phase) => {
-    const r = makeReceipt(),
-      store = open(),
-      p = paths(r);
-    const originalOpen = fs.opendirSync;
-    vi.spyOn(fs, "opendirSync").mockImplementationOnce(
-      (...args: Parameters<typeof fs.opendirSync>) => {
-        write(p.pending, { receipt: r, eventId: r.eventId });
-        write(p.email, r);
-        return originalOpen(...args);
-      },
-    );
-    if (phase === "journal-cleared") {
-      const originalStat = fs.lstatSync;
-      vi.spyOn(fs, "lstatSync").mockImplementation(((
-        ...args: Parameters<typeof fs.lstatSync>
-      ) => {
-        if (args[0] === p.event && !existsSync(p.event)) {
-          write(p.event, {
-            emailId: r.emailId,
-            eventId: r.eventId,
-            clientId: r.clientId,
-          });
-          unlinkSync(p.pending);
-          throw Object.assign(new Error("not yet visible"), { code: "ENOENT" });
-        }
-        return originalStat(...args);
-      }) as typeof fs.lstatSync);
-    }
-    expect(
-      notificationReceiptPage(directory, scope, threadId).receipts,
-    ).toEqual([r]);
-    store.release();
-  });
+  it.each(["journal-present", "journal-cleared"])(
+    "reads status across a concurrent write with %s",
+    (phase) => {
+      const r = makeReceipt(),
+        store = open(),
+        p = paths(r);
+      const originalOpen = fs.opendirSync;
+      vi.spyOn(fs, "opendirSync").mockImplementationOnce(
+        (...args: Parameters<typeof fs.opendirSync>) => {
+          write(p.pending, { receipt: r, eventId: r.eventId });
+          write(p.email, r);
+          return originalOpen(...args);
+        },
+      );
+      if (phase === "journal-cleared") {
+        const originalStat = fs.lstatSync;
+        vi.spyOn(fs, "lstatSync").mockImplementation(((
+          ...args: Parameters<typeof fs.lstatSync>
+        ) => {
+          if (args[0] === p.event && !existsSync(p.event)) {
+            write(p.event, {
+              emailId: r.emailId,
+              eventId: r.eventId,
+              clientId: r.clientId,
+            });
+            unlinkSync(p.pending);
+            throw Object.assign(new Error("not yet visible"), {
+              code: "ENOENT",
+            });
+          }
+          return originalStat(...args);
+        }) as typeof fs.lstatSync);
+      }
+      expect(
+        notificationReceiptPage(directory, scope, threadId).receipts,
+      ).toEqual([r]);
+      store.release();
+    },
+  );
   it("normalizes UUID filenames, indexes aliases, and paginates without modifying receipts", () => {
     const store = open(),
       all = Array.from({ length: 4 }, makeReceipt);

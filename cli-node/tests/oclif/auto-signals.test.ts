@@ -458,25 +458,28 @@ describe("stopping automatic working", () => {
   it.each([
     ["the owner first", [0, 1]],
     ["the holder first", [1, 0]],
-  ] as const)("restores working when both answers are refused, %s", async (_label, order) => {
-    const dir = configDir();
-    const spawn = spawner();
-    const emailId = claim(dir);
-    startWorkingLease(dir, emailId);
-    const halts = [
-      await haltAutoWorking(dir, { emailIds: [emailId] }, "reply"),
-      await haltAutoWorking(dir, { emailIds: [emailId] }, "reply"),
-    ];
-    let restored = 0;
-    for (const index of order)
-      restored += restoreAutoWorking(halts[index] as HaltedAutoWorking, {
-        env: {},
-        spawnImpl: spawn.impl,
-      });
-    expect(restored).toBe(1);
-    expect(readWorkingLease(dir, emailId)?.stopped_at).toBeNull();
-    expect(spawn.calls).toHaveLength(1);
-  });
+  ] as const)(
+    "restores working when both answers are refused, %s",
+    async (_label, order) => {
+      const dir = configDir();
+      const spawn = spawner();
+      const emailId = claim(dir);
+      startWorkingLease(dir, emailId);
+      const halts = [
+        await haltAutoWorking(dir, { emailIds: [emailId] }, "reply"),
+        await haltAutoWorking(dir, { emailIds: [emailId] }, "reply"),
+      ];
+      let restored = 0;
+      for (const index of order)
+        restored += restoreAutoWorking(halts[index] as HaltedAutoWorking, {
+          env: {},
+          spawnImpl: spawn.impl,
+        });
+      expect(restored).toBe(1);
+      expect(readWorkingLease(dir, emailId)?.stopped_at).toBeNull();
+      expect(spawn.calls).toHaveLength(1);
+    },
+  );
 
   it("starts a renewer on restore even while the old heartbeat looks live", async () => {
     const dir = configDir();

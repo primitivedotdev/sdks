@@ -217,27 +217,27 @@ describe("contact notification policy", () => {
     expect(dispatch).toThrow("changed or expired");
     expect(await f.policy.admitResponse(sender, received, signal)).toBeNull();
   });
-  it.each([
-    "agent",
-    "org",
-  ] as const)("does not bypass %s silence for solicited responses", async (source) => {
-    const f = fixture();
-    f.rows([]);
-    f.document[`${source}_policy`] = {
-      ...f.document[`${source}_policy`],
-      version: randomUUID(),
-      updated_at: activation,
-      rules: [
-        {
-          pattern: sender,
-          effect: "silence",
-          notify_since: null,
-          notification_generation: null,
-        },
-      ],
-    };
-    expect(await f.policy.admitResponse(sender, received, signal)).toBeNull();
-  });
+  it.each(["agent", "org"] as const)(
+    "does not bypass %s silence for solicited responses",
+    async (source) => {
+      const f = fixture();
+      f.rows([]);
+      f.document[`${source}_policy`] = {
+        ...f.document[`${source}_policy`],
+        version: randomUUID(),
+        updated_at: activation,
+        rules: [
+          {
+            pattern: sender,
+            effect: "silence",
+            notify_since: null,
+            notification_generation: null,
+          },
+        ],
+      };
+      expect(await f.policy.admitResponse(sender, received, signal)).toBeNull();
+    },
+  );
   it("does not backfill a solicited reply before the membership activation", async () => {
     const f = fixture();
     expect(
@@ -357,29 +357,29 @@ describe("contact notification policy", () => {
   it.each([
     { receivedAt: "2026-09-01T10:01:04.700Z", allowed: true },
     { receivedAt: "2026-09-01T10:00:59.999Z", allowed: false },
-  ])("refreshes request-only admission after acceptance without backfilling $receivedAt", async ({
-    receivedAt,
-    allowed,
-  }) => {
-    const f = requestFixture();
-    expect(await f.policy.admit(sender, received, signal)).toMatchObject({
-      kind: "request",
-    });
-    const membership = row({ notify_since: received });
-    f.rows([membership]);
-    f.advance(4700);
-
-    const admission = await f.policy.admit(sender, receivedAt, signal);
-    if (allowed)
-      expect(admission).toMatchObject({
-        kind: "allowed",
-        generation: membership.notification_generation,
-        notifySince: received,
+  ])(
+    "refreshes request-only admission after acceptance without backfilling $receivedAt",
+    async ({ receivedAt, allowed }) => {
+      const f = requestFixture();
+      expect(await f.policy.admit(sender, received, signal)).toMatchObject({
+        kind: "request",
       });
-    else expect(admission).toBeNull();
-    expect(f.readPage).toHaveBeenCalledTimes(2);
-    expect(f.readPolicy).toHaveBeenCalledTimes(2);
-  });
+      const membership = row({ notify_since: received });
+      f.rows([membership]);
+      f.advance(4700);
+
+      const admission = await f.policy.admit(sender, receivedAt, signal);
+      if (allowed)
+        expect(admission).toMatchObject({
+          kind: "allowed",
+          generation: membership.notification_generation,
+          notifySince: received,
+        });
+      else expect(admission).toBeNull();
+      expect(f.readPage).toHaveBeenCalledTimes(2);
+      expect(f.readPolicy).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("refreshes request-only decisions once and still rechecks permission before dispatch", async () => {
     const f = requestFixture();
@@ -697,63 +697,26 @@ describe("reserved human sender admission", () => {
       membership,
     };
   }
-  it.each([
-    "owner",
-    "member",
-  ] as const)("carries verified %s authority and rechecks it before dispatch", async (relation) => {
-    const f = memberFixture(relation);
-    const admitted = await f.policy.admit(sender, received, signal, f.emailId);
-    expect(admitted).toMatchObject({
-      kind: "allowed",
-      source: "network",
-      senderRelation: relation,
-      emailId: f.emailId,
-    });
-    if (!admitted) throw new Error("Expected member admission");
-    (await f.policy.recheck(admitted, signal))();
-    f.decision.allowed = false;
-    f.decision.allowed_since = null;
-    await expect(f.policy.recheck(admitted, signal)).rejects.toThrow(
-      "changed or expired",
-    );
-    expect(
-      await f.policy.admit(sender, received, signal, f.emailId),
-    ).toBeNull();
-    expect(
-      await f.policy.admitResponse(sender, received, signal, f.emailId),
-    ).toBeNull();
-  });
-  it.each([
-    "owner",
-    "member",
-  ] as const)("respects local mutes for verified %s senders, including queued replies", async (relation) => {
-    for (const mute of ["membership", "agent", "org"] as const) {
+  it.each(["owner", "member"] as const)(
+    "carries verified %s authority and rechecks it before dispatch",
+    async (relation) => {
       const f = memberFixture(relation);
-      const admitted = await f.policy.admitResponse(
+      const admitted = await f.policy.admit(
         sender,
         received,
         signal,
         f.emailId,
       );
-      if (!admitted) throw new Error("Expected initial member admission");
-      if (mute === "membership") {
-        Object.assign(f.membership, {
-          notify: false,
-          notify_since: null,
-          notification_generation: null,
-        });
-      } else {
-        f.document[`${mute}_policy`].version = randomUUID();
-        f.document[`${mute}_policy`].updated_at = activation;
-        f.document[`${mute}_policy`].rules = [
-          {
-            pattern: sender,
-            effect: "silence",
-            notify_since: null,
-            notification_generation: null,
-          },
-        ];
-      }
+      expect(admitted).toMatchObject({
+        kind: "allowed",
+        source: "network",
+        senderRelation: relation,
+        emailId: f.emailId,
+      });
+      if (!admitted) throw new Error("Expected member admission");
+      (await f.policy.recheck(admitted, signal))();
+      f.decision.allowed = false;
+      f.decision.allowed_since = null;
       await expect(f.policy.recheck(admitted, signal)).rejects.toThrow(
         "changed or expired",
       );
@@ -763,9 +726,51 @@ describe("reserved human sender admission", () => {
       expect(
         await f.policy.admitResponse(sender, received, signal, f.emailId),
       ).toBeNull();
-      expect(f.readNetworkAdmission).toHaveBeenCalled();
-    }
-  });
+    },
+  );
+  it.each(["owner", "member"] as const)(
+    "respects local mutes for verified %s senders, including queued replies",
+    async (relation) => {
+      for (const mute of ["membership", "agent", "org"] as const) {
+        const f = memberFixture(relation);
+        const admitted = await f.policy.admitResponse(
+          sender,
+          received,
+          signal,
+          f.emailId,
+        );
+        if (!admitted) throw new Error("Expected initial member admission");
+        if (mute === "membership") {
+          Object.assign(f.membership, {
+            notify: false,
+            notify_since: null,
+            notification_generation: null,
+          });
+        } else {
+          f.document[`${mute}_policy`].version = randomUUID();
+          f.document[`${mute}_policy`].updated_at = activation;
+          f.document[`${mute}_policy`].rules = [
+            {
+              pattern: sender,
+              effect: "silence",
+              notify_since: null,
+              notification_generation: null,
+            },
+          ];
+        }
+        await expect(f.policy.recheck(admitted, signal)).rejects.toThrow(
+          "changed or expired",
+        );
+        expect(
+          await f.policy.admit(sender, received, signal, f.emailId),
+        ).toBeNull();
+        expect(
+          await f.policy.admitResponse(sender, received, signal, f.emailId),
+        ).toBeNull();
+        expect(f.readNetworkAdmission).toHaveBeenCalled();
+      }
+    },
+  );
   it("does not let an explicit contact bypass a muted or revoked member sender", async () => {
     const f = memberFixture("owner");
     f.decision.allowed = false;
@@ -796,23 +801,26 @@ describe("reserved human sender admission", () => {
     {},
     { member_policy_required: true },
     { member_policy_required: false, sender_relation: "owner" },
-  ])("refuses malformed authority even for an approved contact: %j", async (extra) => {
-    const policy = createNotificationContactPolicy({
-      recipient,
-      readPolicy: async () => emptyContactPolicy(recipient),
-      readPage: async () => ({ data: [row()], cursor: null }),
-      readNetworkAdmission: async () =>
-        ({
-          allowed: true,
-          allowed_since: activation,
-          pending: false,
-          ...extra,
-        }) as never,
-    });
-    await expect(
-      policy.admit(sender, received, signal, randomUUID()),
-    ).rejects.toThrow("unavailable");
-  });
+  ])(
+    "refuses malformed authority even for an approved contact: %j",
+    async (extra) => {
+      const policy = createNotificationContactPolicy({
+        recipient,
+        readPolicy: async () => emptyContactPolicy(recipient),
+        readPage: async () => ({ data: [row()], cursor: null }),
+        readNetworkAdmission: async () =>
+          ({
+            allowed: true,
+            allowed_since: activation,
+            pending: false,
+            ...extra,
+          }) as never,
+      });
+      await expect(
+        policy.admit(sender, received, signal, randomUUID()),
+      ).rejects.toThrow("unavailable");
+    },
+  );
   it("holds a pending reserved sender instead of taking the approved-contact shortcut", async () => {
     const f = memberFixture();
     f.decision.allowed = false;

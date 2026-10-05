@@ -158,33 +158,31 @@ function fixture() {
   };
 }
 describe("explicit signal send", () => {
-  it.each([
-    "read",
-    "ack",
-    "working",
-    "typing",
-  ] as const)("sends and deduplicates %s with pinned identity and ordinary email headers", async (kind) => {
-    const f = fixture();
-    expect((await f.send(kind)).data.outcome).toBe("sent");
-    expect((await f.send(kind)).data.outcome).toBe("already_sent");
-    expect(f.posts).toHaveLength(1);
-    const body = f.posts[0].body;
-    expect(body).toMatchObject({
-      from: f.context.identity.agentAddress,
-      to: f.detail.from_email,
-      in_reply_to: f.detail.message_id,
-      references: ["<older@example.test>", f.detail.message_id],
-    });
-    const parts = body.attachments as { content_base64: string }[];
-    expect(
-      JSON.parse(Buffer.from(parts[0].content_base64, "base64").toString()),
-    ).toMatchObject({
-      protocol: kind,
-      step: kind,
-      payload: { subject_message_id: f.detail.message_id },
-    });
-    expect(readFileSync(f.path(), "utf8")).not.toContain(f.context.apiKey);
-  });
+  it.each(["read", "ack", "working", "typing"] as const)(
+    "sends and deduplicates %s with pinned identity and ordinary email headers",
+    async (kind) => {
+      const f = fixture();
+      expect((await f.send(kind)).data.outcome).toBe("sent");
+      expect((await f.send(kind)).data.outcome).toBe("already_sent");
+      expect(f.posts).toHaveLength(1);
+      const body = f.posts[0].body;
+      expect(body).toMatchObject({
+        from: f.context.identity.agentAddress,
+        to: f.detail.from_email,
+        in_reply_to: f.detail.message_id,
+        references: ["<older@example.test>", f.detail.message_id],
+      });
+      const parts = body.attachments as { content_base64: string }[];
+      expect(
+        JSON.parse(Buffer.from(parts[0].content_base64, "base64").toString()),
+      ).toMatchObject({
+        protocol: kind,
+        step: kind,
+        payload: { subject_message_id: f.detail.message_id },
+      });
+      expect(readFileSync(f.path(), "utf8")).not.toContain(f.context.apiKey);
+    },
+  );
   it("renews expired known activity only on explicit invocation with a fresh key", async () => {
     const f = fixture();
     await f.send("working", { expiresIn: 1 });
@@ -264,28 +262,25 @@ describe("explicit signal send", () => {
     await first;
     expect((await f.send("read")).data.outcome).toBe("already_sent");
   });
-  it.each([
-    "trust",
-    "scope",
-    "signal",
-    "missing parent",
-    "self",
-  ])("refuses %s before sending", async (reason) => {
-    const f = fixture();
-    if (reason === "self") {
-      f.detail.from_email = f.context.identity.agentAddress;
-      f.detail.from_header = f.context.identity.agentAddress;
-    }
-    if (reason === "trust") f.detail.auth.dmarc = "fail";
-    if (reason === "scope") f.detail.recipient = "another@example.test";
-    if (reason === "signal")
-      f.detail.parsed.attachments = [
-        { filename: "interaction.json", content_type: "application/json" },
-      ];
-    if (reason === "missing parent") f.detail.message_id = "";
-    await expect(f.send("read")).rejects.toThrow();
-    expect(f.posts).toHaveLength(0);
-  });
+  it.each(["trust", "scope", "signal", "missing parent", "self"])(
+    "refuses %s before sending",
+    async (reason) => {
+      const f = fixture();
+      if (reason === "self") {
+        f.detail.from_email = f.context.identity.agentAddress;
+        f.detail.from_header = f.context.identity.agentAddress;
+      }
+      if (reason === "trust") f.detail.auth.dmarc = "fail";
+      if (reason === "scope") f.detail.recipient = "another@example.test";
+      if (reason === "signal")
+        f.detail.parsed.attachments = [
+          { filename: "interaction.json", content_type: "application/json" },
+        ];
+      if (reason === "missing parent") f.detail.message_id = "";
+      await expect(f.send("read")).rejects.toThrow();
+      expect(f.posts).toHaveLength(0);
+    },
+  );
   it("preserves an unknown outcome for malformed post-dispatch responses", async () => {
     const f = fixture();
     f.state.malformed = true;
@@ -296,20 +291,18 @@ describe("explicit signal send", () => {
     expect((await f.send("read")).data.outcome).toBe("already_sent");
     expect(f.posts).toHaveLength(1);
   });
-  it.each([
-    undefined,
-    "",
-    "not-a-status",
-    123,
-  ])("holds malformed reconciliation status %s after expiry", async (status) => {
-    const f = fixture();
-    f.state.lost = true;
-    await f.send("typing", { expiresIn: 1 });
-    f.advance(1001);
-    f.records[0].status = status;
-    expect((await f.send("typing")).exitCode).toBe(4);
-    expect(f.posts).toHaveLength(1);
-  });
+  it.each([undefined, "", "not-a-status", 123])(
+    "holds malformed reconciliation status %s after expiry",
+    async (status) => {
+      const f = fixture();
+      f.state.lost = true;
+      await f.send("typing", { expiresIn: 1 });
+      f.advance(1001);
+      f.records[0].status = status;
+      expect((await f.send("typing")).exitCode).toBe(4);
+      expect(f.posts).toHaveLength(1);
+    },
+  );
   it("refuses typing above 30 seconds and working above 60", async () => {
     const f = fixture();
     await expect(f.send("typing", { expiresIn: 31 })).rejects.toThrow("1-30");

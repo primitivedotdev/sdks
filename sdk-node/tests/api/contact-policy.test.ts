@@ -90,29 +90,31 @@ describe("contact approval policy API", () => {
     ]);
   });
 
-  it.each([
-    403, 409,
-  ])("does not retry or broaden a refused policy write (%s)", async (status) => {
-    const fetcher = vi.fn<typeof fetch>(async () =>
-      Response.json(
-        {
-          success: false,
-          error: {
-            code: status === 409 ? "contact_policy_conflict" : "forbidden",
-            message: "Refused",
+  it.each([403, 409])(
+    "does not retry or broaden a refused policy write (%s)",
+    async (status) => {
+      const fetcher = vi.fn<typeof fetch>(async () =>
+        Response.json(
+          {
+            success: false,
+            error: {
+              code: status === 409 ? "contact_policy_conflict" : "forbidden",
+              message: "Refused",
+            },
           },
-        },
-        { status },
-      ),
-    );
-    const client = new PrimitiveClient({ apiKey: key, fetch: fetcher }).client;
-    const result = await putAgentContactPolicy({
-      client,
-      path: { agent_address: agent },
-      body: { if_version: version, rules: [], allow_contact_requests: true },
-    });
-    expect(result.response?.status).toBe(status);
-    expect(result.error).toBeDefined();
-    expect(fetcher).toHaveBeenCalledOnce();
-  });
+          { status },
+        ),
+      );
+      const client = new PrimitiveClient({ apiKey: key, fetch: fetcher })
+        .client;
+      const result = await putAgentContactPolicy({
+        client,
+        path: { agent_address: agent },
+        body: { if_version: version, rules: [], allow_contact_requests: true },
+      });
+      expect(result.response?.status).toBe(status);
+      expect(result.error).toBeDefined();
+      expect(fetcher).toHaveBeenCalledOnce();
+    },
+  );
 });

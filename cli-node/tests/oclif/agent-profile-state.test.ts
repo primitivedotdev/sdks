@@ -88,21 +88,24 @@ describe("connected-agent profile state isolation", () => {
     "startAgentSignup",
     "verifyAgentSignup",
     "resendAgentSignupVerification",
-  ] as const)("blocks generated %s before authentication or dispatch", async (operationName) => {
-    vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "work");
-    const operation = operationManifest.find(
-      (item) => item.operationId === operationName,
-    );
-    if (!operation) throw new Error("Missing operation");
-    const Command = createOperationCommand(operation);
-    const command = Object.create(Command.prototype) as InstanceType<
-      typeof Command
-    >;
-    Object.assign(command, { parse: async () => ({ flags: {} }) });
-    await expect(command.run()).rejects.toThrow(
-      "Unset PRIMITIVE_AGENT_PROFILE",
-    );
-  });
+  ] as const)(
+    "blocks generated %s before authentication or dispatch",
+    async (operationName) => {
+      vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "work");
+      const operation = operationManifest.find(
+        (item) => item.operationId === operationName,
+      );
+      if (!operation) throw new Error("Missing operation");
+      const Command = createOperationCommand(operation);
+      const command = Object.create(Command.prototype) as InstanceType<
+        typeof Command
+      >;
+      Object.assign(command, { parse: async () => ({ flags: {} }) });
+      await expect(command.run()).rejects.toThrow(
+        "Unset PRIMITIVE_AGENT_PROFILE",
+      );
+    },
+  );
 
   it("selected profile cannot revoke, remove, lock or replace the default login", async () => {
     const path = join(configDir, "credentials.json");

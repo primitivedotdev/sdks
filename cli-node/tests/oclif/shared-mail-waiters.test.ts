@@ -70,66 +70,66 @@ const notify = (id: string) =>
   store.claimForNotification(id, "runtime:session");
 
 describe("active reply wait handoff", () => {
-  it.each([
-    "bound",
-    "completed",
-  ] as const)("only the owning native session can claim a %s conversation after its synchronous wait ends", async (phase) => {
-    const owner = createSharedMailWaiter();
-    const requestId = randomUUID(),
-      parent = randomUUID();
-    const session = `codex:${randomUUID()}`;
-    await store.registerWait({
-      requestId,
-      peer,
-      sessionKey: session,
-      createdAt: new Date().toISOString(),
-      idempotencyKey: randomUUID(),
-      waiter: owner,
-    });
-    await store.bindWait(requestId, parent);
-    if (phase === "completed") {
-      const interim = await receive(parent);
-      await store.claimForWait(interim, requestId, owner.token);
-      await store.markWaitObserved(interim, requestId);
-      await store.finishWait(requestId);
-    }
-    await store.releaseWaiter(requestId, owner.token);
-    const reply = await receive(parent);
-    const other = `codex:${randomUUID()}`;
-    // Explicit sender and contact-preference listeners both use this atomic
-    // claim. A consumer that bypasses policy cannot steal or skip the event.
-    expect((await store.claimForNotification(reply, other)).status).toBe(
-      "held",
-    );
-    expect((await store.readEmail(reply))?.route).toBeNull();
-    const [wrong, right] = await Promise.all([
-      store.claimForNotification(reply, other),
-      store.claimForNotification(reply, session),
-    ]);
-    expect(wrong.status).toBe("held");
-    expect(right.status).toBe("claimed");
-    await expect(store.skipNotification(reply, other)).rejects.toThrow(
-      "inconsistent",
-    );
-    expect((await store.readEmail(reply))?.route).toMatchObject({
-      kind: "notification",
-      sessionKey: session,
-      state: "selected",
-    });
-    await store.markNotification(reply, "submitting");
-    await store.markNotification(reply, "accepted");
-    store = await openSharedMailStore({
-      configDir: directory,
-      scope: "fixture",
-      recipient,
-    });
-    expect((await store.claimForNotification(reply, other)).status).toBe(
-      "held",
-    );
-    expect((await store.claimForNotification(reply, session)).status).toBe(
-      "already_observed",
-    );
-  });
+  it.each(["bound", "completed"] as const)(
+    "only the owning native session can claim a %s conversation after its synchronous wait ends",
+    async (phase) => {
+      const owner = createSharedMailWaiter();
+      const requestId = randomUUID(),
+        parent = randomUUID();
+      const session = `codex:${randomUUID()}`;
+      await store.registerWait({
+        requestId,
+        peer,
+        sessionKey: session,
+        createdAt: new Date().toISOString(),
+        idempotencyKey: randomUUID(),
+        waiter: owner,
+      });
+      await store.bindWait(requestId, parent);
+      if (phase === "completed") {
+        const interim = await receive(parent);
+        await store.claimForWait(interim, requestId, owner.token);
+        await store.markWaitObserved(interim, requestId);
+        await store.finishWait(requestId);
+      }
+      await store.releaseWaiter(requestId, owner.token);
+      const reply = await receive(parent);
+      const other = `codex:${randomUUID()}`;
+      // Explicit sender and contact-preference listeners both use this atomic
+      // claim. A consumer that bypasses policy cannot steal or skip the event.
+      expect((await store.claimForNotification(reply, other)).status).toBe(
+        "held",
+      );
+      expect((await store.readEmail(reply))?.route).toBeNull();
+      const [wrong, right] = await Promise.all([
+        store.claimForNotification(reply, other),
+        store.claimForNotification(reply, session),
+      ]);
+      expect(wrong.status).toBe("held");
+      expect(right.status).toBe("claimed");
+      await expect(store.skipNotification(reply, other)).rejects.toThrow(
+        "inconsistent",
+      );
+      expect((await store.readEmail(reply))?.route).toMatchObject({
+        kind: "notification",
+        sessionKey: session,
+        state: "selected",
+      });
+      await store.markNotification(reply, "submitting");
+      await store.markNotification(reply, "accepted");
+      store = await openSharedMailStore({
+        configDir: directory,
+        scope: "fixture",
+        recipient,
+      });
+      expect((await store.claimForNotification(reply, other)).status).toBe(
+        "held",
+      );
+      expect((await store.claimForNotification(reply, session)).status).toBe(
+        "already_observed",
+      );
+    },
+  );
 
   it("holds a live legacy macOS waiter after clock correction or identity upgrade", async () => {
     lifecycle.identity.mockReturnValue(
@@ -201,28 +201,28 @@ describe("active reply wait handoff", () => {
     expect((await store.readWait(canonical.requestId))?.waiters).toEqual([]);
   });
 
-  it.each([
-    "wait",
-    "notification",
-  ] as const)("gives a resumed wait and notification one winner: %s first", async (winner) => {
-    const wait = await bound(),
-      id = await receive(wait.parent);
-    await store.releaseWaiter(wait.requestId, wait.owner.token);
-    const resumed = createSharedMailWaiter();
-    if (winner === "wait") {
-      await store.joinWait(wait.requestId, resumed);
-      expect((await notify(id)).status).toBe("held");
-      expect(
-        (await store.claimForWait(id, wait.requestId, resumed.token)).status,
-      ).toBe("claimed");
-    } else {
-      expect((await notify(id)).status).toBe("claimed");
-      await store.joinWait(wait.requestId, resumed);
-      expect(
-        (await store.claimForWait(id, wait.requestId, resumed.token)).status,
-      ).toBe("held");
-    }
-  });
+  it.each(["wait", "notification"] as const)(
+    "gives a resumed wait and notification one winner: %s first",
+    async (winner) => {
+      const wait = await bound(),
+        id = await receive(wait.parent);
+      await store.releaseWaiter(wait.requestId, wait.owner.token);
+      const resumed = createSharedMailWaiter();
+      if (winner === "wait") {
+        await store.joinWait(wait.requestId, resumed);
+        expect((await notify(id)).status).toBe("held");
+        expect(
+          (await store.claimForWait(id, wait.requestId, resumed.token)).status,
+        ).toBe("claimed");
+      } else {
+        expect((await notify(id)).status).toBe("claimed");
+        await store.joinWait(wait.requestId, resumed);
+        expect(
+          (await store.claimForWait(id, wait.requestId, resumed.token)).status,
+        ).toBe("held");
+      }
+    },
+  );
 
   it("preserves a reply already claimed before timeout for exact recovery, never external replay", async () => {
     const wait = await bound(),
@@ -239,28 +239,28 @@ describe("active reply wait handoff", () => {
     ).toBe("claimed");
   });
 
-  it.each([
-    "exit",
-    "reused",
-  ] as const)("hands off unclaimed mail after a proven process %s", async (reason) => {
-    const wait = await bound(),
-      id = await receive(wait.parent);
-    lifecycle.identity.mockReturnValue(
-      reason === "exit" ? null : "different-start",
-    );
-    if (reason === "exit") {
-      const kill = process.kill.bind(process);
-      vi.spyOn(process, "kill").mockImplementation((pid, signal) => {
-        if (pid === wait.owner.pid && signal === 0)
-          throw Object.assign(new Error("gone"), { code: "ESRCH" });
-        return kill(pid, signal);
-      });
-    }
-    expect((await notify(id)).status).toBe("claimed");
-    expect(
-      (await store.claimForWait(id, wait.requestId, wait.owner.token)).status,
-    ).toBe("held");
-  });
+  it.each(["exit", "reused"] as const)(
+    "hands off unclaimed mail after a proven process %s",
+    async (reason) => {
+      const wait = await bound(),
+        id = await receive(wait.parent);
+      lifecycle.identity.mockReturnValue(
+        reason === "exit" ? null : "different-start",
+      );
+      if (reason === "exit") {
+        const kill = process.kill.bind(process);
+        vi.spyOn(process, "kill").mockImplementation((pid, signal) => {
+          if (pid === wait.owner.pid && signal === 0)
+            throw Object.assign(new Error("gone"), { code: "ESRCH" });
+          return kill(pid, signal);
+        });
+      }
+      expect((await notify(id)).status).toBe("claimed");
+      expect(
+        (await store.claimForWait(id, wait.requestId, wait.owner.token)).status,
+      ).toBe("held");
+    },
+  );
 
   it("retains the hold when process metadata is unavailable and liveness is uncertain", async () => {
     const wait = await bound(),
@@ -288,28 +288,28 @@ describe("active reply wait handoff", () => {
     expect((await notify(id)).status).toBe("held");
   });
 
-  it.each([
-    "unbound",
-    "uncertain",
-  ] as const)("never releases a possible %s send based on waiter exit", async (status) => {
-    const wait = await registered(),
-      id = await receive(randomUUID());
-    if (status === "uncertain") await store.markWaitUncertain(wait.requestId);
-    await store.releaseWaiter(wait.requestId, wait.owner.token);
-    expect((await notify(id)).status).toBe("held");
-  });
+  it.each(["unbound", "uncertain"] as const)(
+    "never releases a possible %s send based on waiter exit",
+    async (status) => {
+      const wait = await registered(),
+        id = await receive(randomUUID());
+      if (status === "uncertain") await store.markWaitUncertain(wait.requestId);
+      await store.releaseWaiter(wait.requestId, wait.owner.token);
+      expect((await notify(id)).status).toBe("held");
+    },
+  );
 
-  it.each([
-    "pending",
-    "rejected",
-  ] as const)("does not promote %s mail merely because a wait ended", async (authorization) => {
-    const wait = await bound(),
-      id = await receive(wait.parent, authorization);
-    await store.releaseWaiter(wait.requestId, wait.owner.token);
-    expect((await notify(id)).status).toBe(
-      authorization === "pending" ? "held" : "unmatched",
-    );
-  });
+  it.each(["pending", "rejected"] as const)(
+    "does not promote %s mail merely because a wait ended",
+    async (authorization) => {
+      const wait = await bound(),
+        id = await receive(wait.parent, authorization);
+      await store.releaseWaiter(wait.requestId, wait.owner.token);
+      expect((await notify(id)).status).toBe(
+        authorization === "pending" ? "held" : "unmatched",
+      );
+    },
+  );
 
   it("allows unrelated parent or sender mail while a wait is active", async () => {
     const wait = await bound();

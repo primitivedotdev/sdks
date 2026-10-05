@@ -331,12 +331,15 @@ describe("connected emails wait", () => {
     [...args, "--q", "hello"],
     [...args, "--subject", "hello"],
     [...args, "--spam-score-gte", "0"],
-  ])("rejects unsupported or incomplete flags before any request: %j", async (...argv) => {
-    const fixture = setup();
-    const result = await run(argv);
-    expect(result.failure).toBeInstanceOf(Error);
-    expect(fixture.requests).toHaveLength(0);
-  });
+  ])(
+    "rejects unsupported or incomplete flags before any request: %j",
+    async (...argv) => {
+      const fixture = setup();
+      const result = await run(argv);
+      expect(result.failure).toBeInstanceOf(Error);
+      expect(fixture.requests).toHaveLength(0);
+    },
+  );
   it("rejects mismatched own address or sent identity without inbox access", async () => {
     const fixture = setup();
     const mismatch = await run([...args, "--to", "other@sender.example"]);

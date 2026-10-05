@@ -182,81 +182,84 @@ describe("followed thread diagnostic integration", () => {
     "other-session",
     "other-peer",
     "other-thread",
-  ])("explains %s new-parent replies using saved conversation context without dispatch", async (scenario) => {
-    const configDir = mkdtempSync(join(tmpdir(), "notification-diagnostic-"));
-    directories.push(configDir);
-    const apiKey = ["pconn", "fixture"].join("_"),
-      apiBaseUrl = "https://example.test/v1";
-    const scope = sharedMailScope(apiKey, apiBaseUrl),
-      threadId = randomUUID();
-    const email = {
-      ...detail,
-      thread_id: threadId,
-      reply_to_sent_email_id: randomUUID(),
-      body_text: "Private email content",
-    };
-    await followEmailConversation(
-      {
+  ])(
+    "explains %s new-parent replies using saved conversation context without dispatch",
+    async (scenario) => {
+      const configDir = mkdtempSync(join(tmpdir(), "notification-diagnostic-"));
+      directories.push(configDir);
+      const apiKey = ["pconn", "fixture"].join("_"),
+        apiBaseUrl = "https://example.test/v1";
+      const scope = sharedMailScope(apiKey, apiBaseUrl),
+        threadId = randomUUID();
+      const email = {
+        ...detail,
+        thread_id: threadId,
+        reply_to_sent_email_id: randomUUID(),
+        body_text: "Private email content",
+      };
+      await followEmailConversation(
+        {
+          configDir,
+          scope,
+          recipient: detail.recipient,
+          peer: detail.from_email,
+          sessionKey,
+          since: detail.received_at,
+        },
+        email,
+      );
+      if (scenario === "old") email.received_at = "2025-12-31T23:59:59.000Z";
+      if (scenario === "other-peer")
+        email.from_email = email.from_header = "other@example.com";
+      if (scenario === "other-thread") email.thread_id = randomUUID();
+      const store = await openSharedMailStore({
         configDir,
         scope,
         recipient: detail.recipient,
-        peer: detail.from_email,
-        sessionKey,
-        since: detail.received_at,
-      },
-      email,
-    );
-    if (scenario === "old") email.received_at = "2025-12-31T23:59:59.000Z";
-    if (scenario === "other-peer")
-      email.from_email = email.from_header = "other@example.com";
-    if (scenario === "other-thread") email.thread_id = randomUUID();
-    const store = await openSharedMailStore({
-      configDir,
-      scope,
-      recipient: detail.recipient,
-    });
-    await store.ingest({
-      emailId: detail.id,
-      eventId: randomUUID(),
-      receivedAt: email.received_at,
-    });
-    hooks.authenticate.mockResolvedValue({
-      auth: {
-        apiKey,
-        apiBaseUrl,
-        connectedAgent: { agentAddress: detail.recipient },
-      },
-      apiClient: { client: {} },
-    });
-    hooks.getEmail.mockResolvedValue({ data: { data: email } });
-    hooks.admit.mockResolvedValue(undefined);
-    hooks.admitResponse.mockResolvedValue(
-      scenario === "muted" ? undefined : { kind: "response" },
-    );
-    const output = await explainNotification({
-      configDir,
-      emailId: detail.id,
-      sessionId:
-        scenario === "other-session" ? randomUUID() : sessionKey.slice(6),
-    });
-    expect(output.reason).toBe(
-      scenario === "allowed"
-        ? "eligible_now"
-        : scenario === "other-session"
-          ? "conversation_belongs_to_other_session"
-          : "sender_not_enabled_or_explicitly_silenced",
-    );
-    expect(hooks.admitResponse).toHaveBeenCalledTimes(
-      ["allowed", "muted"].includes(scenario) ? 1 : 0,
-    );
-    expect(output.replyWait).toBeNull();
-    expect(output.conversationFollow).toEqual(
-      scenario === "other-thread"
-        ? null
-        : { threadId, sessionKey, since: "2026-01-01T00:00:00.000Z" },
-    );
-    expect(JSON.stringify(output)).not.toContain(email.body_text);
-    expect((await store.readEmail(detail.id))?.route).toBeNull();
-    expect(hooks.getEmail).toHaveBeenCalledOnce();
-  });
+      });
+      await store.ingest({
+        emailId: detail.id,
+        eventId: randomUUID(),
+        receivedAt: email.received_at,
+      });
+      hooks.authenticate.mockResolvedValue({
+        auth: {
+          apiKey,
+          apiBaseUrl,
+          connectedAgent: { agentAddress: detail.recipient },
+        },
+        apiClient: { client: {} },
+      });
+      hooks.getEmail.mockResolvedValue({ data: { data: email } });
+      hooks.admit.mockResolvedValue(undefined);
+      hooks.admitResponse.mockResolvedValue(
+        scenario === "muted" ? undefined : { kind: "response" },
+      );
+      const output = await explainNotification({
+        configDir,
+        emailId: detail.id,
+        sessionId:
+          scenario === "other-session" ? randomUUID() : sessionKey.slice(6),
+      });
+      expect(output.reason).toBe(
+        scenario === "allowed"
+          ? "eligible_now"
+          : scenario === "other-session"
+            ? "conversation_belongs_to_other_session"
+            : "sender_not_enabled_or_explicitly_silenced",
+      );
+      expect(hooks.admitResponse).toHaveBeenCalledTimes(
+        ["allowed", "muted"].includes(scenario) ? 1 : 0,
+      );
+      expect(output.replyWait).toBeNull();
+      expect(output.conversationFollow).toEqual(
+        scenario === "other-thread"
+          ? null
+          : { threadId, sessionKey, since: "2026-01-01T00:00:00.000Z" },
+      );
+      expect(JSON.stringify(output)).not.toContain(email.body_text);
+      expect((await store.readEmail(detail.id))?.route).toBeNull();
+      expect(hooks.getEmail).toHaveBeenCalledOnce();
+    },
+  );
 });

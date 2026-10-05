@@ -157,79 +157,84 @@ it("accepts a currently authorized contact once and retains ordinary receipt ded
   expect(f.receipts()).toMatchObject([{ state: "accepted" }]);
 });
 
-it.each([
-  false,
-  true,
-])("authenticates managed staging mail through scoped reply and native policy paths (request: %s)", async (contactRequest) => {
-  const f = await setup(stagingSender, stagingAuth());
-  const sentId = randomUUID();
-  f.detail.reply_to_sent_email_id = sentId;
-  const scope = { from: f.detail.recipient, recipient: stagingSender, sentId };
-  expect(isScopedChatReply(f.detail, scope)).toBe(true);
-  expect(
-    isScopedChatReply(f.detail, {
-      ...scope,
-      recipient: "other@neutral.primitive-staging.email",
-    }),
-  ).toBe(false);
-  expect(isScopedChatReply(f.detail, { ...scope, sentId: randomUUID() })).toBe(
-    false,
-  );
-  const authorize = { ...f.authorize, contactRequest, reserve: () => true };
-  expect(
-    await f.notifications.handleDetail(
-      f.detail,
-      f.eventId,
-      f.signal,
-      authorize,
-    ),
-  ).toEqual({ disposition: "notified" });
-  expect(
-    await f.notifications.handleDetail(
-      f.detail,
-      f.eventId,
-      f.signal,
-      authorize,
-    ),
-  ).toEqual({ disposition: "notified" });
-  expect(f.dispatch).toHaveBeenCalledOnce();
-  expect(f.receipts()).toMatchObject([{ state: "accepted" }]);
-  expect(f.queue.mock.calls[0]?.[0]).toContain(stagingSender);
-  expect(f.queue.mock.calls[0]?.[0].includes("first-contact request")).toBe(
-    contactRequest,
-  );
-});
+it.each([false, true])(
+  "authenticates managed staging mail through scoped reply and native policy paths (request: %s)",
+  async (contactRequest) => {
+    const f = await setup(stagingSender, stagingAuth());
+    const sentId = randomUUID();
+    f.detail.reply_to_sent_email_id = sentId;
+    const scope = {
+      from: f.detail.recipient,
+      recipient: stagingSender,
+      sentId,
+    };
+    expect(isScopedChatReply(f.detail, scope)).toBe(true);
+    expect(
+      isScopedChatReply(f.detail, {
+        ...scope,
+        recipient: "other@neutral.primitive-staging.email",
+      }),
+    ).toBe(false);
+    expect(
+      isScopedChatReply(f.detail, { ...scope, sentId: randomUUID() }),
+    ).toBe(false);
+    const authorize = { ...f.authorize, contactRequest, reserve: () => true };
+    expect(
+      await f.notifications.handleDetail(
+        f.detail,
+        f.eventId,
+        f.signal,
+        authorize,
+      ),
+    ).toEqual({ disposition: "notified" });
+    expect(
+      await f.notifications.handleDetail(
+        f.detail,
+        f.eventId,
+        f.signal,
+        authorize,
+      ),
+    ).toEqual({ disposition: "notified" });
+    expect(f.dispatch).toHaveBeenCalledOnce();
+    expect(f.receipts()).toMatchObject([{ state: "accepted" }]);
+    expect(f.queue.mock.calls[0]?.[0]).toContain(stagingSender);
+    expect(f.queue.mock.calls[0]?.[0].includes("first-contact request")).toBe(
+      contactRequest,
+    );
+  },
+);
 
 it.each([
   { contactRequest: false, mismatch: "sender" },
   { contactRequest: true, mismatch: "sender" },
   { contactRequest: false, mismatch: "signer" },
   { contactRequest: true, mismatch: "signer" },
-])("rejects managed staging $mismatch mismatch before native dispatch (request: $contactRequest)", async ({
-  contactRequest,
-  mismatch,
-}) => {
-  const auth = stagingAuth();
-  if (mismatch === "signer") auth.dkimSignatures[0].domain = "primitive.email";
-  const f = await setup(stagingSender, auth);
-  if (mismatch === "sender")
-    f.detail.from_header = "other@neutral.primitive-staging.email";
-  expect(
-    isScopedChatReply(f.detail, {
-      from: f.detail.recipient,
-      recipient: stagingSender,
-    }),
-  ).toBe(false);
-  expect(
-    await f.notifications.handleDetail(f.detail, f.eventId, f.signal, {
-      ...f.authorize,
-      contactRequest,
-      reserve: () => true,
-    }),
-  ).toEqual({ disposition: "skipped" });
-  expect(f.queue).not.toHaveBeenCalled();
-  expect(f.receipts()).toEqual([]);
-});
+])(
+  "rejects managed staging $mismatch mismatch before native dispatch (request: $contactRequest)",
+  async ({ contactRequest, mismatch }) => {
+    const auth = stagingAuth();
+    if (mismatch === "signer")
+      auth.dkimSignatures[0].domain = "primitive.email";
+    const f = await setup(stagingSender, auth);
+    if (mismatch === "sender")
+      f.detail.from_header = "other@neutral.primitive-staging.email";
+    expect(
+      isScopedChatReply(f.detail, {
+        from: f.detail.recipient,
+        recipient: stagingSender,
+      }),
+    ).toBe(false);
+    expect(
+      await f.notifications.handleDetail(f.detail, f.eventId, f.signal, {
+        ...f.authorize,
+        contactRequest,
+        reserve: () => true,
+      }),
+    ).toEqual({ disposition: "skipped" });
+    expect(f.queue).not.toHaveBeenCalled();
+    expect(f.receipts()).toEqual([]);
+  },
+);
 
 it("does not queue or create a submitting receipt after notification is disabled", async () => {
   const f = await setup();

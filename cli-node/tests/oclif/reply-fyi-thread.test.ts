@@ -228,15 +228,15 @@ describe("reply --fyi", () => {
     });
   });
 
-  it.each([
-    [["--html", "<p>x</p>"]],
-    [["--attachment", "./x.pdf"]],
-  ])("refuses content that would not stay informational: %j", async (extra) => {
-    await expect(
-      run(ReplyCommand, ["--id", "email-1", "--fyi", ...extra]),
-    ).rejects.toThrow(/cannot also be provided/);
-    expect(mocks.replyToEmail).not.toHaveBeenCalled();
-  });
+  it.each([[["--html", "<p>x</p>"]], [["--attachment", "./x.pdf"]]])(
+    "refuses content that would not stay informational: %j",
+    async (extra) => {
+      await expect(
+        run(ReplyCommand, ["--id", "email-1", "--fyi", ...extra]),
+      ).rejects.toThrow(/cannot also be provided/);
+      expect(mocks.replyToEmail).not.toHaveBeenCalled();
+    },
+  );
 
   it("refuses a body over the note limit before sending", async () => {
     await expect(
@@ -442,15 +442,18 @@ describe("reply --thread", () => {
   it.each([
     [[{ direction: "outbound", id: "sent-9" }]],
     [[{ direction: "inbound", id: "email-1" }]],
-  ])("refuses a truncated thread without latest_inbound_id: %j", async (messages) => {
-    mocks.getThread.mockResolvedValue({
-      data: { data: { id: "thread-1", message_count: 250, messages } },
-    });
-    await expect(
-      run(ReplyCommand, ["--thread", "thread-1", "--body", "x"]),
-    ).rejects.toThrow(/more messages than the API listed/);
-    expect(mocks.replyToEmail).not.toHaveBeenCalled();
-  });
+  ])(
+    "refuses a truncated thread without latest_inbound_id: %j",
+    async (messages) => {
+      mocks.getThread.mockResolvedValue({
+        data: { data: { id: "thread-1", message_count: 250, messages } },
+      });
+      await expect(
+        run(ReplyCommand, ["--thread", "thread-1", "--body", "x"]),
+      ).rejects.toThrow(/more messages than the API listed/);
+      expect(mocks.replyToEmail).not.toHaveBeenCalled();
+    },
+  );
 
   it("refuses when the thread cannot be read", async () => {
     mocks.getThread.mockResolvedValue({
