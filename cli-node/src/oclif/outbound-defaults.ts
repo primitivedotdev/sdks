@@ -45,16 +45,11 @@ export function deriveSubject(body: string): string {
 
 const CHAT_SUBJECT_MAX_LENGTH = 60;
 
-// Words whose trailing period does not end a sentence.
+// Titles come before a name, so their period never ends a sentence.
+const TITLES = new Set(["dr", "mr", "mrs", "ms", "prof", "sr", "jr", "st"]);
+// These can also end a sentence ("No. Cancel it."), so their period is
+// skipped only when the text continues in lowercase or with a digit.
 const ABBREVIATIONS = new Set([
-  "dr",
-  "mr",
-  "mrs",
-  "ms",
-  "prof",
-  "sr",
-  "jr",
-  "st",
   "vs",
   "etc",
   "e.g",
@@ -69,8 +64,9 @@ const ABBREVIATIONS = new Set([
 
 /**
  * The line up to its first sentence end: `.`, `?` or `!` followed by
- * whitespace or the line end. A period after a common abbreviation or a
- * single letter (an initial) does not end the sentence.
+ * whitespace or the line end. A period after a title or a single letter
+ * (an initial) does not end the sentence, nor does one after another
+ * common abbreviation when the text continues in lowercase or a digit.
  */
 function firstSentence(line: string): string {
   const end = /[.?!](?=\s|$)/g;
@@ -78,7 +74,9 @@ function firstSentence(line: string): string {
     if (match[0] === ".") {
       const word = /(\S+)$/.exec(line.slice(0, match.index))?.[1] ?? "";
       const bare = word.replace(/^[("'[]+/, "").toLowerCase();
-      if (ABBREVIATIONS.has(bare) || /^[a-z]$/.test(bare)) continue;
+      if (TITLES.has(bare) || /^[a-z]$/.test(bare)) continue;
+      const next = /^\s+(\S)/.exec(line.slice(match.index + 1))?.[1] ?? "";
+      if (ABBREVIATIONS.has(bare) && /[a-z0-9]/.test(next)) continue;
     }
     return line.slice(0, match.index + 1);
   }

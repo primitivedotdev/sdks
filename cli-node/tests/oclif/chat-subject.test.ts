@@ -51,6 +51,16 @@ describe("chat subject", () => {
     expect(deriveChatSubject("Ask J. Doe now. Thanks.")).toBe(
       "Ask J. Doe now.",
     );
+    expect(deriveChatSubject("See fig. 3 for the result. Then reply.")).toBe(
+      "See fig. 3 for the result.",
+    );
+  });
+
+  it("ends at an abbreviation that ends a sentence", () => {
+    expect(deriveChatSubject("No. Cancel the operation.")).toBe("No.");
+    expect(deriveChatSubject("Bring pens, paper, etc. Then wait.")).toBe(
+      "Bring pens, paper, etc.",
+    );
   });
 
   it("falls back like the send subject for an empty body", () => {
