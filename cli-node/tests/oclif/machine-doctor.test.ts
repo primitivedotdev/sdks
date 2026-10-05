@@ -2049,6 +2049,9 @@ describe.runIf(process.platform !== "win32")(
       rmSync(launcherPath(configDir));
       const before = byId(await runMachineDoctor(options))["claude.hook.stop"];
       expect(before).toMatchObject({ status: "fail", fixable: true });
+      expect(before.detail).toContain(
+        `The hook launcher ${launcherPath(configDir)} is missing`,
+      );
       const fixed = byId(await runMachineDoctor({ ...options, fix: true }));
       expect(fixed["claude.hook.stop"]).toMatchObject({
         status: "ok",

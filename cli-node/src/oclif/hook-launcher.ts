@@ -42,8 +42,10 @@ function shellQuote(value: string): string {
  * The text hooks show when they cannot run. It is emitted inside a JSON string
  * by the shell script, so it must contain no double quote or backslash.
  */
-export const NO_NODE_WARNING =
-  "Primitive wake hooks could not find Node.js, so new mail will not wake this session. Install Node.js again, then run `primitive agent connect --resume` for each connected session or `primitive machine doctor --fix`.";
+/** Oldest Node major this CLI runs on (package.json `engines.node`). */
+export const MIN_NODE_MAJOR = 22;
+
+export const NO_NODE_WARNING = `Primitive wake hooks could not find Node.js ${MIN_NODE_MAJOR} or later, so new mail will not wake this session. Install it, then run \`primitive agent connect --resume\` for each connected session or \`primitive machine doctor --fix\`.`;
 export const NO_CLI_WARNING =
   "Primitive wake hooks could not find the Primitive CLI (its package cache was removed and it could not be fetched again), so new mail will not wake this session. Run `npm install -g primitive`, then `primitive machine doctor --fix`.";
 
@@ -98,13 +100,20 @@ export function hookLauncherScript(params: {
 pinned_node=${shellQuote(params.node)}
 pinned_version=${shellQuote(params.version ?? "")}
 warning_file=${shellQuote(warning)}
-shown_file=${shellQuote(`${warning}.shown`)}
 
+# Record why hooks cannot run, show it once to each session through its
+# PostToolUse hook (the session id is the hook's sixth argument), and exit 0
+# so Claude Code is never blocked.
 fail_open() {
   mkdir -p "\${warning_file%/*}" 2>/dev/null
   printf '%s\\n' "$1" > "$warning_file" 2>/dev/null
   case "\${hook_script##*/}" in
     claude-pending-mail.mjs)
+      session=$hook_session
+      case "$session" in
+        '' | *[!0-9A-Fa-f-]*) session=unknown ;;
+      esac
+      shown_file="$warning_file.shown-$session"
       if [ ! -f "$shown_file" ]; then
         : > "$shown_file" 2>/dev/null
         printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}' "$1"
@@ -114,14 +123,19 @@ fail_open() {
   exit 0
 }
 
+# A fallback Node must be new enough to run this CLI.
+supported() {
+  [ -x "$1" ] && "$1" -e 'process.exit(Number(process.versions.node.split(".")[0]) >= ${MIN_NODE_MAJOR} ? 0 : 1)' >/dev/null 2>&1
+}
+
 pick_node() {
   if [ -x "$pinned_node" ]; then node=$pinned_node; return 0; fi
   node=$(command -v node 2>/dev/null)
-  if [ -n "$node" ] && [ -x "$node" ]; then return 0; fi
+  if [ -n "$node" ] && supported "$node"; then return 0; fi
   versions=\${pinned_node%/*/bin/node}
   nvm_root=\${NVM_DIR:-$HOME/.nvm}
   for node in "$versions"/*/bin/node${common}; do
-    if [ -x "$node" ]; then return 0; fi
+    if supported "$node"; then return 0; fi
   done
   node=
   return 1
@@ -131,17 +145,31 @@ package_dir() {
   "$node" -e 'process.stdout.write(require("path").dirname(require("fs").realpathSync(process.argv[1])))' "$1" 2>/dev/null
 }
 
+# A CLI copy whose bin directory holds both the hook script and run.js.
+complete_copy() {
+  [ -n "$1" ] && [ -f "$1/$name" ] && [ -f "$1/run.js" ]
+}
+
 hook_script=$1
+hook_session=$6
 pick_node || fail_open ${shellQuote(NO_NODE_WARNING)}
 PATH=\${node%/*}:$PATH
 export PATH
 
-dir=
-if [ $# -ge 1 ] && [ ! -f "$1" ]; then
+# The hook names a script and, after it, the CLI's run.js. When either is
+# gone (a cleaned npx cache), both come from another copy of the CLI.
+need_cli=
+if [ $# -ge 1 ] && [ ! -f "$1" ]; then need_cli=1; fi
+if [ $# -ge 2 ] && [ "\${2##*/}" = run.js ] && [ ! -f "$2" ]; then need_cli=1; fi
+if [ -n "$need_cli" ]; then
   name=\${1##*/}
-  found=$(command -v primitive 2>/dev/null)
-  if [ -n "$found" ]; then dir=$(package_dir "$found"); fi
-  if { [ -z "$dir" ] || [ ! -f "$dir/$name" ]; } && [ -n "$pinned_version" ]; then
+  dir=
+  if [ -f "$1" ] && complete_copy "\${1%/*}"; then dir=\${1%/*}; fi
+  if ! complete_copy "$dir"; then
+    found=$(command -v primitive 2>/dev/null)
+    if [ -n "$found" ]; then dir=$(package_dir "$found"); fi
+  fi
+  if ! complete_copy "$dir" && [ -n "$pinned_version" ]; then
     npx=\${node%/*}/npx
     [ -x "$npx" ] || npx=$(command -v npx 2>/dev/null)
     if [ -n "$npx" ]; then
@@ -149,20 +177,17 @@ if [ $# -ge 1 ] && [ ! -f "$1" ]; then
       if [ -n "$found" ]; then dir=$(package_dir "$found"); fi
     fi
   fi
-  if [ -z "$dir" ] || [ ! -f "$dir/$name" ]; then fail_open ${shellQuote(NO_CLI_WARNING)}; fi
+  complete_copy "$dir" || fail_open ${shellQuote(NO_CLI_WARNING)}
   shift
-  set -- "$dir/$name" "$@"
-fi
-if [ $# -ge 2 ] && [ "\${2##*/}" = run.js ] && [ ! -f "$2" ]; then
-  [ -n "$dir" ] || dir=\${1%/*}
-  if [ -f "$dir/run.js" ]; then
-    first=$1
-    shift 2
-    set -- "$first" "$dir/run.js" "$@"
+  if [ $# -ge 1 ] && [ "\${1##*/}" = run.js ] && [ ! -f "$1" ]; then
+    shift
+    set -- "$dir/$name" "$dir/run.js" "$@"
+  else
+    set -- "$dir/$name" "$@"
   fi
 fi
 
-if [ -f "$warning_file" ]; then rm -f "$warning_file" "$shown_file" 2>/dev/null; fi
+if [ -f "$warning_file" ]; then rm -f "$warning_file" "$warning_file".shown-* 2>/dev/null; fi
 exec "$node" "$@"
 `;
 }

@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   hookLauncherScript,
   hookLauncherWarningPath,
+  MIN_NODE_MAJOR,
   NO_CLI_WARNING,
   NO_NODE_WARNING,
   writeHookLauncher,
@@ -28,10 +29,29 @@ afterEach(() => {
 });
 
 const posix = process.platform !== "win32";
+const sessionA = "11111111-1111-4111-8111-111111111111";
+const sessionB = "22222222-2222-4222-8222-222222222222";
+
+/**
+ * A PATH holding only the utilities the launcher uses, so no Node installed
+ * on the test machine is found by accident.
+ */
+function toolsDir(root: string): string {
+  const tools = join(root, "tools");
+  mkdirSync(tools);
+  for (const tool of ["mkdir", "rm", "tail", "sh"]) {
+    const found = spawnSync("sh", ["-c", `command -v ${tool}`], {
+      encoding: "utf8",
+    }).stdout.trim();
+    symlinkSync(found, join(tools, tool));
+  }
+  return tools;
+}
 
 function setup() {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "hook-launcher-")));
   directories.push(root);
+  const tools = toolsDir(root);
   const configDir = join(root, "config");
   const home = join(root, "home");
   mkdirSync(home);
@@ -49,7 +69,7 @@ function setup() {
     join(root, "pkg", "package.json"),
     '{"name":"primitive","version":"1.48.0","type":"module"}',
   );
-  return { root, configDir, home, bin };
+  return { root, configDir, home, bin, tools };
 }
 
 /** A fake Node that reports itself, then runs the real one. */
@@ -91,7 +111,7 @@ function run(
 
 describe.runIf(posix)("hook launcher", () => {
   it("runs the pinned Node while it exists", () => {
-    const { root, configDir, home, bin } = setup();
+    const { root, configDir, home, bin, tools } = setup();
     const pinned = join(
       root,
       "nvm",
@@ -106,7 +126,7 @@ describe.runIf(posix)("hook launcher", () => {
     const result = run(
       launcher,
       [join(bin, "claude-wake.mjs"), join(bin, "run.js"), "x"],
-      { PATH: "/bin:/usr/bin", HOME: home },
+      { PATH: tools, HOME: home },
     );
     expect(result.status).toBe(0);
     expect(result.stdout.startsWith("pinned ")).toBe(true);
@@ -117,7 +137,7 @@ describe.runIf(posix)("hook launcher", () => {
   });
 
   it("falls back to the Node on PATH when the pinned one is removed", () => {
-    const { root, configDir, home, bin } = setup();
+    const { root, configDir, home, bin, tools } = setup();
     const pinned = join(
       root,
       "nvm",
@@ -131,7 +151,7 @@ describe.runIf(posix)("hook launcher", () => {
     fakeNode(onPath, "path");
     const launcher = install(configDir, pinned);
     const result = run(launcher, [join(bin, "claude-wake.mjs"), "x"], {
-      PATH: `${join(root, "path-bin")}:/bin:/usr/bin`,
+      PATH: `${join(root, "path-bin")}:${tools}`,
       HOME: home,
     });
     expect(result.status).toBe(0);
@@ -140,7 +160,7 @@ describe.runIf(posix)("hook launcher", () => {
   });
 
   it("falls back to another installed version beside the removed one", () => {
-    const { root, configDir, home, bin } = setup();
+    const { root, configDir, home, bin, tools } = setup();
     const versions = join(root, "nvm", "versions", "node");
     fakeNode(join(versions, "v22.1.0", "bin", "node"), "sibling");
     const launcher = install(
@@ -148,34 +168,83 @@ describe.runIf(posix)("hook launcher", () => {
       join(versions, "v24.0.0", "bin", "node"),
     );
     const result = run(launcher, [join(bin, "claude-wake.mjs")], {
-      PATH: "/bin:/usr/bin",
+      PATH: tools,
       HOME: home,
     });
     expect(result.stdout.startsWith("sibling ")).toBe(true);
   });
 
+  it("skips a Node on PATH too old to run the CLI", () => {
+    const { root, configDir, home, bin, tools } = setup();
+    const versions = join(root, "nvm", "versions", "node");
+    fakeNode(join(versions, "v22.1.0", "bin", "node"), "sibling");
+    // Answers the version check as an unsupported Node would.
+    const old = join(root, "old-bin", "node");
+    mkdirSync(join(root, "old-bin"));
+    writeFileSync(
+      old,
+      `#!/bin/sh\n[ "$1" = -e ] && exit 1\nprintf 'old '\nexec '${process.execPath}' "$@"\n`,
+    );
+    chmodSync(old, 0o755);
+    const launcher = install(
+      configDir,
+      join(versions, "v24.0.0", "bin", "node"),
+    );
+    const result = run(launcher, [join(bin, "claude-wake.mjs")], {
+      PATH: `${join(root, "old-bin")}:${tools}`,
+      HOME: home,
+    });
+    expect(result.stdout.startsWith("sibling ")).toBe(true);
+  });
+
+  it("matches the Node version the CLI package requires", () => {
+    const manifest = JSON.parse(
+      readFileSync(
+        join(import.meta.dirname, "..", "..", "package.json"),
+        "utf8",
+      ),
+    ) as { engines: { node: string } };
+    expect(manifest.engines.node).toBe(`>=${MIN_NODE_MAJOR}`);
+  });
+
   it("writes a warning when no Node is found and shows it once to the PostToolUse hook", () => {
-    const { root, configDir, home, bin } = setup();
+    const { root, configDir, home, bin, tools } = setup();
     const launcher = install(configDir, join(root, "gone", "bin", "node"));
-    const env = { PATH: "/bin:/usr/bin", HOME: home };
+    const env = { PATH: tools, HOME: home };
     // A Stop hook exits 0 so Claude Code is never blocked.
     const stop = run(launcher, [join(bin, "claude-wake.mjs")], env);
     expect(stop).toEqual({ status: 0, stdout: "" });
     expect(readFileSync(hookLauncherWarningPath(configDir), "utf8")).toBe(
       `${NO_NODE_WARNING}\n`,
     );
-    const pending = run(launcher, [join(bin, "claude-pending-mail.mjs")], env);
-    expect(pending.status).toBe(0);
-    expect(JSON.parse(pending.stdout)).toEqual({
+    // The PostToolUse hook's sixth argument is its session.
+    const pendingArgs = (session: string) => [
+      join(bin, "claude-pending-mail.mjs"),
+      join(bin, "run.js"),
+      configDir,
+      "profile",
+      "a@example.test",
+      session,
+      "primitive-pending-mail-v1",
+    ];
+    const notice = {
       hookSpecificOutput: {
         hookEventName: "PostToolUse",
         additionalContext: NO_NODE_WARNING,
       },
-    });
-    expect(run(launcher, [join(bin, "claude-pending-mail.mjs")], env)).toEqual({
+    };
+    const pending = run(launcher, pendingArgs(sessionA), env);
+    expect(pending.status).toBe(0);
+    expect(JSON.parse(pending.stdout)).toEqual(notice);
+    expect(run(launcher, pendingArgs(sessionA), env)).toEqual({
       status: 0,
       stdout: "",
     });
+    // Another session using the same launcher still sees it once.
+    expect(
+      JSON.parse(run(launcher, pendingArgs(sessionB), env).stdout),
+    ).toEqual(notice);
+    expect(run(launcher, pendingArgs(sessionB), env).stdout).toBe("");
 
     // Once Node is back, the next hook run clears the warning.
     fakeNode(join(root, "gone", "bin", "node"), "back");
@@ -185,7 +254,7 @@ describe.runIf(posix)("hook launcher", () => {
   });
 
   it("runs the hook scripts from the primitive on PATH when the npx cache is gone", () => {
-    const { root, configDir, home, bin } = setup();
+    const { root, configDir, home, bin, tools } = setup();
     const pathBin = join(root, "global-bin");
     mkdirSync(pathBin);
     symlinkSync(join(bin, "run.js"), join(pathBin, "primitive"));
@@ -199,7 +268,7 @@ describe.runIf(posix)("hook launcher", () => {
         configDir,
         "profile",
       ],
-      { PATH: `${pathBin}:/bin:/usr/bin`, HOME: home },
+      { PATH: `${pathBin}:${tools}`, HOME: home },
     );
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({
@@ -209,8 +278,30 @@ describe.runIf(posix)("hook launcher", () => {
     });
   });
 
+  it("finds another copy when only the hook's run.js is gone", () => {
+    const { root, configDir, home, bin, tools } = setup();
+    const pathBin = join(root, "global-bin");
+    mkdirSync(pathBin);
+    symlinkSync(join(bin, "run.js"), join(pathBin, "primitive"));
+    // The hook script survives in a directory without run.js.
+    const partial = join(root, "partial", "bin");
+    mkdirSync(partial, { recursive: true });
+    writeFileSync(join(partial, "claude-wake.mjs"), "process.exit(9);\n");
+    const launcher = install(configDir, process.execPath);
+    const result = run(
+      launcher,
+      [join(partial, "claude-wake.mjs"), join(partial, "run.js"), configDir],
+      { PATH: `${pathBin}:${tools}`, HOME: home },
+    );
+    expect(JSON.parse(result.stdout)).toEqual({
+      script: "claude-wake.mjs",
+      argv: [join(bin, "run.js"), configDir],
+      dir: bin,
+    });
+  });
+
   it("replaces the CLI entry of a machine-wide session hook the same way", () => {
-    const { root, configDir, home, bin } = setup();
+    const { root, configDir, home, bin, tools } = setup();
     const pathBin = join(root, "global-bin");
     mkdirSync(pathBin);
     symlinkSync(join(bin, "run.js"), join(pathBin, "primitive"));
@@ -222,7 +313,7 @@ describe.runIf(posix)("hook launcher", () => {
         "agent",
         "session-register",
       ],
-      { PATH: `${pathBin}:/bin:/usr/bin`, HOME: home },
+      { PATH: `${pathBin}:${tools}`, HOME: home },
     );
     expect(JSON.parse(result.stdout)).toEqual({
       script: "run.js",
@@ -232,7 +323,7 @@ describe.runIf(posix)("hook launcher", () => {
   });
 
   it("fetches the pinned version with npx when no copy is installed", () => {
-    const { root, configDir, home, bin } = setup();
+    const { root, configDir, home, bin, tools } = setup();
     // An npx that reports the package bin it would put on PATH.
     const nodeDir = join(root, "node-bin");
     mkdirSync(nodeDir);
@@ -250,7 +341,7 @@ describe.runIf(posix)("hook launcher", () => {
     const result = run(
       launcher,
       [join(gone, "claude-wake.mjs"), join(gone, "run.js")],
-      { PATH: "/bin:/usr/bin", HOME: home },
+      { PATH: tools, HOME: home },
     );
     expect(readFileSync(join(root, "npx-args"), "utf8").trim()).toBe(
       "-y -p primitive@1.48.0 -c command -v primitive",
@@ -262,14 +353,14 @@ describe.runIf(posix)("hook launcher", () => {
   });
 
   it("warns instead of failing when no copy of the CLI can be found", () => {
-    const { root, configDir, home } = setup();
+    const { root, configDir, home, tools } = setup();
     // A Node with no npx beside it, so nothing is fetched.
     const nodeDir = join(root, "node-bin");
     mkdirSync(nodeDir);
     symlinkSync(process.execPath, join(nodeDir, "node"));
     const launcher = install(configDir, join(nodeDir, "node"));
     const gone = join(root, "_npx", "gone", "bin");
-    const env = { PATH: "/bin:/usr/bin", HOME: home };
+    const env = { PATH: tools, HOME: home };
     expect(
       run(launcher, [join(gone, "claude-wake.mjs"), join(gone, "run.js")], env),
     ).toEqual({ status: 0, stdout: "" });

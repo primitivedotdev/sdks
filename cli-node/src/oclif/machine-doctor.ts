@@ -730,6 +730,14 @@ export async function runMachineDoctor(
     },
     restoreProfiles: options.profiles,
   };
+  // Claude hooks name the launcher, but the file itself is gone.
+  const launcherMissing = (): boolean =>
+    !!cli?.launcher &&
+    settingsRead.ok &&
+    !existsSync(cli.launcher.path) &&
+    JSON.stringify(settingsRead.settings).includes(
+      JSON.stringify(cli.launcher.path),
+    );
   const hookCheck = (id: HookCheckId): CheckRunner => ({
     inspect: () => {
       const skip = skipRuntime("claude");
@@ -749,9 +757,18 @@ export async function runMachineDoctor(
         return check(id, "skip", PER_CONNECTION_SKIP, {
           path: join(paths.claudeDir, "settings.json"),
         });
-      const finding = inspectClaudeHooks(settingsRead.settings, hookContext)[
+      const inspected = inspectClaudeHooks(settingsRead.settings, hookContext)[
         id
       ];
+      // A hook naming a deleted launcher is already reported as outdated;
+      // say why, since its settings entry looks unchanged.
+      const finding =
+        inspected.status === "fail" && launcherMissing()
+          ? {
+              ...inspected,
+              detail: `${inspected.detail} The hook launcher ${cli?.launcher?.path} is missing; a repair writes it again.`,
+            }
+          : inspected;
       // The launcher records when it last found no Node or CLI to run.
       const launcherWarning =
         id === "claude.hook.stop" && cli?.launcher
@@ -811,8 +828,11 @@ export async function runMachineDoctor(
         new Set(ids),
         { profiles: options.profiles },
       );
-      if (!repaired.changed.size) return false;
-      // Hooks run through the launcher, so it is in place before they name it.
+      // Hooks run through the launcher, so it is in place before they name
+      // it, and it is restored whenever hooks name it and it is gone, even
+      // when no hook entry itself needs to change.
+      const restoreLauncher = launcherMissing();
+      if (!repaired.changed.size && !restoreLauncher) return false;
       if (cli && hookBlocked === null)
         try {
           ensureHookLauncher(cli);
@@ -821,6 +841,7 @@ export async function runMachineDoctor(
             `The hook launcher ${cli.launcher?.path ?? ""} could not be written.`,
           );
         }
+      if (!repaired.changed.size) return id === "claude.hook.stop";
       // A failed write throws before anything is recorded, so no later check
       // reports a change that was never saved.
       writeClaudeSettings({
