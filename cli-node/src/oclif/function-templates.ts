@@ -51,7 +51,7 @@ export const PRIMITIVE_TEAM_AUTHOR: FunctionTemplateAuthor = {
 // patch releases of the SDK pick up automatically. Update alongside
 // any minor or major version bump of the SDK so scaffolded projects
 // use the same SDK version this CLI release was tested against.
-const SDK_VERSION_RANGE = "^1.34.0";
+const SDK_VERSION_RANGE = "^1.35.0";
 
 // The CLI version range that ships in the scaffolded devDependencies.
 // Pinned separately from SDK_VERSION_RANGE because primitive
