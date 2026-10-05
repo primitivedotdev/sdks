@@ -113,9 +113,9 @@ fail_open() {
       case "$session" in
         '' | *[!0-9A-Fa-f-]*) session=unknown ;;
       esac
-      shown_file="$warning_file.shown-$session"
-      if [ ! -f "$shown_file" ]; then
-        : > "$shown_file" 2>/dev/null
+      # mkdir is atomic, so of several hooks running at once only one
+      # shows the warning.
+      if mkdir "$warning_file.shown-$session" 2>/dev/null; then
         printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}' "$1"
       fi
       ;;
@@ -187,7 +187,7 @@ if [ -n "$need_cli" ]; then
   fi
 fi
 
-if [ -f "$warning_file" ]; then rm -f "$warning_file" "$warning_file".shown-* 2>/dev/null; fi
+if [ -f "$warning_file" ]; then rm -rf "$warning_file" "$warning_file".shown-* 2>/dev/null; fi
 exec "$node" "$@"
 `;
 }

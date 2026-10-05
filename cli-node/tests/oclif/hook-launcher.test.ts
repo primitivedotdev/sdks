@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -172,6 +172,38 @@ describe.runIf(posix)("hook launcher", () => {
       HOME: home,
     });
     expect(result.stdout.startsWith("sibling ")).toBe(true);
+  });
+
+  it("shows the warning once even when a session's hooks run at the same time", async () => {
+    const { root, configDir, home, bin, tools } = setup();
+    const launcher = install(configDir, join(root, "gone", "bin", "node"));
+    const outputs = await Promise.all(
+      Array.from(
+        { length: 8 },
+        () =>
+          new Promise<string>((done) => {
+            const child = spawn(
+              launcher,
+              [
+                join(bin, "claude-pending-mail.mjs"),
+                join(bin, "run.js"),
+                configDir,
+                "profile",
+                "a@example.test",
+                sessionA,
+                "primitive-pending-mail-v1",
+              ],
+              { env: { PATH: tools, HOME: home } },
+            );
+            let stdout = "";
+            child.stdout.on("data", (chunk) => {
+              stdout += String(chunk);
+            });
+            child.on("close", () => done(stdout));
+          }),
+      ),
+    );
+    expect(outputs.filter(Boolean)).toHaveLength(1);
   });
 
   it("skips a Node on PATH too old to run the CLI", () => {
