@@ -54,6 +54,12 @@ describe("chat subject", () => {
     expect(deriveChatSubject("See fig. 3 for the result. Then reply.")).toBe(
       "See fig. 3 for the result.",
     );
+    expect(deriveChatSubject("Use e.g. Node to run this. Then reply.")).toBe(
+      "Use e.g. Node to run this.",
+    );
+    expect(deriveChatSubject("Ask Acme Co. today. Then report.")).toBe(
+      "Ask Acme Co. today.",
+    );
   });
 
   it("ends at an abbreviation that ends a sentence", () => {

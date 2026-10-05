@@ -45,28 +45,34 @@ export function deriveSubject(body: string): string {
 
 const CHAT_SUBJECT_MAX_LENGTH = 60;
 
-// Titles come before a name, so their period never ends a sentence.
-const TITLES = new Set(["dr", "mr", "mrs", "ms", "prof", "sr", "jr", "st"]);
-// These can also end a sentence ("No. Cancel it."), so their period is
-// skipped only when the text continues in lowercase or with a digit.
-const ABBREVIATIONS = new Set([
+// Titles and abbreviations that introduce what follows (often a
+// capitalized name: "Dr. Smith", "e.g. Node") practically never end a
+// sentence, so their period never does.
+const TITLES = new Set([
+  "dr",
+  "mr",
+  "mrs",
+  "ms",
+  "prof",
+  "sr",
+  "jr",
+  "st",
   "vs",
-  "etc",
   "e.g",
   "i.e",
   "approx",
-  "inc",
-  "ltd",
-  "co",
-  "no",
   "fig",
 ]);
+// These also end sentences ("No. Cancel it.", "pens, etc. Then"), so their
+// period is skipped only when the text continues in lowercase or a digit.
+const ABBREVIATIONS = new Set(["etc", "inc", "ltd", "co", "no"]);
 
 /**
  * The line up to its first sentence end: `.`, `?` or `!` followed by
- * whitespace or the line end. A period after a title or a single letter
- * (an initial) does not end the sentence, nor does one after another
- * common abbreviation when the text continues in lowercase or a digit.
+ * whitespace or the line end. A period after a title-like abbreviation or
+ * a single letter (an initial) does not end the sentence, nor does one
+ * after another abbreviation when the text continues in lowercase or a
+ * digit.
  */
 function firstSentence(line: string): string {
   const end = /[.?!](?=\s|$)/g;
