@@ -918,35 +918,43 @@ describe("native receiving unavailable in this runtime", () => {
     expect(dependencies.setupAgent).not.toHaveBeenCalled();
   });
 
-  it("probes a real socket: a served one is not refused", async () => {
-    const directory = mkdtempSync(join("/tmp", "pc-"));
-    directories.push(directory);
-    const path = join(directory, "s.sock");
-    const server = createServer((socket) => socket.end());
-    await new Promise<void>((resolve) => server.listen(path, resolve));
-    expect(await socketRefusesConnections(path)).toBe(false);
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    // A missing path is a different case (no socket), never "refused".
-    expect(await socketRefusesConnections(join(directory, "none.sock"))).toBe(
-      false,
-    );
-  });
+  // Unix domain sockets; Windows named pipes behave differently.
+  it.skipIf(process.platform === "win32")(
+    "probes a real socket: a served one is not refused",
+    async () => {
+      // A short path: socket paths are length-limited and tmpdir() can be long.
+      const directory = mkdtempSync(join("/tmp", "pc-"));
+      directories.push(directory);
+      const path = join(directory, "s.sock");
+      const server = createServer((socket) => socket.end());
+      await new Promise<void>((resolve) => server.listen(path, resolve));
+      expect(await socketRefusesConnections(path)).toBe(false);
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      // A missing path is a different case (no socket), never "refused".
+      expect(await socketRefusesConnections(join(directory, "none.sock"))).toBe(
+        false,
+      );
+    },
+  );
 
-  it("probes a real socket: one left behind by a killed server is refused", async () => {
-    const directory = mkdtempSync(join("/tmp", "pc-"));
-    directories.push(directory);
-    const path = join(directory, "stale.sock");
-    // A server that dies without closing leaves its socket file behind.
-    const child = spawn(process.execPath, [
-      "-e",
-      `require("node:net").createServer().listen(${JSON.stringify(path)}, () => process.stdout.write("up"))`,
-    ]);
-    await new Promise<void>((resolve) => child.stdout.once("data", resolve));
-    child.kill("SIGKILL");
-    await new Promise<void>((resolve) => child.once("exit", () => resolve()));
-    expect(existsSync(path)).toBe(true);
-    expect(await socketRefusesConnections(path)).toBe(true);
-  });
+  it.skipIf(process.platform === "win32")(
+    "probes a real socket: one left behind by a killed server is refused",
+    async () => {
+      const directory = mkdtempSync(join("/tmp", "pc-"));
+      directories.push(directory);
+      const path = join(directory, "stale.sock");
+      // A server that dies without closing leaves its socket file behind.
+      const child = spawn(process.execPath, [
+        "-e",
+        `require("node:net").createServer().listen(${JSON.stringify(path)}, () => process.stdout.write("up"))`,
+      ]);
+      await new Promise<void>((resolve) => child.stdout.once("data", resolve));
+      child.kill("SIGKILL");
+      await new Promise<void>((resolve) => child.once("exit", () => resolve()));
+      expect(existsSync(path)).toBe(true);
+      expect(await socketRefusesConnections(path)).toBe(true);
+    },
+  );
 
   it("does not probe on resume, so a saved native setup keeps its receiver", async () => {
     const { options, preflight } = unavailable({ resume: true });
