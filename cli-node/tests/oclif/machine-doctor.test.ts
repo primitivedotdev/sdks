@@ -14,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { saveCliCredentials } from "../../src/oclif/auth.js";
 import { claudeWakeHookStatus } from "../../src/oclif/claude-wake-install.js";
 import { codexHookTrustHash } from "../../src/oclif/codex-machine-hooks.js";
 import {
@@ -1463,6 +1464,219 @@ describe("primitive machine doctor", () => {
       "agent204@example.test",
     );
   }, 30_000);
+
+  it("moves aside a rejected profile whose agent is gone from the owner's complete list", async () => {
+    const { configDir, options } = machine();
+    const removed = `session-${sessionA}`;
+    saveConnectedAgentProfile(
+      configDir,
+      removed,
+      profile("removed@example.test"),
+    );
+    saveCliCredentials(configDir, {
+      auth_method: "oauth",
+      access_token: ["member", "token"].join("-"),
+      refresh_token: ["inert", "refresh"].join("-"),
+      token_type: "Bearer",
+      expires_at: "2099-01-01T00:00:00.000Z",
+      oauth_grant_id: "grant",
+      oauth_client_id: "fixture",
+      org_id: "33333333-3333-4333-8333-333333333333",
+      org_name: null,
+      api_base_url: "https://api.primitive.dev/v1",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    const listQueries: string[] = [];
+    const fetchStub = (async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/agent-connections/me"))
+        return new Response(JSON.stringify({ success: false }), {
+          status: 401,
+        });
+      if (url.pathname.endsWith("/agent-connections")) {
+        listQueries.push(url.search);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: [{ address: "other@example.test", status: "connected" }],
+            meta: { cursor: null },
+          }),
+          { status: 200 },
+        );
+      }
+      throw new TypeError("offline");
+    }) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fetch: fetchStub }),
+    );
+    expect(
+      listQueries.every((query) => query.includes("include_hidden=true")),
+    ).toBe(true);
+    expect(report["profiles.orphaned"]).toMatchObject({
+      status: "fail",
+      fixable: true,
+    });
+    expect(report["profiles.orphaned"].detail).toContain(
+      "removed@example.test",
+    );
+    const fixed = byId(
+      await runMachineDoctor({ ...options, fix: true, fetch: fetchStub }),
+    );
+    expect(fixed["profiles.orphaned"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    expect(
+      existsSync(join(configDir, "agent-connections", "profiles", removed)),
+    ).toBe(false);
+    expect(
+      readdirSync(join(configDir, "agent-connections", "orphaned")),
+    ).toEqual([`${removed}-20261002T120000Z`]);
+  });
+
+  it("keeps a revoked status found before a later page fails", async () => {
+    const { configDir, options } = machine();
+    const revoked = `session-${sessionA}`;
+    saveConnectedAgentProfile(
+      configDir,
+      revoked,
+      profile("early@example.test"),
+    );
+    saveCliCredentials(configDir, {
+      auth_method: "oauth",
+      access_token: ["member", "token"].join("-"),
+      refresh_token: ["inert", "refresh"].join("-"),
+      token_type: "Bearer",
+      expires_at: "2099-01-01T00:00:00.000Z",
+      oauth_grant_id: "grant",
+      oauth_client_id: "fixture",
+      org_id: "33333333-3333-4333-8333-333333333333",
+      org_name: null,
+      api_base_url: "https://api.primitive.dev/v1",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    const fetchStub = (async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/agent-connections")) {
+        if (url.searchParams.get("cursor"))
+          return new Response("unavailable", { status: 503 });
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: [{ address: "early@example.test", status: "revoked" }],
+            meta: { cursor: "page-2" },
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ success: false }), {
+        status: 401,
+      });
+    }) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fix: true, fetch: fetchStub }),
+    );
+    expect(report["profiles.orphaned"]).toMatchObject({
+      status: "ok",
+      fixed: true,
+    });
+    expect(
+      existsSync(join(configDir, "agent-connections", "profiles", revoked)),
+    ).toBe(false);
+  });
+
+  it("never treats a page without an explicit end cursor as the whole list", async () => {
+    const { configDir, options } = machine();
+    saveConnectedAgentProfile(
+      configDir,
+      `session-${sessionA}`,
+      profile("later-page@example.test"),
+    );
+    saveCliCredentials(configDir, {
+      auth_method: "oauth",
+      access_token: ["member", "token"].join("-"),
+      refresh_token: ["inert", "refresh"].join("-"),
+      token_type: "Bearer",
+      expires_at: "2099-01-01T00:00:00.000Z",
+      oauth_grant_id: "grant",
+      oauth_client_id: "fixture",
+      org_id: "33333333-3333-4333-8333-333333333333",
+      org_name: null,
+      api_base_url: "https://api.primitive.dev/v1",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    const fetchStub = (async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/agent-connections"))
+        return new Response(
+          JSON.stringify({ success: true, data: [], meta: {} }),
+          { status: 200 },
+        );
+      return new Response(JSON.stringify({ success: false }), {
+        status: 401,
+      });
+    }) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fix: true, fetch: fetchStub }),
+    );
+    expect(report["profiles.orphaned"].status).toBe("warn");
+    expect(
+      existsSync(
+        join(configDir, "agent-connections", "profiles", `session-${sessionA}`),
+      ),
+    ).toBe(true);
+  });
+
+  it("says when rejected profiles belong to another API than the sign-in", async () => {
+    const { configDir, options } = machine();
+    saveConnectedAgentProfile(configDir, `session-${sessionA}`, {
+      ...profile("staging-agent@example.test"),
+      api_base_url: "https://api.primitive-staging-1.com/v1",
+    });
+    saveCliCredentials(configDir, {
+      auth_method: "oauth",
+      access_token: ["member", "token"].join("-"),
+      refresh_token: ["inert", "refresh"].join("-"),
+      token_type: "Bearer",
+      expires_at: "2099-01-01T00:00:00.000Z",
+      oauth_grant_id: "grant",
+      oauth_client_id: "fixture",
+      org_id: "33333333-3333-4333-8333-333333333333",
+      org_name: null,
+      api_base_url: "https://api.primitive.dev/v1",
+      created_at: "2026-01-01T00:00:00.000Z",
+    });
+    const fetchStub = (async () =>
+      new Response(JSON.stringify({ success: false }), {
+        status: 401,
+      })) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fetch: fetchStub }),
+    );
+    expect(report["profiles.orphaned"].status).toBe("warn");
+    expect(report["profiles.orphaned"].detail).toContain(
+      "1 of them belong to an organization or Primitive API your current sign-in is not for",
+    );
+  });
+
+  it("names rejected profiles it cannot confirm and says how to clean them up", async () => {
+    const { configDir, options } = machine();
+    saveConnectedAgentProfile(
+      configDir,
+      `session-${sessionA}`,
+      profile("stale@example.test"),
+    );
+    const fetchStub = (async () =>
+      new Response(JSON.stringify({ success: false }), {
+        status: 401,
+      })) as typeof fetch;
+    const report = byId(
+      await runMachineDoctor({ ...options, fetch: fetchStub }),
+    );
+    expect(report["profiles.orphaned"].status).toBe("warn");
+    expect(report["profiles.orphaned"].detail).toContain("stale@example.test");
+    expect(report["profiles.orphaned"].detail).toContain("primitive login");
+  });
 
   it("retries disconnecting ended sessions whose agent is still connected", async () => {
     const { configDir, options } = machine();

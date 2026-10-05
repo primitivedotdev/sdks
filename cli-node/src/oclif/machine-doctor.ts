@@ -381,16 +381,26 @@ async function memberCredentialsFor(
   }
 }
 
-/** Find an address in the member's connection list; null when it cannot be confirmed. */
-async function ownerListedStatus(
+/** Pages to read before giving up on confirming absence (10,000 agents). */
+const OWNER_LIST_MAX_PAGES = 200;
+
+/**
+ * The member's connection list, hidden agents included, as address to status.
+ * Read once per run. `complete` is true only when every page was read and the
+ * last one explicitly ended the list (`meta.cursor: null`): a status found on
+ * any page stands, but absence is proof only from a complete list.
+ */
+async function ownerConnectionStatuses(
   credentials: StoredCliCredentials,
-  address: string,
   fetchImpl: typeof fetch,
-): Promise<string | null> {
+): Promise<{ statuses: Map<string, string>; complete: boolean }> {
+  const statuses = new Map<string, string>();
+  const partial = () => ({ statuses, complete: false });
   let cursor: string | undefined;
-  for (let page = 0; page < 10; page++) {
+  for (let page = 0; page < OWNER_LIST_MAX_PAGES; page++) {
     const url = new URL(`${credentials.api_base_url}/agent-connections`);
     url.searchParams.set("limit", "50");
+    url.searchParams.set("include_hidden", "true");
     if (cursor) url.searchParams.set("cursor", cursor);
     try {
       const response = await fetchImpl(url, {
@@ -404,27 +414,29 @@ async function ownerListedStatus(
       });
       if (response.status !== 200) {
         await response.body?.cancel().catch(() => undefined);
-        return null;
+        return partial();
       }
       const text = await response.text();
-      if (text.length > 1_048_576) return null;
+      if (text.length > 1_048_576) return partial();
       const body = JSON.parse(text) as {
         success?: unknown;
         data?: unknown;
         meta?: { cursor?: unknown };
       };
-      if (body.success !== true || !Array.isArray(body.data)) return null;
+      if (body.success !== true || !Array.isArray(body.data)) return partial();
       for (const row of body.data as Array<Record<string, unknown>>)
-        if (row?.address === address && typeof row.status === "string")
-          return row.status;
+        if (typeof row?.address === "string" && typeof row.status === "string")
+          statuses.set(row.address, row.status);
       const next = body.meta?.cursor;
-      if (typeof next !== "string" || !next || next === cursor) return null;
+      if (next === null) return { statuses, complete: true };
+      if (typeof next !== "string" || !next || next === cursor)
+        return partial();
       cursor = next;
     } catch {
-      return null;
+      return partial();
     }
   }
-  return null;
+  return partial();
 }
 
 type CheckRunner = {
@@ -802,7 +814,13 @@ export async function runMachineDoctor(
           )
         : check("profiles.orphaned", "ok", "No saved agent profiles.");
     let member: StoredCliCredentials | null | undefined;
-    let unconfirmed = 0;
+    const unconfirmed: string[] = [];
+    // Rejected profiles the saved sign-in cannot check at all: another
+    // organization or another Primitive API (such as staging).
+    let elsewhere = 0;
+    let ownerList:
+      | { statuses: Map<string, string>; complete: boolean }
+      | undefined;
     let unknown = 0;
     let connected = 0;
     // A few requests at a time: this runs on a timer and a machine can
@@ -825,18 +843,22 @@ export async function runMachineDoctor(
       if (entry.state === "revoked") orphans.push(entry);
       else if (entry.state === "rejected") {
         member ??= await memberCredentialsFor(options);
-        const listed =
-          member &&
+        const checkable =
+          !!member &&
           member.org_id === entry.profile.org_id &&
-          member.api_base_url === entry.profile.api_base_url
-            ? await ownerListedStatus(
-                member,
-                entry.profile.agent_address,
-                fetchImpl,
-              )
+          member.api_base_url === entry.profile.api_base_url;
+        if (member && !checkable) elsewhere++;
+        if (checkable && member && ownerList === undefined)
+          ownerList = await ownerConnectionStatuses(member, fetchImpl);
+        const listed =
+          checkable && ownerList
+            ? (ownerList.statuses.get(entry.profile.agent_address) ??
+              (ownerList.complete ? "absent" : null))
             : null;
-        if (listed === "revoked") orphans.push(entry);
-        else unconfirmed++;
+        // A rejected key whose agent is revoked, or gone from the complete
+        // list (removed in the app), can never work again.
+        if (listed === "revoked" || listed === "absent") orphans.push(entry);
+        else unconfirmed.push(entry.profile.agent_address);
       } else if (entry.state === "unavailable") unknown++;
       else connected++;
     }
@@ -844,20 +866,20 @@ export async function runMachineDoctor(
       return check(
         "profiles.orphaned",
         "fail",
-        `${orphans.length} saved profiles were disconnected in Primitive: ${orphans
+        `${orphans.length} saved profiles were disconnected or removed in Primitive: ${orphans
           .map((entry) => entry.profile.agent_address)
           .join(
             ", ",
           )}. A repair moves them aside locally; nothing changes in Primitive.`,
         { fixable: true },
       );
-    if (unconfirmed || unreadable)
+    if (unconfirmed.length || unreadable)
       return check(
         "profiles.orphaned",
         "warn",
         [
-          unconfirmed
-            ? `${unconfirmed} profiles' credentials were rejected but disconnection could not be confirmed`
+          unconfirmed.length
+            ? `${unconfirmed.length} saved profiles have credentials Primitive no longer accepts (${unconfirmed.slice(0, 5).join(", ")}${unconfirmed.length > 5 ? `, and ${unconfirmed.length - 5} more` : ""}). They cannot send or receive. To clean them up, sign in with \`primitive login --force\` as a member of their organization and run \`primitive machine doctor --fix\`, which confirms each one is disconnected before moving it aside${elsewhere ? `. ${elsewhere} of them belong to an organization or Primitive API your current sign-in is not for, so sign in there to check them` : ""}`
             : "",
           unreadable ? `${unreadable} profiles could not be read` : "",
         ]
