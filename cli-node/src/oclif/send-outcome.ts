@@ -8,7 +8,9 @@ import type {
   ThreadMessage,
 } from "@primitivedotdev/api-core";
 import { getEmail, getThread } from "@primitivedotdev/api-core";
+import { cliInvocation } from "./agent-identity-suggestions.js";
 import { extractErrorPayload } from "./api-command.js";
+import { AGENT_PROFILE_ENV } from "./connected-agent-profile.js";
 import { formatAlreadySentNotice } from "./idempotent-replay-banner.js";
 
 /**
@@ -388,10 +390,31 @@ export type FollowUpCommand<Kind extends string = string> = {
   argv: string[];
   description: string;
   command: string;
+  /** Environment `argv` needs, such as the connected profile that ran this command. */
+  env?: Record<string, string>;
   kind: Kind;
   placeholders: FollowUpCommandPlaceholder[];
   requires_message: boolean;
 };
+
+const FOLLOW_UP_PROFILE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/;
+
+/**
+ * How a printed follow-up command reaches this same CLI and identity: through
+ * npx when this process runs from npx's cache (a bare `primitive` may be
+ * missing or an older global install), and under the connected profile this
+ * process was selected with, since another profile cannot see the same mail.
+ */
+export function followUpInvocation(
+  entry: string | undefined = process.argv[1],
+  env: NodeJS.ProcessEnv = process.env,
+): { program: string[]; env?: Record<string, string> } {
+  const program = cliInvocation(entry).split(" ");
+  const profile = env[AGENT_PROFILE_ENV];
+  return profile && FOLLOW_UP_PROFILE.test(profile)
+    ? { program, env: { [AGENT_PROFILE_ENV]: profile } }
+    : { program };
+}
 
 export function shellQuote(value: string): string {
   if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(value)) return value;
@@ -407,12 +430,19 @@ export function buildFollowUpCommand<Kind extends string>(
   description: string,
   argv: string[],
   options: { requiresMessage?: boolean } = {},
+  invocation: ReturnType<typeof followUpInvocation> = followUpInvocation(),
 ): FollowUpCommand<Kind> {
   const requiresMessage = options.requiresMessage ?? false;
+  const resolved =
+    argv[0] === "primitive" ? [...invocation.program, ...argv.slice(1)] : argv;
+  const prefix = Object.entries(invocation.env ?? {})
+    .map(([name, value]) => `${name}=${value} `)
+    .join("");
   return {
-    argv,
+    argv: resolved,
     description,
-    command: commandFromArgv(argv),
+    command: `${prefix}${commandFromArgv(resolved)}`,
+    ...(invocation.env ? { env: invocation.env } : {}),
     kind,
     placeholders: requiresMessage
       ? [
