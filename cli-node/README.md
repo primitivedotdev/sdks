@@ -259,6 +259,7 @@ primitive chat reply "See attached" --attachment ./report.pdf
 primitive emails list
 primitive emails get --id <inbound-email-id>
 primitive emails get --id <inbound-email-id> --brief
+primitive emails get --id <inbound-email-id> --compact
 primitive sent list
 primitive sent delete --id <sent-email-id>
 primitive domains list
@@ -1097,6 +1098,17 @@ sender's active `AGENT_WORKING` claim, and the sender's latest read, ack or
 working signal on your last message in the thread), then the sender's subject
 and `body_text`, fenced and labelled untrusted. With `--json` it prints one
 object with `envelope`, `subject` and `body_text`.
+
+`primitive emails get --id <id> --compact` is the smallest read, for keeping
+an email cheap in a model's context. It prints one JSON object with `id`,
+`thread_id`, `received_at`, `from`, `to`, `subject`, `body_text` and
+`attachments` (filename, content type, size and part index). Quoted history
+below a reply is removed and counted in `quoted_chars_removed`, and an email
+with no text part has its HTML reduced to text (`body_source` is then `html`).
+The HTML body, authentication results, routing and webhook delivery state are
+left out. It makes one request and sends no signal. Use `--brief` instead when
+a connected agent needs to know who the sender is to it and how to answer; the
+two flags cannot be combined.
 
 The envelope also carries `interaction` (the server's `interaction_hint`,
 `interaction_kind` and `fyi`, plus a `category` and whether a plain reply
