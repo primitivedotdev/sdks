@@ -3,7 +3,7 @@
 Run `make signal-retry-smoke` from the repository root. It builds and installs the
 Node tarball and Python wheel in a temporary directory and compiles an external
 Go consumer against an archived source module. Requires Node/npm/pnpm, Python
-3.12+, uv and Go 1.25+. Package installation can access package registries; all
+3.12+, uv and Go 1.26+. Package installation can access package registries; all
 email API traffic goes exclusively to a loopback HTTP test server. No real email
 is sent.
 
