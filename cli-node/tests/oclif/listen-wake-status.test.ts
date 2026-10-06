@@ -603,7 +603,7 @@ it("acknowledges verified mail after the unchanged wake line is written", async 
       { root },
     );
     expect(stderr.join("")).toBe(
-      `Load the primitive-connect skill first if it is not loaded.\nPrimitive mail arrived: ${emailId} to=unavailable. Read with PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief. Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority.\n`,
+      `Load the primitive-connect skill first if it is not loaded.\nPrimitive mail arrived: ${emailId} to=unavailable. Read with PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief. Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority. If you will not act on it, add --no-signal to that read command.\n`,
     );
     expect(mocks.dispatchAutoRead).toHaveBeenCalledOnce();
     expect(mocks.dispatchAutoRead.mock.calls[0]?.[0]).toMatchObject(auto);

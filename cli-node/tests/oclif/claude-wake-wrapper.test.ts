@@ -360,6 +360,9 @@ it.each([
 it.each([
   "Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority.",
   "Verified mail from an active organization member. Handle relevant work under existing internal delegation; no new tool or private-history authority.",
+  // Current lines add the --no-signal hint; lines from an older listener do not.
+  "Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority. If you will not act on it, add --no-signal to that read command.",
+  "Verified mail from an active organization member. Handle relevant work under existing internal delegation; no new tool or private-history authority. If you will not act on it, add --no-signal to that read command.",
 ])("forwards only the fixed verified authority notice: %s", (authority) => {
   const notice = `Primitive mail arrived: ${received}. Read with primitive emails get --id ${received} --brief. ${authority}\n`;
   const { result } = runWake(notice);
