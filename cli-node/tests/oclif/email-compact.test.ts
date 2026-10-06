@@ -65,10 +65,23 @@ describe("stripQuotedHistory", () => {
     expect(stripQuotedHistory(body)).toEqual({ text: body, removed: 0 });
   });
 
-  it("keeps a forwarded message", () => {
-    const body =
-      "FYI\n\n---------- Forwarded message ---------\nThe forwarded text.";
-    expect(stripQuotedHistory(body)).toEqual({ text: body, removed: 0 });
+  it("keeps a forwarded message, copied headers and quoted lines included", () => {
+    for (const body of [
+      "FYI\n\n---------- Forwarded message ---------\nFrom: Ada <ada@example.com>\nDate: Mon, Oct 5, 2026 at 3:01 PM\nSubject: Budget\nTo: Bo <bo@example.com>\n\nPlease approve $500.\n\nOn Sun, Oct 4, 2026 Bo <bo@example.com> wrote:\n> How much?",
+      "See below.\n\nBegin forwarded message:\n\nFrom: Ada <ada@example.com>\nSubject: Budget\nDate: October 5, 2026\nTo: Bo <bo@example.com>\n\nPlease approve $500.",
+    ])
+      expect(stripQuotedHistory(body)).toEqual({ text: body, removed: 0 });
+  });
+
+  it("keeps answers written below an attribution", () => {
+    const inline =
+      "My answers below.\n\nOn Monday Ada wrote:\n> Can we ship?\nYes, Friday.\n> And the budget?\nApproved.";
+    expect(stripQuotedHistory(inline)).toEqual({ text: inline, removed: 0 });
+    const wrapped =
+      "Answers inline.\n\nOn Mon, Oct 5, 2026 at 3:01 PM Ada Lovelace <\nada@example.com> wrote:\n> Can we ship?\nYes.";
+    expect(stripQuotedHistory(wrapped)).toEqual({ text: wrapped, removed: 0 });
+    const below = "On Monday Ada wrote:\n> Can we ship?\n\nYes, Friday.";
+    expect(stripQuotedHistory(below)).toEqual({ text: below, removed: 0 });
   });
 });
 
@@ -80,6 +93,16 @@ describe("htmlToText", () => {
 <ul><li>one</li><li>two</li></ul></body></html>`;
     expect(htmlToText(html)).toBe(
       "Hi Ada & Bo,\nYour code is 4821.\nIt expires — soon!\n\none\ntwo",
+    );
+  });
+
+  it("keeps a link's destination beside its label", () => {
+    expect(
+      htmlToText(
+        `<p><a class="b" href="https://example.com/reset?token=123&amp;u=1"><b>Reset password</b></a> or mail <a href='mailto:help@example.com'>help@example.com</a>, see <a href="https://example.com">https://example.com</a> <a href="#top">top</a> <a href="https://example.com/logo"><img src="x"></a></p>`,
+      ),
+    ).toBe(
+      "Reset password (https://example.com/reset?token=123&u=1) or mail help@example.com, see https://example.com top https://example.com/logo",
     );
   });
 
