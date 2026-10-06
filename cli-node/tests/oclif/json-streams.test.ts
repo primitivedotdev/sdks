@@ -989,12 +989,12 @@ describe("collaboration commands with --json", () => {
     process.env.PRIMITIVE_AGENT_PROFILE = "work";
   });
 
-  it("emails get --brief prints the envelope as one document", async () => {
+  it("emails get --context prints the envelope as one document", async () => {
     responder = mailApi;
     const result = await runMerged("emails:get", [
       "--id",
       emailId,
-      "--brief",
+      "--context",
       "--json",
     ]);
     const document = expectOneDocument(result);
@@ -1014,7 +1014,7 @@ describe("collaboration commands with --json", () => {
     ["starts automatic working", [], 1],
     ["--no-signal skips automatic working", ["--no-signal"], 0],
   ] as const)(
-    "emails get --brief %s and still prints one document",
+    "emails get --context %s and still prints one document",
     async (_label, extra, expected) => {
       // A member (a person), not a connected agent: only people get automatic working.
       responder = (url, init, request) => {
@@ -1041,7 +1041,7 @@ describe("collaboration commands with --json", () => {
       const result = await runMerged("emails:get", [
         "--id",
         emailId,
-        "--brief",
+        "--context",
         "--json",
         ...extra,
       ]);
@@ -1060,7 +1060,7 @@ describe("collaboration commands with --json", () => {
     },
   );
 
-  it("emails get --brief never starts working from an old claim on agent mail", async () => {
+  it("emails get --context never starts working from an old claim on agent mail", async () => {
     responder = (url, init, request) => {
       const response = mailApi(url, init, request);
       const path = url.pathname.replace(/^\/v1/, "");
@@ -1086,7 +1086,7 @@ describe("collaboration commands with --json", () => {
     const result = await runMerged("emails:get", [
       "--id",
       emailId,
-      "--brief",
+      "--context",
       "--json",
     ]);
     expect(result.exitCode).toBe(0);
@@ -1095,25 +1095,25 @@ describe("collaboration commands with --json", () => {
     expect(readWorkingLease(configDir, emailId)).toBeNull();
   });
 
-  it("emails get --brief never starts working for mail no receiver surfaced", async () => {
+  it("emails get --context never starts working for mail no receiver surfaced", async () => {
     responder = mailApi;
     workers.length = 0;
     const result = await runMerged("emails:get", [
       "--id",
       emailId,
-      "--brief",
+      "--context",
       "--json",
     ]);
     expectOneDocument(result);
     expect(workers).toHaveLength(0);
   });
 
-  it("emails get --brief reports a failed read as one document", async () => {
+  it("emails get --context reports a failed read as one document", async () => {
     responder = notFound;
     const result = await runMerged("emails:get", [
       "--id",
       emailId,
-      "--brief",
+      "--context",
       "--json",
     ]);
     expect(result.exitCode).not.toBe(0);

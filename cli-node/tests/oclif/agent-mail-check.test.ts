@@ -147,7 +147,7 @@ describe("agent check-mail", () => {
           // Each email names the address that received it and the command
           // that reads it under that profile, ready to run.
           to: identity.agentAddress,
-          read_command: `PRIMITIVE_AGENT_PROFILE=${identity.profileName} primitive emails get --id ${peer.id} --brief`,
+          read_command: `PRIMITIVE_AGENT_PROFILE=${identity.profileName} primitive emails get --id ${peer.id} --context`,
         },
       ],
       more: false,
@@ -155,7 +155,7 @@ describe("agent check-mail", () => {
       owner_member_address: null,
       profile: identity.profileName,
       to: identity.agentAddress,
-      read_command: `PRIMITIVE_AGENT_PROFILE=${identity.profileName} primitive emails get --id <id> --brief`,
+      read_command: `PRIMITIVE_AGENT_PROFILE=${identity.profileName} primitive emails get --id <id> --context`,
     });
     expect(JSON.stringify(first)).not.toContain("private subject");
     expect(h.emitted).toEqual([first]);

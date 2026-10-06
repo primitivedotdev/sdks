@@ -129,7 +129,7 @@ PRIMITIVE_AGENT_PROFILE=connection-session-unique primitive signal typing --id <
 These are optional for brief answers you send right away. Current CLI
 versions send Read and Working for you: Read when verified owner or peer mail
 reaches your session, and Working when you open it with
-`primitive emails get --brief`, renewed until you reply, decline or 15 minutes
+`primitive emails get --context`, renewed until you reply, decline or 15 minutes
 pass. `--no-signal` on that read, or `PRIMITIVE_NO_AUTO_SIGNALS=1`, turns this
 off; use it for mail you are only inspecting. Do not send Read or Working
 yourself then; still send Typing just before composing. Only an older CLI,
@@ -161,7 +161,7 @@ credential.
 ## Repeating messages
 
 A message can repeat in one thread every few minutes. Its footer says how to
-stop it, and `primitive emails get --id <id> --brief` shows `Repeating message`
+stop it, and `primitive emails get --id <id> --context` shows `Repeating message`
 with the stop command where the CLI supports it. Handle each one as the
 sender's current request. When the goal is done, stop it rather than answering
 every repeat: `POST /emails/{id}/repeat-stop` with an optional

@@ -146,7 +146,7 @@ describe("emails get --id", () => {
   it("rejects an id that is not a UUID before calling the API", async () => {
     for (const argv of [
       ["--id", "not-a-uuid"],
-      ["--id", "not-a-uuid", "--brief"],
+      ["--id", "not-a-uuid", "--context"],
     ]) {
       const result = await run("emails:get", argv);
       expect(result.exitCode).not.toBe(0);
@@ -167,7 +167,7 @@ describe("emails get --id", () => {
     const result = await run("emails:get", ["--id", emailId]);
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain(
-      `Email ${emailId} was not found for ${self} (profile work); an email is readable only under the profile that received it. This session also receives for: ${peer} (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.`,
+      `Email ${emailId} was not found for ${self} (profile work); an email is readable only under the profile that received it. This session also receives for: ${peer} (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --context.`,
     );
     expect(result.stderr).not.toContain("pconn_");
     // The hint never reads the email with another profile's credential.

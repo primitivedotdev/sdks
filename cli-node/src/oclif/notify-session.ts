@@ -333,7 +333,7 @@ export async function openSessionNotifications(
               ]
             : []),
           `Inspect only when relevant: ${wakeReadCommand(input.emailId, options.profileName)}`,
-          // Reading verified owner or member mail with --brief reports
+          // Reading verified owner or member mail with --context reports
           // working to the sender until an answer; the same hint the Claude
           // wake line carries.
           ...(input.authorization?.senderRelation
