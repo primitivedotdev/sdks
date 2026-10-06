@@ -712,7 +712,10 @@ describe("COMMANDS / manifest coverage", () => {
       description: string;
       flags: Record<string, unknown>;
     };
-    expect(listener.description).toContain("Connected-agent credentials");
+    expect(listener.description).toContain(
+      "Requires a connected agent credential",
+    );
+    expect(listener.description).toContain("refused before any request");
     expect(listener.description).toContain(
       "external mail events at tool-output authority",
     );

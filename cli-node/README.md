@@ -30,8 +30,14 @@ This package wraps the [@primitivedotdev/sdk](https://www.npmjs.com/package/@pri
 
 ### Receive webhook events without a public endpoint
 
-With an existing Primitive account and inbox, sign in or set `PRIMITIVE_API_KEY`.
-Run `primitive listen` to print existing webhook events as JSONL.
+`primitive listen` needs a connected agent credential: connect one with
+`primitive agent connect` and select its profile, or set `PRIMITIVE_API_KEY` to a
+connected agent key (starting with `pconn_`). The subscription receives inbound
+email for that agent's address. With an account API key or `primitive signin`,
+the command stops before making a request; watch mail with
+`primitive emails watch` or deliver it to an HTTP webhook endpoint instead.
+
+Run `primitive listen` to print received events as JSONL.
 `--json` is accepted explicitly; status remains JSON and stdout events remain JSONL. Status goes to
 stderr. No public URL or separate destination setup is required.
 
@@ -590,8 +596,8 @@ primitive listen --once --timeout 60
 primitive listen --subscription my-agent --exec "python3 accept.py"
 ```
 
-WebSocket is the default transport. Subscription registration and reconnects are
-automatic; the saved default resumes the same durable queue. `--once` waits for
+These commands need a connected agent credential (see above). WebSocket is the
+default transport. Subscription registration and reconnects are automatic; the saved default resumes the same durable queue. `--once` waits for
 one successful, confirmed delivery. `--timeout` is in seconds and exits 2 on
 timeout; Ctrl-C exits 130. Bare `primitive listen` prints one raw JSON event per
 line. Use `--transport poll` explicitly for HTTP polling. Accept or enqueue each

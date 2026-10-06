@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Errors } from "@oclif/core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  ConnectedAgentKeyRequiredError,
   cliApiHeadersFromEnv,
   createAuthenticatedCliApiClient,
   refreshStoredCliCredentials,
@@ -284,6 +285,45 @@ describe("CLI API request config", () => {
 
     expect(auth.apiBaseUrl).toBe("https://api.saved.example/v1");
     expect(auth.apiKey).toBe("prim_oat_refreshed");
+  });
+
+  it("refuses saved sign-in credentials for connected-agent commands before refreshing them", async () => {
+    const expired = {
+      ...CREDENTIALS,
+      expires_at: "2026-05-05T00:00:00.000Z",
+    };
+    saveCliCredentials(tempDir, expired);
+    let requests = 0;
+    const fetchMock = async () => {
+      requests++;
+      return new Response("{}");
+    };
+    await expect(
+      createAuthenticatedCliApiClient({
+        configDir: tempDir,
+        fetch: fetchMock as typeof fetch,
+        now: () => new Date("2026-05-05T00:00:00.000Z").getTime(),
+        requireConnectedAgentKey: true,
+      }),
+    ).rejects.toBeInstanceOf(ConnectedAgentKeyRequiredError);
+    expect(requests).toBe(0);
+    expect(loadCliCredentials(tempDir)).toEqual(expired);
+  });
+
+  it("refuses an account API key for connected-agent commands and accepts a connected key", async () => {
+    await expect(
+      createAuthenticatedCliApiClient({
+        configDir: tempDir,
+        apiKey: "prim_account",
+        requireConnectedAgentKey: true,
+      }),
+    ).rejects.toBeInstanceOf(ConnectedAgentKeyRequiredError);
+    const { auth } = await createAuthenticatedCliApiClient({
+      configDir: tempDir,
+      apiKey: `pconn_${"a".repeat(64)}`,
+      requireConnectedAgentKey: true,
+    });
+    expect(auth.apiKey).toBe(`pconn_${"a".repeat(64)}`);
   });
 
   it("removes saved OAuth credentials when refresh returns invalid_grant", async () => {

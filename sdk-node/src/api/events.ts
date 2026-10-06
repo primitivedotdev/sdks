@@ -6,6 +6,9 @@ import {
 import type { KnownWebhookEvent, WebhookEvent } from "../types.js";
 import { parseWebhookEvent } from "../webhook/parse-event.js";
 import {
+  AGENT_CONNECTION_REQUIRED,
+  AGENT_CONNECTION_REQUIRED_MESSAGE,
+  bearerToken,
   delay,
   EventConnection,
   type EventDelivery,
@@ -133,6 +136,15 @@ export class EventsResource {
       status = { ...status, ...next };
       options.onStatus?.(status);
     };
+    // Only connected-agent credentials can create subscriptions. Refuse an
+    // account key here instead of spending a request on the same answer.
+    const token = await bearerToken(config);
+    if (token && !token.startsWith("pconn_"))
+      throw new EventReceiverError(
+        AGENT_CONNECTION_REQUIRED_MESSAGE,
+        AGENT_CONNECTION_REQUIRED,
+        403,
+      );
     const retry = <T>(operation: () => Promise<T>, operationSignal = signal) =>
       eventRetry(operation, operationSignal, () =>
         emit({ type: "reconnecting" }),
