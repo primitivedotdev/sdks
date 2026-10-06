@@ -278,6 +278,24 @@ it("settles suppressed first-contact admission before the durable native receipt
   expect(f.receipts()).toEqual([]);
 });
 
+it("tells the agent to read owner or member mail with --no-signal when it will not act", async () => {
+  for (const senderRelation of ["owner", "member"] as const) {
+    const f = await setup();
+    await f.notifications.handleDetail(f.detail, f.eventId, f.signal, {
+      sender: "sender@example.com",
+      senderRelation,
+      recheck: async () => () => {},
+    });
+    expect(f.queue.mock.calls[0]?.[0]).toContain(
+      "If you will not act on it, add --no-signal to that read command.",
+    );
+  }
+  // A contact gets no automatic working report, so no hint.
+  const f = await setup();
+  await f.handle();
+  expect(f.queue.mock.calls[0]?.[0]).not.toContain("--no-signal");
+});
+
 it("queues only IDs and sender for a request, with no request body or private-context grant", async () => {
   const f = await setup();
   f.detail.body_text =

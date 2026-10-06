@@ -2,6 +2,7 @@ import { Command, Errors, Flags } from "@oclif/core";
 import type { Account } from "@primitivedotdev/api-core";
 import { getAccount, listDomains } from "@primitivedotdev/api-core";
 import { receiverStatusCommand } from "../agent-connect.js";
+import { cliInvocation } from "../agent-identity-suggestions.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import {
   API_BASE_URL_FLAG_DESCRIPTION,
@@ -88,7 +89,7 @@ class WhoamiCommand extends Command {
 
       if (auth.connectedAgent) {
         const identity = auth.connectedAgent;
-        const statusCommand = `primitive agent connect --profile ${identity.profileName} --status --json`;
+        const statusCommand = `${cliInvocation(process.argv[1])} agent connect --profile ${identity.profileName} --status --json`;
         const receiver = receiverStatusCommand(
           this.config.configDir,
           identity.profileName,

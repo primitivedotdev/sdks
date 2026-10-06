@@ -382,7 +382,10 @@ describe("doctor with a saved connected profile", () => {
         stderr.push(String(chunk));
         return true;
       });
-    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const logged: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((line) => {
+      logged.push(String(line));
+    });
     try {
       vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
       vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "hooked");
@@ -414,6 +417,17 @@ describe("doctor with a saved connected profile", () => {
       expect(text).toContain(
         "`PRIMITIVE_AGENT_PROFILE=hooked primitive whoami --json` for saved identity",
       );
+      // A warning is not a failure: `ok` agrees with the zero exit code.
+      const summary = JSON.parse(logged.join("\n"));
+      expect(summary.ok).toBe(true);
+      expect(summary.warnings).toBeGreaterThanOrEqual(1);
+      expect(process.exitCode ?? 0).toBe(0);
+      // --json is accepted; stdout is the same JSON summary.
+      logged.length = 0;
+      await DoctorCommand.run(["--json"], {
+        root: resolve(import.meta.dirname, "../.."),
+      });
+      expect(JSON.parse(logged.join("\n")).ok).toBe(true);
     } finally {
       write.mockRestore();
       log.mockRestore();

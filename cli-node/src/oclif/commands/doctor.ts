@@ -368,6 +368,10 @@ class DoctorCommand extends Command {
       env: "PRIMITIVE_API_BASE_URL",
       hidden: true,
     }),
+    json: Flags.boolean({
+      description:
+        "Accepted for consistency: stdout is always the JSON summary, and the readable checklist goes to stderr",
+    }),
   };
 
   async run(): Promise<void> {
@@ -433,8 +437,11 @@ class DoctorCommand extends Command {
 
     // Structured stdout for piping. Keep stderr human-readable;
     // stdout JSON is what `primitive doctor | jq` consumers parse.
+    // `ok` agrees with the exit code: true unless a check failed. Warnings
+    // (an offline-only profile check, say) are counted separately.
     const summary = {
-      ok: rows.every((row) => row.outcome.status === "ok"),
+      ok: rows.every((row) => row.outcome.status !== "fail"),
+      warnings: rows.filter((row) => row.outcome.status === "warn").length,
       checks: rows.map(({ label, outcome }) => ({
         label,
         status: outcome.status,
