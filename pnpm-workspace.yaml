@@ -17,6 +17,7 @@ overrides:
   postcss@>=8.0.0 <8.5.23: 8.5.23
   deepmerge-ts@<8.0.0: 8.0.0
   http-cache-semantics@<4.3.0: 4.3.0
+  source-map-js@<1.2.2: 1.2.2
 
 allowBuilds:
   esbuild: true
