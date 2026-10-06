@@ -184,7 +184,7 @@ export function htmlToText(html: string): string {
       label: string,
     ) => {
       const url = (double ?? single ?? "").trim();
-      const shown = label.replace(/<[^>]*>/g, "").trim();
+      const shown = removeAll(label, /<[^>]*>/g, "").trim();
       if (!/^(https?:|mailto:)/i.test(url)) return label;
       if (shown === url || `mailto:${shown}` === url) return label;
       return shown === "" ? url : `${label} (${url})`;
