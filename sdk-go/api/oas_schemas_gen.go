@@ -12551,9 +12551,9 @@ type EmailSearchResult struct {
 	// Relevance score. Present only when sorting by relevance.
 	Score      OptFloat64               `json:"score"`
 	Highlights OptEmailSearchHighlights `json:"highlights"`
-	// Which side of the conversation the result is on: `inbound` for mail received by the organization.
-	// This endpoint currently returns received mail only, so every result is `inbound`; treat an
-	// unfamiliar value as one added after your client was built.
+	// Which side of the conversation the result is on: `inbound` for mail received by the organization,
+	// `outbound` for mail it sent. This endpoint currently returns received mail only, so every result
+	// is `inbound`.
 	Direction EmailSearchResultDirection `json:"direction"`
 }
 
@@ -13028,9 +13028,9 @@ func (s *EmailSearchResultAwaiting) UnmarshalText(data []byte) error {
 	}
 }
 
-// Which side of the conversation the result is on: `inbound` for mail received by the organization.
-// This endpoint currently returns received mail only, so every result is `inbound`; treat an
-// unfamiliar value as one added after your client was built.
+// Which side of the conversation the result is on: `inbound` for mail received by the organization,
+// `outbound` for mail it sent. This endpoint currently returns received mail only, so every result
+// is `inbound`.
 type EmailSearchResultDirection string
 
 const (

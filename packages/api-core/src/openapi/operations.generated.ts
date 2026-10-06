@@ -8992,7 +8992,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "inbound",
                   "outbound"
                 ],
-                "description": "Which side of the conversation the result is on: `inbound` for mail received by the organization. This endpoint currently returns received mail only, so every result is `inbound`; treat an unfamiliar value as one added after your client was built."
+                "description": "Which side of the conversation the result is on: `inbound` for mail received by the organization, `outbound` for mail it sent. This endpoint currently returns received mail only, so every result is `inbound`."
               }
             },
             "required": [

@@ -137,8 +137,8 @@ class EmailSearchResult:
             from_known_address (bool): Whether the parsed From address is known to this org from prior authenticated inbound
                 mail.
             direction (EmailSearchResultDirection): Which side of the conversation the result is on: `inbound` for mail
-                received by the organization. This endpoint currently returns received mail only, so every result is `inbound`;
-                treat an unfamiliar value as one added after your client was built.
+                received by the organization, `outbound` for mail it sent. This endpoint currently returns received mail only,
+                so every result is `inbound`.
             message_id (None | str | Unset):
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
