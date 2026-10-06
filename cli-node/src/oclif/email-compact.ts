@@ -41,6 +41,8 @@ const WROTE_LAST_LINE = /^.{0,300}\bwrote:\s*$/i;
 const HEADER_FROM = /^\s*\*?From:\*?\s+\S/i;
 const HEADER_OTHER = /^\s*\*?(Sent|Date|To|Subject):\*?\s/i;
 const QUOTED_LINE = /^\s*>/;
+const FORWARDED =
+  /^\s*(?:-{2,}\s*Forwarded message\s*-{2,}|Begin forwarded message:)\s*$/i;
 
 /**
  * Whether line `i` opens a copied header block ("From:", then "Sent:" or
@@ -62,18 +64,34 @@ function nextNonEmpty(lines: string[], from: number): number {
   return -1;
 }
 
-/** Index of the line where quoted history starts, or -1 when there is none. */
+/**
+ * Whether everything from line `from` on is quoted (">") or blank. Text of the
+ * sender's own below an attribution means they answered inline or below the
+ * quote, so the attribution does not start history to remove.
+ */
+function onlyQuotedAfter(lines: string[], from: number): boolean {
+  for (let j = from; j < lines.length; j++) {
+    const line = lines[j] ?? "";
+    if (line.trim() !== "" && !QUOTED_LINE.test(line)) return false;
+  }
+  return true;
+}
+
+/**
+ * Index of the line where quoted history starts, or -1 when there is none.
+ */
 function quotedHistoryStart(lines: string[]): number {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
     if (ORIGINAL_MESSAGE.test(line)) return i;
-    if (WROTE_ONE_LINE.test(line)) return i;
+    if (WROTE_ONE_LINE.test(line) && onlyQuotedAfter(lines, i + 1)) return i;
     // Clients wrap a long attribution ("On <date>, <name> <address>" then
     // "wrote:") across two lines.
     if (
       WROTE_FIRST_LINE.test(line) &&
       WROTE_LAST_LINE.test(lines[i + 1] ?? "") &&
-      !WROTE_LAST_LINE.test(line)
+      !WROTE_LAST_LINE.test(line) &&
+      onlyQuotedAfter(lines, i + 2)
     )
       return i;
     if (OUTLOOK_RULE.test(line)) {
@@ -89,8 +107,10 @@ function quotedHistoryStart(lines: string[]): number {
  * Remove the quoted history a reply carries below its new text: everything
  * from an attribution line, an "Original Message" rule or a copied header
  * block onward, and any run of ">" lines the message ends with. Quoted lines
- * with the sender's own text after them (an inline reply) are kept, and so is
- * the whole body when removing the history would leave nothing.
+ * with the sender's own text after them (an inline reply) are kept. A body
+ * that forwards a message is returned whole, since the forwarded text is what
+ * the sender wants read, and so is one where removing the history would leave
+ * nothing.
  */
 export function stripQuotedHistory(body: string): {
   text: string;
@@ -98,6 +118,8 @@ export function stripQuotedHistory(body: string): {
 } {
   const original = body.replace(/\r\n?/g, "\n").trim();
   let lines = original.split("\n");
+  if (lines.some((line) => FORWARDED.test(line)))
+    return { text: original, removed: 0 };
   const start = quotedHistoryStart(lines);
   if (start !== -1) lines = lines.slice(0, start);
   while (lines.length > 0) {
@@ -151,6 +173,23 @@ function removeAll(text: string, pattern: RegExp, replacement = " "): string {
 export function htmlToText(html: string): string {
   let text = removeAll(html, /<!--[\s\S]*?-->/g);
   text = removeAll(text, /<(script|style|head|title)\b[\s\S]*?<\/\1\s*>/gi);
+  // A link keeps its destination beside its label: "Reset password" alone
+  // cannot be followed.
+  text = text.replace(
+    /<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a\s*>/gi,
+    (
+      _match,
+      double: string | undefined,
+      single: string | undefined,
+      label: string,
+    ) => {
+      const url = (double ?? single ?? "").trim();
+      const shown = label.replace(/<[^>]*>/g, "").trim();
+      if (!/^(https?:|mailto:)/i.test(url)) return label;
+      if (shown === url || `mailto:${shown}` === url) return label;
+      return shown === "" ? url : `${label} (${url})`;
+    },
+  );
   text = text
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|tr|li|h[1-6]|table|blockquote)\s*>/gi, "\n");
