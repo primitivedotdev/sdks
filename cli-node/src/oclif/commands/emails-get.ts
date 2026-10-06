@@ -76,6 +76,15 @@ type BriefFlags = {
 
 async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
   await runWithTiming(flags.time === true, async () => {
+    // --no-signal also ends a working report an earlier read started: an
+    // agent decides whether to act only after reading the body. It is local,
+    // so it runs first and holds even if this read then fails.
+    if (flags["no-signal"])
+      await haltAutoWorking(
+        command.config.configDir,
+        { emailIds: [flags.id] },
+        "not_acting",
+      );
     const { apiClient, auth, baseUrlOverridden } =
       await createAuthenticatedCliApiClient({
         configDir: command.config.configDir,
@@ -115,14 +124,6 @@ async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
       isOwnSignal: (sentId) => isSentSignal(command.config.configDir, sentId),
       signal: AbortSignal.timeout(30_000),
     });
-    // --no-signal also ends a working report an earlier read started: an
-    // agent decides whether to act only after reading the body.
-    if (flags["no-signal"])
-      await haltAutoWorking(
-        command.config.configDir,
-        { emailIds: [detail.id] },
-        "not_acting",
-      );
     // Detached and silent, so stdout stays one document and stderr empty.
     // Recheck the sender here: a claim saved before agent senders stopped
     // qualifying must not start Working toward another agent.

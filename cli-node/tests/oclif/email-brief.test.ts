@@ -967,6 +967,20 @@ describe("emails get", () => {
     expect(result.stdout).not.toContain("The sender now sees you working");
   });
 
+  it("stops working with --no-signal even when the read itself fails", async () => {
+    claimAutoRead(configDir, {
+      emailId: otherId,
+      profileName: "work",
+      sender,
+      threadId: thread,
+    });
+    startWorkingLease(configDir, otherId);
+    await run(["--id", otherId, "--brief", "--no-signal"], {});
+    expect(readWorkingLease(configDir, otherId)?.stop_reason).toBe(
+      "not_acting",
+    );
+  });
+
   it("names the no-signal read as the way to stop working", () => {
     const command = workingStopCommand(emailId, "PRIMITIVE_AGENT_PROFILE=work primitive");
     expect(command).toBe(
