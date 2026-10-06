@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -53,7 +52,7 @@ class SentEmailRescheduleInput:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        scheduled_at = isoparse(d.pop("scheduled_at"))
+        scheduled_at = datetime.datetime.fromisoformat(d.pop("scheduled_at"))
 
 
 

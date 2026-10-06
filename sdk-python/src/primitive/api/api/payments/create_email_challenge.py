@@ -40,7 +40,6 @@ def _get_kwargs(
 
     _kwargs["json"] = body.to_dict()
 
-
     headers["Content-Type"] = "application/json"
 
     _kwargs["headers"] = headers
@@ -127,7 +126,7 @@ def sync_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateEmailChallengeResponse200 | CreateEmailChallengeResponse201 | ErrorResponse]:
-    r""" Create an email-native payment challenge
+    """ Create an email-native payment challenge
 
      Issue an x402 payment challenge over a real email thread (the payee
     side). Unlike `createChallenge` (which mints a synthetic challenge id),
@@ -138,7 +137,7 @@ def sync_detailed(
     the thread's `interaction_id` plus the `challenge` (the
     `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
     needs to sign; the payer replies with a signed `payment` interaction
-    step. Amounts are in token base units (USDC has 6 decimals, so `\"10000\"`
+    step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
     is 0.01 USDC).
 
     Args:
@@ -178,7 +177,7 @@ def sync(
     idempotency_key: str | Unset = UNSET,
 
 ) -> CreateEmailChallengeResponse200 | CreateEmailChallengeResponse201 | ErrorResponse | None:
-    r""" Create an email-native payment challenge
+    """ Create an email-native payment challenge
 
      Issue an x402 payment challenge over a real email thread (the payee
     side). Unlike `createChallenge` (which mints a synthetic challenge id),
@@ -189,7 +188,7 @@ def sync(
     the thread's `interaction_id` plus the `challenge` (the
     `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
     needs to sign; the payer replies with a signed `payment` interaction
-    step. Amounts are in token base units (USDC has 6 decimals, so `\"10000\"`
+    step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
     is 0.01 USDC).
 
     Args:
@@ -224,7 +223,7 @@ async def asyncio_detailed(
     idempotency_key: str | Unset = UNSET,
 
 ) -> Response[CreateEmailChallengeResponse200 | CreateEmailChallengeResponse201 | ErrorResponse]:
-    r""" Create an email-native payment challenge
+    """ Create an email-native payment challenge
 
      Issue an x402 payment challenge over a real email thread (the payee
     side). Unlike `createChallenge` (which mints a synthetic challenge id),
@@ -235,7 +234,7 @@ async def asyncio_detailed(
     the thread's `interaction_id` plus the `challenge` (the
     `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
     needs to sign; the payer replies with a signed `payment` interaction
-    step. Amounts are in token base units (USDC has 6 decimals, so `\"10000\"`
+    step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
     is 0.01 USDC).
 
     Args:
@@ -275,7 +274,7 @@ async def asyncio(
     idempotency_key: str | Unset = UNSET,
 
 ) -> CreateEmailChallengeResponse200 | CreateEmailChallengeResponse201 | ErrorResponse | None:
-    r""" Create an email-native payment challenge
+    """ Create an email-native payment challenge
 
      Issue an x402 payment challenge over a real email thread (the payee
     side). Unlike `createChallenge` (which mints a synthetic challenge id),
@@ -286,7 +285,7 @@ async def asyncio(
     the thread's `interaction_id` plus the `challenge` (the
     `payment_requirements`, the `nonce_binding`, and `expires_at`) the payer
     needs to sign; the payer replies with a signed `payment` interaction
-    step. Amounts are in token base units (USDC has 6 decimals, so `\"10000\"`
+    step. Amounts are in token base units (USDC has 6 decimals, so `"10000"`
     is 0.01 USDC).
 
     Args:

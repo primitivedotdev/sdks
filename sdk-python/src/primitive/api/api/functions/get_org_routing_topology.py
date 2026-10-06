@@ -75,13 +75,13 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetOrgRoutingTopologyResponse200]:
-    r""" Get the org's function routing topology
+    """ Get the org's function routing topology
 
      Returns a single snapshot of how inbound mail is routed across
     this org's active domains and functions: which active domain has
     which function bound, the org's fallback function (if any), and
     every deployed function with no route bound. Use this to answer
-    \"which of my functions actually receive mail?\" diagnostically.
+    "which of my functions actually receive mail?" diagnostically.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -107,13 +107,13 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetOrgRoutingTopologyResponse200 | None:
-    r""" Get the org's function routing topology
+    """ Get the org's function routing topology
 
      Returns a single snapshot of how inbound mail is routed across
     this org's active domains and functions: which active domain has
     which function bound, the org's fallback function (if any), and
     every deployed function with no route bound. Use this to answer
-    \"which of my functions actually receive mail?\" diagnostically.
+    "which of my functions actually receive mail?" diagnostically.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -134,13 +134,13 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetOrgRoutingTopologyResponse200]:
-    r""" Get the org's function routing topology
+    """ Get the org's function routing topology
 
      Returns a single snapshot of how inbound mail is routed across
     this org's active domains and functions: which active domain has
     which function bound, the org's fallback function (if any), and
     every deployed function with no route bound. Use this to answer
-    \"which of my functions actually receive mail?\" diagnostically.
+    "which of my functions actually receive mail?" diagnostically.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -166,13 +166,13 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetOrgRoutingTopologyResponse200 | None:
-    r""" Get the org's function routing topology
+    """ Get the org's function routing topology
 
      Returns a single snapshot of how inbound mail is routed across
     this org's active domains and functions: which active domain has
     which function bound, the org's fallback function (if any), and
     every deployed function with no route bound. Use this to answer
-    \"which of my functions actually receive mail?\" diagnostically.
+    "which of my functions actually receive mail?" diagnostically.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.

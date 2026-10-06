@@ -10,7 +10,6 @@ from ..types import UNSET, Unset
 
 from ..models.delivery_status import DeliveryStatus
 from ..models.sent_email_status import SentEmailStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -284,7 +283,7 @@ class SendMailResult:
         if isinstance(_scheduled_at,  Unset):
             scheduled_at = UNSET
         else:
-            scheduled_at = isoparse(_scheduled_at)
+            scheduled_at = datetime.datetime.fromisoformat(_scheduled_at)
 
 
 

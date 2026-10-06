@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
-from typing import Literal, TypeAlias, TypedDict
+from typing import Literal, NotRequired, TypeAlias, TypedDict
 
 from ._compat import StrEnum
 from .events import (
@@ -10,12 +9,6 @@ from .events import (
     PaymentFailedEvent,
     PaymentSettledEvent,
 )
-
-if sys.version_info >= (3, 11):
-    from typing import NotRequired
-else:
-    from typing_extensions import NotRequired
-
 from .models_generated import (
     AuthConfidence as GeneratedAuthConfidence,
 )

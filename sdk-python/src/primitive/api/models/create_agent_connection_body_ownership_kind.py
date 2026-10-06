@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CreateAgentConnectionBodyOwnershipKind(str, Enum):
+class CreateAgentConnectionBodyOwnershipKind(StrEnum):
     PERSONAL = "personal"
     SHARED = "shared"
 

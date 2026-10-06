@@ -43,7 +43,7 @@ class DomainDnsHealthCheckScopes:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.domain_dns_health_scope import DomainDnsHealthScope
+        from ..models.domain_dns_health_scope import DomainDnsHealthScope # noqa: PLC0415
         ownership = self.ownership.to_dict()
 
         inbound = self.inbound.to_dict()
@@ -68,7 +68,7 @@ class DomainDnsHealthCheckScopes:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.domain_dns_health_scope import DomainDnsHealthScope
+        from ..models.domain_dns_health_scope import DomainDnsHealthScope # noqa: PLC0415
         d = dict(src_dict)
         ownership = DomainDnsHealthScope.from_dict(d.pop("ownership"))
 

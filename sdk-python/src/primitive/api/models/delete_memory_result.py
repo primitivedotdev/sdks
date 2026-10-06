@@ -39,7 +39,7 @@ class DeleteMemoryResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.memory_resolved_scope import MemoryResolvedScope
+        from ..models.memory_resolved_scope import MemoryResolvedScope # noqa: PLC0415
         deleted = self.deleted
 
         key = self.key
@@ -61,7 +61,7 @@ class DeleteMemoryResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.memory_resolved_scope import MemoryResolvedScope
+        from ..models.memory_resolved_scope import MemoryResolvedScope # noqa: PLC0415
         d = dict(src_dict)
         deleted = d.pop("deleted")
 

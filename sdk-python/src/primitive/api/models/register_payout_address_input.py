@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.register_payout_address_input_network import RegisterPayoutAddressInputNetwork
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -85,7 +84,7 @@ class RegisterPayoutAddressInput:
 
         signature = d.pop("signature")
 
-        issued_at = isoparse(d.pop("issued_at"))
+        issued_at = datetime.datetime.fromisoformat(d.pop("issued_at"))
 
 
 

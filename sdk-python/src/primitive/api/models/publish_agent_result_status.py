@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class PublishAgentResultStatus(str, Enum):
+class PublishAgentResultStatus(StrEnum):
     APPROVED = "approved"
     REQUESTED = "requested"
 

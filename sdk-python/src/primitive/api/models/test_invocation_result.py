@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -117,7 +116,7 @@ class TestInvocationResult:
 
         subject = d.pop("subject")
 
-        poll_since = isoparse(d.pop("poll_since"))
+        poll_since = datetime.datetime.fromisoformat(d.pop("poll_since"))
 
 
 

@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.agent_network_peer_ownership_kind import AgentNetworkPeerOwnershipKind
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -51,8 +50,8 @@ class AgentNetworkPeer:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_network_peer_owner_type_0 import AgentNetworkPeerOwnerType0
-        from ..models.agent_presence_type_0 import AgentPresenceType0
+        from ..models.agent_network_peer_owner_type_0 import AgentNetworkPeerOwnerType0 # noqa: PLC0415
+        from ..models.agent_presence_type_0 import AgentPresenceType0 # noqa: PLC0415
         address = self.address
 
         name = self.name
@@ -98,8 +97,8 @@ class AgentNetworkPeer:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_network_peer_owner_type_0 import AgentNetworkPeerOwnerType0
-        from ..models.agent_presence_type_0 import AgentPresenceType0
+        from ..models.agent_network_peer_owner_type_0 import AgentNetworkPeerOwnerType0 # noqa: PLC0415
+        from ..models.agent_presence_type_0 import AgentPresenceType0 # noqa: PLC0415
         d = dict(src_dict)
         address = d.pop("address")
 
@@ -111,7 +110,7 @@ class AgentNetworkPeer:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_seen_at_type_0 = isoparse(data)
+                last_seen_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

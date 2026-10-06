@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class PublishPolicy(str, Enum):
+class PublishPolicy(StrEnum):
     OPEN = "open"
     OWNER_ONLY = "owner_only"
     REQUEST = "request"

@@ -41,8 +41,8 @@ class ListAgentContactsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.list_agent_contacts_response_200_data_item import ListAgentContactsResponse200DataItem
-        from ..models.list_agent_contacts_response_200_meta import ListAgentContactsResponse200Meta
+        from ..models.list_agent_contacts_response_200_data_item import ListAgentContactsResponse200DataItem # noqa: PLC0415
+        from ..models.list_agent_contacts_response_200_meta import ListAgentContactsResponse200Meta # noqa: PLC0415
         success = self.success
 
         data = []
@@ -69,8 +69,8 @@ class ListAgentContactsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.list_agent_contacts_response_200_data_item import ListAgentContactsResponse200DataItem
-        from ..models.list_agent_contacts_response_200_meta import ListAgentContactsResponse200Meta
+        from ..models.list_agent_contacts_response_200_data_item import ListAgentContactsResponse200DataItem # noqa: PLC0415
+        from ..models.list_agent_contacts_response_200_meta import ListAgentContactsResponse200Meta # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

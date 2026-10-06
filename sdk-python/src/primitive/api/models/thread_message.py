@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.thread_message_direction import ThreadMessageDirection
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -73,8 +72,8 @@ class ThreadMessage:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0
-        from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
+        from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0 # noqa: PLC0415
+        from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0 # noqa: PLC0415
         direction = self.direction.value
 
         id = str(self.id)
@@ -171,8 +170,8 @@ class ThreadMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0
-        from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0
+        from ..models.thread_message_repeat_type_0 import ThreadMessageRepeatType0 # noqa: PLC0415
+        from ..models.thread_message_sender_member_type_0 import ThreadMessageSenderMemberType0 # noqa: PLC0415
         d = dict(src_dict)
         direction = ThreadMessageDirection(d.pop("direction"))
 
@@ -242,7 +241,7 @@ class ThreadMessage:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                timestamp_type_0 = isoparse(data)
+                timestamp_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

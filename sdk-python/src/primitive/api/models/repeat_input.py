@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -101,7 +100,7 @@ class RepeatInput:
         if isinstance(_until,  Unset):
             until = UNSET
         else:
-            until = isoparse(_until)
+            until = datetime.datetime.fromisoformat(_until)
 
 
 

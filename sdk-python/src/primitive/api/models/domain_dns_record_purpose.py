@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class DomainDnsRecordPurpose(str, Enum):
+class DomainDnsRecordPurpose(StrEnum):
     DKIM = "dkim"
     DMARC = "dmarc"
     INBOUND_MX = "inbound_mx"

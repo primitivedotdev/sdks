@@ -39,7 +39,7 @@ class PutContactPolicyCreate:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.contact_policy_rule_input import ContactPolicyRuleInput
+        from ..models.contact_policy_rule_input import ContactPolicyRuleInput # noqa: PLC0415
         rules = []
         for rules_item_data in self.rules:
             rules_item = rules_item_data.to_dict()
@@ -66,7 +66,7 @@ class PutContactPolicyCreate:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.contact_policy_rule_input import ContactPolicyRuleInput
+        from ..models.contact_policy_rule_input import ContactPolicyRuleInput # noqa: PLC0415
         d = dict(src_dict)
         rules = []
         _rules = d.pop("rules")

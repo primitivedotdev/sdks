@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -52,7 +51,7 @@ class PullWebhookResponseDataDeliveryType0:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.pull_webhook_response_data_delivery_type_0_headers import PullWebhookResponseDataDeliveryType0Headers
+        from ..models.pull_webhook_response_data_delivery_type_0_headers import PullWebhookResponseDataDeliveryType0Headers # noqa: PLC0415
         queue_id = str(self.queue_id)
 
         event_id = str(self.event_id)
@@ -89,7 +88,7 @@ class PullWebhookResponseDataDeliveryType0:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.pull_webhook_response_data_delivery_type_0_headers import PullWebhookResponseDataDeliveryType0Headers
+        from ..models.pull_webhook_response_data_delivery_type_0_headers import PullWebhookResponseDataDeliveryType0Headers # noqa: PLC0415
         d = dict(src_dict)
         queue_id = UUID(d.pop("queue_id"))
 
@@ -113,7 +112,7 @@ class PullWebhookResponseDataDeliveryType0:
 
 
 
-        lease_expires_at = isoparse(d.pop("lease_expires_at"))
+        lease_expires_at = datetime.datetime.fromisoformat(d.pop("lease_expires_at"))
 
 
 

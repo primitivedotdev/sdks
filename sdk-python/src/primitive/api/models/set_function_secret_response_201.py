@@ -38,7 +38,7 @@ class SetFunctionSecretResponse201:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_secret_write_result import FunctionSecretWriteResult
+        from ..models.function_secret_write_result import FunctionSecretWriteResult # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,7 +60,7 @@ class SetFunctionSecretResponse201:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_secret_write_result import FunctionSecretWriteResult
+        from ..models.function_secret_write_result import FunctionSecretWriteResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

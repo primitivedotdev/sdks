@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class GateFixAction(str, Enum):
+class GateFixAction(StrEnum):
     CONFIRM_DOMAIN = "confirm_domain"
     SENDER_MUST_FIX_AUTHENTICATION = "sender_must_fix_authentication"
     WAIT_FOR_INBOUND = "wait_for_inbound"

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SimulateRouteResultMatchedTierType3Type1(str, Enum):
+class SimulateRouteResultMatchedTierType3Type1(StrEnum):
     EXACT = "exact"
     REGEX = "regex"
     WILDCARD = "wildcard"

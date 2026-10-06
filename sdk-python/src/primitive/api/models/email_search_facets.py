@@ -43,8 +43,8 @@ class EmailSearchFacets:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.email_search_facet_bucket import EmailSearchFacetBucket
-        from ..models.email_search_facets_has_attachment import EmailSearchFacetsHasAttachment
+        from ..models.email_search_facet_bucket import EmailSearchFacetBucket # noqa: PLC0415
+        from ..models.email_search_facets_has_attachment import EmailSearchFacetsHasAttachment # noqa: PLC0415
         by_sender = []
         for by_sender_item_data in self.by_sender:
             by_sender_item = by_sender_item_data.to_dict()
@@ -84,8 +84,8 @@ class EmailSearchFacets:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.email_search_facet_bucket import EmailSearchFacetBucket
-        from ..models.email_search_facets_has_attachment import EmailSearchFacetsHasAttachment
+        from ..models.email_search_facet_bucket import EmailSearchFacetBucket # noqa: PLC0415
+        from ..models.email_search_facets_has_attachment import EmailSearchFacetsHasAttachment # noqa: PLC0415
         d = dict(src_dict)
         by_sender = []
         _by_sender = d.pop("by_sender")

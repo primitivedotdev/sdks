@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class X402PayoutAddressNetwork(str, Enum):
+class X402PayoutAddressNetwork(StrEnum):
     BASE = "base"
     BASE_SEPOLIA = "base-sepolia"
 

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class FunctionRouteResultConflictKind(str, Enum):
+class FunctionRouteResultConflictKind(StrEnum):
     FUNCTION = "function"
     HTTP = "http"
 

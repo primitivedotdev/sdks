@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SendPermissionAnyRecipientType(str, Enum):
+class SendPermissionAnyRecipientType(StrEnum):
     ANY_RECIPIENT = "any_recipient"
 
     def __str__(self) -> str:

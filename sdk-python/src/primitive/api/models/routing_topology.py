@@ -47,9 +47,9 @@ class RoutingTopology:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.routing_topology_domains_item import RoutingTopologyDomainsItem
-        from ..models.routing_topology_fallback_function_type_0 import RoutingTopologyFallbackFunctionType0
-        from ..models.routing_topology_unrouted_functions_item import RoutingTopologyUnroutedFunctionsItem
+        from ..models.routing_topology_domains_item import RoutingTopologyDomainsItem # noqa: PLC0415
+        from ..models.routing_topology_fallback_function_type_0 import RoutingTopologyFallbackFunctionType0 # noqa: PLC0415
+        from ..models.routing_topology_unrouted_functions_item import RoutingTopologyUnroutedFunctionsItem # noqa: PLC0415
         domains = []
         for domains_item_data in self.domains:
             domains_item = domains_item_data.to_dict()
@@ -89,9 +89,9 @@ class RoutingTopology:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.routing_topology_domains_item import RoutingTopologyDomainsItem
-        from ..models.routing_topology_fallback_function_type_0 import RoutingTopologyFallbackFunctionType0
-        from ..models.routing_topology_unrouted_functions_item import RoutingTopologyUnroutedFunctionsItem
+        from ..models.routing_topology_domains_item import RoutingTopologyDomainsItem # noqa: PLC0415
+        from ..models.routing_topology_fallback_function_type_0 import RoutingTopologyFallbackFunctionType0 # noqa: PLC0415
+        from ..models.routing_topology_unrouted_functions_item import RoutingTopologyUnroutedFunctionsItem # noqa: PLC0415
         d = dict(src_dict)
         domains = []
         _domains = d.pop("domains")

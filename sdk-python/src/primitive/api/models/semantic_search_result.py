@@ -69,8 +69,8 @@ class SemanticSearchResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.semantic_search_score_breakdown import SemanticSearchScoreBreakdown
-        from ..models.semantic_search_snippet import SemanticSearchSnippet
+        from ..models.semantic_search_score_breakdown import SemanticSearchScoreBreakdown # noqa: PLC0415
+        from ..models.semantic_search_snippet import SemanticSearchSnippet # noqa: PLC0415
         source_type = self.source_type.value
 
         id = self.id
@@ -141,8 +141,8 @@ class SemanticSearchResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.semantic_search_score_breakdown import SemanticSearchScoreBreakdown
-        from ..models.semantic_search_snippet import SemanticSearchSnippet
+        from ..models.semantic_search_score_breakdown import SemanticSearchScoreBreakdown # noqa: PLC0415
+        from ..models.semantic_search_snippet import SemanticSearchSnippet # noqa: PLC0415
         d = dict(src_dict)
         source_type = SemanticSearchResultSourceType(d.pop("source_type"))
 

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class AgentSignupVerifyResultTokenType(str, Enum):
+class AgentSignupVerifyResultTokenType(StrEnum):
     BEARER = "Bearer"
 
     def __str__(self) -> str:

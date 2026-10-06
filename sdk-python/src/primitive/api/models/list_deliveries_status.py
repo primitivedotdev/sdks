@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class ListDeliveriesStatus(str, Enum):
+class ListDeliveriesStatus(StrEnum):
     DELIVERED = "delivered"
     FAILED = "failed"
     HEADER_CONFIRMED = "header_confirmed"

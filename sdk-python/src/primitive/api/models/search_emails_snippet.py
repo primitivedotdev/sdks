@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SearchEmailsSnippet(str, Enum):
+class SearchEmailsSnippet(StrEnum):
     FALSE = "false"
     TRUE = "true"
 

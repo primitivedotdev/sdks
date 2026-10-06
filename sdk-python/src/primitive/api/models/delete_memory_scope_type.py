@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class DeleteMemoryScopeType(str, Enum):
+class DeleteMemoryScopeType(StrEnum):
     FUNCTION = "function"
     ORG = "org"
 

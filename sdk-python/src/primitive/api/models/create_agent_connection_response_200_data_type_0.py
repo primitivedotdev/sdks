@@ -38,8 +38,8 @@ class CreateAgentConnectionResponse200DataType0:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_agent_connection_response_200_data_type_0_connection import CreateAgentConnectionResponse200DataType0Connection
-        from ..models.create_agent_connection_response_200_data_type_0_invitation import CreateAgentConnectionResponse200DataType0Invitation
+        from ..models.create_agent_connection_response_200_data_type_0_connection import CreateAgentConnectionResponse200DataType0Connection # noqa: PLC0415
+        from ..models.create_agent_connection_response_200_data_type_0_invitation import CreateAgentConnectionResponse200DataType0Invitation # noqa: PLC0415
         connection = self.connection.to_dict()
 
         invitation = self.invitation.to_dict()
@@ -58,8 +58,8 @@ class CreateAgentConnectionResponse200DataType0:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_agent_connection_response_200_data_type_0_connection import CreateAgentConnectionResponse200DataType0Connection
-        from ..models.create_agent_connection_response_200_data_type_0_invitation import CreateAgentConnectionResponse200DataType0Invitation
+        from ..models.create_agent_connection_response_200_data_type_0_connection import CreateAgentConnectionResponse200DataType0Connection # noqa: PLC0415
+        from ..models.create_agent_connection_response_200_data_type_0_invitation import CreateAgentConnectionResponse200DataType0Invitation # noqa: PLC0415
         d = dict(src_dict)
         connection = CreateAgentConnectionResponse200DataType0Connection.from_dict(d.pop("connection"))
 

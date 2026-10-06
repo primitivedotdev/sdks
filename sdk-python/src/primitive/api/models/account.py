@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -69,7 +68,7 @@ class Account:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.plan_limits import PlanLimits
+        from ..models.plan_limits import PlanLimits # noqa: PLC0415
         id = str(self.id)
 
         email = self.email
@@ -165,7 +164,7 @@ class Account:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.plan_limits import PlanLimits
+        from ..models.plan_limits import PlanLimits # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -192,7 +191,7 @@ class Account:
         managed_inbox_address = _parse_managed_inbox_address(d.pop("managed_inbox_address"))
 
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
@@ -229,7 +228,7 @@ class Account:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                subscription_current_period_end_type_0 = isoparse(data)
+                subscription_current_period_end_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -269,7 +268,7 @@ class Account:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                webhook_secret_rotated_at_type_0 = isoparse(data)
+                webhook_secret_rotated_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

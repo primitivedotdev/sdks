@@ -55,11 +55,11 @@ class InboxStatus:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.inbox_status_domain import InboxStatusDomain
-        from ..models.inbox_status_endpoint_summary import InboxStatusEndpointSummary
-        from ..models.inbox_status_function_summary import InboxStatusFunctionSummary
-        from ..models.inbox_status_next_action import InboxStatusNextAction
-        from ..models.inbox_status_recent_email_summary import InboxStatusRecentEmailSummary
+        from ..models.inbox_status_domain import InboxStatusDomain # noqa: PLC0415
+        from ..models.inbox_status_endpoint_summary import InboxStatusEndpointSummary # noqa: PLC0415
+        from ..models.inbox_status_function_summary import InboxStatusFunctionSummary # noqa: PLC0415
+        from ..models.inbox_status_next_action import InboxStatusNextAction # noqa: PLC0415
+        from ..models.inbox_status_recent_email_summary import InboxStatusRecentEmailSummary # noqa: PLC0415
         ready = self.ready
 
         receiving_ready = self.receiving_ready
@@ -109,11 +109,11 @@ class InboxStatus:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.inbox_status_domain import InboxStatusDomain
-        from ..models.inbox_status_endpoint_summary import InboxStatusEndpointSummary
-        from ..models.inbox_status_function_summary import InboxStatusFunctionSummary
-        from ..models.inbox_status_next_action import InboxStatusNextAction
-        from ..models.inbox_status_recent_email_summary import InboxStatusRecentEmailSummary
+        from ..models.inbox_status_domain import InboxStatusDomain # noqa: PLC0415
+        from ..models.inbox_status_endpoint_summary import InboxStatusEndpointSummary # noqa: PLC0415
+        from ..models.inbox_status_function_summary import InboxStatusFunctionSummary # noqa: PLC0415
+        from ..models.inbox_status_next_action import InboxStatusNextAction # noqa: PLC0415
+        from ..models.inbox_status_recent_email_summary import InboxStatusRecentEmailSummary # noqa: PLC0415
         d = dict(src_dict)
         ready = d.pop("ready")
 

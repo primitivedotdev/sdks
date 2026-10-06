@@ -18,7 +18,6 @@ from ...models.search_emails_response_200 import SearchEmailsResponse200
 from ...models.search_emails_snippet import SearchEmailsSnippet
 from ...models.search_emails_sort import SearchEmailsSort
 from ...types import UNSET, Unset
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime

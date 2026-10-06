@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -61,12 +60,12 @@ class AgentPresenceType0:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        last_checked_at = isoparse(d.pop("last_checked_at"))
+        last_checked_at = datetime.datetime.fromisoformat(d.pop("last_checked_at"))
 
 
 
 
-        expires_at = isoparse(d.pop("expires_at"))
+        expires_at = datetime.datetime.fromisoformat(d.pop("expires_at"))
 
 
 

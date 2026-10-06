@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class FunctionDeployStatus(str, Enum):
+class FunctionDeployStatus(StrEnum):
     DEPLOYED = "deployed"
     FAILED = "failed"
     PENDING = "pending"

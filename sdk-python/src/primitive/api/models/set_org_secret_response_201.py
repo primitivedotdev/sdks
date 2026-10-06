@@ -38,7 +38,7 @@ class SetOrgSecretResponse201:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.org_secret_write_result import OrgSecretWriteResult
+        from ..models.org_secret_write_result import OrgSecretWriteResult # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,7 +60,7 @@ class SetOrgSecretResponse201:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.org_secret_write_result import OrgSecretWriteResult
+        from ..models.org_secret_write_result import OrgSecretWriteResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

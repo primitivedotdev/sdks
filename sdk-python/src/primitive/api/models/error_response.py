@@ -38,7 +38,7 @@ class ErrorResponse:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.error_response_error import ErrorResponseError
+        from ..models.error_response_error import ErrorResponseError # noqa: PLC0415
         success = self.success
 
         error = self.error.to_dict()
@@ -57,7 +57,7 @@ class ErrorResponse:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.error_response_error import ErrorResponseError
+        from ..models.error_response_error import ErrorResponseError # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

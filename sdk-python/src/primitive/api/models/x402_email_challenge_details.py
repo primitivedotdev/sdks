@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -50,8 +49,8 @@ class X402EmailChallengeDetails:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.x402_nonce_binding import X402NonceBinding
-        from ..models.x402_payment_requirements import X402PaymentRequirements
+        from ..models.x402_nonce_binding import X402NonceBinding # noqa: PLC0415
+        from ..models.x402_payment_requirements import X402PaymentRequirements # noqa: PLC0415
         payment_requirements = self.payment_requirements.to_dict()
 
         nonce_binding = self.nonce_binding.to_dict()
@@ -73,8 +72,8 @@ class X402EmailChallengeDetails:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.x402_nonce_binding import X402NonceBinding
-        from ..models.x402_payment_requirements import X402PaymentRequirements
+        from ..models.x402_nonce_binding import X402NonceBinding # noqa: PLC0415
+        from ..models.x402_payment_requirements import X402PaymentRequirements # noqa: PLC0415
         d = dict(src_dict)
         payment_requirements = X402PaymentRequirements.from_dict(d.pop("payment_requirements"))
 
@@ -86,7 +85,7 @@ class X402EmailChallengeDetails:
 
 
 
-        expires_at = isoparse(d.pop("expires_at"))
+        expires_at = datetime.datetime.fromisoformat(d.pop("expires_at"))
 
 
 

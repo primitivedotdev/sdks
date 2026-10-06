@@ -44,7 +44,7 @@ class AgentClaimResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.plan_limits import PlanLimits
+        from ..models.plan_limits import PlanLimits # noqa: PLC0415
         org_id = str(self.org_id)
 
         plan = self.plan.value
@@ -69,7 +69,7 @@ class AgentClaimResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.plan_limits import PlanLimits
+        from ..models.plan_limits import PlanLimits # noqa: PLC0415
         d = dict(src_dict)
         org_id = UUID(d.pop("org_id"))
 

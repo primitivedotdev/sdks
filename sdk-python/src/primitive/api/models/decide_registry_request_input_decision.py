@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class DecideRegistryRequestInputDecision(str, Enum):
+class DecideRegistryRequestInputDecision(StrEnum):
     APPROVED = "approved"
     REJECTED = "rejected"
 

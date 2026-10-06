@@ -48,8 +48,8 @@ class ErrorResponseError:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.error_response_error_details import ErrorResponseErrorDetails
-        from ..models.gate_denial import GateDenial
+        from ..models.error_response_error_details import ErrorResponseErrorDetails # noqa: PLC0415
+        from ..models.gate_denial import GateDenial # noqa: PLC0415
         code = self.code.value
 
         message = self.message
@@ -89,8 +89,8 @@ class ErrorResponseError:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.error_response_error_details import ErrorResponseErrorDetails
-        from ..models.gate_denial import GateDenial
+        from ..models.error_response_error_details import ErrorResponseErrorDetails # noqa: PLC0415
+        from ..models.gate_denial import GateDenial # noqa: PLC0415
         d = dict(src_dict)
         code = ErrorResponseErrorCode(d.pop("code"))
 

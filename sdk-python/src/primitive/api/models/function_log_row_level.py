@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class FunctionLogRowLevel(str, Enum):
+class FunctionLogRowLevel(StrEnum):
     DEBUG = "debug"
     ERROR = "error"
     INFO = "info"

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class X402ChallengeNetwork(str, Enum):
+class X402ChallengeNetwork(StrEnum):
     BASE = "base"
     BASE_SEPOLIA = "base-sepolia"
 

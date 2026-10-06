@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -64,7 +63,7 @@ class WakeSchedule:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.wake_schedule_args import WakeScheduleArgs
+        from ..models.wake_schedule_args import WakeScheduleArgs # noqa: PLC0415
         id = str(self.id)
 
         target_address = self.target_address
@@ -136,7 +135,7 @@ class WakeSchedule:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.wake_schedule_args import WakeScheduleArgs
+        from ..models.wake_schedule_args import WakeScheduleArgs # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -151,19 +150,19 @@ class WakeSchedule:
 
         timezone = d.pop("timezone")
 
-        next_run_at = isoparse(d.pop("next_run_at"))
+        next_run_at = datetime.datetime.fromisoformat(d.pop("next_run_at"))
 
 
 
 
         enabled = d.pop("enabled")
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        updated_at = isoparse(d.pop("updated_at"))
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
 
@@ -196,7 +195,7 @@ class WakeSchedule:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_run_at_type_0 = isoparse(data)
+                last_run_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

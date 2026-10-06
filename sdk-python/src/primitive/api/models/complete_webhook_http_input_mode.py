@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CompleteWebhookHttpInputMode(str, Enum):
+class CompleteWebhookHttpInputMode(StrEnum):
     HTTP = "http"
 
     def __str__(self) -> str:

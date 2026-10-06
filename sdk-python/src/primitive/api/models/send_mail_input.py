@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -93,9 +92,9 @@ class SendMailInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.repeat_input import RepeatInput
-        from ..models.send_mail_attachment import SendMailAttachment
-        from ..models.send_mail_payload_ref import SendMailPayloadRef
+        from ..models.repeat_input import RepeatInput # noqa: PLC0415
+        from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
+        from ..models.send_mail_payload_ref import SendMailPayloadRef # noqa: PLC0415
         from_ = self.from_
 
         to = self.to
@@ -203,9 +202,9 @@ class SendMailInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.repeat_input import RepeatInput
-        from ..models.send_mail_attachment import SendMailAttachment
-        from ..models.send_mail_payload_ref import SendMailPayloadRef
+        from ..models.repeat_input import RepeatInput # noqa: PLC0415
+        from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
+        from ..models.send_mail_payload_ref import SendMailPayloadRef # noqa: PLC0415
         d = dict(src_dict)
         from_ = d.pop("from")
 
@@ -297,7 +296,7 @@ class SendMailInput:
         if isinstance(_scheduled_at,  Unset):
             scheduled_at = UNSET
         else:
-            scheduled_at = isoparse(_scheduled_at)
+            scheduled_at = datetime.datetime.fromisoformat(_scheduled_at)
 
 
 

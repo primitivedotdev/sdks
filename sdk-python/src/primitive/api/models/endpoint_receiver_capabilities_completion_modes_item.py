@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class EndpointReceiverCapabilitiesCompletionModesItem(str, Enum):
+class EndpointReceiverCapabilitiesCompletionModesItem(StrEnum):
     EXEC = "exec"
     HTTP = "http"
     SDK = "sdk"

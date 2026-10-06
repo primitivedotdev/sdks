@@ -12,7 +12,6 @@ from ...models.error_response import ErrorResponse
 from ...models.list_deliveries_response_200 import ListDeliveriesResponse200
 from ...models.list_deliveries_status import ListDeliveriesStatus
 from ...types import UNSET, Unset
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime

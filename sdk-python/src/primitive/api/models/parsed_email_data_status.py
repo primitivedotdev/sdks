@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class ParsedEmailDataStatus(str, Enum):
+class ParsedEmailDataStatus(StrEnum):
     COMPLETE = "complete"
     FAILED = "failed"
 

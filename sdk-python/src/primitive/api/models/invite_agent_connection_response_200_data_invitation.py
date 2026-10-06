@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -58,7 +57,7 @@ class InviteAgentConnectionResponse200DataInvitation:
         d = dict(src_dict)
         claim_url = d.pop("claim_url")
 
-        expires_at = isoparse(d.pop("expires_at"))
+        expires_at = datetime.datetime.fromisoformat(d.pop("expires_at"))
 
 
 

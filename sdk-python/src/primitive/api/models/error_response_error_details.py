@@ -48,7 +48,7 @@ class ErrorResponseErrorDetails:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.error_response_error_details_mx_conflict import ErrorResponseErrorDetailsMxConflict
+        from ..models.error_response_error_details_mx_conflict import ErrorResponseErrorDetailsMxConflict # noqa: PLC0415
         mx_conflict: dict[str, Any] | Unset = UNSET
         if not isinstance(self.mx_conflict, Unset):
             mx_conflict = self.mx_conflict.to_dict()
@@ -87,7 +87,7 @@ class ErrorResponseErrorDetails:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.error_response_error_details_mx_conflict import ErrorResponseErrorDetailsMxConflict
+        from ..models.error_response_error_details_mx_conflict import ErrorResponseErrorDetailsMxConflict # noqa: PLC0415
         d = dict(src_dict)
         _mx_conflict = d.pop("mx_conflict", UNSET)
         mx_conflict: ErrorResponseErrorDetailsMxConflict | Unset

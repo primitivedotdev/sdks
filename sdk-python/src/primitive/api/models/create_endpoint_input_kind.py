@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CreateEndpointInputKind(str, Enum):
+class CreateEndpointInputKind(StrEnum):
     FUNCTION = "function"
     HTTP = "http"
     PULL = "pull"

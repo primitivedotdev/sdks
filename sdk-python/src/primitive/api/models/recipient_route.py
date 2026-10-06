@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.recipient_route_match_type import RecipientRouteMatchType
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -227,7 +226,7 @@ class RecipientRoute:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_matched_at_type_0 = isoparse(data)
+                last_matched_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -244,7 +243,7 @@ class RecipientRoute:
         if isinstance(_created_at,  Unset):
             created_at = UNSET
         else:
-            created_at = isoparse(_created_at)
+            created_at = datetime.datetime.fromisoformat(_created_at)
 
 
 

@@ -47,7 +47,7 @@ class CreateWakeScheduleInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_wake_schedule_input_args import CreateWakeScheduleInputArgs
+        from ..models.create_wake_schedule_input_args import CreateWakeScheduleInputArgs # noqa: PLC0415
         from_address = self.from_address
 
         target_address = self.target_address
@@ -86,7 +86,7 @@ class CreateWakeScheduleInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_wake_schedule_input_args import CreateWakeScheduleInputArgs
+        from ..models.create_wake_schedule_input_args import CreateWakeScheduleInputArgs # noqa: PLC0415
         d = dict(src_dict)
         from_address = d.pop("from_address")
 

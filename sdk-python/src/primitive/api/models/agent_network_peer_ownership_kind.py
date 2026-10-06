@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class AgentNetworkPeerOwnershipKind(str, Enum):
+class AgentNetworkPeerOwnershipKind(StrEnum):
     LEGACY_UNKNOWN = "legacy_unknown"
     PERSONAL = "personal"
     SHARED = "shared"

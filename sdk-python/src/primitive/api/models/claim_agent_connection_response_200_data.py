@@ -46,8 +46,8 @@ class ClaimAgentConnectionResponse200Data:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.claim_agent_connection_response_200_data_connection import ClaimAgentConnectionResponse200DataConnection
-        from ..models.presence_profile import PresenceProfile
+        from ..models.claim_agent_connection_response_200_data_connection import ClaimAgentConnectionResponse200DataConnection # noqa: PLC0415
+        from ..models.presence_profile import PresenceProfile # noqa: PLC0415
         connection = self.connection.to_dict()
 
         org_id = self.org_id
@@ -81,8 +81,8 @@ class ClaimAgentConnectionResponse200Data:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.claim_agent_connection_response_200_data_connection import ClaimAgentConnectionResponse200DataConnection
-        from ..models.presence_profile import PresenceProfile
+        from ..models.claim_agent_connection_response_200_data_connection import ClaimAgentConnectionResponse200DataConnection # noqa: PLC0415
+        from ..models.presence_profile import PresenceProfile # noqa: PLC0415
         d = dict(src_dict)
         connection = ClaimAgentConnectionResponse200DataConnection.from_dict(d.pop("connection"))
 

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class DomainDnsRecordType(str, Enum):
+class DomainDnsRecordType(StrEnum):
     MX = "MX"
     TXT = "TXT"
 

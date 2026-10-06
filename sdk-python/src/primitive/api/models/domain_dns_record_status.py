@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class DomainDnsRecordStatus(str, Enum):
+class DomainDnsRecordStatus(StrEnum):
     FOUND = "found"
     INCORRECT = "incorrect"
     MISSING = "missing"

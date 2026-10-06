@@ -608,10 +608,9 @@ def _build_semantic_search_input(
             if corpus is not None
             else UNSET
         ),
-        # isoparse (python-dateutil) accepts ISO-8601 with the `Z` UTC
-        # suffix; datetime.fromisoformat rejects it on Python 3.10, our
-        # declared minimum. The generated models use isoparse for the
-        # same fields in `from_dict`.
+        # isoparse (python-dateutil) accepts the full ISO-8601 grammar,
+        # which is wider than datetime.fromisoformat, so caller-supplied
+        # dates keep parsing as they did before.
         date_from=isoparse(date_from) if date_from is not None else UNSET,
         date_to=isoparse(date_to) if date_to is not None else UNSET,
         include=(

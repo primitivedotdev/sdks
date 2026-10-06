@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SemanticSearchInputMode(str, Enum):
+class SemanticSearchInputMode(StrEnum):
     HYBRID = "hybrid"
     KEYWORD = "keyword"
     SEMANTIC = "semantic"

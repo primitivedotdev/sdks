@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -64,8 +63,8 @@ class FunctionRouting:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_routing_domain_type_0 import FunctionRoutingDomainType0
-        from ..models.function_routing_rules import FunctionRoutingRules
+        from ..models.function_routing_domain_type_0 import FunctionRoutingDomainType0 # noqa: PLC0415
+        from ..models.function_routing_rules import FunctionRoutingRules # noqa: PLC0415
         endpoint_id = str(self.endpoint_id)
 
         enabled = self.enabled
@@ -140,8 +139,8 @@ class FunctionRouting:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_routing_domain_type_0 import FunctionRoutingDomainType0
-        from ..models.function_routing_rules import FunctionRoutingRules
+        from ..models.function_routing_domain_type_0 import FunctionRoutingDomainType0 # noqa: PLC0415
+        from ..models.function_routing_rules import FunctionRoutingRules # noqa: PLC0415
         d = dict(src_dict)
         endpoint_id = UUID(d.pop("endpoint_id"))
 
@@ -189,7 +188,7 @@ class FunctionRouting:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_delivery_at_type_0 = isoparse(data)
+                last_delivery_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -209,7 +208,7 @@ class FunctionRouting:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_success_at_type_0 = isoparse(data)
+                last_success_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -229,7 +228,7 @@ class FunctionRouting:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_failure_at_type_0 = isoparse(data)
+                last_failure_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

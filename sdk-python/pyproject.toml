@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "primitivedotdev"
-version = "1.35.0"
+version = "1.36.0"
 description = "Official Primitive Python SDK for webhook handling and API access"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Primitive", email = "support@primitive.dev" }]
 keywords = ["primitive", "email", "webhook", "signature", "hmac"]
@@ -16,7 +16,6 @@ classifiers = [
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -41,7 +40,7 @@ dev = [
   "build>=1.2.2,<2",
   "datamodel-code-generator>=0.31.0,<1",
   "hatchling>=1.27.0,<2",
-  "openapi-python-client==0.28.4",
+  "openapi-python-client==0.29.1",
   "pytest>=8.3.0,<10",
   "pytest-cov>=6.2.0,<8",
   "ruff>=0.12.0,<1",
@@ -101,7 +100,7 @@ omit = [
 ]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 88
 extend-exclude = [
   "src/primitive/api/api",
@@ -116,7 +115,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501", "SIM108", "UP012", "UP017"]
 
 [tool.basedpyright]
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 typeCheckingMode = "standard"
 include = ["src", "tests", "scripts"]
 exclude = [

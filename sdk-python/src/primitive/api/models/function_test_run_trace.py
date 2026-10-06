@@ -66,13 +66,13 @@ class FunctionTestRunTrace:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_log_row import FunctionLogRow
-        from ..models.function_test_run import FunctionTestRun
-        from ..models.function_test_run_delivery import FunctionTestRunDelivery
-        from ..models.function_test_run_inbound_email_type_0 import FunctionTestRunInboundEmailType0
-        from ..models.function_test_run_outbound_request import FunctionTestRunOutboundRequest
-        from ..models.function_test_run_reply import FunctionTestRunReply
-        from ..models.function_test_run_send_type_0 import FunctionTestRunSendType0
+        from ..models.function_log_row import FunctionLogRow # noqa: PLC0415
+        from ..models.function_test_run import FunctionTestRun # noqa: PLC0415
+        from ..models.function_test_run_delivery import FunctionTestRunDelivery # noqa: PLC0415
+        from ..models.function_test_run_inbound_email_type_0 import FunctionTestRunInboundEmailType0 # noqa: PLC0415
+        from ..models.function_test_run_outbound_request import FunctionTestRunOutboundRequest # noqa: PLC0415
+        from ..models.function_test_run_reply import FunctionTestRunReply # noqa: PLC0415
+        from ..models.function_test_run_send_type_0 import FunctionTestRunSendType0 # noqa: PLC0415
         state = self.state.value
 
         test_run = self.test_run.to_dict()
@@ -137,13 +137,13 @@ class FunctionTestRunTrace:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_log_row import FunctionLogRow
-        from ..models.function_test_run import FunctionTestRun
-        from ..models.function_test_run_delivery import FunctionTestRunDelivery
-        from ..models.function_test_run_inbound_email_type_0 import FunctionTestRunInboundEmailType0
-        from ..models.function_test_run_outbound_request import FunctionTestRunOutboundRequest
-        from ..models.function_test_run_reply import FunctionTestRunReply
-        from ..models.function_test_run_send_type_0 import FunctionTestRunSendType0
+        from ..models.function_log_row import FunctionLogRow # noqa: PLC0415
+        from ..models.function_test_run import FunctionTestRun # noqa: PLC0415
+        from ..models.function_test_run_delivery import FunctionTestRunDelivery # noqa: PLC0415
+        from ..models.function_test_run_inbound_email_type_0 import FunctionTestRunInboundEmailType0 # noqa: PLC0415
+        from ..models.function_test_run_outbound_request import FunctionTestRunOutboundRequest # noqa: PLC0415
+        from ..models.function_test_run_reply import FunctionTestRunReply # noqa: PLC0415
+        from ..models.function_test_run_send_type_0 import FunctionTestRunSendType0 # noqa: PLC0415
         d = dict(src_dict)
         state = FunctionTestRunState(d.pop("state"))
 

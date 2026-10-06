@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SendPermissionAddressType(str, Enum):
+class SendPermissionAddressType(StrEnum):
     ADDRESS = "address"
 
     def __str__(self) -> str:

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class ContactPolicyRuleEffect(str, Enum):
+class ContactPolicyRuleEffect(StrEnum):
     ALLOW = "allow"
     SILENCE = "silence"
 

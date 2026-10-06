@@ -60,7 +60,7 @@ class Conversation:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.conversation_message import ConversationMessage
+        from ..models.conversation_message import ConversationMessage # noqa: PLC0415
         thread_id: None | str
         if isinstance(self.thread_id, UUID):
             thread_id = str(self.thread_id)
@@ -106,7 +106,7 @@ class Conversation:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.conversation_message import ConversationMessage
+        from ..models.conversation_message import ConversationMessage # noqa: PLC0415
         d = dict(src_dict)
         def _parse_thread_id(data: object) -> None | UUID:
             if data is None:

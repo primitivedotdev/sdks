@@ -36,7 +36,7 @@ class PayChallengeInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.x402_payment_payload import X402PaymentPayload
+        from ..models.x402_payment_payload import X402PaymentPayload # noqa: PLC0415
         payment = self.payment.to_dict()
 
 
@@ -52,7 +52,7 @@ class PayChallengeInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.x402_payment_payload import X402PaymentPayload
+        from ..models.x402_payment_payload import X402PaymentPayload # noqa: PLC0415
         d = dict(src_dict)
         payment = X402PaymentPayload.from_dict(d.pop("payment"))
 

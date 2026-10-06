@@ -11,7 +11,6 @@ from ..types import UNSET, Unset
 from ..models.conversation_message_direction import ConversationMessageDirection
 from ..models.conversation_message_role import ConversationMessageRole
 from ..models.sent_email_status import SentEmailStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -111,9 +110,9 @@ class ConversationMessage:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0
-        from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
-        from ..models.presence_control_type_0 import PresenceControlType0
+        from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0 # noqa: PLC0415
+        from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0 # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
         role = self.role.value
 
         direction = self.direction.value
@@ -225,9 +224,9 @@ class ConversationMessage:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0
-        from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0
-        from ..models.presence_control_type_0 import PresenceControlType0
+        from ..models.conversation_message_repeat_type_0 import ConversationMessageRepeatType0 # noqa: PLC0415
+        from ..models.conversation_message_sender_member_type_0 import ConversationMessageSenderMemberType0 # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
         d = dict(src_dict)
         role = ConversationMessageRole(d.pop("role"))
 
@@ -294,7 +293,7 @@ class ConversationMessage:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                timestamp_type_0 = isoparse(data)
+                timestamp_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

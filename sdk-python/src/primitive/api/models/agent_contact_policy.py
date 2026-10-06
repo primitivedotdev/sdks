@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -52,8 +51,8 @@ class AgentContactPolicy:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_contact_policy_override import AgentContactPolicyOverride
-        from ..models.contact_policy import ContactPolicy
+        from ..models.agent_contact_policy_override import AgentContactPolicyOverride # noqa: PLC0415
+        from ..models.contact_policy import ContactPolicy # noqa: PLC0415
         agent_address = self.agent_address
 
         org_policy = self.org_policy.to_dict()
@@ -95,8 +94,8 @@ class AgentContactPolicy:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_contact_policy_override import AgentContactPolicyOverride
-        from ..models.contact_policy import ContactPolicy
+        from ..models.agent_contact_policy_override import AgentContactPolicyOverride # noqa: PLC0415
+        from ..models.contact_policy import ContactPolicy # noqa: PLC0415
         d = dict(src_dict)
         agent_address = d.pop("agent_address")
 
@@ -112,7 +111,7 @@ class AgentContactPolicy:
 
         effective_version = d.pop("effective_version")
 
-        effective_since = isoparse(d.pop("effective_since"))
+        effective_since = datetime.datetime.fromisoformat(d.pop("effective_since"))
 
 
 
@@ -125,7 +124,7 @@ class AgentContactPolicy:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                contact_request_since_type_0 = isoparse(data)
+                contact_request_since_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
