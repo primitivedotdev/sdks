@@ -10,9 +10,12 @@ import {
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
 import {
+  AUTO_WORKING_CAP_MS,
+  type AutoWorkingLease,
   dispatchAutoWorking,
   haltAutoWorking,
   isSentSignal,
+  readWorkingLease,
 } from "../auto-signals.js";
 import { buildEmailBrief, renderEmailBrief } from "../email-brief.js";
 import { withFlagSuggestion } from "../flag-suggestions.js";
@@ -61,6 +64,22 @@ const NO_SIGNAL_DESCRIPTION =
 export function workingStopCommand(emailId: string, prefix: string): string {
   return `${prefix} emails get --id ${emailId} --brief --no-signal`;
 }
+/**
+ * Whether a working report from an earlier read is still being renewed: not
+ * stopped, and inside the renewal cap (past it nothing renews, whatever the
+ * saved lease says).
+ */
+export function workingStillRunning(
+  lease: AutoWorkingLease | null,
+  now: number = Date.now(),
+): boolean {
+  return (
+    lease !== null &&
+    lease.stopped_at === null &&
+    now - lease.started_at < AUTO_WORKING_CAP_MS
+  );
+}
+
 export function workingStopLine(command: string): string {
   return `The sender now sees you working on this until you answer. If you will not act on it, stop that with ${command} (it sends nothing).`;
 }
@@ -127,13 +146,22 @@ async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
     // Detached and silent, so stdout stays one document and stderr empty.
     // Recheck the sender here: a claim saved before agent senders stopped
     // qualifying must not start Working toward another agent.
-    const working =
+    const dispatched =
       !flags["no-signal"] &&
       detail.sender_connected_agent_verified !== true &&
       dispatchAutoWorking({
         configDir: command.config.configDir,
         emailId: detail.id,
       });
+    // A working report an earlier read started is still running: say how to
+    // stop it here too (a second reader, or a session reading again after
+    // its context was compacted, otherwise never learns it).
+    const working =
+      dispatched ||
+      (!flags["no-signal"] &&
+        workingStillRunning(
+          readWorkingLease(command.config.configDir, detail.id),
+        ));
     const stop = working
       ? workingStopCommand(detail.id, followUpCommandPrefix())
       : null;

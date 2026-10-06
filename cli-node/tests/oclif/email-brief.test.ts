@@ -48,6 +48,7 @@ import {
   startWorkingLease,
 } from "../../src/oclif/auto-signals.js";
 import {
+  workingStillRunning,
   workingStopCommand,
   workingStopLine,
 } from "../../src/oclif/commands/emails-get.js";
@@ -965,6 +966,40 @@ describe("emails get", () => {
       "not_acting",
     );
     expect(result.stdout).not.toContain("The sender now sees you working");
+  });
+
+  it("prints the stop line when a working report from an earlier read is still running", async () => {
+    claimAutoRead(configDir, {
+      emailId,
+      profileName: "work",
+      sender,
+      threadId: thread,
+    });
+    startWorkingLease(configDir, emailId);
+    vi.stubEnv("PRIMITIVE_NO_AUTO_SIGNALS", "1");
+    const result = await run(["--id", emailId, "--brief"], baseRoutes());
+    expect(result.stdout).toContain("The sender now sees you working on this");
+    expect(result.stdout).toContain(`--id ${emailId} --brief --no-signal`);
+  });
+
+  it("treats a lease past the renewal cap or stopped as not running", () => {
+    const lease = {
+      version: 1 as const,
+      email_id: emailId,
+      profile: "work",
+      sender,
+      thread_id: thread,
+      started_at: 1_000,
+      stopped_at: null,
+      stop_reason: null,
+      signal_sent_ids: [],
+    };
+    expect(workingStillRunning(lease, 1_000 + 60_000)).toBe(true);
+    expect(workingStillRunning(lease, 1_000 + 15 * 60_000)).toBe(false);
+    expect(workingStillRunning({ ...lease, stopped_at: 2_000 }, 3_000)).toBe(
+      false,
+    );
+    expect(workingStillRunning(null)).toBe(false);
   });
 
   it("stops working with --no-signal even when the read itself fails", async () => {
