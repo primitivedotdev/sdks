@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -11,6 +11,7 @@ import {
   agentProfileDirectory,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
+import { AGENT_CONNECTION_REQUIRED_MESSAGE } from "../../src/oclif/listen-credential.js";
 import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -267,6 +268,32 @@ describe("native listener command transport", () => {
       });
       expect(claudeCodeSession(session, {}, directory)).toBe(false);
     } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+  it("refuses an account key for --notify-session before writing listener state", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-listen-account-"));
+    vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+    vi.stubEnv("PRIMITIVE_API_KEY", ["prim", "a".repeat(48)].join("_"));
+    vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "");
+    vi.stubEnv("CLAUDE_CODE_SESSION_ID", "");
+    vi.stubEnv("CODEX_THREAD_ID", "");
+    try {
+      await expect(
+        ListenCommand.run(
+          [
+            "--background",
+            "--notify-session",
+            session,
+            "--sender",
+            "peer@example.com",
+          ],
+          { root },
+        ),
+      ).rejects.toThrow(AGENT_CONNECTION_REQUIRED_MESSAGE);
+      expect(readdirSync(directory)).toEqual([]);
+    } finally {
+      vi.unstubAllEnvs();
       rmSync(directory, { recursive: true, force: true });
     }
   });

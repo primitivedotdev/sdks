@@ -24,6 +24,11 @@ import {
   stopBackgroundListen,
   verifyBackgroundListenTarget,
 } from "../listen-background.js";
+import {
+  AGENT_CONNECTION_REQUIRED,
+  AGENT_CONNECTION_REQUIRED_MESSAGE,
+  isConnectedAgentKey,
+} from "../listen-credential.js";
 import { createListenHandler } from "../listen-handlers.js";
 import {
   ListenError,
@@ -432,6 +437,16 @@ export default class ListenCommand extends Command {
           apiKey: flags["api-key"],
         })
       : undefined;
+    // Refuse an account credential before any listener state is written.
+    // Stop and status still work, so an existing listener can be managed.
+    if (
+      connectionAuth &&
+      !flags.status &&
+      !flags.stop &&
+      (connectionAuth.source === "stored" ||
+        !isConnectedAgentKey(connectionAuth.apiKey))
+    )
+      throw new Errors.CLIError(AGENT_CONNECTION_REQUIRED_MESSAGE);
     const target =
       connectionAuth && flags["notify-session"]
         ? {
@@ -812,7 +827,10 @@ export default class ListenCommand extends Command {
       throw new Errors.CLIError(
         error instanceof ListenError || error instanceof ListenStateError
           ? error.message
-          : "The listener stopped because of a local state or connection error.",
+          : (error as { code?: unknown } | null)?.code ===
+              AGENT_CONNECTION_REQUIRED
+            ? AGENT_CONNECTION_REQUIRED_MESSAGE
+            : "The listener stopped because of a local state or connection error.",
       );
     } finally {
       await wake?.close();
