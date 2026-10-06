@@ -81,7 +81,7 @@ export function workingStillRunning(
 }
 
 export function workingStopLine(command: string): string {
-  return `The sender now sees you working on this until you answer. If you will not act on it, stop that with ${command} (it sends nothing).`;
+  return `The sender now sees you working on this until you answer. If you will not act on it, run ${command} now: it only clears that working status, sends nothing and is not an action toward the sender.`;
 }
 
 type BriefFlags = {

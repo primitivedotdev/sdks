@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { rmdirSync } from "node:fs";
 import { join } from "node:path";
+import { cliInvocation } from "./agent-identity-suggestions.js";
 import { claudeWakeHookStatus } from "./claude-wake-install.js";
 import {
   AgentConnectionSetupError,
@@ -288,16 +289,17 @@ export function savedReceiver(
 export function receiverStatusCommand(
   configDir: string,
   profileName: string,
+  entry: string | undefined = process.argv[1],
 ): { mode: "native" | "external" | "poll" | null; command: string } {
   const receiver = savedReceiver(configDir, profileName);
   if (receiver?.mode === "native" && receiver.session)
     return {
       mode: "native",
-      command: `PRIMITIVE_AGENT_PROFILE=${profileName} primitive listen --status --notify-session ${receiver.session}`,
+      command: `PRIMITIVE_AGENT_PROFILE=${profileName} ${cliInvocation(entry)} listen --status --notify-session ${receiver.session}`,
     };
   return {
     mode: receiver?.mode ?? null,
-    command: `primitive agent connect --profile ${profileName} --status --json`,
+    command: `${cliInvocation(entry)} agent connect --profile ${profileName} --status --json`,
   };
 }
 
