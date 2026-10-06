@@ -24,14 +24,15 @@ T = TypeVar("T", bound="EmailSearchMeta")
 class EmailSearchMeta:
     """ 
         Attributes:
-            total (int): Total number of matching records, capped when `total_capped` is true.
+            total (int | None): Total number of matching records, capped when `total_capped` is true. Null when the request
+                set `count=false`.
             total_capped (bool): Whether `total` was capped instead of counted exactly.
             limit (int): Page size used for this request.
             cursor (None | str): Cursor for the next search page, or null if no more results.
             sort (EmailSearchMetaSort): Sort mode used for the result page.
      """
 
-    total: int
+    total: int | None
     total_capped: bool
     limit: int
     cursor: None | str
@@ -43,6 +44,7 @@ class EmailSearchMeta:
 
 
     def to_dict(self) -> dict[str, Any]:
+        total: int | None
         total = self.total
 
         total_capped = self.total_capped
@@ -72,7 +74,13 @@ class EmailSearchMeta:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         d = dict(src_dict)
-        total = d.pop("total")
+        def _parse_total(data: object) -> int | None:
+            if data is None:
+                return data
+            return cast(int | None, data)
+
+        total = _parse_total(d.pop("total"))
+
 
         total_capped = d.pop("total_capped")
 

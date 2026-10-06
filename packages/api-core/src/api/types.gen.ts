@@ -1873,13 +1873,21 @@ export type EmailSearchResult = EmailSummary & {
      */
     score?: number;
     highlights?: EmailSearchHighlights;
+    /**
+     * The conversation thread this email belongs to, usable with `thread_id` on this endpoint and with `/threads/{id}`. Null until the email has been threaded.
+     */
+    thread_id: string | null;
+    /**
+     * Which side of the conversation the result is on: `inbound` for mail received by the organization. This endpoint currently returns received mail only, so every result is `inbound`; treat an unfamiliar value as one added after your client was built.
+     */
+    direction: 'inbound' | 'outbound';
 };
 
 export type EmailSearchMeta = {
     /**
-     * Total number of matching records, capped when `total_capped` is true.
+     * Total number of matching records, capped when `total_capped` is true. Null when the request set `count=false`.
      */
-    total: number;
+    total: number | null;
     /**
      * Whether `total` was capped instead of counted exactly.
      */
@@ -6730,9 +6738,38 @@ export type SearchEmailsData = {
          */
         snippet?: 'true' | 'false';
         /**
-         * Include facet counts for sender, domain, status, and attachment presence.
+         * Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet aggregation is not run at all.
          */
         include_facets?: 'true' | 'false';
+        /**
+         * Only return emails in this thread (the `thread_id` each result carries). Combines with `q` and every other filter, and with pagination. Visibility is unchanged; an agent connection still sees only mail received by its address.
+         */
+        thread_id?: string;
+        /**
+         * Search-as-you-type. When `true`, the final word of `q` is treated as
+         * still being typed and matches any word that begins with it, so
+         * `q=quarterly invoi` finds "invoice" and "invoicing". Only the final
+         * word is affected, and only when it is unquoted text (a bare word or
+         * `subject:`/`body:` with a bare value); a quoted phrase or a field
+         * filter in the final position leaves the query unchanged. The final
+         * word is kept even when it is a stop word, so `q=the` matches
+         * "theory". Matching is against the same stemmed index as a whole-word
+         * search, so a partial word whose spelling diverges from its stem
+         * (`runni` for "running") may not match until the word is complete.
+         * The text is never interpreted as query syntax: operators such as
+         * `|`, `!`, `&`, `:*` and `<->` are read as ordinary characters.
+         * Defaults to `false`.
+         *
+         */
+        prefix?: 'true' | 'false';
+        /**
+         * When `false`, the total match count is not computed and `meta.total`
+         * is null (`meta.total_capped` is false). Use `meta.cursor` to tell
+         * whether another page exists. Skipping the count makes a broad query,
+         * such as a one-letter prefix, cheaper to serve. Defaults to `true`.
+         *
+         */
+        count?: 'true' | 'false';
     };
     url: '/emails/search';
 };

@@ -560,6 +560,34 @@ Function-scoped memories use the function id UUID, not the function name. The
 generated memory methods are `SetMemory`, `GetMemory`, `DeleteMemory`, and
 `SearchMemories`.
 
+### Searching received mail
+
+`SearchEmails` calls `GET /emails/search`. Each `EmailSearchResult` carries
+`ThreadID` (a `NilUUID`, null until the email has been threaded) and
+`Direction`. Set `ThreadID` to search one conversation, `Prefix` to match the
+last word of `Q` as a prefix while someone is still typing, and `Count` to
+`SearchEmailsCountFalse` to skip the total count when you only need the page.
+
+```go
+res, err := client.SearchEmails(ctx, primitiveapi.SearchEmailsParams{
+	Q:      primitiveapi.NewOptString("quarterly invoi"),
+	Prefix: primitiveapi.NewOptSearchEmailsPrefix(primitiveapi.SearchEmailsPrefixTrue),
+	Count:  primitiveapi.NewOptSearchEmailsCount(primitiveapi.SearchEmailsCountFalse),
+})
+if err != nil {
+	log.Fatal(err)
+}
+if page, ok := res.(*primitiveapi.SearchEmailsOK); ok {
+	if total, ok := page.Meta.Total.Get(); ok {
+		fmt.Println("matches:", total)
+	}
+}
+```
+
+`Meta.Total` is a `NilInt`: null when the request sets `Count` to false, a
+number otherwise. Use `Meta.Cursor` to tell whether another page exists. Search
+text containing a NUL character is rejected with a 400 validation error.
+
 ### Payment and interaction webhook events
 
 Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{"interaction": {...}}` with no event/type field at all.

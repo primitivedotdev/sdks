@@ -541,6 +541,44 @@ Function scope is available on the generated memory operations with
 `scope_type="function"` and `scope_id=<function-id>`; the id is the function
 UUID, not the function name.
 
+### Searching received mail
+
+`search_emails` calls `GET /emails/search`. Each result carries `thread_id`
+(`None` until the email has been threaded) and `direction`. Pass `thread_id`
+to search one conversation, `prefix=SearchEmailsPrefix.TRUE` to match the last
+word of `q` as a prefix while someone is still typing, and
+`count=SearchEmailsCount.FALSE` to skip the total count when you only need the
+page.
+
+```python
+from primitive.api import create_client
+from primitive.api.api.emails.search_emails import sync as search_emails
+from primitive.api.models.search_emails_count import SearchEmailsCount
+from primitive.api.models.search_emails_include_facets import (
+    SearchEmailsIncludeFacets,
+)
+from primitive.api.models.search_emails_prefix import SearchEmailsPrefix
+
+client = create_client("prim_test")
+page = search_emails(
+    client=client,
+    q="quarterly invoi",
+    prefix=SearchEmailsPrefix.TRUE,
+    count=SearchEmailsCount.FALSE,
+    include_facets=SearchEmailsIncludeFacets.FALSE,
+)
+```
+
+`page.meta.total` is `None` when the request sets `count` to false and an
+`int` otherwise; use `page.meta.cursor` to tell whether another page exists.
+Turning `include_facets` off skips the facet aggregation entirely. Search text
+containing a NUL character is rejected with a 400 validation error.
+
+Upgrading to 2.0: `EmailSearchMeta.total` is now typed `int | None`. It is
+`None` only when the request sets `count=SearchEmailsCount.FALSE`; type-checked
+code that treats it as an `int` needs a `None` check. Search results also gain
+the required `thread_id` and `direction` fields.
+
 ### Payment and interaction webhook events
 
 Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{"interaction": {...}}` with no event/type field at all.

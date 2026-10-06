@@ -32230,7 +32230,7 @@ func (s *EmailSearchMeta) Encode(e *jx.Encoder) {
 func (s *EmailSearchMeta) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("total")
-		e.Int(s.Total)
+		s.Total.Encode(e)
 	}
 	{
 		e.FieldStart("total_capped")
@@ -32270,9 +32270,7 @@ func (s *EmailSearchMeta) Decode(d *jx.Decoder) error {
 		case "total":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				v, err := d.Int()
-				s.Total = int(v)
-				if err != nil {
+				if err := s.Total.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -32505,10 +32503,8 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 		e.Int(s.WebhookAttemptCount)
 	}
 	{
-		if s.ThreadID.Set {
-			e.FieldStart("thread_id")
-			s.ThreadID.Encode(e)
-		}
+		e.FieldStart("thread_id")
+		s.ThreadID.Encode(e)
 	}
 	{
 		if s.PresenceControl.Set {
@@ -32602,9 +32598,13 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 			s.Highlights.Encode(e)
 		}
 	}
+	{
+		e.FieldStart("direction")
+		s.Direction.Encode(e)
+	}
 }
 
-var jsonFieldsNameOfEmailSearchResult = [33]string{
+var jsonFieldsNameOfEmailSearchResult = [34]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -32638,6 +32638,7 @@ var jsonFieldsNameOfEmailSearchResult = [33]string{
 	30: "from_known_address",
 	31: "score",
 	32: "highlights",
+	33: "direction",
 }
 
 // Decode decodes EmailSearchResult from json.
@@ -32814,8 +32815,8 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"webhook_attempt_count\"")
 			}
 		case "thread_id":
+			requiredBitSet[1] |= 1 << 7
 			if err := func() error {
-				s.ThreadID.Reset()
 				if err := s.ThreadID.Decode(d); err != nil {
 					return err
 				}
@@ -33011,6 +33012,16 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"highlights\"")
 			}
+		case "direction":
+			requiredBitSet[4] |= 1 << 1
+			if err := func() error {
+				if err := s.Direction.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"direction\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -33022,10 +33033,10 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [5]uint8{
 		0b01110001,
-		0b01001101,
+		0b11001101,
 		0b01111100,
 		0b01100000,
-		0b00000000,
+		0b00000010,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -33298,6 +33309,46 @@ func (s EmailSearchResultAwaiting) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *EmailSearchResultAwaiting) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes EmailSearchResultDirection as json.
+func (s EmailSearchResultDirection) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes EmailSearchResultDirection from json.
+func (s *EmailSearchResultDirection) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode EmailSearchResultDirection to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch EmailSearchResultDirection(v) {
+	case EmailSearchResultDirectionInbound:
+		*s = EmailSearchResultDirectionInbound
+	case EmailSearchResultDirectionOutbound:
+		*s = EmailSearchResultDirectionOutbound
+	default:
+		*s = EmailSearchResultDirection(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s EmailSearchResultDirection) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *EmailSearchResultDirection) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

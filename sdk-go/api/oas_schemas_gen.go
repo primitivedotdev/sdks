@@ -12306,8 +12306,9 @@ func (s *EmailSearchHighlights) SetBody(val []string) {
 
 // Ref: #/components/schemas/EmailSearchMeta
 type EmailSearchMeta struct {
-	// Total number of matching records, capped when `total_capped` is true.
-	Total int `json:"total"`
+	// Total number of matching records, capped when `total_capped` is true. Null when the request set
+	// `count=false`.
+	Total NilInt `json:"total"`
 	// Whether `total` was capped instead of counted exactly.
 	TotalCapped bool `json:"total_capped"`
 	// Page size used for this request.
@@ -12319,7 +12320,7 @@ type EmailSearchMeta struct {
 }
 
 // GetTotal returns the value of Total.
-func (s *EmailSearchMeta) GetTotal() int {
+func (s *EmailSearchMeta) GetTotal() NilInt {
 	return s.Total
 }
 
@@ -12344,7 +12345,7 @@ func (s *EmailSearchMeta) GetSort() EmailSearchMetaSort {
 }
 
 // SetTotal sets the value of Total.
-func (s *EmailSearchMeta) SetTotal(val int) {
+func (s *EmailSearchMeta) SetTotal(val NilInt) {
 	s.Total = val
 }
 
@@ -12443,10 +12444,8 @@ type EmailSearchResult struct {
 	RawSizeBytes        OptNilInt                `json:"raw_size_bytes"`
 	WebhookStatus       OptNilEmailWebhookStatus `json:"webhook_status"`
 	WebhookAttemptCount int                      `json:"webhook_attempt_count"`
-	// Conversation thread this message belongs to. Fetch
-	// `/threads/{thread_id}` for the full ordered thread. NULL on
-	// messages received before threading was enabled.
-	ThreadID        OptNilUUID                             `json:"thread_id"`
+	// Merged property.
+	ThreadID        NilUUID                                `json:"thread_id"`
 	PresenceControl OptNilEmailSearchResultPresenceControl `json:"presence_control"`
 	// What the message declared about being automated, verbatim:
 	// `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
@@ -12552,6 +12551,10 @@ type EmailSearchResult struct {
 	// Relevance score. Present only when sorting by relevance.
 	Score      OptFloat64               `json:"score"`
 	Highlights OptEmailSearchHighlights `json:"highlights"`
+	// Which side of the conversation the result is on: `inbound` for mail received by the organization.
+	// This endpoint currently returns received mail only, so every result is `inbound`; treat an
+	// unfamiliar value as one added after your client was built.
+	Direction EmailSearchResultDirection `json:"direction"`
 }
 
 // GetID returns the value of ID.
@@ -12630,7 +12633,7 @@ func (s *EmailSearchResult) GetWebhookAttemptCount() int {
 }
 
 // GetThreadID returns the value of ThreadID.
-func (s *EmailSearchResult) GetThreadID() OptNilUUID {
+func (s *EmailSearchResult) GetThreadID() NilUUID {
 	return s.ThreadID
 }
 
@@ -12719,6 +12722,11 @@ func (s *EmailSearchResult) GetHighlights() OptEmailSearchHighlights {
 	return s.Highlights
 }
 
+// GetDirection returns the value of Direction.
+func (s *EmailSearchResult) GetDirection() EmailSearchResultDirection {
+	return s.Direction
+}
+
 // SetID sets the value of ID.
 func (s *EmailSearchResult) SetID(val uuid.UUID) {
 	s.ID = val
@@ -12795,7 +12803,7 @@ func (s *EmailSearchResult) SetWebhookAttemptCount(val int) {
 }
 
 // SetThreadID sets the value of ThreadID.
-func (s *EmailSearchResult) SetThreadID(val OptNilUUID) {
+func (s *EmailSearchResult) SetThreadID(val NilUUID) {
 	s.ThreadID = val
 }
 
@@ -12882,6 +12890,11 @@ func (s *EmailSearchResult) SetScore(val OptFloat64) {
 // SetHighlights sets the value of Highlights.
 func (s *EmailSearchResult) SetHighlights(val OptEmailSearchHighlights) {
 	s.Highlights = val
+}
+
+// SetDirection sets the value of Direction.
+func (s *EmailSearchResult) SetDirection(val EmailSearchResultDirection) {
+	s.Direction = val
 }
 
 // What the message declared about being automated, verbatim:
@@ -13009,6 +13022,50 @@ func (s *EmailSearchResultAwaiting) UnmarshalText(data []byte) error {
 		return nil
 	case EmailSearchResultAwaitingThem:
 		*s = EmailSearchResultAwaitingThem
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Which side of the conversation the result is on: `inbound` for mail received by the organization.
+// This endpoint currently returns received mail only, so every result is `inbound`; treat an
+// unfamiliar value as one added after your client was built.
+type EmailSearchResultDirection string
+
+const (
+	EmailSearchResultDirectionInbound  EmailSearchResultDirection = "inbound"
+	EmailSearchResultDirectionOutbound EmailSearchResultDirection = "outbound"
+)
+
+// AllValues returns all EmailSearchResultDirection values.
+func (EmailSearchResultDirection) AllValues() []EmailSearchResultDirection {
+	return []EmailSearchResultDirection{
+		EmailSearchResultDirectionInbound,
+		EmailSearchResultDirectionOutbound,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s EmailSearchResultDirection) MarshalText() ([]byte, error) {
+	switch s {
+	case EmailSearchResultDirectionInbound:
+		return []byte(s), nil
+	case EmailSearchResultDirectionOutbound:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *EmailSearchResultDirection) UnmarshalText(data []byte) error {
+	switch EmailSearchResultDirection(data) {
+	case EmailSearchResultDirectionInbound:
+		*s = EmailSearchResultDirectionInbound
+		return nil
+	case EmailSearchResultDirectionOutbound:
+		*s = EmailSearchResultDirectionOutbound
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -29291,6 +29348,52 @@ func (o OptSearchEmailsAwaiting) Or(d SearchEmailsAwaiting) SearchEmailsAwaiting
 	return d
 }
 
+// NewOptSearchEmailsCount returns new OptSearchEmailsCount with value set to v.
+func NewOptSearchEmailsCount(v SearchEmailsCount) OptSearchEmailsCount {
+	return OptSearchEmailsCount{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsCount is optional SearchEmailsCount.
+type OptSearchEmailsCount struct {
+	Value SearchEmailsCount
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsCount was set.
+func (o OptSearchEmailsCount) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsCount) Reset() {
+	var v SearchEmailsCount
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsCount) SetTo(v SearchEmailsCount) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsCount) Get() (v SearchEmailsCount, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsCount) Or(d SearchEmailsCount) SearchEmailsCount {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSearchEmailsHasAttachment returns new OptSearchEmailsHasAttachment with value set to v.
 func NewOptSearchEmailsHasAttachment(v SearchEmailsHasAttachment) OptSearchEmailsHasAttachment {
 	return OptSearchEmailsHasAttachment{
@@ -29377,6 +29480,52 @@ func (o OptSearchEmailsIncludeFacets) Get() (v SearchEmailsIncludeFacets, ok boo
 
 // Or returns value if set, or given parameter if does not.
 func (o OptSearchEmailsIncludeFacets) Or(d SearchEmailsIncludeFacets) SearchEmailsIncludeFacets {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSearchEmailsPrefix returns new OptSearchEmailsPrefix with value set to v.
+func NewOptSearchEmailsPrefix(v SearchEmailsPrefix) OptSearchEmailsPrefix {
+	return OptSearchEmailsPrefix{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsPrefix is optional SearchEmailsPrefix.
+type OptSearchEmailsPrefix struct {
+	Value SearchEmailsPrefix
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsPrefix was set.
+func (o OptSearchEmailsPrefix) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsPrefix) Reset() {
+	var v SearchEmailsPrefix
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsPrefix) SetTo(v SearchEmailsPrefix) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsPrefix) Get() (v SearchEmailsPrefix, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsPrefix) Or(d SearchEmailsPrefix) SearchEmailsPrefix {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -36229,6 +36378,47 @@ type SearchEmailsBadRequest ErrorResponse
 
 func (*SearchEmailsBadRequest) searchEmailsRes() {}
 
+type SearchEmailsCount string
+
+const (
+	SearchEmailsCountTrue  SearchEmailsCount = "true"
+	SearchEmailsCountFalse SearchEmailsCount = "false"
+)
+
+// AllValues returns all SearchEmailsCount values.
+func (SearchEmailsCount) AllValues() []SearchEmailsCount {
+	return []SearchEmailsCount{
+		SearchEmailsCountTrue,
+		SearchEmailsCountFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsCount) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsCountTrue:
+		return []byte(s), nil
+	case SearchEmailsCountFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsCount) UnmarshalText(data []byte) error {
+	switch SearchEmailsCount(data) {
+	case SearchEmailsCountTrue:
+		*s = SearchEmailsCountTrue
+		return nil
+	case SearchEmailsCountFalse:
+		*s = SearchEmailsCountFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type SearchEmailsGatewayTimeout ErrorResponse
 
 func (*SearchEmailsGatewayTimeout) searchEmailsRes() {}
@@ -36368,6 +36558,47 @@ func (s *SearchEmailsOK) SetFacets(val OptEmailSearchFacets) {
 }
 
 func (*SearchEmailsOK) searchEmailsRes() {}
+
+type SearchEmailsPrefix string
+
+const (
+	SearchEmailsPrefixTrue  SearchEmailsPrefix = "true"
+	SearchEmailsPrefixFalse SearchEmailsPrefix = "false"
+)
+
+// AllValues returns all SearchEmailsPrefix values.
+func (SearchEmailsPrefix) AllValues() []SearchEmailsPrefix {
+	return []SearchEmailsPrefix{
+		SearchEmailsPrefixTrue,
+		SearchEmailsPrefixFalse,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsPrefix) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsPrefixTrue:
+		return []byte(s), nil
+	case SearchEmailsPrefixFalse:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsPrefix) UnmarshalText(data []byte) error {
+	switch SearchEmailsPrefix(data) {
+	case SearchEmailsPrefixTrue:
+		*s = SearchEmailsPrefixTrue
+		return nil
+	case SearchEmailsPrefixFalse:
+		*s = SearchEmailsPrefixFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type SearchEmailsSnippet string
 

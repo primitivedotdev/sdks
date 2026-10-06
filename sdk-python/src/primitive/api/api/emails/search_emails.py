@@ -12,8 +12,10 @@ from ...models.email_status import EmailStatus
 from ...models.error_response import ErrorResponse
 from ...models.search_emails_automated import SearchEmailsAutomated
 from ...models.search_emails_awaiting import SearchEmailsAwaiting
+from ...models.search_emails_count import SearchEmailsCount
 from ...models.search_emails_has_attachment import SearchEmailsHasAttachment
 from ...models.search_emails_include_facets import SearchEmailsIncludeFacets
+from ...models.search_emails_prefix import SearchEmailsPrefix
 from ...models.search_emails_response_200 import SearchEmailsResponse200
 from ...models.search_emails_snippet import SearchEmailsSnippet
 from ...models.search_emails_sort import SearchEmailsSort
@@ -47,6 +49,9 @@ def _get_kwargs(
     limit: int | Unset = 50,
     snippet: SearchEmailsSnippet | Unset = SearchEmailsSnippet.TRUE,
     include_facets: SearchEmailsIncludeFacets | Unset = SearchEmailsIncludeFacets.TRUE,
+    thread_id: UUID | Unset = UNSET,
+    prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
+    count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
 
 ) -> dict[str, Any]:
     
@@ -134,6 +139,23 @@ def _get_kwargs(
         json_include_facets = include_facets.value
 
     params["include_facets"] = json_include_facets
+
+    json_thread_id: str | Unset = UNSET
+    if not isinstance(thread_id, Unset):
+        json_thread_id = str(thread_id)
+    params["thread_id"] = json_thread_id
+
+    json_prefix: str | Unset = UNSET
+    if not isinstance(prefix, Unset):
+        json_prefix = prefix.value
+
+    params["prefix"] = json_prefix
+
+    json_count: str | Unset = UNSET
+    if not isinstance(count, Unset):
+        json_count = count.value
+
+    params["count"] = json_count
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -224,6 +246,9 @@ def sync_detailed(
     limit: int | Unset = 50,
     snippet: SearchEmailsSnippet | Unset = SearchEmailsSnippet.TRUE,
     include_facets: SearchEmailsIncludeFacets | Unset = SearchEmailsIncludeFacets.TRUE,
+    thread_id: UUID | Unset = UNSET,
+    prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
+    count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
 
 ) -> Response[ErrorResponse | SearchEmailsResponse200]:
     """ Search inbound emails
@@ -239,6 +264,10 @@ def sync_detailed(
     as the web inbox search. Structured filters such as `from`, `to`,
     `domain_id`, status, attachment presence, and spam score bounds
     are combined with the text query.
+
+    The text parameters (`q`, `from`, `to`, `subject` and `body`) must not
+    contain a NUL character; a value that does is rejected with a 400
+    validation error.
 
     Connected-agent credentials search only mail received by their own
     address. This applies to results, totals, facets, and every page;
@@ -296,6 +325,9 @@ def sync_detailed(
         snippet (SearchEmailsSnippet | Unset):  Default: SearchEmailsSnippet.TRUE.
         include_facets (SearchEmailsIncludeFacets | Unset):  Default:
             SearchEmailsIncludeFacets.TRUE.
+        thread_id (UUID | Unset):
+        prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
+        count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -327,6 +359,9 @@ cursor=cursor,
 limit=limit,
 snippet=snippet,
 include_facets=include_facets,
+thread_id=thread_id,
+prefix=prefix,
+count=count,
 
     )
 
@@ -359,6 +394,9 @@ def sync(
     limit: int | Unset = 50,
     snippet: SearchEmailsSnippet | Unset = SearchEmailsSnippet.TRUE,
     include_facets: SearchEmailsIncludeFacets | Unset = SearchEmailsIncludeFacets.TRUE,
+    thread_id: UUID | Unset = UNSET,
+    prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
+    count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
 
 ) -> ErrorResponse | SearchEmailsResponse200 | None:
     """ Search inbound emails
@@ -374,6 +412,10 @@ def sync(
     as the web inbox search. Structured filters such as `from`, `to`,
     `domain_id`, status, attachment presence, and spam score bounds
     are combined with the text query.
+
+    The text parameters (`q`, `from`, `to`, `subject` and `body`) must not
+    contain a NUL character; a value that does is rejected with a 400
+    validation error.
 
     Connected-agent credentials search only mail received by their own
     address. This applies to results, totals, facets, and every page;
@@ -431,6 +473,9 @@ def sync(
         snippet (SearchEmailsSnippet | Unset):  Default: SearchEmailsSnippet.TRUE.
         include_facets (SearchEmailsIncludeFacets | Unset):  Default:
             SearchEmailsIncludeFacets.TRUE.
+        thread_id (UUID | Unset):
+        prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
+        count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -463,6 +508,9 @@ cursor=cursor,
 limit=limit,
 snippet=snippet,
 include_facets=include_facets,
+thread_id=thread_id,
+prefix=prefix,
+count=count,
 
     ).parsed
 
@@ -489,6 +537,9 @@ async def asyncio_detailed(
     limit: int | Unset = 50,
     snippet: SearchEmailsSnippet | Unset = SearchEmailsSnippet.TRUE,
     include_facets: SearchEmailsIncludeFacets | Unset = SearchEmailsIncludeFacets.TRUE,
+    thread_id: UUID | Unset = UNSET,
+    prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
+    count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
 
 ) -> Response[ErrorResponse | SearchEmailsResponse200]:
     """ Search inbound emails
@@ -504,6 +555,10 @@ async def asyncio_detailed(
     as the web inbox search. Structured filters such as `from`, `to`,
     `domain_id`, status, attachment presence, and spam score bounds
     are combined with the text query.
+
+    The text parameters (`q`, `from`, `to`, `subject` and `body`) must not
+    contain a NUL character; a value that does is rejected with a 400
+    validation error.
 
     Connected-agent credentials search only mail received by their own
     address. This applies to results, totals, facets, and every page;
@@ -561,6 +616,9 @@ async def asyncio_detailed(
         snippet (SearchEmailsSnippet | Unset):  Default: SearchEmailsSnippet.TRUE.
         include_facets (SearchEmailsIncludeFacets | Unset):  Default:
             SearchEmailsIncludeFacets.TRUE.
+        thread_id (UUID | Unset):
+        prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
+        count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -592,6 +650,9 @@ cursor=cursor,
 limit=limit,
 snippet=snippet,
 include_facets=include_facets,
+thread_id=thread_id,
+prefix=prefix,
+count=count,
 
     )
 
@@ -624,6 +685,9 @@ async def asyncio(
     limit: int | Unset = 50,
     snippet: SearchEmailsSnippet | Unset = SearchEmailsSnippet.TRUE,
     include_facets: SearchEmailsIncludeFacets | Unset = SearchEmailsIncludeFacets.TRUE,
+    thread_id: UUID | Unset = UNSET,
+    prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
+    count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
 
 ) -> ErrorResponse | SearchEmailsResponse200 | None:
     """ Search inbound emails
@@ -639,6 +703,10 @@ async def asyncio(
     as the web inbox search. Structured filters such as `from`, `to`,
     `domain_id`, status, attachment presence, and spam score bounds
     are combined with the text query.
+
+    The text parameters (`q`, `from`, `to`, `subject` and `body`) must not
+    contain a NUL character; a value that does is rejected with a 400
+    validation error.
 
     Connected-agent credentials search only mail received by their own
     address. This applies to results, totals, facets, and every page;
@@ -696,6 +764,9 @@ async def asyncio(
         snippet (SearchEmailsSnippet | Unset):  Default: SearchEmailsSnippet.TRUE.
         include_facets (SearchEmailsIncludeFacets | Unset):  Default:
             SearchEmailsIncludeFacets.TRUE.
+        thread_id (UUID | Unset):
+        prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
+        count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -728,5 +799,8 @@ cursor=cursor,
 limit=limit,
 snippet=snippet,
 include_facets=include_facets,
+thread_id=thread_id,
+prefix=prefix,
+count=count,
 
     )).parsed

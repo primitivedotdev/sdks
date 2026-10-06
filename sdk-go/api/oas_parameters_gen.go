@@ -10953,8 +10953,32 @@ type SearchEmailsParams struct {
 	Limit OptInt `json:",omitempty,omitzero"`
 	// Include subject/body highlight snippets when text search is active.
 	Snippet OptSearchEmailsSnippet `json:",omitempty,omitzero"`
-	// Include facet counts for sender, domain, status, and attachment presence.
+	// Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet
+	// aggregation is not run at all.
 	IncludeFacets OptSearchEmailsIncludeFacets `json:",omitempty,omitzero"`
+	// Only return emails in this thread (the `thread_id` each result carries). Combines with `q` and
+	// every other filter, and with pagination. Visibility is unchanged; an agent connection still sees
+	// only mail received by its address.
+	ThreadID OptUUID `json:",omitempty,omitzero"`
+	// Search-as-you-type. When `true`, the final word of `q` is treated as
+	// still being typed and matches any word that begins with it, so
+	// `q=quarterly invoi` finds "invoice" and "invoicing". Only the final
+	// word is affected, and only when it is unquoted text (a bare word or
+	// `subject:`/`body:` with a bare value); a quoted phrase or a field
+	// filter in the final position leaves the query unchanged. The final
+	// word is kept even when it is a stop word, so `q=the` matches
+	// "theory". Matching is against the same stemmed index as a whole-word
+	// search, so a partial word whose spelling diverges from its stem
+	// (`runni` for "running") may not match until the word is complete.
+	// The text is never interpreted as query syntax: operators such as
+	// `|`, `!`, `&`, `:*` and `<->` are read as ordinary characters.
+	// Defaults to `false`.
+	Prefix OptSearchEmailsPrefix `json:",omitempty,omitzero"`
+	// When `false`, the total match count is not computed and `meta.total`
+	// is null (`meta.total_capped` is false). Use `meta.cursor` to tell
+	// whether another page exists. Skipping the count makes a broad query,
+	// such as a one-letter prefix, cheaper to serve. Defaults to `true`.
+	Count OptSearchEmailsCount `json:",omitempty,omitzero"`
 }
 
 func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmailsParams) {
@@ -11136,6 +11160,33 @@ func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmails
 		}
 		if v, ok := packed[key]; ok {
 			params.IncludeFacets = v.(OptSearchEmailsIncludeFacets)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "thread_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ThreadID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "prefix",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Prefix = v.(OptSearchEmailsPrefix)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "count",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Count = v.(OptSearchEmailsCount)
 		}
 	}
 	return params
@@ -12296,6 +12347,169 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "include_facets",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: thread_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "thread_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotThreadIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotThreadIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ThreadID.SetTo(paramsDotThreadIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "thread_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: prefix.
+	{
+		val := SearchEmailsPrefix("false")
+		params.Prefix.SetTo(val)
+	}
+	// Decode query: prefix.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "prefix",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotPrefixVal SearchEmailsPrefix
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotPrefixVal = SearchEmailsPrefix(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Prefix.SetTo(paramsDotPrefixVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Prefix.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "prefix",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: count.
+	{
+		val := SearchEmailsCount("true")
+		params.Count.SetTo(val)
+	}
+	// Decode query: count.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "count",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotCountVal SearchEmailsCount
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotCountVal = SearchEmailsCount(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Count.SetTo(paramsDotCountVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Count.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "count",
 			In:   "query",
 			Err:  err,
 		}

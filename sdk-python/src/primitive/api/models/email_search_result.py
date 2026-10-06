@@ -8,6 +8,7 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from ..models.email_search_result_direction import EmailSearchResultDirection
 from ..models.email_status import EmailStatus
 from ..models.email_summary_awaiting import EmailSummaryAwaiting
 from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
@@ -130,9 +131,14 @@ class EmailSearchResult:
                 `list_unsubscribe`, `list_id`, `auto_response_suppress`,
                 `failed_recipients`, `report`. Treat an unfamiliar value as a
                 reason added after your client was built.
+            thread_id (None | UUID): The conversation thread this email belongs to, usable with `thread_id` on this endpoint
+                and with `/threads/{id}`. Null until the email has been threaded.
             attachment_count (int): Number of parsed attachments on the email.
             from_known_address (bool): Whether the parsed From address is known to this org from prior authenticated inbound
                 mail.
+            direction (EmailSearchResultDirection): Which side of the conversation the result is on: `inbound` for mail
+                received by the organization. This endpoint currently returns received mail only, so every result is `inbound`;
+                treat an unfamiliar value as one added after your client was built.
             message_id (None | str | Unset):
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
@@ -162,9 +168,6 @@ class EmailSearchResult:
                 is `pending`; it means the email is past ingestion but
                 webhook delivery has not yet begun. Two overlapping uses
                 of the word `pending` for distinct lifecycle phases.
-            thread_id (None | Unset | UUID): Conversation thread this message belongs to. Fetch
-                `/threads/{thread_id}` for the full ordered thread. NULL on
-                messages received before threading was enabled.
             presence_control (None | PresenceControlType0 | Unset):
             automation_headers (EmailSummaryAutomationHeadersType0 | None | Unset): What the message declared about being
                 automated, verbatim:
@@ -217,8 +220,10 @@ class EmailSearchResult:
     awaiting: EmailSummaryAwaiting
     automated: bool
     automated_reasons: list[str]
+    thread_id: None | UUID
     attachment_count: int
     from_known_address: bool
+    direction: EmailSearchResultDirection
     message_id: None | str | Unset = UNSET
     domain_id: None | Unset | UUID = UNSET
     org_id: None | Unset | UUID = UNSET
@@ -226,7 +231,6 @@ class EmailSearchResult:
     spam_score: float | None | Unset = UNSET
     raw_size_bytes: int | None | Unset = UNSET
     webhook_status: EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset = UNSET
-    thread_id: None | Unset | UUID = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
     automation_headers: EmailSummaryAutomationHeadersType0 | None | Unset = UNSET
     repeat: EmailSummaryRepeatType0 | None | Unset = UNSET
@@ -281,9 +285,17 @@ class EmailSearchResult:
 
 
 
+        thread_id: None | str
+        if isinstance(self.thread_id, UUID):
+            thread_id = str(self.thread_id)
+        else:
+            thread_id = self.thread_id
+
         attachment_count = self.attachment_count
 
         from_known_address = self.from_known_address
+
+        direction = self.direction.value
 
         message_id: None | str | Unset
         if isinstance(self.message_id, Unset):
@@ -336,14 +348,6 @@ class EmailSearchResult:
             webhook_status = self.webhook_status.value
         else:
             webhook_status = self.webhook_status
-
-        thread_id: None | str | Unset
-        if isinstance(self.thread_id, Unset):
-            thread_id = UNSET
-        elif isinstance(self.thread_id, UUID):
-            thread_id = str(self.thread_id)
-        else:
-            thread_id = self.thread_id
 
         presence_control: dict[str, Any] | None | Unset
         if isinstance(self.presence_control, Unset):
@@ -412,8 +416,10 @@ class EmailSearchResult:
             "awaiting": awaiting,
             "automated": automated,
             "automated_reasons": automated_reasons,
+            "thread_id": thread_id,
             "attachment_count": attachment_count,
             "from_known_address": from_known_address,
+            "direction": direction,
         })
         if message_id is not UNSET:
             field_dict["message_id"] = message_id
@@ -429,8 +435,6 @@ class EmailSearchResult:
             field_dict["raw_size_bytes"] = raw_size_bytes
         if webhook_status is not UNSET:
             field_dict["webhook_status"] = webhook_status
-        if thread_id is not UNSET:
-            field_dict["thread_id"] = thread_id
         if presence_control is not UNSET:
             field_dict["presence_control"] = presence_control
         if automation_headers is not UNSET:
@@ -522,9 +526,32 @@ class EmailSearchResult:
         automated_reasons = cast(list[str], d.pop("automated_reasons"))
 
 
+        def _parse_thread_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                thread_id_type_0 = UUID(data)
+
+
+
+                return thread_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        thread_id = _parse_thread_id(d.pop("thread_id"))
+
+
         attachment_count = d.pop("attachment_count")
 
         from_known_address = d.pop("from_known_address")
+
+        direction = EmailSearchResultDirection(d.pop("direction"))
+
+
+
 
         def _parse_message_id(data: object) -> None | str | Unset:
             if data is None:
@@ -644,26 +671,6 @@ class EmailSearchResult:
             return cast(EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset, data)
 
         webhook_status = _parse_webhook_status(d.pop("webhook_status", UNSET))
-
-
-        def _parse_thread_id(data: object) -> None | Unset | UUID:
-            if data is None:
-                return data
-            if isinstance(data, Unset):
-                return data
-            try:
-                if not isinstance(data, str):
-                    raise TypeError()
-                thread_id_type_0 = UUID(data)
-
-
-
-                return thread_id_type_0
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
-            return cast(None | Unset | UUID, data)
-
-        thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
 
 
         def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
@@ -788,8 +795,10 @@ class EmailSearchResult:
             awaiting=awaiting,
             automated=automated,
             automated_reasons=automated_reasons,
+            thread_id=thread_id,
             attachment_count=attachment_count,
             from_known_address=from_known_address,
+            direction=direction,
             message_id=message_id,
             domain_id=domain_id,
             org_id=org_id,
@@ -797,7 +806,6 @@ class EmailSearchResult:
             spam_score=spam_score,
             raw_size_bytes=raw_size_bytes,
             webhook_status=webhook_status,
-            thread_id=thread_id,
             presence_control=presence_control,
             automation_headers=automation_headers,
             repeat=repeat,

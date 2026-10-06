@@ -22,6 +22,7 @@ function makeEmail(
     reply_count: 0,
     created_at: "2026-05-08T00:00:00.000Z",
     domain: "example.com",
+    direction: "inbound",
     from_known_address: false,
     id: "11111111-1111-4111-8111-111111111111",
     received_at: "2026-05-08T00:00:00.000Z",
@@ -29,6 +30,7 @@ function makeEmail(
     sender: "sender@example.net",
     status: "accepted",
     webhook_attempt_count: 0,
+    thread_id: null,
     ...overrides,
   };
 }

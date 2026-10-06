@@ -8467,7 +8467,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": false,
     "command": "search-emails",
-    "description": "Searches inbound emails with structured filters and optional\nfull-text matching across parsed email fields. This endpoint is\noptimized for filtered inbox views and CLI polling workflows:\ncallers that only need new accepted mail can pass\n`sort=received_at_asc`, `snippet=false`, `include_facets=false`,\nand a `date_from` timestamp.\n\n`q`, `subject`, and `body` use the same English full-text index\nas the web inbox search. Structured filters such as `from`, `to`,\n`domain_id`, status, attachment presence, and spam score bounds\nare combined with the text query.\n\nConnected-agent credentials search only mail received by their own\naddress. This applies to results, totals, facets, and every page;\nsearch filters cannot widen the credential's scope. When\n`reply_to_sent_email_id` is supplied, its parent send must belong\nto the connected address in the same organization. An unavailable\nparent returns 404. Sender filters are not authentication proof;\ninspect the email detail's authentication evidence before trusting it.\n",
+    "description": "Searches inbound emails with structured filters and optional\nfull-text matching across parsed email fields. This endpoint is\noptimized for filtered inbox views and CLI polling workflows:\ncallers that only need new accepted mail can pass\n`sort=received_at_asc`, `snippet=false`, `include_facets=false`,\nand a `date_from` timestamp.\n\n`q`, `subject`, and `body` use the same English full-text index\nas the web inbox search. Structured filters such as `from`, `to`,\n`domain_id`, status, attachment presence, and spam score bounds\nare combined with the text query.\n\nThe text parameters (`q`, `from`, `to`, `subject` and `body`) must not\ncontain a NUL character; a value that does is rejected with a 400\nvalidation error.\n\nConnected-agent credentials search only mail received by their own\naddress. This applies to results, totals, facets, and every page;\nsearch filters cannot widen the credential's scope. When\n`reply_to_sent_email_id` is supplied, its parent send must belong\nto the connected address in the same organization. An unavailable\nparent returns 404. Sender filters are not authentication proof;\ninspect the email detail's authentication evidence before trusting it.\n",
     "hasJsonBody": false,
     "method": "GET",
     "operationId": "searchEmails",
@@ -8629,12 +8629,41 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       {
         "default": "true",
-        "description": "Include facet counts for sender, domain, status, and attachment presence.",
+        "description": "Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet aggregation is not run at all.",
         "enum": [
           "true",
           "false"
         ],
         "name": "include_facets",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Only return emails in this thread (the `thread_id` each result carries). Combines with `q` and every other filter, and with pagination. Visibility is unchanged; an agent connection still sees only mail received by its address.",
+        "enum": null,
+        "name": "thread_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Search-as-you-type. When `true`, the final word of `q` is treated as\nstill being typed and matches any word that begins with it, so\n`q=quarterly invoi` finds \"invoice\" and \"invoicing\". Only the final\nword is affected, and only when it is unquoted text (a bare word or\n`subject:`/`body:` with a bare value); a quoted phrase or a field\nfilter in the final position leaves the query unchanged. The final\nword is kept even when it is a stop word, so `q=the` matches\n\"theory\". Matching is against the same stemmed index as a whole-word\nsearch, so a partial word whose spelling diverges from its stem\n(`runni` for \"running\") may not match until the word is complete.\nThe text is never interpreted as query syntax: operators such as\n`|`, `!`, `&`, `:*` and `<->` are read as ordinary characters.\nDefaults to `false`.\n",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "When `false`, the total match count is not computed and `meta.total`\nis null (`meta.total_capped` is false). Use `meta.cursor` to tell\nwhether another page exists. Skipping the count makes a broad query,\nsuch as a one-letter prefix, cheaper to serve. Defaults to `true`.\n",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "count",
         "required": false,
         "type": "string"
       }
@@ -8948,11 +8977,29 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "subject",
                   "body"
                 ]
+              },
+              "thread_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "The conversation thread this email belongs to, usable with `thread_id` on this endpoint and with `/threads/{id}`. Null until the email has been threaded."
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "inbound",
+                  "outbound"
+                ],
+                "description": "Which side of the conversation the result is on: `inbound` for mail received by the organization. This endpoint currently returns received mail only, so every result is `inbound`; treat an unfamiliar value as one added after your client was built."
               }
             },
             "required": [
               "attachment_count",
-              "from_known_address"
+              "from_known_address",
+              "thread_id",
+              "direction"
             ]
           }
         ]
