@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.agent_network_contact_admission_sender_relation import AgentNetworkContactAdmissionSenderRelation
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -97,7 +96,7 @@ class AgentNetworkContactAdmission:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                allowed_since_type_0 = isoparse(data)
+                allowed_since_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

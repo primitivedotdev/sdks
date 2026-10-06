@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -218,7 +217,7 @@ class FunctionTestRunOutboundRequest:
         error = _parse_error(d.pop("error"))
 
 
-        ts = isoparse(d.pop("ts"))
+        ts = datetime.datetime.fromisoformat(d.pop("ts"))
 
 
 

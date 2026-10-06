@@ -75,7 +75,7 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetWebhookSecretResponse200]:
-    r""" Get webhook signing secret
+    """ Get webhook signing secret
 
      Returns the webhook signing secret for your account. If no
     secret exists yet, one is generated automatically on first
@@ -92,7 +92,7 @@ def sync_detailed(
     delivery body. Base64-decoding before HMAC will silently
     produce mismatched signatures.
 
-    See the API-level \"Webhook signing\" section for the full
+    See the API-level "Webhook signing" section for the full
     wire format (header name, signed string shape, hash algo,
     tolerance) including a language-agnostic verification
     recipe.
@@ -121,7 +121,7 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetWebhookSecretResponse200 | None:
-    r""" Get webhook signing secret
+    """ Get webhook signing secret
 
      Returns the webhook signing secret for your account. If no
     secret exists yet, one is generated automatically on first
@@ -138,7 +138,7 @@ def sync(
     delivery body. Base64-decoding before HMAC will silently
     produce mismatched signatures.
 
-    See the API-level \"Webhook signing\" section for the full
+    See the API-level "Webhook signing" section for the full
     wire format (header name, signed string shape, hash algo,
     tolerance) including a language-agnostic verification
     recipe.
@@ -162,7 +162,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetWebhookSecretResponse200]:
-    r""" Get webhook signing secret
+    """ Get webhook signing secret
 
      Returns the webhook signing secret for your account. If no
     secret exists yet, one is generated automatically on first
@@ -179,7 +179,7 @@ async def asyncio_detailed(
     delivery body. Base64-decoding before HMAC will silently
     produce mismatched signatures.
 
-    See the API-level \"Webhook signing\" section for the full
+    See the API-level "Webhook signing" section for the full
     wire format (header name, signed string shape, hash algo,
     tolerance) including a language-agnostic verification
     recipe.
@@ -208,7 +208,7 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetWebhookSecretResponse200 | None:
-    r""" Get webhook signing secret
+    """ Get webhook signing secret
 
      Returns the webhook signing secret for your account. If no
     secret exists yet, one is generated automatically on first
@@ -225,7 +225,7 @@ async def asyncio(
     delivery body. Base64-decoding before HMAC will silently
     produce mismatched signatures.
 
-    See the API-level \"Webhook signing\" section for the full
+    See the API-level "Webhook signing" section for the full
     wire format (header name, signed string shape, hash algo,
     tolerance) including a language-agnostic verification
     recipe.

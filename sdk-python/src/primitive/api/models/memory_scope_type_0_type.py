@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class MemoryScopeType0Type(str, Enum):
+class MemoryScopeType0Type(StrEnum):
     ORG = "org"
 
     def __str__(self) -> str:

@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.function_deploy_status import FunctionDeployStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -125,12 +124,12 @@ class FunctionDetail:
 
 
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        updated_at = isoparse(d.pop("updated_at"))
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
 
@@ -153,7 +152,7 @@ class FunctionDetail:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                deployed_at_type_0 = isoparse(data)
+                deployed_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

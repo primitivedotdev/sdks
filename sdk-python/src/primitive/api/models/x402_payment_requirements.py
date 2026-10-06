@@ -57,7 +57,7 @@ class X402PaymentRequirements:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.x402_payment_requirements_extra import X402PaymentRequirementsExtra
+        from ..models.x402_payment_requirements_extra import X402PaymentRequirementsExtra # noqa: PLC0415
         scheme = self.scheme
 
         network = self.network.value
@@ -100,7 +100,7 @@ class X402PaymentRequirements:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.x402_payment_requirements_extra import X402PaymentRequirementsExtra
+        from ..models.x402_payment_requirements_extra import X402PaymentRequirementsExtra # noqa: PLC0415
         d = dict(src_dict)
         scheme = d.pop("scheme")
 

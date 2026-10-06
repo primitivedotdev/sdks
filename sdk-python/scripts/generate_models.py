@@ -195,7 +195,7 @@ def main() -> None:
             "--snake-case-field",
             "--field-constraints",
             "--target-python-version",
-            "3.10",
+            "3.11",
             "--disable-timestamp",
             "--use-annotated",
             "--use-union-operator",

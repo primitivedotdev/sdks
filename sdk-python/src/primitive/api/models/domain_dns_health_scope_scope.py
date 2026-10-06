@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class DomainDnsHealthScopeScope(str, Enum):
+class DomainDnsHealthScopeScope(StrEnum):
     INBOUND = "inbound"
     OUTBOUND = "outbound"
     OWNERSHIP = "ownership"

@@ -36,7 +36,7 @@ class ListFunctionSecretsResponse200Data:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_secret_list_item import FunctionSecretListItem
+        from ..models.function_secret_list_item import FunctionSecretListItem # noqa: PLC0415
         items = []
         for items_item_data in self.items:
             items_item = items_item_data.to_dict()
@@ -57,7 +57,7 @@ class ListFunctionSecretsResponse200Data:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_secret_list_item import FunctionSecretListItem
+        from ..models.function_secret_list_item import FunctionSecretListItem # noqa: PLC0415
         d = dict(src_dict)
         items = []
         _items = d.pop("items")

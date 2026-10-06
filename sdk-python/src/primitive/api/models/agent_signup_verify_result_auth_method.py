@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class AgentSignupVerifyResultAuthMethod(str, Enum):
+class AgentSignupVerifyResultAuthMethod(StrEnum):
     OAUTH = "oauth"
 
     def __str__(self) -> str:

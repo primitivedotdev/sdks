@@ -34,7 +34,6 @@ def _get_kwargs(
 
     _kwargs["json"] = body.to_dict()
 
-
     headers["Content-Type"] = "application/json"
 
     _kwargs["headers"] = headers
@@ -106,7 +105,7 @@ def sync_detailed(
     body: CreateChallengeInput,
 
 ) -> Response[CreateChallengeResponse201 | ErrorResponse]:
-    r""" Create a payment challenge
+    """ Create a payment challenge
 
      Create an x402 payment challenge (the payee side of a payment). The
     `pay_to` address is resolved server-side from your registered default
@@ -114,7 +113,7 @@ def sync_detailed(
     carries the `nonce_binding` and `payment_requirements` the payer needs to
     sign; hand the whole challenge object to the payer (for example in an
     email reply). Amounts are in token base units (USDC has 6 decimals, so
-    `\"10000\"` is 0.01 USDC).
+    `"10000"` is 0.01 USDC).
 
     Args:
         body (CreateChallengeInput):
@@ -145,7 +144,7 @@ def sync(
     body: CreateChallengeInput,
 
 ) -> CreateChallengeResponse201 | ErrorResponse | None:
-    r""" Create a payment challenge
+    """ Create a payment challenge
 
      Create an x402 payment challenge (the payee side of a payment). The
     `pay_to` address is resolved server-side from your registered default
@@ -153,7 +152,7 @@ def sync(
     carries the `nonce_binding` and `payment_requirements` the payer needs to
     sign; hand the whole challenge object to the payer (for example in an
     email reply). Amounts are in token base units (USDC has 6 decimals, so
-    `\"10000\"` is 0.01 USDC).
+    `"10000"` is 0.01 USDC).
 
     Args:
         body (CreateChallengeInput):
@@ -179,7 +178,7 @@ async def asyncio_detailed(
     body: CreateChallengeInput,
 
 ) -> Response[CreateChallengeResponse201 | ErrorResponse]:
-    r""" Create a payment challenge
+    """ Create a payment challenge
 
      Create an x402 payment challenge (the payee side of a payment). The
     `pay_to` address is resolved server-side from your registered default
@@ -187,7 +186,7 @@ async def asyncio_detailed(
     carries the `nonce_binding` and `payment_requirements` the payer needs to
     sign; hand the whole challenge object to the payer (for example in an
     email reply). Amounts are in token base units (USDC has 6 decimals, so
-    `\"10000\"` is 0.01 USDC).
+    `"10000"` is 0.01 USDC).
 
     Args:
         body (CreateChallengeInput):
@@ -218,7 +217,7 @@ async def asyncio(
     body: CreateChallengeInput,
 
 ) -> CreateChallengeResponse201 | ErrorResponse | None:
-    r""" Create a payment challenge
+    """ Create a payment challenge
 
      Create an x402 payment challenge (the payee side of a payment). The
     `pay_to` address is resolved server-side from your registered default
@@ -226,7 +225,7 @@ async def asyncio(
     carries the `nonce_binding` and `payment_requirements` the payer needs to
     sign; hand the whole challenge object to the payer (for example in an
     email reply). Amounts are in token base units (USDC has 6 decimals, so
-    `\"10000\"` is 0.01 USDC).
+    `"10000"` is 0.01 USDC).
 
     Args:
         body (CreateChallengeInput):

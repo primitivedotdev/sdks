@@ -38,7 +38,7 @@ class ListFunctionLogsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.list_function_logs_response_200_data import ListFunctionLogsResponse200Data
+        from ..models.list_function_logs_response_200_data import ListFunctionLogsResponse200Data # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,7 +60,7 @@ class ListFunctionLogsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.list_function_logs_response_200_data import ListFunctionLogsResponse200Data
+        from ..models.list_function_logs_response_200_data import ListFunctionLogsResponse200Data # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

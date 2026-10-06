@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class RegisterPayoutAddressInputNetwork(str, Enum):
+class RegisterPayoutAddressInputNetwork(StrEnum):
     BASE = "base"
     BASE_SEPOLIA = "base-sepolia"
 

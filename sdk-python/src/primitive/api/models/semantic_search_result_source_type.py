@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SemanticSearchResultSourceType(str, Enum):
+class SemanticSearchResultSourceType(StrEnum):
     INBOUND_EMAIL = "inbound_email"
     SENT_EMAIL = "sent_email"
 

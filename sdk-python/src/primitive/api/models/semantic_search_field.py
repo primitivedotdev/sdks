@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SemanticSearchField(str, Enum):
+class SemanticSearchField(StrEnum):
     ADDRESSES = "addresses"
     BODY = "body"
     HEADERS = "headers"

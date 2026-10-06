@@ -124,7 +124,7 @@ async def _retry(
             } or not (error.status in {0, 408, 429} or error.status >= 500):
                 raise
             retry_after = error.retry_after
-        except (httpx.TransportError, OSError, ConnectionClosed, asyncio.TimeoutError):
+        except (TimeoutError, httpx.TransportError, OSError, ConnectionClosed):
             pass
         if status:
             status(EventStatus("reconnecting"))
@@ -593,7 +593,7 @@ class EventsResource:
 
         try:
             return await asyncio.wait_for(receive(), timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return None
         finally:
             if not handed_off:

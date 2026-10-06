@@ -66,9 +66,9 @@ class ParsedEmailData:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.email_address import EmailAddress
-        from ..models.email_attachment import EmailAttachment
-        from ..models.parsed_email_data_error_type_0 import ParsedEmailDataErrorType0
+        from ..models.email_address import EmailAddress # noqa: PLC0415
+        from ..models.email_attachment import EmailAttachment # noqa: PLC0415
+        from ..models.parsed_email_data_error_type_0 import ParsedEmailDataErrorType0 # noqa: PLC0415
         status = self.status.value
 
         body_text: None | str | Unset
@@ -205,9 +205,9 @@ class ParsedEmailData:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.email_address import EmailAddress
-        from ..models.email_attachment import EmailAttachment
-        from ..models.parsed_email_data_error_type_0 import ParsedEmailDataErrorType0
+        from ..models.email_address import EmailAddress # noqa: PLC0415
+        from ..models.email_attachment import EmailAttachment # noqa: PLC0415
+        from ..models.parsed_email_data_error_type_0 import ParsedEmailDataErrorType0 # noqa: PLC0415
         d = dict(src_dict)
         status = ParsedEmailDataStatus(d.pop("status"))
 

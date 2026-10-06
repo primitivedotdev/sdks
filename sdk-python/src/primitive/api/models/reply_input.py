@@ -82,8 +82,8 @@ class ReplyInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.repeat_input import RepeatInput
-        from ..models.send_mail_attachment import SendMailAttachment
+        from ..models.repeat_input import RepeatInput # noqa: PLC0415
+        from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         body_text = self.body_text
 
         body_html = self.body_html
@@ -133,8 +133,8 @@ class ReplyInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.repeat_input import RepeatInput
-        from ..models.send_mail_attachment import SendMailAttachment
+        from ..models.repeat_input import RepeatInput # noqa: PLC0415
+        from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         d = dict(src_dict)
         body_text = d.pop("body_text", UNSET)
 

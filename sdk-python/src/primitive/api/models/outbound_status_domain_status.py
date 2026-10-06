@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class OutboundStatusDomainStatus(str, Enum):
+class OutboundStatusDomainStatus(StrEnum):
     INACTIVE = "inactive"
     PENDING_OUTBOUND_DNS = "pending_outbound_dns"
     PENDING_OWNERSHIP = "pending_ownership"

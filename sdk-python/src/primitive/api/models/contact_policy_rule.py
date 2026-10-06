@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.contact_policy_rule_effect import ContactPolicyRuleEffect
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -90,7 +89,7 @@ class ContactPolicyRule:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                notify_since_type_0 = isoparse(data)
+                notify_since_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

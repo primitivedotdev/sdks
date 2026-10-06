@@ -44,9 +44,9 @@ class SearchEmailsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.email_search_facets import EmailSearchFacets
-        from ..models.email_search_meta import EmailSearchMeta
-        from ..models.email_search_result import EmailSearchResult
+        from ..models.email_search_facets import EmailSearchFacets # noqa: PLC0415
+        from ..models.email_search_meta import EmailSearchMeta # noqa: PLC0415
+        from ..models.email_search_result import EmailSearchResult # noqa: PLC0415
         success = self.success
 
         data = []
@@ -79,9 +79,9 @@ class SearchEmailsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.email_search_facets import EmailSearchFacets
-        from ..models.email_search_meta import EmailSearchMeta
-        from ..models.email_search_result import EmailSearchResult
+        from ..models.email_search_facets import EmailSearchFacets # noqa: PLC0415
+        from ..models.email_search_meta import EmailSearchMeta # noqa: PLC0415
+        from ..models.email_search_result import EmailSearchResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

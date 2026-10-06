@@ -154,7 +154,7 @@ export function listenStarterFiles(): Record<string, string> {
     ".gitignore": ".primitive-inbox/\n.venv/\n.env\n.env.*\n__pycache__/\n",
     "README.md": `# Receive events locally
 
-Python 3.10+; the optional processor uses a Unix advisory lock (macOS/Linux).
+Python 3.11+; the optional processor uses a Unix advisory lock (macOS/Linux).
 
 1. Configure the Primitive CLI with your API key using your usual login/config.
 2. Start receiving (no Python dependencies needed for this hook):

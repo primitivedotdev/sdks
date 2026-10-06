@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CreateRouteInputMatchType(str, Enum):
+class CreateRouteInputMatchType(StrEnum):
     EXACT = "exact"
     REGEX = "regex"
     WILDCARD = "wildcard"

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SentEmailStatus(str, Enum):
+class SentEmailStatus(StrEnum):
     AGENT_FAILED = "agent_failed"
     BOUNCED = "bounced"
     CANCELED = "canceled"

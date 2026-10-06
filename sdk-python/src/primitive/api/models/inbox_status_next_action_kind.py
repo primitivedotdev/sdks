@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class InboxStatusNextActionKind(str, Enum):
+class InboxStatusNextActionKind(StrEnum):
     ADD_DOMAIN = "add_domain"
     CONFIGURE_PROCESSING = "configure_processing"
     FIX_FAILED_FUNCTIONS = "fix_failed_functions"

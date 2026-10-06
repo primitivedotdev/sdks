@@ -47,7 +47,7 @@ class X402EmailChallenge:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.x402_email_challenge_details import X402EmailChallengeDetails
+        from ..models.x402_email_challenge_details import X402EmailChallengeDetails # noqa: PLC0415
         interaction_id = self.interaction_id
 
         challenge_id = str(self.challenge_id)
@@ -69,7 +69,7 @@ class X402EmailChallenge:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.x402_email_challenge_details import X402EmailChallengeDetails
+        from ..models.x402_email_challenge_details import X402EmailChallengeDetails # noqa: PLC0415
         d = dict(src_dict)
         interaction_id = d.pop("interaction_id")
 

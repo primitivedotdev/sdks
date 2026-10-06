@@ -13,7 +13,6 @@ from ...models.search_memories_include_value import SearchMemoriesIncludeValue
 from ...models.search_memories_response_200 import SearchMemoriesResponse200
 from ...models.search_memories_scope_type import SearchMemoriesScopeType
 from ...types import UNSET, Unset
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime

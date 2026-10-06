@@ -10,7 +10,6 @@ from ..types import UNSET, Unset
 
 from ..models.x402_challenge_network import X402ChallengeNetwork
 from ..models.x402_challenge_status import X402ChallengeStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -77,8 +76,8 @@ class X402Challenge:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.x402_nonce_binding import X402NonceBinding
-        from ..models.x402_payment_requirements import X402PaymentRequirements
+        from ..models.x402_nonce_binding import X402NonceBinding # noqa: PLC0415
+        from ..models.x402_payment_requirements import X402PaymentRequirements # noqa: PLC0415
         id = str(self.id)
 
         status = self.status.value
@@ -177,8 +176,8 @@ class X402Challenge:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.x402_nonce_binding import X402NonceBinding
-        from ..models.x402_payment_requirements import X402PaymentRequirements
+        from ..models.x402_nonce_binding import X402NonceBinding # noqa: PLC0415
+        from ..models.x402_payment_requirements import X402PaymentRequirements # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -206,7 +205,7 @@ class X402Challenge:
 
 
 
-        expires_at = isoparse(d.pop("expires_at"))
+        expires_at = datetime.datetime.fromisoformat(d.pop("expires_at"))
 
 
 
@@ -259,7 +258,7 @@ class X402Challenge:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                settled_at_type_0 = isoparse(data)
+                settled_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -286,7 +285,7 @@ class X402Challenge:
         if isinstance(_created_at,  Unset):
             created_at = UNSET
         else:
-            created_at = isoparse(_created_at)
+            created_at = datetime.datetime.fromisoformat(_created_at)
 
 
 

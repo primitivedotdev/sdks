@@ -38,7 +38,7 @@ class DeleteMemoryResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.delete_memory_result import DeleteMemoryResult
+        from ..models.delete_memory_result import DeleteMemoryResult # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,7 +60,7 @@ class DeleteMemoryResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.delete_memory_result import DeleteMemoryResult
+        from ..models.delete_memory_result import DeleteMemoryResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

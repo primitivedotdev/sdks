@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class FunctionTestRunState(str, Enum):
+class FunctionTestRunState(StrEnum):
     COMPLETED = "completed"
     FAILED = "failed"
     SEND_FAILED = "send_failed"

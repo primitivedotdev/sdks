@@ -42,8 +42,8 @@ class InstallTemplateBody:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.install_template_body_secrets import InstallTemplateBodySecrets
-        from ..models.install_template_body_variables import InstallTemplateBodyVariables
+        from ..models.install_template_body_secrets import InstallTemplateBodySecrets # noqa: PLC0415
+        from ..models.install_template_body_variables import InstallTemplateBodyVariables # noqa: PLC0415
         address = self.address
 
         domain = self.domain
@@ -76,8 +76,8 @@ class InstallTemplateBody:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.install_template_body_secrets import InstallTemplateBodySecrets
-        from ..models.install_template_body_variables import InstallTemplateBodyVariables
+        from ..models.install_template_body_secrets import InstallTemplateBodySecrets # noqa: PLC0415
+        from ..models.install_template_body_variables import InstallTemplateBodyVariables # noqa: PLC0415
         d = dict(src_dict)
         address = d.pop("address", UNSET)
 

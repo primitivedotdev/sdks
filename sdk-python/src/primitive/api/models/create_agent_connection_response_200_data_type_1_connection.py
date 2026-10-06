@@ -10,7 +10,6 @@ from ..types import UNSET, Unset
 
 from ..models.create_agent_connection_response_200_data_type_1_connection_ownership_kind import CreateAgentConnectionResponse200DataType1ConnectionOwnershipKind
 from ..models.create_agent_connection_response_200_data_type_1_connection_status import CreateAgentConnectionResponse200DataType1ConnectionStatus
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -63,7 +62,7 @@ class CreateAgentConnectionResponse200DataType1Connection:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_presence_type_0 import AgentPresenceType0
+        from ..models.agent_presence_type_0 import AgentPresenceType0 # noqa: PLC0415
         address = self.address
 
         name = self.name
@@ -136,7 +135,7 @@ class CreateAgentConnectionResponse200DataType1Connection:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_presence_type_0 import AgentPresenceType0
+        from ..models.agent_presence_type_0 import AgentPresenceType0 # noqa: PLC0415
         d = dict(src_dict)
         address = d.pop("address")
 
@@ -149,12 +148,12 @@ class CreateAgentConnectionResponse200DataType1Connection:
 
 
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        updated_at = isoparse(d.pop("updated_at"))
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
 
@@ -165,7 +164,7 @@ class CreateAgentConnectionResponse200DataType1Connection:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                claimed_at_type_0 = isoparse(data)
+                claimed_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -183,7 +182,7 @@ class CreateAgentConnectionResponse200DataType1Connection:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                verified_at_type_0 = isoparse(data)
+                verified_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -201,7 +200,7 @@ class CreateAgentConnectionResponse200DataType1Connection:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_seen_at_type_0 = isoparse(data)
+                last_seen_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

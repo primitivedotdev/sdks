@@ -68,7 +68,7 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetSendPermissionsResponse200]:
-    r""" List send-permission rules
+    """ List send-permission rules
 
      Returns a flat list of rules describing every recipient the
     caller may send to. Each rule has a `type`, a kind-specific
@@ -76,7 +76,7 @@ def sync_detailed(
     matches the recipient, /send-mail will accept the send under
     the recipient-scope check.
 
-    The endpoint is the answer to \"where can I send\" without
+    The endpoint is the answer to "where can I send" without
     exposing internal entitlement names. Agents that don't
     recognize a `type` can still read the `description` prose
     and act on it.
@@ -125,7 +125,7 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetSendPermissionsResponse200 | None:
-    r""" List send-permission rules
+    """ List send-permission rules
 
      Returns a flat list of rules describing every recipient the
     caller may send to. Each rule has a `type`, a kind-specific
@@ -133,7 +133,7 @@ def sync(
     matches the recipient, /send-mail will accept the send under
     the recipient-scope check.
 
-    The endpoint is the answer to \"where can I send\" without
+    The endpoint is the answer to "where can I send" without
     exposing internal entitlement names. Agents that don't
     recognize a `type` can still read the `description` prose
     and act on it.
@@ -177,7 +177,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetSendPermissionsResponse200]:
-    r""" List send-permission rules
+    """ List send-permission rules
 
      Returns a flat list of rules describing every recipient the
     caller may send to. Each rule has a `type`, a kind-specific
@@ -185,7 +185,7 @@ async def asyncio_detailed(
     matches the recipient, /send-mail will accept the send under
     the recipient-scope check.
 
-    The endpoint is the answer to \"where can I send\" without
+    The endpoint is the answer to "where can I send" without
     exposing internal entitlement names. Agents that don't
     recognize a `type` can still read the `description` prose
     and act on it.
@@ -234,7 +234,7 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetSendPermissionsResponse200 | None:
-    r""" List send-permission rules
+    """ List send-permission rules
 
      Returns a flat list of rules describing every recipient the
     caller may send to. Each rule has a `type`, a kind-specific
@@ -242,7 +242,7 @@ async def asyncio(
     matches the recipient, /send-mail will accept the send under
     the recipient-scope check.
 
-    The endpoint is the answer to \"where can I send\" without
+    The endpoint is the answer to "where can I send" without
     exposing internal entitlement names. Agents that don't
     recognize a `type` can still read the `description` prose
     and act on it.

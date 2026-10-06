@@ -50,7 +50,7 @@ It is independent of the existing hand-selected shared fixtures.
 
 ## Reproduce
 
-Requirements: Node 22+, Python 3.10+, `uv`, Go, `pnpm`, and a POSIX host supporting
+Requirements: Node 22+, Python 3.11+, `uv`, Go, `pnpm`, and a POSIX host supporting
 `fork`/`wait4`. From the SDK repository root:
 
 ```sh

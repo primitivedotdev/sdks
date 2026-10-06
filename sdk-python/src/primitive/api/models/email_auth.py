@@ -56,7 +56,7 @@ class EmailAuth:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.dkim_signature import DkimSignature
+        from ..models.dkim_signature import DkimSignature # noqa: PLC0415
         spf = self.spf
 
         dmarc = self.dmarc
@@ -121,7 +121,7 @@ class EmailAuth:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.dkim_signature import DkimSignature
+        from ..models.dkim_signature import DkimSignature # noqa: PLC0415
         d = dict(src_dict)
         spf = d.pop("spf")
 

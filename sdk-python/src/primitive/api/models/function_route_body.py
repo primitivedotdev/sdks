@@ -42,8 +42,8 @@ class FunctionRouteBody:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_route_body_target_type_0 import FunctionRouteBodyTargetType0
-        from ..models.function_route_body_target_type_1 import FunctionRouteBodyTargetType1
+        from ..models.function_route_body_target_type_0 import FunctionRouteBodyTargetType0 # noqa: PLC0415
+        from ..models.function_route_body_target_type_1 import FunctionRouteBodyTargetType1 # noqa: PLC0415
         target: dict[str, Any]
         if isinstance(self.target, FunctionRouteBodyTargetType0):
             target = self.target.to_dict()
@@ -68,8 +68,8 @@ class FunctionRouteBody:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_route_body_target_type_0 import FunctionRouteBodyTargetType0
-        from ..models.function_route_body_target_type_1 import FunctionRouteBodyTargetType1
+        from ..models.function_route_body_target_type_0 import FunctionRouteBodyTargetType0 # noqa: PLC0415
+        from ..models.function_route_body_target_type_1 import FunctionRouteBodyTargetType1 # noqa: PLC0415
         d = dict(src_dict)
         def _parse_target(data: object) -> FunctionRouteBodyTargetType0 | FunctionRouteBodyTargetType1:
             try:

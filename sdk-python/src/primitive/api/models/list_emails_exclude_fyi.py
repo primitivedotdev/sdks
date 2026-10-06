@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class ListEmailsExcludeFyi(str, Enum):
+class ListEmailsExcludeFyi(StrEnum):
     FALSE = "false"
     TRUE = "true"
 

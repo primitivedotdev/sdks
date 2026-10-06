@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CreateAgentConnectionResponse200DataType1ConnectionStatus(str, Enum):
+class CreateAgentConnectionResponse200DataType1ConnectionStatus(StrEnum):
     CLAIMED = "claimed"
     CONNECTED = "connected"
     PENDING = "pending"

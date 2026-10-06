@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.function_test_run_delivery_status import FunctionTestRunDeliveryStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -60,7 +59,7 @@ class FunctionTestRunDelivery:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_test_run_delivery_endpoint_type_0 import FunctionTestRunDeliveryEndpointType0
+        from ..models.function_test_run_delivery_endpoint_type_0 import FunctionTestRunDeliveryEndpointType0 # noqa: PLC0415
         id = self.id
 
         endpoint_id = str(self.endpoint_id)
@@ -113,7 +112,7 @@ class FunctionTestRunDelivery:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_test_run_delivery_endpoint_type_0 import FunctionTestRunDeliveryEndpointType0
+        from ..models.function_test_run_delivery_endpoint_type_0 import FunctionTestRunDeliveryEndpointType0 # noqa: PLC0415
         d = dict(src_dict)
         id = d.pop("id")
 
@@ -155,12 +154,12 @@ class FunctionTestRunDelivery:
         last_error_code = _parse_last_error_code(d.pop("last_error_code"))
 
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        updated_at = isoparse(d.pop("updated_at"))
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
 

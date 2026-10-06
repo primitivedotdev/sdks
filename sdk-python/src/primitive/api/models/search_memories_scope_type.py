@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SearchMemoriesScopeType(str, Enum):
+class SearchMemoriesScopeType(StrEnum):
     FUNCTION = "function"
     ORG = "org"
 

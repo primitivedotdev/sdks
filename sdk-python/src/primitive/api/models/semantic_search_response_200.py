@@ -41,8 +41,8 @@ class SemanticSearchResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.semantic_search_meta import SemanticSearchMeta
-        from ..models.semantic_search_result import SemanticSearchResult
+        from ..models.semantic_search_meta import SemanticSearchMeta # noqa: PLC0415
+        from ..models.semantic_search_result import SemanticSearchResult # noqa: PLC0415
         success = self.success
 
         data = []
@@ -69,8 +69,8 @@ class SemanticSearchResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.semantic_search_meta import SemanticSearchMeta
-        from ..models.semantic_search_result import SemanticSearchResult
+        from ..models.semantic_search_meta import SemanticSearchMeta # noqa: PLC0415
+        from ..models.semantic_search_result import SemanticSearchResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

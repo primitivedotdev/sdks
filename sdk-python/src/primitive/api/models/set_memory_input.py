@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -63,9 +62,9 @@ class SetMemoryInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.memory_json_value_type_5 import MemoryJsonValueType5
-        from ..models.memory_scope_type_0 import MemoryScopeType0
-        from ..models.memory_scope_type_1 import MemoryScopeType1
+        from ..models.memory_json_value_type_5 import MemoryJsonValueType5 # noqa: PLC0415
+        from ..models.memory_scope_type_0 import MemoryScopeType0 # noqa: PLC0415
+        from ..models.memory_scope_type_1 import MemoryScopeType1 # noqa: PLC0415
         key = self.key
 
         value: bool | dict[str, Any] | float | list[Any] | None | str
@@ -125,9 +124,9 @@ class SetMemoryInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.memory_json_value_type_5 import MemoryJsonValueType5
-        from ..models.memory_scope_type_0 import MemoryScopeType0
-        from ..models.memory_scope_type_1 import MemoryScopeType1
+        from ..models.memory_json_value_type_5 import MemoryJsonValueType5 # noqa: PLC0415
+        from ..models.memory_scope_type_0 import MemoryScopeType0 # noqa: PLC0415
+        from ..models.memory_scope_type_1 import MemoryScopeType1 # noqa: PLC0415
         d = dict(src_dict)
         key = d.pop("key")
 
@@ -188,7 +187,7 @@ class SetMemoryInput:
         if isinstance(_expires_at,  Unset):
             expires_at = UNSET
         else:
-            expires_at = isoparse(_expires_at)
+            expires_at = datetime.datetime.fromisoformat(_expires_at)
 
 
 

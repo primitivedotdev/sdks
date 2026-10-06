@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CompleteWebhookStdoutInputTransportError(str, Enum):
+class CompleteWebhookStdoutInputTransportError(StrEnum):
     IO = "io"
 
     def __str__(self) -> str:

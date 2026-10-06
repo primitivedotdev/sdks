@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class X402ChallengeStatus(str, Enum):
+class X402ChallengeStatus(StrEnum):
     EXPIRED = "expired"
     FAILED = "failed"
     PENDING = "pending"

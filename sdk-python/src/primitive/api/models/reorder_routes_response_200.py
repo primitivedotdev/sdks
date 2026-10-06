@@ -38,7 +38,7 @@ class ReorderRoutesResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.recipient_route import RecipientRoute
+        from ..models.recipient_route import RecipientRoute # noqa: PLC0415
         success = self.success
 
         data: list[dict[str, Any]] | Unset = UNSET
@@ -65,7 +65,7 @@ class ReorderRoutesResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.recipient_route import RecipientRoute
+        from ..models.recipient_route import RecipientRoute # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

@@ -15,7 +15,6 @@ from ...models.list_emails_awaiting import ListEmailsAwaiting
 from ...models.list_emails_exclude_fyi import ListEmailsExcludeFyi
 from ...models.list_emails_response_200 import ListEmailsResponse200
 from ...types import UNSET, Unset
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime

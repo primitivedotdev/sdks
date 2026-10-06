@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.template_registry_status import TemplateRegistryStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -73,8 +72,8 @@ class TemplateRegistryDetail:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.template_author import TemplateAuthor
-        from ..models.template_manifest import TemplateManifest
+        from ..models.template_author import TemplateAuthor # noqa: PLC0415
+        from ..models.template_manifest import TemplateManifest # noqa: PLC0415
         id = str(self.id)
 
         slug = self.slug
@@ -143,8 +142,8 @@ class TemplateRegistryDetail:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.template_author import TemplateAuthor
-        from ..models.template_manifest import TemplateManifest
+        from ..models.template_author import TemplateAuthor # noqa: PLC0415
+        from ..models.template_manifest import TemplateManifest # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -171,12 +170,12 @@ class TemplateRegistryDetail:
 
         github_repo = d.pop("github_repo")
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        updated_at = isoparse(d.pop("updated_at"))
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
 

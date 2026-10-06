@@ -38,7 +38,7 @@ class GetContactResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.get_contact_response_200_data import GetContactResponse200Data
+        from ..models.get_contact_response_200_data import GetContactResponse200Data # noqa: PLC0415
         success = self.success
 
         data = self.data.to_dict()
@@ -57,7 +57,7 @@ class GetContactResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.get_contact_response_200_data import GetContactResponse200Data
+        from ..models.get_contact_response_200_data import GetContactResponse200Data # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

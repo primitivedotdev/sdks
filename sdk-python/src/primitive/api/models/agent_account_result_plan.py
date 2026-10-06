@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class AgentAccountResultPlan(str, Enum):
+class AgentAccountResultPlan(StrEnum):
     AGENT = "agent"
 
     def __str__(self) -> str:

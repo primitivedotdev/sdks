@@ -42,7 +42,7 @@ class StartAgentSignupInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.start_agent_signup_input_metadata import StartAgentSignupInputMetadata
+        from ..models.start_agent_signup_input_metadata import StartAgentSignupInputMetadata # noqa: PLC0415
         email = self.email
 
         terms_accepted = self.terms_accepted
@@ -71,7 +71,7 @@ class StartAgentSignupInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.start_agent_signup_input_metadata import StartAgentSignupInputMetadata
+        from ..models.start_agent_signup_input_metadata import StartAgentSignupInputMetadata # noqa: PLC0415
         d = dict(src_dict)
         email = d.pop("email")
 

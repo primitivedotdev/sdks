@@ -12,7 +12,6 @@ from ...models.error_response import ErrorResponse
 from ...models.list_sent_emails_response_200 import ListSentEmailsResponse200
 from ...models.sent_email_status import SentEmailStatus
 from ...types import UNSET, Unset
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime

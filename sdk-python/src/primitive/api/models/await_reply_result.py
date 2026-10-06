@@ -44,7 +44,7 @@ class AwaitReplyResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.reply_email import ReplyEmail
+        from ..models.reply_email import ReplyEmail # noqa: PLC0415
         sent_email_id = str(self.sent_email_id)
 
         reply: dict[str, Any] | None
@@ -73,7 +73,7 @@ class AwaitReplyResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.reply_email import ReplyEmail
+        from ..models.reply_email import ReplyEmail # noqa: PLC0415
         d = dict(src_dict)
         sent_email_id = UUID(d.pop("sent_email_id"))
 

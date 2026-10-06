@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class DeliveryStatus(str, Enum):
+class DeliveryStatus(StrEnum):
     BOUNCED = "bounced"
     DEFERRED = "deferred"
     DELIVERED = "delivered"

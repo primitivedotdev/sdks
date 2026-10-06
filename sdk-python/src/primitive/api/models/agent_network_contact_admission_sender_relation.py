@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class AgentNetworkContactAdmissionSenderRelation(str, Enum):
+class AgentNetworkContactAdmissionSenderRelation(StrEnum):
     MEMBER = "member"
     OWNER = "owner"
 

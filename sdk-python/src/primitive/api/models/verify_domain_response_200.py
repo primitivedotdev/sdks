@@ -39,8 +39,8 @@ class VerifyDomainResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.domain_verify_result_type_0 import DomainVerifyResultType0
-        from ..models.domain_verify_result_type_1 import DomainVerifyResultType1
+        from ..models.domain_verify_result_type_0 import DomainVerifyResultType0 # noqa: PLC0415
+        from ..models.domain_verify_result_type_1 import DomainVerifyResultType1 # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset
@@ -67,8 +67,8 @@ class VerifyDomainResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.domain_verify_result_type_0 import DomainVerifyResultType0
-        from ..models.domain_verify_result_type_1 import DomainVerifyResultType1
+        from ..models.domain_verify_result_type_0 import DomainVerifyResultType0 # noqa: PLC0415
+        from ..models.domain_verify_result_type_1 import DomainVerifyResultType1 # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

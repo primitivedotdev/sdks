@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.x402_declined_payment_network import X402DeclinedPaymentNetwork
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -113,7 +112,7 @@ class X402DeclinedPayment:
 
         reason = d.pop("reason")
 
-        declined_at = isoparse(d.pop("declined_at"))
+        declined_at = datetime.datetime.fromisoformat(d.pop("declined_at"))
 
 
 

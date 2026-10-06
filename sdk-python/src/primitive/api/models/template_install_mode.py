@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class TemplateInstallMode(str, Enum):
+class TemplateInstallMode(StrEnum):
     DEPLOY = "deploy"
     SCAFFOLD = "scaffold"
 

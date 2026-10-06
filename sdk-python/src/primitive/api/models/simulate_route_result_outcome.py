@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SimulateRouteResultOutcome(str, Enum):
+class SimulateRouteResultOutcome(StrEnum):
     DEFAULTED = "defaulted"
     MATCHED = "matched"
     NONE = "none"

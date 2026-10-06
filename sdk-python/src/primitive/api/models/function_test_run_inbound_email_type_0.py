@@ -12,7 +12,6 @@ from ..models.email_status import EmailStatus
 from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
 from ..models.email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from ..models.email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -171,7 +170,7 @@ class FunctionTestRunInboundEmailType0:
 
 
 
-        received_at = isoparse(d.pop("received_at"))
+        received_at = datetime.datetime.fromisoformat(d.pop("received_at"))
 
 
 

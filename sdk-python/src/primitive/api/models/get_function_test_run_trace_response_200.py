@@ -40,7 +40,7 @@ class GetFunctionTestRunTraceResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_test_run_trace import FunctionTestRunTrace
+        from ..models.function_test_run_trace import FunctionTestRunTrace # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -62,7 +62,7 @@ class GetFunctionTestRunTraceResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_test_run_trace import FunctionTestRunTrace
+        from ..models.function_test_run_trace import FunctionTestRunTrace # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

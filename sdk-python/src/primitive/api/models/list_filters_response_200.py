@@ -38,7 +38,7 @@ class ListFiltersResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.filter_ import Filter
+        from ..models.filter_ import Filter # noqa: PLC0415
         success = self.success
 
         data: list[dict[str, Any]] | Unset = UNSET
@@ -65,7 +65,7 @@ class ListFiltersResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.filter_ import Filter
+        from ..models.filter_ import Filter # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

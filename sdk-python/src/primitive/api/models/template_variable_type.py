@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class TemplateVariableType(str, Enum):
+class TemplateVariableType(StrEnum):
     EMAIL = "email"
     SELECT = "select"
     STRING = "string"

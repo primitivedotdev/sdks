@@ -39,8 +39,8 @@ class CreateAgentConnectionResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_agent_connection_response_200_data_type_0 import CreateAgentConnectionResponse200DataType0
-        from ..models.create_agent_connection_response_200_data_type_1 import CreateAgentConnectionResponse200DataType1
+        from ..models.create_agent_connection_response_200_data_type_0 import CreateAgentConnectionResponse200DataType0 # noqa: PLC0415
+        from ..models.create_agent_connection_response_200_data_type_1 import CreateAgentConnectionResponse200DataType1 # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any]
@@ -64,8 +64,8 @@ class CreateAgentConnectionResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_agent_connection_response_200_data_type_0 import CreateAgentConnectionResponse200DataType0
-        from ..models.create_agent_connection_response_200_data_type_1 import CreateAgentConnectionResponse200DataType1
+        from ..models.create_agent_connection_response_200_data_type_0 import CreateAgentConnectionResponse200DataType0 # noqa: PLC0415
+        from ..models.create_agent_connection_response_200_data_type_1 import CreateAgentConnectionResponse200DataType1 # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

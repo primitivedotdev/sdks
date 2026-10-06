@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SearchEmailsHasAttachment(str, Enum):
+class SearchEmailsHasAttachment(StrEnum):
     FALSE = "false"
     TRUE = "true"
 

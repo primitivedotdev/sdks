@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class FunctionTestRunDeliveryStatus(str, Enum):
+class FunctionTestRunDeliveryStatus(StrEnum):
     DELIVERED = "delivered"
     FAILED = "failed"
     HEADER_CONFIRMED = "header_confirmed"

@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.domain_dns_health_status import DomainDnsHealthStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -72,8 +71,8 @@ class DomainDnsHealthCheck:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.domain_dns_health_check_scopes import DomainDnsHealthCheckScopes
-        from ..models.domain_dns_record import DomainDnsRecord
+        from ..models.domain_dns_health_check_scopes import DomainDnsHealthCheckScopes # noqa: PLC0415
+        from ..models.domain_dns_record import DomainDnsRecord # noqa: PLC0415
         domain_id = str(self.domain_id)
 
         domain = self.domain
@@ -139,8 +138,8 @@ class DomainDnsHealthCheck:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.domain_dns_health_check_scopes import DomainDnsHealthCheckScopes
-        from ..models.domain_dns_record import DomainDnsRecord
+        from ..models.domain_dns_health_check_scopes import DomainDnsHealthCheckScopes # noqa: PLC0415
+        from ..models.domain_dns_record import DomainDnsRecord # noqa: PLC0415
         d = dict(src_dict)
         domain_id = UUID(d.pop("domain_id"))
 
@@ -156,7 +155,7 @@ class DomainDnsHealthCheck:
 
 
 
-        checked_at = isoparse(d.pop("checked_at"))
+        checked_at = datetime.datetime.fromisoformat(d.pop("checked_at"))
 
 
 
@@ -167,7 +166,7 @@ class DomainDnsHealthCheck:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                next_check_at_type_0 = isoparse(data)
+                next_check_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -185,7 +184,7 @@ class DomainDnsHealthCheck:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                outbound_verified_at_type_0 = isoparse(data)
+                outbound_verified_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

@@ -50,7 +50,7 @@ class CallerIdentity:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.caller_identity_member_address_type_0 import CallerIdentityMemberAddressType0
+        from ..models.caller_identity_member_address_type_0 import CallerIdentityMemberAddressType0 # noqa: PLC0415
         org_id = self.org_id
 
         user_id = self.user_id
@@ -94,7 +94,7 @@ class CallerIdentity:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.caller_identity_member_address_type_0 import CallerIdentityMemberAddressType0
+        from ..models.caller_identity_member_address_type_0 import CallerIdentityMemberAddressType0 # noqa: PLC0415
         d = dict(src_dict)
         org_id = d.pop("org_id")
 

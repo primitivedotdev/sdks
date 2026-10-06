@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CompleteWebhookSdkInputTransportError(str, Enum):
+class CompleteWebhookSdkInputTransportError(StrEnum):
     IO = "io"
     TIMEOUT = "timeout"
 

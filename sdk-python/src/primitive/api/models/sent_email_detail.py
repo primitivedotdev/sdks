@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.sent_email_status import SentEmailStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -243,12 +242,12 @@ class SentEmailDetail:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.gate_denial import GateDenial
-        from ..models.presence_control_type_0 import PresenceControlType0
-        from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
-        from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item
-        from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
-        from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
+        from ..models.gate_denial import GateDenial # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem # noqa: PLC0415
+        from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item # noqa: PLC0415
+        from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
+        from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
         id = str(self.id)
 
         status = self.status.value
@@ -598,12 +597,12 @@ class SentEmailDetail:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.gate_denial import GateDenial
-        from ..models.presence_control_type_0 import PresenceControlType0
-        from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem
-        from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item
-        from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
-        from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
+        from ..models.gate_denial import GateDenial # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.sent_email_detail_attachments_item import SentEmailDetailAttachmentsItem # noqa: PLC0415
+        from ..models.sent_email_detail_tags_type_0_item import SentEmailDetailTagsType0Item # noqa: PLC0415
+        from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
+        from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -615,17 +614,17 @@ class SentEmailDetail:
 
 
 
-        status_changed_at = isoparse(d.pop("status_changed_at"))
+        status_changed_at = datetime.datetime.fromisoformat(d.pop("status_changed_at"))
 
 
 
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        updated_at = isoparse(d.pop("updated_at"))
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
 
@@ -662,7 +661,7 @@ class SentEmailDetail:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                content_discarded_at_type_0 = isoparse(data)
+                content_discarded_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -867,7 +866,7 @@ class SentEmailDetail:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                scheduled_at_type_0 = isoparse(data)
+                scheduled_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -887,7 +886,7 @@ class SentEmailDetail:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                canceled_at_type_0 = isoparse(data)
+                canceled_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

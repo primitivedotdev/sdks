@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class EmailSummaryAwaiting(str, Enum):
+class EmailSummaryAwaiting(StrEnum):
     THEM = "them"
     YOU = "you"
 

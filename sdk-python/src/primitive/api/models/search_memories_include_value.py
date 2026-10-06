@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SearchMemoriesIncludeValue(str, Enum):
+class SearchMemoriesIncludeValue(StrEnum):
     FALSE = "false"
     TRUE = "true"
 

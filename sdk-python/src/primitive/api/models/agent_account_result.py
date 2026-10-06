@@ -49,8 +49,8 @@ class AgentAccountResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_account_upgrade_hint import AgentAccountUpgradeHint
-        from ..models.plan_limits import PlanLimits
+        from ..models.agent_account_upgrade_hint import AgentAccountUpgradeHint # noqa: PLC0415
+        from ..models.plan_limits import PlanLimits # noqa: PLC0415
         api_key = self.api_key
 
         org_id = str(self.org_id)
@@ -82,8 +82,8 @@ class AgentAccountResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_account_upgrade_hint import AgentAccountUpgradeHint
-        from ..models.plan_limits import PlanLimits
+        from ..models.agent_account_upgrade_hint import AgentAccountUpgradeHint # noqa: PLC0415
+        from ..models.plan_limits import PlanLimits # noqa: PLC0415
         d = dict(src_dict)
         api_key = d.pop("api_key")
 

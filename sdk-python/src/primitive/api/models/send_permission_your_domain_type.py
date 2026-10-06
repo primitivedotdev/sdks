@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SendPermissionYourDomainType(str, Enum):
+class SendPermissionYourDomainType(StrEnum):
     YOUR_DOMAIN = "your_domain"
 
     def __str__(self) -> str:

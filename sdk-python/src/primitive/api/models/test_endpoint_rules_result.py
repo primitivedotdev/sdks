@@ -62,7 +62,7 @@ class TestEndpointRulesResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.test_endpoint_rules_result_evaluated import TestEndpointRulesResultEvaluated
+        from ..models.test_endpoint_rules_result_evaluated import TestEndpointRulesResultEvaluated # noqa: PLC0415
         would_deliver = self.would_deliver
 
         rule: None | str
@@ -98,7 +98,7 @@ class TestEndpointRulesResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.test_endpoint_rules_result_evaluated import TestEndpointRulesResultEvaluated
+        from ..models.test_endpoint_rules_result_evaluated import TestEndpointRulesResultEvaluated # noqa: PLC0415
         d = dict(src_dict)
         would_deliver = d.pop("would_deliver")
 

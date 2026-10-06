@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CliSignupVerifyResultAuthMethod(str, Enum):
+class CliSignupVerifyResultAuthMethod(StrEnum):
     OAUTH = "oauth"
 
     def __str__(self) -> str:

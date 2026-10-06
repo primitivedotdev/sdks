@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class RevokeAgentConnectionResponse200DataConnectionOwnershipKind(str, Enum):
+class RevokeAgentConnectionResponse200DataConnectionOwnershipKind(StrEnum):
     LEGACY_UNKNOWN = "legacy_unknown"
     PERSONAL = "personal"
     SHARED = "shared"

@@ -12,7 +12,6 @@ from ..models.semantic_search_field import SemanticSearchField
 from ..models.semantic_search_input_corpus_item import SemanticSearchInputCorpusItem
 from ..models.semantic_search_input_include_item import SemanticSearchInputIncludeItem
 from ..models.semantic_search_input_mode import SemanticSearchInputMode
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -207,7 +206,7 @@ class SemanticSearchInput:
         if isinstance(_date_from,  Unset):
             date_from = UNSET
         else:
-            date_from = isoparse(_date_from)
+            date_from = datetime.datetime.fromisoformat(_date_from)
 
 
 
@@ -217,7 +216,7 @@ class SemanticSearchInput:
         if isinstance(_date_to,  Unset):
             date_to = UNSET
         else:
-            date_to = isoparse(_date_to)
+            date_to = datetime.datetime.fromisoformat(_date_to)
 
 
 

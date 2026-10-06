@@ -44,8 +44,8 @@ class CreditBalance:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.credit_balance_budget_type_0 import CreditBalanceBudgetType0
-        from ..models.credit_balance_prepaid_credit_type_0 import CreditBalancePrepaidCreditType0
+        from ..models.credit_balance_budget_type_0 import CreditBalanceBudgetType0 # noqa: PLC0415
+        from ..models.credit_balance_prepaid_credit_type_0 import CreditBalancePrepaidCreditType0 # noqa: PLC0415
         budget: dict[str, Any] | None
         if isinstance(self.budget, CreditBalanceBudgetType0):
             budget = self.budget.to_dict()
@@ -75,8 +75,8 @@ class CreditBalance:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.credit_balance_budget_type_0 import CreditBalanceBudgetType0
-        from ..models.credit_balance_prepaid_credit_type_0 import CreditBalancePrepaidCreditType0
+        from ..models.credit_balance_budget_type_0 import CreditBalanceBudgetType0 # noqa: PLC0415
+        from ..models.credit_balance_prepaid_credit_type_0 import CreditBalancePrepaidCreditType0 # noqa: PLC0415
         d = dict(src_dict)
         def _parse_budget(data: object) -> CreditBalanceBudgetType0 | None:
             if data is None:
