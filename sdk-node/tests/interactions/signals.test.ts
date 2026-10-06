@@ -71,68 +71,67 @@ it("normalizes long ASCII padding but rejects internal spaces and other whitespa
   ])
     expect(() => withId(messageId)).toThrow("invalid Message-ID");
 });
-it.each([
-  "read",
-  "working",
-  "typing",
-])("reuses persisted %s body and key after uncertain attempts, isolating adapter mutations", async (kind) => {
-  const original = prepare(fixture(kind));
-  if (original.status !== "prepared") throw new Error("fixture");
-  expect(Object.isFrozen(original.prepared)).toBe(true);
-  const saved: PreparedSignal = JSON.parse(JSON.stringify(original.prepared));
-  const calls: string[] = [];
-  const send = async (body: unknown, key: string) => {
-    calls.push(JSON.stringify([body, key]));
-    if (typeof body === "object" && body !== null)
-      Object.assign(body, { to: "changed@example.com" });
-    if (calls.length === 1) throw new Error("timeout");
-    return { status: "accepted" };
-  };
-  const opts = {
-    accountScope: saved.accountScope,
-    now: () => fixture("read").now,
-  };
-  await expect(sendPreparedSignal(send, saved, opts)).rejects.toThrow(
-    "timeout",
-  );
-  expect(await sendPreparedSignal(send, saved, opts)).toEqual({
-    status: "response",
-    result: { status: "accepted" },
-  });
-  expect(calls[0]).toBe(calls[1]);
-  await expect(
-    sendPreparedSignal(send, saved, { ...opts, accountScope: "another" }),
-  ).rejects.toThrow("scope");
-  expect(calls).toHaveLength(2);
-});
-it.each([
-  "working",
-  "typing",
-])("refuses expired %s at equality without claiming earlier failure", async (kind) => {
-  const item = fixture(kind),
-    result = prepare(item);
-  if (result.status !== "prepared") throw new Error("fixture");
-  let calls = 0;
-  const send = async () => ++calls;
-  expect(
-    (
+it.each(["read", "working", "typing"])(
+  "reuses persisted %s body and key after uncertain attempts, isolating adapter mutations",
+  async (kind) => {
+    const original = prepare(fixture(kind));
+    if (original.status !== "prepared") throw new Error("fixture");
+    expect(Object.isFrozen(original.prepared)).toBe(true);
+    const saved: PreparedSignal = JSON.parse(JSON.stringify(original.prepared));
+    const calls: string[] = [];
+    const send = async (body: unknown, key: string) => {
+      calls.push(JSON.stringify([body, key]));
+      if (typeof body === "object" && body !== null)
+        Object.assign(body, { to: "changed@example.com" });
+      if (calls.length === 1) throw new Error("timeout");
+      return { status: "accepted" };
+    };
+    const opts = {
+      accountScope: saved.accountScope,
+      now: () => fixture("read").now,
+    };
+    await expect(sendPreparedSignal(send, saved, opts)).rejects.toThrow(
+      "timeout",
+    );
+    expect(await sendPreparedSignal(send, saved, opts)).toEqual({
+      status: "response",
+      result: { status: "accepted" },
+    });
+    expect(calls[0]).toBe(calls[1]);
+    await expect(
+      sendPreparedSignal(send, saved, { ...opts, accountScope: "another" }),
+    ).rejects.toThrow("scope");
+    expect(calls).toHaveLength(2);
+  },
+);
+it.each(["working", "typing"])(
+  "refuses expired %s at equality without claiming earlier failure",
+  async (kind) => {
+    const item = fixture(kind),
+      result = prepare(item);
+    if (result.status !== "prepared") throw new Error("fixture");
+    let calls = 0;
+    const send = async () => ++calls;
+    expect(
+      (
+        await sendPreparedSignal(send, result.prepared, {
+          accountScope: "account-one",
+          now: () => item.now + 59999,
+        })
+      ).status,
+    ).toBe("response");
+    expect(
       await sendPreparedSignal(send, result.prepared, {
         accountScope: "account-one",
-        now: () => item.now + 59999,
-      })
-    ).status,
-  ).toBe("response");
-  expect(
-    await sendPreparedSignal(send, result.prepared, {
-      accountScope: "account-one",
-      now: () => item.now + 60000,
-    }),
-  ).toEqual({
-    status: "expired",
-    idempotencyKey: result.prepared.idempotencyKey,
-  });
-  expect(calls).toBe(1);
-});
+        now: () => item.now + 60000,
+      }),
+    ).toEqual({
+      status: "expired",
+      idempotencyKey: result.prepared.idempotencyKey,
+    });
+    expect(calls).toBe(1);
+  },
+);
 it("rejects lone surrogates and uses fresh keys for separate preparations", () => {
   const item = fixture("read");
   for (const field of ["subject", "accountScope"] as const)
@@ -188,44 +187,44 @@ it("prepares in a browser bundle without Buffer, crypto or a Node runtime", asyn
   });
 });
 
-it.each([
-  "read",
-  "typing",
-])("sends %s through the generated ordinary operation without dropping body or key", async (kind) => {
-  const { createClient, sendEmail } = await import("../../src/api/index.js");
-  const result = prepare(fixture(kind));
-  if (result.status !== "prepared") throw new Error("fixture");
-  const requests: Request[] = [];
-  const client = createClient({
-    baseUrl: "https://api.example.test/v1",
-    fetch: async (request) => {
-      requests.push(request as Request);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: { code: "validation_error", message: "fixture" },
-        }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
-    },
-  });
-  const sent = await sendPreparedSignal(
-    (body, key) =>
-      sendEmail({ client, body, headers: { "Idempotency-Key": key } }),
-    result.prepared,
-    { accountScope: "account-one", now: () => 1800000000123 },
-  );
-  expect(sent.status).toBe("response");
-  if (sent.status === "response")
-    expect(sent.result.response?.status).toBe(400);
-  expect(requests[0]?.url).toBe("https://api.example.test/v1/send-mail");
-  expect(requests[0]?.headers.get("Idempotency-Key")).toBe(
-    result.prepared.idempotencyKey,
-  );
-  expect(await requests[0]?.json()).toEqual(
-    JSON.parse(result.prepared.requestJson),
-  );
-});
+it.each(["read", "typing"])(
+  "sends %s through the generated ordinary operation without dropping body or key",
+  async (kind) => {
+    const { createClient, sendEmail } = await import("../../src/api/index.js");
+    const result = prepare(fixture(kind));
+    if (result.status !== "prepared") throw new Error("fixture");
+    const requests: Request[] = [];
+    const client = createClient({
+      baseUrl: "https://api.example.test/v1",
+      fetch: async (request) => {
+        requests.push(request as Request);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: { code: "validation_error", message: "fixture" },
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } },
+        );
+      },
+    });
+    const sent = await sendPreparedSignal(
+      (body, key) =>
+        sendEmail({ client, body, headers: { "Idempotency-Key": key } }),
+      result.prepared,
+      { accountScope: "account-one", now: () => 1800000000123 },
+    );
+    expect(sent.status).toBe("response");
+    if (sent.status === "response")
+      expect(sent.result.response?.status).toBe(400);
+    expect(requests[0]?.url).toBe("https://api.example.test/v1/send-mail");
+    expect(requests[0]?.headers.get("Idempotency-Key")).toBe(
+      result.prepared.idempotencyKey,
+    );
+    expect(await requests[0]?.json()).toEqual(
+      JSON.parse(result.prepared.requestJson),
+    );
+  },
+);
 
 it("gives distinct signals for one parent distinct explicit keys and preserves a retry", async () => {
   const item = fixture("read");

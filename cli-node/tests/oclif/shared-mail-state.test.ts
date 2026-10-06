@@ -352,34 +352,35 @@ describe("shared mail ingress and claims", () => {
     expect(native.status).toBe("held");
     expect(waiter.status).toBe("claimed");
   });
-  it.each([
-    "submitting",
-    "accepted",
-    "unknown",
-  ] as const)("never reroutes native %s even after later wait registration", async (state) => {
-    const parent = randomUUID(),
-      e = await received(parent);
-    await store.claimForNotification(e.emailId, "runtime:opaque-session");
-    await store.markNotification(e.emailId, "submitting");
-    if (state !== "submitting") await store.markNotification(e.emailId, state);
-    expect(
-      (await store.claimForNotification(e.emailId, "runtime:opaque-session"))
-        .status,
-    ).toBe(state === "accepted" ? "already_observed" : "held");
-    const w = intent();
-    await store.registerWait(w);
-    await store.bindWait(w.requestId, parent);
-    expect((await store.claimForWait(e.emailId, w.requestId)).status).toBe(
-      "held",
-    );
-    expect(
-      (await store.claimForNotification(e.emailId, "runtime:different")).status,
-    ).toBe("held");
-    if (state !== "submitting")
-      await expect(
-        store.markNotification(e.emailId, "submitting"),
-      ).rejects.toThrow("inconsistent");
-  });
+  it.each(["submitting", "accepted", "unknown"] as const)(
+    "never reroutes native %s even after later wait registration",
+    async (state) => {
+      const parent = randomUUID(),
+        e = await received(parent);
+      await store.claimForNotification(e.emailId, "runtime:opaque-session");
+      await store.markNotification(e.emailId, "submitting");
+      if (state !== "submitting")
+        await store.markNotification(e.emailId, state);
+      expect(
+        (await store.claimForNotification(e.emailId, "runtime:opaque-session"))
+          .status,
+      ).toBe(state === "accepted" ? "already_observed" : "held");
+      const w = intent();
+      await store.registerWait(w);
+      await store.bindWait(w.requestId, parent);
+      expect((await store.claimForWait(e.emailId, w.requestId)).status).toBe(
+        "held",
+      );
+      expect(
+        (await store.claimForNotification(e.emailId, "runtime:different"))
+          .status,
+      ).toBe("held");
+      if (state !== "submitting")
+        await expect(
+          store.markNotification(e.emailId, "submitting"),
+        ).rejects.toThrow("inconsistent");
+    },
+  );
   it("releases only an unsubmitted claim so another session can recover deferred work", async () => {
     const e = await received();
     await store.claimForNotification(e.emailId, "runtime:owner");
@@ -419,23 +420,25 @@ describe("shared mail ingress and claims", () => {
       store.markNotification(e.emailId, "submitting"),
     ).rejects.toThrow("inconsistent");
   });
-  it.each([
-    "submitting",
-    "accepted",
-    "unknown",
-  ] as const)("cannot turn a %s outcome into a skipped notification", async (state) => {
-    const e = await received();
-    await store.claimForNotification(e.emailId, "runtime:owner");
-    await store.markNotification(e.emailId, "submitting");
-    if (state !== "submitting") await store.markNotification(e.emailId, state);
-    await expect(
-      store.skipNotification(e.emailId, "runtime:owner"),
-    ).rejects.toThrow("inconsistent");
-    await expect(
-      store.releaseNotification(e.emailId, "runtime:owner"),
-    ).rejects.toThrow("inconsistent");
-    expect((await store.readEmail(e.emailId))?.route).toMatchObject({ state });
-  });
+  it.each(["submitting", "accepted", "unknown"] as const)(
+    "cannot turn a %s outcome into a skipped notification",
+    async (state) => {
+      const e = await received();
+      await store.claimForNotification(e.emailId, "runtime:owner");
+      await store.markNotification(e.emailId, "submitting");
+      if (state !== "submitting")
+        await store.markNotification(e.emailId, state);
+      await expect(
+        store.skipNotification(e.emailId, "runtime:owner"),
+      ).rejects.toThrow("inconsistent");
+      await expect(
+        store.releaseNotification(e.emailId, "runtime:owner"),
+      ).rejects.toThrow("inconsistent");
+      expect((await store.readEmail(e.emailId))?.route).toMatchObject({
+        state,
+      });
+    },
+  );
   it("rejects terminal untrusted mail without assigning a consumer", async () => {
     const e = await received(null, "rejected");
     expect(
@@ -443,37 +446,40 @@ describe("shared mail ingress and claims", () => {
     ).toBe("unmatched");
     expect((await store.readEmail(e.emailId))?.route).toBeNull();
   });
-  it.each([
-    1, 2, 3,
-  ])("recovers a torn claim transaction at rename %s without losing wait ownership", async (phase) => {
-    const w = intent(),
-      parent = randomUUID();
-    await store.registerWait(w);
-    await store.bindWait(w.requestId, parent);
-    const e = await received(parent),
-      original = fs.renameSync;
-    let writes = 0;
-    vi.spyOn(fs, "renameSync").mockImplementation((...args) => {
-      if (String(args[1]).endsWith(".json") && ++writes === phase)
-        throw new Error("interrupted");
-      return original(...args);
-    });
-    await expect(store.claimForWait(e.emailId, w.requestId)).rejects.toThrow(
-      "interrupted",
-    );
-    vi.restoreAllMocks();
-    // Reads recover the pending transaction under the same short lock.
-    await store.readEmail(e.emailId);
-    // A failure before the journal rename cannot commit anything. Later phases recover.
-    if (phase > 1)
-      expect((await store.listWaitEmails(w.requestId)).emails).toHaveLength(1);
-    expect(
-      (await store.claimForNotification(e.emailId, "runtime:session")).status,
-    ).toBe("held");
-    expect((await store.claimForWait(e.emailId, w.requestId)).status).toBe(
-      "claimed",
-    );
-  });
+  it.each([1, 2, 3])(
+    "recovers a torn claim transaction at rename %s without losing wait ownership",
+    async (phase) => {
+      const w = intent(),
+        parent = randomUUID();
+      await store.registerWait(w);
+      await store.bindWait(w.requestId, parent);
+      const e = await received(parent),
+        original = fs.renameSync;
+      let writes = 0;
+      vi.spyOn(fs, "renameSync").mockImplementation((...args) => {
+        if (String(args[1]).endsWith(".json") && ++writes === phase)
+          throw new Error("interrupted");
+        return original(...args);
+      });
+      await expect(store.claimForWait(e.emailId, w.requestId)).rejects.toThrow(
+        "interrupted",
+      );
+      vi.restoreAllMocks();
+      // Reads recover the pending transaction under the same short lock.
+      await store.readEmail(e.emailId);
+      // A failure before the journal rename cannot commit anything. Later phases recover.
+      if (phase > 1)
+        expect((await store.listWaitEmails(w.requestId)).emails).toHaveLength(
+          1,
+        );
+      expect(
+        (await store.claimForNotification(e.emailId, "runtime:session")).status,
+      ).toBe("held");
+      expect((await store.claimForWait(e.emailId, w.requestId)).status).toBe(
+        "claimed",
+      );
+    },
+  );
   it("rejects disk null, unexpected payload fields, and conflicting journal recovery", async () => {
     const e = await received(),
       path = join(store.directory, "emails", `${e.emailId}.json`),

@@ -552,7 +552,7 @@ export class X402Client {
         { retryAfter },
       );
     }
-    if (!json || json.success !== true || json.data === undefined) {
+    if (json?.success !== true || json.data === undefined) {
       throw new X402Error(
         `unexpected response shape (${res.status}) from ${path}: missing success/data envelope`,
         res.status,

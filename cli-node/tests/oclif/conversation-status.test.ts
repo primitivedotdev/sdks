@@ -79,29 +79,27 @@ describe("exact conversation status", () => {
     unavailable = true;
     expect(await readBoundSentMessageId(apiClient, f.wait, signal)).toBeNull();
   });
-  it.each([
-    "read",
-    "ack",
-    "working",
-    "typing",
-  ] as const)("accepts canonical %s only for the bound send and session", (kind) => {
-    const f = fixture(kind);
-    expect(
-      boundConversationStatus(
-        f.detail,
-        f.content,
-        f.wait,
-        f.messageId,
-        f.sessionKey,
-        f.now,
-      ),
-    ).toEqual({
-      emailId: f.detail.id,
-      sentEmailId: f.wait.sentEmailId,
-      kind,
-      peer: f.wait.peer,
-    });
-  });
+  it.each(["read", "ack", "working", "typing"] as const)(
+    "accepts canonical %s only for the bound send and session",
+    (kind) => {
+      const f = fixture(kind);
+      expect(
+        boundConversationStatus(
+          f.detail,
+          f.content,
+          f.wait,
+          f.messageId,
+          f.sessionKey,
+          f.now,
+        ),
+      ).toEqual({
+        emailId: f.detail.id,
+        sentEmailId: f.wait.sentEmailId,
+        kind,
+        peer: f.wait.peer,
+      });
+    },
+  );
   it("rejects wrong peer, session, parent, Message-ID, interaction domain and stale activity", () => {
     const f = fixture();
     const check = (

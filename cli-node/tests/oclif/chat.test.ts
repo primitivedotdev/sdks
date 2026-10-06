@@ -479,31 +479,33 @@ describe("chat command", () => {
       verifiedSession: "11111111-1111-4111-8111-111111111111",
     },
     { name: "an unbound profile", verifiedSession: undefined },
-  ])("refuses async sending from $name before opening a wait or sending", async ({
-    verifiedSession,
-  }) => {
-    const previous = process.env.CLAUDE_CODE_SESSION_ID;
-    const previousCodex = process.env.CODEX_SESSION_ID;
-    const previousThread = process.env.CODEX_THREAD_ID;
-    delete process.env.CODEX_SESSION_ID;
-    delete process.env.CODEX_THREAD_ID;
-    process.env.CLAUDE_CODE_SESSION_ID = "22222222-2222-4222-8222-222222222222";
-    try {
-      connectedAuth(true, verifiedSession);
-      await expect(
-        runChatCommand(["help@agent.example", "hello", "--async"]),
-      ).rejects.toThrow("exact current coding session");
-      expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
-      expect(mocks.sendEmail).not.toHaveBeenCalled();
-    } finally {
-      if (previous === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
-      else process.env.CLAUDE_CODE_SESSION_ID = previous;
-      if (previousCodex === undefined) delete process.env.CODEX_SESSION_ID;
-      else process.env.CODEX_SESSION_ID = previousCodex;
-      if (previousThread === undefined) delete process.env.CODEX_THREAD_ID;
-      else process.env.CODEX_THREAD_ID = previousThread;
-    }
-  });
+  ])(
+    "refuses async sending from $name before opening a wait or sending",
+    async ({ verifiedSession }) => {
+      const previous = process.env.CLAUDE_CODE_SESSION_ID;
+      const previousCodex = process.env.CODEX_SESSION_ID;
+      const previousThread = process.env.CODEX_THREAD_ID;
+      delete process.env.CODEX_SESSION_ID;
+      delete process.env.CODEX_THREAD_ID;
+      process.env.CLAUDE_CODE_SESSION_ID =
+        "22222222-2222-4222-8222-222222222222";
+      try {
+        connectedAuth(true, verifiedSession);
+        await expect(
+          runChatCommand(["help@agent.example", "hello", "--async"]),
+        ).rejects.toThrow("exact current coding session");
+        expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+        expect(mocks.sendEmail).not.toHaveBeenCalled();
+      } finally {
+        if (previous === undefined) delete process.env.CLAUDE_CODE_SESSION_ID;
+        else process.env.CLAUDE_CODE_SESSION_ID = previous;
+        if (previousCodex === undefined) delete process.env.CODEX_SESSION_ID;
+        else process.env.CODEX_SESSION_ID = previousCodex;
+        if (previousThread === undefined) delete process.env.CODEX_THREAD_ID;
+        else process.env.CODEX_THREAD_ID = previousThread;
+      }
+    },
+  );
 
   it("uses verified external setup without a runtime ID but refuses an unbound profile", async () => {
     const previous = process.env.CLAUDE_CODE_SESSION_ID;
@@ -569,20 +571,19 @@ describe("chat command", () => {
     }
   });
 
-  it.each([
-    "other@sender.example",
-    "",
-    "Agent <other@sender.example>",
-  ])("rejects a mismatched pinned sender before sending: %s", async (from) => {
-    connectedAuth(true);
-    await expect(
-      runChatCommand(["help@agent.example", "hello", "--from", from]),
-    ).rejects.toThrow("pinned address");
-    expect(mocks.sendEmail).not.toHaveBeenCalled();
-    expect(mocks.replyToEmail).not.toHaveBeenCalled();
-    expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
-    expect(mocks.getEmail).not.toHaveBeenCalled();
-  });
+  it.each(["other@sender.example", "", "Agent <other@sender.example>"])(
+    "rejects a mismatched pinned sender before sending: %s",
+    async (from) => {
+      connectedAuth(true);
+      await expect(
+        runChatCommand(["help@agent.example", "hello", "--from", from]),
+      ).rejects.toThrow("pinned address");
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+      expect(mocks.replyToEmail).not.toHaveBeenCalled();
+      expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+      expect(mocks.getEmail).not.toHaveBeenCalled();
+    },
+  );
 
   it("still requires --from for raw connection credentials", async () => {
     connectedAuth();
@@ -637,45 +638,45 @@ describe("chat command", () => {
     expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
   });
 
-  it.each([
-    "observed",
-    "finish",
-  ] as const)("retains the exact reply for restart when shared %s fails", async (phase) => {
-    connectedAuth();
-    mocks[phase].mockRejectedValueOnce(
-      new Error("interrupted shared finalization"),
-    );
-    const args = [
-      "help@agent.example",
-      "hello",
-      "--from",
-      "agent@sender.example",
-      "--json",
-    ];
-    const first = await runChatCommand(args);
-    expect(JSON.parse(first.stdout).outcome).toBe("sent_awaiting_reply");
-    expect(first.exitCode).toBe(3);
-    // --json keeps stderr empty; the receipt note is in warnings.
-    expect(first.stderr).toBe("");
-    const path = (JSON.parse(first.stdout).warnings as string[])
-      .find((line) => line.startsWith("Chat receipt: "))
-      ?.slice("Chat receipt: ".length);
-    expect(path).toBeDefined();
-    const saved = JSON.parse(readFileSync(path ?? "", "utf8"));
-    expect(saved.completed).toBe(false);
-    expect(saved.reply).toEqual({
-      emailId: "email-1",
-      requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    });
-    const resumed = await runChatCommand(args);
-    expect(JSON.parse(resumed.stdout).outcome).toBe("replied");
-    expect(mocks.openConnectedReplyWait.mock.calls[1][0].resumeReply).toEqual(
-      saved.reply,
-    );
-    expect(mocks.sendEmail).toHaveBeenCalledOnce();
-    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
-    expect(JSON.parse(readFileSync(path ?? "", "utf8")).completed).toBe(true);
-  });
+  it.each(["observed", "finish"] as const)(
+    "retains the exact reply for restart when shared %s fails",
+    async (phase) => {
+      connectedAuth();
+      mocks[phase].mockRejectedValueOnce(
+        new Error("interrupted shared finalization"),
+      );
+      const args = [
+        "help@agent.example",
+        "hello",
+        "--from",
+        "agent@sender.example",
+        "--json",
+      ];
+      const first = await runChatCommand(args);
+      expect(JSON.parse(first.stdout).outcome).toBe("sent_awaiting_reply");
+      expect(first.exitCode).toBe(3);
+      // --json keeps stderr empty; the receipt note is in warnings.
+      expect(first.stderr).toBe("");
+      const path = (JSON.parse(first.stdout).warnings as string[])
+        .find((line) => line.startsWith("Chat receipt: "))
+        ?.slice("Chat receipt: ".length);
+      expect(path).toBeDefined();
+      const saved = JSON.parse(readFileSync(path ?? "", "utf8"));
+      expect(saved.completed).toBe(false);
+      expect(saved.reply).toEqual({
+        emailId: "email-1",
+        requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      });
+      const resumed = await runChatCommand(args);
+      expect(JSON.parse(resumed.stdout).outcome).toBe("replied");
+      expect(mocks.openConnectedReplyWait.mock.calls[1][0].resumeReply).toEqual(
+        saved.reply,
+      );
+      expect(mocks.sendEmail).toHaveBeenCalledOnce();
+      expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
+      expect(JSON.parse(readFileSync(path ?? "", "utf8")).completed).toBe(true);
+    },
+  );
   it("retains a timed-out send and resumes without another POST", async () => {
     connectedAuth();
     mocks.next
@@ -782,26 +783,25 @@ describe("chat command", () => {
     expect(mocks.bind).not.toHaveBeenCalled();
   });
 
-  it.each([
-    "agent_failed",
-    "gate_denied",
-    "canceled",
-  ] as const)("releases the peer hold for a definitive %s send record", async (status) => {
-    connectedAuth();
-    mocks.sendEmail.mockResolvedValueOnce({
-      data: { data: sentEmail({ status }) },
-    });
-    const result = await runChatCommand([
-      "help@agent.example",
-      "hello",
-      "--from",
-      "agent@sender.example",
-      "--json",
-    ]);
-    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
-    expect(mocks.cancelRejectedSend).toHaveBeenCalledOnce();
-    expect(mocks.bind).not.toHaveBeenCalled();
-  });
+  it.each(["agent_failed", "gate_denied", "canceled"] as const)(
+    "releases the peer hold for a definitive %s send record",
+    async (status) => {
+      connectedAuth();
+      mocks.sendEmail.mockResolvedValueOnce({
+        data: { data: sentEmail({ status }) },
+      });
+      const result = await runChatCommand([
+        "help@agent.example",
+        "hello",
+        "--from",
+        "agent@sender.example",
+        "--json",
+      ]);
+      expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+      expect(mocks.cancelRejectedSend).toHaveBeenCalledOnce();
+      expect(mocks.bind).not.toHaveBeenCalled();
+    },
+  );
 
   it("keeps a server-error send hold uncertain", async () => {
     connectedAuth();

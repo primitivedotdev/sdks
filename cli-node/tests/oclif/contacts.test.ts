@@ -197,48 +197,48 @@ describe("contacts public API commands", () => {
     ).rejects.toMatchObject({ directoryAvailable: true });
     expect(f.calls.map((call) => call.method)).toEqual(["PUT"]);
   });
-  it.each([
-    "directory",
-    "membership",
-  ])("aborts a stalled %s write without retry or subsequent mutation", async (stage) => {
-    const controller = new AbortController();
-    let resolveStarted!: (signal: AbortSignal) => void;
-    const started = new Promise<AbortSignal>((resolve) => {
-      resolveStarted = resolve;
-    });
-    const f = fixture();
-    const methods: string[] = [];
-    f.fetch.mockImplementation(async (input, init) => {
-      const request = new Request(input, init);
-      methods.push(request.method);
-      if (stage === "membership" && methods.length === 1)
-        return Response.json(ok(contact).body);
-      resolveStarted(request.signal);
-      return new Promise<Response>((_resolve, reject) => {
-        if (request.signal.aborted) reject(request.signal.reason);
-        else
-          request.signal.addEventListener(
-            "abort",
-            () => reject(request.signal.reason),
-            { once: true },
-          );
+  it.each(["directory", "membership"])(
+    "aborts a stalled %s write without retry or subsequent mutation",
+    async (stage) => {
+      const controller = new AbortController();
+      let resolveStarted!: (signal: AbortSignal) => void;
+      const started = new Promise<AbortSignal>((resolve) => {
+        resolveStarted = resolve;
       });
-    });
-    const result = runContactRequest(f.client, {
-      target: "agent",
-      action: "add",
-      agent,
-      address,
-      signal: controller.signal,
-    });
-    const rejected = expect(result).rejects.toThrow();
-    const signal = await started;
-    expect(signal.aborted).toBe(false);
-    controller.abort();
-    await rejected;
-    expect(signal.aborted).toBe(true);
-    expect(methods).toEqual(stage === "directory" ? ["PUT"] : ["PUT", "PUT"]);
-  });
+      const f = fixture();
+      const methods: string[] = [];
+      f.fetch.mockImplementation(async (input, init) => {
+        const request = new Request(input, init);
+        methods.push(request.method);
+        if (stage === "membership" && methods.length === 1)
+          return Response.json(ok(contact).body);
+        resolveStarted(request.signal);
+        return new Promise<Response>((_resolve, reject) => {
+          if (request.signal.aborted) reject(request.signal.reason);
+          else
+            request.signal.addEventListener(
+              "abort",
+              () => reject(request.signal.reason),
+              { once: true },
+            );
+        });
+      });
+      const result = runContactRequest(f.client, {
+        target: "agent",
+        action: "add",
+        agent,
+        address,
+        signal: controller.signal,
+      });
+      const rejected = expect(result).rejects.toThrow();
+      const signal = await started;
+      expect(signal.aborted).toBe(false);
+      controller.abort();
+      await rejected;
+      expect(signal.aborted).toBe(true);
+      expect(methods).toEqual(stage === "directory" ? ["PUT"] : ["PUT", "PUT"]);
+    },
+  );
   it("never dispatches an already aborted contact request", async () => {
     const f = fixture();
     await expect(
@@ -300,42 +300,40 @@ describe("contacts public API commands", () => {
     expect(f.calls[1]?.url.searchParams.get("if_version")).toBe(version);
     expect(f.calls[1]?.url.pathname).toContain("/agent-contacts/");
   });
-  it.each([
-    "missing",
-    "cursor",
-    "wrong agent",
-    "missing version",
-  ])("does not mutate after an unsafe membership lookup: %s", async (kind) => {
-    const replies =
-      kind === "missing"
-        ? [ok([], null)]
-        : kind === "cursor"
-          ? [ok([], "a@example.test"), ok([], "a@example.test")]
-          : [
-              ok(
-                [
-                  {
-                    ...member,
-                    ...(kind === "wrong agent"
-                      ? { agent_address: "other@example.test" }
-                      : { version: undefined }),
-                  },
-                ],
-                null,
-              ),
-            ];
-    const f = fixture(...replies);
-    await expect(
-      runContactRequest(f.client, {
-        target: "agent",
-        action: "update",
-        address,
-        agent,
-        notify: true,
-      }),
-    ).rejects.toThrow();
-    expect(f.calls.every((call) => call.method === "GET")).toBe(true);
-  });
+  it.each(["missing", "cursor", "wrong agent", "missing version"])(
+    "does not mutate after an unsafe membership lookup: %s",
+    async (kind) => {
+      const replies =
+        kind === "missing"
+          ? [ok([], null)]
+          : kind === "cursor"
+            ? [ok([], "a@example.test"), ok([], "a@example.test")]
+            : [
+                ok(
+                  [
+                    {
+                      ...member,
+                      ...(kind === "wrong agent"
+                        ? { agent_address: "other@example.test" }
+                        : { version: undefined }),
+                    },
+                  ],
+                  null,
+                ),
+              ];
+      const f = fixture(...replies);
+      await expect(
+        runContactRequest(f.client, {
+          target: "agent",
+          action: "update",
+          address,
+          agent,
+          notify: true,
+        }),
+      ).rejects.toThrow();
+      expect(f.calls.every((call) => call.method === "GET")).toBe(true);
+    },
+  );
   it("does not turn incomplete pages into empty successful lists", async () => {
     const f = fixture(ok([]));
     await expect(
@@ -402,31 +400,28 @@ describe("contact command parsing", () => {
       reply: ok({ deleted: false }),
       method: "DELETE",
     },
-  ])("runs $command.name with its public argument shape", async ({
-    command,
-    argv,
-    reply,
-    method,
-  }) => {
-    const f = fixture(reply);
-    configured(f);
-    await command.run(argv, { root });
-    expect(f.calls).toHaveLength(1);
-    expect(f.calls[0]?.method).toBe(method);
-  });
-  it.each(
-    [[], ["--notify"], ["--no-notify"]].map((flags) => ({ flags })),
-  )("parses agent contacts add %j without defaulting omitted notify", async ({
-    flags,
-  }) => {
-    const f = fixture(ok(contact), ok(member));
-    configured(f);
-    await AgentContactsAdd.run([address, ...flags], { root });
-    expect(f.calls[1]?.body).toEqual({
-      if_absent: true,
-      ...(flags.length ? { notify: flags[0] === "--notify" } : {}),
-    });
-  });
+  ])(
+    "runs $command.name with its public argument shape",
+    async ({ command, argv, reply, method }) => {
+      const f = fixture(reply);
+      configured(f);
+      await command.run(argv, { root });
+      expect(f.calls).toHaveLength(1);
+      expect(f.calls[0]?.method).toBe(method);
+    },
+  );
+  it.each([[], ["--notify"], ["--no-notify"]].map((flags) => ({ flags })))(
+    "parses agent contacts add %j without defaulting omitted notify",
+    async ({ flags }) => {
+      const f = fixture(ok(contact), ok(member));
+      configured(f);
+      await AgentContactsAdd.run([address, ...flags], { root });
+      expect(f.calls[1]?.body).toEqual({
+        if_absent: true,
+        ...(flags.length ? { notify: flags[0] === "--notify" } : {}),
+      });
+    },
+  );
   it("parses an explicit membership CAS and clears purpose without changing notify", async () => {
     const f = fixture(ok(member));
     configured(f);

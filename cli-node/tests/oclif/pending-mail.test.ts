@@ -399,14 +399,12 @@ describe("pending notices for consumed replies", () => {
     ]);
   });
 
-  it.each([
-    null,
-    undefined,
-    "",
-    "async:not-a-session",
-  ])("clears nothing for a wait with no runtime session (%s)", async (key) => {
-    await recordPendingMail(configDir, profile, session, mail(1));
-    await clearConsumedPendingMail(configDir, key, id(1));
-    expect(readPendingMail(configDir, profile, session)).toEqual([mail(1)]);
-  });
+  it.each([null, undefined, "", "async:not-a-session"])(
+    "clears nothing for a wait with no runtime session (%s)",
+    async (key) => {
+      await recordPendingMail(configDir, profile, session, mail(1));
+      await clearConsumedPendingMail(configDir, key, id(1));
+      expect(readPendingMail(configDir, profile, session)).toEqual([mail(1)]);
+    },
+  );
 });

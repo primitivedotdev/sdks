@@ -234,32 +234,32 @@ describe("process generation ownership", () => {
     release();
   });
 
-  it.each([
-    "darwin",
-    "win32",
-  ] as const)("compares persisted %s identity before recovering a reused live PID", (target) => {
-    platform(target);
-    vi.stubEnv("SystemRoot", "C:\\Windows");
-    let generation = 1;
-    vi.mocked(execFileSync).mockImplementation((file) => {
-      if (file === "/usr/sbin/sysctl") return `${BOOT_ID}\n`;
-      return target === "darwin"
-        ? `Wed Sep 9 12:34:0${generation} 2026\n`
-        : `63893018096000000${generation}\r\n`;
-    });
-    const oldRelease = acquireListenLock(directory, "queue");
-    const old = lockOwner();
-    expect(() => acquireListenLock(directory, "queue")).toThrow(
-      "Another listener",
-    );
-    generation++;
-    const release = acquireListenLock(directory, "queue");
-    const current = lockOwner();
-    expect(current.owner).not.toBe(old.owner);
-    oldRelease();
-    expect(existsSync(current.file)).toBe(true);
-    release();
-  });
+  it.each(["darwin", "win32"] as const)(
+    "compares persisted %s identity before recovering a reused live PID",
+    (target) => {
+      platform(target);
+      vi.stubEnv("SystemRoot", "C:\\Windows");
+      let generation = 1;
+      vi.mocked(execFileSync).mockImplementation((file) => {
+        if (file === "/usr/sbin/sysctl") return `${BOOT_ID}\n`;
+        return target === "darwin"
+          ? `Wed Sep 9 12:34:0${generation} 2026\n`
+          : `63893018096000000${generation}\r\n`;
+      });
+      const oldRelease = acquireListenLock(directory, "queue");
+      const old = lockOwner();
+      expect(() => acquireListenLock(directory, "queue")).toThrow(
+        "Another listener",
+      );
+      generation++;
+      const release = acquireListenLock(directory, "queue");
+      const current = lockOwner();
+      expect(current.owner).not.toBe(old.owner);
+      oldRelease();
+      expect(existsSync(current.file)).toBe(true);
+      release();
+    },
+  );
 
   it.each([
     "",
@@ -267,17 +267,20 @@ describe("process generation ownership", () => {
     '{"version":1,"identity":null}',
     '{"version":1,"identity":"unknown"}',
     '{"version":2,"identity":"linux:0385d3d5-2a65-41bd-9596-c3dd32c06ddd:100"}',
-  ])("retains a live PID with legacy or unverifiable owner content %j", (content) => {
-    linuxIdentity(() => "100");
-    const release = acquireListenLock(directory, "queue");
-    const old = lockOwner();
-    writeFileSync(old.file, content);
-    expect(() => acquireListenLock(directory, "queue")).toThrow(
-      /primitive listen --subscription local-[a-f0-9-]{36}/,
-    );
-    expect(readFileSync(old.file, "utf8")).toBe(content);
-    release();
-  });
+  ])(
+    "retains a live PID with legacy or unverifiable owner content %j",
+    (content) => {
+      linuxIdentity(() => "100");
+      const release = acquireListenLock(directory, "queue");
+      const old = lockOwner();
+      writeFileSync(old.file, content);
+      expect(() => acquireListenLock(directory, "queue")).toThrow(
+        /primitive listen --subscription local-[a-f0-9-]{36}/,
+      );
+      expect(readFileSync(old.file, "utf8")).toBe(content);
+      release();
+    },
+  );
 
   it("retains a live PID when the current OS identity becomes unreadable", () => {
     let started: string | null = "100";
@@ -443,22 +446,22 @@ describe("native process identity readers", () => {
     );
   });
 
-  it.each([
-    "darwin",
-    "win32",
-  ] as const)("retains live locks on %s native reader failure", (target) => {
-    platform(target);
-    vi.stubEnv("SystemRoot", "C:\\Windows");
-    vi.mocked(execFileSync).mockImplementation(() => {
-      throw new Error("unavailable or denied");
-    });
-    expect(listenProcessIdentity(123)).toBeNull();
-    const release = acquireListenLock(directory, "queue");
-    expect(() => acquireListenLock(directory, "queue")).toThrow(
-      "cannot be verified",
-    );
-    release();
-  });
+  it.each(["darwin", "win32"] as const)(
+    "retains live locks on %s native reader failure",
+    (target) => {
+      platform(target);
+      vi.stubEnv("SystemRoot", "C:\\Windows");
+      vi.mocked(execFileSync).mockImplementation(() => {
+        throw new Error("unavailable or denied");
+      });
+      expect(listenProcessIdentity(123)).toBeNull();
+      const release = acquireListenLock(directory, "queue");
+      expect(() => acquireListenLock(directory, "queue")).toThrow(
+        "cannot be verified",
+      );
+      release();
+    },
+  );
 
   it("rejects invalid PIDs before invoking OS tools", () => {
     platform("darwin");

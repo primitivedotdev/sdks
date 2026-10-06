@@ -690,27 +690,30 @@ describe("findNextAwaiting", () => {
       "ignores-automated",
       /ignored `automated=false`/,
     ],
-  ] as const)("fails loudly, never scanning locally, when the server %s", async (_label, mode, message) => {
-    inbox.mode = mode;
-    inbox.add({
-      id: "news",
-      created_at: "2026-09-17T00:00:00.000Z",
-      automation_headers: { list_id: "<l.example>" },
-    });
-    inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
-    const error = await findNextAwaiting({
-      apiClient,
-      includeAutomated: false,
-      api: inbox.api(),
-    }).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(AutomatedFilterUnsupportedError);
-    expect((error as Error).message).toMatch(message);
-    expect((error as AutomatedFilterUnsupportedError).code).toBe(
-      "automated_filter_unsupported",
-    );
-    expect(inbox.calls.filter((c) => c.op === "list")).toHaveLength(1);
-    expect(inbox.calls.filter((c) => c.op === "get")).toHaveLength(0);
-  });
+  ] as const)(
+    "fails loudly, never scanning locally, when the server %s",
+    async (_label, mode, message) => {
+      inbox.mode = mode;
+      inbox.add({
+        id: "news",
+        created_at: "2026-09-17T00:00:00.000Z",
+        automation_headers: { list_id: "<l.example>" },
+      });
+      inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
+      const error = await findNextAwaiting({
+        apiClient,
+        includeAutomated: false,
+        api: inbox.api(),
+      }).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(AutomatedFilterUnsupportedError);
+      expect((error as Error).message).toMatch(message);
+      expect((error as AutomatedFilterUnsupportedError).code).toBe(
+        "automated_filter_unsupported",
+      );
+      expect(inbox.calls.filter((c) => c.op === "list")).toHaveLength(1);
+      expect(inbox.calls.filter((c) => c.op === "get")).toHaveLength(0);
+    },
+  );
 
   it("fails loudly when the detail lacks the automated verdict", async () => {
     inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });

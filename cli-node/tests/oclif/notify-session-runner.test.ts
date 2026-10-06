@@ -399,68 +399,70 @@ function setup(
   };
 }
 describe("shared notification listener integration", () => {
-  it.each([
-    "verified",
-    "pending",
-  ])("does not count %s controls or notify the model before simultaneous ordinary mail", async (status) => {
-    const f = setup();
-    Object.assign(f.detail, { presence_control: { status, valid_for_ms: 0 } });
-    f.changed.mockImplementationOnce(async () => {
-      f.nextEmail();
-      Reflect.deleteProperty(f.detail, "presence_control");
-      await f.store()?.ingest({
-        emailId: f.detail.id,
-        eventId: randomUUID(),
-        receivedAt: f.detail.received_at,
+  it.each(["verified", "pending"])(
+    "does not count %s controls or notify the model before simultaneous ordinary mail",
+    async (status) => {
+      const f = setup();
+      Object.assign(f.detail, {
+        presence_control: { status, valid_for_ms: 0 },
       });
-    });
-    expect(await runListen(f.options)).toBe(1);
-    expect(f.changed).toHaveBeenCalledOnce();
-    expect(f.handleDetail).toHaveBeenCalledOnce();
-    expect(f.close).toHaveBeenCalledOnce();
-    expect(f.closeReceiver).toHaveBeenCalledOnce();
-  });
+      f.changed.mockImplementationOnce(async () => {
+        f.nextEmail();
+        Reflect.deleteProperty(f.detail, "presence_control");
+        await f.store()?.ingest({
+          emailId: f.detail.id,
+          eventId: randomUUID(),
+          receivedAt: f.detail.received_at,
+        });
+      });
+      expect(await runListen(f.options)).toBe(1);
+      expect(f.changed).toHaveBeenCalledOnce();
+      expect(f.handleDetail).toHaveBeenCalledOnce();
+      expect(f.close).toHaveBeenCalledOnce();
+      expect(f.closeReceiver).toHaveBeenCalledOnce();
+    },
+  );
   it.each([
     { resolved: true, notified: true },
     { resolved: false, notified: false },
-  ])("retries one recipient-bound pending email, then applies final allowed=$resolved", async ({
-    resolved,
-    notified,
-  }) => {
-    const f = setup(["sdk"], ["email.received"], true);
-    f.contacts([]);
-    f.network(false, null, true);
-    let clock = performance.now();
-    const spy = vi.spyOn(performance, "now").mockImplementation(() => clock);
-    f.changed.mockImplementation(async () => {
-      clock += NETWORK_ADMISSION_PENDING_RETRY_MS + 1;
-      f.network(
-        resolved,
-        resolved ? new Date(Date.now() - 60_000).toISOString() : null,
-      );
-    });
-    try {
+  ])(
+    "retries one recipient-bound pending email, then applies final allowed=$resolved",
+    async ({ resolved, notified }) => {
+      const f = setup(["sdk"], ["email.received"], true);
+      f.contacts([]);
+      f.network(false, null, true);
+      let clock = performance.now();
+      const spy = vi.spyOn(performance, "now").mockImplementation(() => clock);
+      f.changed.mockImplementation(async () => {
+        clock += NETWORK_ADMISSION_PENDING_RETRY_MS + 1;
+        f.network(
+          resolved,
+          resolved ? new Date(Date.now() - 60_000).toISOString() : null,
+        );
+      });
+      try {
+        expect(
+          await runListen({
+            ...f.options,
+            notifySession: {
+              ...f.options.notifySession,
+              senders: [],
+              contactPreferences: true,
+            },
+          }),
+        ).toBe(1);
+      } finally {
+        spy.mockRestore();
+      }
+      expect(f.changed).toHaveBeenCalledOnce();
+      expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
       expect(
-        await runListen({
-          ...f.options,
-          notifySession: {
-            ...f.options.notifySession,
-            senders: [],
-            contactPreferences: true,
-          },
-        }),
-      ).toBe(1);
-    } finally {
-      spy.mockRestore();
-    }
-    expect(f.changed).toHaveBeenCalledOnce();
-    expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
-    expect(
-      f.order.filter(
-        (path) => path === "/v1/agent-networks/default/contact-admission",
-      ).length,
-    ).toBeGreaterThanOrEqual(2);
-  });
+        f.order.filter(
+          (path) => path === "/v1/agent-networks/default/contact-admission",
+        ).length,
+      ).toBeGreaterThanOrEqual(2);
+    },
+  );
   it.each([
     {
       scenario: "first peer mail",
@@ -490,53 +492,51 @@ describe("shared notification listener integration", () => {
       muted: true,
       notified: false,
     },
-  ])("routes $scenario only when current network and contact policy admit it", async ({
-    allowed,
-    old,
-    muted,
-    notified,
-  }) => {
-    const f = setup(["sdk"], ["email.received"], true);
-    const activated = new Date(
-      Date.now() - (old ? 1000 : 60_000),
-    ).toISOString();
-    if (old) f.detail.received_at = new Date(Date.now() - 2000).toISOString();
-    f.network(allowed, allowed ? activated : null);
-    f.contacts(
-      muted
-        ? [
-            {
-              agent_address: f.detail.recipient,
-              contact_address: f.detail.from_email,
-              notify: false,
-              notify_since: null,
-              notification_generation: null,
-              version: randomUUID(),
-            },
-          ]
-        : [],
-    );
-    expect(
-      await runListen({
-        ...f.options,
-        notifySession: {
-          ...f.options.notifySession,
-          senders: [],
-          contactPreferences: true,
-        },
-      }),
-    ).toBe(1);
-    expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
-    if (notified) {
-      expect(f.receipt()).toMatchObject({ state: "accepted" });
-      expect(f.handleDetail.mock.calls[0]?.[3]).toMatchObject({
-        sender: f.detail.from_email,
-      });
-    } else expect(f.receipt()).toBeNull();
-    expect(
-      f.order.includes("/v1/agent-networks/default/contact-admission"),
-    ).toBe(true);
-  });
+  ])(
+    "routes $scenario only when current network and contact policy admit it",
+    async ({ allowed, old, muted, notified }) => {
+      const f = setup(["sdk"], ["email.received"], true);
+      const activated = new Date(
+        Date.now() - (old ? 1000 : 60_000),
+      ).toISOString();
+      if (old) f.detail.received_at = new Date(Date.now() - 2000).toISOString();
+      f.network(allowed, allowed ? activated : null);
+      f.contacts(
+        muted
+          ? [
+              {
+                agent_address: f.detail.recipient,
+                contact_address: f.detail.from_email,
+                notify: false,
+                notify_since: null,
+                notification_generation: null,
+                version: randomUUID(),
+              },
+            ]
+          : [],
+      );
+      expect(
+        await runListen({
+          ...f.options,
+          notifySession: {
+            ...f.options.notifySession,
+            senders: [],
+            contactPreferences: true,
+          },
+        }),
+      ).toBe(1);
+      expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
+      if (notified) {
+        expect(f.receipt()).toMatchObject({ state: "accepted" });
+        expect(f.handleDetail.mock.calls[0]?.[3]).toMatchObject({
+          sender: f.detail.from_email,
+        });
+      } else expect(f.receipt()).toBeNull();
+      expect(
+        f.order.includes("/v1/agent-networks/default/contact-admission"),
+      ).toBe(true);
+    },
+  );
   it("does not ask network admission for mail with unverified sender provenance", async () => {
     const f = setup(["sdk"], ["email.received"], true);
     f.contacts([]);
@@ -755,20 +755,18 @@ describe("shared notification listener integration", () => {
     ).rejects.toThrow("reserved");
     expect(authenticate).not.toHaveBeenCalled();
   });
-  it.each([
-    { modes: ["stdout"] },
-    { modes: [] },
-  ])("checks native readiness then refuses incompatible SDK completion %j", async ({
-    modes,
-  }) => {
-    const f = setup(modes);
-    await expect(runListen(f.options)).rejects.toThrow(
-      "compatible subscription",
-    );
-    expect(f.order).toEqual(["native-ready", "/v1/endpoints"]);
-    expect(receive).not.toHaveBeenCalled();
-    expect(f.close).toHaveBeenCalledOnce();
-  });
+  it.each([{ modes: ["stdout"] }, { modes: [] }])(
+    "checks native readiness then refuses incompatible SDK completion %j",
+    async ({ modes }) => {
+      const f = setup(modes);
+      await expect(runListen(f.options)).rejects.toThrow(
+        "compatible subscription",
+      );
+      expect(f.order).toEqual(["native-ready", "/v1/endpoints"]);
+      expect(receive).not.toHaveBeenCalled();
+      expect(f.close).toHaveBeenCalledOnce();
+    },
+  );
   it("uses one stable name and accepts only through the shared receiver", async () => {
     const f = setup();
     expect(await runListen(f.options)).toBe(1);
@@ -892,100 +890,99 @@ describe("first-contact intake", () => {
       contactRequest: true,
     });
   });
-  it.each([
-    "trusted",
-    "sender-mismatch",
-    "signer-mismatch",
-  ])("checks managed staging authentication before structured request admission: %s", async (evidence) => {
-    const f = setup();
-    f.detail.from_email = "agent@neutral.primitive-staging.email";
-    f.detail.from_header =
-      evidence === "sender-mismatch"
-        ? "other@neutral.primitive-staging.email"
-        : f.detail.from_email;
-    Object.assign(f.detail.auth, {
-      dmarcFromDomain: "primitive-staging.email",
-      dkimSignatures: [
-        {
-          domain:
-            evidence === "signer-mismatch"
-              ? "primitive.email"
-              : "primitive-staging.email",
-          selector: "default",
-          result: "pass",
-          aligned: true,
-          keyBits: 2048,
-          algo: "rsa-sha256",
-        },
-      ],
-    });
-    f.requests();
-    expect(await runListen(requestOptions(f))).toBe(1);
-    expect(f.handleDetail).toHaveBeenCalledTimes(
-      evidence === "trusted" ? 1 : 0,
-    );
-    if (evidence === "trusted") {
-      expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
-        sender: f.detail.from_email,
-        contactRequest: true,
+  it.each(["trusted", "sender-mismatch", "signer-mismatch"])(
+    "checks managed staging authentication before structured request admission: %s",
+    async (evidence) => {
+      const f = setup();
+      f.detail.from_email = "agent@neutral.primitive-staging.email";
+      f.detail.from_header =
+        evidence === "sender-mismatch"
+          ? "other@neutral.primitive-staging.email"
+          : f.detail.from_email;
+      Object.assign(f.detail.auth, {
+        dmarcFromDomain: "primitive-staging.email",
+        dkimSignatures: [
+          {
+            domain:
+              evidence === "signer-mismatch"
+                ? "primitive.email"
+                : "primitive-staging.email",
+            selector: "default",
+            result: "pass",
+            aligned: true,
+            keyBits: 2048,
+            algo: "rsa-sha256",
+          },
+        ],
       });
-      expect(f.receipt()).toMatchObject({ state: "accepted" });
-    } else {
-      expect(f.receipt()).toBeNull();
-    }
-  });
+      f.requests();
+      expect(await runListen(requestOptions(f))).toBe(1);
+      expect(f.handleDetail).toHaveBeenCalledTimes(
+        evidence === "trusted" ? 1 : 0,
+      );
+      if (evidence === "trusted") {
+        expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+          sender: f.detail.from_email,
+          contactRequest: true,
+        });
+        expect(f.receipt()).toMatchObject({ state: "accepted" });
+      } else {
+        expect(f.receipt()).toBeNull();
+      }
+    },
+  );
   it.each([
     { offset: 4700, notified: true },
     { offset: -1, notified: false },
-  ])("rechecks cached request-only policy for ordinary mail received $offset ms after acceptance", async ({
-    offset,
-    notified,
-  }) => {
-    const f = setup();
-    f.requests(false);
-    const acceptedAt = Date.now();
-    const original = receive.getMockImplementation();
-    if (!original) throw new Error("Missing shared receiver fixture");
-    receive.mockImplementationOnce(async (...args: unknown[]) => {
-      // Startup has cached request-only admission. Acceptance changes exact
-      // membership before ordinary mail is read, still within the 30s cache.
-      f.contacts([
-        {
-          agent_address: f.detail.recipient,
-          contact_address: f.detail.from_email,
-          version: randomUUID(),
-          notify: true,
-          notification_generation: randomUUID(),
-          notify_since: new Date(acceptedAt).toISOString(),
-        },
-      ]);
-      f.detail.received_at = new Date(acceptedAt + offset).toISOString();
-      return original(...args);
-    });
+  ])(
+    "rechecks cached request-only policy for ordinary mail received $offset ms after acceptance",
+    async ({ offset, notified }) => {
+      const f = setup();
+      f.requests(false);
+      const acceptedAt = Date.now();
+      const original = receive.getMockImplementation();
+      if (!original) throw new Error("Missing shared receiver fixture");
+      receive.mockImplementationOnce(async (...args: unknown[]) => {
+        // Startup has cached request-only admission. Acceptance changes exact
+        // membership before ordinary mail is read, still within the 30s cache.
+        f.contacts([
+          {
+            agent_address: f.detail.recipient,
+            contact_address: f.detail.from_email,
+            version: randomUUID(),
+            notify: true,
+            notification_generation: randomUUID(),
+            notify_since: new Date(acceptedAt).toISOString(),
+          },
+        ]);
+        f.detail.received_at = new Date(acceptedAt + offset).toISOString();
+        return original(...args);
+      });
 
-    expect(await runListen(requestOptions(f))).toBe(1);
-    expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
-    expect(
-      f.order.filter((path) => path.startsWith("/v1/agent-contacts/")),
-    ).toHaveLength(notified ? 3 : 2);
-    if (notified) {
-      expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
-        sender: f.detail.from_email,
-        contactRequest: false,
-      });
-      expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
-        state: "accepted",
-      });
-      const controller = new AbortController();
-      f.changed.mockImplementationOnce(async () => controller.abort());
+      expect(await runListen(requestOptions(f))).toBe(1);
+      expect(f.handleDetail).toHaveBeenCalledTimes(notified ? 1 : 0);
       expect(
-        await runListen({ ...requestOptions(f), signal: controller.signal }),
-      ).toBe(0);
-      expect(f.handleDetail).toHaveBeenCalledOnce();
-    } else {
-      expect((await f.store()?.readEmail(f.detail.id))?.route).toBeNull();
-    }
-  });
+        f.order.filter((path) => path.startsWith("/v1/agent-contacts/")),
+      ).toHaveLength(notified ? 3 : 2);
+      if (notified) {
+        expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+          sender: f.detail.from_email,
+          contactRequest: false,
+        });
+        expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+          state: "accepted",
+        });
+        const controller = new AbortController();
+        f.changed.mockImplementationOnce(async () => controller.abort());
+        expect(
+          await runListen({ ...requestOptions(f), signal: controller.signal }),
+        ).toBe(0);
+        expect(f.handleDetail).toHaveBeenCalledOnce();
+      } else {
+        expect((await f.store()?.readEmail(f.detail.id))?.route).toBeNull();
+      }
+    },
+  );
   it("keeps a request eligible after a crash between ingest and native dispatch", async () => {
     const f = setup();
     f.requests();
@@ -1024,70 +1021,72 @@ describe("first-contact intake", () => {
     expect(f.receipt()).toBeNull();
     expect(f.handleDetail).toHaveBeenCalledOnce();
   });
-  it.each([
-    "duplicate",
-    "expired",
-  ])("durably settles a %s request without a native receipt or retry after restart", async (reason) => {
-    const f = setup();
-    f.requests();
-    if (reason !== "expired") {
-      for (let index = 0; index < 1; index++) {
-        expect(
-          f.notices().reserve(
-            reason === "duplicate"
-              ? f.detail.from_email
-              : `peer${index}@example.com`,
-            f.options.notifySession.threadId,
-            {
-              emailId: randomUUID(),
-              eventId: randomUUID(),
-              clientId: randomUUID(),
-              state: "submitting",
-            },
-            [],
-          ),
-        ).toBe("reserved");
-      }
-    } else {
-      const original = f.handleDetail.getMockImplementation();
-      if (!original) throw new Error("Missing notification fixture");
-      f.handleDetail.mockImplementationOnce(async (...args) => {
-        const now = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 601_000);
-        try {
-          return await original(...args);
-        } finally {
-          now.mockRestore();
+  it.each(["duplicate", "expired"])(
+    "durably settles a %s request without a native receipt or retry after restart",
+    async (reason) => {
+      const f = setup();
+      f.requests();
+      if (reason !== "expired") {
+        for (let index = 0; index < 1; index++) {
+          expect(
+            f.notices().reserve(
+              reason === "duplicate"
+                ? f.detail.from_email
+                : `peer${index}@example.com`,
+              f.options.notifySession.threadId,
+              {
+                emailId: randomUUID(),
+                eventId: randomUUID(),
+                clientId: randomUUID(),
+                state: "submitting",
+              },
+              [],
+            ),
+          ).toBe("reserved");
         }
+      } else {
+        const original = f.handleDetail.getMockImplementation();
+        if (!original) throw new Error("Missing notification fixture");
+        f.handleDetail.mockImplementationOnce(async (...args) => {
+          const now = vi
+            .spyOn(Date, "now")
+            .mockReturnValue(Date.now() + 601_000);
+          try {
+            return await original(...args);
+          } finally {
+            now.mockRestore();
+          }
+        });
+      }
+      expect(await runListen(requestOptions(f))).toBe(1);
+      expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
+        state: "skipped",
       });
-    }
-    expect(await runListen(requestOptions(f))).toBe(1);
-    expect((await f.store()?.readEmail(f.detail.id))?.route).toMatchObject({
-      state: "skipped",
-    });
-    expect(f.receipt()).toBeNull();
-    for (const threadId of [f.options.notifySession.threadId, randomUUID()]) {
-      const controller = new AbortController();
-      f.changed.mockImplementationOnce(async () => {
-        controller.abort();
-      });
-      const options = requestOptions(f);
-      expect(
-        await runListen({
-          ...options,
-          signal: controller.signal,
-          notifySession: { ...options.notifySession, threadId },
-        }),
-      ).toBe(0);
-      expect(
-        (
-          await f
-            .store()
-            ?.claimForNotification(f.detail.id, `codex:${threadId}`)
-        )?.status,
-      ).toBe("already_observed");
-    }
-    expect(f.handleDetail).toHaveBeenCalledOnce();
-  });
+      expect(f.receipt()).toBeNull();
+      for (const threadId of [f.options.notifySession.threadId, randomUUID()]) {
+        const controller = new AbortController();
+        f.changed.mockImplementationOnce(async () => {
+          controller.abort();
+        });
+        const options = requestOptions(f);
+        expect(
+          await runListen({
+            ...options,
+            signal: controller.signal,
+            notifySession: { ...options.notifySession, threadId },
+          }),
+        ).toBe(0);
+        expect(
+          (
+            await f
+              .store()
+              ?.claimForNotification(f.detail.id, `codex:${threadId}`)
+          )?.status,
+        ).toBe("already_observed");
+      }
+      expect(f.handleDetail).toHaveBeenCalledOnce();
+    },
+  );
   it("retries a capacity-deferred request when a membership frees a slot, without hot polling", async () => {
     const f = setup();
     f.requests();
@@ -1158,28 +1157,28 @@ describe("first-contact intake", () => {
 });
 
 describe("locally solicited notification replies", () => {
-  it.each([
-    503,
-    "pending",
-  ] as const)("holds an exact solicited reply while current member proof is %s", async (failure) => {
-    const f = await solicited("plain");
-    f.network(
-      false,
-      null,
-      failure === "pending",
-      failure === 503 ? 503 : 200,
-      true,
-    );
-    const controller = new AbortController();
-    f.changed.mockImplementationOnce(async () => controller.abort());
-    expect(await runListen({ ...f.options, signal: controller.signal })).toBe(
-      0,
-    );
-    expect(f.handleDetail).not.toHaveBeenCalled();
-    expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
-      route: null,
-    });
-  });
+  it.each([503, "pending"] as const)(
+    "holds an exact solicited reply while current member proof is %s",
+    async (failure) => {
+      const f = await solicited("plain");
+      f.network(
+        false,
+        null,
+        failure === "pending",
+        failure === 503 ? 503 : 200,
+        true,
+      );
+      const controller = new AbortController();
+      f.changed.mockImplementationOnce(async () => controller.abort());
+      expect(await runListen({ ...f.options, signal: controller.signal })).toBe(
+        0,
+      );
+      expect(f.handleDetail).not.toHaveBeenCalled();
+      expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+        route: null,
+      });
+    },
+  );
   it("keeps exact external solicited replies independent of generic network eligibility", async () => {
     const f = await solicited("plain");
     f.network(false, null, true);
@@ -1187,31 +1186,36 @@ describe("locally solicited notification replies", () => {
     expect(f.handleDetail).toHaveBeenCalledOnce();
   });
 
-  it.each([
-    503,
-    "pending",
-  ] as const)("keeps unrelated mail pending during network %s", async (failure) => {
-    const f = setup();
-    f.contacts([]);
-    f.network(false, null, failure === "pending", failure === 503 ? 503 : 200);
-    const controller = new AbortController();
-    f.changed.mockImplementationOnce(async () => controller.abort());
-    expect(
-      await runListen({
-        ...f.options,
-        signal: controller.signal,
-        notifySession: {
-          ...f.options.notifySession,
-          senders: [],
-          contactPreferences: true,
-        },
-      }),
-    ).toBe(0);
-    expect(f.handleDetail).not.toHaveBeenCalled();
-    expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
-      route: null,
-    });
-  });
+  it.each([503, "pending"] as const)(
+    "keeps unrelated mail pending during network %s",
+    async (failure) => {
+      const f = setup();
+      f.contacts([]);
+      f.network(
+        false,
+        null,
+        failure === "pending",
+        failure === 503 ? 503 : 200,
+      );
+      const controller = new AbortController();
+      f.changed.mockImplementationOnce(async () => controller.abort());
+      expect(
+        await runListen({
+          ...f.options,
+          signal: controller.signal,
+          notifySession: {
+            ...f.options.notifySession,
+            senders: [],
+            contactPreferences: true,
+          },
+        }),
+      ).toBe(0);
+      expect(f.handleDetail).not.toHaveBeenCalled();
+      expect(await f.store()?.readEmail(f.detail.id)).toMatchObject({
+        route: null,
+      });
+    },
+  );
 
   it("follows a fresh async reply through a changed parent without admitting unrelated senders", async () => {
     const f = setup();
@@ -1310,37 +1314,41 @@ describe("locally solicited notification replies", () => {
     "mute",
     "session",
     "contact",
-  ])("does not widen followed conversation admission for %s", async (mismatch) => {
-    const f = await followedThread();
-    if (mismatch === "sender")
-      f.detail.from_header = f.detail.from_email = "other@example.com";
-    if (mismatch === "thread") f.detail.thread_id = randomUUID();
-    if (mismatch === "before-follow")
-      f.detail.received_at = new Date(Date.now() - 5000).toISOString();
-    if (mismatch === "auth") f.detail.auth.dmarc = "fail";
-    if (mismatch === "mute")
-      f.contacts([
-        {
-          agent_address: f.detail.recipient,
-          contact_address: f.detail.from_email,
-          notify: false,
-          notify_since: null,
-          notification_generation: null,
-          version: randomUUID(),
-        },
-      ]);
-    if (mismatch === "session") f.options.notifySession.threadId = randomUUID();
-    if (mismatch === "contact")
-      f.interaction(
-        prepareContactRequest(
-          f.detail.from_email,
-          "New unrelated request",
-          600,
-        ),
-      );
-    expect(await runListen(f.options)).toBe(1);
-    expect(f.handleDetail).not.toHaveBeenCalled();
-  });
+  ])(
+    "does not widen followed conversation admission for %s",
+    async (mismatch) => {
+      const f = await followedThread();
+      if (mismatch === "sender")
+        f.detail.from_header = f.detail.from_email = "other@example.com";
+      if (mismatch === "thread") f.detail.thread_id = randomUUID();
+      if (mismatch === "before-follow")
+        f.detail.received_at = new Date(Date.now() - 5000).toISOString();
+      if (mismatch === "auth") f.detail.auth.dmarc = "fail";
+      if (mismatch === "mute")
+        f.contacts([
+          {
+            agent_address: f.detail.recipient,
+            contact_address: f.detail.from_email,
+            notify: false,
+            notify_since: null,
+            notification_generation: null,
+            version: randomUUID(),
+          },
+        ]);
+      if (mismatch === "session")
+        f.options.notifySession.threadId = randomUUID();
+      if (mismatch === "contact")
+        f.interaction(
+          prepareContactRequest(
+            f.detail.from_email,
+            "New unrelated request",
+            600,
+          ),
+        );
+      expect(await runListen(f.options)).toBe(1);
+      expect(f.handleDetail).not.toHaveBeenCalled();
+    },
+  );
 
   async function solicited(kind: "contact" | "plain", mismatch?: string) {
     const f = setup();
@@ -1428,28 +1436,28 @@ describe("locally solicited notification replies", () => {
     };
     return { ...f, options, parent, requestId, owner };
   }
-  it.each([
-    "contact",
-    "plain",
-  ] as const)("notifies one exact late %s response with unsolicited requests disabled and no membership", async (kind) => {
-    const f = await solicited(kind);
-    expect(await runListen(f.options)).toBe(1);
-    expect(f.handleDetail).toHaveBeenCalledOnce();
-    expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
-      sender: f.detail.from_email,
-      contactRequest: false,
-    });
-    expect(await f.store()?.readWait(f.requestId)).toMatchObject({
-      status: "bound",
-      waiters: [],
-    });
-    const controller = new AbortController();
-    f.changed.mockImplementationOnce(async () => controller.abort());
-    expect(await runListen({ ...f.options, signal: controller.signal })).toBe(
-      0,
-    );
-    expect(f.handleDetail).toHaveBeenCalledOnce();
-  });
+  it.each(["contact", "plain"] as const)(
+    "notifies one exact late %s response with unsolicited requests disabled and no membership",
+    async (kind) => {
+      const f = await solicited(kind);
+      expect(await runListen(f.options)).toBe(1);
+      expect(f.handleDetail).toHaveBeenCalledOnce();
+      expect(f.handleDetail.mock.calls[0][3]).toMatchObject({
+        sender: f.detail.from_email,
+        contactRequest: false,
+      });
+      expect(await f.store()?.readWait(f.requestId)).toMatchObject({
+        status: "bound",
+        waiters: [],
+      });
+      const controller = new AbortController();
+      f.changed.mockImplementationOnce(async () => controller.abort());
+      expect(await runListen({ ...f.options, signal: controller.signal })).toBe(
+        0,
+      );
+      expect(f.handleDetail).toHaveBeenCalledOnce();
+    },
+  );
   it("keeps following after an interim reply completes the synchronous wait, including an attached result and restart", async () => {
     const f = await solicited("plain", "completed");
     (f.detail.parsed.attachments as unknown[]).push({
@@ -1521,42 +1529,45 @@ describe("locally solicited notification replies", () => {
     "expiry",
     "expired-arrival",
     "before-request",
-  ])("does not admit a late contact response with mismatched %s", async (mismatch) => {
-    const f = await solicited("contact", mismatch);
-    expect(await runListen(f.options)).toBe(1);
-    expect(f.handleDetail).not.toHaveBeenCalled();
-  });
-  it.each([
-    "contact",
-    "plain",
-  ] as const)("retains an active %s waiter until it releases ownership", async (kind) => {
-    const f = await solicited(kind, "active-wait");
-    f.changed.mockImplementationOnce(async () => {
+  ])(
+    "does not admit a late contact response with mismatched %s",
+    async (mismatch) => {
+      const f = await solicited("contact", mismatch);
+      expect(await runListen(f.options)).toBe(1);
       expect(f.handleDetail).not.toHaveBeenCalled();
-      await f.store()?.releaseWaiter(f.requestId, f.owner.token);
-    });
-    expect(await runListen(f.options)).toBe(1);
-    expect(f.changed).toHaveBeenCalledOnce();
-    expect(f.handleDetail).toHaveBeenCalledOnce();
-  });
-  it.each([
-    "contact",
-    "plain",
-  ] as const)("keeps explicit silence authoritative for a solicited %s response", async (kind) => {
-    const f = await solicited(kind);
-    f.contacts([
-      {
-        agent_address: f.detail.recipient,
-        contact_address: f.detail.from_email,
-        notify: false,
-        notify_since: null,
-        notification_generation: null,
-        version: randomUUID(),
-      },
-    ]);
-    expect(await runListen(f.options)).toBe(1);
-    expect(f.handleDetail).not.toHaveBeenCalled();
-  });
+    },
+  );
+  it.each(["contact", "plain"] as const)(
+    "retains an active %s waiter until it releases ownership",
+    async (kind) => {
+      const f = await solicited(kind, "active-wait");
+      f.changed.mockImplementationOnce(async () => {
+        expect(f.handleDetail).not.toHaveBeenCalled();
+        await f.store()?.releaseWaiter(f.requestId, f.owner.token);
+      });
+      expect(await runListen(f.options)).toBe(1);
+      expect(f.changed).toHaveBeenCalledOnce();
+      expect(f.handleDetail).toHaveBeenCalledOnce();
+    },
+  );
+  it.each(["contact", "plain"] as const)(
+    "keeps explicit silence authoritative for a solicited %s response",
+    async (kind) => {
+      const f = await solicited(kind);
+      f.contacts([
+        {
+          agent_address: f.detail.recipient,
+          contact_address: f.detail.from_email,
+          notify: false,
+          notify_since: null,
+          notification_generation: null,
+          version: randomUUID(),
+        },
+      ]);
+      expect(await runListen(f.options)).toBe(1);
+      expect(f.handleDetail).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("thread mutes in session notifications", () => {

@@ -447,28 +447,26 @@ describe("contact request command lifecycle", () => {
     ]);
     expect(f.writes[0].body).toEqual({ if_absent: true });
   });
-  it.each([
-    403,
-    409,
-    429,
-    503,
-    "transport",
-    "wrong-address",
-  ])("stops before receiving or sending after directory failure %s", async (failure) => {
-    const f = fixture();
-    if (typeof failure === "number") f.state.directoryStatus = failure;
-    else if (failure === "transport") f.state.directoryThrows = true;
-    else f.state.directoryAddress = "other@example.net";
-    const error = await requestContact(f.context, f.options).catch(
-      (error: unknown) => error,
-    );
-    expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toContain("No contact email was sent");
-    expect((error as Error).message).not.toContain("Private");
-    expect(f.writes.map((row) => row.path)).toEqual([`/v1/contacts/${f.peer}`]);
-    expect(hooks.open).not.toHaveBeenCalled();
-    expect(f.state.rows).toEqual([]);
-  });
+  it.each([403, 409, 429, 503, "transport", "wrong-address"])(
+    "stops before receiving or sending after directory failure %s",
+    async (failure) => {
+      const f = fixture();
+      if (typeof failure === "number") f.state.directoryStatus = failure;
+      else if (failure === "transport") f.state.directoryThrows = true;
+      else f.state.directoryAddress = "other@example.net";
+      const error = await requestContact(f.context, f.options).catch(
+        (error: unknown) => error,
+      );
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain("No contact email was sent");
+      expect((error as Error).message).not.toContain("Private");
+      expect(f.writes.map((row) => row.path)).toEqual([
+        `/v1/contacts/${f.peer}`,
+      ]);
+      expect(hooks.open).not.toHaveBeenCalled();
+      expect(f.state.rows).toEqual([]);
+    },
+  );
   it("reuses a directory entry after its response was lost, then sends only on the explicit retry", async () => {
     const f = fixture();
     f.state.directoryThrows = true;
@@ -525,42 +523,42 @@ describe("contact request command lifecycle", () => {
     expect(f.writes[1].body).toMatchObject({ if_absent: true, notify: true });
     expect(f.writes.at(-1)?.path).toBe("/v1/send-mail");
   });
-  it.each([
-    "membership",
-    "policy",
-  ])("does not overwrite %s silence or send a request with --notify", async (kind) => {
-    const f = fixture();
-    if (kind === "membership")
-      f.state.rows = [
-        {
-          agent_address: f.recipient,
-          contact_address: f.peer,
-          notify: false,
-          notify_since: null,
-          notification_generation: null,
-          version: randomUUID(),
-        },
-      ];
-    else
-      f.state.policy.org_policy = {
-        ...f.state.policy.org_policy,
-        version: randomUUID(),
-        updated_at: new Date().toISOString(),
-        rules: [
+  it.each(["membership", "policy"])(
+    "does not overwrite %s silence or send a request with --notify",
+    async (kind) => {
+      const f = fixture();
+      if (kind === "membership")
+        f.state.rows = [
           {
-            pattern: "*@example.net",
-            effect: "silence",
+            agent_address: f.recipient,
+            contact_address: f.peer,
+            notify: false,
             notify_since: null,
             notification_generation: null,
+            version: randomUUID(),
           },
-        ],
-      };
-    await expect(
-      requestContact(f.context, { ...f.options, notify: true }),
-    ).rejects.toThrow("silenced");
-    expect(f.writes).toEqual([]);
-    expect(hooks.open).not.toHaveBeenCalled();
-  });
+        ];
+      else
+        f.state.policy.org_policy = {
+          ...f.state.policy.org_policy,
+          version: randomUUID(),
+          updated_at: new Date().toISOString(),
+          rules: [
+            {
+              pattern: "*@example.net",
+              effect: "silence",
+              notify_since: null,
+              notification_generation: null,
+            },
+          ],
+        };
+      await expect(
+        requestContact(f.context, { ...f.options, notify: true }),
+      ).rejects.toThrow("silenced");
+      expect(f.writes).toEqual([]);
+      expect(hooks.open).not.toHaveBeenCalled();
+    },
+  );
   it("does not fabricate permission or send after directory creation followed by membership conflict", async () => {
     const f = fixture();
     f.state.membershipStatus = 409;
@@ -632,9 +630,11 @@ describe("contact request command lifecycle", () => {
     expect(result.data).not.toHaveProperty("contact_accepted");
     const reply = f.writes.at(-1);
     expect(reply?.path).toBe(`/v1/emails/${f.emailId}/reply`);
-    const part = (reply?.body.attachments as { content_base64: string }[])[0];
+    const part = (
+      reply?.body.attachments as { content_base64: string }[] | undefined
+    )?.[0];
     expect(
-      JSON.parse(Buffer.from(part.content_base64, "base64").toString()),
+      JSON.parse(Buffer.from(part?.content_base64 ?? "", "base64").toString()),
     ).toMatchObject({
       step: "accept",
       interaction_id: f.request.interaction_id,
@@ -669,32 +669,32 @@ describe("contact request command lifecycle", () => {
       f.writes.filter((row) => row.path.includes("/agent-contacts/")).length,
     ).toBe(1);
   });
-  it.each([
-    "transport",
-    "send-record",
-  ])("keeps %s uncertainty distinct from a sent acceptance, including repeated recovery", async (failure) => {
-    const f = fixture();
-    if (failure === "transport") f.state.sendThrows = true;
-    else f.state.sendStatus = "unknown";
-    const initial = await acceptContact(f.context, f.emailId);
-    expect(initial).toMatchObject({
-      exitCode: 4,
-      data: {
-        outcome: "uncertain",
-        local_preference_saved: true,
-        acceptance_sent: null,
-      },
-    });
-    expect(initial.data).not.toHaveProperty("contact_accepted");
-    const count = f.writes.length;
-    f.state.sendThrows = false;
-    f.state.sendStatus = "delivered";
-    expect(await acceptContact(f.context, f.emailId)).toMatchObject({
-      exitCode: 4,
-      data: { outcome: "uncertain", acceptance_sent: null },
-    });
-    expect(f.writes).toHaveLength(count);
-  });
+  it.each(["transport", "send-record"])(
+    "keeps %s uncertainty distinct from a sent acceptance, including repeated recovery",
+    async (failure) => {
+      const f = fixture();
+      if (failure === "transport") f.state.sendThrows = true;
+      else f.state.sendStatus = "unknown";
+      const initial = await acceptContact(f.context, f.emailId);
+      expect(initial).toMatchObject({
+        exitCode: 4,
+        data: {
+          outcome: "uncertain",
+          local_preference_saved: true,
+          acceptance_sent: null,
+        },
+      });
+      expect(initial.data).not.toHaveProperty("contact_accepted");
+      const count = f.writes.length;
+      f.state.sendThrows = false;
+      f.state.sendStatus = "delivered";
+      expect(await acceptContact(f.context, f.emailId)).toMatchObject({
+        exitCode: 4,
+        data: { outcome: "uncertain", acceptance_sent: null },
+      });
+      expect(f.writes).toHaveLength(count);
+    },
+  );
   it("reports a refused send record truthfully and permits an explicit retry", async () => {
     const f = fixture();
     f.state.sendStatus = "gate_denied";
@@ -717,14 +717,17 @@ describe("contact request command lifecycle", () => {
   it.each([
     ["fail", "auth-suspicious", false],
     ["temperror", "dmarc-temperror", true],
-  ])("reports a safe trust reason without writing preferences (%s)", async (dmarc, reason, retryable) => {
-    const f = fixture();
-    f.state.auth = String(dmarc);
-    await expect(acceptContact(f.context, f.emailId)).rejects.toThrow(
-      `authentication rejected (reason: ${reason}; retryable: ${retryable}). No acceptance or contact preference was written.`,
-    );
-    expect(f.writes).toEqual([]);
-  });
+  ])(
+    "reports a safe trust reason without writing preferences (%s)",
+    async (dmarc, reason, retryable) => {
+      const f = fixture();
+      f.state.auth = String(dmarc);
+      await expect(acceptContact(f.context, f.emailId)).rejects.toThrow(
+        `authentication rejected (reason: ${reason}; retryable: ${retryable}). No acceptance or contact preference was written.`,
+      );
+      expect(f.writes).toEqual([]);
+    },
+  );
 });
 
 it("recovers a lost send response using only its durable exact idempotency lookup", async () => {

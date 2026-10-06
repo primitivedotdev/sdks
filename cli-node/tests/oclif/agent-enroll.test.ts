@@ -776,24 +776,27 @@ test("a changed owner login after claim cannot update another organization's pol
 test.each([
   ["conflict", { policyConflict: true }],
   ["readback", { policyReadbackDisabled: true }],
-] as const)("does not claim contact intake after a %s", async (_name, policyOptions) => {
-  const configDir = owner();
-  const { fetcher, policyWrites } = server(policyOptions);
-  const value = await enrollAgent({
-    configDir,
-    session,
-    name: "Research",
-    receiverMode: "external",
-    contactRequests: true,
-    env: { CLAUDE_CODE_SESSION_ID: session },
-    fetch: fetcher,
-    now: () => clock,
-    setup: (async () => result) as typeof setupAgent,
-  });
-  assert.equal(value.connection.status, "connected");
-  assert.equal(value.contactRequestPolicy, "unavailable");
-  assert.equal(policyWrites.length, 1);
-});
+] as const)(
+  "does not claim contact intake after a %s",
+  async (_name, policyOptions) => {
+    const configDir = owner();
+    const { fetcher, policyWrites } = server(policyOptions);
+    const value = await enrollAgent({
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external",
+      contactRequests: true,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+      setup: (async () => result) as typeof setupAgent,
+    });
+    assert.equal(value.connection.status, "connected");
+    assert.equal(value.contactRequestPolicy, "unavailable");
+    assert.equal(policyWrites.length, 1);
+  },
+);
 
 test("a lost create response recovers the saved request and requires explicit Continue setup", async () => {
   const configDir = owner();
@@ -892,36 +895,37 @@ test.each([
   if (held) assert.equal(JSON.parse(readFileSync(path, "utf8")).address, null);
 });
 
-test.each([
-  400, 401, 403,
-] as const)("a proven pre-create %i denial clears the journal for the same-session retry", async (status) => {
-  const configDir = owner();
-  const { fetcher, creates } = server({ firstCreateStatus: status });
-  const options = {
-    configDir,
-    session,
-    name: "Research",
-    receiverMode: "external" as const,
-    env: { CLAUDE_CODE_SESSION_ID: session },
-    fetch: fetcher,
-    now: () => clock,
-    setup: (async () => result) as typeof setupAgent,
-  };
-  await assert.rejects(
-    enrollAgent(options),
-    /rejected before an address was created/,
-  );
-  const path = join(
-    agentProfileDirectory(configDir, `session-${session}`),
-    "enrollment",
-    "state.json",
-  );
-  assert.equal(existsSync(path), false);
-  const second = await enrollAgent(options);
-  assert.equal(second.connection.status, "connected");
-  assert.equal(creates.length, 2);
-  assert.equal(creates[0]?.address, creates[1]?.address);
-});
+test.each([400, 401, 403] as const)(
+  "a proven pre-create %i denial clears the journal for the same-session retry",
+  async (status) => {
+    const configDir = owner();
+    const { fetcher, creates } = server({ firstCreateStatus: status });
+    const options = {
+      configDir,
+      session,
+      name: "Research",
+      receiverMode: "external" as const,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      fetch: fetcher,
+      now: () => clock,
+      setup: (async () => result) as typeof setupAgent,
+    };
+    await assert.rejects(
+      enrollAgent(options),
+      /rejected before an address was created/,
+    );
+    const path = join(
+      agentProfileDirectory(configDir, `session-${session}`),
+      "enrollment",
+      "state.json",
+    );
+    assert.equal(existsSync(path), false);
+    const second = await enrollAgent(options);
+    assert.equal(second.connection.status, "connected");
+    assert.equal(creates.length, 2);
+    assert.equal(creates[0]?.address, creates[1]?.address);
+  },
+);
 
 test("a 409 create response stays uncertain and is not automatically retried", async () => {
   const configDir = owner();

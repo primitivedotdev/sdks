@@ -84,15 +84,16 @@ describe("bounded setup GET recovery", () => {
       1000, 1000, 1000, 1000,
     ]);
   });
-  it.each([
-    401, 403, 404,
-  ])("does not retry HTTP %s authorization or missing-resource failures", async (status) => {
-    const b = budget(),
-      read = vi.fn(async () => failed(status));
-    await expect(
-      readSetupApi(b, "verification send lookup", read),
-    ).rejects.toThrow(`HTTP ${status}`);
-    expect(read).toHaveBeenCalledOnce();
-    expect(b.sleep).not.toHaveBeenCalled();
-  });
+  it.each([401, 403, 404])(
+    "does not retry HTTP %s authorization or missing-resource failures",
+    async (status) => {
+      const b = budget(),
+        read = vi.fn(async () => failed(status));
+      await expect(
+        readSetupApi(b, "verification send lookup", read),
+      ).rejects.toThrow(`HTTP ${status}`);
+      expect(read).toHaveBeenCalledOnce();
+      expect(b.sleep).not.toHaveBeenCalled();
+    },
+  );
 });

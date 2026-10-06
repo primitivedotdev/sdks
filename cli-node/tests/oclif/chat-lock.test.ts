@@ -85,17 +85,16 @@ describe("acquireChatLock", () => {
     }
   });
 
-  it.each([
-    "",
-    "not-a-pid\n",
-    "123garbage\n",
-  ])("preserves an ambiguous lock %j", (contents) => {
-    const path = join(configDir, "chat-state.lock");
-    writeFileSync(path, contents);
-    expect(() => acquireChatLock(configDir)).toThrow(ChatLockContentionError);
-    expect(readFileSync(path, "utf8")).toBe(contents);
-    expect(readdirSync(configDir)).toEqual(["chat-state.lock"]);
-  });
+  it.each(["", "not-a-pid\n", "123garbage\n"])(
+    "preserves an ambiguous lock %j",
+    (contents) => {
+      const path = join(configDir, "chat-state.lock");
+      writeFileSync(path, contents);
+      expect(() => acquireChatLock(configDir)).toThrow(ChatLockContentionError);
+      expect(readFileSync(path, "utf8")).toBe(contents);
+      expect(readdirSync(configDir)).toEqual(["chat-state.lock"]);
+    },
+  );
 
   it("throws ChatLockContentionError when a live process holds the lock", () => {
     // The current test process is definitely alive — write its own

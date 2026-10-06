@@ -11,33 +11,33 @@ const address = "agent+demo@example.com";
 const key = ["fixture", "credential"].join("-");
 
 describe("mailbox deletion", () => {
-  it.each([
-    "sent",
-    "connection",
-  ] as const)("routes %s deletion without changing its meaning", async (kind) => {
-    const fetcher = vi.fn<typeof fetch>(async (input) => {
-      const request = input as Request;
-      expect(request.method).toBe(kind === "sent" ? "DELETE" : "POST");
-      expect(new URL(request.url).pathname).toBe(
+  it.each(["sent", "connection"] as const)(
+    "routes %s deletion without changing its meaning",
+    async (kind) => {
+      const fetcher = vi.fn<typeof fetch>(async (input) => {
+        const request = input as Request;
+        expect(request.method).toBe(kind === "sent" ? "DELETE" : "POST");
+        expect(new URL(request.url).pathname).toBe(
+          kind === "sent"
+            ? `/v1/sent-emails/${id}`
+            : `/v1/agent-connections/${encodeURIComponent(address)}/remove`,
+        );
+        expect(request.headers.get("authorization")).toBe(`Bearer ${key}`);
+        expect(await request.text()).toBe("");
+        return Response.json({ success: true, data: { deleted: true } });
+      });
+      const client = new PrimitiveClient({ apiKey: key, fetch: fetcher });
+      const result =
         kind === "sent"
-          ? `/v1/sent-emails/${id}`
-          : `/v1/agent-connections/${encodeURIComponent(address)}/remove`,
-      );
-      expect(request.headers.get("authorization")).toBe(`Bearer ${key}`);
-      expect(await request.text()).toBe("");
-      return Response.json({ success: true, data: { deleted: true } });
-    });
-    const client = new PrimitiveClient({ apiKey: key, fetch: fetcher });
-    const result =
-      kind === "sent"
-        ? await deleteSentEmail({ client: client.client, path: { id } })
-        : await removeAgentConnection({
-            client: client.client,
-            path: { address },
-          });
-    expect(result.data?.data?.deleted).toBe(true);
-    expect(fetcher).toHaveBeenCalledOnce();
-  });
+          ? await deleteSentEmail({ client: client.client, path: { id } })
+          : await removeAgentConnection({
+              client: client.client,
+              path: { address },
+            });
+      expect(result.data?.data?.deleted).toBe(true);
+      expect(fetcher).toHaveBeenCalledOnce();
+    },
+  );
 
   it.each([
     [409, "sent_email_not_settled"],
@@ -59,53 +59,53 @@ describe("mailbox deletion", () => {
     expect(fetcher).toHaveBeenCalledOnce();
   });
 
-  it.each([
-    "send",
-    "reply",
-  ] as const)("preserves deleted %s refusal and never retries with a different key", async (kind) => {
-    const fetcher = vi.fn<typeof fetch>(async () =>
-      Response.json(
-        {
-          success: false,
-          error: {
-            code: "sent_email_deleted",
-            message: "Prior send deleted",
-            details: { idempotent_replay: true },
-          },
-        },
-        { status: 410 },
-      ),
-    );
-    const client = new PrimitiveClient({ apiKey: key, fetch: fetcher });
-    if (kind === "send") {
-      await expect(
-        client.send(
+  it.each(["send", "reply"] as const)(
+    "preserves deleted %s refusal and never retries with a different key",
+    async (kind) => {
+      const fetcher = vi.fn<typeof fetch>(async () =>
+        Response.json(
           {
-            from: "sender@example.com",
-            to: "receiver@example.com",
-            subject: "Example",
-            bodyText: "Hello",
+            success: false,
+            error: {
+              code: "sent_email_deleted",
+              message: "Prior send deleted",
+              details: { idempotent_replay: true },
+            },
           },
-          { idempotencyKey: "existing-key" },
+          { status: 410 },
         ),
-      ).rejects.toMatchObject({
-        status: 410,
-        code: "sent_email_deleted",
-        details: { idempotent_replay: true },
-      });
-    } else {
-      const result = await replyToEmail({
-        client: client.client,
-        path: { id },
-        body: { body_text: "Hello" },
-        headers: { "Idempotency-Key": "existing-key" },
-      });
-      expect(result.response?.status).toBe(410);
-      expect(result.error?.error).toMatchObject({
-        code: "sent_email_deleted",
-        details: { idempotent_replay: true },
-      });
-    }
-    expect(fetcher).toHaveBeenCalledOnce();
-  });
+      );
+      const client = new PrimitiveClient({ apiKey: key, fetch: fetcher });
+      if (kind === "send") {
+        await expect(
+          client.send(
+            {
+              from: "sender@example.com",
+              to: "receiver@example.com",
+              subject: "Example",
+              bodyText: "Hello",
+            },
+            { idempotencyKey: "existing-key" },
+          ),
+        ).rejects.toMatchObject({
+          status: 410,
+          code: "sent_email_deleted",
+          details: { idempotent_replay: true },
+        });
+      } else {
+        const result = await replyToEmail({
+          client: client.client,
+          path: { id },
+          body: { body_text: "Hello" },
+          headers: { "Idempotency-Key": "existing-key" },
+        });
+        expect(result.response?.status).toBe(410);
+        expect(result.error?.error).toMatchObject({
+          code: "sent_email_deleted",
+          details: { idempotent_replay: true },
+        });
+      }
+      expect(fetcher).toHaveBeenCalledOnce();
+    },
+  );
 });

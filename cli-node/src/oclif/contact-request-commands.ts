@@ -194,7 +194,7 @@ async function enablePeer(
     });
   await policy.refresh(signal());
   const allowed = await policy.admit(peer, new Date().toISOString(), signal());
-  if (!allowed || allowed.kind !== "allowed")
+  if (allowed?.kind !== "allowed")
     throw new Error(
       "Contact notification permission changed. No contact email was sent; inspect the saved preference before retrying.",
     );

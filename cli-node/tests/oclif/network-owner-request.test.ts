@@ -34,16 +34,16 @@ describe("network owner filter", () => {
     );
   });
 
-  it.each([
-    " ",
-    "x".repeat(101),
-  ])("rejects an invalid owner before an API request", async (owner) => {
-    const api = client();
-    await expect(
-      runNetworkRequest(api as never, { action: "peers", owner }),
-    ).rejects.toThrow("--owner");
-    expect(api.get).not.toHaveBeenCalled();
-  });
+  it.each([" ", "x".repeat(101)])(
+    "rejects an invalid owner before an API request",
+    async (owner) => {
+      const api = client();
+      await expect(
+        runNetworkRequest(api as never, { action: "peers", owner }),
+      ).rejects.toThrow("--owner");
+      expect(api.get).not.toHaveBeenCalled();
+    },
+  );
 
   it("refuses a legacy unfiltered response instead of presenting a wrong owner", async () => {
     const api = {

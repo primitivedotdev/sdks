@@ -236,7 +236,7 @@ describe("agent runtime commands", () => {
     const calls = fixture(missing, ok(note("v", "1")));
     captureLog(AgentRuntimeSetCommand);
     await AgentRuntimeSetCommand.run([], { root });
-    const written = (calls[1]?.body as { value: string }).value;
+    const written = (calls[1]?.body as { value: string } | undefined)?.value;
     expect(written).toMatch(/^(Claude Code|Codex|omp|CLI) on \S+ in \S/);
   });
 

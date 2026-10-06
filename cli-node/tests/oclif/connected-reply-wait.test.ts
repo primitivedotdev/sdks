@@ -158,98 +158,96 @@ function fixture() {
   };
 }
 describe("connected pushed reply waits", () => {
-  it.each([
-    "selected",
-    "submitting",
-    "accepted",
-    "skipped",
-  ] as const)("recovers a validated contact acceptance after a %s native notice without changing its route", async (state) => {
-    const f = fixture();
-    const request = prepareContactRequest(
-      target.from,
-      "Public coordination",
-      600,
-      Date.parse(f.state.detail.received_at) - 1000,
-    );
-    const reference = contactReference(request);
-    const bytes = Buffer.from(
-      JSON.stringify(prepareContactAcceptance(request)),
-    );
-    f.state.partBytes = bytes;
-    f.state.detail.parsed = {
-      status: "complete",
-      attachments: [
-        {
-          filename: "interaction.json",
-          content_type: "application/json",
-          part_index: 0,
-          size_bytes: bytes.length,
-          sha256: createHash("sha256").update(bytes).digest("hex"),
-        },
-      ],
-    };
-    const original = await openConnectedReplyWait({
-      ...f.options,
-      contactRequest: reference,
-    });
-    const store = original.receiver.store;
-    await original.close();
-    await store.ingest({
-      emailId: f.state.detail.id,
-      eventId: randomUUID(),
-      receivedAt: f.state.detail.received_at,
-    });
-    await store.hydrate(f.state.detail.id, {
-      recipient: target.from,
-      peer: target.recipient,
-      replyToSentEmailId: target.sentId,
-      receivedAt: f.state.detail.received_at,
-      authorization: "trusted",
-    });
-    expect(
-      (await store.claimForNotification(f.state.detail.id, "native-session"))
-        .status,
-    ).toBe("claimed");
-    if (state === "skipped")
-      await store.skipNotification(f.state.detail.id, "native-session");
-    else if (state !== "selected") {
-      await store.markNotification(f.state.detail.id, "submitting");
-      if (state === "accepted")
-        await store.markNotification(f.state.detail.id, "accepted");
-    }
-    const resumed = await openConnectedReplyWait({
-      ...f.options,
-      contactRequest: reference,
-      deadline: Date.now() + 5000,
-    });
-    hooks.changed.mockImplementationOnce(async () => {
-      if (state === "selected")
+  it.each(["selected", "submitting", "accepted", "skipped"] as const)(
+    "recovers a validated contact acceptance after a %s native notice without changing its route",
+    async (state) => {
+      const f = fixture();
+      const request = prepareContactRequest(
+        target.from,
+        "Public coordination",
+        600,
+        Date.parse(f.state.detail.received_at) - 1000,
+      );
+      const reference = contactReference(request);
+      const bytes = Buffer.from(
+        JSON.stringify(prepareContactAcceptance(request)),
+      );
+      f.state.partBytes = bytes;
+      f.state.detail.parsed = {
+        status: "complete",
+        attachments: [
+          {
+            filename: "interaction.json",
+            content_type: "application/json",
+            part_index: 0,
+            size_bytes: bytes.length,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+          },
+        ],
+      };
+      const original = await openConnectedReplyWait({
+        ...f.options,
+        contactRequest: reference,
+      });
+      const store = original.receiver.store;
+      await original.close();
+      await store.ingest({
+        emailId: f.state.detail.id,
+        eventId: randomUUID(),
+        receivedAt: f.state.detail.received_at,
+      });
+      await store.hydrate(f.state.detail.id, {
+        recipient: target.from,
+        peer: target.recipient,
+        replyToSentEmailId: target.sentId,
+        receivedAt: f.state.detail.received_at,
+        authorization: "trusted",
+      });
+      expect(
+        (await store.claimForNotification(f.state.detail.id, "native-session"))
+          .status,
+      ).toBe("claimed");
+      if (state === "skipped")
+        await store.skipNotification(f.state.detail.id, "native-session");
+      else if (state !== "selected") {
         await store.markNotification(f.state.detail.id, "submitting");
-      await store.markNotification(f.state.detail.id, "accepted");
-    });
-    expect((await resumed.next())?.id).toBe(f.state.detail.id);
-    expect(hooks.changed).toHaveBeenCalledTimes(
-      ["selected", "submitting"].includes(state) ? 1 : 0,
-    );
-    const route = (await store.readEmail(f.state.detail.id))?.route;
-    expect(route).toMatchObject({
-      kind: "notification",
-      state: state === "skipped" ? "skipped" : "accepted",
-    });
-    await resumed.observed(f.state.detail.id);
-    await resumed.observed(f.state.detail.id);
-    await resumed.finish();
-    expect(await store.readWait(resumed.requestId)).toMatchObject({
-      status: "completed",
-      contactRequest: reference,
-    });
-    expect((await store.readEmail(f.state.detail.id))?.route).toEqual(route);
-    expect(
-      (await store.claimForNotification(f.state.detail.id, "native-session"))
-        .status,
-    ).toBe("already_observed");
-    await resumed.close();
-  });
+        if (state === "accepted")
+          await store.markNotification(f.state.detail.id, "accepted");
+      }
+      const resumed = await openConnectedReplyWait({
+        ...f.options,
+        contactRequest: reference,
+        deadline: Date.now() + 5000,
+      });
+      hooks.changed.mockImplementationOnce(async () => {
+        if (state === "selected")
+          await store.markNotification(f.state.detail.id, "submitting");
+        await store.markNotification(f.state.detail.id, "accepted");
+      });
+      expect((await resumed.next())?.id).toBe(f.state.detail.id);
+      expect(hooks.changed).toHaveBeenCalledTimes(
+        ["selected", "submitting"].includes(state) ? 1 : 0,
+      );
+      const route = (await store.readEmail(f.state.detail.id))?.route;
+      expect(route).toMatchObject({
+        kind: "notification",
+        state: state === "skipped" ? "skipped" : "accepted",
+      });
+      await resumed.observed(f.state.detail.id);
+      await resumed.observed(f.state.detail.id);
+      await resumed.finish();
+      expect(await store.readWait(resumed.requestId)).toMatchObject({
+        status: "completed",
+        contactRequest: reference,
+      });
+      expect((await store.readEmail(f.state.detail.id))?.route).toEqual(route);
+      expect(
+        (await store.claimForNotification(f.state.detail.id, "native-session"))
+          .status,
+      ).toBe("already_observed");
+      await resumed.close();
+    },
+  );
   it("hands an unclaimed late reply to notifications after the receive deadline aborts", async () => {
     const f = fixture();
     const deadline = Date.now() + 5000;
@@ -323,44 +321,44 @@ describe("connected pushed reply waits", () => {
     ).toBe("held");
   });
 
-  it.each([
-    "deadline",
-    "close",
-  ] as const)("does not claim a reply when %s occurs during its detail read", async (reason) => {
-    const f = fixture();
-    const deadline = Date.now() + 5000;
-    const waiter = await openConnectedReplyWait({ ...f.options, deadline });
-    await waiter.receiver.store.ingest({
-      emailId: f.state.detail.id,
-      eventId: randomUUID(),
-      receivedAt: f.state.detail.received_at,
-    });
-    await waiter.receiver.store.hydrate(f.state.detail.id, {
-      recipient: target.from,
-      peer: target.recipient,
-      replyToSentEmailId: target.sentId,
-      receivedAt: f.state.detail.received_at,
-      authorization: "trusted",
-    });
-    f.state.beforeDetail = async () => {
-      if (reason === "deadline")
-        vi.spyOn(Date, "now").mockReturnValue(deadline);
-      else await waiter.close();
-    };
-    expect(await waiter.next()).toBeNull();
-    expect(
-      (await waiter.receiver.store.readEmail(f.state.detail.id))?.route,
-    ).toBeNull();
-    expect(
-      (
-        await waiter.receiver.store.claimForNotification(
-          f.state.detail.id,
-          "runtime:session",
-        )
-      ).status,
-    ).toBe("claimed");
-    await waiter.close();
-  });
+  it.each(["deadline", "close"] as const)(
+    "does not claim a reply when %s occurs during its detail read",
+    async (reason) => {
+      const f = fixture();
+      const deadline = Date.now() + 5000;
+      const waiter = await openConnectedReplyWait({ ...f.options, deadline });
+      await waiter.receiver.store.ingest({
+        emailId: f.state.detail.id,
+        eventId: randomUUID(),
+        receivedAt: f.state.detail.received_at,
+      });
+      await waiter.receiver.store.hydrate(f.state.detail.id, {
+        recipient: target.from,
+        peer: target.recipient,
+        replyToSentEmailId: target.sentId,
+        receivedAt: f.state.detail.received_at,
+        authorization: "trusted",
+      });
+      f.state.beforeDetail = async () => {
+        if (reason === "deadline")
+          vi.spyOn(Date, "now").mockReturnValue(deadline);
+        else await waiter.close();
+      };
+      expect(await waiter.next()).toBeNull();
+      expect(
+        (await waiter.receiver.store.readEmail(f.state.detail.id))?.route,
+      ).toBeNull();
+      expect(
+        (
+          await waiter.receiver.store.claimForNotification(
+            f.state.detail.id,
+            "runtime:session",
+          )
+        ).status,
+      ).toBe("claimed");
+      await waiter.close();
+    },
+  );
 
   it("registers before readiness and recovers the exact parent without inbox reads", async () => {
     const f = fixture();
@@ -465,58 +463,58 @@ describe("connected pushed reply waits", () => {
     expect(f.searches()).toBe(1);
     await waiter.close();
   });
-  it.each([
-    "http",
-    "stream",
-  ] as const)("retries a temporary %s contact download on the same wait and exact ID", async (failure) => {
-    const f = fixture();
-    const receivedAt = Date.now() - 3600_000;
-    const request = prepareContactRequest(
-      target.from,
-      "Public coordination",
-      600,
-      receivedAt,
-    );
-    const bytes = Buffer.from(
-      JSON.stringify(prepareContactAcceptance(request)),
-    );
-    f.state.partBytes = bytes;
-    f.state.partFailure = failure;
-    f.state.detail.received_at = new Date(receivedAt + 1000).toISOString();
-    f.state.detail.parsed = {
-      status: "complete",
-      attachments: [
-        {
-          filename: "interaction.json",
-          content_type: "application/json",
-          part_index: 0,
-          size_bytes: bytes.length,
-          sha256: createHash("sha256").update(bytes).digest("hex"),
-        },
-      ],
-    };
-    const waiter = await openConnectedReplyWait({
-      ...f.options,
-      contactRequest: contactReference(request),
-      deadline: Date.now() + 5000,
-    });
-    hooks.changed.mockImplementation(async () => {
+  it.each(["http", "stream"] as const)(
+    "retries a temporary %s contact download on the same wait and exact ID",
+    async (failure) => {
+      const f = fixture();
+      const receivedAt = Date.now() - 3600_000;
+      const request = prepareContactRequest(
+        target.from,
+        "Public coordination",
+        600,
+        receivedAt,
+      );
+      const bytes = Buffer.from(
+        JSON.stringify(prepareContactAcceptance(request)),
+      );
+      f.state.partBytes = bytes;
+      f.state.partFailure = failure;
+      f.state.detail.received_at = new Date(receivedAt + 1000).toISOString();
+      f.state.detail.parsed = {
+        status: "complete",
+        attachments: [
+          {
+            filename: "interaction.json",
+            content_type: "application/json",
+            part_index: 0,
+            size_bytes: bytes.length,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+          },
+        ],
+      };
+      const waiter = await openConnectedReplyWait({
+        ...f.options,
+        contactRequest: contactReference(request),
+        deadline: Date.now() + 5000,
+      });
+      hooks.changed.mockImplementation(async () => {
+        expect(
+          await waiter.receiver.store.readEmail(f.state.detail.id),
+        ).toBeNull();
+        f.state.partFailure = null;
+      });
+      expect((await waiter.next())?.id).toBe(f.state.detail.id);
+      expect(hooks.changed).toHaveBeenCalledOnce();
+      expect(f.searches()).toBe(1);
       expect(
-        await waiter.receiver.store.readEmail(f.state.detail.id),
-      ).toBeNull();
-      f.state.partFailure = null;
-    });
-    expect((await waiter.next())?.id).toBe(f.state.detail.id);
-    expect(hooks.changed).toHaveBeenCalledOnce();
-    expect(f.searches()).toBe(1);
-    expect(
-      f.requests.filter((path) => path.endsWith("/attachments/0")).length,
-    ).toBeGreaterThan(1);
-    expect(
-      (await waiter.receiver.store.readEmail(f.state.detail.id))?.route,
-    ).toMatchObject({ kind: "wait", requestId: waiter.requestId });
-    await waiter.close();
-  });
+        f.requests.filter((path) => path.endsWith("/attachments/0")).length,
+      ).toBeGreaterThan(1);
+      expect(
+        (await waiter.receiver.store.readEmail(f.state.detail.id))?.route,
+      ).toMatchObject({ kind: "wait", requestId: waiter.requestId });
+      await waiter.close();
+    },
+  );
   it("starts a new active claim when the prior wait for that parent completed", async () => {
     const f = fixture();
     const first = await openConnectedReplyWait(f.options);
@@ -590,77 +588,76 @@ describe("connected pushed reply waits", () => {
     ).toBe("claimed");
   });
 
-  it.each([
-    "unbound",
-    "uncertain",
-  ] as const)("preserves a preexisting %s intent when constructor binding fails", async (status) => {
-    const f = fixture();
-    const first = await openConnectedReplyWait(f.options);
-    await first.next();
-    await first.observed(f.state.detail.id);
-    await first.finish();
-    await first.close();
-    const store = first.receiver.store,
-      requestId = randomUUID(),
-      peer = "other@agent.example",
-      createdAt = new Date().toISOString();
-    await store.registerWait({
-      requestId,
-      peer,
-      idempotencyKey: "saved-key",
-      createdAt,
-    });
-    if (status === "uncertain") await store.markWaitUncertain(requestId);
-    await expect(
-      openConnectedReplyWait({
-        ...f.options,
+  it.each(["unbound", "uncertain"] as const)(
+    "preserves a preexisting %s intent when constructor binding fails",
+    async (status) => {
+      const f = fixture();
+      const first = await openConnectedReplyWait(f.options);
+      await first.next();
+      await first.observed(f.state.detail.id);
+      await first.finish();
+      await first.close();
+      const store = first.receiver.store,
+        requestId = randomUUID(),
+        peer = "other@agent.example",
+        createdAt = new Date().toISOString();
+      await store.registerWait({
         requestId,
-        recipient: peer,
+        peer,
         idempotencyKey: "saved-key",
         createdAt,
-      }),
-    ).rejects.toThrow("inconsistent");
-    expect((await store.readWait(requestId))?.status).toBe(status);
-  });
+      });
+      if (status === "uncertain") await store.markWaitUncertain(requestId);
+      await expect(
+        openConnectedReplyWait({
+          ...f.options,
+          requestId,
+          recipient: peer,
+          idempotencyKey: "saved-key",
+          createdAt,
+        }),
+      ).rejects.toThrow("inconsistent");
+      expect((await store.readWait(requestId))?.status).toBe(status);
+    },
+  );
 
-  it.each([
-    "claimed",
-    "observed",
-    "completed",
-  ] as const)("recovers only the saved exact reply after interrupted %s finalization", async (phase) => {
-    const f = fixture();
-    const first = await openConnectedReplyWait(f.options);
-    expect((await first.next())?.id).toBe(f.state.detail.id);
-    if (phase !== "claimed") await first.observed(f.state.detail.id);
-    if (phase === "completed") await first.finish();
-    await first.close();
-    const searchCount = f.searches();
-    f.requests.length = 0;
-    f.state.page = { data: [{ id: randomUUID() }], meta: { cursor: null } };
-    const resumed = await openConnectedReplyWait({
-      ...f.options,
-      resumeReply: { emailId: f.state.detail.id, requestId: first.requestId },
-    });
-    expect(resumed.requestId).toBe(first.requestId);
-    await resumed.bind(target.sentId);
-    expect((await resumed.next())?.id).toBe(f.state.detail.id);
-    await resumed.observed(f.state.detail.id);
-    await resumed.finish();
-    expect(
-      (await resumed.receiver.store.readWait(first.requestId))?.status,
-    ).toBe("completed");
-    expect(
-      (
-        await resumed.receiver.store.claimForNotification(
-          f.state.detail.id,
-          "runtime:session",
-        )
-      ).status,
-    ).toBe("held");
-    expect(f.searches()).toBe(searchCount);
-    expect(f.requests).toEqual([`/v1/emails/${f.state.detail.id}`]);
-    await resumed.close();
-  });
+  it.each(["claimed", "observed", "completed"] as const)(
+    "recovers only the saved exact reply after interrupted %s finalization",
+    async (phase) => {
+      const f = fixture();
+      const first = await openConnectedReplyWait(f.options);
+      expect((await first.next())?.id).toBe(f.state.detail.id);
+      if (phase !== "claimed") await first.observed(f.state.detail.id);
+      if (phase === "completed") await first.finish();
+      await first.close();
+      const searchCount = f.searches();
+      f.requests.length = 0;
+      f.state.page = { data: [{ id: randomUUID() }], meta: { cursor: null } };
+      const resumed = await openConnectedReplyWait({
+        ...f.options,
+        resumeReply: { emailId: f.state.detail.id, requestId: first.requestId },
+      });
+      expect(resumed.requestId).toBe(first.requestId);
+      await resumed.bind(target.sentId);
+      expect((await resumed.next())?.id).toBe(f.state.detail.id);
+      await resumed.observed(f.state.detail.id);
+      await resumed.finish();
+      expect(
+        (await resumed.receiver.store.readWait(first.requestId))?.status,
+      ).toBe("completed");
+      expect(
+        (
+          await resumed.receiver.store.claimForNotification(
+            f.state.detail.id,
+            "runtime:session",
+          )
+        ).status,
+      ).toBe("held");
+      expect(f.searches()).toBe(searchCount);
+      expect(f.requests).toEqual([`/v1/emails/${f.state.detail.id}`]);
+      await resumed.close();
+    },
+  );
   it("rejects a saved reply whose peer or claimed email differs", async () => {
     const f = fixture();
     const first = await openConnectedReplyWait(f.options);

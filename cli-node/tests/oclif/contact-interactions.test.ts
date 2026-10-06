@@ -133,16 +133,21 @@ describe("contact request email controls", () => {
     { size_bytes: 0 },
     { size_bytes: MAX_CONTACT_BYTES + 1 },
     { sha256: "unverified" },
-  ])("rejects unsafe attachment inventory before downloading %#", async (patch) => {
-    const bytes = encode(request()),
-      detail = email(bytes);
-    const part = detail.parsed?.attachments?.[0];
-    if (!part) throw new Error("Missing fixture attachment");
-    Object.assign(part, patch);
-    const read = vi.fn(async () => bytes);
-    expect(await readContactInteraction(detail, read, signal, now)).toBeNull();
-    expect(read).not.toHaveBeenCalled();
-  });
+  ])(
+    "rejects unsafe attachment inventory before downloading %#",
+    async (patch) => {
+      const bytes = encode(request()),
+        detail = email(bytes);
+      const part = detail.parsed?.attachments?.[0];
+      if (!part) throw new Error("Missing fixture attachment");
+      Object.assign(part, patch);
+      const read = vi.fn(async () => bytes);
+      expect(
+        await readContactInteraction(detail, read, signal, now),
+      ).toBeNull();
+      expect(read).not.toHaveBeenCalled();
+    },
+  );
 
   it("does not choose between conflicting canonical parts or treat incomplete parsing as absence", async () => {
     const bytes = encode(request()),

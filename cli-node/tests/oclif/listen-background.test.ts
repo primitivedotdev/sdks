@@ -674,24 +674,27 @@ describe("listener lifecycle state", () => {
     ["ENOSPC", "disk-full"],
     ["EDQUOT", "disk-full"],
     ["EIO", "storage-unavailable"],
-  ] as const)("records %s from the receiver as %s with guidance", async (code, failureCode) => {
-    const primary = Object.assign(new Error("synthetic write failure"), {
-      code,
-    });
-    const f = running(async () => {
-      throw primary;
-    });
-    await expect(f.done).rejects.toBe(primary);
-    const current = backgroundListenStatus(target);
-    expect(current).toMatchObject({
-      phase: "failed",
-      reason: "failed",
-      healthy: false,
-      failureCode,
-    });
-    expect(current.detail).toContain("new mail is not reaching this session");
-    expect(backgroundListenRestartable(current)).toBe(true);
-  });
+  ] as const)(
+    "records %s from the receiver as %s with guidance",
+    async (code, failureCode) => {
+      const primary = Object.assign(new Error("synthetic write failure"), {
+        code,
+      });
+      const f = running(async () => {
+        throw primary;
+      });
+      await expect(f.done).rejects.toBe(primary);
+      const current = backgroundListenStatus(target);
+      expect(current).toMatchObject({
+        phase: "failed",
+        reason: "failed",
+        healthy: false,
+        failureCode,
+      });
+      expect(current.detail).toContain("new mail is not reaching this session");
+      expect(backgroundListenRestartable(current)).toBe(true);
+    },
+  );
 
   it("keeps a holding failure code over a storage classification", async () => {
     const primary = Object.assign(new Error("synthetic"), { code: "ENOSPC" });
@@ -787,31 +790,31 @@ describe("listener lifecycle state", () => {
     expect(backgroundListenStatus(target).phase).toBe("failed");
   });
 
-  it.each([
-    "throws",
-    "returns private text",
-  ])("preserves the primary failure and stores only a safe code when classification %s", async (mode) => {
-    const privateText = `private-detail-${randomUUID()}`;
-    const primary = new Error(privateText);
-    const f = running(
-      async () => {
-        throw primary;
-      },
-      () => false,
-      {
-        failureCode: () => {
-          if (mode === "throws") throw new Error(privateText);
-          return privateText as BackgroundListenFailureCode;
+  it.each(["throws", "returns private text"])(
+    "preserves the primary failure and stores only a safe code when classification %s",
+    async (mode) => {
+      const privateText = `private-detail-${randomUUID()}`;
+      const primary = new Error(privateText);
+      const f = running(
+        async () => {
+          throw primary;
         },
-      },
-    );
-    await expect(f.done).rejects.toBe(primary);
-    expect(backgroundListenStatus(target)).toMatchObject({
-      phase: "failed",
-      failureCode: "receiving-failed",
-    });
-    expect(readFileSync(stateFile(), "utf8")).not.toContain(privateText);
-  });
+        () => false,
+        {
+          failureCode: () => {
+            if (mode === "throws") throw new Error(privateText);
+            return privateText as BackgroundListenFailureCode;
+          },
+        },
+      );
+      await expect(f.done).rejects.toBe(primary);
+      expect(backgroundListenStatus(target)).toMatchObject({
+        phase: "failed",
+        failureCode: "receiving-failed",
+      });
+      expect(readFileSync(stateFile(), "utf8")).not.toContain(privateText);
+    },
+  );
 
   it("rejects a symlinked lifecycle directory during status and stop", async () => {
     const f = running();
@@ -925,65 +928,71 @@ describe("detached synthetic listener processes", () => {
       ["split whitespace", ["--api-key", " \t "]],
       ["equals empty", ["--api-key="]],
       ["equals whitespace", ["--api-key= \t "]],
-    ])("keeps the parsed parent and detached child identity equal for %s", async (_name, keyArgs) => {
-      const inherited = ["inert", "inherited"].join("-");
-      const stored = ["inert", "stored"].join("-");
-      vi.stubEnv("PRIMITIVE_API_KEY", inherited);
-      if (savedLogin)
-        saveCliCredentials(directory, {
-          auth_method: "oauth",
-          access_token: stored,
-          refresh_token: ["inert", "refresh"].join("-"),
-          token_type: "Bearer",
-          expires_at: "2099-01-01T00:00:00.000Z",
-          oauth_grant_id: randomUUID(),
-          oauth_client_id: "fixture",
-          org_id: randomUUID(),
-          org_name: null,
-          api_base_url: "https://example.test/v1",
-          created_at: "2026-01-01T00:00:00.000Z",
+    ])(
+      "keeps the parsed parent and detached child identity equal for %s",
+      async (_name, keyArgs) => {
+        const inherited = ["inert", "inherited"].join("-");
+        const stored = ["inert", "stored"].join("-");
+        vi.stubEnv("PRIMITIVE_API_KEY", inherited);
+        if (savedLogin)
+          saveCliCredentials(directory, {
+            auth_method: "oauth",
+            access_token: stored,
+            refresh_token: ["inert", "refresh"].join("-"),
+            token_type: "Bearer",
+            expires_at: "2099-01-01T00:00:00.000Z",
+            oauth_grant_id: randomUUID(),
+            oauth_client_id: "fixture",
+            org_id: randomUUID(),
+            org_name: null,
+            api_base_url: "https://example.test/v1",
+            created_at: "2026-01-01T00:00:00.000Z",
+          });
+        if (process.platform !== "win32") chmodSync(directory, 0o755);
+        const argv = [
+          "--background",
+          "--notify-session",
+          target.threadId,
+          "--sender",
+          "owner@example.com",
+          ...keyArgs,
+        ];
+        const parsed = await Parser.parse(argv, { flags: ListenCommand.flags });
+        const auth = resolveCliAuth({
+          configDir: directory,
+          apiKey: parsed.flags["api-key"],
         });
-      if (process.platform !== "win32") chmodSync(directory, 0o755);
-      const argv = [
-        "--background",
-        "--notify-session",
-        target.threadId,
-        "--sender",
-        "owner@example.com",
-        ...keyArgs,
-      ];
-      const parsed = await Parser.parse(argv, { flags: ListenCommand.flags });
-      const auth = resolveCliAuth({
-        configDir: directory,
-        apiKey: parsed.flags["api-key"],
-      });
-      expect([auth.apiKey, auth.source]).toEqual(
-        !keyArgs.length
-          ? [inherited, "flag-or-env"]
-          : savedLogin
-            ? [stored, "stored"]
-            : [undefined, "none"],
-      );
-      const result = await startBackgroundListen({
-        ...target,
-        argv: [childFiles(), ...argv],
-        env: {
-          TEST_LISTEN_TARGET: JSON.stringify(target),
-          TEST_EXPECT_AUTH: JSON.stringify([auth.apiKey ?? null, auth.source]),
-        },
-        startupTimeoutMs: 5000,
-      });
-      expect(result.status).toMatchObject({
-        phase: "receiving",
-        healthy: true,
-        detached: true,
-      });
-      expect(readFileSync(stateFile(), "utf8")).not.toContain(inherited);
-      expect(readFileSync(stateFile(), "utf8")).not.toContain(stored);
-      expect((await stopBackgroundListen(target)).phase).toBe("stopped");
-      if (process.platform !== "win32")
-        expect(statSync(directory).mode & 0o777).toBe(0o755);
-    });
+        expect([auth.apiKey, auth.source]).toEqual(
+          !keyArgs.length
+            ? [inherited, "flag-or-env"]
+            : savedLogin
+              ? [stored, "stored"]
+              : [undefined, "none"],
+        );
+        const result = await startBackgroundListen({
+          ...target,
+          argv: [childFiles(), ...argv],
+          env: {
+            TEST_LISTEN_TARGET: JSON.stringify(target),
+            TEST_EXPECT_AUTH: JSON.stringify([
+              auth.apiKey ?? null,
+              auth.source,
+            ]),
+          },
+          startupTimeoutMs: 5000,
+        });
+        expect(result.status).toMatchObject({
+          phase: "receiving",
+          healthy: true,
+          detached: true,
+        });
+        expect(readFileSync(stateFile(), "utf8")).not.toContain(inherited);
+        expect(readFileSync(stateFile(), "utf8")).not.toContain(stored);
+        expect((await stopBackgroundListen(target)).phase).toBe("stopped");
+        if (process.platform !== "win32")
+          expect(statSync(directory).mode & 0o777).toBe(0o755);
+      },
+    );
   });
 
   it("reports startup policy retries before readiness times out and receives after restoration", async () => {

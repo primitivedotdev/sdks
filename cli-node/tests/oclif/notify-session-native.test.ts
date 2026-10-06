@@ -22,17 +22,17 @@ import {
 } from "../../src/oclif/notify-session-native.js";
 
 describe("native turn refusal classification", () => {
-  it.each([
-    "Review",
-    "Compact",
-  ])("accepts only explicit %s pre-dispatch refusal", (kind) => {
-    expect(
-      isNativeTurnNotSteerableResponse({
-        code: -32603,
-        message: `failed to submit turn input: ActiveTurnNotSteerable { turn_kind: ${kind} }`,
-      }),
-    ).toBe(true);
-  });
+  it.each(["Review", "Compact"])(
+    "accepts only explicit %s pre-dispatch refusal",
+    (kind) => {
+      expect(
+        isNativeTurnNotSteerableResponse({
+          code: -32603,
+          message: `failed to submit turn input: ActiveTurnNotSteerable { turn_kind: ${kind} }`,
+        }),
+      ).toBe(true);
+    },
+  );
   it.each([
     null,
     { code: -32603, message: "failed to submit turn input: Other" },
@@ -253,45 +253,46 @@ describe.skipIf(process.platform === "win32")(
       ).rejects.toMatchObject({ submitted: false });
       expect(persisted).toBe(false);
     });
-    it.each([
-      "inProgress",
-      "completed",
-      "interrupted",
-      "failed",
-    ])("acknowledges a valid %s turn without requiring a new user message", async (status) => {
-      const f = await fixture();
-      const native = await f.connect();
-      const existingTurnId = randomUUID();
-      f.state.turn = { id: existingTurnId, items: [], status };
-      const beforeDispatch = vi.fn();
-      await native.queue("External event", randomUUID(), beforeDispatch);
-      expect(beforeDispatch).toHaveBeenCalledOnce();
-      expect(
-        f.calls.filter((call) => call.method === "turn/start"),
-      ).toHaveLength(1);
-      expect(f.calls.some((call) => call.method === "turn/interrupt")).toBe(
-        false,
-      );
-    });
+    it.each(["inProgress", "completed", "interrupted", "failed"])(
+      "acknowledges a valid %s turn without requiring a new user message",
+      async (status) => {
+        const f = await fixture();
+        const native = await f.connect();
+        const existingTurnId = randomUUID();
+        f.state.turn = { id: existingTurnId, items: [], status };
+        const beforeDispatch = vi.fn();
+        await native.queue("External event", randomUUID(), beforeDispatch);
+        expect(beforeDispatch).toHaveBeenCalledOnce();
+        expect(
+          f.calls.filter((call) => call.method === "turn/start"),
+        ).toHaveLength(1);
+        expect(f.calls.some((call) => call.method === "turn/interrupt")).toBe(
+          false,
+        );
+      },
+    );
     it.each([
       { items: [], status: "inProgress" },
       { id: "", items: [], status: "inProgress" },
       { id: "turn", items: null, status: "inProgress" },
       { id: "turn", items: [], status: "unknown" },
       { id: "turn", items: [], status: ["inProgress"] },
-    ])("holds a malformed turn acknowledgement as unknown: %j", async (turn) => {
-      const f = await fixture();
-      const native = await f.connect();
-      f.state.turn = turn;
-      const beforeDispatch = vi.fn();
-      await expect(
-        native.queue("External event", randomUUID(), beforeDispatch),
-      ).rejects.toMatchObject({ submitted: true });
-      expect(beforeDispatch).toHaveBeenCalledOnce();
-      expect(
-        f.calls.filter((call) => call.method === "turn/start"),
-      ).toHaveLength(1);
-    });
+    ])(
+      "holds a malformed turn acknowledgement as unknown: %j",
+      async (turn) => {
+        const f = await fixture();
+        const native = await f.connect();
+        f.state.turn = turn;
+        const beforeDispatch = vi.fn();
+        await expect(
+          native.queue("External event", randomUUID(), beforeDispatch),
+        ).rejects.toMatchObject({ submitted: true });
+        expect(beforeDispatch).toHaveBeenCalledOnce();
+        expect(
+          f.calls.filter((call) => call.method === "turn/start"),
+        ).toHaveLength(1);
+      },
+    );
     it("identifies a completely listed but unloaded session without submitting input", async () => {
       const f = await fixture();
       f.state.loaded = [];
@@ -348,23 +349,29 @@ describe.skipIf(process.platform === "win32")(
       "unloaded-after-resume",
       "cwd-changed-after-resume",
       "direct-input-disabled-after-resume",
-    ])("rejects %s before dispatch and closes the native connection", async (reason) => {
-      const f = await fixture();
-      if (reason === "wrong-thread") f.state.resumeThreadId = randomUUID();
-      if (reason === "resume-error")
-        f.state.resumeError = { code: -32603, message: "resume refused" };
-      if (reason === "unloaded-after-resume") f.state.unloadAfterResume = true;
-      if (reason === "cwd-changed-after-resume")
-        f.state.changeCwdAfterResume = true;
-      if (reason === "direct-input-disabled-after-resume")
-        f.state.disableDirectAfterResume = true;
-      await expect(f.connect()).rejects.toMatchObject({ submitted: false });
-      expect(
-        f.calls.filter((call) => call.method === "thread/resume"),
-      ).toHaveLength(1);
-      expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
-      await vi.waitFor(() => expect(f.sockets.clients.size).toBe(0));
-    });
+    ])(
+      "rejects %s before dispatch and closes the native connection",
+      async (reason) => {
+        const f = await fixture();
+        if (reason === "wrong-thread") f.state.resumeThreadId = randomUUID();
+        if (reason === "resume-error")
+          f.state.resumeError = { code: -32603, message: "resume refused" };
+        if (reason === "unloaded-after-resume")
+          f.state.unloadAfterResume = true;
+        if (reason === "cwd-changed-after-resume")
+          f.state.changeCwdAfterResume = true;
+        if (reason === "direct-input-disabled-after-resume")
+          f.state.disableDirectAfterResume = true;
+        await expect(f.connect()).rejects.toMatchObject({ submitted: false });
+        expect(
+          f.calls.filter((call) => call.method === "thread/resume"),
+        ).toHaveLength(1);
+        expect(f.calls.some((call) => call.method === "turn/start")).toBe(
+          false,
+        );
+        await vi.waitFor(() => expect(f.sockets.clients.size).toBe(0));
+      },
+    );
     it("keeps incomplete loaded-session pagination fatal even when the session was found", async () => {
       const f = await fixture();
       f.state.loadedComplete = false;
@@ -410,30 +417,30 @@ describe.skipIf(process.platform === "win32")(
       ).rejects.toMatchObject({ submitted: true });
       expect(f.calls.some((call) => call.id === 900)).toBe(false);
     });
-    it.each([
-      "Review",
-      "Compact",
-    ])("retries only Codex's explicit %s pre-dispatch refusal", async (kind) => {
-      const f = await fixture();
-      const native = await f.connect();
-      f.state.turnError = {
-        code: -32603,
-        message: `failed to submit turn input: ActiveTurnNotSteerable { turn_kind: ${kind} }`,
-      };
-      const dispatch = vi.fn();
-      await expect(
-        native.queue("Event", randomUUID(), dispatch),
-      ).rejects.toBeInstanceOf(NativeTurnNotSubmittedError);
-      expect(dispatch).toHaveBeenCalledOnce();
-      expect(
-        f.calls.filter((call) => call.method === "turn/start"),
-      ).toHaveLength(1);
-      f.state.turnError = null;
-      await native.queue("Event", randomUUID(), dispatch);
-      expect(
-        f.calls.filter((call) => call.method === "turn/start"),
-      ).toHaveLength(2);
-    });
+    it.each(["Review", "Compact"])(
+      "retries only Codex's explicit %s pre-dispatch refusal",
+      async (kind) => {
+        const f = await fixture();
+        const native = await f.connect();
+        f.state.turnError = {
+          code: -32603,
+          message: `failed to submit turn input: ActiveTurnNotSteerable { turn_kind: ${kind} }`,
+        };
+        const dispatch = vi.fn();
+        await expect(
+          native.queue("Event", randomUUID(), dispatch),
+        ).rejects.toBeInstanceOf(NativeTurnNotSubmittedError);
+        expect(dispatch).toHaveBeenCalledOnce();
+        expect(
+          f.calls.filter((call) => call.method === "turn/start"),
+        ).toHaveLength(1);
+        f.state.turnError = null;
+        await native.queue("Event", randomUUID(), dispatch);
+        expect(
+          f.calls.filter((call) => call.method === "turn/start"),
+        ).toHaveLength(2);
+      },
+    );
     it.each([
       { code: -32603, message: "failed to submit turn input: Other" },
       {
@@ -469,44 +476,46 @@ describe.skipIf(process.platform === "win32")(
       );
       expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
     });
-    it.each([
-      "thread/closed",
-      "thread/status/changed",
-    ])("marks an exact %s unload as disconnected while ignoring other threads", async (method) => {
-      const f = await fixture();
-      const disconnected = vi.fn();
-      await f.connect(disconnected);
-      for (const socket of f.sockets.clients) {
-        socket.send(
-          JSON.stringify({
-            method,
-            params: {
-              threadId: randomUUID(),
-              status: { type: "notLoaded" },
-            },
-          }),
+    it.each(["thread/closed", "thread/status/changed"])(
+      "marks an exact %s unload as disconnected while ignoring other threads",
+      async (method) => {
+        const f = await fixture();
+        const disconnected = vi.fn();
+        await f.connect(disconnected);
+        for (const socket of f.sockets.clients) {
+          socket.send(
+            JSON.stringify({
+              method,
+              params: {
+                threadId: randomUUID(),
+                status: { type: "notLoaded" },
+              },
+            }),
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        expect(disconnected).not.toHaveBeenCalled();
+        for (const socket of f.sockets.clients) {
+          socket.send(
+            JSON.stringify({
+              method,
+              params: {
+                threadId: f.threadId,
+                status: { type: "notLoaded" },
+              },
+            }),
+          );
+        }
+        await vi.waitFor(() =>
+          expect(disconnected).toHaveBeenCalledWith(
+            expect.any(NativeSessionNotLoadedError),
+          ),
         );
-      }
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      expect(disconnected).not.toHaveBeenCalled();
-      for (const socket of f.sockets.clients) {
-        socket.send(
-          JSON.stringify({
-            method,
-            params: {
-              threadId: f.threadId,
-              status: { type: "notLoaded" },
-            },
-          }),
+        expect(f.calls.some((call) => call.method === "turn/start")).toBe(
+          false,
         );
-      }
-      await vi.waitFor(() =>
-        expect(disconnected).toHaveBeenCalledWith(
-          expect.any(NativeSessionNotLoadedError),
-        ),
-      );
-      expect(f.calls.some((call) => call.method === "turn/start")).toBe(false);
-    });
+      },
+    );
     it("does not report deliberate close or cancellation as a lost connection", async () => {
       const f = await fixture();
       const disconnected = vi.fn();

@@ -155,7 +155,7 @@ export class EventsResource {
       ),
     );
     const endpoint = result.data;
-    if (!endpoint || endpoint.kind !== "pull" || endpoint.enabled === false)
+    if (endpoint?.kind !== "pull" || endpoint.enabled === false)
       throw new EventReceiverError(
         "Subscription is unavailable",
         "subscription_unavailable",

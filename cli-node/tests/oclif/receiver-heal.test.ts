@@ -152,17 +152,17 @@ describe("restarting a dead receiver from the bound session", () => {
     expect(heal().result.action).toBe("restarting");
   });
 
-  it.each([
-    "notification-outcome-unknown",
-    "connection-changed",
-  ])("holds a receiver that failed with %s", (code) => {
-    connected();
-    receiver("failed", code);
-    expect(heal().result).toEqual({
-      action: "none",
-      reason: "not_restartable",
-    });
-  });
+  it.each(["notification-outcome-unknown", "connection-changed"])(
+    "holds a receiver that failed with %s",
+    (code) => {
+      connected();
+      receiver("failed", code);
+      expect(heal().result).toEqual({
+        action: "none",
+        reason: "not_restartable",
+      });
+    },
+  );
 
   it("never restarts a receiver that was stopped or never started", () => {
     connected();

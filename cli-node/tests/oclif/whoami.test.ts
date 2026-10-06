@@ -77,51 +77,51 @@ describe("whoami command", () => {
     );
   });
 
-  it.each([
-    true,
-    false,
-  ])("reports saved identity offline without calling the account API (json %s)", async (json) => {
-    const credential = ["pconn", "test"].join("_");
-    mocks.auth.mockResolvedValue({
-      apiClient: { client: {} },
-      auth: {
-        apiKey: credential,
-        connectedAgent: {
-          profileName: "work",
-          agentAddress: "agent@example.test",
-          ownerAddress: "owner@example.test",
-          ownerMemberAddress: "ada_123456789@example.test",
-          apiBaseUrl: "https://api.primitive-staging-1.com/v1",
-          orgId: "org-1",
+  it.each([true, false])(
+    "reports saved identity offline without calling the account API (json %s)",
+    async (json) => {
+      const credential = ["pconn", "test"].join("_");
+      mocks.auth.mockResolvedValue({
+        apiClient: { client: {} },
+        auth: {
+          apiKey: credential,
+          connectedAgent: {
+            profileName: "work",
+            agentAddress: "agent@example.test",
+            ownerAddress: "owner@example.test",
+            ownerMemberAddress: "ada_123456789@example.test",
+            apiBaseUrl: "https://api.primitive-staging-1.com/v1",
+            orgId: "org-1",
+          },
         },
-      },
-    });
-    const output: string[] = [];
-    vi.spyOn(console, "log").mockImplementation((value: unknown) => {
-      output.push(String(value));
-    });
-    await WhoamiCommand.run(json ? ["--json"] : [], {
-      root: resolve(import.meta.dirname, "../.."),
-    });
-    const text = output.join("\n");
-    expect(mocks.account).not.toHaveBeenCalled();
-    expect(text).toContain("agent@example.test");
-    expect(text).toContain(
-      "primitive agent connect --profile work --status --json",
-    );
-    expect(text).toContain("not verified");
-    expect(text).toContain("ada_123456789@example.test");
-    if (!json)
-      expect(text).toContain(
-        "Owner personal address (send reports here): ada_123456789@example.test",
-      );
-    expect(text).not.toContain(credential);
-    if (json)
-      expect(JSON.parse(text)).toMatchObject({
-        verification: "offline",
-        auth_method: "agent_connection",
       });
-  });
+      const output: string[] = [];
+      vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+        output.push(String(value));
+      });
+      await WhoamiCommand.run(json ? ["--json"] : [], {
+        root: resolve(import.meta.dirname, "../.."),
+      });
+      const text = output.join("\n");
+      expect(mocks.account).not.toHaveBeenCalled();
+      expect(text).toContain("agent@example.test");
+      expect(text).toContain(
+        "primitive agent connect --profile work --status --json",
+      );
+      expect(text).toContain("not verified");
+      expect(text).toContain("ada_123456789@example.test");
+      if (!json)
+        expect(text).toContain(
+          "Owner personal address (send reports here): ada_123456789@example.test",
+        );
+      expect(text).not.toContain(credential);
+      if (json)
+        expect(JSON.parse(text)).toMatchObject({
+          verification: "offline",
+          auth_method: "agent_connection",
+        });
+    },
+  );
 
   it.each([
     [
@@ -132,44 +132,47 @@ describe("whoami command", () => {
       "native",
       `Inspect the receiver with \`PRIMITIVE_AGENT_PROFILE=work primitive listen --status --notify-session ${session}\`.`,
     ],
-  ])("points a %s receiver at the status command for its mode", async (receiverMode, hint) => {
-    const directory = mkdtempSync(join(tmpdir(), "primitive-whoami-"));
-    try {
-      vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
-      writeMailJson(
-        join(agentProfileDirectory(directory, "work"), "setup.json"),
-        { session, receiverMode },
-      );
-      mocks.auth.mockResolvedValue({
-        apiClient: { client: {} },
-        auth: {
-          apiKey: ["pconn", "test"].join("_"),
-          connectedAgent: {
-            profileName: "work",
-            agentAddress: "agent@example.test",
-            ownerAddress: "owner@example.test",
-            ownerMemberAddress: null,
-            apiBaseUrl: "https://api.primitive.dev/v1",
-            orgId: "org-1",
+  ])(
+    "points a %s receiver at the status command for its mode",
+    async (receiverMode, hint) => {
+      const directory = mkdtempSync(join(tmpdir(), "primitive-whoami-"));
+      try {
+        vi.stubEnv("PRIMITIVE_CONFIG_DIR", directory);
+        writeMailJson(
+          join(agentProfileDirectory(directory, "work"), "setup.json"),
+          { session, receiverMode },
+        );
+        mocks.auth.mockResolvedValue({
+          apiClient: { client: {} },
+          auth: {
+            apiKey: ["pconn", "test"].join("_"),
+            connectedAgent: {
+              profileName: "work",
+              agentAddress: "agent@example.test",
+              ownerAddress: "owner@example.test",
+              ownerMemberAddress: null,
+              apiBaseUrl: "https://api.primitive.dev/v1",
+              orgId: "org-1",
+            },
           },
-        },
-      });
-      const output: string[] = [];
-      vi.spyOn(console, "log").mockImplementation((value: unknown) => {
-        output.push(String(value));
-      });
-      await WhoamiCommand.run(["--json"], {
-        root: resolve(import.meta.dirname, "../.."),
-      });
-      const { guidance } = JSON.parse(output.join("\n"));
-      expect(guidance).toContain(hint);
-      if (receiverMode === "external")
-        expect(guidance).not.toContain("listen --status");
-    } finally {
-      vi.unstubAllEnvs();
-      rmSync(directory, { recursive: true, force: true });
-    }
-  });
+        });
+        const output: string[] = [];
+        vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+          output.push(String(value));
+        });
+        await WhoamiCommand.run(["--json"], {
+          root: resolve(import.meta.dirname, "../.."),
+        });
+        const { guidance } = JSON.parse(output.join("\n"));
+        expect(guidance).toContain(hint);
+        if (receiverMode === "external")
+          expect(guidance).not.toContain("listen --status");
+      } finally {
+        vi.unstubAllEnvs();
+        rmSync(directory, { recursive: true, force: true });
+      }
+    },
+  );
 
   it("does not call account or imply sign-in is needed for a raw connection credential", async () => {
     mocks.auth.mockResolvedValue({
