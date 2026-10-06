@@ -449,6 +449,12 @@ class ReplyCommand extends Command {
               ? [priorRepliesCheck.detail.from_email]
               : [],
           profileName: auth.connectedAgent?.profileName,
+          // Other emails from the same sender stay in progress unless they
+          // are in this reply's thread.
+          threadId:
+            priorRepliesCheck.status === "checked"
+              ? (priorRepliesCheck.detail?.thread_id ?? null)
+              : null,
         },
         flags.fyi ? "fyi" : "reply",
       );

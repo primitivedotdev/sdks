@@ -86,12 +86,17 @@ function spawner(options: { fail?: boolean } = {}) {
   };
   return { calls, impl };
 }
-function claim(dir: string, emailId = randomUUID(), sender = OWNER) {
+function claim(
+  dir: string,
+  emailId = randomUUID(),
+  sender = OWNER,
+  threadId: string = randomUUID(),
+) {
   claimAutoRead(dir, {
     emailId,
     profileName: "work",
     sender,
-    threadId: randomUUID(),
+    threadId,
   });
   return emailId;
 }
@@ -361,6 +366,38 @@ describe("automatic working dispatch", () => {
 });
 
 describe("stopping automatic working", () => {
+  it("lets a reply stop only the same sender's mail in its own thread", async () => {
+    const dir = configDir();
+    const thread = randomUUID();
+    const answered = claim(dir, randomUUID(), OWNER, thread);
+    const sameThread = claim(dir, randomUUID(), OWNER, thread);
+    const otherThread = claim(dir);
+    for (const id of [answered, sameThread, otherThread])
+      startWorkingLease(dir, id);
+    await haltAutoWorking(
+      dir,
+      {
+        emailIds: [answered],
+        peers: [OWNER],
+        profileName: "work",
+        threadId: thread,
+      },
+      "reply",
+    );
+    expect(readWorkingLease(dir, answered)?.stop_reason).toBe("reply");
+    expect(readWorkingLease(dir, sameThread)?.stop_reason).toBe("reply");
+    expect(readWorkingLease(dir, otherThread)?.stopped_at).toBeNull();
+    // An unknown thread stops only the named email.
+    const lone = claim(dir);
+    startWorkingLease(dir, lone);
+    await haltAutoWorking(
+      dir,
+      { emailIds: [], peers: [OWNER], profileName: "work", threadId: null },
+      "reply",
+    );
+    expect(readWorkingLease(dir, lone)?.stopped_at).toBeNull();
+  });
+
   it("stops the answered email and mail from the answered peer only", async () => {
     const dir = configDir();
     const answered = claim(dir);
