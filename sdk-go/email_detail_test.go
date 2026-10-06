@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
 
 // Round-trip pin for the new EmailDetail fields (replies,

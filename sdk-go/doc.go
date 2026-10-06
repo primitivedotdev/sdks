@@ -7,7 +7,7 @@
 // Lower-level webhook and generated API helpers still remain available for
 // advanced use cases.
 //
-// Import the module path github.com/primitivedotdev/sdks/sdk-go and use the
+// Import the module path github.com/primitivedotdev/sdks/sdk-go/v2 and use the
 // package name primitive in code.
 //
 // For lower-level use cases, applications can call HandleWebhook,

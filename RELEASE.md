@@ -5,7 +5,7 @@ This repository publishes three language SDKs plus a Node-only CLI from one shar
 - Node SDK: `@primitivedotdev/sdk`
 - Node CLI: `primitive` (also mirrored as `primcli` and the legacy scoped `@primitivedotdev/cli`)
 - Python: `primitivedotdev`
-- Go: `github.com/primitivedotdev/sdks/sdk-go`
+- Go: `github.com/primitivedotdev/sdks/sdk-go/v2`
 
 Use this process when cutting a release for one or more packages.
 
@@ -81,6 +81,8 @@ Each mirror (`primcli` and `@primitivedotdev/cli`) needs its own npm trusted pub
 3. Merge that PR into `main`.
 4. The `Go Release` workflow creates the subdirectory-prefixed `sdk-go/vX.Y.Z` tag plus a GitHub release.
 5. Verify the subdirectory-prefixed tag resolves correctly through the Go module proxy.
+
+The module path carries the major version, as Go requires for v2 and later: `sdk-go/go.mod` declares `github.com/primitivedotdev/sdks/sdk-go/v2`, and `sdk-go/VERSION` `2.x.y` is tagged `sdk-go/v2.x.y`. The tag keeps the `sdk-go/` directory prefix; the `/v2` lives only in the module path. `scripts/check-go-module-major.sh` runs in `make go-check` and before the release tag is created, and fails when the two disagree. A future major (v3) needs both the module path and every import updated in the same PR as the `VERSION` bump. To confirm a release through the proxy, run `go list -m github.com/primitivedotdev/sdks/sdk-go/v2@v2.x.y`.
 
 The repository initializes `sdk-go/VERSION` with `unreleased` so the first automation PR does not publish a Go tag. The first real Go release happens when that file changes to a semantic version.
 

@@ -1,4 +1,4 @@
-module github.com/primitivedotdev/sdks/sdk-go
+module github.com/primitivedotdev/sdks/sdk-go/v2
 
 go 1.26.0
 

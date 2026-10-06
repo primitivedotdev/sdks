@@ -327,6 +327,7 @@ go-check-generated:
 	cd sdk-go && $(PYTHON) scripts/generate_schema_module.py && $(PYTHON) scripts/generate_api_client.py && go mod tidy && git diff --exit-code -- go.mod go.sum schema_generated.go api
 
 go-check: go-check-generated
+	scripts/check-go-module-major.sh
 	cd sdk-go && test -z "$$(gofmt -l .)"
 	cd sdk-go && go vet ./...
 	cd sdk-go && go test ./...

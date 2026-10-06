@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	api "github.com/primitivedotdev/sdks/sdk-go/api"
+	api "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
 
 var emailSearchThread = uuid.MustParse("5c1e9a7d-3b2f-4e8a-b6d4-9f0c2a1e7b35")

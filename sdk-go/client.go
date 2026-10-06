@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
 
 var emailRegex = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)

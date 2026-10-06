@@ -1,4 +1,4 @@
-# `github.com/primitivedotdev/sdks/sdk-go`
+# `github.com/primitivedotdev/sdks/sdk-go/v2`
 
 Official Primitive Go SDK.
 
@@ -21,8 +21,39 @@ advanced use.
 ## Installation
 
 ```bash
-go get github.com/primitivedotdev/sdks/sdk-go@latest
+go get github.com/primitivedotdev/sdks/sdk-go/v2@latest
 ```
+
+## Upgrading to v2
+
+The module path now ends in `/v2`. Update your imports and dependency:
+
+```bash
+go get github.com/primitivedotdev/sdks/sdk-go/v2@latest
+```
+
+```go
+import (
+	primitive "github.com/primitivedotdev/sdks/sdk-go/v2"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+)
+```
+
+Then remove the old `github.com/primitivedotdev/sdks/sdk-go` requirement with
+`go mod tidy`. Package names are unchanged.
+
+v2 changes two types on email search results from `SearchEmails`:
+
+- `EmailSearchMeta.Total` is now a `NilInt` instead of an `int`. It is null
+  only when the request sets `Count` to `SearchEmailsCountFalse`; otherwise it
+  holds a number. Read it with `Meta.Total.Get()` or `Meta.Total.Or(0)`.
+- `EmailSearchResult.ThreadID` is now a `NilUUID` instead of an `OptNilUUID`,
+  because search results always include the field. Read it with
+  `ThreadID.Get()`.
+
+Search results also gain a `Direction` field, and `SearchEmailsParams` gains
+the `ThreadID`, `Prefix` and `Count` options. See
+[Searching received mail](#searching-received-mail).
 
 ## Basic usage
 
@@ -36,7 +67,7 @@ import (
 	"log"
 	"time"
 
-	primitive "github.com/primitivedotdev/sdks/sdk-go"
+	primitive "github.com/primitivedotdev/sdks/sdk-go/v2"
 )
 
 func handle(ctx context.Context, body []byte, headers map[string]string) {
@@ -538,7 +569,7 @@ not have been sent, so the payment outcome is indeterminate.
 Use the sibling `api` package when you want the full generated HTTP API surface.
 
 ```go
-import primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+import primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 
 client, err := primitiveapi.NewAPIClient("prim_test")
 if err != nil {

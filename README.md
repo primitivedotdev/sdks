@@ -17,7 +17,7 @@ small default workflow:
 | --- | --- | --- |
 | Node.js | `npm install @primitivedotdev/sdk` | `sdk-node/README.md` |
 | Python | `pip install primitivedotdev` | `sdk-python/README.md` |
-| Go | `go get github.com/primitivedotdev/sdks/sdk-go@latest` | `sdk-go/README.md` |
+| Go | `go get github.com/primitivedotdev/sdks/sdk-go/v2@latest` | `sdk-go/README.md` |
 
 ## Default API shape
 
