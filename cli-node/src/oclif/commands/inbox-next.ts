@@ -51,6 +51,7 @@ import {
   type ReplyStateFields,
   ReplyStateUnsupportedError,
 } from "../reply-state.js";
+import { followUpCommandPrefix } from "../send-outcome.js";
 
 // `primitive inbox next` is the agent-loop verb: hand me the one email
 // that is waiting on my reply, with its whole conversation, and tell me
@@ -340,8 +341,9 @@ export function formatTrust(email: InboxNextEmail): string {
   return `${auth}; known sender: ${known}`;
 }
 
+/** The reply command line, reaching this same CLI and connected profile. */
 export function replyCommand(bin: string, id: string): string {
-  return `${bin} reply --id ${id}`;
+  return `${followUpCommandPrefix(bin)} reply --id ${id}`;
 }
 
 export type InboxNextApi = {
@@ -753,7 +755,7 @@ export function formatTranscript(
     ),
     "",
     ...transcriptFooter(interaction, actions, email.id, bin),
-    `Then run \`${bin} inbox next\` again.`,
+    `Then run \`${followUpCommandPrefix(bin)} inbox next\` again.`,
   ];
   return lines.join("\n");
 }

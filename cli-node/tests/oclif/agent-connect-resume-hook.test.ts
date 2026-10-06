@@ -286,13 +286,19 @@ it("agent connect --session runs the whole flow with a default profile and one J
   expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
 });
 
-it("agent connect --status needs --profile or PRIMITIVE_AGENT_PROFILE", async () => {
+it("agent connect --status needs a profile, a session or PRIMITIVE_AGENT_PROFILE", async () => {
   vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "");
+  for (const name of [
+    "CLAUDE_CODE_SESSION_ID",
+    "CODEX_THREAD_ID",
+    "CODEX_SESSION_ID",
+  ])
+    vi.stubEnv(name, "");
   vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
     () => undefined,
   );
   await expect(AgentConnectCommand.run(["--status"], { root })).rejects.toThrow(
-    "Pass --profile <name> or set PRIMITIVE_AGENT_PROFILE.",
+    "Pass --profile <name>, --session <id> or set PRIMITIVE_AGENT_PROFILE.",
   );
   expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
   expect(existsSync(join(home, "codex"))).toBe(false);

@@ -834,6 +834,16 @@ describe("output", () => {
     expect(json.version).toBe(1);
     expect(json.reply_command).toBe("primitive reply --id a");
     expect(json.email?.from).toBe("Alice <alice@example.com>");
+    // Under a connected profile the reply command names it, like every other
+    // printed follow-up command.
+    vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "session-1");
+    try {
+      expect(toJson(result, "primitive").reply_command).toBe(
+        "PRIMITIVE_AGENT_PROFILE=session-1 primitive reply --id a",
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("carries sender trust evidence", async () => {
@@ -998,6 +1008,20 @@ describe("output", () => {
       `  primitive reply --id ${id} --body "..."`,
       "Then run `primitive inbox next` again.",
     ]);
+    // Under a connected profile both footer commands name it.
+    vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "session-1");
+    try {
+      expect(
+        await footer({ interaction_hint: "none", interaction_kind: null }),
+      ).toEqual([
+        "",
+        "Reply with:",
+        `  PRIMITIVE_AGENT_PROFILE=session-1 primitive reply --id ${id} --body "..."`,
+        "Then run `PRIMITIVE_AGENT_PROFILE=session-1 primitive inbox next` again.",
+      ]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("agrees with the brief on a repeat only the sender can stop", async () => {
