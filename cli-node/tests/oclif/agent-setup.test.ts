@@ -308,20 +308,23 @@ describe("one-command connected agent setup", () => {
     });
     expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
   });
-  it.each([
-    "unknown",
-    "wait_timeout",
-  ])("reports %s delivery evidence without declaring verification submitted", async (status) => {
-    const f = fixture();
-    f.dependencies.sendVerification.mockResolvedValue({ ...f.receipt, status });
-    expect(await setupAgent(f.params)).toMatchObject({
-      verification: { state: "delivery_unknown", deliveryStatus: status },
-    });
-    expect(await f.resume()).toMatchObject({
-      verification: { state: "delivery_unknown" },
-    });
-    expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
-  });
+  it.each(["unknown", "wait_timeout"])(
+    "reports %s delivery evidence without declaring verification submitted",
+    async (status) => {
+      const f = fixture();
+      f.dependencies.sendVerification.mockResolvedValue({
+        ...f.receipt,
+        status,
+      });
+      expect(await setupAgent(f.params)).toMatchObject({
+        verification: { state: "delivery_unknown", deliveryStatus: status },
+      });
+      expect(await f.resume()).toMatchObject({
+        verification: { state: "delivery_unknown" },
+      });
+      expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
+    },
+  );
   it("native preflight failure cannot consume an invitation", async () => {
     const f = fixture();
     f.dependencies.preflight.mockRejectedValue(
@@ -709,76 +712,76 @@ describe("one-command connected agent setup", () => {
     expect(timeout).toHaveBeenCalledWith(150_000);
     expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
   });
-  it.each([
-    undefined,
-    "invalid-private-status",
-  ])("keeps a successful POST with malformed status %s uncertain and resumable", async (status) => {
-    const f = fixture();
-    const claim = await f.fetch(f.identity.apiBaseUrl);
-    let sends = 0;
-    f.fetch.mockImplementation(async (input, init) => {
-      const path = new URL(new Request(input, init).url).pathname;
-      if (path.endsWith("/claim")) return claim;
-      if (path.endsWith("/send-mail")) {
-        sends++;
-        return Response.json({ data: { id: f.receipt.id, status } });
-      }
-      throw new Error("Unexpected request");
-    });
-    const { sendVerification: _send, ...dependencies } = f.dependencies;
-    const result = await setupAgent({ ...f.params, dependencies });
-    expect(result).toMatchObject({
-      verification: { state: "send_unknown" },
-      receiving: { state: "not_started" },
-    });
-    expect(JSON.stringify(result)).not.toContain("invalid-private-status");
-    expect(f.state()).toMatchObject({ phase: "sending", receipt: null });
-    f.dependencies.reconcile.mockResolvedValue(f.receipt);
-    expect(await f.resume()).toMatchObject({
-      verification: { state: "reply_submitted" },
-    });
-    expect(sends).toBe(1);
-  });
-  it.each([
-    undefined,
-    "invalid-private-status",
-  ])("does not persist malformed status %s from a verification receipt lookup", async (status) => {
-    const f = fixture();
-    f.dependencies.sendVerification.mockRejectedValue(
-      new Error("Uncertain send"),
-    );
-    await setupAgent(f.params);
-    f.fetch.mockImplementation(async () =>
-      Response.json({
-        data: [
-          {
-            id: f.receipt.id,
-            status,
-            client_idempotency_key: `connection-verification-${f.state().invitationHash}`,
-            from_address: f.identity.agentAddress,
-            to_address: f.identity.ownerAddress,
-          },
-        ],
-        meta: { cursor: null },
-      }),
-    );
-    const { reconcile: _reconcile, ...dependencies } = f.dependencies;
-    await expect(
-      setupAgent({
-        ...f.params,
-        invitation: undefined,
-        resume: true,
-        dependencies,
-      }),
-    ).rejects.toThrow("receipt is incomplete or invalid");
-    expect(f.state()).toMatchObject({ phase: "sending", receipt: null });
-    expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
-    expect(f.dependencies.startListener).not.toHaveBeenCalled();
-    f.dependencies.reconcile.mockResolvedValue(f.receipt);
-    expect(await f.resume()).toMatchObject({
-      verification: { state: "reply_submitted" },
-    });
-  });
+  it.each([undefined, "invalid-private-status"])(
+    "keeps a successful POST with malformed status %s uncertain and resumable",
+    async (status) => {
+      const f = fixture();
+      const claim = await f.fetch(f.identity.apiBaseUrl);
+      let sends = 0;
+      f.fetch.mockImplementation(async (input, init) => {
+        const path = new URL(new Request(input, init).url).pathname;
+        if (path.endsWith("/claim")) return claim;
+        if (path.endsWith("/send-mail")) {
+          sends++;
+          return Response.json({ data: { id: f.receipt.id, status } });
+        }
+        throw new Error("Unexpected request");
+      });
+      const { sendVerification: _send, ...dependencies } = f.dependencies;
+      const result = await setupAgent({ ...f.params, dependencies });
+      expect(result).toMatchObject({
+        verification: { state: "send_unknown" },
+        receiving: { state: "not_started" },
+      });
+      expect(JSON.stringify(result)).not.toContain("invalid-private-status");
+      expect(f.state()).toMatchObject({ phase: "sending", receipt: null });
+      f.dependencies.reconcile.mockResolvedValue(f.receipt);
+      expect(await f.resume()).toMatchObject({
+        verification: { state: "reply_submitted" },
+      });
+      expect(sends).toBe(1);
+    },
+  );
+  it.each([undefined, "invalid-private-status"])(
+    "does not persist malformed status %s from a verification receipt lookup",
+    async (status) => {
+      const f = fixture();
+      f.dependencies.sendVerification.mockRejectedValue(
+        new Error("Uncertain send"),
+      );
+      await setupAgent(f.params);
+      f.fetch.mockImplementation(async () =>
+        Response.json({
+          data: [
+            {
+              id: f.receipt.id,
+              status,
+              client_idempotency_key: `connection-verification-${f.state().invitationHash}`,
+              from_address: f.identity.agentAddress,
+              to_address: f.identity.ownerAddress,
+            },
+          ],
+          meta: { cursor: null },
+        }),
+      );
+      const { reconcile: _reconcile, ...dependencies } = f.dependencies;
+      await expect(
+        setupAgent({
+          ...f.params,
+          invitation: undefined,
+          resume: true,
+          dependencies,
+        }),
+      ).rejects.toThrow("receipt is incomplete or invalid");
+      expect(f.state()).toMatchObject({ phase: "sending", receipt: null });
+      expect(f.dependencies.sendVerification).toHaveBeenCalledOnce();
+      expect(f.dependencies.startListener).not.toHaveBeenCalled();
+      f.dependencies.reconcile.mockResolvedValue(f.receipt);
+      expect(await f.resume()).toMatchObject({
+        verification: { state: "reply_submitted" },
+      });
+    },
+  );
   it("never retries a rate-limited verification POST", async () => {
     const f = fixture();
     const claim = await f.fetch(f.identity.apiBaseUrl);
@@ -803,112 +806,117 @@ describe("one-command connected agent setup", () => {
     expect(sends).toBe(1);
     expect(f.dependencies.sleep).not.toHaveBeenCalled();
   });
-  it.each([
-    "multiple",
-    "incomplete",
-  ])("refuses %s challenge search without sending", async (kind) => {
-    const f = fixture();
-    const claim = await f.fetch(f.identity.apiBaseUrl);
-    f.fetch.mockImplementation(async (input, init) => {
-      const path = new URL(new Request(input, init).url).pathname;
-      if (path.endsWith("/claim")) return claim;
-      if (path.endsWith("/emails/search"))
-        return Response.json({
-          data: [
-            { id: f.challenge.id },
-            ...(kind === "multiple" ? [{ id: randomUUID() }] : []),
-          ],
-          meta: { cursor: kind === "incomplete" ? "more" : null },
-        });
-      if (path.includes("/emails/"))
-        return Response.json({
-          data: { ...f.detail, id: path.split("/").at(-1) },
-        });
-      throw new Error("Unexpected request");
-    });
-    const { findChallenge: _find, ...dependencies } = f.dependencies;
-    await expect(setupAgent({ ...f.params, dependencies })).rejects.toThrow(
-      /ambiguous|Several/,
-    );
-    expect(f.dependencies.sendVerification).not.toHaveBeenCalled();
-  });
-  it.each([
-    "absent",
-    "silenced",
-    "rate-limited",
-  ])("uses conditional owner contact setup and preserves %s membership", async (kind) => {
-    const f = fixture();
-    const claim = await f.fetch(f.identity.apiBaseUrl);
-    let clock = f.now;
-    f.dependencies.now = () => clock;
-    f.dependencies.sleep.mockImplementation(async (ms: number) => {
-      clock += ms;
-    });
-    let limited = kind === "rate-limited";
-    let policyReads = 0;
-    const rows: Array<Record<string, unknown>> =
-      kind === "silenced"
-        ? [
-            {
-              agent_address: f.identity.agentAddress,
-              contact_address: f.identity.ownerAddress,
-              notify: false,
-              notify_since: null,
-              notification_generation: null,
-              version: randomUUID(),
-            },
-          ]
-        : [];
-    const writes: Record<string, unknown>[] = [];
-    f.fetch.mockImplementation(async (input, init) => {
-      const request = new Request(input, init);
-      const path = decodeURIComponent(new URL(request.url).pathname);
-      const ok = (data: unknown) =>
-        Response.json({ success: true, data, meta: { cursor: null } });
-      if (path.endsWith("/claim")) return claim;
-      if (path.startsWith("/v1/agent-contact-policy/")) {
-        policyReads++;
-        if (limited) {
-          limited = false;
-          return Response.json(
-            { error: { private: "do not print" } },
-            { status: 429, headers: { "retry-after": "32" } },
-          );
+  it.each(["multiple", "incomplete"])(
+    "refuses %s challenge search without sending",
+    async (kind) => {
+      const f = fixture();
+      const claim = await f.fetch(f.identity.apiBaseUrl);
+      f.fetch.mockImplementation(async (input, init) => {
+        const path = new URL(new Request(input, init).url).pathname;
+        if (path.endsWith("/claim")) return claim;
+        if (path.endsWith("/emails/search"))
+          return Response.json({
+            data: [
+              { id: f.challenge.id },
+              ...(kind === "multiple" ? [{ id: randomUUID() }] : []),
+            ],
+            meta: { cursor: kind === "incomplete" ? "more" : null },
+          });
+        if (path.includes("/emails/"))
+          return Response.json({
+            data: { ...f.detail, id: path.split("/").at(-1) },
+          });
+        throw new Error("Unexpected request");
+      });
+      const { findChallenge: _find, ...dependencies } = f.dependencies;
+      await expect(setupAgent({ ...f.params, dependencies })).rejects.toThrow(
+        /ambiguous|Several/,
+      );
+      expect(f.dependencies.sendVerification).not.toHaveBeenCalled();
+    },
+  );
+  it.each(["absent", "silenced", "rate-limited"])(
+    "uses conditional owner contact setup and preserves %s membership",
+    async (kind) => {
+      const f = fixture();
+      const claim = await f.fetch(f.identity.apiBaseUrl);
+      let clock = f.now;
+      f.dependencies.now = () => clock;
+      f.dependencies.sleep.mockImplementation(async (ms: number) => {
+        clock += ms;
+      });
+      let limited = kind === "rate-limited";
+      let policyReads = 0;
+      const rows: Array<Record<string, unknown>> =
+        kind === "silenced"
+          ? [
+              {
+                agent_address: f.identity.agentAddress,
+                contact_address: f.identity.ownerAddress,
+                notify: false,
+                notify_since: null,
+                notification_generation: null,
+                version: randomUUID(),
+              },
+            ]
+          : [];
+      const writes: Record<string, unknown>[] = [];
+      f.fetch.mockImplementation(async (input, init) => {
+        const request = new Request(input, init);
+        const path = decodeURIComponent(new URL(request.url).pathname);
+        const ok = (data: unknown) =>
+          Response.json({ success: true, data, meta: { cursor: null } });
+        if (path.endsWith("/claim")) return claim;
+        if (path.startsWith("/v1/agent-contact-policy/")) {
+          policyReads++;
+          if (limited) {
+            limited = false;
+            return Response.json(
+              { error: { private: "do not print" } },
+              { status: 429, headers: { "retry-after": "32" } },
+            );
+          }
+          return ok(emptyContactPolicy(f.identity.agentAddress));
         }
-        return ok(emptyContactPolicy(f.identity.agentAddress));
+        if (path === `/v1/contacts/${f.identity.ownerAddress}`)
+          return ok({
+            address: f.identity.ownerAddress,
+            version: randomUUID(),
+          });
+        if (path === `/v1/agent-contacts/${f.identity.agentAddress}`)
+          return ok(rows);
+        if (
+          path.startsWith("/v1/agent-contacts/") &&
+          request.method === "PUT"
+        ) {
+          const body = (await request.json()) as Record<string, unknown>;
+          writes.push(body);
+          const row = {
+            agent_address: f.identity.agentAddress,
+            contact_address: f.identity.ownerAddress,
+            notify: true,
+            notify_since: new Date(Date.now() - 1000).toISOString(),
+            notification_generation: randomUUID(),
+            version: randomUUID(),
+          };
+          rows.push(row);
+          return ok(row);
+        }
+        throw new Error("Unexpected request");
+      });
+      const { enableOwner: _enable, ...dependencies } = f.dependencies;
+      expect(await setupAgent({ ...f.params, dependencies })).toMatchObject({
+        ownerNotifications: kind === "silenced" ? "silenced" : "enabled",
+      });
+      expect(writes).toHaveLength(kind === "silenced" ? 0 : 1);
+      if (writes.length)
+        expect(writes[0]).toMatchObject({ if_absent: true, notify: true });
+      if (kind === "rate-limited") {
+        expect(f.dependencies.sleep).toHaveBeenCalledExactlyOnceWith(32_000);
+        expect(policyReads).toBeGreaterThanOrEqual(3);
       }
-      if (path === `/v1/contacts/${f.identity.ownerAddress}`)
-        return ok({ address: f.identity.ownerAddress, version: randomUUID() });
-      if (path === `/v1/agent-contacts/${f.identity.agentAddress}`)
-        return ok(rows);
-      if (path.startsWith("/v1/agent-contacts/") && request.method === "PUT") {
-        const body = (await request.json()) as Record<string, unknown>;
-        writes.push(body);
-        const row = {
-          agent_address: f.identity.agentAddress,
-          contact_address: f.identity.ownerAddress,
-          notify: true,
-          notify_since: new Date(Date.now() - 1000).toISOString(),
-          notification_generation: randomUUID(),
-          version: randomUUID(),
-        };
-        rows.push(row);
-        return ok(row);
-      }
-      throw new Error("Unexpected request");
-    });
-    const { enableOwner: _enable, ...dependencies } = f.dependencies;
-    expect(await setupAgent({ ...f.params, dependencies })).toMatchObject({
-      ownerNotifications: kind === "silenced" ? "silenced" : "enabled",
-    });
-    expect(writes).toHaveLength(kind === "silenced" ? 0 : 1);
-    if (writes.length)
-      expect(writes[0]).toMatchObject({ if_absent: true, notify: true });
-    if (kind === "rate-limited") {
-      expect(f.dependencies.sleep).toHaveBeenCalledExactlyOnceWith(32_000);
-      expect(policyReads).toBeGreaterThanOrEqual(3);
-    }
-  });
+    },
+  );
 });
 
 describe("verification after the setup reply", () => {

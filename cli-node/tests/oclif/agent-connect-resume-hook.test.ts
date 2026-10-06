@@ -286,13 +286,19 @@ it("agent connect --session runs the whole flow with a default profile and one J
   expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
 });
 
-it("agent connect --status needs --profile or PRIMITIVE_AGENT_PROFILE", async () => {
+it("agent connect --status needs a profile, a session or PRIMITIVE_AGENT_PROFILE", async () => {
   vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "");
+  for (const name of [
+    "CLAUDE_CODE_SESSION_ID",
+    "CODEX_THREAD_ID",
+    "CODEX_SESSION_ID",
+  ])
+    vi.stubEnv(name, "");
   vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
     () => undefined,
   );
   await expect(AgentConnectCommand.run(["--status"], { root })).rejects.toThrow(
-    "Pass --profile <name> or set PRIMITIVE_AGENT_PROFILE.",
+    "Pass --profile <name>, --session <id> or set PRIMITIVE_AGENT_PROFILE.",
   );
   expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
   expect(existsSync(join(home, "codex"))).toBe(false);
@@ -386,45 +392,50 @@ it.each([
   ["no session", ["--no-skill", "--json"]],
   ["an empty session", ["--session", "", "--no-skill", "--json"]],
   ["--receiver poll", ["--receiver", "poll", "--no-skill", "--json"]],
-])("agent connect with %s claims once and reports poll receiving", async (_label, argv) => {
-  const outputs: string[] = [];
-  vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation((line) => {
-    outputs.push(String(line));
-  });
-  const { invitationProfileName } = await import(
-    "../../src/oclif/agent-connect-flow.js"
-  );
-  const profile = invitationProfileName(pollInvitation);
-  expect(profile).toMatch(/^connection-[a-f0-9]{12}$/);
-  mocks.readAgentInvitation.mockResolvedValue(pollInvitation);
-  mocks.setupAgent.mockResolvedValue(pollResult(profile));
-  await AgentConnectCommand.run(argv, { root });
-  expect(process.exitCode).toBeUndefined();
-  expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
-  expect(mocks.setupAgent).toHaveBeenCalledTimes(1);
-  const [options] = mocks.setupAgent.mock.calls[0];
-  expect(options).toMatchObject({
-    profileName: profile,
-    receiverMode: "poll",
-    invitation: pollInvitation,
-  });
-  expect(options).not.toHaveProperty("session");
-  expect(mocks.installClaudeWakeHook).not.toHaveBeenCalled();
-  const output = JSON.parse(outputs[0]);
-  expect(output).toMatchObject({
-    status: "connected",
-    address: "cloud@example.com",
-    profile,
-    sessionId: null,
-    receiving: {
-      mode: "poll",
-      state: "poll",
-      checkCommand: `PRIMITIVE_AGENT_PROFILE=${profile} primitive agent check-mail --json`,
-    },
-    resumeCommand: `primitive agent connect --profile ${profile} --receiver poll --resume --no-skill --json`,
-  });
-  expect(output.cli.capabilities).toContain("poll_receiver");
-});
+])(
+  "agent connect with %s claims once and reports poll receiving",
+  async (_label, argv) => {
+    const outputs: string[] = [];
+    vi.spyOn(AgentConnectCommand.prototype, "log").mockImplementation(
+      (line) => {
+        outputs.push(String(line));
+      },
+    );
+    const { invitationProfileName } = await import(
+      "../../src/oclif/agent-connect-flow.js"
+    );
+    const profile = invitationProfileName(pollInvitation);
+    expect(profile).toMatch(/^connection-[a-f0-9]{12}$/);
+    mocks.readAgentInvitation.mockResolvedValue(pollInvitation);
+    mocks.setupAgent.mockResolvedValue(pollResult(profile));
+    await AgentConnectCommand.run(argv, { root });
+    expect(process.exitCode).toBeUndefined();
+    expect(mocks.readAgentInvitation).toHaveBeenCalledTimes(1);
+    expect(mocks.setupAgent).toHaveBeenCalledTimes(1);
+    const [options] = mocks.setupAgent.mock.calls[0];
+    expect(options).toMatchObject({
+      profileName: profile,
+      receiverMode: "poll",
+      invitation: pollInvitation,
+    });
+    expect(options).not.toHaveProperty("session");
+    expect(mocks.installClaudeWakeHook).not.toHaveBeenCalled();
+    const output = JSON.parse(outputs[0]);
+    expect(output).toMatchObject({
+      status: "connected",
+      address: "cloud@example.com",
+      profile,
+      sessionId: null,
+      receiving: {
+        mode: "poll",
+        state: "poll",
+        checkCommand: `PRIMITIVE_AGENT_PROFILE=${profile} primitive agent check-mail --json`,
+      },
+      resumeCommand: `primitive agent connect --profile ${profile} --receiver poll --resume --no-skill --json`,
+    });
+    expect(output.cli.capabilities).toContain("poll_receiver");
+  },
+);
 
 it("agent connect with a profile and an explicitly empty session runs poll setup, not claim-only", async () => {
   const outputs: string[] = [];

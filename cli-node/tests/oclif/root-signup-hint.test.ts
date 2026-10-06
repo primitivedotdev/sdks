@@ -116,9 +116,9 @@ describe("root signup hint", () => {
       env: { XDG_CONFIG_HOME: tempDir },
       fetch: async (input, init) => {
         expect(String(input)).toBe("https://api.example.test/v1/account");
-        expect((init?.headers as Record<string, string>).authorization).toBe(
-          "Bearer prim_oat_root",
-        );
+        expect(
+          (init?.headers as Record<string, string> | undefined)?.authorization,
+        ).toBe("Bearer prim_oat_root");
         return Response.json({
           data: { email: "agent@example.com", id: "org_123" },
         });
@@ -151,9 +151,9 @@ describe("root signup hint", () => {
       },
       fetch: async (input, init) => {
         expect(String(input)).toBe("https://api-key.example.test/v1/account");
-        expect((init?.headers as Record<string, string>).authorization).toBe(
-          "Bearer prim_explicit_root",
-        );
+        expect(
+          (init?.headers as Record<string, string> | undefined)?.authorization,
+        ).toBe("Bearer prim_explicit_root");
         return Response.json({
           data: { email: "api-key@example.com", id: "org_api_key" },
         });

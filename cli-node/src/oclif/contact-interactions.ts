@@ -134,8 +134,7 @@ export async function readContactInteraction(
   if (canonical.length !== 1) return null;
   const part = canonical[0];
   if (
-    !part ||
-    part.content_type?.split(";")[0]?.trim().toLowerCase() !==
+    part?.content_type?.split(";")[0]?.trim().toLowerCase() !==
       "application/json" ||
     !Number.isSafeInteger(part.part_index) ||
     part.part_index === undefined ||

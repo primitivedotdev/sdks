@@ -168,21 +168,20 @@ describe("durable native conversation following", () => {
     expect(results.filter((row) => row.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((row) => row.status === "rejected")).toHaveLength(1);
   });
-  it.each([
-    "sender",
-    "recipient",
-    "authentication",
-  ])("cannot learn from mismatched %s evidence", async (caseName) => {
-    const f = fixture();
-    if (caseName === "sender") f.detail.from_header = "someone@example.net";
-    if (caseName === "recipient") f.detail.to_email = "someone@example.com";
-    if (caseName === "authentication")
-      f.detail.auth = { ...f.detail.auth, dmarc: "fail" };
-    await expect(followEmailConversation(f.context, f.detail)).rejects.toThrow(
-      "authenticated",
-    );
-    expect(readConversationFollow(f.context, f.threadId)).toBeNull();
-  });
+  it.each(["sender", "recipient", "authentication"])(
+    "cannot learn from mismatched %s evidence",
+    async (caseName) => {
+      const f = fixture();
+      if (caseName === "sender") f.detail.from_header = "someone@example.net";
+      if (caseName === "recipient") f.detail.to_email = "someone@example.com";
+      if (caseName === "authentication")
+        f.detail.auth = { ...f.detail.auth, dmarc: "fail" };
+      await expect(
+        followEmailConversation(f.context, f.detail),
+      ).rejects.toThrow("authenticated");
+      expect(readConversationFollow(f.context, f.threadId)).toBeNull();
+    },
+  );
   it("does not infer a missing thread from references or turn contact interactions into follows", async () => {
     const f = fixture();
     expect(

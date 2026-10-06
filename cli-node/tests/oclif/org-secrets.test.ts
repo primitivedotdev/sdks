@@ -71,9 +71,11 @@ describe("runOrgSecretsRequest", () => {
       key: "K",
       value: "v",
     });
-    expect((captured?.headers as Record<string, string>)["content-type"]).toBe(
-      "application/json",
-    );
+    expect(
+      (captured?.headers as Record<string, string> | undefined)?.[
+        "content-type"
+      ],
+    ).toBe("application/json");
   });
 
   it("remove DELETEs the keyed URL and returns null", async () => {

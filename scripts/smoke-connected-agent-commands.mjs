@@ -97,9 +97,10 @@ try {
   assert.match(JSON.parse(identity.stdout).status_command,/agent connect --profile work --status --json/);
   for (const args of [
     ['agent','connect','--profile','work','--session',session,'--receiver','unsupported'],
-    ['agent','connect','--profile','work','--status','--session',session],
     ['listen','--email-id',session],
   ]) await run(args,{exit:2});
+  // --status accepts --session; an explicit --profile still names what it reads.
+  assert.equal(JSON.parse((await run(['agent','connect','--profile','work','--status','--session',session,'--json'],{preload:deny})).stdout).status,'configured');
   // --resume, --receiver and --contact-requests are valid without --session
   // for poll receiving, so they are no longer usage errors. Against this
   // claim-only profile each is still refused before any network call, and

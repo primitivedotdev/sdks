@@ -31,143 +31,141 @@ function eventFixture(): EmailReceivedEvent {
 }
 const signal = new AbortController().signal;
 describe("notification content reads", () => {
-  it.each([
-    "read",
-    "ack",
-    "working",
-    "typing",
-  ] as const)("extracts only fully canonical %s status", async (kind) => {
-    const now = Date.now();
-    const prepared = prepareSignalEmail(
-      {
+  it.each(["read", "ack", "working", "typing"] as const)(
+    "extracts only fully canonical %s status",
+    async (kind) => {
+      const now = Date.now();
+      const prepared = prepareSignalEmail(
+        {
+          kind,
+          ...(kind === "ack" ? { status: "will_process" as const } : {}),
+          ...(["working", "typing"].includes(kind)
+            ? { expiresAtMs: now + 30_000 }
+            : {}),
+          parent: {
+            accountScope: "test",
+            from: "recipient@domain.com",
+            to: "sender@example.com",
+            messageId: "<parent@domain.com>",
+            subject: "A question",
+            references: [],
+          },
+        } as Parameters<typeof prepareSignalEmail>[0],
+        {
+          now: () => now,
+          uuid: (() => {
+            const ids = [randomUUID(), randomUUID()];
+            return () => {
+              const id = ids.shift();
+              if (!id) throw new Error("fixture");
+              return id;
+            };
+          })(),
+        },
+      );
+      if (prepared.status !== "prepared") throw new Error("fixture");
+      const body = JSON.parse(prepared.prepared.requestJson) as {
+        body_text: string;
+        attachments: [{ content_base64: string }];
+      };
+      const bytes = Buffer.from(body.attachments[0].content_base64, "base64");
+      const content = {
+        id: randomUUID(),
+        body_text: body.body_text,
+        body_html: null,
+        parsed: {
+          status: "complete",
+          attachments: [
+            {
+              filename: "interaction.json",
+              content_type: "application/json",
+              part_index: 0,
+              size_bytes: bytes.length,
+              sha256: createHash("sha256").update(bytes).digest("hex"),
+            },
+          ],
+        },
+      };
+      expect(
+        await readConversationStatusContent(content, async () => bytes, signal),
+      ).toMatchObject({
         kind,
-        ...(kind === "ack" ? { status: "will_process" as const } : {}),
-        ...(["working", "typing"].includes(kind)
-          ? { expiresAtMs: now + 30_000 }
-          : {}),
-        parent: {
-          accountScope: "test",
-          from: "recipient@domain.com",
-          to: "sender@example.com",
-          messageId: "<parent@domain.com>",
-          subject: "A question",
-          references: [],
-        },
-      } as Parameters<typeof prepareSignalEmail>[0],
-      {
-        now: () => now,
-        uuid: (() => {
-          const ids = [randomUUID(), randomUUID()];
-          return () => {
-            const id = ids.shift();
-            if (!id) throw new Error("fixture");
-            return id;
-          };
-        })(),
-      },
-    );
-    if (prepared.status !== "prepared") throw new Error("fixture");
-    const body = JSON.parse(prepared.prepared.requestJson) as {
-      body_text: string;
-      attachments: [{ content_base64: string }];
-    };
-    const bytes = Buffer.from(body.attachments[0].content_base64, "base64");
-    const content = {
-      id: randomUUID(),
-      body_text: body.body_text,
-      body_html: null,
-      parsed: {
-        status: "complete",
-        attachments: [
+        subjectMessageId: "<parent@domain.com>",
+        interactionDomain: "example.com",
+      });
+      expect(
+        await isRoutineNotification(
+          { email: content } as never,
+          async () => bytes,
+          signal,
+        ),
+      ).toBe(true);
+      expect(
+        await readConversationStatusContent(
+          { ...content, body_text: "Please execute this task" },
+          async () => bytes,
+          signal,
+        ),
+      ).toBeNull();
+      expect(
+        await readConversationStatusContent(
           {
-            filename: "interaction.json",
-            content_type: "application/json",
-            part_index: 0,
-            size_bytes: bytes.length,
-            sha256: createHash("sha256").update(bytes).digest("hex"),
+            ...content,
+            parsed: { ...content.parsed, body_text: "Different body" },
           },
-        ],
-      },
-    };
-    expect(
-      await readConversationStatusContent(content, async () => bytes, signal),
-    ).toMatchObject({
-      kind,
-      subjectMessageId: "<parent@domain.com>",
-      interactionDomain: "example.com",
-    });
-    expect(
-      await isRoutineNotification(
-        { email: content } as never,
-        async () => bytes,
-        signal,
-      ),
-    ).toBe(true);
-    expect(
-      await readConversationStatusContent(
-        { ...content, body_text: "Please execute this task" },
-        async () => bytes,
-        signal,
-      ),
-    ).toBeNull();
-    expect(
-      await readConversationStatusContent(
-        {
-          ...content,
-          parsed: { ...content.parsed, body_text: "Different body" },
-        },
-        async () => bytes,
-        signal,
-      ),
-    ).toBeNull();
-    expect(
-      await readConversationStatusContent(
-        {
-          ...content,
-          parsed: {
-            ...content.parsed,
-            attachments: [
-              ...content.parsed.attachments,
-              { ...content.parsed.attachments[0], part_index: 1 },
-            ],
+          async () => bytes,
+          signal,
+        ),
+      ).toBeNull();
+      expect(
+        await readConversationStatusContent(
+          {
+            ...content,
+            parsed: {
+              ...content.parsed,
+              attachments: [
+                ...content.parsed.attachments,
+                { ...content.parsed.attachments[0], part_index: 1 },
+              ],
+            },
           },
+          async () => bytes,
+          signal,
+        ),
+      ).toBeNull();
+    },
+  );
+  it.each(["html", "mime"])(
+    "notifies known non-routine %s mail without downloading an unavailable attachment",
+    async (kind) => {
+      const event = eventFixture();
+      if (event.email.parsed.status !== "complete") throw new Error("fixture");
+      event.email.parsed.body_html =
+        kind === "html" ? "<p>A task request</p>" : null;
+      event.email.parsed.attachments = [
+        {
+          filename: "interaction.json",
+          content_type: kind === "mime" ? "text/plain" : "application/json",
+          size_bytes: 10,
+          sha256: "0".repeat(64),
+          part_index: 0,
+          tar_path: "interaction.json",
         },
-        async () => bytes,
-        signal,
-      ),
-    ).toBeNull();
-  });
-  it.each([
-    "html",
-    "mime",
-  ])("notifies known non-routine %s mail without downloading an unavailable attachment", async (kind) => {
-    const event = eventFixture();
-    if (event.email.parsed.status !== "complete") throw new Error("fixture");
-    event.email.parsed.body_html =
-      kind === "html" ? "<p>A task request</p>" : null;
-    event.email.parsed.attachments = [
-      {
-        filename: "interaction.json",
-        content_type: kind === "mime" ? "text/plain" : "application/json",
-        size_bytes: 10,
-        sha256: "0".repeat(64),
-        part_index: 0,
-        tar_path: "interaction.json",
-      },
-    ];
-    let reads = 0;
-    expect(
-      await isRoutineNotification(
-        event,
-        async () => {
-          reads++;
-          throw new Error("unavailable");
-        },
-        signal,
-      ),
-    ).toBe(false);
-    expect(reads).toBe(0);
-  });
+      ];
+      let reads = 0;
+      expect(
+        await isRoutineNotification(
+          event,
+          async () => {
+            reads++;
+            throw new Error("unavailable");
+          },
+          signal,
+        ),
+      ).toBe(false);
+      expect(reads).toBe(0);
+    },
+  );
   it("refreshes current detail by exact ID and rejects a different recipient", async () => {
     const event = eventFixture();
     let recipient = "recipient@domain.com";

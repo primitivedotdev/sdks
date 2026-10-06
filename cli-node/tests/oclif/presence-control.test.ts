@@ -247,29 +247,27 @@ describe("deterministic presence control", () => {
     expect(f.state.sends).toEqual([]);
   });
 
-  it.each([
-    "\n",
-    "\r\n",
-    "\r\n\r\n",
-  ])("answers canonical probe text with MIME terminal newlines %j", async (ending) => {
-    const f = fixture();
-    f.state.detail.body_text += ending;
-    f.state.detail.parsed.body_text += ending;
-    expect(await f.receiver().handle(f.detail, randomUUID())).toBe("quiet");
-    expect(f.state.sends).toHaveLength(1);
-  });
+  it.each(["\n", "\r\n", "\r\n\r\n"])(
+    "answers canonical probe text with MIME terminal newlines %j",
+    async (ending) => {
+      const f = fixture();
+      f.state.detail.body_text += ending;
+      f.state.detail.parsed.body_text += ending;
+      expect(await f.receiver().handle(f.detail, randomUUID())).toBe("quiet");
+      expect(f.state.sends).toHaveLength(1);
+    },
+  );
 
-  it.each([
-    " ",
-    " extra prose",
-    "\nextra prose",
-  ])("refuses changed probe prose %j", async (ending) => {
-    const f = fixture();
-    f.state.detail.body_text += ending;
-    f.state.detail.parsed.body_text += ending;
-    expect(await f.receiver().handle(f.detail, randomUUID())).toBe("quiet");
-    expect(f.state.sends).toHaveLength(0);
-  });
+  it.each([" ", " extra prose", "\nextra prose"])(
+    "refuses changed probe prose %j",
+    async (ending) => {
+      const f = fixture();
+      f.state.detail.body_text += ending;
+      f.state.detail.parsed.body_text += ending;
+      expect(await f.receiver().handle(f.detail, randomUUID())).toBe("quiet");
+      expect(f.state.sends).toHaveLength(0);
+    },
+  );
 
   it("admits an authoritatively rejected mixed carrier through ordinary routing", async () => {
     const f = fixture();
@@ -285,24 +283,24 @@ describe("deterministic presence control", () => {
     expect(f.state.sends).toEqual([]);
   });
 
-  it.each([
-    "session",
-    "invitation",
-  ])("does not answer when the saved %s ownership generation changes", async (field) => {
-    const f = fixture();
-    const receiver = f.receiver();
-    writeMailJson(
-      join(agentProfileDirectory(f.configDir, "work"), "setup.json"),
-      {
-        session: field === "session" ? randomUUID() : f.session,
-        phase: "sent",
-        invitationHash:
-          field === "invitation" ? "b".repeat(64) : f.profile.invitation_hash,
-      },
-    );
-    expect(await receiver.handle(f.detail, randomUUID())).toBe("quiet");
-    expect(f.state.sends).toEqual([]);
-  });
+  it.each(["session", "invitation"])(
+    "does not answer when the saved %s ownership generation changes",
+    async (field) => {
+      const f = fixture();
+      const receiver = f.receiver();
+      writeMailJson(
+        join(agentProfileDirectory(f.configDir, "work"), "setup.json"),
+        {
+          session: field === "session" ? randomUUID() : f.session,
+          phase: "sent",
+          invitationHash:
+            field === "invitation" ? "b".repeat(64) : f.profile.invitation_hash,
+        },
+      );
+      expect(await receiver.handle(f.detail, randomUUID())).toBe("quiet");
+      expect(f.state.sends).toEqual([]);
+    },
+  );
 
   it("refuses a profile authentication return address that does not match its owner", async () => {
     const f = fixture();
@@ -469,18 +467,15 @@ describe("deterministic presence control", () => {
     expect(await receiver.handle(f.detail, randomUUID())).toBe("pending");
   });
 
-  it.each([
-    0.5,
-    -1,
-    600001,
-    Number.NaN,
-    Number.POSITIVE_INFINITY,
-  ])("defers malformed freshness %j without sending or model routing", async (valid_for_ms) => {
-    const f = fixture();
-    f.state.detail.presence_control.valid_for_ms = valid_for_ms;
-    expect(await f.receiver().handle(f.detail, randomUUID())).toBe("pending");
-    expect(f.state.sends).toEqual([]);
-  });
+  it.each([0.5, -1, 600001, Number.NaN, Number.POSITIVE_INFINITY])(
+    "defers malformed freshness %j without sending or model routing",
+    async (valid_for_ms) => {
+      const f = fixture();
+      f.state.detail.presence_control.valid_for_ms = valid_for_ms;
+      expect(await f.receiver().handle(f.detail, randomUUID())).toBe("pending");
+      expect(f.state.sends).toEqual([]);
+    },
+  );
 
   it("defers changed authenticated bytes rather than replying or routing a model task", async () => {
     const f = fixture();

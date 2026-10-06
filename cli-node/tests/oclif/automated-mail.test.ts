@@ -373,13 +373,14 @@ const FIXTURE = JSON.parse(
 ) as { cases: FixtureCase[] };
 
 describe("shared automated-mail fixture", () => {
-  it.each(
-    FIXTURE.cases.map((c) => [c.name, c] as const),
-  )("agrees with the API rules for: %s", (_name, c) => {
-    const verdict = classifyAutomatedMail(automatedInputFromEmail(c.email));
-    expect(verdict.reasons).toEqual(c.expected.reasons);
-    expect(verdict.automated).toBe(c.expected.automated);
-  });
+  it.each(FIXTURE.cases.map((c) => [c.name, c] as const))(
+    "agrees with the API rules for: %s",
+    (_name, c) => {
+      const verdict = classifyAutomatedMail(automatedInputFromEmail(c.email));
+      expect(verdict.reasons).toEqual(c.expected.reasons);
+      expect(verdict.automated).toBe(c.expected.automated);
+    },
+  );
 
   it("never treats a shared domain as its own address", () => {
     expect(

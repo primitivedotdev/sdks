@@ -88,8 +88,7 @@ export function saveChatReceipt(receipt: ChatReceipt): void {
 function parseReceipt(raw: string): ReceiptData {
   const value: ReceiptData = JSON.parse(raw);
   if (
-    !value ||
-    value.version !== 1 ||
+    value?.version !== 1 ||
     typeof value.request_hash !== "string" ||
     typeof value.sent_at !== "string" ||
     !Number.isFinite(Date.parse(value.sent_at)) ||

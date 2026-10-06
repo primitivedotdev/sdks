@@ -39,54 +39,54 @@ function response() {
 afterEach(() => vi.restoreAllMocks());
 
 describe("attachment part downloads", () => {
-  it.each([
-    "inbound",
-    "outbound",
-  ] as const)("preserves exact %s bytes and metadata through the portable method", async (direction) => {
-    const fetcher = vi.fn<typeof fetch>(async (input) => {
-      const request = input as Request;
-      expect(request.url).toBe(
-        `https://api.primitive.dev/v1/${direction === "inbound" ? "emails" : "sent-emails"}/${fixture.id}/attachments/7`,
-      );
-      expect(request.headers.get("authorization")).toBe(`Bearer ${key}`);
-      const result = response();
-      vi.spyOn(result, "blob").mockImplementation(() => {
-        throw new Error("Blob conversion is unavailable");
+  it.each(["inbound", "outbound"] as const)(
+    "preserves exact %s bytes and metadata through the portable method",
+    async (direction) => {
+      const fetcher = vi.fn<typeof fetch>(async (input) => {
+        const request = input as Request;
+        expect(request.url).toBe(
+          `https://api.primitive.dev/v1/${direction === "inbound" ? "emails" : "sent-emails"}/${fixture.id}/attachments/7`,
+        );
+        expect(request.headers.get("authorization")).toBe(`Bearer ${key}`);
+        const result = response();
+        vi.spyOn(result, "blob").mockImplementation(() => {
+          throw new Error("Blob conversion is unavailable");
+        });
+        return result;
       });
-      return result;
-    });
-    const client = new PrimitiveClient({ apiKey: key, fetch: fetcher });
-    const result = await (direction === "inbound"
-      ? client.downloadEmailAttachmentPart(fixture.id, fixture.part_index)
-      : client.downloadSentAttachmentPart(fixture.id, fixture.part_index));
-    expect([...result.bytes]).toEqual(fixture.bytes);
-    expect(result.sha256).toBe(fixture.sha256);
-    expect(result.contentDisposition).toBe(fixture.content_disposition);
-    expect(result.cacheControl).toBe("private, no-store");
-    expect(fetcher).toHaveBeenCalledOnce();
-  });
+      const client = new PrimitiveClient({ apiKey: key, fetch: fetcher });
+      const result = await (direction === "inbound"
+        ? client.downloadEmailAttachmentPart(fixture.id, fixture.part_index)
+        : client.downloadSentAttachmentPart(fixture.id, fixture.part_index));
+      expect([...result.bytes]).toEqual(fixture.bytes);
+      expect(result.sha256).toBe(fixture.sha256);
+      expect(result.contentDisposition).toBe(fixture.content_disposition);
+      expect(result.cacheControl).toBe("private, no-store");
+      expect(fetcher).toHaveBeenCalledOnce();
+    },
+  );
 
-  it.each([
-    downloadEmailAttachmentPart,
-    downloadSentAttachmentPart,
-  ])("preserves bytes in the generated binary operation", async (operation) => {
-    const client = new PrimitiveClient({
-      apiKey: key,
-      fetch: async () => response(),
-    });
-    const result = await operation({
-      client: client.client,
-      path: { id: fixture.id, part_index: fixture.part_index },
-    });
-    expect(result.data).toBeInstanceOf(Blob);
-    if (!result.data) throw new Error("Missing attachment bytes");
-    expect([...new Uint8Array(await result.data.arrayBuffer())]).toEqual(
-      fixture.bytes,
-    );
-    expect(result.response?.headers.get("x-content-sha256")).toBe(
-      fixture.sha256,
-    );
-  });
+  it.each([downloadEmailAttachmentPart, downloadSentAttachmentPart])(
+    "preserves bytes in the generated binary operation",
+    async (operation) => {
+      const client = new PrimitiveClient({
+        apiKey: key,
+        fetch: async () => response(),
+      });
+      const result = await operation({
+        client: client.client,
+        path: { id: fixture.id, part_index: fixture.part_index },
+      });
+      expect(result.data).toBeInstanceOf(Blob);
+      if (!result.data) throw new Error("Missing attachment bytes");
+      expect([...new Uint8Array(await result.data.arrayBuffer())]).toEqual(
+        fixture.bytes,
+      );
+      expect(result.response?.headers.get("x-content-sha256")).toBe(
+        fixture.sha256,
+      );
+    },
+  );
 
   it("runs the browser bundle without Buffer, Blob, or Node globals", async () => {
     const bundle = await build({
@@ -215,52 +215,52 @@ const sentFixture = JSON.parse(
     "utf8",
   ),
 ) as { success: boolean; data: SentEmailDetail };
-it.each([
-  true,
-  false,
-])("discovers a sent part index through typed detail (archive available: %s)", async (available) => {
-  const paths: string[] = [];
-  const client = new PrimitiveClient({
-    fetch: async (input) => {
-      const path = new URL((input as Request).url).pathname;
-      paths.push(path);
-      if (path === `/v1/sent-emails/${fixture.id}`)
-        return Response.json({
-          ...sentFixture,
-          data: {
-            ...sentFixture.data,
-            attachments_download_available: available,
-          },
-        });
-      expect(path).toBe(`/v1/sent-emails/${fixture.id}/attachments/7`);
-      return response();
-    },
-  });
-  const result = await getSentEmail({
-    client: client.client,
-    path: { id: fixture.id },
-  });
-  const detail = result.data?.data;
-  expect(detail?.attachments_download_available).toBe(available);
-  expect(detail?.attachments_size_bytes).toBe(1024);
-  const metadata = detail?.attachments?.[0];
-  if (!metadata) throw new Error("Missing sent attachment metadata");
-  expect(metadata.part_index).toBe(7);
-  expect(metadata.filename).toBe("sample.bin");
-  expect(metadata.content_type).toBe("application/octet-stream");
-  expect(metadata.size_bytes).toBe(fixture.bytes.length);
-  expect(metadata.sha256).toBe(fixture.sha256);
-  expect(metadata.tar_path).toBe("7/sample.bin");
-  const downloaded = await client.downloadSentAttachmentPart(
-    detail.id,
-    metadata.part_index,
-  );
-  expect([...downloaded.bytes]).toEqual(fixture.bytes);
-  expect(paths).toEqual([
-    `/v1/sent-emails/${fixture.id}`,
-    `/v1/sent-emails/${fixture.id}/attachments/7`,
-  ]);
-});
+it.each([true, false])(
+  "discovers a sent part index through typed detail (archive available: %s)",
+  async (available) => {
+    const paths: string[] = [];
+    const client = new PrimitiveClient({
+      fetch: async (input) => {
+        const path = new URL((input as Request).url).pathname;
+        paths.push(path);
+        if (path === `/v1/sent-emails/${fixture.id}`)
+          return Response.json({
+            ...sentFixture,
+            data: {
+              ...sentFixture.data,
+              attachments_download_available: available,
+            },
+          });
+        expect(path).toBe(`/v1/sent-emails/${fixture.id}/attachments/7`);
+        return response();
+      },
+    });
+    const result = await getSentEmail({
+      client: client.client,
+      path: { id: fixture.id },
+    });
+    const detail = result.data?.data;
+    expect(detail?.attachments_download_available).toBe(available);
+    expect(detail?.attachments_size_bytes).toBe(1024);
+    const metadata = detail?.attachments?.[0];
+    if (!metadata) throw new Error("Missing sent attachment metadata");
+    expect(metadata.part_index).toBe(7);
+    expect(metadata.filename).toBe("sample.bin");
+    expect(metadata.content_type).toBe("application/octet-stream");
+    expect(metadata.size_bytes).toBe(fixture.bytes.length);
+    expect(metadata.sha256).toBe(fixture.sha256);
+    expect(metadata.tar_path).toBe("7/sample.bin");
+    const downloaded = await client.downloadSentAttachmentPart(
+      detail.id,
+      metadata.part_index,
+    );
+    expect([...downloaded.bytes]).toEqual(fixture.bytes);
+    expect(paths).toEqual([
+      `/v1/sent-emails/${fixture.id}`,
+      `/v1/sent-emails/${fixture.id}/attachments/7`,
+    ]);
+  },
+);
 it("preserves absent legacy sent inventory separately from an explicit empty inventory", async () => {
   const {
     attachments,

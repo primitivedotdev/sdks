@@ -379,17 +379,18 @@ describe("--json prints one document on a merged stream", () => {
     expect(jsonCommandIds).not.toContain("listen");
   });
 
-  it.each(
-    jsonCommandIds,
-  )("%s fails with one JSON document and empty stderr", async (id) => {
-    const result = await runMerged(id, FAILURE_ARGV[id] ?? ["--json"]);
-    expect(result.stderr).toBe("");
-    const document = parseOne(result.merged);
-    expect(parseOne(result.stdout)).toEqual(document);
-    if (result.exitCode !== 0) {
-      expect(document).toMatchObject({ error: expect.anything() });
-    }
-  });
+  it.each(jsonCommandIds)(
+    "%s fails with one JSON document and empty stderr",
+    async (id) => {
+      const result = await runMerged(id, FAILURE_ARGV[id] ?? ["--json"]);
+      expect(result.stderr).toBe("");
+      const document = parseOne(result.merged);
+      expect(parseOne(result.stdout)).toEqual(document);
+      if (result.exitCode !== 0) {
+        expect(document).toMatchObject({ error: expect.anything() });
+      }
+    },
+  );
 });
 
 // Hand-rolled commands run against an API that answers every request
@@ -444,24 +445,25 @@ const SUCCESS_ARGV: Record<string, string[]> = {
 };
 
 describe("hand-rolled commands with --json against a successful API", () => {
-  it.each(
-    Object.entries(SUCCESS_ARGV),
-  )("%s prints one JSON document with empty stderr", async (id, argv) => {
-    responder = (_url, init) =>
-      (init?.method ?? "GET").toUpperCase() === "GET"
-        ? jsonResponse(200, {
-            success: true,
-            data: [],
-            meta: { cursor: null },
-          })
-        : jsonResponse(200, { success: true, data: {} });
-    const result = await runMerged(id, [...argv, "--json"]);
-    expect(result.stderr).toBe("");
-    const document = parseOne(result.merged);
-    if (result.exitCode !== 0) {
-      expect(document).toMatchObject({ error: expect.anything() });
-    }
-  });
+  it.each(Object.entries(SUCCESS_ARGV))(
+    "%s prints one JSON document with empty stderr",
+    async (id, argv) => {
+      responder = (_url, init) =>
+        (init?.method ?? "GET").toUpperCase() === "GET"
+          ? jsonResponse(200, {
+              success: true,
+              data: [],
+              meta: { cursor: null },
+            })
+          : jsonResponse(200, { success: true, data: {} });
+      const result = await runMerged(id, [...argv, "--json"]);
+      expect(result.stderr).toBe("");
+      const document = parseOne(result.merged);
+      if (result.exitCode !== 0) {
+        expect(document).toMatchObject({ error: expect.anything() });
+      }
+    },
+  );
 });
 
 function placeholderFor(parameter: {
@@ -510,30 +512,33 @@ describe("generated commands with --json", () => {
       (operation) =>
         [`${operation.tagCommand}:${operation.command}`, operation] as const,
     ),
-  )("%s keeps the data payload as one document with empty stderr", async (id, operation) => {
-    responder = () =>
-      jsonResponse(200, {
-        success: true,
+  )(
+    "%s keeps the data payload as one document with empty stderr",
+    async (id, operation) => {
+      responder = () =>
+        jsonResponse(200, {
+          success: true,
+          data: [],
+          meta: { cursor: "cursor-2" },
+        });
+      const result = await runMerged(id, operationArgv(operation));
+      expect(result.stderr).toBe("");
+      const document = parseOne(result.merged);
+      expect(result.exitCode, JSON.stringify(document)).toBe(0);
+      // The same stdout shape as without --json: the bare data payload.
+      expect(document).toEqual([]);
+      const enveloped = await runMerged(id, [
+        ...operationArgv(operation),
+        "--envelope",
+      ]);
+      expect(enveloped.stderr).toBe("");
+      expect(enveloped.exitCode).toBe(0);
+      expect(parseOne(enveloped.merged)).toMatchObject({
         data: [],
         meta: { cursor: "cursor-2" },
       });
-    const result = await runMerged(id, operationArgv(operation));
-    expect(result.stderr).toBe("");
-    const document = parseOne(result.merged);
-    expect(result.exitCode, JSON.stringify(document)).toBe(0);
-    // The same stdout shape as without --json: the bare data payload.
-    expect(document).toEqual([]);
-    const enveloped = await runMerged(id, [
-      ...operationArgv(operation),
-      "--envelope",
-    ]);
-    expect(enveloped.stderr).toBe("");
-    expect(enveloped.exitCode).toBe(0);
-    expect(parseOne(enveloped.merged)).toMatchObject({
-      data: [],
-      meta: { cursor: "cursor-2" },
-    });
-  });
+    },
+  );
 
   it("drops the cursor line under --json and keeps it in --envelope", async () => {
     responder = () =>
@@ -1008,47 +1013,52 @@ describe("collaboration commands with --json", () => {
   it.each([
     ["starts automatic working", [], 1],
     ["--no-signal skips automatic working", ["--no-signal"], 0],
-  ] as const)("emails get --brief %s and still prints one document", async (_label, extra, expected) => {
-    // A member (a person), not a connected agent: only people get automatic working.
-    responder = (url, init, request) => {
-      const path = url.pathname.replace(/^\/v1/, "");
-      if (
-        (request?.method ?? "GET") !== "GET" ||
-        !/^\/emails\/[^/]+$/.test(path)
-      )
-        return mailApi(url, init, request);
-      const email = path.split("/")[2] as string;
-      return jsonResponse(200, {
-        success: true,
-        data: { ...detail(email), sender_connected_agent_verified: false },
+  ] as const)(
+    "emails get --brief %s and still prints one document",
+    async (_label, extra, expected) => {
+      // A member (a person), not a connected agent: only people get automatic working.
+      responder = (url, init, request) => {
+        const path = url.pathname.replace(/^\/v1/, "");
+        if (
+          (request?.method ?? "GET") !== "GET" ||
+          !/^\/emails\/[^/]+$/.test(path)
+        )
+          return mailApi(url, init, request);
+        const email = path.split("/")[2] as string;
+        return jsonResponse(200, {
+          success: true,
+          data: { ...detail(email), sender_connected_agent_verified: false },
+        });
+      };
+      workers.length = 0;
+      const configDir = process.env.PRIMITIVE_CONFIG_DIR as string;
+      claimAutoRead(configDir, {
+        emailId,
+        profileName: "work",
+        sender: peer,
+        threadId,
       });
-    };
-    workers.length = 0;
-    const configDir = process.env.PRIMITIVE_CONFIG_DIR as string;
-    claimAutoRead(configDir, {
-      emailId,
-      profileName: "work",
-      sender: peer,
-      threadId,
-    });
-    const result = await runMerged("emails:get", [
-      "--id",
-      emailId,
-      "--brief",
-      "--json",
-      ...extra,
-    ]);
-    expect(result.exitCode).toBe(0);
-    expectOneDocument(result);
-    expect(workers).toHaveLength(expected);
-    expect(readWorkingLease(configDir, emailId) !== null).toBe(expected === 1);
-    if (expected)
-      expect(workers[0]).toMatchObject({
-        PRIMITIVE_AUTO_SIGNAL_KIND: "working",
-        PRIMITIVE_AUTO_SIGNAL_EMAIL: emailId,
-        PRIMITIVE_AGENT_PROFILE: "work",
-      });
-  });
+      const result = await runMerged("emails:get", [
+        "--id",
+        emailId,
+        "--brief",
+        "--json",
+        ...extra,
+      ]);
+      expect(result.exitCode).toBe(0);
+      expectOneDocument(result);
+      expect(workers).toHaveLength(expected);
+      expect(readWorkingLease(configDir, emailId) !== null).toBe(
+        expected === 1,
+      );
+      if (expected)
+        expect(workers[0]).toMatchObject({
+          PRIMITIVE_AUTO_SIGNAL_KIND: "working",
+          PRIMITIVE_AUTO_SIGNAL_EMAIL: emailId,
+          PRIMITIVE_AGENT_PROFILE: "work",
+        });
+    },
+  );
 
   it("emails get --brief never starts working from an old claim on agent mail", async () => {
     responder = (url, init, request) => {

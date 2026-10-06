@@ -216,9 +216,12 @@ describe("native listener command transport", () => {
     ["--background", "--notify-session", session, "--status"],
     ["--stop", "--notify-session", session, "--contacts"],
     ["--stop", "--notify-session", session, "--sender", "peer@example.com"],
-  ])("rejects incompatible lifecycle options before starting a receiver: %j", async (...args) => {
-    await expect(ListenCommand.run(args, { root })).rejects.toThrow();
-  });
+  ])(
+    "rejects incompatible lifecycle options before starting a receiver: %j",
+    async (...args) => {
+      await expect(ListenCommand.run(args, { root })).rejects.toThrow();
+    },
+  );
   it("refuses --notify-session for a Claude Code session and points to the hook path", async () => {
     vi.stubEnv("CLAUDE_CODE_SESSION_ID", session.toUpperCase());
     vi.stubEnv("CODEX_THREAD_ID", "");
@@ -278,19 +281,22 @@ describe("native listener command transport", () => {
   it.each([
     ["--transport", "poll", "requires --transport websocket"],
     ["--subscription", "custom", "omit --subscription"],
-  ])("rejects %s before authentication or session access", async (flag, value, message) => {
-    await expect(
-      ListenCommand.run(
-        [
-          "--notify-session",
-          session,
-          "--sender",
-          "peer@example.com",
-          flag,
-          value,
-        ],
-        { root },
-      ),
-    ).rejects.toThrow(message);
-  });
+  ])(
+    "rejects %s before authentication or session access",
+    async (flag, value, message) => {
+      await expect(
+        ListenCommand.run(
+          [
+            "--notify-session",
+            session,
+            "--sender",
+            "peer@example.com",
+            flag,
+            value,
+          ],
+          { root },
+        ),
+      ).rejects.toThrow(message);
+    },
+  );
 });

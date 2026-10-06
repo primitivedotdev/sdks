@@ -33,11 +33,11 @@ import { WebhookVerificationError } from "../webhook/errors.js";
 // signing module (which would drag `node:crypto` into the bundle).
 export const PRIMITIVE_SIGNATURE_HEADER = "Primitive-Signature";
 
+export type { WebhookVerificationErrorCode } from "../webhook/errors.js";
 // Re-export so consumers can `import { verifyWebhookSignature,
 // WebhookVerificationError } from '@primitivedotdev/sdk/api'`
 // without a second import statement against `/webhook`.
 export { WebhookVerificationError } from "../webhook/errors.js";
-export type { WebhookVerificationErrorCode } from "../webhook/errors.js";
 
 // 5 minute max-age tolerance matches `webhook/signing.ts`.
 const DEFAULT_TOLERANCE_SECONDS = 5 * 60;
@@ -141,7 +141,10 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   return diff === 0;
 }
 
-async function computeHmacHex(secret: string, payload: string): Promise<string> {
+async function computeHmacHex(
+  secret: string,
+  payload: string,
+): Promise<string> {
   const encoder = new TextEncoder();
   const keyData = encoder.encode(secret);
   const key = await crypto.subtle.importKey(
@@ -193,7 +196,9 @@ async function computeHmacHex(secret: string, payload: string): Promise<string> 
  * };
  * ```
  */
-export async function verifyWebhookSignature(opts: VerifyOptions): Promise<true> {
+export async function verifyWebhookSignature(
+  opts: VerifyOptions,
+): Promise<true> {
   const {
     rawBody,
     signatureHeader,

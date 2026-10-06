@@ -2,7 +2,7 @@
   "name": "primitive-sdk-workspace",
   "private": true,
   "devDependencies": {
-    "ws": "^8.21.0",
-    "@types/ws": "^8.18.1"
+    "ws": "^8.22.0",
+    "@types/ws": "^8.18.2"
   }
 }

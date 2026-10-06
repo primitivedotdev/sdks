@@ -9,12 +9,20 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { resolveCliAuth } from "../auth.js";
-import { dispatchAutoWorking, isSentSignal } from "../auto-signals.js";
+import {
+  AUTO_WORKING_CAP_MS,
+  type AutoWorkingLease,
+  dispatchAutoWorking,
+  haltAutoWorking,
+  isSentSignal,
+  readWorkingLease,
+} from "../auto-signals.js";
 import { buildEmailBrief, renderEmailBrief } from "../email-brief.js";
 import { withFlagSuggestion } from "../flag-suggestions.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { clearReadPendingMail } from "../pending-mail.js";
 import { explainPendingMailNotFound } from "../pending-mail-miss.js";
+import { followUpCommandPrefix } from "../send-outcome.js";
 
 const EMAIL_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 
@@ -46,7 +54,35 @@ export async function clearPendingAfterRead(
 }
 
 const NO_SIGNAL_DESCRIPTION =
-  "With --brief, do not report working to the sender. By default, reading mail from the verified owner or a same-organization member (not another agent) that a receiver surfaced to this session reports working in the background until you answer (also disabled by PRIMITIVE_NO_AUTO_SIGNALS=1).";
+  "With --brief, do not report working to the sender, and stop a working report an earlier read of this email started; nothing is sent. By default, reading mail from the verified owner or a same-organization member (not another agent) that a receiver surfaced to this session reports working in the background until you answer (also disabled by PRIMITIVE_NO_AUTO_SIGNALS=1).";
+
+/**
+ * The line a brief ends with once it has started reporting working: the
+ * agent only knows whether it will act after reading, so the way out has to
+ * come after the content.
+ */
+export function workingStopCommand(emailId: string, prefix: string): string {
+  return `${prefix} emails get --id ${emailId} --brief --no-signal`;
+}
+/**
+ * Whether a working report from an earlier read is still being renewed: not
+ * stopped, and inside the renewal cap (past it nothing renews, whatever the
+ * saved lease says).
+ */
+export function workingStillRunning(
+  lease: AutoWorkingLease | null,
+  now: number = Date.now(),
+): boolean {
+  return (
+    lease !== null &&
+    lease.stopped_at === null &&
+    now - lease.started_at < AUTO_WORKING_CAP_MS
+  );
+}
+
+export function workingStopLine(command: string): string {
+  return `The sender now sees you working on this until you answer. If you will not act on it, stop that with ${command} (it sends nothing).`;
+}
 
 type BriefFlags = {
   id: string;
@@ -59,6 +95,15 @@ type BriefFlags = {
 
 async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
   await runWithTiming(flags.time === true, async () => {
+    // --no-signal also ends a working report an earlier read started: an
+    // agent decides whether to act only after reading the body. It is local,
+    // so it runs first and holds even if this read then fails.
+    if (flags["no-signal"])
+      await haltAutoWorking(
+        command.config.configDir,
+        { emailIds: [flags.id] },
+        "not_acting",
+      );
     const { apiClient, auth, baseUrlOverridden } =
       await createAuthenticatedCliApiClient({
         configDir: command.config.configDir,
@@ -98,18 +143,38 @@ async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
       isOwnSignal: (sentId) => isSentSignal(command.config.configDir, sentId),
       signal: AbortSignal.timeout(30_000),
     });
-    command.log(
-      flags.json ? JSON.stringify(brief, null, 2) : renderEmailBrief(brief),
-    );
-    await clearPendingAfterRead(command.config.configDir, detail.id);
     // Detached and silent, so stdout stays one document and stderr empty.
     // Recheck the sender here: a claim saved before agent senders stopped
     // qualifying must not start Working toward another agent.
-    if (!flags["no-signal"] && detail.sender_connected_agent_verified !== true)
+    const dispatched =
+      !flags["no-signal"] &&
+      detail.sender_connected_agent_verified !== true &&
       dispatchAutoWorking({
         configDir: command.config.configDir,
         emailId: detail.id,
       });
+    // A working report an earlier read started is still running: say how to
+    // stop it here too (a second reader, or a session reading again after
+    // its context was compacted, otherwise never learns it).
+    const working =
+      dispatched ||
+      (!flags["no-signal"] &&
+        workingStillRunning(
+          readWorkingLease(command.config.configDir, detail.id),
+        ));
+    const stop = working
+      ? workingStopCommand(detail.id, followUpCommandPrefix())
+      : null;
+    command.log(
+      flags.json
+        ? JSON.stringify(
+            stop ? { ...brief, working_signal: { stop_command: stop } } : brief,
+            null,
+            2,
+          )
+        : `${renderEmailBrief(brief)}${stop ? `\n${workingStopLine(stop)}` : ""}`,
+    );
+    await clearPendingAfterRead(command.config.configDir, detail.id);
   });
 }
 

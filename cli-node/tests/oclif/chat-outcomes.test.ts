@@ -390,25 +390,25 @@ describe("chat send outcomes", () => {
     expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    "wrong Claude",
-    "mixed runtime",
-  ])("refuses async chat before sending for %s identity", async (identityKind) => {
-    const { sessionId } = connectedExternalChatFixture();
-    vi.stubEnv(
-      "CLAUDE_CODE_SESSION_ID",
-      identityKind === "wrong Claude" ? randomUUID() : sessionId,
-    );
-    vi.stubEnv(
-      "CODEX_THREAD_ID",
-      identityKind === "mixed runtime" ? randomUUID() : "",
-    );
-    vi.stubEnv("CODEX_SESSION_ID", "");
-    const result = await run("chat", freshChatArgs("--async", "--json"));
-    expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
-    expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
-    expect(mocks.sendEmail).not.toHaveBeenCalled();
-  });
+  it.each(["wrong Claude", "mixed runtime"])(
+    "refuses async chat before sending for %s identity",
+    async (identityKind) => {
+      const { sessionId } = connectedExternalChatFixture();
+      vi.stubEnv(
+        "CLAUDE_CODE_SESSION_ID",
+        identityKind === "wrong Claude" ? randomUUID() : sessionId,
+      );
+      vi.stubEnv(
+        "CODEX_THREAD_ID",
+        identityKind === "mixed runtime" ? randomUUID() : "",
+      );
+      vi.stubEnv("CODEX_SESSION_ID", "");
+      const result = await run("chat", freshChatArgs("--async", "--json"));
+      expect(JSON.parse(result.stdout).outcome).toBe("not_sent");
+      expect(mocks.openConnectedReplyWait).not.toHaveBeenCalled();
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+    },
+  );
 
   it("refuses async chat when the selected profile lacks a verified external setup", async () => {
     const { setupPath } = connectedExternalChatFixture();
@@ -505,28 +505,29 @@ describe("chat send outcomes", () => {
     expect(result.stderr).toContain("Error: Failed to poll for reply.");
   });
 
-  it.each([
-    400, 401, 402, 403, 404, 413, 422, 429,
-  ])("reports not_sent with exit 1 for a definitive HTTP %i rejection", async (status) => {
-    mocks.sendEmail.mockResolvedValue(apiFailure(status));
+  it.each([400, 401, 402, 403, 404, 413, 422, 429])(
+    "reports not_sent with exit 1 for a definitive HTTP %i rejection",
+    async (status) => {
+      mocks.sendEmail.mockResolvedValue(apiFailure(status));
 
-    const result = await run("chat", freshChatArgs("--json"));
-    const envelope = JSON.parse(result.stdout);
+      const result = await run("chat", freshChatArgs("--json"));
+      const envelope = JSON.parse(result.stdout);
 
-    expect(result.exitCode).toBe(1);
-    expect(envelope).toMatchObject({
-      outcome: "not_sent",
-      exit_code: 1,
-      http_status: status,
-      sent: null,
-      reply: null,
-      follow_up_commands: [],
-    });
-    expect(envelope.error).toMatchObject({ code: "request_failed" });
-    expect(result.stderr).toContain(
-      `Message not sent: the API rejected the request (HTTP ${status}). Nothing went out`,
-    );
-  });
+      expect(result.exitCode).toBe(1);
+      expect(envelope).toMatchObject({
+        outcome: "not_sent",
+        exit_code: 1,
+        http_status: status,
+        sent: null,
+        reply: null,
+        follow_up_commands: [],
+      });
+      expect(envelope.error).toMatchObject({ code: "request_failed" });
+      expect(result.stderr).toContain(
+        `Message not sent: the API rejected the request (HTTP ${status}). Nothing went out`,
+      );
+    },
+  );
 
   it("lets a corrected retry through after a definitive rejection", async () => {
     mocks.sendEmail.mockResolvedValueOnce(apiFailure(401, "unauthorized"));
@@ -963,38 +964,41 @@ describe("chat send outcomes", () => {
     ["gate_denied", false],
     ["canceled", false],
     ["agent_failed", true],
-  ] as const)("reports not_sent, without waiting for a reply, for a %s send record (replay: %s)", async (status, replay) => {
-    mocks.sendEmail.mockResolvedValue({
-      data: {
-        data: sentEmail({
-          delivery_status: undefined,
-          idempotent_replay: replay,
-          queue_id: null,
-          status,
-        }),
-      },
-    });
+  ] as const)(
+    "reports not_sent, without waiting for a reply, for a %s send record (replay: %s)",
+    async (status, replay) => {
+      mocks.sendEmail.mockResolvedValue({
+        data: {
+          data: sentEmail({
+            delivery_status: undefined,
+            idempotent_replay: replay,
+            queue_id: null,
+            status,
+          }),
+        },
+      });
 
-    const result = await run("chat", freshChatArgs("--json"));
-    const envelope = JSON.parse(result.stdout);
+      const result = await run("chat", freshChatArgs("--json"));
+      const envelope = JSON.parse(result.stdout);
 
-    expect(result.exitCode).toBe(1);
-    expect(envelope).toMatchObject({
-      outcome: "not_sent",
-      exit_code: 1,
-      sent: { id: "sent-1", status },
-      reply: null,
-      http_status: null,
-      error: null,
-    });
-    expect(envelope.outcome_message).toContain(`has status ${status}`);
-    expect(envelope.outcome_message).toContain("Nothing went out");
-    expect(
-      envelope.follow_up_commands.map((c: { kind: string }) => c.kind),
-    ).toEqual(["inspect_sent_email"]);
-    expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
-    expect(`${result.stdout}${result.stderr}`).not.toContain("Already sent");
-  });
+      expect(result.exitCode).toBe(1);
+      expect(envelope).toMatchObject({
+        outcome: "not_sent",
+        exit_code: 1,
+        sent: { id: "sent-1", status },
+        reply: null,
+        http_status: null,
+        error: null,
+      });
+      expect(envelope.outcome_message).toContain(`has status ${status}`);
+      expect(envelope.outcome_message).toContain("Nothing went out");
+      expect(
+        envelope.follow_up_commands.map((c: { kind: string }) => c.kind),
+      ).toEqual(["inspect_sent_email"]);
+      expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();
+      expect(`${result.stdout}${result.stderr}`).not.toContain("Already sent");
+    },
+  );
 
   it("still reports not_sent when saving the receipt fails after a not-sent record", async () => {
     mocks.sendEmail.mockResolvedValue({

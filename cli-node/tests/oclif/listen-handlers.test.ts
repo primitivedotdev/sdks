@@ -171,61 +171,61 @@ describe("JSONL stdout", () => {
 });
 
 describe("local HTTP forwarding", () => {
-  it.each([
-    "X-Primitive-Confirmed",
-    "X-MyMX-Confirmed",
-  ])("preserves signed bytes and honors %s without forwarding API credentials", async (confirmation) => {
-    const secret = "test-webhook-signing-secret";
-    const { header } = signWebhookPayload(delivery.body, secret);
-    let received = "";
-    let verified = false;
-    let headers: Record<string, unknown> = {};
-    const target = await serve(async (request, response) => {
-      const chunks: Buffer[] = [];
-      for await (const chunk of request) chunks.push(Buffer.from(chunk));
-      received = Buffer.concat(chunks).toString("utf8");
-      headers = request.headers;
-      verifyWebhookSignature({
-        rawBody: received,
-        signatureHeader: String(request.headers["primitive-signature"]),
-        secret,
+  it.each(["X-Primitive-Confirmed", "X-MyMX-Confirmed"])(
+    "preserves signed bytes and honors %s without forwarding API credentials",
+    async (confirmation) => {
+      const secret = "test-webhook-signing-secret";
+      const { header } = signWebhookPayload(delivery.body, secret);
+      let received = "";
+      let verified = false;
+      let headers: Record<string, unknown> = {};
+      const target = await serve(async (request, response) => {
+        const chunks: Buffer[] = [];
+        for await (const chunk of request) chunks.push(Buffer.from(chunk));
+        received = Buffer.concat(chunks).toString("utf8");
+        headers = request.headers;
+        verifyWebhookSignature({
+          rawBody: received,
+          signatureHeader: String(request.headers["primitive-signature"]),
+          secret,
+        });
+        verified = true;
+        response.writeHead(200, { [confirmation]: "true" });
+        response.end("accepted");
       });
-      verified = true;
-      response.writeHead(200, { [confirmation]: "true" });
-      response.end("accepted");
-    });
-    const result = await createListenHandler({ forwardTo: target })(
-      {
-        ...delivery,
-        headers: {
-          ...delivery.headers,
-          "Primitive-Signature": header,
-          "MyMX-Signature": header,
-          "X-Webhook-Event": delivery.event_type,
-          "X-Primitive-Webhook-Delivery-Id": delivery.delivery_id,
-          Authorization: "Bearer forbidden",
-          Cookie: "forbidden",
-          "X-Api-Key": "forbidden",
-          "Content-Length": "1",
+      const result = await createListenHandler({ forwardTo: target })(
+        {
+          ...delivery,
+          headers: {
+            ...delivery.headers,
+            "Primitive-Signature": header,
+            "MyMX-Signature": header,
+            "X-Webhook-Event": delivery.event_type,
+            "X-Primitive-Webhook-Delivery-Id": delivery.delivery_id,
+            Authorization: "Bearer forbidden",
+            Cookie: "forbidden",
+            "X-Api-Key": "forbidden",
+            "Content-Length": "1",
+          },
         },
-      },
-      liveSignal(),
-    );
-    expect(verified).toBe(true);
-    expect(received).toBe(delivery.body);
-    expect(headers).toMatchObject({
-      "primitive-signature": header,
-      "mymx-signature": header,
-      "content-length": String(Buffer.byteLength(delivery.body)),
-    });
-    expect(headers).not.toHaveProperty("authorization");
-    expect(headers).not.toHaveProperty("cookie");
-    expect(headers).not.toHaveProperty("x-api-key");
-    expect(result).toMatchObject({
-      succeeded: true,
-      outcome: { mode: "http", status_code: 200, confirmed: true },
-    });
-  });
+        liveSignal(),
+      );
+      expect(verified).toBe(true);
+      expect(received).toBe(delivery.body);
+      expect(headers).toMatchObject({
+        "primitive-signature": header,
+        "mymx-signature": header,
+        "content-length": String(Buffer.byteLength(delivery.body)),
+      });
+      expect(headers).not.toHaveProperty("authorization");
+      expect(headers).not.toHaveProperty("cookie");
+      expect(headers).not.toHaveProperty("x-api-key");
+      expect(result).toMatchObject({
+        succeeded: true,
+        outcome: { mode: "http", status_code: 200, confirmed: true },
+      });
+    },
+  );
   it("does not follow redirects", async () => {
     let redirected = false;
     const destination = await serve((_request, response) => {
@@ -253,18 +253,24 @@ describe("local HTTP forwarding", () => {
     [500, '{"code":"temporarily_unavailable"}', "temporarily_unavailable"],
     [400, '{"error":{"code":"NOT_VALID"}}', "handler_4xx"],
     [500, "upstream failed", "handler_5xx"],
-  ])("normalizes HTTP %s errors using the webhook protocol", async (status, body, code) => {
-    const target = await serve((_request, response) => {
-      response.writeHead(Number(status));
-      response.end(body);
-    });
-    expect(
-      await createListenHandler({ forwardTo: target })(delivery, liveSignal()),
-    ).toMatchObject({
-      succeeded: false,
-      outcome: { status_code: status, error_code: code, confirmed: false },
-    });
-  });
+  ])(
+    "normalizes HTTP %s errors using the webhook protocol",
+    async (status, body, code) => {
+      const target = await serve((_request, response) => {
+        response.writeHead(Number(status));
+        response.end(body);
+      });
+      expect(
+        await createListenHandler({ forwardTo: target })(
+          delivery,
+          liveSignal(),
+        ),
+      ).toMatchObject({
+        succeeded: false,
+        outcome: { status_code: status, error_code: code, confirmed: false },
+      });
+    },
+  );
   it("rejects an oversized 200 response instead of acknowledging it", async () => {
     const target = await serve((_request, response) => {
       response.writeHead(200);

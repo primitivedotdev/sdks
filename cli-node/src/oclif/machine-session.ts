@@ -1209,8 +1209,7 @@ export async function endSession(options: {
       options.configDir,
       sessionId,
       (current) => {
-        if (!current || current.createdBy !== "session-register")
-          return current;
+        if (current?.createdBy !== "session-register") return current;
         managed = true;
         if (current.endedAt && current.disconnect === "done") {
           alreadyDone = true;

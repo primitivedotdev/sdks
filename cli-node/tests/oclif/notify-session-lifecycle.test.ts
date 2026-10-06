@@ -171,47 +171,47 @@ function fixture() {
 }
 
 describe("native listener cancellation boundaries", () => {
-  it.each([
-    "credential",
-    "origin",
-  ] as const)("rejects a replaced %s before native attachment, subscription or journal state", async (kind) => {
-    const f = fixture();
-    f.replaceCredentials(kind);
-    await expect(f.run()).rejects.toThrow("selected connection changed");
-    expect(connect).not.toHaveBeenCalled();
-    expect(receive).not.toHaveBeenCalled();
-    expect(f.queue).not.toHaveBeenCalled();
-    expect(f.requests).toEqual([]);
-    expect(f.files()).toEqual([]);
-  });
-  it.each([
-    "disconnect",
-    "owner stop",
-  ])("holds unknown acceptance through %s, aborted reconciliation and cleanup failure", async (reason) => {
-    const f = fixture();
-    f.queue.mockImplementationOnce(async (_text, _id, dispatch) => {
-      dispatch();
-      f.abort(
-        reason === "disconnect"
-          ? new NativeSessionDisconnectedError()
-          : undefined,
+  it.each(["credential", "origin"] as const)(
+    "rejects a replaced %s before native attachment, subscription or journal state",
+    async (kind) => {
+      const f = fixture();
+      f.replaceCredentials(kind);
+      await expect(f.run()).rejects.toThrow("selected connection changed");
+      expect(connect).not.toHaveBeenCalled();
+      expect(receive).not.toHaveBeenCalled();
+      expect(f.queue).not.toHaveBeenCalled();
+      expect(f.requests).toEqual([]);
+      expect(f.files()).toEqual([]);
+    },
+  );
+  it.each(["disconnect", "owner stop"])(
+    "holds unknown acceptance through %s, aborted reconciliation and cleanup failure",
+    async (reason) => {
+      const f = fixture();
+      f.queue.mockImplementationOnce(async (_text, _id, dispatch) => {
+        dispatch();
+        f.abort(
+          reason === "disconnect"
+            ? new NativeSessionDisconnectedError()
+            : undefined,
+        );
+        throw new NativeSessionError("Queue acceptance was lost", true);
+      });
+      f.closeReceiver.mockRejectedValueOnce(new Error("Cleanup failed"));
+      await expect(f.run()).rejects.toBeInstanceOf(
+        NotificationOutcomeUnknownError,
       );
-      throw new NativeSessionError("Queue acceptance was lost", true);
-    });
-    f.closeReceiver.mockRejectedValueOnce(new Error("Cleanup failed"));
-    await expect(f.run()).rejects.toBeInstanceOf(
-      NotificationOutcomeUnknownError,
-    );
-    expect(f.receipts()).toMatchObject([{ state: "unknown" }]);
-    // Aborted shared transactions did not manufacture submission evidence.
-    expect((await f.row())?.route).toMatchObject({ state: "selected" });
-    f.restart();
-    await expect(f.run()).rejects.toBeInstanceOf(
-      NotificationOutcomeUnknownError,
-    );
-    expect((await f.row())?.route).toMatchObject({ state: "unknown" });
-    expect(f.queue).toHaveBeenCalledOnce();
-  });
+      expect(f.receipts()).toMatchObject([{ state: "unknown" }]);
+      // Aborted shared transactions did not manufacture submission evidence.
+      expect((await f.row())?.route).toMatchObject({ state: "selected" });
+      f.restart();
+      await expect(f.run()).rejects.toBeInstanceOf(
+        NotificationOutcomeUnknownError,
+      );
+      expect((await f.row())?.route).toMatchObject({ state: "unknown" });
+      expect(f.queue).toHaveBeenCalledOnce();
+    },
+  );
 
   it("allows a fresh attempt after a known pre-dispatch disconnect", async () => {
     const f = fixture();

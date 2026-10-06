@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildFollowUpCommand,
   DEFINITIVE_SEND_REJECTION_STATUSES,
+  followUpCommandPrefix,
+  followUpInvocation,
   formatPriorRepliesWarning,
   formatSendRecordFailureSummary,
   priorRepliesThatWentOut,
@@ -168,5 +171,93 @@ describe("sent history window", () => {
     expect(sentHistoryWindowStart("2026-09-25T12:00:00.000Z")).toBe(
       "2026-09-25T11:55:00.000Z",
     );
+  });
+});
+
+describe("follow-up commands", () => {
+  const NPX_ENTRY =
+    "/home/agent/.npm/_npx/0123456789abcdef/node_modules/primitive/bin/run.js";
+  const GLOBAL_ENTRY = "/usr/local/lib/node_modules/primitive/bin/run.js";
+  const argv = ["primitive", "emails", "get", "--id", "abc"];
+
+  it("prints bare primitive with no environment for a global CLI and no profile", () => {
+    const command = buildFollowUpCommand(
+      "inspect",
+      "Inspect",
+      argv,
+      {},
+      followUpInvocation(GLOBAL_ENTRY, {}),
+    );
+    expect(command.argv).toEqual(argv);
+    expect(command.command).toBe("primitive emails get --id abc");
+    expect(command).not.toHaveProperty("env");
+  });
+
+  it("reaches the same CLI and profile when run from npx under a connected profile", () => {
+    const command = buildFollowUpCommand(
+      "inspect",
+      "Inspect",
+      argv,
+      {},
+      followUpInvocation(NPX_ENTRY, { PRIMITIVE_AGENT_PROFILE: "session-1" }),
+    );
+    expect(command.argv).toEqual([
+      "npx",
+      "-y",
+      "primitive@latest",
+      "emails",
+      "get",
+      "--id",
+      "abc",
+    ]);
+    expect(command.env).toEqual({ PRIMITIVE_AGENT_PROFILE: "session-1" });
+    expect(command.command).toBe(
+      "PRIMITIVE_AGENT_PROFILE=session-1 npx -y primitive@latest emails get --id abc",
+    );
+  });
+
+  it("never prints a profile name that is unsafe on a command line", () => {
+    const command = buildFollowUpCommand(
+      "inspect",
+      "Inspect",
+      argv,
+      {},
+      followUpInvocation(GLOBAL_ENTRY, {
+        PRIMITIVE_AGENT_PROFILE: "x; rm -rf ~",
+      }),
+    );
+    expect(command.command).toBe("primitive emails get --id abc");
+    expect(command).not.toHaveProperty("env");
+  });
+
+  it("leaves a command that is not the CLI unchanged and never gives it the profile", () => {
+    const command = buildFollowUpCommand(
+      "other",
+      "Other",
+      ["curl", "https://example.test"],
+      {},
+      followUpInvocation(NPX_ENTRY, { PRIMITIVE_AGENT_PROFILE: "session-1" }),
+    );
+    expect(command.argv).toEqual(["curl", "https://example.test"]);
+    expect(command.command).toBe("curl https://example.test");
+    expect(command).not.toHaveProperty("env");
+  });
+
+  it("starts string-built command lines the same way", () => {
+    expect(
+      followUpCommandPrefix("primitive", followUpInvocation(GLOBAL_ENTRY, {})),
+    ).toBe("primitive");
+    expect(
+      followUpCommandPrefix(
+        "primitive",
+        followUpInvocation(NPX_ENTRY, { PRIMITIVE_AGENT_PROFILE: "session-1" }),
+      ),
+    ).toBe("PRIMITIVE_AGENT_PROFILE=session-1 npx -y primitive@latest");
+    expect(
+      followUpCommandPrefix(
+        "primcli",
+        followUpInvocation(GLOBAL_ENTRY, { PRIMITIVE_AGENT_PROFILE: "work" }),
+      ),
+    ).toBe("PRIMITIVE_AGENT_PROFILE=work primcli");
   });
 });

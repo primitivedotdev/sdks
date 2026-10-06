@@ -475,8 +475,7 @@ async function enableAgentContactRequests(options: {
   }
   const after = await readPolicy();
   if (
-    !after ||
-    after.agent_policy.allow_contact_requests !== true ||
+    after?.agent_policy.allow_contact_requests !== true ||
     after.allow_contact_requests !== true ||
     !after.contact_request_since ||
     !after.contact_request_generation ||

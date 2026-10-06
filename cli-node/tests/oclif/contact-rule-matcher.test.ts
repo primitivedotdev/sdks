@@ -145,12 +145,13 @@ describe("public contact-pattern conformance", () => {
   it.each(vectors.invalid)("rejects %s", (value) =>
     expect(() =>
       canonicalContactSelector({ kind: "pattern", value }),
-    ).toThrow());
-  it.each(vectors.matches)("matches $pattern against $address", ({
-    pattern,
-    address,
-    expected,
-  }) => expect(matchesContactPattern(pattern, address)).toBe(expected));
+    ).toThrow(),
+  );
+  it.each(vectors.matches)(
+    "matches $pattern against $address",
+    ({ pattern, address, expected }) =>
+      expect(matchesContactPattern(pattern, address)).toBe(expected),
+  );
   it("counts a local wildcard inside the 64-character bound", () => {
     expect(
       canonicalContactSelector({

@@ -176,8 +176,7 @@ function emailDirectory(configDir: string, emailId: string): string {
 function parseClaim(value: unknown): AutoSignalClaim | null {
   const row = value as Partial<AutoSignalClaim> | null;
   if (
-    !row ||
-    row.version !== 1 ||
+    row?.version !== 1 ||
     typeof row.profile !== "string" ||
     !profilePattern.test(row.profile) ||
     (row.thread_id !== null && typeof row.thread_id !== "string")
@@ -307,8 +306,7 @@ export function readWorkingLease(
       64 * 1024,
     ) as Partial<AutoWorkingLease> | null;
     if (
-      !row ||
-      row.version !== 1 ||
+      row?.version !== 1 ||
       typeof row.profile !== "string" ||
       !profilePattern.test(row.profile) ||
       typeof row.started_at !== "number" ||
@@ -626,7 +624,16 @@ export type HaltedAutoWorking = {
  */
 export async function haltAutoWorking(
   configDir: string,
-  match: { emailIds?: string[]; peers?: string[]; profileName?: string },
+  match: {
+    emailIds?: string[];
+    peers?: string[];
+    profileName?: string;
+    /**
+     * When set, a peer match also needs the lease's thread to be this one: a
+     * reply answers its own conversation, not every email from that sender.
+     */
+    threadId?: string | null;
+  },
   reason: string,
   options: { settleMs?: number } = {},
 ): Promise<HaltedAutoWorking> {
@@ -658,7 +665,9 @@ export async function haltAutoWorking(
       const byPeer =
         peers.has(lease.sender) &&
         match.profileName !== undefined &&
-        match.profileName === lease.profile;
+        match.profileName === lease.profile &&
+        (match.threadId === undefined ||
+          (match.threadId !== null && lease.thread_id === match.threadId));
       if (!ids.has(lease.email_id) && !byPeer) continue;
       try {
         const stop = stopWorkingLease(configDir, lease.email_id, reason);

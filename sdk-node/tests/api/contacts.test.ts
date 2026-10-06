@@ -18,32 +18,32 @@ const version = "11111111-1111-4111-8111-111111111111";
 const key = ["fixture", "credential"].join("-");
 
 describe("public contact operations", () => {
-  it.each([
-    "/contacts",
-    "/agent-contacts/{agent_address}",
-  ] as const)("requires explicit terminal pagination metadata for %s", (path) => {
-    expect(openapiDocument).toMatchObject({
-      paths: {
-        [path]: {
-          get: {
-            responses: {
-              "200": {
-                content: {
-                  "application/json": {
-                    schema: {
-                      allOf: [
-                        { required: expect.arrayContaining(["meta"]) },
-                        {
-                          properties: {
-                            meta: {
-                              required: expect.arrayContaining(["cursor"]),
-                              properties: {
-                                cursor: { type: ["string", "null"] },
+  it.each(["/contacts", "/agent-contacts/{agent_address}"] as const)(
+    "requires explicit terminal pagination metadata for %s",
+    (path) => {
+      expect(openapiDocument).toMatchObject({
+        paths: {
+          [path]: {
+            get: {
+              responses: {
+                "200": {
+                  content: {
+                    "application/json": {
+                      schema: {
+                        allOf: [
+                          { required: expect.arrayContaining(["meta"]) },
+                          {
+                            properties: {
+                              meta: {
+                                required: expect.arrayContaining(["cursor"]),
+                                properties: {
+                                  cursor: { type: ["string", "null"] },
+                                },
                               },
                             },
                           },
-                        },
-                      ],
+                        ],
+                      },
                     },
                   },
                 },
@@ -51,9 +51,9 @@ describe("public contact operations", () => {
             },
           },
         },
-      },
-    });
-  });
+      });
+    },
+  );
 
   it("preserves exact address paths, pagination and conditional writes", async () => {
     const requests: {

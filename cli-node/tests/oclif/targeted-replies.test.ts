@@ -94,22 +94,24 @@ afterEach(() => {
 });
 
 describe("targeted reply recovery", () => {
-  it.each([
-    "verified",
-    "pending",
-  ])("never completes a chat wait for %s presence controls even with matching reply metadata", async (status) => {
-    const { state, apiClient } = fixture();
-    Object.assign(state.detail, {
-      presence_control: { status, valid_for_ms: 0 },
-    });
-    const result = await inspectTargetedReply({
-      apiClient,
-      ...target,
-      id: "reply-1",
-    });
-    expect(result?.kind).toBe(status === "verified" ? "unrelated" : "pending");
-    expect(state.requests).toHaveLength(1);
-  });
+  it.each(["verified", "pending"])(
+    "never completes a chat wait for %s presence controls even with matching reply metadata",
+    async (status) => {
+      const { state, apiClient } = fixture();
+      Object.assign(state.detail, {
+        presence_control: { status, valid_for_ms: 0 },
+      });
+      const result = await inspectTargetedReply({
+        apiClient,
+        ...target,
+        id: "reply-1",
+      });
+      expect(result?.kind).toBe(
+        status === "verified" ? "unrelated" : "pending",
+      );
+      expect(state.requests).toHaveLength(1);
+    },
+  );
   it("queries the exact parent and peer without reading inbox history", async () => {
     const { state, apiClient } = fixture();
     const page = await readTargetedReplyPage({
@@ -165,48 +167,54 @@ describe("targeted reply recovery", () => {
     [404, "unavailable on this API endpoint (HTTP 404)"],
     [405, "unavailable on this API endpoint (HTTP 405)"],
     [400, "failed (HTTP 400)"],
-  ])("reports HTTP %s accurately without bodies, retries, or inbox scans", async (status, message) => {
-    const { state, apiClient } = fixture();
-    state.page = { error: { message: "Private server content" } };
-    state.status = status;
-    const error = await readTargetedReplyPage({
-      apiClient,
-      ...target,
-      pageSize: 10,
-    }).catch((error: unknown) => error);
-    expect(error).toBeInstanceOf(Error);
-    expect((error as Error).message).toContain(message);
-    expect((error as Error).message).not.toMatch(
-      /Private|requires server support/,
-    );
-    expect(state.requests.map((url) => url.pathname)).toEqual([
-      "/v1/emails/search",
-    ]);
-  });
+  ])(
+    "reports HTTP %s accurately without bodies, retries, or inbox scans",
+    async (status, message) => {
+      const { state, apiClient } = fixture();
+      state.page = { error: { message: "Private server content" } };
+      state.status = status;
+      const error = await readTargetedReplyPage({
+        apiClient,
+        ...target,
+        pageSize: 10,
+      }).catch((error: unknown) => error);
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain(message);
+      expect((error as Error).message).not.toMatch(
+        /Private|requires server support/,
+      );
+      expect(state.requests.map((url) => url.pathname)).toEqual([
+        "/v1/emails/search",
+      ]);
+    },
+  );
   it.each([
     ["32", "Retry after 32 seconds"],
     ["Tue, 29 Sep 2026 00:00:32 GMT", "Retry after 32 seconds"],
     ["private-invalid-header", "after the rate limit resets"],
     ["-32", "after the rate limit resets"],
     ["999999999999999999999", "after the rate limit resets"],
-  ])("reports only a valid parsed Retry-After delay: %s", async (header, message) => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-09-29T00:00:00Z"));
-    const { state, apiClient } = fixture();
-    state.status = 429;
-    state.retryAfter = header;
-    state.page = { error: { message: "Private server content" } };
-    const error = await readTargetedReplyPage({
-      apiClient,
-      ...target,
-      pageSize: 10,
-    }).catch((error: unknown) => error);
-    expect((error as Error).message).toContain(message);
-    expect((error as Error).message).not.toMatch(
-      /Private|private-invalid-header|requires server support/,
-    );
-    expect(state.requests).toHaveLength(1);
-  });
+  ])(
+    "reports only a valid parsed Retry-After delay: %s",
+    async (header, message) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-09-29T00:00:00Z"));
+      const { state, apiClient } = fixture();
+      state.status = 429;
+      state.retryAfter = header;
+      state.page = { error: { message: "Private server content" } };
+      const error = await readTargetedReplyPage({
+        apiClient,
+        ...target,
+        pageSize: 10,
+      }).catch((error: unknown) => error);
+      expect((error as Error).message).toContain(message);
+      expect((error as Error).message).not.toMatch(
+        /Private|private-invalid-header|requires server support/,
+      );
+      expect(state.requests).toHaveLength(1);
+    },
+  );
   it("reports transport failure without exposing its error or retrying", async () => {
     const { state, apiClient } = fixture();
     state.transportError = true;

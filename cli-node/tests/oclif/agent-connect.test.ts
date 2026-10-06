@@ -554,35 +554,38 @@ describe("connected-agent setup", () => {
     "origin",
     "identity",
     "credential",
-  ])("leaves %s outcomes non-replayable and redacts remote content", async (kind) => {
-    const request = vi.fn<typeof fetch>(async () => {
-      if (kind === "transport") throw new Error(`${token} ${credential}`);
-      if (kind === "http")
-        return response({ message: `${token} ${credential}` }, 409);
-      if (kind === "json") return new Response(`${token} ${credential}`);
-      if (kind === "oversized") return new Response("a".repeat(33_000));
-      const body = claim();
-      if (kind === "origin")
-        body.data.api_base_url = "https://untrusted.example/v1";
-      if (kind === "identity")
-        body.data.connection.owner_address = "other@example.test";
-      if (kind === "credential") body.data.api_key = "invalid";
-      return response(body);
-    });
-    try {
-      await connectAgent(params(request));
-      expect.fail("must refuse");
-    } catch (error) {
-      expect(String(error)).toContain("fresh invitation");
-      expect(String(error)).not.toContain(token);
-      expect(String(error)).not.toContain(credential);
-    }
-    await expect(connectAgent(params(request))).rejects.toThrow(
-      /did not finish, so it was not submitted again[\s\S]*fresh setup instruction/,
-    );
-    expect(request).toHaveBeenCalledTimes(1);
-    expect(loadConnectedAgentProfile(configDir, "work")).toBeNull();
-  });
+  ])(
+    "leaves %s outcomes non-replayable and redacts remote content",
+    async (kind) => {
+      const request = vi.fn<typeof fetch>(async () => {
+        if (kind === "transport") throw new Error(`${token} ${credential}`);
+        if (kind === "http")
+          return response({ message: `${token} ${credential}` }, 409);
+        if (kind === "json") return new Response(`${token} ${credential}`);
+        if (kind === "oversized") return new Response("a".repeat(33_000));
+        const body = claim();
+        if (kind === "origin")
+          body.data.api_base_url = "https://untrusted.example/v1";
+        if (kind === "identity")
+          body.data.connection.owner_address = "other@example.test";
+        if (kind === "credential") body.data.api_key = "invalid";
+        return response(body);
+      });
+      try {
+        await connectAgent(params(request));
+        expect.fail("must refuse");
+      } catch (error) {
+        expect(String(error)).toContain("fresh invitation");
+        expect(String(error)).not.toContain(token);
+        expect(String(error)).not.toContain(credential);
+      }
+      await expect(connectAgent(params(request))).rejects.toThrow(
+        /did not finish, so it was not submitted again[\s\S]*fresh setup instruction/,
+      );
+      expect(request).toHaveBeenCalledTimes(1);
+      expect(loadConnectedAgentProfile(configDir, "work")).toBeNull();
+    },
+  );
 
   it("never claims with malformed input or a traversing profile name", async () => {
     const request = successfulFetch();
@@ -681,55 +684,55 @@ describe("connected-agent setup", () => {
     ).toMatchObject({ source: "connected-profile" });
   });
 
-  it.each([
-    undefined,
-    "https://ambient.example/v1",
-  ])("ignores ambient environment origin %s and invalid headers for a selected profile", async (ambientOrigin) => {
-    await connectAgent(params(successfulFetch()));
-    writeFileSync(
-      join(configDir, "config.json"),
-      JSON.stringify({
-        version: 1,
-        current_environment: "staging",
-        environments: { staging: { api_base_url: ambientOrigin } },
-      }),
-    );
-    const selected = {
-      configDir,
-      env: {
-        PRIMITIVE_AGENT_PROFILE: "work",
-        PRIMITIVE_API_HEADERS: "invalid ambient JSON",
-      },
-    };
-    const expected = {
-      apiBaseUrl,
-      resolvedApiBaseUrl: apiBaseUrl,
-      baseUrlOverridden: false,
-      environmentName: null,
-    };
-    expect(resolveCliApiRequestConfig(selected)).toEqual(expected);
-    const request = vi.fn<typeof fetch>();
-    const result = await createAuthenticatedCliApiClient({
-      ...selected,
-      fetch: request,
-    });
-    expect(result.requestConfig).toEqual(expected);
-    expect(result.auth).toMatchObject({
-      source: "connected-profile",
-      apiKey: credential,
-      apiBaseUrl,
-    });
-    expect(request).not.toHaveBeenCalled();
-    await expect(
-      createAuthenticatedCliApiClient({ ...selected, apiKey: "different" }),
-    ).rejects.toThrow(/conflict/);
-    await expect(
-      createAuthenticatedCliApiClient({
+  it.each([undefined, "https://ambient.example/v1"])(
+    "ignores ambient environment origin %s and invalid headers for a selected profile",
+    async (ambientOrigin) => {
+      await connectAgent(params(successfulFetch()));
+      writeFileSync(
+        join(configDir, "config.json"),
+        JSON.stringify({
+          version: 1,
+          current_environment: "staging",
+          environments: { staging: { api_base_url: ambientOrigin } },
+        }),
+      );
+      const selected = {
+        configDir,
+        env: {
+          PRIMITIVE_AGENT_PROFILE: "work",
+          PRIMITIVE_API_HEADERS: "invalid ambient JSON",
+        },
+      };
+      const expected = {
+        apiBaseUrl,
+        resolvedApiBaseUrl: apiBaseUrl,
+        baseUrlOverridden: false,
+        environmentName: null,
+      };
+      expect(resolveCliApiRequestConfig(selected)).toEqual(expected);
+      const request = vi.fn<typeof fetch>();
+      const result = await createAuthenticatedCliApiClient({
         ...selected,
-        apiBaseUrl: "https://different.example/v1",
-      }),
-    ).rejects.toThrow(/conflict/);
-  });
+        fetch: request,
+      });
+      expect(result.requestConfig).toEqual(expected);
+      expect(result.auth).toMatchObject({
+        source: "connected-profile",
+        apiKey: credential,
+        apiBaseUrl,
+      });
+      expect(request).not.toHaveBeenCalled();
+      await expect(
+        createAuthenticatedCliApiClient({ ...selected, apiKey: "different" }),
+      ).rejects.toThrow(/conflict/);
+      await expect(
+        createAuthenticatedCliApiClient({
+          ...selected,
+          apiBaseUrl: "https://different.example/v1",
+        }),
+      ).rejects.toThrow(/conflict/);
+    },
+  );
 });
 
 describe("invitation input", () => {

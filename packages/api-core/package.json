@@ -20,10 +20,10 @@
     "generate": "pnpm generate:openapi && pnpm generate:api"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "0.97.3",
-    "@types/node": "^22.10.2",
-    "tsx": "^4.21.0",
+    "@hey-api/openapi-ts": "0.99.0",
+    "@types/node": "^26.6.4",
+    "tsx": "4.23.14",
     "typescript": "^5.7.2",
-    "yaml": "^2.8.1"
+    "yaml": "^2.9.1"
   }
 }

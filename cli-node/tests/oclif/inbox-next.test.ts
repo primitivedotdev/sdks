@@ -690,27 +690,30 @@ describe("findNextAwaiting", () => {
       "ignores-automated",
       /ignored `automated=false`/,
     ],
-  ] as const)("fails loudly, never scanning locally, when the server %s", async (_label, mode, message) => {
-    inbox.mode = mode;
-    inbox.add({
-      id: "news",
-      created_at: "2026-09-17T00:00:00.000Z",
-      automation_headers: { list_id: "<l.example>" },
-    });
-    inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
-    const error = await findNextAwaiting({
-      apiClient,
-      includeAutomated: false,
-      api: inbox.api(),
-    }).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(AutomatedFilterUnsupportedError);
-    expect((error as Error).message).toMatch(message);
-    expect((error as AutomatedFilterUnsupportedError).code).toBe(
-      "automated_filter_unsupported",
-    );
-    expect(inbox.calls.filter((c) => c.op === "list")).toHaveLength(1);
-    expect(inbox.calls.filter((c) => c.op === "get")).toHaveLength(0);
-  });
+  ] as const)(
+    "fails loudly, never scanning locally, when the server %s",
+    async (_label, mode, message) => {
+      inbox.mode = mode;
+      inbox.add({
+        id: "news",
+        created_at: "2026-09-17T00:00:00.000Z",
+        automation_headers: { list_id: "<l.example>" },
+      });
+      inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
+      const error = await findNextAwaiting({
+        apiClient,
+        includeAutomated: false,
+        api: inbox.api(),
+      }).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(AutomatedFilterUnsupportedError);
+      expect((error as Error).message).toMatch(message);
+      expect((error as AutomatedFilterUnsupportedError).code).toBe(
+        "automated_filter_unsupported",
+      );
+      expect(inbox.calls.filter((c) => c.op === "list")).toHaveLength(1);
+      expect(inbox.calls.filter((c) => c.op === "get")).toHaveLength(0);
+    },
+  );
 
   it("fails loudly when the detail lacks the automated verdict", async () => {
     inbox.add({ id: "a", created_at: "2026-09-18T00:00:00.000Z" });
@@ -831,6 +834,16 @@ describe("output", () => {
     expect(json.version).toBe(1);
     expect(json.reply_command).toBe("primitive reply --id a");
     expect(json.email?.from).toBe("Alice <alice@example.com>");
+    // Under a connected profile the reply command names it, like every other
+    // printed follow-up command.
+    vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "session-1");
+    try {
+      expect(toJson(result, "primitive").reply_command).toBe(
+        "PRIMITIVE_AGENT_PROFILE=session-1 primitive reply --id a",
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("carries sender trust evidence", async () => {
@@ -995,6 +1008,20 @@ describe("output", () => {
       `  primitive reply --id ${id} --body "..."`,
       "Then run `primitive inbox next` again.",
     ]);
+    // Under a connected profile both footer commands name it.
+    vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "session-1");
+    try {
+      expect(
+        await footer({ interaction_hint: "none", interaction_kind: null }),
+      ).toEqual([
+        "",
+        "Reply with:",
+        `  PRIMITIVE_AGENT_PROFILE=session-1 primitive reply --id ${id} --body "..."`,
+        "Then run `PRIMITIVE_AGENT_PROFILE=session-1 primitive inbox next` again.",
+      ]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("agrees with the brief on a repeat only the sender can stop", async () => {

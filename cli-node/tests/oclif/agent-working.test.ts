@@ -326,7 +326,7 @@ describe("agent working commands", () => {
       value: { claim: "composer", until: new Date(NOW).toISOString() },
       if_version: "7",
     });
-    const written = (calls[1]?.body as { value: unknown }).value;
+    const written = (calls[1]?.body as { value: unknown } | undefined)?.value;
     expect(readWorkingClaim(written, NOW).state).toBe("expired");
     expect(lines).toEqual(["Working claim cleared."]);
   });

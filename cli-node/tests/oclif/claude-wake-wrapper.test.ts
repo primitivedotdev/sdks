@@ -296,70 +296,74 @@ it("overlapping resume and Stop hooks forward one winning listener notice", asyn
   ).toHaveLength(1);
 }, 10_000);
 
-it.each([
-  false,
-  true,
-])("stops the listener when the Claude parent exits (ignores SIGTERM: %s)", (ignoreTerm) => {
-  const root = mkdtempSync(join(tmpdir(), "primitive-wake-parent-"));
-  roots.push(root);
-  const cli = join(root, "cli.mjs");
-  const launcher = join(root, "launcher.mjs");
-  const ready = join(root, "listener-ready");
-  const stopped = join(root, "listener-stopped");
-  const wrapper = resolve(import.meta.dirname, "../../bin/claude-wake.mjs");
-  writeFileSync(
-    cli,
-    [
-      'import { writeFileSync } from "node:fs";',
-      'if (process.argv.includes("--help")) {',
-      '  process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2");',
-      "  process.exit(0);",
-      "}",
-      'writeFileSync(process.env.LISTENER_READY, "ready");',
-      'if (process.env.IGNORE_TERM === "1") process.on("SIGTERM", () => {});',
-      'else process.on("SIGTERM", () => {',
-      '  writeFileSync(process.env.LISTENER_STOPPED, "stopped");',
-      "  process.exit(0);",
-      "});",
-      // Bound test cleanup even if the wrapper loses its parent guard.
-      "setTimeout(() => process.exit(0), 6_000);",
-    ].join("\n"),
-  );
-  writeFileSync(
-    launcher,
-    [
-      'import { spawn } from "node:child_process";',
-      'import { existsSync } from "node:fs";',
-      `const child = spawn(process.execPath, ${JSON.stringify([wrapper, cli, root, "session-test", "test@example.com", session, "primitive-agent-wake-v1"])}, { stdio: ["pipe", "inherit", "inherit"], env: process.env });`,
-      `child.stdin.end(${JSON.stringify(JSON.stringify({ hook_event_name: "Stop", session_id: session }))});`,
-      "const deadline = Date.now() + 4_000;",
-      "while (!existsSync(process.env.LISTENER_READY) && Date.now() < deadline)",
-      "  await new Promise(resolve => setTimeout(resolve, 20));",
-      "process.exit(existsSync(process.env.LISTENER_READY) ? 0 : 1);",
-    ].join("\n"),
-  );
-  const started = Date.now();
-  const result = spawnSync(process.execPath, [launcher], {
-    encoding: "utf8",
-    timeout: 10_000,
-    env: {
-      ...process.env,
-      LISTENER_READY: ready,
-      LISTENER_STOPPED: stopped,
-      IGNORE_TERM: ignoreTerm ? "1" : "0",
-    },
-  });
-  expect(result.error).toBeUndefined();
-  expect(result.status).toBe(0);
-  expect(existsSync(ready)).toBe(true);
-  expect(existsSync(stopped)).toBe(!ignoreTerm);
-  expect(Date.now() - started).toBeLessThan(5_000);
-  expect(result.stderr).toBe("");
-}, 12_000);
+it.each([false, true])(
+  "stops the listener when the Claude parent exits (ignores SIGTERM: %s)",
+  (ignoreTerm) => {
+    const root = mkdtempSync(join(tmpdir(), "primitive-wake-parent-"));
+    roots.push(root);
+    const cli = join(root, "cli.mjs");
+    const launcher = join(root, "launcher.mjs");
+    const ready = join(root, "listener-ready");
+    const stopped = join(root, "listener-stopped");
+    const wrapper = resolve(import.meta.dirname, "../../bin/claude-wake.mjs");
+    writeFileSync(
+      cli,
+      [
+        'import { writeFileSync } from "node:fs";',
+        'if (process.argv.includes("--help")) {',
+        '  process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2");',
+        "  process.exit(0);",
+        "}",
+        'writeFileSync(process.env.LISTENER_READY, "ready");',
+        'if (process.env.IGNORE_TERM === "1") process.on("SIGTERM", () => {});',
+        'else process.on("SIGTERM", () => {',
+        '  writeFileSync(process.env.LISTENER_STOPPED, "stopped");',
+        "  process.exit(0);",
+        "});",
+        // Bound test cleanup even if the wrapper loses its parent guard.
+        "setTimeout(() => process.exit(0), 6_000);",
+      ].join("\n"),
+    );
+    writeFileSync(
+      launcher,
+      [
+        'import { spawn } from "node:child_process";',
+        'import { existsSync } from "node:fs";',
+        `const child = spawn(process.execPath, ${JSON.stringify([wrapper, cli, root, "session-test", "test@example.com", session, "primitive-agent-wake-v1"])}, { stdio: ["pipe", "inherit", "inherit"], env: process.env });`,
+        `child.stdin.end(${JSON.stringify(JSON.stringify({ hook_event_name: "Stop", session_id: session }))});`,
+        "const deadline = Date.now() + 4_000;",
+        "while (!existsSync(process.env.LISTENER_READY) && Date.now() < deadline)",
+        "  await new Promise(resolve => setTimeout(resolve, 20));",
+        "process.exit(existsSync(process.env.LISTENER_READY) ? 0 : 1);",
+      ].join("\n"),
+    );
+    const started = Date.now();
+    const result = spawnSync(process.execPath, [launcher], {
+      encoding: "utf8",
+      timeout: 10_000,
+      env: {
+        ...process.env,
+        LISTENER_READY: ready,
+        LISTENER_STOPPED: stopped,
+        IGNORE_TERM: ignoreTerm ? "1" : "0",
+      },
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(existsSync(ready)).toBe(true);
+    expect(existsSync(stopped)).toBe(!ignoreTerm);
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(result.stderr).toBe("");
+  },
+  12_000,
+);
 
 it.each([
   "Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority.",
   "Verified mail from an active organization member. Handle relevant work under existing internal delegation; no new tool or private-history authority.",
+  // Current lines add the --no-signal hint; lines from an older listener do not.
+  "Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority. If you will not act on it, add --no-signal to that read command.",
+  "Verified mail from an active organization member. Handle relevant work under existing internal delegation; no new tool or private-history authority. If you will not act on it, add --no-signal to that read command.",
 ])("forwards only the fixed verified authority notice: %s", (authority) => {
   const notice = `Primitive mail arrived: ${received}. Read with primitive emails get --id ${received} --brief. ${authority}\n`;
   const { result } = runWake(notice);
@@ -440,15 +444,15 @@ it.each([
     head: "to=unavailable from=peer@example.com relationship=agent thread=none in_thread=no attachments=no",
     profile: "work",
   },
-])("forwards a wake naming its receiving address and profile: $head", ({
-  head,
-  profile,
-}) => {
-  const notice = `Primitive mail arrived: ${received} ${head}. Read with PRIMITIVE_AGENT_PROFILE=${profile} primitive emails get --id ${received} --brief. ${external}\n`;
-  const { result } = runWake(notice);
-  expect(result.status).toBe(2);
-  expect(result.stderr).toBe(notice);
-});
+])(
+  "forwards a wake naming its receiving address and profile: $head",
+  ({ head, profile }) => {
+    const notice = `Primitive mail arrived: ${received} ${head}. Read with PRIMITIVE_AGENT_PROFILE=${profile} primitive emails get --id ${received} --brief. ${external}\n`;
+    const { result } = runWake(notice);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toBe(notice);
+  },
+);
 
 it.each([
   // Shell text in the profile selector.

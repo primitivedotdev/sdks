@@ -97,6 +97,69 @@ describe("agent status", () => {
     ).toEqual({ profile: "work" });
   });
 
+  it("reads the session's address with agent connect --status --session", async () => {
+    savedProfile("work", "work@example.test", session);
+    await AgentConnectCommand.run(
+      ["--status", "--session", session, "--json"],
+      { root },
+    );
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      status: "configured",
+      identity: { profileName: "work", agentAddress: "work@example.test" },
+    });
+  });
+
+  it("says plainly when a session has no address, so connecting replaces nothing", async () => {
+    await AgentConnectCommand.run(
+      ["--status", "--session", session, "--json"],
+      { root },
+    );
+    expect(process.exitCode).toBe(1);
+    const result = JSON.parse(outputs[0] ?? "");
+    expect(result).toMatchObject({
+      status: "not_configured",
+      profileName: null,
+      session,
+    });
+    expect(result.detail).toContain("will not replace anything");
+  });
+
+  it("refuses a --status --session that is not a session UUID, or is empty", async () => {
+    await expect(
+      AgentConnectCommand.run(["--status", "--session", "nope", "--json"], {
+        root,
+      }),
+    ).rejects.toThrow(/exact loaded session UUID/);
+    process.env.CODEX_THREAD_ID = session;
+    savedProfile("work", "work@example.test", session);
+    await expect(
+      AgentConnectCommand.run(["--status", "--session", "", "--json"], {
+        root,
+      }),
+    ).rejects.toThrow(/no session to look in/);
+  });
+
+  it("answers for an explicit --session even when PRIMITIVE_AGENT_PROFILE names another profile", async () => {
+    savedProfile("work", "work@example.test", session);
+    savedProfile("other", "other@example.test", null);
+    process.env.PRIMITIVE_AGENT_PROFILE = "other";
+    await AgentConnectCommand.run(
+      ["--status", "--session", session, "--json"],
+      { root },
+    );
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      identity: { profileName: "work", agentAddress: "work@example.test" },
+    });
+    expect(
+      statusProfile({
+        configDir,
+        profile: "flag",
+        session,
+        env: { PRIMITIVE_AGENT_PROFILE: "other" },
+      }),
+    ).toEqual({ profile: "flag" });
+  });
+
   it("asks for a profile when the session has none or several", async () => {
     await AgentStatusCommand.run(["--json"], { root });
     expect(process.exitCode).toBe(1);
@@ -108,6 +171,6 @@ describe("agent status", () => {
     savedProfile("two", "two@example.test", session);
     expect(
       statusProfile({ configDir, env: { CODEX_THREAD_ID: session } }),
-    ).toEqual({ profile: null, bound: ["one", "two"] });
+    ).toEqual({ profile: null, session, bound: ["one", "two"] });
   });
 });

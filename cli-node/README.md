@@ -1108,7 +1108,10 @@ The envelope also carries `interaction` (the server's `interaction_hint`,
 `interaction_kind` and `fyi`, plus a `category` and whether a plain reply
 completes it; null when the server does not report them) and `next_actions`,
 the commands that answer the email, best first, each with `kind`, `command`,
-`argv`, `description`, `placeholders` and `requires_message`. For anything
+`argv`, `description`, `placeholders` and `requires_message`, plus `env` when
+`argv` must run under the connected profile that ran the command (`command`
+already carries it as a `PRIMITIVE_AGENT_PROFILE=` prefix). A CLI run from npx
+prints `npx -y primitive@latest` in place of `primitive`. For anything
 other than ordinary mail, one `how to answer:` line directly above the
 untrusted content names the command:
 
