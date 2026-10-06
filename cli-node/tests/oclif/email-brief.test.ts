@@ -967,6 +967,20 @@ describe("emails get", () => {
     expect(result.stdout).not.toContain("The sender now sees you working");
   });
 
+  it("prints the stop line when a working report from an earlier read is still running", async () => {
+    claimAutoRead(configDir, {
+      emailId,
+      profileName: "work",
+      sender,
+      threadId: thread,
+    });
+    startWorkingLease(configDir, emailId);
+    vi.stubEnv("PRIMITIVE_NO_AUTO_SIGNALS", "1");
+    const result = await run(["--id", emailId, "--brief"], baseRoutes());
+    expect(result.stdout).toContain("The sender now sees you working on this");
+    expect(result.stdout).toContain(`--id ${emailId} --brief --no-signal`);
+  });
+
   it("stops working with --no-signal even when the read itself fails", async () => {
     claimAutoRead(configDir, {
       emailId: otherId,

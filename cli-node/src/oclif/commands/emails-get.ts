@@ -13,6 +13,7 @@ import {
   dispatchAutoWorking,
   haltAutoWorking,
   isSentSignal,
+  readWorkingLease,
 } from "../auto-signals.js";
 import { buildEmailBrief, renderEmailBrief } from "../email-brief.js";
 import { withFlagSuggestion } from "../flag-suggestions.js";
@@ -127,13 +128,21 @@ async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
     // Detached and silent, so stdout stays one document and stderr empty.
     // Recheck the sender here: a claim saved before agent senders stopped
     // qualifying must not start Working toward another agent.
-    const working =
+    const dispatched =
       !flags["no-signal"] &&
       detail.sender_connected_agent_verified !== true &&
       dispatchAutoWorking({
         configDir: command.config.configDir,
         emailId: detail.id,
       });
+    // A working report an earlier read started is still running: say how to
+    // stop it here too (a second reader, or a session reading again after
+    // its context was compacted, otherwise never learns it).
+    const working =
+      dispatched ||
+      (!flags["no-signal"] &&
+        readWorkingLease(command.config.configDir, detail.id)?.stopped_at ===
+          null);
     const stop = working
       ? workingStopCommand(detail.id, followUpCommandPrefix())
       : null;
