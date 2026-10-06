@@ -624,7 +624,16 @@ export type HaltedAutoWorking = {
  */
 export async function haltAutoWorking(
   configDir: string,
-  match: { emailIds?: string[]; peers?: string[]; profileName?: string },
+  match: {
+    emailIds?: string[];
+    peers?: string[];
+    profileName?: string;
+    /**
+     * When set, a peer match also needs the lease's thread to be this one: a
+     * reply answers its own conversation, not every email from that sender.
+     */
+    threadId?: string | null;
+  },
   reason: string,
   options: { settleMs?: number } = {},
 ): Promise<HaltedAutoWorking> {
@@ -656,7 +665,9 @@ export async function haltAutoWorking(
       const byPeer =
         peers.has(lease.sender) &&
         match.profileName !== undefined &&
-        match.profileName === lease.profile;
+        match.profileName === lease.profile &&
+        (match.threadId === undefined ||
+          (match.threadId !== null && lease.thread_id === match.threadId));
       if (!ids.has(lease.email_id) && !byPeer) continue;
       try {
         const stop = stopWorkingLease(configDir, lease.email_id, reason);

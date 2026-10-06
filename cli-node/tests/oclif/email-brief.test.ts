@@ -43,6 +43,15 @@ vi.mock("../../src/oclif/notify-session-content.js", async (original) => ({
 }));
 
 import {
+  claimAutoRead,
+  readWorkingLease,
+  startWorkingLease,
+} from "../../src/oclif/auto-signals.js";
+import {
+  workingStopCommand,
+  workingStopLine,
+} from "../../src/oclif/commands/emails-get.js";
+import {
   briefAttachments,
   buildEmailBrief,
   parseWorkClaim,
@@ -938,6 +947,50 @@ describe("emails get", () => {
         newer: null,
       });
   }
+
+  it("stops a working report an earlier read started when read again with --no-signal", async () => {
+    claimAutoRead(configDir, {
+      emailId,
+      profileName: "work",
+      sender,
+      threadId: thread,
+    });
+    startWorkingLease(configDir, emailId);
+    const result = await run(
+      ["--id", emailId, "--brief", "--no-signal"],
+      baseRoutes(),
+    );
+    expect(result.code).toBeUndefined();
+    expect(readWorkingLease(configDir, emailId)?.stop_reason).toBe(
+      "not_acting",
+    );
+    expect(result.stdout).not.toContain("The sender now sees you working");
+  });
+
+  it("stops working with --no-signal even when the read itself fails", async () => {
+    claimAutoRead(configDir, {
+      emailId: otherId,
+      profileName: "work",
+      sender,
+      threadId: thread,
+    });
+    startWorkingLease(configDir, otherId);
+    await run(["--id", otherId, "--brief", "--no-signal"], {});
+    expect(readWorkingLease(configDir, otherId)?.stop_reason).toBe(
+      "not_acting",
+    );
+  });
+
+  it("names the no-signal read as the way to stop working", () => {
+    const command = workingStopCommand(
+      emailId,
+      "PRIMITIVE_AGENT_PROFILE=work primitive",
+    );
+    expect(command).toBe(
+      `PRIMITIVE_AGENT_PROFILE=work primitive emails get --id ${emailId} --brief --no-signal`,
+    );
+    expect(workingStopLine(command)).toContain("it sends nothing");
+  });
 
   it("prints one JSON object for --brief --json", async () => {
     const result = await run(
