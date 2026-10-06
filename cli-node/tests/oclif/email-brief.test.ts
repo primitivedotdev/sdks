@@ -43,12 +43,6 @@ vi.mock("../../src/oclif/notify-session-content.js", async (original) => ({
 }));
 
 import {
-  briefAttachments,
-  buildEmailBrief,
-  parseWorkClaim,
-  renderEmailBrief,
-} from "../../src/oclif/email-brief.js";
-import {
   claimAutoRead,
   readWorkingLease,
   startWorkingLease,
@@ -57,6 +51,12 @@ import {
   workingStopCommand,
   workingStopLine,
 } from "../../src/oclif/commands/emails-get.js";
+import {
+  briefAttachments,
+  buildEmailBrief,
+  parseWorkClaim,
+  renderEmailBrief,
+} from "../../src/oclif/email-brief.js";
 import { COMMANDS } from "../../src/oclif/index.js";
 import {
   readPendingMail,
@@ -982,7 +982,10 @@ describe("emails get", () => {
   });
 
   it("names the no-signal read as the way to stop working", () => {
-    const command = workingStopCommand(emailId, "PRIMITIVE_AGENT_PROFILE=work primitive");
+    const command = workingStopCommand(
+      emailId,
+      "PRIMITIVE_AGENT_PROFILE=work primitive",
+    );
     expect(command).toBe(
       `PRIMITIVE_AGENT_PROFILE=work primitive emails get --id ${emailId} --brief --no-signal`,
     );
