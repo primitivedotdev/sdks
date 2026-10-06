@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Command, Flags } from "@oclif/core";
 import type { Account } from "@primitivedotdev/api-core";
@@ -8,9 +8,14 @@ import {
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { receiverStatusCommand } from "../agent-connect.js";
+import { cliInvocation } from "../agent-identity-suggestions.js";
 import { createAuthenticatedCliApiClient } from "../api-client.js";
 import { detectPrimitiveKeyEnvMisname, resolveCliAuth } from "../auth.js";
-import { AGENT_PROFILE_ENV } from "../connected-agent-profile.js";
+import {
+  AGENT_PROFILE_ENV,
+  agentProfilesDirectory,
+  loadConnectedAgentProfile,
+} from "../connected-agent-profile.js";
 
 // `primitive doctor` is a one-command health check the AGX walkthrough
 // kept asking for. Before this command, a user with a misconfigured
@@ -189,11 +194,39 @@ function checkApiKey(opts: {
       hint: "Run `primitive logout` to clear it, then `primitive signin` to recreate.",
     };
   }
+  // An agent machine often has no member login at all, only connected agent
+  // profiles: point at those instead of signin.
+  const profiles = savedAgentProfiles(opts.configDir);
+  if (profiles.length > 0) {
+    const shown = profiles.slice(0, 5).join(", ");
+    return {
+      status: "warn",
+      message: `no member login or API key; this machine has connected agent profile${profiles.length === 1 ? "" : "s"} ${shown}${profiles.length > 5 ? `, and ${profiles.length - 5} more` : ""}`,
+      hint: `Select one to check it: ${AGENT_PROFILE_ENV}=${profiles[0]} ${cliInvocation(process.argv[1])} doctor`,
+    };
+  }
   return {
     status: "fail",
     message: "no CLI OAuth session or explicit API key found",
     hint: "Run `primitive signin`, pass --api-key explicitly, or export PRIMITIVE_API_KEY=prim_...",
   };
+}
+
+/** Names of saved connected agent profiles that load, sorted. */
+export function savedAgentProfiles(configDir: string): string[] {
+  try {
+    return readdirSync(join(agentProfilesDirectory(configDir), "profiles"))
+      .filter((name) => {
+        try {
+          return loadConnectedAgentProfile(configDir, name) !== null;
+        } catch {
+          return false;
+        }
+      })
+      .sort();
+  } catch {
+    return [];
+  }
 }
 
 async function checkAccount(
@@ -356,7 +389,7 @@ class DoctorCommand extends Command {
       ? {
           status: "warn",
           message: `Saved connected profile ${connected.profileName} for ${connected.agentAddress} (offline; live authentication and receiving not verified)`,
-          hint: `Use primitive whoami --json for saved identity and \`${
+          hint: `Use \`${AGENT_PROFILE_ENV}=${connected.profileName} ${cliInvocation(process.argv[1])} whoami --json\` for saved identity and \`${
             receiverStatusCommand(this.config.configDir, connected.profileName)
               .command
           }\` for this profile's receiver.`,

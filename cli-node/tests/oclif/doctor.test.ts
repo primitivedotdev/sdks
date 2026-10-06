@@ -337,6 +337,40 @@ describe("checkApiKey", () => {
   });
 });
 
+describe("checkApiKey on a machine with only connected agent profiles", () => {
+  it("names the saved profiles and how to select one instead of failing with signin", () => {
+    const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-agents-"));
+    try {
+      for (const name of ["session-b", "session-a"])
+        saveConnectedAgentProfile(directory, name, {
+          version: 1,
+          auth_method: "agent_connection",
+          api_key: ["pconn", "c".repeat(48)].join("_"),
+          api_base_url: "https://api.primitive.dev/v1",
+          org_id: "22222222-2222-4222-8222-222222222222",
+          agent_address: `${name}@example.com`,
+          owner_address: "owner@example.com",
+          invitation_hash: "d".repeat(64),
+          created_at: new Date().toISOString(),
+        });
+      const outcome = checkApiKey({
+        apiKey: undefined,
+        configDir: directory,
+        env: {},
+      });
+      expect(outcome.status).toBe("warn");
+      if (outcome.status === "ok") return;
+      expect(outcome.message).toContain("session-a, session-b");
+      expect(outcome.hint).toBe(
+        "Select one to check it: PRIMITIVE_AGENT_PROFILE=session-a primitive doctor",
+      );
+      expect(outcome.hint).not.toMatch(/signin/);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("doctor with a saved connected profile", () => {
   it("points a Claude hook receiver at agent connect --status, not listen --status", async () => {
     const directory = mkdtempSync(join(tmpdir(), "primitive-doctor-hook-"));
@@ -376,6 +410,10 @@ describe("doctor with a saved connected profile", () => {
         "`primitive agent connect --profile hooked --status --json` for this profile's receiver",
       );
       expect(text).not.toContain("listen --status");
+      // Whoami names the profile too, so the hint runs as this identity.
+      expect(text).toContain(
+        "`PRIMITIVE_AGENT_PROFILE=hooked primitive whoami --json` for saved identity",
+      );
     } finally {
       write.mockRestore();
       log.mockRestore();

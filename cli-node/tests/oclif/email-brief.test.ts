@@ -1024,7 +1024,9 @@ describe("emails get", () => {
     expect(command).toBe(
       `PRIMITIVE_AGENT_PROFILE=work primitive emails get --id ${emailId} --brief --no-signal`,
     );
-    expect(workingStopLine(command)).toContain("it sends nothing");
+    expect(workingStopLine(command)).toContain(
+      "sends nothing and is not an action toward the sender",
+    );
   });
 
   it("prints one JSON object for --brief --json", async () => {
