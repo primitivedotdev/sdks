@@ -92,6 +92,19 @@ describe("stripQuotedHistory", () => {
     }
   });
 
+  it("still removes a quoted thread when the reply only happens to say below or inline", () => {
+    expect(
+      stripQuotedHistory(
+        "Shipping is below budget.\n\nOn Monday Ada wrote:\n> Are we over?\n> Let me know.",
+      ).text,
+    ).toBe("Shipping is below budget.");
+    expect(
+      stripQuotedHistory(
+        "The inline styles are fixed.\n\nOn Mon, Oct 5, 2026 at 3:01 PM Ada Lovelace <\nada@example.com> wrote:\n> Status?",
+      ).text,
+    ).toBe("The inline styles are fixed.");
+  });
+
   it("keeps a quoted question left open at the end of an inline exchange", () => {
     const body = "> Can you do Friday?\nYes.\n> And the budget?";
     expect(stripQuotedHistory(body)).toEqual({ text: body, removed: 0 });

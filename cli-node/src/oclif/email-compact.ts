@@ -84,6 +84,15 @@ function onlyQuotedAfter(lines: string[], from: number): boolean {
   return true;
 }
 
+/** Whether line `i` is an "On <date>, <name> wrote:" line, on one line or two. */
+function isAttribution(lines: string[], i: number): boolean {
+  const line = lines[i] ?? "";
+  return (
+    WROTE_ONE_LINE.test(line) ||
+    (WROTE_FIRST_LINE.test(line) && WROTE_LAST_LINE.test(lines[i + 1] ?? ""))
+  );
+}
+
 /**
  * Index of the line where quoted history starts, or -1 when there is none.
  */
@@ -140,7 +149,12 @@ export function stripQuotedHistory(
     // Below an "Original Message" rule or copied headers the earlier message
     // is not marked with ">", so answers typed into it look like history.
     // When the sender says that is what they did, nothing is removed.
-    if (ANSWERS_INLINE.test(lines.slice(0, start).join("\n")))
+    // An attribution line is only taken as the start when everything under
+    // it is quoted, so there the phrase cannot be about answers further down.
+    if (
+      !isAttribution(lines, start) &&
+      ANSWERS_INLINE.test(lines.slice(0, start).join("\n"))
+    )
       return { text: original, removed: 0 };
     lines = lines.slice(0, start);
   }
