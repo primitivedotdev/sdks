@@ -1,4 +1,4 @@
-# `github.com/primitivedotdev/sdks/sdk-go`
+# `github.com/primitivedotdev/sdks/sdk-go/v2`
 
 Official Primitive Go SDK.
 
@@ -21,8 +21,39 @@ advanced use.
 ## Installation
 
 ```bash
-go get github.com/primitivedotdev/sdks/sdk-go@latest
+go get github.com/primitivedotdev/sdks/sdk-go/v2@latest
 ```
+
+## Upgrading to v2
+
+The module path now ends in `/v2`. Update your imports and dependency:
+
+```bash
+go get github.com/primitivedotdev/sdks/sdk-go/v2@latest
+```
+
+```go
+import (
+	primitive "github.com/primitivedotdev/sdks/sdk-go/v2"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
+)
+```
+
+Then remove the old `github.com/primitivedotdev/sdks/sdk-go` requirement with
+`go mod tidy`. Package names are unchanged.
+
+v2 changes two types on email search results from `SearchEmails`:
+
+- `EmailSearchMeta.Total` is now a `NilInt` instead of an `int`. It is null
+  only when the request sets `Count` to `SearchEmailsCountFalse`; otherwise it
+  holds a number. Read it with `Meta.Total.Get()` or `Meta.Total.Or(0)`.
+- `EmailSearchResult.ThreadID` is now a `NilUUID` instead of an `OptNilUUID`,
+  because search results always include the field. Read it with
+  `ThreadID.Get()`.
+
+Search results also gain a `Direction` field, and `SearchEmailsParams` gains
+the `ThreadID`, `Prefix` and `Count` options. See
+[Searching received mail](#searching-received-mail).
 
 ## Basic usage
 
@@ -36,7 +67,7 @@ import (
 	"log"
 	"time"
 
-	primitive "github.com/primitivedotdev/sdks/sdk-go"
+	primitive "github.com/primitivedotdev/sdks/sdk-go/v2"
 )
 
 func handle(ctx context.Context, body []byte, headers map[string]string) {
@@ -538,7 +569,7 @@ not have been sent, so the payment outcome is indeterminate.
 Use the sibling `api` package when you want the full generated HTTP API surface.
 
 ```go
-import primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+import primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 
 client, err := primitiveapi.NewAPIClient("prim_test")
 if err != nil {
@@ -559,6 +590,34 @@ Primitive Memories store durable JSON values by key. Calls default to org scope.
 Function-scoped memories use the function id UUID, not the function name. The
 generated memory methods are `SetMemory`, `GetMemory`, `DeleteMemory`, and
 `SearchMemories`.
+
+### Searching received mail
+
+`SearchEmails` calls `GET /emails/search`. Each `EmailSearchResult` carries
+`ThreadID` (a `NilUUID`, null until the email has been threaded) and
+`Direction`. Set `ThreadID` to search one conversation, `Prefix` to match the
+last word of `Q` as a prefix while someone is still typing, and `Count` to
+`SearchEmailsCountFalse` to skip the total count when you only need the page.
+
+```go
+res, err := client.SearchEmails(ctx, primitiveapi.SearchEmailsParams{
+	Q:      primitiveapi.NewOptString("quarterly invoi"),
+	Prefix: primitiveapi.NewOptSearchEmailsPrefix(primitiveapi.SearchEmailsPrefixTrue),
+	Count:  primitiveapi.NewOptSearchEmailsCount(primitiveapi.SearchEmailsCountFalse),
+})
+if err != nil {
+	log.Fatal(err)
+}
+if page, ok := res.(*primitiveapi.SearchEmailsOK); ok {
+	if total, ok := page.Meta.Total.Get(); ok {
+		fmt.Println("matches:", total)
+	}
+}
+```
+
+`Meta.Total` is a `NilInt`: null when the request sets `Count` to false, a
+number otherwise. Use `Meta.Cursor` to tell whether another page exists. Search
+text containing a NUL character is rejected with a 400 validation error.
 
 ### Payment and interaction webhook events
 

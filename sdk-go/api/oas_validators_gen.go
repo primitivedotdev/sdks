@@ -8344,6 +8344,17 @@ func (s *EmailSearchResult) Validate() error {
 			Error: err,
 		})
 	}
+	if err := func() error {
+		if err := s.Direction.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "direction",
+			Error: err,
+		})
+	}
 	if len(failures) > 0 {
 		return &validate.Error{Fields: failures}
 	}
@@ -8355,6 +8366,17 @@ func (s EmailSearchResultAwaiting) Validate() error {
 	case "you":
 		return nil
 	case "them":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s EmailSearchResultDirection) Validate() error {
+	switch s {
+	case "inbound":
+		return nil
+	case "outbound":
 		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
@@ -18653,6 +18675,17 @@ func (s *SearchEmailsBadRequest) Validate() error {
 	return nil
 }
 
+func (s SearchEmailsCount) Validate() error {
+	switch s {
+	case "true":
+		return nil
+	case "false":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *SearchEmailsGatewayTimeout) Validate() error {
 	alias := (*ErrorResponse)(s)
 	if err := alias.Validate(); err != nil {
@@ -18758,6 +18791,17 @@ func (s *SearchEmailsOK) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s SearchEmailsPrefix) Validate() error {
+	switch s {
+	case "true":
+		return nil
+	case "false":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s SearchEmailsSnippet) Validate() error {

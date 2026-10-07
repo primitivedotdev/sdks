@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
 
 type sendPayloadFixture struct {

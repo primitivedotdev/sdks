@@ -1593,6 +1593,9 @@ type Invoker interface {
 	// as the web inbox search. Structured filters such as `from`, `to`,
 	// `domain_id`, status, attachment presence, and spam score bounds
 	// are combined with the text query.
+	// The text parameters (`q`, `from`, `to`, `subject` and `body`) must not
+	// contain a NUL character; a value that does is rejected with a 400
+	// validation error.
 	// Connected-agent credentials search only mail received by their own
 	// address. This applies to results, totals, facets, and every page;
 	// search filters cannot widen the credential's scope. When
@@ -19158,6 +19161,9 @@ func (c *Client) sendRunWakeSchedule(ctx context.Context, params RunWakeSchedule
 // as the web inbox search. Structured filters such as `from`, `to`,
 // `domain_id`, status, attachment presence, and spam score bounds
 // are combined with the text query.
+// The text parameters (`q`, `from`, `to`, `subject` and `body`) must not
+// contain a NUL character; a value that does is rejected with a 400
+// validation error.
 // Connected-agent credentials search only mail received by their own
 // address. This applies to results, totals, facets, and every page;
 // search filters cannot widen the credential's scope. When
@@ -19548,6 +19554,57 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.IncludeFacets.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "thread_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "thread_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.ThreadID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "prefix" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "prefix",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Prefix.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "count" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "count",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Count.Get(); ok {
 				return e.EncodeValue(conv.StringToString(string(val)))
 			}
 			return nil

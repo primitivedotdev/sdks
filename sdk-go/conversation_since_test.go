@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	api "github.com/primitivedotdev/sdks/sdk-go/api"
+	api "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
 
 const (

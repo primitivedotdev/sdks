@@ -198,8 +198,8 @@ import (
     "context"
     "encoding/json"
     "time"
-    primitive "github.com/primitivedotdev/sdks/sdk-go"
-    primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+    primitive "github.com/primitivedotdev/sdks/sdk-go/v2"
+    primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
 
 // Inside the caller's send function, using an existing generated client:

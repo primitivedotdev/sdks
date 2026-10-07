@@ -22,6 +22,21 @@ npm install @primitivedotdev/sdk
 
 Requires Node.js 22 or newer.
 
+## Upgrading to 2.0
+
+2.0 changes one type. `EmailSearchMeta.total`, returned by `searchEmails`, is
+now `number | null`. It is null only when the request sets `count: "false"`, a
+new option; requests that do not set it still receive a number. Strict
+TypeScript code that reads `meta.total` as a `number` needs a null check, for
+example `meta.total ?? 0`, or a branch on `meta.total === null` when the
+request opts out of counting.
+
+2.0 also adds, without breaking existing calls:
+
+- `thread_id`, `prefix` and `count` query options on `searchEmails`.
+- `thread_id` (`string | null`) and `direction` (`"inbound" | "outbound"`) on
+  every `EmailSearchResult`.
+
 ## Set your API key
 
 Get a key from your [dashboard](https://primitive.dev) and export it, then pass it to the client as `apiKey` (the examples below read it from `process.env.PRIMITIVE_API_KEY`).
@@ -511,6 +526,41 @@ semantic search. Use `client.semanticSearch(...)` for mail search. The raw
 generated operations (`setMemory`, `getMemory`, `searchMemories`,
 `deleteMemory`) remain exported from `@primitivedotdev/sdk/api` for callers who
 want the exact OpenAPI operation shape.
+
+#### Searching received mail
+
+`searchEmails` calls `GET /emails/search`. Each result carries `thread_id`
+(null until the email has been threaded) and `direction`. Pass `thread_id` to
+search one conversation, `prefix: "true"` to match the last word of `q` as a
+prefix while someone is still typing, and `count: "false"` to skip the total
+count when you only need the page.
+
+```ts
+import { PrimitiveApiClient, searchEmails } from "@primitivedotdev/sdk/api";
+
+const api = new PrimitiveApiClient({ apiKey: process.env.PRIMITIVE_API_KEY });
+
+const { data: page } = await searchEmails({
+  client: api.client,
+  query: {
+    q: "quarterly invoi",
+    prefix: "true",
+    count: "false",
+    include_facets: "false",
+  },
+});
+
+for (const email of page?.data ?? []) {
+  console.log(email.id, email.thread_id, email.direction);
+}
+// `meta.total` is null because the request set count=false. Use
+// `meta.cursor` to tell whether another page exists.
+const hasMore = page?.meta.cursor != null;
+```
+
+With `count` left at its default, `meta.total` is a number. `include_facets:
+"false"` skips the facet aggregation entirely. Search text containing a NUL
+character is rejected with a 400 validation error.
 
 #### Repeating sends
 

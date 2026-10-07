@@ -10,7 +10,7 @@ The Primitive SDKs monorepo. Four published artifacts, all generated from the sa
 |---|---|---|
 | `sdk-node/` | `@primitivedotdev/sdk` | `npm install @primitivedotdev/sdk` |
 | `sdk-python/` | `primitivedotdev` (PyPI) | `pip install primitivedotdev` |
-| `sdk-go/` | `github.com/primitivedotdev/sdks/sdk-go` | `go get github.com/primitivedotdev/sdks/sdk-go@latest` |
+| `sdk-go/` | `github.com/primitivedotdev/sdks/sdk-go/v2` | `go get github.com/primitivedotdev/sdks/sdk-go/v2@latest` |
 | `cli-node/` | `primitive` | `npm install -g primitive` |
 
 Plus one workspace-internal package at `packages/api-core/` that ships the generated TypeScript API client and is bundled inline into the Node SDK + CLI.

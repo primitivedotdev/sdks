@@ -559,6 +559,10 @@ export const listEmails = <ThrowOnError extends boolean = false>(options?: Optio
  * `domain_id`, status, attachment presence, and spam score bounds
  * are combined with the text query.
  *
+ * The text parameters (`q`, `from`, `to`, `subject` and `body`) must not
+ * contain a NUL character; a value that does is rejected with a 400
+ * validation error.
+ *
  * Connected-agent credentials search only mail received by their own
  * address. This applies to results, totals, facets, and every page;
  * search filters cannot widen the credential's scope. When

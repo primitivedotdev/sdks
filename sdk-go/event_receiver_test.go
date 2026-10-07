@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 	"io"
 	"net/http"
 	"net/http/httptest"

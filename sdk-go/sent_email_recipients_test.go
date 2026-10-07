@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-faster/jx"
 	"github.com/google/uuid"
-	api "github.com/primitivedotdev/sdks/sdk-go/api"
+	api "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
 
 var sentEmailRecipientFields = []string{"to_addresses", "cc", "bcc", "reply_to", "tags"}

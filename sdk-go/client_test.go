@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/api"
+	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
 
 type stubSendAPI struct {

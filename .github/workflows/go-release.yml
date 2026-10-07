@@ -54,6 +54,10 @@ jobs:
 
           printf 'changed=true\n' >> "$GITHUB_OUTPUT"
 
+      - name: Ensure module path matches the major version
+        if: ${{ steps.version.outputs.changed == 'true' }}
+        run: scripts/check-go-module-major.sh
+
       - name: Ensure release tag does not already exist
         if: ${{ steps.version.outputs.changed == 'true' }}
         env:

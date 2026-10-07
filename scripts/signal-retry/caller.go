@@ -9,8 +9,8 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
-	primitive "github.com/primitivedotdev/sdks/sdk-go"
-	api "github.com/primitivedotdev/sdks/sdk-go/api"
+	primitive "github.com/primitivedotdev/sdks/sdk-go/v2"
+	api "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
 
 func must(err error) {

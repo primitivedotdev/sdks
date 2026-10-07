@@ -1752,6 +1752,10 @@ paths:
         `domain_id`, status, attachment presence, and spam score bounds
         are combined with the text query.
 
+        The text parameters (`q`, `from`, `to`, `subject` and `body`) must not
+        contain a NUL character; a value that does is rejected with a 400
+        validation error.
+
         Connected-agent credentials search only mail received by their own
         address. This applies to results, totals, facets, and every page;
         search filters cannot widen the credential's scope. When
@@ -2000,7 +2004,54 @@ paths:
               - "false"
             default: "true"
           description: Include facet counts for sender, domain, status, and attachment
-            presence.
+            presence. When `false`, the facet aggregation is not run at all.
+        - name: thread_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Only return emails in this thread (the `thread_id` each result
+            carries). Combines with `q` and every other filter, and with
+            pagination. Visibility is unchanged; an agent connection still sees
+            only mail received by its address.
+        - name: prefix
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            default: "false"
+          description: |
+            Search-as-you-type. When `true`, the final word of `q` is treated as
+            still being typed and matches any word that begins with it, so
+            `q=quarterly invoi` finds "invoice" and "invoicing". Only the final
+            word is affected, and only when it is unquoted text (a bare word or
+            `subject:`/`body:` with a bare value); a quoted phrase or a field
+            filter in the final position leaves the query unchanged. The final
+            word is kept even when it is a stop word, so `q=the` matches
+            "theory". Matching is against the same stemmed index as a whole-word
+            search, so a partial word whose spelling diverges from its stem
+            (`runni` for "running") may not match until the word is complete.
+            The text is never interpreted as query syntax: operators such as
+            `|`, `!`, `&`, `:*` and `<->` are read as ordinary characters.
+            Defaults to `false`.
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            default: "true"
+          description: |
+            When `false`, the total match count is not computed and `meta.total`
+            is null (`meta.total_capped` is false). Use `meta.cursor` to tell
+            whether another page exists. Skipping the count makes a broad query,
+            such as a one-letter prefix, cheaper to serve. Defaults to `true`.
       responses:
         "200":
           description: Search results
@@ -14274,15 +14325,37 @@ components:
               description: Relevance score. Present only when sorting by relevance.
             highlights:
               $ref: "#/components/schemas/EmailSearchHighlights"
+            thread_id:
+              type:
+                - string
+                - "null"
+              format: uuid
+              description: The conversation thread this email belongs to, usable with
+                `thread_id` on this endpoint and with `/threads/{id}`. Null until
+                the email has been threaded.
+            direction:
+              type: string
+              enum:
+                - inbound
+                - outbound
+              description: "Which side of the conversation the result is on: `inbound`
+                for mail received by the organization, `outbound` for mail it
+                sent. This endpoint currently returns received mail only, so
+                every result is `inbound`."
           required:
             - attachment_count
             - from_known_address
+            - thread_id
+            - direction
     EmailSearchMeta:
       type: object
       properties:
         total:
-          type: integer
-          description: Total number of matching records, capped when `total_capped` is true.
+          type:
+            - integer
+            - "null"
+          description: Total number of matching records, capped when `total_capped` is
+            true. Null when the request set `count=false`.
         total_capped:
           type: boolean
           description: Whether `total` was capped instead of counted exactly.

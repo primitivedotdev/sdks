@@ -24663,6 +24663,9 @@ func (s *Server) handleRunWakeScheduleRequest(args [1]string, argsEscaped bool, 
 // as the web inbox search. Structured filters such as `from`, `to`,
 // `domain_id`, status, attachment presence, and spam score bounds
 // are combined with the text query.
+// The text parameters (`q`, `from`, `to`, `subject` and `body`) must not
+// contain a NUL character; a value that does is rejected with a 400
+// validation error.
 // Connected-agent credentials search only mail received by their own
 // address. This applies to results, totals, facets, and every page;
 // search filters cannot widen the credential's scope. When
@@ -24890,6 +24893,18 @@ func (s *Server) handleSearchEmailsRequest(args [0]string, argsEscaped bool, w h
 					Name: "include_facets",
 					In:   "query",
 				}: params.IncludeFacets,
+				{
+					Name: "thread_id",
+					In:   "query",
+				}: params.ThreadID,
+				{
+					Name: "prefix",
+					In:   "query",
+				}: params.Prefix,
+				{
+					Name: "count",
+					In:   "query",
+				}: params.Count,
 			},
 			Raw: r,
 		}

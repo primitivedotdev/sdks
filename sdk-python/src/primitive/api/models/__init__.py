@@ -211,6 +211,7 @@ from .email_search_highlights import EmailSearchHighlights
 from .email_search_meta import EmailSearchMeta
 from .email_search_meta_sort import EmailSearchMetaSort
 from .email_search_result import EmailSearchResult
+from .email_search_result_direction import EmailSearchResultDirection
 from .email_status import EmailStatus
 from .email_summary import EmailSummary
 from .email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
@@ -472,8 +473,10 @@ from .run_wake_schedule_response_200 import RunWakeScheduleResponse200
 from .run_wake_schedule_response_200_data import RunWakeScheduleResponse200Data
 from .search_emails_automated import SearchEmailsAutomated
 from .search_emails_awaiting import SearchEmailsAwaiting
+from .search_emails_count import SearchEmailsCount
 from .search_emails_has_attachment import SearchEmailsHasAttachment
 from .search_emails_include_facets import SearchEmailsIncludeFacets
+from .search_emails_prefix import SearchEmailsPrefix
 from .search_emails_response_200 import SearchEmailsResponse200
 from .search_emails_snippet import SearchEmailsSnippet
 from .search_emails_sort import SearchEmailsSort
@@ -865,6 +868,7 @@ __all__ = (
     "EmailSearchMeta",
     "EmailSearchMetaSort",
     "EmailSearchResult",
+    "EmailSearchResultDirection",
     "EmailStatus",
     "EmailSummary",
     "EmailSummaryAutomationHeadersType0",
@@ -1126,8 +1130,10 @@ __all__ = (
     "RunWakeScheduleResponse200Data",
     "SearchEmailsAutomated",
     "SearchEmailsAwaiting",
+    "SearchEmailsCount",
     "SearchEmailsHasAttachment",
     "SearchEmailsIncludeFacets",
+    "SearchEmailsPrefix",
     "SearchEmailsResponse200",
     "SearchEmailsSnippet",
     "SearchEmailsSort",
