@@ -80,13 +80,30 @@ const LEXICAL_ONLY_FLAGS = [
   "sort",
   "snippet",
   "include-facets",
+  "thread-id",
+  "prefix",
+  "count",
 ] as const;
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// One line describing meta.total for the --envelope footer. The total is
+// null when the request skipped counting (--no-count), and a lower bound
+// when the server capped the count.
+export function formatSearchTotal(
+  meta: Pick<EmailSearchMeta, "total" | "total_capped"> | undefined,
+): string {
+  if (meta?.total === null) return "Total: not counted (--no-count)";
+  if (meta?.total === undefined) return "Total: unknown";
+  return `Total: ${meta.total}${meta.total_capped ? "+" : ""}`;
+}
 
 class SearchCommand extends Command {
   static description =
     `Search received (default) or both received and sent mail (with --mode).
 
-  Default behavior is lexical full-text matching: the positional query is sent as \`q=<query>\` to the inbound search endpoint, which matches against subject, body, sender, and recipient in a single pass. Structured filters (--from, --to, --subject, --body, --domain, --has-attachment, --date-from, --date-to, --status) AND with the text query.
+  Default behavior is lexical full-text matching: the positional query is sent as \`q=<query>\` to the inbound search endpoint, which matches against subject, body, sender, and recipient in a single pass. Structured filters (--from, --to, --subject, --body, --domain, --has-attachment, --date-from, --date-to, --status, --thread-id) AND with the text query. --prefix treats the last word of the query as a prefix for search-as-you-type, and --no-count skips the total match count so meta.total is null.
 
   Pass --mode to switch to the cross-corpus semantic backend (covers inbound and outbound). \`--mode keyword\` is plain full-text; \`--mode semantic\` is embedding-only; \`--mode hybrid\` blends both. Semantic modes require the Pro plan with the semantic_search_enabled entitlement.
 
@@ -101,6 +118,8 @@ class SearchCommand extends Command {
     '<%= config.bin %> search "shipping" --mode keyword --corpus outbound',
     "<%= config.bin %> search \"needle\" --json | jq '.data[0].id'",
     '<%= config.bin %> search "invoice" --awaiting you',
+    '<%= config.bin %> search "quarterly invoi" --prefix --no-count',
+    '<%= config.bin %> search "contract" --thread-id 11111111-1111-4111-8111-111111111111',
   ];
 
   static args = {
@@ -176,6 +195,19 @@ class SearchCommand extends Command {
         "Lexical only. Include facet counts for sender, domain, status, and attachment presence.",
       options: ["true", "false"],
     }),
+    "thread-id": Flags.string({
+      description:
+        "Lexical only. Only return emails in this conversation thread (the thread_id each result carries).",
+    }),
+    prefix: Flags.boolean({
+      description:
+        "Lexical only. Match the last word of the query as a prefix, so `invoi` finds invoice and invoicing.",
+    }),
+    count: Flags.boolean({
+      allowNo: true,
+      description:
+        "Lexical only. Pass --no-count to skip computing the total match count; meta.total is then null. Use meta.cursor to tell whether another page exists.",
+    }),
     // Semantic-only filter. Rejected when --mode is not set.
     corpus: Flags.string({
       description:
@@ -206,7 +238,7 @@ class SearchCommand extends Command {
     }),
     envelope: Flags.boolean({
       description:
-        "Lexical text-table only. Surface the next pagination cursor (if any) on STDERR below the table. Has no effect with --json; --json already prints the full envelope including meta.",
+        "Lexical text-table only. Surface the total match count and the next pagination cursor (if any) on STDERR below the table. Has no effect with --json; --json already prints the full envelope including meta.",
     }),
     time: Flags.boolean({
       description: TIME_FLAG_DESCRIPTION,
@@ -215,6 +247,13 @@ class SearchCommand extends Command {
 
   async run(): Promise<void> {
     const { args, flags } = await this.parse(SearchCommand);
+
+    const threadId = flags["thread-id"];
+    if (threadId !== undefined && !UUID_PATTERN.test(threadId)) {
+      process.stderr.write(`--thread-id must be a UUID, got "${threadId}".\n`);
+      process.exitCode = 2;
+      return;
+    }
 
     await runWithTiming(flags.time, async () => {
       const { apiClient, auth, baseUrlOverridden } =
@@ -341,6 +380,9 @@ class SearchCommand extends Command {
       if (flags["date-from"]) query.date_from = flags["date-from"];
       if (flags["date-to"]) query.date_to = flags["date-to"];
       if (flags.cursor) query.cursor = flags.cursor;
+      if (threadId) query.thread_id = threadId;
+      if (flags.prefix) query.prefix = "true";
+      if (flags.count === false) query.count = "false";
 
       const result = await searchEmails({
         client: apiClient.client,
@@ -398,9 +440,10 @@ class SearchCommand extends Command {
       }
 
       if (flags.envelope) {
+        process.stderr.write(`\n${formatSearchTotal(envelope?.meta)}\n`);
         const nextCursor = envelope?.meta?.cursor ?? null;
         if (nextCursor) {
-          process.stderr.write(`\nNext page: pass --cursor ${nextCursor}\n`);
+          process.stderr.write(`Next page: pass --cursor ${nextCursor}\n`);
         }
       }
     });
