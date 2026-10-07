@@ -371,6 +371,41 @@ it.each([
   expect(result.stderr).toBe(notice);
 });
 
+// A listener started by the previous CLI version keeps writing --brief and
+// "the brief" until it restarts; the hook from this version must not drop it.
+it.each([
+  ["--brief", ""],
+  [
+    "--brief",
+    "It is an interaction a plain reply does not complete; the brief names the command that answers it. ",
+  ],
+  [
+    "--brief",
+    "It is a repeating message; the brief says how to answer it and whether you can stop it. ",
+  ],
+  [
+    "--context",
+    "It is an interaction a plain reply does not complete; that read names the command that answers it. ",
+  ],
+  [
+    "--context",
+    "It is a repeating message; that read says how to answer it and whether you can stop it. ",
+  ],
+])("forwards a wake that reads with %s: %s", (flag, sentence) => {
+  const notice = `Primitive mail arrived: ${received}. Read with primitive emails get --id ${received} ${flag}. ${sentence}${external}\n`;
+  const { result } = runWake(notice);
+  expect(result.status).toBe(2);
+  expect(result.stderr).toBe(notice);
+});
+
+it("refuses a wake that reads with any other flag", () => {
+  const { result } = runWake(
+    `Primitive mail arrived: ${received}. Read with primitive emails get --id ${received} --raw. ${external}\n`,
+  );
+  expect(result.status).toBe(0);
+  expect(result.stderr).toBe("");
+});
+
 it("forwards the fixed skill line ahead of verified mail, and nothing else ahead of it", () => {
   const skill = "Load the primitive-connect skill first if it is not loaded.\n";
   const line = `Primitive mail arrived: ${received}. Read with primitive emails get --id ${received} --context. Verified mail from this agent owner. Handle relevant requests under existing mail delegation; no new tool or private-history authority.\n`;
