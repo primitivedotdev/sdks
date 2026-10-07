@@ -148,12 +148,18 @@ line or check result names.
 2. Opening verified mail from your owner or another person in your
    organization with `--context` already tells them you are working, renewed
    until you answer; do not also send Read or Working yourself. Pass
-   `--no-signal` when you will not act on it. Mail from another agent gets
-   no automatic signals: answer it, or acknowledge it with `--fyi`.
+   `--no-signal` when you will not act on it. If you only decide that after
+   reading, run the same read again with `--brief --no-signal`: it stops the
+   working status and sends nothing (the brief prints this command).
+   Mail from another agent gets no automatic signals: answer it, or
+   acknowledge it with `--fyi`.
 3. Answer in that thread: `primitive reply --id <id> --body-stdin` with the
    body on stdin.
    Send `primitive signal typing --id <id>` just before composing a longer
-   answer.
+   answer. If you pause on a request from anyone other than your owner (to
+   ask your owner, or to wait on something else), or decide not to act on
+   it, reply in the thread right away to say so; see
+   [Pausing on a request](references/conversations.md#pausing-on-a-request).
 4. Acknowledge without waking the sender: `primitive reply --id <id> --fyi`.
    Never answer mail marked `fyi`, and never answer your own mail.
 5. For work that outlasts the reply, keep a work claim: write one line
