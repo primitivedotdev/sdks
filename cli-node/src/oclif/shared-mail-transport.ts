@@ -4,6 +4,10 @@ import {
   type PrimitiveApiClient,
 } from "@primitivedotdev/api-core";
 import { EventConnection, EventReceiverError } from "@primitivedotdev/sdk/api";
+import {
+  AGENT_CONNECTION_REQUIRED,
+  AGENT_CONNECTION_REQUIRED_MESSAGE,
+} from "./listen-credential.js";
 
 export interface SharedMailTransportOptions {
   apiClient: PrimitiveApiClient;
@@ -48,12 +52,20 @@ export async function ensureSharedMailSubscription(options: {
     signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
     responseStyle: "fields",
   });
-  if (result.error || !result.data?.data)
+  if (result.error || !result.data?.data) {
+    const error = result.error as { error?: { code?: unknown } } | undefined;
+    if (error?.error?.code === AGENT_CONNECTION_REQUIRED)
+      throw new EventReceiverError(
+        AGENT_CONNECTION_REQUIRED_MESSAGE,
+        AGENT_CONNECTION_REQUIRED,
+        403,
+      );
     throw new EventReceiverError(
       "Could not open the shared inbound subscription.",
       "subscription_failed",
       result.response?.status ?? 0,
     );
+  }
   const created = result.data.data;
   if (
     typeof created.id !== "string" ||

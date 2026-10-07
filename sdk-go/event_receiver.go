@@ -27,6 +27,11 @@ type receiverAPI interface {
 	ReceiverDo(*http.Request) (*http.Response, error)
 }
 
+// AgentConnectionRequired is the code for an account credential creating an event subscription.
+const AgentConnectionRequired = "pull_subscription_requires_agent_connection"
+
+const agentConnectionRequiredMessage = "event subscriptions require a connected agent credential (an API key starting with pconn_), which limits them to one address; with an account API key, receive mail with GET /emails?since=<cursor>&wait=30 or an HTTP webhook endpoint instead"
+
 type EventReceiverError struct {
 	Code       string
 	Status     int
@@ -34,6 +39,9 @@ type EventReceiverError struct {
 }
 
 func (e *EventReceiverError) Error() string {
+	if e.Code == AgentConnectionRequired {
+		return agentConnectionRequiredMessage
+	}
 	return fmt.Sprintf("event receiver failed (%s, HTTP %d)", e.Code, e.Status)
 }
 
@@ -447,6 +455,11 @@ func (c *eventConnection) complete(ctx context.Context, body map[string]interfac
 	return nil
 }
 func (r *EventsResource) connect(ctx context.Context, options EventOptions) (*eventConnection, error) {
+	// Only connected-agent credentials can create subscriptions. Refuse an
+	// account key here instead of spending a request on the same answer.
+	if _, token, err := r.api.ReceiverConnection(ctx); err == nil && token != "" && !strings.HasPrefix(token, "pconn_") {
+		return nil, &EventReceiverError{Code: AgentConnectionRequired, Status: 403}
+	}
 	c := &eventConnection{api: r.api, options: options, gaps: -1, status: EventStatus{Type: "ready"}}
 	body := map[string]interface{}{"kind": "pull", "name": options.Subscription}
 	if options.Events != nil {

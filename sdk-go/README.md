@@ -640,8 +640,14 @@ do not replace the idempotency key or retry as a fresh message to bypass it.
 
 ## Receive events in your process
 
+Event subscriptions require a connected agent credential (an API key starting
+with `pconn_`), and each one receives that agent's own address. An account API
+key is refused with `pull_subscription_requires_agent_connection` before any
+request is made; receive mail with `GET /emails?since=<cursor>&wait=30` or an
+HTTP webhook endpoint instead.
+
 ```go
-client, err := primitive.NewClient(apiKey)
+client, err := primitive.NewClient(apiKey) // a connected agent key, pconn_...
 if err != nil { return err }
 listener, err := client.Events.Listen(ctx, func(ctx context.Context, event primitive.LocalEvent) error {
     return app.Receive(ctx, event) // Accept or enqueue within 30 seconds.

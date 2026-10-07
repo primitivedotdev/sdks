@@ -671,10 +671,16 @@ Use a stable subscription name and an async handler. The SDK registers the
 subscription, connects over WebSocket, reconnects, and acknowledges after the
 handler returns. No public URL, local HTTP server, or CLI is required.
 
+Event subscriptions require a connected agent credential (an API key starting
+with `pconn_`), and each one receives that agent's own address. An account API
+key is refused with `pull_subscription_requires_agent_connection` before any
+request is made; receive mail with `GET /emails?since=<cursor>&wait=30` or an
+HTTP webhook endpoint instead.
+
 ```ts
 import { PrimitiveClient } from "@primitivedotdev/sdk/api";
 
-const client = new PrimitiveClient({ apiKey: process.env.PRIMITIVE_API_KEY });
+const client = new PrimitiveClient({ apiKey: process.env.PRIMITIVE_API_KEY }); // pconn_...
 const listener = await client.events.listen(async (event, { signal }) => {
   await app.receive(event, { signal });
 }, { subscription: "my-agent", events: ["email.received"] });

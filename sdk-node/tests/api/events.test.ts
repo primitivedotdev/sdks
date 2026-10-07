@@ -57,7 +57,7 @@ function setup(
     });
   });
   return {
-    client: new PrimitiveClient({ apiKey: "test", fetch }),
+    client: new PrimitiveClient({ apiKey: "pconn_test", fetch }),
     fetch,
     bodies,
   };
@@ -88,6 +88,41 @@ describe("in-process events", () => {
       lease_token: fixture.delivery.lease_token,
     });
     await expect(delivery?.retry()).rejects.toThrow("already been chosen");
+  });
+  it("refuses an account key before any request", async () => {
+    const fetch = vi.fn();
+    const client = new PrimitiveClient({ apiKey: "prim_account", fetch });
+    await expect(client.events.wait(options)).rejects.toMatchObject({
+      name: "EventReceiverError",
+      code: "pull_subscription_requires_agent_connection",
+      status: 403,
+      message: expect.stringContaining("connected agent credential"),
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("explains the server refusal for credentials it cannot classify locally", async () => {
+    const fetch = vi.fn(async () =>
+      Response.json(
+        {
+          success: false,
+          error: {
+            code: "pull_subscription_requires_agent_connection",
+            message: "refused",
+          },
+        },
+        { status: 403 },
+      ),
+    );
+    const client = new PrimitiveClient({
+      fetch,
+      auth: () => undefined,
+    });
+    await expect(client.events.wait(options)).rejects.toMatchObject({
+      code: "pull_subscription_requires_agent_connection",
+      status: 403,
+      message: expect.stringContaining("GET /emails?since="),
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
   it("validates before I/O and refuses unsupported servers before consuming", async () => {
     const { client, fetch } = setup({ capabilities: false });

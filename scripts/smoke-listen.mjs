@@ -68,7 +68,7 @@ sockets.on("connection", (socket, request) => {
   socket.on("message", (raw) => {
     const frame = JSON.parse(raw.toString());
     if (frame.type === "authenticate") {
-      assert.ok(frame.token === "fixture-key" || frame.token === `pconn_${"a".repeat(64)}`);
+      assert.ok(frame.token === `pconn_${"f".repeat(64)}` || frame.token === `pconn_${"a".repeat(64)}`);
       socket.send(JSON.stringify({ type: "ready", protocol: "primitive.events.v1" }));
     } else if (frame.type === "receive") {
       if (emptyStream) return;
@@ -85,7 +85,7 @@ sockets.on("connection", (socket, request) => {
 await new Promise((done) => api.listen(0, "127.0.0.1", done));
 const base = `http://127.0.0.1:${api.address().port}/v1`;
 const env = { ...process.env, PRIMITIVE_CONFIG_DIR: join(directory, "config"),
-  PRIMITIVE_API_KEY: "fixture-key", PRIMITIVE_API_BASE_URL: base,
+  PRIMITIVE_API_KEY: `pconn_${"f".repeat(64)}`, PRIMITIVE_API_BASE_URL: base,
   PRIMITIVE_SKIP_NEW_VERSION_CHECK: "1" };
 delete env.PRIMITIVE_API_HEADERS;
 function run(args, options = {}) {
@@ -108,6 +108,10 @@ try {
     assert.match(result.stdout + result.stderr, /listen/);
   }
   let before = requests.length;
+  const accountKey = await run(["listen", "--once", "--timeout", "10"], { env: { ...env, PRIMITIVE_API_KEY: "prim_fixture" } });
+  assert.notEqual(accountKey.code, 0);
+  assert.match(accountKey.stderr, /connected agent credential/);
+  assert.equal(requests.length, before, "an account key must be refused before any request");
   const connected = await run(["listen", "--once", "--timeout", "10"], { env: { ...env, PRIMITIVE_API_KEY: `pconn_${"a".repeat(64)}` } });
   assert.equal(connected.code, 0, connected.stderr);
   assert.equal(connected.stdout.trim(), body);
