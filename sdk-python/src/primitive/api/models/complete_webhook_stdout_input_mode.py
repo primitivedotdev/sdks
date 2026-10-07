@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CompleteWebhookStdoutInputMode(str, Enum):
+class CompleteWebhookStdoutInputMode(StrEnum):
     STDOUT = "stdout"
 
     def __str__(self) -> str:

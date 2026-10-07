@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.agent_network_member_ownership_kind import AgentNetworkMemberOwnershipKind
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -62,8 +61,8 @@ class AgentNetworkMember:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_network_member_owner_type_0 import AgentNetworkMemberOwnerType0
-        from ..models.agent_presence_type_0 import AgentPresenceType0
+        from ..models.agent_network_member_owner_type_0 import AgentNetworkMemberOwnerType0 # noqa: PLC0415
+        from ..models.agent_presence_type_0 import AgentPresenceType0 # noqa: PLC0415
         address = self.address
 
         name = self.name
@@ -124,8 +123,8 @@ class AgentNetworkMember:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_network_member_owner_type_0 import AgentNetworkMemberOwnerType0
-        from ..models.agent_presence_type_0 import AgentPresenceType0
+        from ..models.agent_network_member_owner_type_0 import AgentNetworkMemberOwnerType0 # noqa: PLC0415
+        from ..models.agent_presence_type_0 import AgentPresenceType0 # noqa: PLC0415
         d = dict(src_dict)
         address = d.pop("address")
 
@@ -147,7 +146,7 @@ class AgentNetworkMember:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_seen_at_type_0 = isoparse(data)
+                last_seen_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

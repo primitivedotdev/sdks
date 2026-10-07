@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class PresenceControlType0Status(str, Enum):
+class PresenceControlType0Status(StrEnum):
     PENDING = "pending"
     REJECTED = "rejected"
     VERIFIED = "verified"

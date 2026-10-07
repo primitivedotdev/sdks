@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SemanticSearchInputCorpusItem(str, Enum):
+class SemanticSearchInputCorpusItem(StrEnum):
     INBOUND = "inbound"
     OUTBOUND = "outbound"
 

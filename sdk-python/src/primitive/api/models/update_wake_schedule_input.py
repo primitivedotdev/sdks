@@ -49,7 +49,7 @@ class UpdateWakeScheduleInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.update_wake_schedule_input_args import UpdateWakeScheduleInputArgs
+        from ..models.update_wake_schedule_input_args import UpdateWakeScheduleInputArgs # noqa: PLC0415
         enabled = self.enabled
 
         command = self.command
@@ -100,7 +100,7 @@ class UpdateWakeScheduleInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.update_wake_schedule_input_args import UpdateWakeScheduleInputArgs
+        from ..models.update_wake_schedule_input_args import UpdateWakeScheduleInputArgs # noqa: PLC0415
         d = dict(src_dict)
         enabled = d.pop("enabled", UNSET)
 

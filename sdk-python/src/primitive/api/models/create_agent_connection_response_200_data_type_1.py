@@ -39,7 +39,7 @@ class CreateAgentConnectionResponse200DataType1:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_agent_connection_response_200_data_type_1_connection import CreateAgentConnectionResponse200DataType1Connection
+        from ..models.create_agent_connection_response_200_data_type_1_connection import CreateAgentConnectionResponse200DataType1Connection # noqa: PLC0415
         connection = self.connection.to_dict()
 
         recovered = self.recovered
@@ -61,7 +61,7 @@ class CreateAgentConnectionResponse200DataType1:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_agent_connection_response_200_data_type_1_connection import CreateAgentConnectionResponse200DataType1Connection
+        from ..models.create_agent_connection_response_200_data_type_1_connection import CreateAgentConnectionResponse200DataType1Connection # noqa: PLC0415
         d = dict(src_dict)
         connection = CreateAgentConnectionResponse200DataType1Connection.from_dict(d.pop("connection"))
 

@@ -20,8 +20,7 @@ T = TypeVar("T", bound="WakeScheduleArgs")
 
 @_attrs_define
 class WakeScheduleArgs:
-    """ 
-     """
+    
 
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 

@@ -43,7 +43,7 @@ class RoutingTopologyDomainsItem:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.routing_topology_domains_item_routed_function_type_0 import RoutingTopologyDomainsItemRoutedFunctionType0
+        from ..models.routing_topology_domains_item_routed_function_type_0 import RoutingTopologyDomainsItemRoutedFunctionType0 # noqa: PLC0415
         domain_id = str(self.domain_id)
 
         domain = self.domain
@@ -73,7 +73,7 @@ class RoutingTopologyDomainsItem:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.routing_topology_domains_item_routed_function_type_0 import RoutingTopologyDomainsItemRoutedFunctionType0
+        from ..models.routing_topology_domains_item_routed_function_type_0 import RoutingTopologyDomainsItemRoutedFunctionType0 # noqa: PLC0415
         d = dict(src_dict)
         domain_id = UUID(d.pop("domain_id"))
 

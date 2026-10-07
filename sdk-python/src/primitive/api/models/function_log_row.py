@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.function_log_row_level import FunctionLogRowLevel
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -62,7 +61,7 @@ class FunctionLogRow:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_log_row_metadata_type_0 import FunctionLogRowMetadataType0
+        from ..models.function_log_row_metadata_type_0 import FunctionLogRowMetadataType0 # noqa: PLC0415
         id = str(self.id)
 
         function_id = str(self.function_id)
@@ -100,7 +99,7 @@ class FunctionLogRow:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_log_row_metadata_type_0 import FunctionLogRowMetadataType0
+        from ..models.function_log_row_metadata_type_0 import FunctionLogRowMetadataType0 # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -119,7 +118,7 @@ class FunctionLogRow:
 
         message = d.pop("message")
 
-        ts = isoparse(d.pop("ts"))
+        ts = datetime.datetime.fromisoformat(d.pop("ts"))
 
 
 

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class TemplateRegistryStatus(str, Enum):
+class TemplateRegistryStatus(StrEnum):
     APPROVED = "approved"
     PENDING = "pending"
     REJECTED = "rejected"

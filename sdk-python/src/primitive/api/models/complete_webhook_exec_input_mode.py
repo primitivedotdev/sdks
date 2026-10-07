@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CompleteWebhookExecInputMode(str, Enum):
+class CompleteWebhookExecInputMode(StrEnum):
     EXEC = "exec"
 
     def __str__(self) -> str:

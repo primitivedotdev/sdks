@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class EndpointKind(str, Enum):
+class EndpointKind(StrEnum):
     FUNCTION = "function"
     HTTP = "http"
     PULL = "pull"

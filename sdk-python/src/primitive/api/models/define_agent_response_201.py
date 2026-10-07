@@ -38,7 +38,7 @@ class DefineAgentResponse201:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.define_agent_response_201_data import DefineAgentResponse201Data
+        from ..models.define_agent_response_201_data import DefineAgentResponse201Data # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,7 +60,7 @@ class DefineAgentResponse201:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.define_agent_response_201_data import DefineAgentResponse201Data
+        from ..models.define_agent_response_201_data import DefineAgentResponse201Data # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

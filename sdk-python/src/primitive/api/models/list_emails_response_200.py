@@ -41,8 +41,8 @@ class ListEmailsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.email_summary import EmailSummary
-        from ..models.pagination_meta import PaginationMeta
+        from ..models.email_summary import EmailSummary # noqa: PLC0415
+        from ..models.pagination_meta import PaginationMeta # noqa: PLC0415
         success = self.success
 
         meta = self.meta.to_dict()
@@ -72,8 +72,8 @@ class ListEmailsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.email_summary import EmailSummary
-        from ..models.pagination_meta import PaginationMeta
+        from ..models.email_summary import EmailSummary # noqa: PLC0415
+        from ..models.pagination_meta import PaginationMeta # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

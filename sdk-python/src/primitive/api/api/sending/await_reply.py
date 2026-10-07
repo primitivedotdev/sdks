@@ -100,11 +100,11 @@ def sync_detailed(
     wait_timeout_ms: int | Unset = UNSET,
 
 ) -> Response[AwaitReplyResponse200 | ErrorResponse]:
-    r""" Get (or wait for) the reply to a sent email
+    """ Get (or wait for) the reply to a sent email
 
      Returns the first threaded inbound reply to a send, keyed by
     the inbound email's `reply_to_sent_email_id`. This is the
-    canonical \"did a reply arrive for this send?\" call: after
+    canonical "did a reply arrive for this send?" call: after
     /send-mail, poll (or long-poll) here instead of hand-rolling
     an /emails/search loop.
 
@@ -154,11 +154,11 @@ def sync(
     wait_timeout_ms: int | Unset = UNSET,
 
 ) -> AwaitReplyResponse200 | ErrorResponse | None:
-    r""" Get (or wait for) the reply to a sent email
+    """ Get (or wait for) the reply to a sent email
 
      Returns the first threaded inbound reply to a send, keyed by
     the inbound email's `reply_to_sent_email_id`. This is the
-    canonical \"did a reply arrive for this send?\" call: after
+    canonical "did a reply arrive for this send?" call: after
     /send-mail, poll (or long-poll) here instead of hand-rolling
     an /emails/search loop.
 
@@ -203,11 +203,11 @@ async def asyncio_detailed(
     wait_timeout_ms: int | Unset = UNSET,
 
 ) -> Response[AwaitReplyResponse200 | ErrorResponse]:
-    r""" Get (or wait for) the reply to a sent email
+    """ Get (or wait for) the reply to a sent email
 
      Returns the first threaded inbound reply to a send, keyed by
     the inbound email's `reply_to_sent_email_id`. This is the
-    canonical \"did a reply arrive for this send?\" call: after
+    canonical "did a reply arrive for this send?" call: after
     /send-mail, poll (or long-poll) here instead of hand-rolling
     an /emails/search loop.
 
@@ -257,11 +257,11 @@ async def asyncio(
     wait_timeout_ms: int | Unset = UNSET,
 
 ) -> AwaitReplyResponse200 | ErrorResponse | None:
-    r""" Get (or wait for) the reply to a sent email
+    """ Get (or wait for) the reply to a sent email
 
      Returns the first threaded inbound reply to a send, keyed by
     the inbound email's `reply_to_sent_email_id`. This is the
-    canonical \"did a reply arrive for this send?\" call: after
+    canonical "did a reply arrive for this send?" call: after
     /send-mail, poll (or long-poll) here instead of hand-rolling
     an /emails/search loop.
 

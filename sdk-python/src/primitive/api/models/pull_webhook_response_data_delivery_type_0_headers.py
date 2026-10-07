@@ -20,8 +20,7 @@ T = TypeVar("T", bound="PullWebhookResponseDataDeliveryType0Headers")
 
 @_attrs_define
 class PullWebhookResponseDataDeliveryType0Headers:
-    """ 
-     """
+    
 
     additional_properties: dict[str, str] = _attrs_field(init=False, factory=dict)
 

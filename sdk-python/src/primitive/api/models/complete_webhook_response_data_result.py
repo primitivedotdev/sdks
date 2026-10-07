@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CompleteWebhookResponseDataResult(str, Enum):
+class CompleteWebhookResponseDataResult(StrEnum):
     ALREADY_COMPLETED = "already_completed"
     COMPLETED = "completed"
 

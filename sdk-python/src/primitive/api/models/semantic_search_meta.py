@@ -44,7 +44,7 @@ class SemanticSearchMeta:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.semantic_search_coverage import SemanticSearchCoverage
+        from ..models.semantic_search_coverage import SemanticSearchCoverage # noqa: PLC0415
         limit = self.limit
 
         cursor: None | str
@@ -74,7 +74,7 @@ class SemanticSearchMeta:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.semantic_search_coverage import SemanticSearchCoverage
+        from ..models.semantic_search_coverage import SemanticSearchCoverage # noqa: PLC0415
         d = dict(src_dict)
         limit = d.pop("limit")
 

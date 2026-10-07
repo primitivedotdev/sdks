@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class ConversationMessageDirection(str, Enum):
+class ConversationMessageDirection(StrEnum):
     INBOUND = "inbound"
     OUTBOUND = "outbound"
 

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CreateChallengeInputNetwork(str, Enum):
+class CreateChallengeInputNetwork(StrEnum):
     BASE = "base"
     BASE_SEPOLIA = "base-sepolia"
 

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CreateFilterInputType(str, Enum):
+class CreateFilterInputType(StrEnum):
     BLOCKLIST = "blocklist"
     WHITELIST = "whitelist"
 

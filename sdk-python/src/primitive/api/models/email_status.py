@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class EmailStatus(str, Enum):
+class EmailStatus(StrEnum):
     ACCEPTED = "accepted"
     COMPLETED = "completed"
     PENDING = "pending"

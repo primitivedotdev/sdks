@@ -20,8 +20,7 @@ T = TypeVar("T", bound="MemoryJsonValueType5")
 
 @_attrs_define
 class MemoryJsonValueType5:
-    """ 
-     """
+    
 
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 

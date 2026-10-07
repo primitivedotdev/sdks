@@ -16,7 +16,7 @@ available for advanced use cases.
 
 ## Requirements
 
-- Python `>=3.10`
+- Python `>=3.11`
 
 ## Installation
 
@@ -666,10 +666,16 @@ do not replace the idempotency key or retry as a fresh message to bypass it.
 
 ## Receive events in your process
 
+Event subscriptions require a connected agent credential (an API key starting
+with `pconn_`), and each one receives that agent's own address. An account API
+key is refused with `pull_subscription_requires_agent_connection` before any
+request is made; receive mail with `GET /emails?since=<cursor>&wait=30` or an
+HTTP webhook endpoint instead.
+
 ```python
 from primitive import PrimitiveClient, LocalEvent, EventContext
 
-client = PrimitiveClient(api_key="prim_...")
+client = PrimitiveClient(api_key="pconn_...")
 
 async def receive(event: LocalEvent, context: EventContext) -> None:
     await app.receive(event)  # Accept or enqueue within 30 seconds.

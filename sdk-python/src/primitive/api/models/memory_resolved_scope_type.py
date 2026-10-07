@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class MemoryResolvedScopeType(str, Enum):
+class MemoryResolvedScopeType(StrEnum):
     FUNCTION = "function"
     ORG = "org"
 

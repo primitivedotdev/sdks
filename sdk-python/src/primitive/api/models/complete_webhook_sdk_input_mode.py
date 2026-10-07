@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CompleteWebhookSdkInputMode(str, Enum):
+class CompleteWebhookSdkInputMode(StrEnum):
     SDK = "sdk"
 
     def __str__(self) -> str:

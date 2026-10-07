@@ -9,6 +9,12 @@ import {
 export type EventOffer = PullWebhookResponse["data"];
 export type EventDelivery = NonNullable<EventOffer["delivery"]>;
 export type EventSocketFactory = (url: string, protocol: string) => WebSocket;
+/** Returned when an account credential tries to create an event subscription. */
+export const AGENT_CONNECTION_REQUIRED =
+  "pull_subscription_requires_agent_connection";
+export const AGENT_CONNECTION_REQUIRED_MESSAGE =
+  "Event subscriptions require a connected agent credential (an API key starting with pconn_), which limits them to one address. With an account API key, receive mail with GET /emails?since=<cursor>&wait=30 or an HTTP webhook endpoint instead.";
+
 export class EventReceiverError extends Error {
   constructor(
     message: string,
@@ -84,11 +90,28 @@ export function unwrap<T>(result: {
       ? result.error.error.code
       : "request_failed";
   throw new EventReceiverError(
-    `Event request failed (${result.response?.status ?? 0}, ${code})`,
+    code === AGENT_CONNECTION_REQUIRED
+      ? AGENT_CONNECTION_REQUIRED_MESSAGE
+      : `Event request failed (${result.response?.status ?? 0}, ${code})`,
     code,
     result.response?.status ?? 0,
     retryAfter(result.response?.headers.get("retry-after") ?? null),
   );
+}
+/** The bearer credential the client would send, without making a request. */
+export async function bearerToken(
+  config: ReturnType<PrimitiveApiClient["client"]["getConfig"]>,
+): Promise<string | undefined> {
+  const auth =
+    typeof config.auth === "function"
+      ? await config.auth({ type: "http", scheme: "bearer" })
+      : config.auth;
+  const authorization = new Headers(config.headers as HeadersInit).get(
+    "authorization",
+  );
+  return typeof auth === "string"
+    ? auth.replace(/^Bearer /i, "")
+    : authorization?.replace(/^Bearer /i, "");
 }
 export function delay(ms: number, signal: AbortSignal): Promise<void> {
   signal.throwIfAborted();
@@ -186,17 +209,7 @@ export class EventConnection {
     // The server authenticates the credential against this exact subscription
     // during the handshake and again on receive/completion. No account access
     // is needed, including when reconnecting an address-scoped credential.
-    const auth =
-      typeof config.auth === "function"
-        ? await config.auth({ type: "http", scheme: "bearer" })
-        : config.auth;
-    const authorization = new Headers(config.headers as HeadersInit).get(
-      "authorization",
-    );
-    const token =
-      typeof auth === "string"
-        ? auth.replace(/^Bearer /i, "")
-        : authorization?.replace(/^Bearer /i, "");
+    const token = await bearerToken(config);
     if (!token)
       throw new EventReceiverError(
         "Event receiver requires bearer credentials",

@@ -55,7 +55,7 @@ class CreateEndpointInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.create_endpoint_input_rules import CreateEndpointInputRules
+        from ..models.create_endpoint_input_rules import CreateEndpointInputRules # noqa: PLC0415
         kind: str | Unset = UNSET
         if not isinstance(self.kind, Unset):
             kind = self.kind.value
@@ -113,7 +113,7 @@ class CreateEndpointInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.create_endpoint_input_rules import CreateEndpointInputRules
+        from ..models.create_endpoint_input_rules import CreateEndpointInputRules # noqa: PLC0415
         d = dict(src_dict)
         _kind = d.pop("kind", UNSET)
         kind: CreateEndpointInputKind | Unset

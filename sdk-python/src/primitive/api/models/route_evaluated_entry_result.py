@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class RouteEvaluatedEntryResult(str, Enum):
+class RouteEvaluatedEntryResult(StrEnum):
     ERROR = "error"
     HIT = "hit"
     MISS = "miss"

@@ -35,7 +35,7 @@ class RevokeAgentConnectionResponse200Data:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.revoke_agent_connection_response_200_data_connection import RevokeAgentConnectionResponse200DataConnection
+        from ..models.revoke_agent_connection_response_200_data_connection import RevokeAgentConnectionResponse200DataConnection # noqa: PLC0415
         connection = self.connection.to_dict()
 
 
@@ -51,7 +51,7 @@ class RevokeAgentConnectionResponse200Data:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.revoke_agent_connection_response_200_data_connection import RevokeAgentConnectionResponse200DataConnection
+        from ..models.revoke_agent_connection_response_200_data_connection import RevokeAgentConnectionResponse200DataConnection # noqa: PLC0415
         d = dict(src_dict)
         connection = RevokeAgentConnectionResponse200DataConnection.from_dict(d.pop("connection"))
 

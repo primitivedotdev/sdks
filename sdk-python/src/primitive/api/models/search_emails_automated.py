@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SearchEmailsAutomated(str, Enum):
+class SearchEmailsAutomated(StrEnum):
     FALSE = "false"
     TRUE = "true"
 

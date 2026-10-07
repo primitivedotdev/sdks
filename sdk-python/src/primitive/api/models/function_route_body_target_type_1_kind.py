@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class FunctionRouteBodyTargetType1Kind(str, Enum):
+class FunctionRouteBodyTargetType1Kind(StrEnum):
     FALLBACK = "fallback"
 
     def __str__(self) -> str:

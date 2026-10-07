@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class FunctionRouteBodyTargetType0Kind(str, Enum):
+class FunctionRouteBodyTargetType0Kind(StrEnum):
     DOMAIN = "domain"
 
     def __str__(self) -> str:

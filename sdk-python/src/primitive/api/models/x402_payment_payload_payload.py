@@ -39,7 +39,7 @@ class X402PaymentPayloadPayload:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.x402_payment_payload_payload_authorization import X402PaymentPayloadPayloadAuthorization
+        from ..models.x402_payment_payload_payload_authorization import X402PaymentPayloadPayloadAuthorization # noqa: PLC0415
         signature = self.signature
 
         authorization = self.authorization.to_dict()
@@ -58,7 +58,7 @@ class X402PaymentPayloadPayload:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.x402_payment_payload_payload_authorization import X402PaymentPayloadPayloadAuthorization
+        from ..models.x402_payment_payload_payload_authorization import X402PaymentPayloadPayloadAuthorization # noqa: PLC0415
         d = dict(src_dict)
         signature = d.pop("signature")
 

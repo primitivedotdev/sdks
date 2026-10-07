@@ -41,8 +41,8 @@ class ListDeliveriesResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.delivery_summary import DeliverySummary
-        from ..models.pagination_meta import PaginationMeta
+        from ..models.delivery_summary import DeliverySummary # noqa: PLC0415
+        from ..models.pagination_meta import PaginationMeta # noqa: PLC0415
         success = self.success
 
         meta = self.meta.to_dict()
@@ -72,8 +72,8 @@ class ListDeliveriesResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.delivery_summary import DeliverySummary
-        from ..models.pagination_meta import PaginationMeta
+        from ..models.delivery_summary import DeliverySummary # noqa: PLC0415
+        from ..models.pagination_meta import PaginationMeta # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

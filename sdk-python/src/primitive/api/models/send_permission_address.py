@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.send_permission_address_type import SendPermissionAddressType
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -87,7 +86,7 @@ class SendPermissionAddress:
 
         address = d.pop("address")
 
-        last_received_at = isoparse(d.pop("last_received_at"))
+        last_received_at = datetime.datetime.fromisoformat(d.pop("last_received_at"))
 
 
 

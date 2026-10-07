@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class ErrorResponseErrorCode(str, Enum):
+class ErrorResponseErrorCode(StrEnum):
     ACCESS_DENIED = "access_denied"
     ADDRESS_NOTE_CONFLICT = "address_note_conflict"
     ADDRESS_NOT_CONTROLLED = "address_not_controlled"

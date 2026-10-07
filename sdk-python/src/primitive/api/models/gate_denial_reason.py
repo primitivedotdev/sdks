@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class GateDenialReason(str, Enum):
+class GateDenialReason(StrEnum):
     DOMAIN_NOT_CONFIRMED = "domain_not_confirmed"
     RECIPIENT_NOT_KNOWN = "recipient_not_known"
     RECIPIENT_UNAUTHENTICATED = "recipient_unauthenticated"

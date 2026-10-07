@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class DomainDnsHealthStatus(str, Enum):
+class DomainDnsHealthStatus(StrEnum):
     DEGRADED = "degraded"
     HEALTHY = "healthy"
     PENDING = "pending"

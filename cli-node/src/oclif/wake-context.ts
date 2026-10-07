@@ -392,7 +392,7 @@ export function wakeReadCommand(
     profileName && WAKE_PROFILE.test(profileName)
       ? `PRIMITIVE_AGENT_PROFILE=${profileName} `
       : "";
-  return `${prefix}${cliInvocation(entry)} emails get --id ${emailId} --brief`;
+  return `${prefix}${cliInvocation(entry)} emails get --id ${emailId} --context`;
 }
 
 /**

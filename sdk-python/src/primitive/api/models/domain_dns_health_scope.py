@@ -10,7 +10,6 @@ from ..types import UNSET, Unset
 
 from ..models.domain_dns_health_scope_scope import DomainDnsHealthScopeScope
 from ..models.domain_dns_health_status import DomainDnsHealthStatus
-from dateutil.parser import isoparse
 from typing import cast
 import datetime
 
@@ -60,7 +59,7 @@ class DomainDnsHealthScope:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.domain_dns_record import DomainDnsRecord
+        from ..models.domain_dns_record import DomainDnsRecord # noqa: PLC0415
         scope = self.scope.value
 
         verified = self.verified
@@ -107,7 +106,7 @@ class DomainDnsHealthScope:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.domain_dns_record import DomainDnsRecord
+        from ..models.domain_dns_record import DomainDnsRecord # noqa: PLC0415
         d = dict(src_dict)
         scope = DomainDnsHealthScopeScope(d.pop("scope"))
 
@@ -121,7 +120,7 @@ class DomainDnsHealthScope:
 
 
 
-        checked_at = isoparse(d.pop("checked_at"))
+        checked_at = datetime.datetime.fromisoformat(d.pop("checked_at"))
 
 
 
@@ -132,7 +131,7 @@ class DomainDnsHealthScope:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                next_check_at_type_0 = isoparse(data)
+                next_check_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

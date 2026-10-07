@@ -53,8 +53,8 @@ class OutboundStatus:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.outbound_status_domain import OutboundStatusDomain
-        from ..models.outbound_status_next_actions_item import OutboundStatusNextActionsItem
+        from ..models.outbound_status_domain import OutboundStatusDomain # noqa: PLC0415
+        from ..models.outbound_status_next_actions_item import OutboundStatusNextActionsItem # noqa: PLC0415
         ready = self.ready
 
         summary = self.summary
@@ -94,8 +94,8 @@ class OutboundStatus:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.outbound_status_domain import OutboundStatusDomain
-        from ..models.outbound_status_next_actions_item import OutboundStatusNextActionsItem
+        from ..models.outbound_status_domain import OutboundStatusDomain # noqa: PLC0415
+        from ..models.outbound_status_next_actions_item import OutboundStatusNextActionsItem # noqa: PLC0415
         d = dict(src_dict)
         ready = d.pop("ready")
 

@@ -38,7 +38,7 @@ class InstallTemplateResponse201:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.template_install_status import TemplateInstallStatus
+        from ..models.template_install_status import TemplateInstallStatus # noqa: PLC0415
         success = self.success
 
         data = self.data.to_dict()
@@ -57,7 +57,7 @@ class InstallTemplateResponse201:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.template_install_status import TemplateInstallStatus
+        from ..models.template_install_status import TemplateInstallStatus # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

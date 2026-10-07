@@ -42,7 +42,7 @@ class StartCliSignupInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.start_cli_signup_input_metadata import StartCliSignupInputMetadata
+        from ..models.start_cli_signup_input_metadata import StartCliSignupInputMetadata # noqa: PLC0415
         email = self.email
 
         terms_accepted = self.terms_accepted
@@ -71,7 +71,7 @@ class StartCliSignupInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.start_cli_signup_input_metadata import StartCliSignupInputMetadata
+        from ..models.start_cli_signup_input_metadata import StartCliSignupInputMetadata # noqa: PLC0415
         d = dict(src_dict)
         email = d.pop("email")
 

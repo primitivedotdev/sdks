@@ -41,8 +41,8 @@ class PullWebhookResponse:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.pull_webhook_response_data import PullWebhookResponseData
-        from ..models.pull_webhook_response_meta import PullWebhookResponseMeta
+        from ..models.pull_webhook_response_data import PullWebhookResponseData # noqa: PLC0415
+        from ..models.pull_webhook_response_meta import PullWebhookResponseMeta # noqa: PLC0415
         success = self.success
 
         data = self.data.to_dict()
@@ -67,8 +67,8 @@ class PullWebhookResponse:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.pull_webhook_response_data import PullWebhookResponseData
-        from ..models.pull_webhook_response_meta import PullWebhookResponseMeta
+        from ..models.pull_webhook_response_data import PullWebhookResponseData # noqa: PLC0415
+        from ..models.pull_webhook_response_meta import PullWebhookResponseMeta # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

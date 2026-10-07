@@ -41,7 +41,7 @@ it("receives over WebSocket by default and retries a lost receipt without anothe
     socket.on("message", (bytes) => {
       const frame = JSON.parse(bytes.toString());
       if (frame.type === "authenticate") {
-        expect(frame.token).toBe("test");
+        expect(frame.token).toBe("pconn_test");
         socket.send(
           JSON.stringify({ type: "ready", protocol: "primitive.events.v1" }),
         );
@@ -84,7 +84,7 @@ it("receives over WebSocket by default and retries a lost receipt without anothe
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("No address");
   const client = new PrimitiveClient({
-    apiKey: "test",
+    apiKey: "pconn_test",
     apiBaseUrl: `http://127.0.0.1:${address.port}/v1`,
   });
   const delivery = await client.events.wait({
@@ -152,7 +152,7 @@ it("stops when a gap callback throws instead of retrying it as a network error",
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("No address");
   const client = new PrimitiveClient({
-    apiKey: "test",
+    apiKey: "pconn_test",
     apiBaseUrl: `http://127.0.0.1:${address.port}/v1`,
   });
   const failure = new TypeError("status callback failed");

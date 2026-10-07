@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SearchEmailsIncludeFacets(str, Enum):
+class SearchEmailsIncludeFacets(StrEnum):
     FALSE = "false"
     TRUE = "true"
 

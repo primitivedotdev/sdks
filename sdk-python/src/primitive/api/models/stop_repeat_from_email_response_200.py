@@ -38,7 +38,7 @@ class StopRepeatFromEmailResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.repeat_stop_result import RepeatStopResult
+        from ..models.repeat_stop_result import RepeatStopResult # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,7 +60,7 @@ class StopRepeatFromEmailResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.repeat_stop_result import RepeatStopResult
+        from ..models.repeat_stop_result import RepeatStopResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

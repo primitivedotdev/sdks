@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.repeat_stop_result_status import RepeatStopResultStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -89,7 +88,7 @@ class RepeatStopResult:
 
 
 
-        stopped_at = isoparse(d.pop("stopped_at"))
+        stopped_at = datetime.datetime.fromisoformat(d.pop("stopped_at"))
 
 
 

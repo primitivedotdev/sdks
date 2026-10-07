@@ -38,7 +38,7 @@ class UpdateRegistryResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.update_registry_response_200_data import UpdateRegistryResponse200Data
+        from ..models.update_registry_response_200_data import UpdateRegistryResponse200Data # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,7 +60,7 @@ class UpdateRegistryResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.update_registry_response_200_data import UpdateRegistryResponse200Data
+        from ..models.update_registry_response_200_data import UpdateRegistryResponse200Data # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

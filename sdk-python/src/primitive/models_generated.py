@@ -173,7 +173,7 @@ class Download(BaseModel):
     ]
 
 
-class Outcome(Enum):
+class Outcome(StrEnum):
     matched = "matched"
     defaulted = "defaulted"
     none = "none"

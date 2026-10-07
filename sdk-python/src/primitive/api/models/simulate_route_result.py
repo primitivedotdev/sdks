@@ -62,7 +62,7 @@ class SimulateRouteResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.route_evaluated_entry import RouteEvaluatedEntry
+        from ..models.route_evaluated_entry import RouteEvaluatedEntry # noqa: PLC0415
         outcome = self.outcome.value
 
         recipient = self.recipient
@@ -126,7 +126,7 @@ class SimulateRouteResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.route_evaluated_entry import RouteEvaluatedEntry
+        from ..models.route_evaluated_entry import RouteEvaluatedEntry # noqa: PLC0415
         d = dict(src_dict)
         outcome = SimulateRouteResultOutcome(d.pop("outcome"))
 

@@ -75,15 +75,15 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetInboxStatusResponse200]:
-    r""" Get inbound inbox readiness
+    """ Get inbound inbox readiness
 
      Returns one consolidated view of inbound domain readiness,
     webhook/function processing routes, deployed Functions, and
     recent inbound email activity.
 
     Agents should call this before guiding a user through inbound
-    setup. It answers the practical questions \"can I receive mail\",
-    \"will anything process that mail\", and \"what should I do next\"
+    setup. It answers the practical questions "can I receive mail",
+    "will anything process that mail", and "what should I do next"
     without forcing clients to stitch together domains, endpoints,
     functions, and emails manually.
 
@@ -111,15 +111,15 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetInboxStatusResponse200 | None:
-    r""" Get inbound inbox readiness
+    """ Get inbound inbox readiness
 
      Returns one consolidated view of inbound domain readiness,
     webhook/function processing routes, deployed Functions, and
     recent inbound email activity.
 
     Agents should call this before guiding a user through inbound
-    setup. It answers the practical questions \"can I receive mail\",
-    \"will anything process that mail\", and \"what should I do next\"
+    setup. It answers the practical questions "can I receive mail",
+    "will anything process that mail", and "what should I do next"
     without forcing clients to stitch together domains, endpoints,
     functions, and emails manually.
 
@@ -142,15 +142,15 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetInboxStatusResponse200]:
-    r""" Get inbound inbox readiness
+    """ Get inbound inbox readiness
 
      Returns one consolidated view of inbound domain readiness,
     webhook/function processing routes, deployed Functions, and
     recent inbound email activity.
 
     Agents should call this before guiding a user through inbound
-    setup. It answers the practical questions \"can I receive mail\",
-    \"will anything process that mail\", and \"what should I do next\"
+    setup. It answers the practical questions "can I receive mail",
+    "will anything process that mail", and "what should I do next"
     without forcing clients to stitch together domains, endpoints,
     functions, and emails manually.
 
@@ -178,15 +178,15 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetInboxStatusResponse200 | None:
-    r""" Get inbound inbox readiness
+    """ Get inbound inbox readiness
 
      Returns one consolidated view of inbound domain readiness,
     webhook/function processing routes, deployed Functions, and
     recent inbound email activity.
 
     Agents should call this before guiding a user through inbound
-    setup. It answers the practical questions \"can I receive mail\",
-    \"will anything process that mail\", and \"what should I do next\"
+    setup. It answers the practical questions "can I receive mail",
+    "will anything process that mail", and "what should I do next"
     without forcing clients to stitch together domains, endpoints,
     functions, and emails manually.
 

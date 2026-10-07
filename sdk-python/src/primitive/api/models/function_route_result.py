@@ -42,8 +42,8 @@ class FunctionRouteResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.function_route_result_conflict import FunctionRouteResultConflict
-        from ..models.function_routing import FunctionRouting
+        from ..models.function_route_result_conflict import FunctionRouteResultConflict # noqa: PLC0415
+        from ..models.function_routing import FunctionRouting # noqa: PLC0415
         routing: dict[str, Any] | None | Unset
         if isinstance(self.routing, Unset):
             routing = UNSET
@@ -72,8 +72,8 @@ class FunctionRouteResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.function_route_result_conflict import FunctionRouteResultConflict
-        from ..models.function_routing import FunctionRouting
+        from ..models.function_route_result_conflict import FunctionRouteResultConflict # noqa: PLC0415
+        from ..models.function_routing import FunctionRouting # noqa: PLC0415
         d = dict(src_dict)
         def _parse_routing(data: object) -> FunctionRouting | None | Unset:
             if data is None:

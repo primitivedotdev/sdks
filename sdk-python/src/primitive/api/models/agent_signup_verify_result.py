@@ -63,7 +63,7 @@ class AgentSignupVerifyResult:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.agent_org_ref import AgentOrgRef
+        from ..models.agent_org_ref import AgentOrgRef # noqa: PLC0415
         api_key = self.api_key
 
         key_id = str(self.key_id)
@@ -121,7 +121,7 @@ class AgentSignupVerifyResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.agent_org_ref import AgentOrgRef
+        from ..models.agent_org_ref import AgentOrgRef # noqa: PLC0415
         d = dict(src_dict)
         api_key = d.pop("api_key")
 

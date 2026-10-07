@@ -68,9 +68,9 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetOutboundStatusResponse200]:
-    r""" Get outbound sending readiness
+    """ Get outbound sending readiness
 
-     The \"what can I send From?\" bootstrap, the outbound mirror of
+     The "what can I send From?" bootstrap, the outbound mirror of
     /inbox/status. Returns per-domain sending readiness for every
     domain in the caller's org, plus the flat `sendable_domains`
     list of From-domains the org may send from right now. That
@@ -109,9 +109,9 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetOutboundStatusResponse200 | None:
-    r""" Get outbound sending readiness
+    """ Get outbound sending readiness
 
-     The \"what can I send From?\" bootstrap, the outbound mirror of
+     The "what can I send From?" bootstrap, the outbound mirror of
     /inbox/status. Returns per-domain sending readiness for every
     domain in the caller's org, plus the flat `sendable_domains`
     list of From-domains the org may send from right now. That
@@ -145,9 +145,9 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetOutboundStatusResponse200]:
-    r""" Get outbound sending readiness
+    """ Get outbound sending readiness
 
-     The \"what can I send From?\" bootstrap, the outbound mirror of
+     The "what can I send From?" bootstrap, the outbound mirror of
     /inbox/status. Returns per-domain sending readiness for every
     domain in the caller's org, plus the flat `sendable_domains`
     list of From-domains the org may send from right now. That
@@ -186,9 +186,9 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetOutboundStatusResponse200 | None:
-    r""" Get outbound sending readiness
+    """ Get outbound sending readiness
 
-     The \"what can I send From?\" bootstrap, the outbound mirror of
+     The "what can I send From?" bootstrap, the outbound mirror of
     /inbox/status. Returns per-domain sending readiness for every
     domain in the caller's org, plus the flat `sendable_domains`
     list of From-domains the org may send from right now. That

@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.x402_payout_address_network import X402PayoutAddressNetwork
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -110,7 +109,7 @@ class X402PayoutAddress:
 
         is_default = d.pop("is_default")
 
-        verified_at = isoparse(d.pop("verified_at"))
+        verified_at = datetime.datetime.fromisoformat(d.pop("verified_at"))
 
 
 
@@ -120,7 +119,7 @@ class X402PayoutAddress:
         if isinstance(_created_at,  Unset):
             created_at = UNSET
         else:
-            created_at = isoparse(_created_at)
+            created_at = datetime.datetime.fromisoformat(_created_at)
 
 
 

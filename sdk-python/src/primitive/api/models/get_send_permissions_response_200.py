@@ -50,11 +50,11 @@ class GetSendPermissionsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.send_permission_address import SendPermissionAddress
-        from ..models.send_permission_any_recipient import SendPermissionAnyRecipient
-        from ..models.send_permission_managed_zone import SendPermissionManagedZone
-        from ..models.send_permission_your_domain import SendPermissionYourDomain
-        from ..models.send_permissions_meta import SendPermissionsMeta
+        from ..models.send_permission_address import SendPermissionAddress # noqa: PLC0415
+        from ..models.send_permission_any_recipient import SendPermissionAnyRecipient # noqa: PLC0415
+        from ..models.send_permission_managed_zone import SendPermissionManagedZone # noqa: PLC0415
+        from ..models.send_permission_your_domain import SendPermissionYourDomain # noqa: PLC0415
+        from ..models.send_permissions_meta import SendPermissionsMeta # noqa: PLC0415
         success = self.success
 
         data = []
@@ -90,11 +90,11 @@ class GetSendPermissionsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.send_permission_address import SendPermissionAddress
-        from ..models.send_permission_any_recipient import SendPermissionAnyRecipient
-        from ..models.send_permission_managed_zone import SendPermissionManagedZone
-        from ..models.send_permission_your_domain import SendPermissionYourDomain
-        from ..models.send_permissions_meta import SendPermissionsMeta
+        from ..models.send_permission_address import SendPermissionAddress # noqa: PLC0415
+        from ..models.send_permission_any_recipient import SendPermissionAnyRecipient # noqa: PLC0415
+        from ..models.send_permission_managed_zone import SendPermissionManagedZone # noqa: PLC0415
+        from ..models.send_permission_your_domain import SendPermissionYourDomain # noqa: PLC0415
+        from ..models.send_permissions_meta import SendPermissionsMeta # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

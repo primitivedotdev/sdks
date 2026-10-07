@@ -38,7 +38,7 @@ class ReplyToEmailResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.send_mail_result import SendMailResult
+        from ..models.send_mail_result import SendMailResult # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,7 +60,7 @@ class ReplyToEmailResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.send_mail_result import SendMailResult
+        from ..models.send_mail_result import SendMailResult # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

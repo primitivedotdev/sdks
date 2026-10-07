@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class TemplateInstallState(str, Enum):
+class TemplateInstallState(StrEnum):
     BIND_FAILED = "bind_failed"
     BOUND = "bound"
     CONNECTING = "connecting"

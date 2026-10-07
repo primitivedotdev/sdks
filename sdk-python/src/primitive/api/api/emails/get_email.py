@@ -85,7 +85,7 @@ def sync_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetEmailResponse200]:
-    r""" Get inbound email by id
+    """ Get inbound email by id
 
      Returns the full record for an inbound email received at one
     of your verified domains, including the parsed text and HTML
@@ -99,8 +99,8 @@ def sync_detailed(
     here; use `/sent-emails/{id}` for those.
 
     The response carries four sender-shaped fields whose
-    meanings overlap. `from_email` is the canonical \"who sent
-    this\" field for most use cases (parsed bare address from
+    meanings overlap. `from_email` is the canonical "who sent
+    this" field for most use cases (parsed bare address from
     the `From:` header, with a `sender` fallback). `from_header`
     is the raw header including any display name. `sender` and
     `smtp_mail_from` both carry the SMTP envelope MAIL FROM
@@ -138,7 +138,7 @@ def sync(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetEmailResponse200 | None:
-    r""" Get inbound email by id
+    """ Get inbound email by id
 
      Returns the full record for an inbound email received at one
     of your verified domains, including the parsed text and HTML
@@ -152,8 +152,8 @@ def sync(
     here; use `/sent-emails/{id}` for those.
 
     The response carries four sender-shaped fields whose
-    meanings overlap. `from_email` is the canonical \"who sent
-    this\" field for most use cases (parsed bare address from
+    meanings overlap. `from_email` is the canonical "who sent
+    this" field for most use cases (parsed bare address from
     the `From:` header, with a `sender` fallback). `from_header`
     is the raw header including any display name. `sender` and
     `smtp_mail_from` both carry the SMTP envelope MAIL FROM
@@ -186,7 +186,7 @@ async def asyncio_detailed(
     client: AuthenticatedClient | Client,
 
 ) -> Response[ErrorResponse | GetEmailResponse200]:
-    r""" Get inbound email by id
+    """ Get inbound email by id
 
      Returns the full record for an inbound email received at one
     of your verified domains, including the parsed text and HTML
@@ -200,8 +200,8 @@ async def asyncio_detailed(
     here; use `/sent-emails/{id}` for those.
 
     The response carries four sender-shaped fields whose
-    meanings overlap. `from_email` is the canonical \"who sent
-    this\" field for most use cases (parsed bare address from
+    meanings overlap. `from_email` is the canonical "who sent
+    this" field for most use cases (parsed bare address from
     the `From:` header, with a `sender` fallback). `from_header`
     is the raw header including any display name. `sender` and
     `smtp_mail_from` both carry the SMTP envelope MAIL FROM
@@ -239,7 +239,7 @@ async def asyncio(
     client: AuthenticatedClient | Client,
 
 ) -> ErrorResponse | GetEmailResponse200 | None:
-    r""" Get inbound email by id
+    """ Get inbound email by id
 
      Returns the full record for an inbound email received at one
     of your verified domains, including the parsed text and HTML
@@ -253,8 +253,8 @@ async def asyncio(
     here; use `/sent-emails/{id}` for those.
 
     The response carries four sender-shaped fields whose
-    meanings overlap. `from_email` is the canonical \"who sent
-    this\" field for most use cases (parsed bare address from
+    meanings overlap. `from_email` is the canonical "who sent
+    this" field for most use cases (parsed bare address from
     the `From:` header, with a `sender` fallback). `from_header`
     is the raw header including any display name. `sender` and
     `smtp_mail_from` both carry the SMTP envelope MAIL FROM

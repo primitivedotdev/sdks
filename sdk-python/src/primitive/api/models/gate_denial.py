@@ -48,7 +48,7 @@ class GateDenial:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.gate_fix import GateFix
+        from ..models.gate_fix import GateFix # noqa: PLC0415
         name = self.name.value
 
         reason = self.reason.value
@@ -83,7 +83,7 @@ class GateDenial:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.gate_fix import GateFix
+        from ..models.gate_fix import GateFix # noqa: PLC0415
         d = dict(src_dict)
         name = GateDenialName(d.pop("name"))
 

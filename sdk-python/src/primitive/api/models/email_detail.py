@@ -13,7 +13,6 @@ from ..models.email_status import EmailStatus
 from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
 from ..models.email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from ..models.email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -339,13 +338,13 @@ class EmailDetail:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.email_auth import EmailAuth
-        from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
-        from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0
-        from ..models.email_detail_reply import EmailDetailReply
-        from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
-        from ..models.parsed_email_data import ParsedEmailData
-        from ..models.presence_control_type_0 import PresenceControlType0
+        from ..models.email_auth import EmailAuth # noqa: PLC0415
+        from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
+        from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
+        from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0 # noqa: PLC0415
+        from ..models.parsed_email_data import ParsedEmailData # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
         id = str(self.id)
 
         sender = self.sender
@@ -698,13 +697,13 @@ class EmailDetail:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.email_auth import EmailAuth
-        from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
-        from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0
-        from ..models.email_detail_reply import EmailDetailReply
-        from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
-        from ..models.parsed_email_data import ParsedEmailData
-        from ..models.presence_control_type_0 import PresenceControlType0
+        from ..models.email_auth import EmailAuth # noqa: PLC0415
+        from ..models.email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
+        from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
+        from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0 # noqa: PLC0415
+        from ..models.parsed_email_data import ParsedEmailData # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -722,12 +721,12 @@ class EmailDetail:
 
         domain = d.pop("domain")
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        received_at = isoparse(d.pop("received_at"))
+        received_at = datetime.datetime.fromisoformat(d.pop("received_at"))
 
 
 
@@ -768,7 +767,7 @@ class EmailDetail:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_replied_at_type_0 = isoparse(data)
+                last_replied_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -958,7 +957,7 @@ class EmailDetail:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                webhook_last_attempt_at_type_0 = isoparse(data)
+                webhook_last_attempt_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -998,7 +997,7 @@ class EmailDetail:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                webhook_fired_at_type_0 = isoparse(data)
+                webhook_fired_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -1066,7 +1065,7 @@ class EmailDetail:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                content_discarded_at_type_0 = isoparse(data)
+                content_discarded_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

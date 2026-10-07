@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class ListAgentConnectionsResponse200DataItemStatus(str, Enum):
+class ListAgentConnectionsResponse200DataItemStatus(StrEnum):
     CLAIMED = "claimed"
     CONNECTED = "connected"
     PENDING = "pending"

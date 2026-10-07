@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -48,7 +47,7 @@ class AgentContactPolicyOverride:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.contact_policy_rule import ContactPolicyRule
+        from ..models.contact_policy_rule import ContactPolicyRule # noqa: PLC0415
         rules = []
         for rules_item_data in self.rules:
             rules_item = rules_item_data.to_dict()
@@ -101,7 +100,7 @@ class AgentContactPolicyOverride:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.contact_policy_rule import ContactPolicyRule
+        from ..models.contact_policy_rule import ContactPolicyRule # noqa: PLC0415
         d = dict(src_dict)
         rules = []
         _rules = d.pop("rules")
@@ -119,7 +118,7 @@ class AgentContactPolicyOverride:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                contact_request_since_type_0 = isoparse(data)
+                contact_request_since_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -173,7 +172,7 @@ class AgentContactPolicyOverride:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                updated_at_type_0 = isoparse(data)
+                updated_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

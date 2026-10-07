@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class RepeatingSendStatus(str, Enum):
+class RepeatingSendStatus(StrEnum):
     ACTIVE = "active"
     CANCELED = "canceled"
     COMPLETED = "completed"

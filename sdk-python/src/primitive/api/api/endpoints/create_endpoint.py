@@ -35,7 +35,6 @@ def _get_kwargs(
 
     _kwargs["json"] = body.to_dict()
 
-
     headers["Content-Type"] = "application/json"
 
     _kwargs["headers"] = headers
@@ -107,7 +106,7 @@ def sync_detailed(
     body: CreateEndpointInput,
 
 ) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
-    r""" Create a webhook endpoint
+    """ Create a webhook endpoint
 
      Creates a new webhook endpoint. If a deactivated endpoint
     with the same URL and domain exists, it is reactivated
@@ -117,8 +116,8 @@ def sync_detailed(
     **Signing is account-scoped, not per-endpoint.** This call
     does not return any signing material; every endpoint on the
     account uses the same webhook secret, fetched via
-    `GET /account/webhook-secret`. See the API-level \"Webhook
-    signing\" section for the full wire format (header name,
+    `GET /account/webhook-secret`. See the API-level "Webhook
+    signing" section for the full wire format (header name,
     signed string, hash algo, secret format, tolerance) and a
     language-agnostic verification recipe.
 
@@ -166,7 +165,7 @@ def sync(
     body: CreateEndpointInput,
 
 ) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
-    r""" Create a webhook endpoint
+    """ Create a webhook endpoint
 
      Creates a new webhook endpoint. If a deactivated endpoint
     with the same URL and domain exists, it is reactivated
@@ -176,8 +175,8 @@ def sync(
     **Signing is account-scoped, not per-endpoint.** This call
     does not return any signing material; every endpoint on the
     account uses the same webhook secret, fetched via
-    `GET /account/webhook-secret`. See the API-level \"Webhook
-    signing\" section for the full wire format (header name,
+    `GET /account/webhook-secret`. See the API-level "Webhook
+    signing" section for the full wire format (header name,
     signed string, hash algo, secret format, tolerance) and a
     language-agnostic verification recipe.
 
@@ -220,7 +219,7 @@ async def asyncio_detailed(
     body: CreateEndpointInput,
 
 ) -> Response[CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse]:
-    r""" Create a webhook endpoint
+    """ Create a webhook endpoint
 
      Creates a new webhook endpoint. If a deactivated endpoint
     with the same URL and domain exists, it is reactivated
@@ -230,8 +229,8 @@ async def asyncio_detailed(
     **Signing is account-scoped, not per-endpoint.** This call
     does not return any signing material; every endpoint on the
     account uses the same webhook secret, fetched via
-    `GET /account/webhook-secret`. See the API-level \"Webhook
-    signing\" section for the full wire format (header name,
+    `GET /account/webhook-secret`. See the API-level "Webhook
+    signing" section for the full wire format (header name,
     signed string, hash algo, secret format, tolerance) and a
     language-agnostic verification recipe.
 
@@ -279,7 +278,7 @@ async def asyncio(
     body: CreateEndpointInput,
 
 ) -> CreateEndpointResponse200 | CreateEndpointResponse201 | ErrorResponse | None:
-    r""" Create a webhook endpoint
+    """ Create a webhook endpoint
 
      Creates a new webhook endpoint. If a deactivated endpoint
     with the same URL and domain exists, it is reactivated
@@ -289,8 +288,8 @@ async def asyncio(
     **Signing is account-scoped, not per-endpoint.** This call
     does not return any signing material; every endpoint on the
     account uses the same webhook secret, fetched via
-    `GET /account/webhook-secret`. See the API-level \"Webhook
-    signing\" section for the full wire format (header name,
+    `GET /account/webhook-secret`. See the API-level "Webhook
+    signing" section for the full wire format (header name,
     signed string, hash algo, secret format, tolerance) and a
     language-agnostic verification recipe.
 

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class RouteEvaluatedEntryTier(str, Enum):
+class RouteEvaluatedEntryTier(StrEnum):
     EXACT = "exact"
     REGEX = "regex"
     WILDCARD = "wildcard"

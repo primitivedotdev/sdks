@@ -35,7 +35,7 @@ class ReorderRoutesInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.reorder_routes_input_updates_item import ReorderRoutesInputUpdatesItem
+        from ..models.reorder_routes_input_updates_item import ReorderRoutesInputUpdatesItem # noqa: PLC0415
         updates = []
         for updates_item_data in self.updates:
             updates_item = updates_item_data.to_dict()
@@ -56,7 +56,7 @@ class ReorderRoutesInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.reorder_routes_input_updates_item import ReorderRoutesInputUpdatesItem
+        from ..models.reorder_routes_input_updates_item import ReorderRoutesInputUpdatesItem # noqa: PLC0415
         d = dict(src_dict)
         updates = []
         _updates = d.pop("updates")

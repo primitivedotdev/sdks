@@ -48,7 +48,7 @@ class TemplateVariable:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.template_variable_validation import TemplateVariableValidation
+        from ..models.template_variable_validation import TemplateVariableValidation # noqa: PLC0415
         key = self.key
 
         prompt = self.prompt
@@ -92,7 +92,7 @@ class TemplateVariable:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.template_variable_validation import TemplateVariableValidation
+        from ..models.template_variable_validation import TemplateVariableValidation # noqa: PLC0415
         d = dict(src_dict)
         key = d.pop("key")
 

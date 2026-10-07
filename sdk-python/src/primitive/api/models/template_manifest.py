@@ -69,14 +69,14 @@ class TemplateManifest:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.template_author import TemplateAuthor
-        from ..models.template_install import TemplateInstall
-        from ..models.template_secret import TemplateSecret
-        from ..models.template_secret_group import TemplateSecretGroup
-        from ..models.template_setup import TemplateSetup
-        from ..models.template_source_type_0 import TemplateSourceType0
-        from ..models.template_source_type_1 import TemplateSourceType1
-        from ..models.template_variable import TemplateVariable
+        from ..models.template_author import TemplateAuthor # noqa: PLC0415
+        from ..models.template_install import TemplateInstall # noqa: PLC0415
+        from ..models.template_secret import TemplateSecret # noqa: PLC0415
+        from ..models.template_secret_group import TemplateSecretGroup # noqa: PLC0415
+        from ..models.template_setup import TemplateSetup # noqa: PLC0415
+        from ..models.template_source_type_0 import TemplateSourceType0 # noqa: PLC0415
+        from ..models.template_source_type_1 import TemplateSourceType1 # noqa: PLC0415
+        from ..models.template_variable import TemplateVariable # noqa: PLC0415
         schema_version = self.schema_version
 
         id = self.id
@@ -158,14 +158,14 @@ class TemplateManifest:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.template_author import TemplateAuthor
-        from ..models.template_install import TemplateInstall
-        from ..models.template_secret import TemplateSecret
-        from ..models.template_secret_group import TemplateSecretGroup
-        from ..models.template_setup import TemplateSetup
-        from ..models.template_source_type_0 import TemplateSourceType0
-        from ..models.template_source_type_1 import TemplateSourceType1
-        from ..models.template_variable import TemplateVariable
+        from ..models.template_author import TemplateAuthor # noqa: PLC0415
+        from ..models.template_install import TemplateInstall # noqa: PLC0415
+        from ..models.template_secret import TemplateSecret # noqa: PLC0415
+        from ..models.template_secret_group import TemplateSecretGroup # noqa: PLC0415
+        from ..models.template_setup import TemplateSetup # noqa: PLC0415
+        from ..models.template_source_type_0 import TemplateSourceType0 # noqa: PLC0415
+        from ..models.template_source_type_1 import TemplateSourceType1 # noqa: PLC0415
+        from ..models.template_variable import TemplateVariable # noqa: PLC0415
         d = dict(src_dict)
         schema_version = cast(Literal[1] , d.pop("schemaVersion"))
         if schema_version != 1:

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class RepeatStopResultStatus(str, Enum):
+class RepeatStopResultStatus(StrEnum):
     STOPPED_BY_RECIPIENT = "stopped_by_recipient"
 
     def __str__(self) -> str:

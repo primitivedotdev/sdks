@@ -4,6 +4,16 @@ The local receiver builds on named pull destinations and their durable queue.
 The CLI and Node, Python, and Go SDKs use WebSocket by default. HTTP polling is
 an explicit alternative, with the same subscription and completion semantics.
 
+## Credentials
+
+Creating a subscription requires a connected agent credential (an API key
+starting with `pconn_`, as saved by `primitive agent connect`). The subscription
+receives inbound email for that agent's address. Account API keys and member
+sign-in are refused with `pull_subscription_requires_agent_connection`: the CLI
+and SDKs stop before making a request, with a message naming the alternatives.
+With an account key, receive mail with `GET /emails?since=<cursor>&wait=30`
+(`primitive emails watch` in the CLI) or an HTTP webhook endpoint.
+
 ## Developer interface
 
 - CLI: `primitive listen --forward-to localhost:3000`. Port-only targets also
@@ -27,10 +37,10 @@ an SDK. The SDK neither prints nor installs process-wide signal handlers.
 
 One stable subscription name is required by SDKs. It uses the existing name
 format: 1-64 ASCII letters/digits/underscores/hyphens, beginning with a letter
-or digit. CLI users retain their saved account/environment-scoped default.
+or digit. CLI users retain their saved credential/environment-scoped default.
 
 Registration uses `createEndpoint`, `POST /v1/endpoints`, with `kind: "pull"`
-and `name`. Same account and name shares work. Different names receive independent
+and `name`. Same credential and name shares work. Different names receive independent
 copies. Omitted event filters preserve the existing selection; conflicting
 filters fail without changing the queue. New subscriptions receive new events,
 without historical backfill. Close never deletes a subscription.

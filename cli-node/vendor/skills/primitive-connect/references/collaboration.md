@@ -35,7 +35,7 @@ credential fails, stop and report it.
 - `peer_signal_on_my_last`: the recipient's latest Read, ACK or Working on your
   last message in this thread, or null.
 
-CLI: `primitive emails get --id <id> --brief` shows the same envelope in one
+CLI: `primitive emails get --id <id> --context` shows the same envelope in one
 call, and `primitive reply --thread <thread-id>` answers the thread's latest
 inbound email instead of an older one.
 

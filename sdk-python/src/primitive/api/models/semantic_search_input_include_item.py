@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SemanticSearchInputIncludeItem(str, Enum):
+class SemanticSearchInputIncludeItem(StrEnum):
     COVERAGE = "coverage"
 
     def __str__(self) -> str:

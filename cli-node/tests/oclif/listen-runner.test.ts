@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
@@ -66,10 +66,9 @@ const apiError = (
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "primitive-listen-runner-"));
   controller = new AbortController();
-  token = "token-a";
+  token = `pconn_${"a".repeat(64)}`;
   requests = [];
   steps = {
-    "/v1/account": [ok({ id: "account-a" })],
     "/v1/endpoints": [ok({ id: "endpoint-a", kind: "pull", enabled: true })],
     "/v1/endpoints/endpoint-a/pull": [pull(delivery)],
     "/v1/endpoints/endpoint-a/complete": [ok({ result: "completed" })],
@@ -316,30 +315,33 @@ describe("local webhook runner", () => {
     expect(options.sleep).not.toHaveBeenCalled();
     expect(options.handler).not.toHaveBeenCalled();
   });
-  it("refreshes changed credentials and refuses a different account before pulling", async () => {
+  it("refreshes changed credentials and refuses a different connected credential before pulling", async () => {
     steps["/v1/endpoints"] = [
       () => {
-        token = "token-b";
+        token = `pconn_${"b".repeat(64)}`;
         return ok({ id: "endpoint-a", kind: "pull", enabled: true });
       },
     ];
-    steps["/v1/account"]?.push(ok({ id: "account-b" }));
-    await expect(runListen(options)).rejects.toThrow("account changed");
+    await expect(runListen(options)).rejects.toThrow("credential changed");
     expect(bodies("/pull")).toEqual([]);
     expect(options.handler).not.toHaveBeenCalled();
   });
-  it("accepts rotated credentials for the same account without changing subscription ownership", async () => {
+  it("refuses an account credential before any request or local state", async () => {
+    token = "prim_account";
+    await expect(runListen(options)).rejects.toThrow(
+      "needs a connected agent credential",
+    );
+    expect(requests).toEqual([]);
+    expect(readdirSync(directory)).toEqual([]);
+    expect(options.handler).not.toHaveBeenCalled();
+  });
+  it("refuses a credential the API rejects for subscriptions with the same guidance", async () => {
     steps["/v1/endpoints"] = [
-      () => {
-        token = "token-b";
-        return ok({ id: "endpoint-a", kind: "pull", enabled: true });
-      },
+      apiError(403, "pull_subscription_requires_agent_connection"),
     ];
-    steps["/v1/account"]?.push(ok({ id: "account-a" }));
-    expect(await runListen(options)).toBe(1);
-    expect(
-      requests.find((request) => request.path.endsWith("/pull"))?.authorization,
-    ).toBe("Bearer token-b");
+    await expect(runListen(options)).rejects.toThrow("primitive agent connect");
+    expect(options.sleep).not.toHaveBeenCalled();
+    expect(options.handler).not.toHaveBeenCalled();
   });
   it("waits for cancelled handler cleanup and sends no completion for unfinished work", async () => {
     let cleanup = false;
@@ -390,7 +392,6 @@ it("keeps the subscription locked until aborted handler cleanup has finished", a
   const first = runListen(options);
   await entered;
   controller.abort();
-  steps["/v1/account"]?.push(ok({ id: "account-a" }));
   const another = new AbortController();
   await expect(
     runListen({ ...options, signal: another.signal }),

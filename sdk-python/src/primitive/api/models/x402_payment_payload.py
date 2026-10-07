@@ -46,7 +46,7 @@ class X402PaymentPayload:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.x402_payment_payload_payload import X402PaymentPayloadPayload
+        from ..models.x402_payment_payload_payload import X402PaymentPayloadPayload # noqa: PLC0415
         x_402_version = self.x_402_version
 
         scheme = self.scheme
@@ -71,7 +71,7 @@ class X402PaymentPayload:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.x402_payment_payload_payload import X402PaymentPayloadPayload
+        from ..models.x402_payment_payload_payload import X402PaymentPayloadPayload # noqa: PLC0415
         d = dict(src_dict)
         x_402_version = cast(Literal[1] , d.pop("x402Version"))
         if x_402_version != 1:

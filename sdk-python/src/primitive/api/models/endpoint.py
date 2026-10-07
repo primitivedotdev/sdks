@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.endpoint_kind import EndpointKind
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -86,8 +85,8 @@ class Endpoint:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities
-        from ..models.endpoint_rules import EndpointRules
+        from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
+        from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         id = str(self.id)
 
         org_id = str(self.org_id)
@@ -231,8 +230,8 @@ class Endpoint:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities
-        from ..models.endpoint_rules import EndpointRules
+        from ..models.endpoint_receiver_capabilities import EndpointReceiverCapabilities # noqa: PLC0415
+        from ..models.endpoint_rules import EndpointRules # noqa: PLC0415
         d = dict(src_dict)
         id = UUID(d.pop("id"))
 
@@ -251,12 +250,12 @@ class Endpoint:
 
 
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        updated_at = isoparse(d.pop("updated_at"))
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
 
@@ -327,7 +326,7 @@ class Endpoint:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_delivery_at_type_0 = isoparse(data)
+                last_delivery_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -347,7 +346,7 @@ class Endpoint:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_success_at_type_0 = isoparse(data)
+                last_success_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -367,7 +366,7 @@ class Endpoint:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_failure_at_type_0 = isoparse(data)
+                last_failure_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -387,7 +386,7 @@ class Endpoint:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                deactivated_at_type_0 = isoparse(data)
+                deactivated_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class ThreadMessageDirection(str, Enum):
+class ThreadMessageDirection(StrEnum):
     INBOUND = "inbound"
     OUTBOUND = "outbound"
 

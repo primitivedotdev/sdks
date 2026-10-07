@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.delivery_summary_status import DeliverySummaryStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -62,7 +61,7 @@ class DeliverySummary:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.delivery_summary_email_type_0 import DeliverySummaryEmailType0
+        from ..models.delivery_summary_email_type_0 import DeliverySummaryEmailType0 # noqa: PLC0415
         id = self.id
 
         email_id = str(self.email_id)
@@ -128,7 +127,7 @@ class DeliverySummary:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.delivery_summary_email_type_0 import DeliverySummaryEmailType0
+        from ..models.delivery_summary_email_type_0 import DeliverySummaryEmailType0 # noqa: PLC0415
         d = dict(src_dict)
         id = d.pop("id")
 
@@ -156,12 +155,12 @@ class DeliverySummary:
 
         attempt_count = d.pop("attempt_count")
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        updated_at = isoparse(d.pop("updated_at"))
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
 

@@ -38,7 +38,7 @@ class StartCliLoginInput:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.start_cli_login_input_metadata import StartCliLoginInputMetadata
+        from ..models.start_cli_login_input_metadata import StartCliLoginInputMetadata # noqa: PLC0415
         device_name = self.device_name
 
         metadata: dict[str, Any] | Unset = UNSET
@@ -61,7 +61,7 @@ class StartCliLoginInput:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.start_cli_login_input_metadata import StartCliLoginInputMetadata
+        from ..models.start_cli_login_input_metadata import StartCliLoginInputMetadata # noqa: PLC0415
         d = dict(src_dict)
         device_name = d.pop("device_name", UNSET)
 

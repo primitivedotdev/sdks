@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SearchEmailsSort(str, Enum):
+class SearchEmailsSort(StrEnum):
     RECEIVED_AT_ASC = "received_at_asc"
     RECEIVED_AT_DESC = "received_at_desc"
     RELEVANCE = "relevance"

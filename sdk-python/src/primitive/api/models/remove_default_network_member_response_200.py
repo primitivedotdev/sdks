@@ -38,7 +38,7 @@ class RemoveDefaultNetworkMemberResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.remove_default_network_member_response_200_data import RemoveDefaultNetworkMemberResponse200Data
+        from ..models.remove_default_network_member_response_200_data import RemoveDefaultNetworkMemberResponse200Data # noqa: PLC0415
         success = self.success
 
         data: dict[str, Any] | Unset = UNSET
@@ -60,7 +60,7 @@ class RemoveDefaultNetworkMemberResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.remove_default_network_member_response_200_data import RemoveDefaultNetworkMemberResponse200Data
+        from ..models.remove_default_network_member_response_200_data import RemoveDefaultNetworkMemberResponse200Data # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

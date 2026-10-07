@@ -9,7 +9,6 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.repeating_send_status import RepeatingSendStatus
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -243,7 +242,7 @@ class RepeatingSend:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                until_type_0 = isoparse(data)
+                until_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -266,7 +265,7 @@ class RepeatingSend:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                next_run_at_type_0 = isoparse(data)
+                next_run_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -286,7 +285,7 @@ class RepeatingSend:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                last_sent_at_type_0 = isoparse(data)
+                last_sent_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -330,7 +329,7 @@ class RepeatingSend:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                stopped_at_type_0 = isoparse(data)
+                stopped_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 
@@ -350,12 +349,12 @@ class RepeatingSend:
         stop_reason = _parse_stop_reason(d.pop("stop_reason"))
 
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
 
-        updated_at = isoparse(d.pop("updated_at"))
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
 

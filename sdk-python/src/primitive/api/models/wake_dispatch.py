@@ -8,7 +8,6 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
-from dateutil.parser import isoparse
 from typing import cast
 from uuid import UUID
 import datetime
@@ -137,7 +136,7 @@ class WakeDispatch:
 
         our_address = d.pop("our_address")
 
-        created_at = isoparse(d.pop("created_at"))
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
 
 
 
@@ -172,7 +171,7 @@ class WakeDispatch:
             try:
                 if not isinstance(data, str):
                     raise TypeError()
-                completed_at_type_0 = isoparse(data)
+                completed_at_type_0 = datetime.datetime.fromisoformat(data)
 
 
 

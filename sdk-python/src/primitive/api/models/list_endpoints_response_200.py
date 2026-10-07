@@ -38,7 +38,7 @@ class ListEndpointsResponse200:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.endpoint import Endpoint
+        from ..models.endpoint import Endpoint # noqa: PLC0415
         success = self.success
 
         data: list[dict[str, Any]] | Unset = UNSET
@@ -65,7 +65,7 @@ class ListEndpointsResponse200:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.endpoint import Endpoint
+        from ..models.endpoint import Endpoint # noqa: PLC0415
         d = dict(src_dict)
         success = d.pop("success")
 

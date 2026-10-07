@@ -38,7 +38,7 @@ class DomainVerifyResultType0:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.domain_dns_record import DomainDnsRecord
+        from ..models.domain_dns_record import DomainDnsRecord # noqa: PLC0415
         verified = self.verified
 
         dns_records: list[dict[str, Any]] | Unset = UNSET
@@ -65,7 +65,7 @@ class DomainVerifyResultType0:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.domain_dns_record import DomainDnsRecord
+        from ..models.domain_dns_record import DomainDnsRecord # noqa: PLC0415
         d = dict(src_dict)
         verified = d.pop("verified")
 

@@ -52,7 +52,7 @@ async def test_receipt_and_subscription_lifecycle() -> None:
     async with httpx.AsyncClient(
         base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
     ) as http:
-        client = PrimitiveClient("test")
+        client = PrimitiveClient("pconn_test")
         client.api_client.set_async_httpx_client(http)
         with pytest.raises(ValueError, match="transport"):
             await client.events.wait(
@@ -80,6 +80,53 @@ async def test_receipt_and_subscription_lifecycle() -> None:
 
 
 @pytest.mark.anyio
+async def test_account_key_is_refused_before_any_request() -> None:
+    requests: list[httpx.Request] = []
+
+    async def fetch(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(500)
+
+    async with httpx.AsyncClient(
+        base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
+    ) as http:
+        client = PrimitiveClient("prim_account")
+        client.api_client.set_async_httpx_client(http)
+        with pytest.raises(EventReceiverError, match="connected agent credential") as raised:
+            await client.events.wait(subscription="agent", transport="poll")
+        assert raised.value.code == "pull_subscription_requires_agent_connection"
+        assert raised.value.status == 403
+        assert not requests
+        # The subscription is released, so a corrected caller can retry it.
+        with pytest.raises(EventReceiverError, match="connected agent credential"):
+            await client.events.wait(subscription="agent", transport="poll")
+
+
+@pytest.mark.anyio
+async def test_server_refusal_is_explained() -> None:
+    async def fetch(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            403,
+            json={
+                "success": False,
+                "error": {
+                    "code": "pull_subscription_requires_agent_connection",
+                    "message": "refused",
+                },
+            },
+        )
+
+    async with httpx.AsyncClient(
+        base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
+    ) as http:
+        client = PrimitiveClient("pconn_test")
+        client.api_client.set_async_httpx_client(http)
+        with pytest.raises(EventReceiverError, match="GET /emails") as raised:
+            await client.events.wait(subscription="agent", transport="poll")
+        assert raised.value.code == "pull_subscription_requires_agent_connection"
+
+
+@pytest.mark.anyio
 async def test_timeout_and_cancellation_release_subscription() -> None:
     async def fetch(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/pull"):
@@ -102,7 +149,7 @@ async def test_timeout_and_cancellation_release_subscription() -> None:
     async with httpx.AsyncClient(
         base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
     ) as http:
-        client = PrimitiveClient("test")
+        client = PrimitiveClient("pconn_test")
         client.api_client.set_async_httpx_client(http)
         assert (
             await client.events.wait(
@@ -163,7 +210,7 @@ async def test_listener_accepts_only_after_handler_and_gracefully_closes() -> No
     async with httpx.AsyncClient(
         base_url="https://api.example.test/v1/", transport=httpx.MockTransport(fetch)
     ) as http:
-        client = PrimitiveClient("test")
+        client = PrimitiveClient("pconn_test")
         client.api_client.set_async_httpx_client(http)
         listener = await client.events.listen(
             handler, subscription="agent", transport="poll"
@@ -191,7 +238,7 @@ async def test_websocket_reconnect_retries_receipt_without_receiving_again() -> 
             async for message in socket:
                 frame = json.loads(message)
                 if frame["type"] == "authenticate":
-                    assert frame["token"] == "test"
+                    assert frame["token"] == "pconn_test"
                     await socket.send(
                         json.dumps({"type": "ready", "protocol": "primitive.events.v1"})
                     )
@@ -260,7 +307,7 @@ async def test_websocket_reconnect_retries_receipt_without_receiving_again() -> 
             base_url=f"http://127.0.0.1:{port}/v1/",
             transport=httpx.MockTransport(fetch),
         ) as http:
-            client = PrimitiveClient("test")
+            client = PrimitiveClient("pconn_test")
             client.api_client.set_async_httpx_client(http)
             delivery = await client.events.wait(subscription="agent", timeout=3)
             assert delivery is not None

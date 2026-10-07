@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class CompleteWebhookHttpInputTransportError(str, Enum):
+class CompleteWebhookHttpInputTransportError(StrEnum):
     IO = "io"
     NETWORK = "network"
     RESPONSE_TOO_LARGE = "response_too_large"

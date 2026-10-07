@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class GetMemoryScopeType(str, Enum):
+class GetMemoryScopeType(StrEnum):
     FUNCTION = "function"
     ORG = "org"
 

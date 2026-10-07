@@ -47,7 +47,7 @@ class PullWebhookResponseData:
 
 
     def to_dict(self) -> dict[str, Any]:
-        from ..models.pull_webhook_response_data_delivery_type_0 import PullWebhookResponseDataDeliveryType0
+        from ..models.pull_webhook_response_data_delivery_type_0 import PullWebhookResponseDataDeliveryType0 # noqa: PLC0415
         delivery: dict[str, Any] | None
         if isinstance(self.delivery, PullWebhookResponseDataDeliveryType0):
             delivery = self.delivery.to_dict()
@@ -83,7 +83,7 @@ class PullWebhookResponseData:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
-        from ..models.pull_webhook_response_data_delivery_type_0 import PullWebhookResponseDataDeliveryType0
+        from ..models.pull_webhook_response_data_delivery_type_0 import PullWebhookResponseDataDeliveryType0 # noqa: PLC0415
         d = dict(src_dict)
         def _parse_delivery(data: object) -> None | PullWebhookResponseDataDeliveryType0:
             if data is None:

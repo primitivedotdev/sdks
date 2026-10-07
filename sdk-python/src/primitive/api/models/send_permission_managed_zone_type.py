@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SendPermissionManagedZoneType(str, Enum):
+class SendPermissionManagedZoneType(StrEnum):
     MANAGED_ZONE = "managed_zone"
 
     def __str__(self) -> str:

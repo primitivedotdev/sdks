@@ -72,7 +72,7 @@ test("PostToolUse checks the exact session and delivers trusted pending metadata
   assert.match(
     context,
     new RegExp(
-      `Read with PRIMITIVE_AGENT_PROFILE=agent primitive emails get --id ${email} --brief\\.`,
+      `Read with PRIMITIVE_AGENT_PROFILE=agent primitive emails get --id ${email} --context\\.`,
     ),
   );
   assert.doesNotMatch(context, /must-not-reach-child/);
