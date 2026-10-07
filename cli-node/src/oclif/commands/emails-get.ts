@@ -243,14 +243,24 @@ export function createEmailsGetCommand(base: typeof Command): typeof Command {
     } as never;
 
     async run(): Promise<void> {
+      // --brief was renamed --context. A wake listener runs for days on the
+      // CLI version that started it, so after an upgrade it still prints
+      // `--brief` read commands; failing those would break every agent it
+      // wakes until it restarts. Run them as --context and say so on stderr.
+      if (this.argv.includes("--brief")) {
+        this.argv = this.argv.map((arg) =>
+          arg === "--brief" ? "--context" : arg,
+        );
+        process.stderr.write(
+          "Note: --brief is now --context; ran it as --context.\n",
+        );
+      }
       const { flags } = await this.parse(EmailsGetCommand as never).catch(
         (error: unknown) => {
           if (
             error instanceof Error &&
             error.message.startsWith("Nonexistent flag") &&
-            this.argv.some(
-              (arg) => arg === "--brief" || arg.startsWith("--brief="),
-            )
+            this.argv.some((arg) => arg.startsWith("--brief="))
           )
             throw new Errors.CLIError(
               "--brief is now --context. Run the same command with --context.",
