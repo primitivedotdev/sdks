@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class EmailSearchResultDirection(str, Enum):
+class EmailSearchResultDirection(StrEnum):
     INBOUND = "inbound"
     OUTBOUND = "outbound"
 

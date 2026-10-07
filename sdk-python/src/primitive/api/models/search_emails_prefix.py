@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SearchEmailsPrefix(str, Enum):
+class SearchEmailsPrefix(StrEnum):
     FALSE = "false"
     TRUE = "true"
 

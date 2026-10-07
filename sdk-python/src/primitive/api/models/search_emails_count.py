@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import StrEnum
 
-class SearchEmailsCount(str, Enum):
+class SearchEmailsCount(StrEnum):
     FALSE = "false"
     TRUE = "true"
 
