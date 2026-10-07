@@ -352,8 +352,10 @@ class SearchCommand extends Command {
       const query: SearchQuery = {
         // `domain` is expressed via the DSL on `q` rather than a
         // separate query param, mirroring how emails-poll composes it.
+        // It goes first so the user's last word stays last: --prefix only
+        // expands the final word, and a trailing field filter disables it.
         q: flags.domain
-          ? `${args.query} domain:${quoteDslValue(flags.domain)}`
+          ? `domain:${quoteDslValue(flags.domain)} ${args.query}`
           : args.query,
         limit: flags.limit,
       };
@@ -430,13 +432,12 @@ class SearchCommand extends Command {
       const rows = envelope?.data ?? [];
       if (rows.length === 0) {
         process.stderr.write("No matching mail.\n");
-        return;
-      }
-
-      const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
-      process.stderr.write(`${formatLexicalHeader(idWidth)}\n`);
-      for (const row of rows) {
-        this.log(formatLexicalRow(row, idWidth));
+      } else {
+        const idWidth = pickIdWidth(Boolean(process.stdout.isTTY));
+        process.stderr.write(`${formatLexicalHeader(idWidth)}\n`);
+        for (const row of rows) {
+          this.log(formatLexicalRow(row, idWidth));
+        }
       }
 
       if (flags.envelope) {

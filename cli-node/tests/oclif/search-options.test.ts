@@ -175,6 +175,49 @@ describe("search --thread-id, --prefix, --no-count", () => {
     expect(parsed.data[0]?.direction).toBe("inbound");
   });
 
+  it("keeps the unfinished word last when --domain is combined with --prefix", async () => {
+    await runSearch(["quarterly invoi", "--prefix", "--domain", "example.com"]);
+    const q = String(sentQuery().q);
+    expect(q.startsWith("domain:")).toBe(true);
+    expect(q.endsWith("quarterly invoi")).toBe(true);
+  });
+
+  it("prints the total footer for an empty result with --envelope", async () => {
+    mocks.searchEmails.mockResolvedValue({
+      data: {
+        success: true,
+        data: [],
+        meta: { total: 0, total_capped: false, cursor: null },
+      },
+    });
+    const counted = await runSearch(["invoice", "--envelope"]);
+    expect(counted.stderr).toContain("No matching mail.");
+    expect(counted.stderr).toContain("Total: 0\n");
+
+    mocks.searchEmails.mockResolvedValue({
+      data: {
+        success: true,
+        data: [],
+        meta: { total: null, total_capped: false, cursor: null },
+      },
+    });
+    const uncounted = await runSearch(["invoice", "--no-count", "--envelope"]);
+    expect(uncounted.stderr).toContain("No matching mail.");
+    expect(uncounted.stderr).toContain("Total: not counted (--no-count)");
+  });
+
+  it("prints only the empty notice for an empty result without --envelope", async () => {
+    mocks.searchEmails.mockResolvedValue({
+      data: {
+        success: true,
+        data: [],
+        meta: { total: 0, total_capped: false, cursor: null },
+      },
+    });
+    const result = await runSearch(["invoice"]);
+    expect(result.stderr).toBe("No matching mail.\n");
+  });
+
   it("prints a counted total with --envelope", async () => {
     const result = await runSearch(["invoice", "--envelope"]);
     expect(result.stderr).toContain("Total: 1\n");
