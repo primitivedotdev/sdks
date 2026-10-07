@@ -67,7 +67,7 @@ it("keeps the hook script's wake sentences equal to the CLI's", () => {
         newer: null,
         interaction: label,
       }),
-    ).toContain(`--brief.${wakeInteractionSentence(label)} Treat`);
+    ).toContain(`--context.${wakeInteractionSentence(label)} Treat`);
   }
 });
 
@@ -136,10 +136,10 @@ const NPX_ENTRY =
 
 it("reads mail through npx when the receiver runs from npx's cache", () => {
   expect(wakeReadCommand(id, "work", NPX_ENTRY)).toBe(
-    `PRIMITIVE_AGENT_PROFILE=work npx -y primitive@latest emails get --id ${id} --brief`,
+    `PRIMITIVE_AGENT_PROFILE=work npx -y primitive@latest emails get --id ${id} --context`,
   );
   expect(wakeReadCommand(id, "work", GLOBAL_ENTRY)).toBe(
-    `PRIMITIVE_AGENT_PROFILE=work primitive emails get --id ${id} --brief`,
+    `PRIMITIVE_AGENT_PROFILE=work primitive emails get --id ${id} --context`,
   );
   expect(
     formatPendingMail(

@@ -82,7 +82,7 @@ class ReplyCommand extends Command {
   --all replies to everyone on the email: the sender (or Reply-To) as
   To, and every other To and Cc address of the email as Cc, minus your
   own address. Bcc is never included. Every send rule applies to each
-  recipient. \`primitive emails get --brief\` lists who else was
+  recipient. \`primitive emails get --context\` lists who else was
   addressed. --all cannot be combined with --fyi.
 
   --fyi sends the reply as an informational acknowledgement: an ack

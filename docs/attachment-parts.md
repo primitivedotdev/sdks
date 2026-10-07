@@ -115,7 +115,7 @@ following `Retry-After` and otherwise backing off from 1 to 8 seconds. A single
 note goes to stderr when waiting starts; stdout still carries only the bytes.
 Pass `--no-wait` to return the error immediately. Other errors are never retried.
 
-`primitive emails get --id <email-id> --brief` lists each attachment's filename,
+`primitive emails get --id <email-id> --context` lists each attachment's filename,
 content type, size and `part_index`, with the exact command that downloads it
 and one that downloads the whole archive. The suggested output name is
 `attachment-<part_index>` plus the filename's extension when that extension is

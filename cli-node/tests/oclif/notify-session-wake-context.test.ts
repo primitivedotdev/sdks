@@ -66,7 +66,7 @@ async function setup(
   return { detail, notifications, queue };
 }
 
-it("adds server-derived wake metadata and the --brief read command", async () => {
+it("adds server-derived wake metadata and the --context read command", async () => {
   const thread = "44444444-4444-4444-8444-444444444444";
   const f = await setup(async () => ({
     sender: "sender@example.com",
@@ -96,7 +96,7 @@ it("adds server-derived wake metadata and the --brief read command", async () =>
     attachments: true,
     newer_inbound_count: 3,
   });
-  expect(text).toContain(`primitive emails get --id ${f.detail.id} --brief`);
+  expect(text).toContain(`primitive emails get --id ${f.detail.id} --context`);
   expect(text).not.toContain("Secret subject text");
   expect(text).not.toContain("Secret body text");
 });
@@ -136,7 +136,7 @@ it("names a server-classified interaction in the wake", async () => {
   );
   expect(payload.interaction).toBe("x402.payment/1");
   expect(text).toContain(
-    "Primitive classifies this email as x402.payment/1. It is an interaction a plain reply does not complete; the brief names the command that answers it.",
+    "Primitive classifies this email as x402.payment/1. It is an interaction a plain reply does not complete; that read names the command that answers it.",
   );
 });
 
@@ -199,7 +199,7 @@ it("names the receiving address and selects its profile in the read command", as
     profile: "session-work",
   });
   expect(text).toContain(
-    `Inspect only when relevant: PRIMITIVE_AGENT_PROFILE=session-work primitive emails get --id ${f.detail.id} --brief`,
+    `Inspect only when relevant: PRIMITIVE_AGENT_PROFILE=session-work primitive emails get --id ${f.detail.id} --context`,
   );
 });
 

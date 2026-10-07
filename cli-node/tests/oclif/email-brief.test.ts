@@ -958,7 +958,7 @@ describe("emails get", () => {
     });
     startWorkingLease(configDir, emailId);
     const result = await run(
-      ["--id", emailId, "--brief", "--no-signal"],
+      ["--id", emailId, "--context", "--no-signal"],
       baseRoutes(),
     );
     expect(result.code).toBeUndefined();
@@ -977,9 +977,9 @@ describe("emails get", () => {
     });
     startWorkingLease(configDir, emailId);
     vi.stubEnv("PRIMITIVE_NO_AUTO_SIGNALS", "1");
-    const result = await run(["--id", emailId, "--brief"], baseRoutes());
+    const result = await run(["--id", emailId, "--context"], baseRoutes());
     expect(result.stdout).toContain("The sender now sees you working on this");
-    expect(result.stdout).toContain(`--id ${emailId} --brief --no-signal`);
+    expect(result.stdout).toContain(`--id ${emailId} --context --no-signal`);
   });
 
   it("treats a lease past the renewal cap or stopped as not running", () => {
@@ -1010,7 +1010,7 @@ describe("emails get", () => {
       threadId: thread,
     });
     startWorkingLease(configDir, otherId);
-    await run(["--id", otherId, "--brief", "--no-signal"], {});
+    await run(["--id", otherId, "--context", "--no-signal"], {});
     expect(readWorkingLease(configDir, otherId)?.stop_reason).toBe(
       "not_acting",
     );
@@ -1022,16 +1022,16 @@ describe("emails get", () => {
       "PRIMITIVE_AGENT_PROFILE=work primitive",
     );
     expect(command).toBe(
-      `PRIMITIVE_AGENT_PROFILE=work primitive emails get --id ${emailId} --brief --no-signal`,
+      `PRIMITIVE_AGENT_PROFILE=work primitive emails get --id ${emailId} --context --no-signal`,
     );
     expect(workingStopLine(command)).toContain(
       "sends nothing and is not an action toward the sender",
     );
   });
 
-  it("prints one JSON object for --brief --json", async () => {
+  it("prints one JSON object for --context --json", async () => {
     const result = await run(
-      ["--id", emailId, "--brief", "--json"],
+      ["--id", emailId, "--context", "--json"],
       baseRoutes(),
     );
     const parsed = JSON.parse(result.stdout);
@@ -1052,13 +1052,13 @@ describe("emails get", () => {
   it("clears only the read email from this session's pending notices", async () => {
     await seed();
     vi.stubEnv("CLAUDE_CODE_SESSION_ID", session);
-    await run(["--id", emailId, "--brief"], baseRoutes());
+    await run(["--id", emailId, "--context"], baseRoutes());
     expect(
       readPendingMail(configDir, "work", session).map((row) => row.email_id),
     ).toEqual([otherId]);
   });
 
-  it("keeps the generated output without --brief and still clears the notice", async () => {
+  it("keeps the generated output without --context and still clears the notice", async () => {
     await seed();
     vi.stubEnv("CLAUDE_CODE_SESSION_ID", session);
     const result = await run(["--id", emailId], baseRoutes());
@@ -1115,9 +1115,17 @@ describe("emails get", () => {
     ).toEqual([otherId]);
   });
 
-  it("rejects --compact with --brief", async () => {
+  it("names the new flag when the removed --brief is used", async () => {
     await expect(
-      run(["--id", emailId, "--compact", "--brief"], baseRoutes()),
+      run(["--id", emailId, "--brief"], baseRoutes()),
+    ).rejects.toThrow(
+      "--brief is now --context. Run the same command with --context.",
+    );
+  });
+
+  it("rejects --compact with --context", async () => {
+    await expect(
+      run(["--id", emailId, "--compact", "--context"], baseRoutes()),
     ).rejects.toThrow(/cannot also be provided/);
   });
 
@@ -1129,7 +1137,7 @@ describe("emails get", () => {
 
   it("leaves notices when the read fails", async () => {
     await seed();
-    const result = await run(["--id", emailId, "--brief"], {});
+    const result = await run(["--id", emailId, "--context"], {});
     expect(result.code).toBe(1);
     expect(readPendingMail(configDir, "work", session)).toHaveLength(2);
   });
@@ -1150,22 +1158,22 @@ describe("emails get", () => {
     });
     vi.stubEnv("CLAUDE_CODE_SESSION_ID", session);
     for (const argv of [
-      ["--id", emailId, "--brief"],
+      ["--id", emailId, "--context"],
       ["--id", emailId],
     ]) {
       const result = await run(argv, {});
       expect(result.code).toBe(1);
       expect(result.stderr).toContain(
-        `Email ${emailId} is a pending notice for profile other, not the profile this command used. Read it with PRIMITIVE_AGENT_PROFILE=other primitive emails get --id ${emailId} --brief.`,
+        `Email ${emailId} is a pending notice for profile other, not the profile this command used. Read it with PRIMITIVE_AGENT_PROFILE=other primitive emails get --id ${emailId} --context.`,
       );
     }
     expect(readPendingMail(configDir, "other", session)).toHaveLength(1);
   });
 
-  it("drops its own notice after repeated not_found reads, with or without --brief", async () => {
+  it("drops its own notice after repeated not_found reads, with or without --context", async () => {
     await seed();
     vi.stubEnv("CLAUDE_CODE_SESSION_ID", session);
-    const first = await run(["--id", emailId, "--brief"], {});
+    const first = await run(["--id", emailId, "--context"], {});
     expect(first.stderr).not.toContain("Dropped");
     await run(["--id", emailId], {});
     expect(readPendingMail(configDir, "work", session)).toHaveLength(2);
@@ -1332,7 +1340,7 @@ describe("interaction answers in the brief", () => {
       interaction_candidate: true,
     });
     expect(brief.envelope.next_actions.map((action) => action.command)).toEqual(
-      [`primitive emails get --id ${emailId} --brief`],
+      [`primitive emails get --id ${emailId} --context`],
     );
     expect(answerLine(text)).toContain("has not finished checking");
   });

@@ -544,7 +544,7 @@ const generatedCommands = Object.fromEntries(
     ]),
 );
 
-// `emails get` keeps the generated output and adds --brief plus clearing of
+// `emails get` keeps the generated output and adds --context plus clearing of
 // the session's pending wake notice for the email it read.
 const emailsGetCommand = createEmailsGetCommand(
   generatedCommands["emails:get-email"] as typeof Command,

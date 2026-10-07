@@ -164,7 +164,7 @@ export async function checkAgentMail(options: {
   // connected profiles, and an email is readable only under the one that
   // received it.
   const readCommand = (id: string) =>
-    `PRIMITIVE_AGENT_PROFILE=${identity.profileName} ${options.invocation ?? "primitive"} emails get --id ${id} --brief`;
+    `PRIMITIVE_AGENT_PROFILE=${identity.profileName} ${options.invocation ?? "primitive"} emails get --id ${id} --context`;
   const to = identity.agentAddress.toLowerCase();
   // Runs beside the mail read; it never throws and is bounded by its timeout.
   const ownerMember = (

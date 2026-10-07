@@ -91,7 +91,7 @@ it("names the profile that holds the notice when another profile reads it", asyn
     `session-${session}`,
   ]);
   expect(await explain()).toBe(
-    `Email ${emailId} is a pending notice for profile session-${session} (session-agent@example.test), not the profile this command used. Read it with PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.\n`,
+    `Email ${emailId} is a pending notice for profile session-${session} (session-agent@example.test), not the profile this command used. Read it with PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --context.\n`,
   );
   // A miss under the wrong profile never counts against the real holder.
   for (let read = 0; read < PENDING_NOT_FOUND_LIMIT + 1; read += 1)
@@ -137,7 +137,7 @@ it("names the session's other address for an email no notice covers", async () =
   await recordPendingMail(configDir, "named", session, notice(otherEmail));
   process.env.PRIMITIVE_AGENT_PROFILE = "named";
   expect(await explain()).toBe(
-    `Email ${emailId} was not found for named@example.test (profile named); an email is readable only under the profile that received it. This session also receives for: session-agent@example.test (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.\n`,
+    `Email ${emailId} was not found for named@example.test (profile named); an email is readable only under the profile that received it. This session also receives for: session-agent@example.test (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --context.\n`,
   );
 });
 
@@ -146,7 +146,7 @@ it("names other saved connected profiles without a runtime session, and counts n
   delete process.env.CLAUDE_CODE_SESSION_ID;
   process.env.PRIMITIVE_AGENT_PROFILE = "named";
   expect(await explain()).toBe(
-    `Email ${emailId} was not found for named@example.test (profile named); an email is readable only under the profile that received it. Other connected profiles saved on this machine: session-agent@example.test (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --brief.\n`,
+    `Email ${emailId} was not found for named@example.test (profile named); an email is readable only under the profile that received it. Other connected profiles saved on this machine: session-agent@example.test (profile session-${session}): PRIMITIVE_AGENT_PROFILE=session-${session} primitive emails get --id ${emailId} --context.\n`,
   );
   expect(readPendingMail(configDir, "named", session)[0]).not.toHaveProperty(
     "not_found_reads",

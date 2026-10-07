@@ -264,7 +264,7 @@ primitive reply --id <inbound-email-id> --fyi --body "Merged. No action needed."
 primitive chat reply "See attached" --attachment ./report.pdf
 primitive emails list
 primitive emails get --id <inbound-email-id>
-primitive emails get --id <inbound-email-id> --brief
+primitive emails get --id <inbound-email-id> --context
 primitive emails get --id <inbound-email-id> --compact
 primitive sent list
 primitive sent delete --id <sent-email-id>
@@ -490,7 +490,7 @@ primitive repeat stop --id <email-id> --reason "The report is finished"
 ```
 
 The sender sees the stop in the thread. `primitive emails get --id <email-id>
---brief` marks a repeating message with its cadence and, when the recipient may
+--context` marks a repeating message with its cadence and, when the recipient may
 stop it, the exact stop command.
 
 ## Recipient routing
@@ -1064,7 +1064,7 @@ The wake line carries only metadata the server or local listener state
 provides, never the subject or body:
 
 ```text
-Primitive mail arrived: <email-id> to=<receiving-address> from=<sender> relationship=<owner|member|agent|contact|other> thread=<thread-id|none> in_thread=<yes|no> attachments=<yes|no> newer=<n> interaction=<kind|fyi>. Read with PRIMITIVE_AGENT_PROFILE=<profile> primitive emails get --id <email-id> --brief. <authority sentence>
+Primitive mail arrived: <email-id> to=<receiving-address> from=<sender> relationship=<owner|member|agent|contact|other> thread=<thread-id|none> in_thread=<yes|no> attachments=<yes|no> newer=<n> interaction=<kind|fyi>. Read with PRIMITIVE_AGENT_PROFILE=<profile> primitive emails get --id <email-id> --context. <authority sentence>
 ```
 
 Mail from a verified owner, member or connected peer agent is preceded by one
@@ -1091,13 +1091,13 @@ sender address outside a plain character set is shown as `from=unavailable`.
 `interaction=<protocol>/<version>` appears when the server classifies the email
 as an interaction (its `interaction_hint` is `card`), and `interaction=fyi`
 for informational mail. Either is followed by one fixed sentence matching the
-brief: that it needs no reply, that a plain reply does not complete it and the
-brief names the command, that it is a repeating message, or that this CLI
+`--context` read: that it needs no reply, that a plain reply does not complete
+it and that read names the command, that it is a repeating message, or that this CLI
 cannot answer it. Both come only from the server's `interaction_hint`,
 `interaction_kind` and `fyi` fields.
 Codex notifications carry the same fields in their JSON line.
 
-`primitive emails get --id <id> --brief` prints a trusted envelope first
+`primitive emails get --id <id> --context` prints a trusted envelope first
 (sender, relationship, verification, thread, whether you have sent in it,
 newer messages and their senders when the API reports them, attachments, the
 sender's active `AGENT_WORKING` claim, and the sender's latest read, ack or
@@ -1112,7 +1112,7 @@ an email cheap in a model's context. It prints one JSON object with `id`,
 below a reply is removed and counted in `quoted_chars_removed`, and an email
 with no text part has its HTML reduced to text (`body_source` is then `html`).
 The HTML body, authentication results, routing and webhook delivery state are
-left out. It makes one request and sends no signal. Use `--brief` instead when
+left out. It makes one request and sends no signal. Use `--context` instead when
 a connected agent needs to know who the sender is to it and how to answer; the
 two flags cannot be combined.
 
@@ -1155,7 +1155,7 @@ Before a wake event is acknowledged, the listener records a pending notice for
 the session in
 `<config>/agent-connections/profiles/<profile>/pending-mail-<session>.json`.
 Reading the email with `primitive emails get --id <id>` (with or without
-`--brief`) inside that session removes it; a read outside any Claude Code or
+`--context`) inside that session removes it; a read outside any Claude Code or
 Codex session leaves every session's notice in place. `primitive listen pending --session <uuid>` lists the
 notices, and `--clear <email-id>` removes one. Pending notices replayed by the
 hooks print the same line as the live wake, including the load-the-skill line
@@ -1194,7 +1194,7 @@ thread is still received and readable; its delivery event is completed without
 a wake.
 
 When an email read carries the server's `collaboration.sender_relationship`,
-the wake line and `--brief` use it for an authenticated sender, `other`
+the wake line and `--context` use it for an authenticated sender, `other`
 included (`org_agent` reads as `agent`); only when the field is absent or
 unrecognized does the CLI derive the relationship itself. For a supported native coding session,
 use `--receiver native`; `primitive listen --status --notify-session <uuid>`

@@ -22,7 +22,7 @@ import {
 /**
  * Automatic communication signals. When mail from the verified owner or a
  * verified same-organization member is surfaced to an agent session, the CLI
- * reports `read` once; when the session opens it with `emails get --brief`, the
+ * reports `read` once; when the session opens it with `emails get --context`, the
  * CLI reports `working` and renews it until the agent answers. Every step is
  * best effort: nothing here may block, delay or fail the wake or the read.
  */
@@ -832,7 +832,7 @@ export function dispatchAutoRead(options: {
 }
 
 /**
- * Called after the session reads an email with `emails get --brief`: start
+ * Called after the session reads an email with `emails get --context`: start
  * working once for mail that already qualified for automatic signals.
  */
 export function dispatchAutoWorking(options: {

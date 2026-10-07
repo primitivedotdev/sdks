@@ -232,7 +232,7 @@ export function interactionNextActions(
         buildFollowUpCommand(
           "read_again",
           "Read the email again once the server has finished checking it",
-          [bin, "emails", "get", "--id", id, "--brief"],
+          [bin, "emails", "get", "--id", id, "--context"],
         ),
       ];
     default:
@@ -317,9 +317,9 @@ export const WAKE_SENTENCES: Record<ReplyExpectation, string> = {
   read_again: "",
   no_reply: " It needs no reply.",
   answer_with_command:
-    " It is an interaction a plain reply does not complete; the brief names the command that answers it.",
+    " It is an interaction a plain reply does not complete; that read names the command that answers it.",
   repeat:
-    " It is a repeating message; the brief says how to answer it and whether you can stop it.",
+    " It is a repeating message; that read says how to answer it and whether you can stop it.",
   unsupported:
     " It is an interaction this CLI cannot answer; a plain reply does not complete it.",
 };

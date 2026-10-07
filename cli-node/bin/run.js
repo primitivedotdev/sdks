@@ -51,7 +51,10 @@ healSelectedReceiverQuietly();
   const { join } = await import("node:path");
   const configDir =
     process.env.PRIMITIVE_CONFIG_DIR ||
-    join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "primitive");
+    join(
+      process.env.XDG_CONFIG_HOME || join(homedir(), ".config"),
+      "primitive",
+    );
   if (existsSync(join(configDir, "auto-signals"))) {
     try {
       const { resumeAutoWorking } = await import(
