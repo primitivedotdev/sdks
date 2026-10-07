@@ -391,6 +391,34 @@ and stderr stays empty. Output merged with `2>&1` therefore still parses:
 - Commands whose `--json` output is a bare array keep that shape.
 - `primitive listen` streams JSONL and is not covered by this rule.
 
+## Searching mail
+
+`primitive search <query>` runs a full-text search over received mail and
+prints a table (header on stderr). Each result in `--json` output carries
+`thread_id` (null until the email has been threaded) and `direction`.
+
+```bash
+primitive search "invoice" --from acme.com
+primitive search "contract" --thread-id <thread-uuid>   # one conversation
+primitive search "quarterly invoi" --prefix             # last word matches as a prefix
+primitive search "a" --prefix --no-count --envelope     # skip the total count
+```
+
+- `--thread-id <uuid>` only returns emails in that thread. It combines with
+  the query text and every other filter.
+- `--prefix` treats the last word of the query as still being typed, so
+  `invoi` matches invoice and invoicing. Only the final unquoted word is
+  affected.
+- `--no-count` skips computing the total match count, which makes broad
+  queries cheaper. `meta.total` is then null in `--json` output, and
+  `--envelope` prints `Total: not counted (--no-count)`. Use `meta.cursor`
+  to tell whether another page exists.
+- `--envelope` prints the total (with `+` when the count was capped) and the
+  next-page cursor on stderr below the table.
+
+These flags apply to the default lexical search only and are rejected with
+`--mode`.
+
 ## Remove mailbox history
 
 `primitive sent delete --id <sent-email-id>` removes sender history and owned
