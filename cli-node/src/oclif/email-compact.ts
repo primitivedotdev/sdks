@@ -217,8 +217,9 @@ export function htmlToText(html: string): string {
   text = removeAll(text, /<(script|style|head|title)\b[\s\S]*?<\/\1\s*>/gi);
   // A link keeps its destination beside its label: "Reset password" alone
   // cannot be followed.
+  // The attribute name is matched whole, so data-href is not taken for href.
   text = text.replace(
-    /<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))[^>]*>([\s\S]*?)<\/a\s*>/gi,
+    /<a\b[^>]*?\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))[^>]*>([\s\S]*?)<\/a\s*>/gi,
     (
       _match,
       double: string | undefined,

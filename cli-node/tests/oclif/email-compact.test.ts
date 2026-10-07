@@ -151,6 +151,19 @@ describe("htmlToText", () => {
     ).toBe("Reset password (https://example.com/reset)");
   });
 
+  it("reads the destination from href, not from an attribute that ends in href", () => {
+    expect(
+      htmlToText(
+        '<a data-href=https://example.com/preview href="https://example.com/reset">Reset password</a>',
+      ),
+    ).toBe("Reset password (https://example.com/reset)");
+    expect(
+      htmlToText(
+        '<a\n  class="b"\n  href="https://example.com/reset">Reset password</a>',
+      ),
+    ).toBe("Reset password (https://example.com/reset)");
+  });
+
   it("leaves no tag behind when tags are nested inside each other", () => {
     expect(htmlToText("a<scr<script>x</script>ipt>b</script>c")).not.toMatch(
       /<|script/,
