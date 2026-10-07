@@ -1115,9 +1115,27 @@ describe("emails get", () => {
     ).toEqual([otherId]);
   });
 
-  it("names the new flag when the removed --brief is used", async () => {
+  it("runs the renamed --brief as --context, so an older listener's wake line still reads", async () => {
+    const legacy = await run(
+      ["--id", emailId, "--brief", "--json"],
+      baseRoutes(),
+    );
+    const current = await run(
+      ["--id", emailId, "--context", "--json"],
+      baseRoutes(),
+    );
+    expect(legacy.code).toBeUndefined();
+    const { warnings, ...brief } = JSON.parse(legacy.stdout);
+    // The note reaches a JSON caller as a warning, and the read is otherwise identical.
+    expect(warnings).toEqual([
+      "Note: --brief is now --context; ran it as --context.",
+    ]);
+    expect(brief).toEqual(JSON.parse(current.stdout));
+  });
+
+  it("still rejects --brief with a value, naming the new flag", async () => {
     await expect(
-      run(["--id", emailId, "--brief"], baseRoutes()),
+      run(["--id", emailId, "--brief=true"], baseRoutes()),
     ).rejects.toThrow(
       "--brief is now --context. Run the same command with --context.",
     );
