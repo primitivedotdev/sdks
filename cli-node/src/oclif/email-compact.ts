@@ -1,5 +1,9 @@
 import type { EmailDetail } from "@primitivedotdev/api-core";
 
+// The MCP server offers the same view as `compact: true` on getEmail and
+// getConversation (web/lib/mcp/compact.ts in the mono-repo). Keep the rules
+// here and there in step.
+
 export type CompactAttachment = {
   /** Sender-authored and untrusted. */
   filename: string | null;
@@ -43,6 +47,9 @@ const HEADER_OTHER = /^\s*\*?(Sent|Date|To|Subject):\*?\s/i;
 const QUOTED_LINE = /^\s*>/;
 const FORWARDED =
   /^\s*(?:-{2,}\s*Forwarded message\s*-{2,}|Begin forwarded message:)\s*$/i;
+const FORWARD_SUBJECT = /^\s*(?:fwd?|wg|tr)\s*:/i;
+const ANSWERS_INLINE =
+  /\b(?:in-?line|below|interleaved|in (?:red|blue|green|bold|caps|capitals))\b/i;
 
 /**
  * Whether line `i` opens a copied header block ("From:", then "Sent:" or
@@ -107,29 +114,64 @@ function quotedHistoryStart(lines: string[]): number {
  * Remove the quoted history a reply carries below its new text: everything
  * from an attribution line, an "Original Message" rule or a copied header
  * block onward, and any run of ">" lines the message ends with. Quoted lines
- * with the sender's own text after them (an inline reply) are kept. A body
- * that forwards a message is returned whole, since the forwarded text is what
- * the sender wants read, and so is one where removing the history would leave
- * nothing.
+ * with the sender's own text after them (an inline reply) are kept. A message
+ * that forwards another (by its subject or a forwarding banner) is returned
+ * whole, since the forwarded text is what the sender wants read, and so is
+ * one where removing the history would leave nothing.
  */
-export function stripQuotedHistory(body: string): {
+export function stripQuotedHistory(
+  body: string,
+  subject?: string | null,
+): {
   text: string;
   removed: number;
 } {
   const original = body.replace(/\r\n?/g, "\n").trim();
   let lines = original.split("\n");
-  if (lines.some((line) => FORWARDED.test(line)))
+  // Outlook forwards a message under the same rule and copied headers it uses
+  // for a reply, so the body cannot tell the two apart; the subject can.
+  if (
+    FORWARD_SUBJECT.test(subject ?? "") ||
+    lines.some((line) => FORWARDED.test(line))
+  )
     return { text: original, removed: 0 };
   const start = quotedHistoryStart(lines);
-  if (start !== -1) lines = lines.slice(0, start);
+  if (start !== -1) {
+    // Below an "Original Message" rule or copied headers the earlier message
+    // is not marked with ">", so answers typed into it look like history.
+    // When the sender says that is what they did, nothing is removed.
+    if (ANSWERS_INLINE.test(lines.slice(0, start).join("\n")))
+      return { text: original, removed: 0 };
+    lines = lines.slice(0, start);
+  }
+  // In an exchange of quoted questions and answers, a quoted line the message
+  // ends with is a question left open, not history.
+  if (isInlineExchange(lines)) return finish(original, lines);
   while (lines.length > 0) {
     const last = lines[lines.length - 1] ?? "";
     if (last.trim() !== "" && !QUOTED_LINE.test(last)) break;
     lines.pop();
   }
+  return finish(original, lines);
+}
+
+function finish(
+  original: string,
+  lines: string[],
+): { text: string; removed: number } {
   const text = lines.join("\n").trim();
   if (text === "") return { text: original, removed: 0 };
   return { text, removed: original.length - text.length };
+}
+
+/** Whether a quoted line is followed, somewhere later, by the sender's own text. */
+function isInlineExchange(lines: string[]): boolean {
+  let quoted = false;
+  for (const line of lines) {
+    if (QUOTED_LINE.test(line)) quoted = true;
+    else if (quoted && line.trim() !== "") return true;
+  }
+  return false;
 }
 
 const NAMED_ENTITIES: Record<string, string> = {
@@ -176,14 +218,15 @@ export function htmlToText(html: string): string {
   // A link keeps its destination beside its label: "Reset password" alone
   // cannot be followed.
   text = text.replace(
-    /<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a\s*>/gi,
+    /<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))[^>]*>([\s\S]*?)<\/a\s*>/gi,
     (
       _match,
       double: string | undefined,
       single: string | undefined,
+      bare: string | undefined,
       label: string,
     ) => {
-      const url = (double ?? single ?? "").trim();
+      const url = (double ?? single ?? bare ?? "").trim();
       const shown = removeAll(label, /<[^>]*>/g, "").trim();
       if (!/^(https?:|mailto:)/i.test(url)) return label;
       if (shown === url || `mailto:${shown}` === url) return label;
@@ -217,6 +260,7 @@ export function buildEmailCompact(detail: EmailDetail): EmailCompact {
   const source = text !== null ? "text" : html !== null ? "html" : "none";
   const stripped = stripQuotedHistory(
     text ?? (html !== null ? htmlToText(html) : ""),
+    detail.subject,
   );
   return {
     id: detail.id,

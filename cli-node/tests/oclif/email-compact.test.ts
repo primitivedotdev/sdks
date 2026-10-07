@@ -60,6 +60,43 @@ describe("stripQuotedHistory", () => {
     expect(stripQuotedHistory(inline)).toEqual({ text: inline, removed: 0 });
   });
 
+  it("keeps an Outlook forward, which only the subject tells from a reply", () => {
+    const body =
+      "FYI\n\n-----Original Message-----\nFrom: Ada <ada@example.com>\nSent: Monday, October 5, 2026 3:01 PM\nTo: Bo <bo@example.com>\nSubject: Budget\n\nPlease approve $500.";
+    for (const subject of [
+      "FW: Budget",
+      "Fwd: Budget",
+      "fw:Budget",
+      "WG: Budget",
+    ])
+      expect(stripQuotedHistory(body, subject)).toEqual({
+        text: body,
+        removed: 0,
+      });
+    expect(stripQuotedHistory(body, "RE: Budget").text).toBe("FYI");
+    expect(stripQuotedHistory(body, null).text).toBe("FYI");
+  });
+
+  it("keeps everything when the sender says their answers are in the earlier message", () => {
+    for (const intro of [
+      "Answers below.",
+      "My comments inline.",
+      "See my replies in red.",
+      "Responses in-line:",
+    ]) {
+      const body = `${intro}\n\n________________________________\nFrom: Ada <ada@example.com>\nSent: Monday, October 5, 2026 3:01 PM\nTo: Bo <bo@example.com>\nSubject: Budget\n\nCan we ship?\nYes, Friday.`;
+      expect(stripQuotedHistory(body, "RE: Budget")).toEqual({
+        text: body,
+        removed: 0,
+      });
+    }
+  });
+
+  it("keeps a quoted question left open at the end of an inline exchange", () => {
+    const body = "> Can you do Friday?\nYes.\n> And the budget?";
+    expect(stripQuotedHistory(body)).toEqual({ text: body, removed: 0 });
+  });
+
   it("keeps the whole body when nothing but history would remain", () => {
     const body = "On Mon, Oct 5, 2026 Ada <ada@example.com> wrote:\n> Lunch?";
     expect(stripQuotedHistory(body)).toEqual({ text: body, removed: 0 });
@@ -104,6 +141,14 @@ describe("htmlToText", () => {
     ).toBe(
       "Reset password (https://example.com/reset?token=123&u=1) or mail help@example.com, see https://example.com top https://example.com/logo",
     );
+  });
+
+  it("keeps the destination of a link whose href is not quoted", () => {
+    expect(
+      htmlToText(
+        "<a href=https://example.com/reset target=_blank>Reset password</a>",
+      ),
+    ).toBe("Reset password (https://example.com/reset)");
   });
 
   it("leaves no tag behind when tags are nested inside each other", () => {
@@ -163,6 +208,18 @@ describe("buildEmailCompact", () => {
         },
       ],
     });
+  });
+
+  it("keeps the body of a forwarded email whole", () => {
+    const body =
+      "FYI\n\n-----Original Message-----\nFrom: Ada <ada@example.com>\nSent: Monday\nSubject: Budget\n\nPlease approve $500.";
+    const compact = buildEmailCompact({
+      ...base,
+      subject: "FW: Budget",
+      body_text: body,
+    } as unknown as EmailDetail);
+    expect(compact.body_text).toBe(body);
+    expect(compact.quoted_chars_removed).toBe(0);
   });
 
   it("reports an email with no body as such", () => {
