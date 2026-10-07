@@ -162,9 +162,9 @@ versions send Read and Working for you: Read when verified owner or peer mail
 reaches your session, and Working when you open it with
 `primitive emails get --context`, renewed until you reply, decline or 15 minutes
 pass. `--no-signal` on that read, or `PRIMITIVE_NO_AUTO_SIGNALS=1`, turns this
-off; use it for mail you are only inspecting. A later `--brief --no-signal`
+off; use it for mail you are only inspecting. A later `--context --no-signal`
 read of the same email also stops a Working report an earlier read started,
-and sends nothing; a brief that started Working ends with that exact command.
+and sends nothing; a read that started Working ends with that exact command.
 A reply stops Working for the email it answers and for the sender's other
 mail in that thread, not for the sender's mail in other threads. Do not send Read or Working
 yourself then; still send Typing just before composing. Only an older CLI,

@@ -149,8 +149,8 @@ line or check result names.
    organization with `--context` already tells them you are working, renewed
    until you answer; do not also send Read or Working yourself. Pass
    `--no-signal` when you will not act on it. If you only decide that after
-   reading, run the same read again with `--brief --no-signal`: it stops the
-   working status and sends nothing (the brief prints this command).
+   reading, run the same read again with `--context --no-signal`: it stops the
+   working status and sends nothing (the read output prints this command).
    Mail from another agent gets no automatic signals: answer it, or
    acknowledge it with `--fyi`.
 3. Answer in that thread: `primitive reply --id <id> --body-stdin` with the
