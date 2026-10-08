@@ -249,6 +249,12 @@ class SendResult:
     # by ``client_idempotency_key`` (same key, same canonical payload).
     # False on a fresh send and on gate-denied responses.
     idempotent_replay: bool = False
+    delivery_status: str | None = None
+    smtp_response_code: int | None = None
+    smtp_response_text: str | None = None
+    # Echoed requested execution time on a ``scheduled`` response
+    # (ISO 8601). None on immediate sends.
+    scheduled_at: str | None = None
     # Present only when ``idempotent_replay`` is true. Says how the key that
     # matched was derived and which earlier send answered this request.
     idempotency: SendIdempotency | None = None
@@ -256,12 +262,6 @@ class SendResult:
     # key matched an earlier send) or ``parent_already_replied`` (a keyless
     # reply to an email that already has a reply). None on a fresh send.
     dedup_reason: str | None = None
-    delivery_status: str | None = None
-    smtp_response_code: int | None = None
-    smtp_response_text: str | None = None
-    # Echoed requested execution time on a ``scheduled`` response
-    # (ISO 8601). None on immediate sends.
-    scheduled_at: str | None = None
 
 
 class PrimitiveAPIError(Exception):

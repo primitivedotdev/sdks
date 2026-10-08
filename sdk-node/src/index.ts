@@ -62,6 +62,8 @@ export {
   RepeatsResource,
   type ReplyInput,
   type SendAttachment,
+  type SendIdempotency,
+  type SendIdempotencyKeySource,
   type SendInput,
   type SendResult,
   type SendThreadInput,

@@ -439,6 +439,31 @@ def test_send_leaves_idempotency_none_on_a_send_that_went_out() -> None:
     assert result.dedup_reason is None
 
 
+def test_send_result_keeps_its_positional_field_order() -> None:
+    """The replay fields are appended, so positional construction is unchanged."""
+    result = primitive.SendResult(
+        "sent-123",
+        "delivered",
+        ["alice@example.com"],
+        [],
+        "idem-123",
+        "req-123",
+        "hash-123",
+        "qid-123",
+        False,
+        "delivered",
+        250,
+        "250 OK",
+        None,
+    )
+
+    assert result.delivery_status == "delivered"
+    assert result.smtp_response_code == 250
+    assert result.smtp_response_text == "250 OK"
+    assert result.idempotency is None
+    assert result.dedup_reason is None
+
+
 def test_send_passes_wait_options_and_idempotency_key() -> None:
     """Per-call options now ride on the httpx.Request headers, set by hook.
 
