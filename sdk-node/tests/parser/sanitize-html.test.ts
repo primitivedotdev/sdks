@@ -277,6 +277,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="display:inline;height:0;overflow:hidden">Shown text</div>`,
     ],
     [
+      "a clipped block that a media query makes inline",
+      `<style>.m{height:0;overflow:hidden}@media(max-width:480px){.m{display:inline}}</style><div class="m">Shown text</div>`,
+    ],
+    [
       "visibility:hidden, which a descendant can undo",
       `<div style="visibility:hidden"><span style="visibility:visible">Shown text</span></div>`,
     ],
@@ -302,6 +306,14 @@ describe("sanitizeHtml — stylesheet cost", () => {
     const start = performance.now();
     sanitizeHtml(`<style>${".a{display:none}".repeat(100000)}</style><p>x</p>`);
     expect(performance.now() - start).toBeLessThan(2000);
+  });
+
+  test("stays fast with many conditional rules and many hidden elements", () => {
+    const css = `.m{display:none}@media(max-width:480px){${".m{display:block}".repeat(100000)}}`;
+    const body = '<div class="m">x</div>'.repeat(10000);
+    const start = performance.now();
+    sanitizeHtml(`<style>${css}</style>${body}`);
+    expect(performance.now() - start).toBeLessThan(3000);
   });
 
   test("stays fast with many rules and many classed elements", () => {

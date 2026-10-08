@@ -267,7 +267,8 @@ type Hide = "display" | "opacity" | "clip";
 interface Sheet {
   /** Simple class rules, indexed by each class they name. */
   byClass: Map<string, Rule[]>;
-  restorers: Restorer[];
+  /** Unevaluated rules that could show something, indexed by a class, id or tag they require ("" for none). */
+  restorers: Map<string, Restorer[]>;
 }
 
 /** Which ways of hiding these declarations could undo, and whether any of those declarations is important. */
@@ -279,8 +280,11 @@ function couldShow(decls: Map<string, Decl>): {
   let important = false;
   for (const [prop, d] of decls) {
     let undo: Hide | null = null;
-    if (prop === "display" && d.value !== "none") undo = "display";
-    else if (
+    if (prop === "display" && d.value !== "none") {
+      undo = "display";
+      // An element made inline is no longer a box that height and overflow can clip.
+      if (!BLOCK_DISPLAY.test(d.value)) undoes.add("clip");
+    } else if (
       prop === "opacity" &&
       !(BARE_NUMBER.test(d.value) && Number.parseFloat(d.value) === 0)
     )
@@ -319,14 +323,19 @@ function rightmostCompound(selector: string): Restorer | null {
 
 function readSheet(html: string): Sheet {
   const byClass = new Map<string, Rule[]>();
-  const restorers: Restorer[] = [];
+  const restorers = new Map<string, Restorer[]>();
   let order = 0;
   const addRestorers = (selectors: string, decls: Map<string, Decl>) => {
     const { undoes, important } = couldShow(decls);
     if (!undoes.size) return;
     for (const sel of selectors.split(",")) {
       const r = rightmostCompound(sel);
-      if (r) restorers.push({ ...r, important, undoes });
+      if (!r) continue;
+      const key = r.classes[0] ? `.${r.classes[0]}` : r.id ? `#${r.id}` : r.tag;
+      const list = restorers.get(key);
+      const entry = { ...r, important, undoes };
+      if (list) list.push(entry);
+      else restorers.set(key, [entry]);
     }
   };
   const sheets = html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) ?? [];
@@ -436,21 +445,29 @@ function mayBeRestored(
   tagName: string,
   attribs: Record<string, string>,
   own: Set<string>,
-  restorers: Restorer[],
+  restorers: Map<string, Restorer[]>,
   reasons: Set<Hide>,
   inlineReasons: Set<Hide>,
 ): boolean {
-  const targets = restorers.filter(
-    (r) =>
-      (!r.id || r.id === attribs.id) &&
-      r.classes.every((c) => own.has(c)) &&
-      (!r.tag || r.tag === tagName.toLowerCase()),
-  );
-  return [...reasons].every((why) =>
-    targets.some(
-      (r) => r.undoes.has(why) && (!inlineReasons.has(why) || r.important),
-    ),
-  );
+  const tag = tagName.toLowerCase();
+  const keys = [
+    "",
+    tag,
+    ...(attribs.id ? [`#${attribs.id}`] : []),
+    ...[...own].map((c) => `.${c}`),
+  ];
+  const undoable = (why: Hide) =>
+    keys.some((k) =>
+      (restorers.get(k) ?? []).some(
+        (r) =>
+          r.undoes.has(why) &&
+          (!inlineReasons.has(why) || r.important) &&
+          (!r.id || r.id === attribs.id) &&
+          (!r.tag || r.tag === tag) &&
+          r.classes.every((c) => own.has(c)),
+      ),
+    );
+  return [...reasons].every(undoable);
 }
 
 /** The winning value of each relevant property for one element. */
