@@ -209,7 +209,7 @@ function declarations(style: string): Map<string, Decl> {
       .slice(i + 1)
       .trim()
       .toLowerCase()
-      .replace(/\s+/g, " ");
+      .replace(/[ \t\n\r\f]+/g, " ");
     const important = /!\s*important\s*$/.test(value);
     if (important) value = value.replace(/!\s*important\s*$/, "").trim();
     if (name === "overflow") {
@@ -534,8 +534,9 @@ const BLOCK_TAGS = new Set([
   "dt",
   "dd",
 ]);
+// One-keyword forms, and two-keyword forms whose outer type is block or whose inner type makes an inline box a block container.
 const BLOCK_DISPLAY =
-  /^(block|inline-block|flow-root|flex|inline-flex|grid|inline-grid|list-item)$/;
+  /^((block|inline-block|flow-root|flex|inline-flex|grid|inline-grid|list-item)( .*)?|inline (flow-root|flex|grid|table))$/;
 
 function hiddenElement(
   tagName: string,

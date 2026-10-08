@@ -164,6 +164,14 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<style>@media screen{.pre{display:bogus!important}}</style><div class="pre" style="height:0;overflow:hidden">${SECRET}</div>`,
     ],
     [
+      "a later display joined by a non-breaking space, which CSS rejects",
+      `<div style="display:none;display:inline\u00a0flow">${SECRET}</div>`,
+    ],
+    [
+      "a clipped box with a two-keyword block display",
+      `<div style="display:block  flow;height:0;overflow:hidden">${SECRET}</div>`,
+    ],
+    [
       "a zero height written as .0px",
       `<div style="height:.0px;overflow:hidden">${SECRET}</div>`,
     ],
