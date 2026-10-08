@@ -8014,6 +8014,54 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "via": {
               "type": "string",
               "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+            },
+            "delivery": {
+              "type": "array",
+              "description": "Per-recipient outcome of the relay forwarding the message to the recipient's mailbox provider. The field may be absent; treat a missing value as no delivery information being available.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "recipient": {
+                    "type": "string",
+                    "description": "The recipient address the relay forwarded to."
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "Outcome of the forward. Currently one of `delivered`, `deferred` or `bounced`. Treat an unfamiliar value as one added after your client was built."
+                  },
+                  "smtp_code": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "description": "SMTP reply code from the mailbox provider, when one was received."
+                  },
+                  "enhanced_status_code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Enhanced status code (for example `2.0.0`) from the mailbox provider, when one was received."
+                  },
+                  "smtp_response": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "SMTP reply text from the mailbox provider, when one was received."
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When this outcome was recorded."
+                  }
+                },
+                "required": [
+                  "recipient",
+                  "status",
+                  "at"
+                ]
+              }
             }
           },
           "required": [
