@@ -229,6 +229,10 @@ expires_at: string
 parsed: (ParsedDataComplete | ParsedDataFailed)
 analysis: EmailAnalysis
 auth: EmailAuth
+/**
+ * Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.
+ */
+relay?: (EmailRelay | null)
 }
 }
 /**
@@ -1003,6 +1007,22 @@ keyBits: (number | null)
 algo: (string | null)
 }
 /**
+ * How an inbound message reached Primitive when it arrived through a Primitive mail relay.
+ *
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "EmailRelay".
+ */
+export interface EmailRelay {
+/**
+ * The relay hostname the domain's MX record points at.
+ */
+hostname: string
+/**
+ * How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built.
+ */
+via: string
+}
+/**
  * Webhook payload for the `email.received` event.
  *
  * This is delivered to your webhook endpoint when Primitive receives an email matching your domain configuration.
@@ -1141,6 +1161,10 @@ expires_at: string
 parsed: (ParsedDataComplete | ParsedDataFailed)
 analysis: EmailAnalysis
 auth: EmailAuth
+/**
+ * Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.
+ */
+relay?: (EmailRelay | null)
 }
 }
 /**

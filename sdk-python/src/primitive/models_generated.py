@@ -173,6 +173,21 @@ class Download(BaseModel):
     ]
 
 
+class EmailRelay(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    hostname: Annotated[
+        str, Field(description="The relay hostname the domain's MX record points at.")
+    ]
+    via: Annotated[
+        str,
+        Field(
+            description="How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+        ),
+    ]
+
+
 class Outcome(StrEnum):
     matched = "matched"
     defaulted = "defaulted"
@@ -1164,6 +1179,12 @@ class Email(BaseModel):
     auth: Annotated[
         EmailAuth, Field(description="Email authentication results (SPF, DKIM, DMARC).")
     ]
+    relay: Annotated[
+        EmailRelay | None,
+        Field(
+            description="Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null."
+        ),
+    ] = None
 
 
 class EmailReceivedEvent(BaseModel):

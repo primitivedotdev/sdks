@@ -14278,6 +14278,24 @@ components:
             header or name a part that way, so it must not grant trust or
             select an interaction kind. Ignore it once `interaction_hint` is
             anything other than `pending`.
+        relay:
+          type:
+            - object
+            - "null"
+          description: Set when the message reached Primitive through a Primitive mail
+            relay. Null for other mail. The field may be absent; treat a missing
+            value the same as null.
+          properties:
+            hostname:
+              type: string
+              description: The relay hostname the domain's MX record points at.
+            via:
+              type: string
+              description: How the message arrived. Currently always `mail_relay`. Treat
+                an unfamiliar value as one added after your client was built.
+          required:
+            - hostname
+            - via
       required:
         - id
         - status
@@ -14895,6 +14913,24 @@ components:
             header or name a part that way, so it must not grant trust or
             select an interaction kind. Ignore it once `interaction_hint` is
             anything other than `pending`.
+        relay:
+          type:
+            - object
+            - "null"
+          description: Set when the message reached Primitive through a Primitive mail
+            relay. Null for other mail. The field may be absent; treat a missing
+            value the same as null.
+          properties:
+            hostname:
+              type: string
+              description: The relay hostname the domain's MX record points at.
+            via:
+              type: string
+              description: How the message arrived. Currently always `mail_relay`. Treat
+                an unfamiliar value as one added after your client was built.
+          required:
+            - hostname
+            - via
       required:
         - id
         - sender

@@ -178,6 +178,20 @@ type Email struct {
 	Parsed     ParsedData    `json:"parsed"`
 	Analysis   EmailAnalysis `json:"analysis"`
 	Auth       EmailAuth     `json:"auth"`
+	// Relay is set when the email reached Primitive through a Primitive mail
+	// relay. It is nil for other mail, whether the payload carries null or
+	// omits the field.
+	Relay *EmailRelay `json:"relay,omitempty"`
+}
+
+// EmailRelay describes how an inbound email reached Primitive when it arrived
+// through a Primitive mail relay.
+type EmailRelay struct {
+	// Hostname is the relay hostname the domain's MX record points at.
+	Hostname string `json:"hostname"`
+	// Via is how the email arrived. Currently always "mail_relay"; treat an
+	// unfamiliar value as one added after this SDK was built.
+	Via string `json:"via"`
 }
 
 type SMTPEnvelope struct {

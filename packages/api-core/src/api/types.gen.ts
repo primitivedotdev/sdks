@@ -1846,6 +1846,19 @@ export type EmailSummary = {
      *
      */
     interaction_candidate?: boolean;
+    /**
+     * Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.
+     */
+    relay?: {
+        /**
+         * The relay hostname the domain's MX record points at.
+         */
+        hostname: string;
+        /**
+         * How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built.
+         */
+        via: string;
+    } | null;
 };
 
 export type EmailSearchHighlights = {
@@ -2204,6 +2217,19 @@ export type EmailDetail = {
      *
      */
     interaction_candidate?: boolean;
+    /**
+     * Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.
+     */
+    relay?: {
+        /**
+         * The relay hostname the domain's MX record points at.
+         */
+        hostname: string;
+        /**
+         * How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built.
+         */
+        via: string;
+    } | null;
 };
 
 export type EmailDetailReply = {

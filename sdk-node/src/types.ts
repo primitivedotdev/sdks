@@ -87,6 +87,12 @@ export const ForwardVerdict = {
 
 export type EmailAuth = EmailReceivedEvent["email"]["auth"];
 
+/**
+ * How the email reached Primitive when it arrived through a Primitive mail
+ * relay. `email.relay` is null or absent for other mail.
+ */
+export type EmailRelay = NonNullable<EmailReceivedEvent["email"]["relay"]>;
+
 export type DkimSignature = EmailAuth["dkimSignatures"][number];
 
 export type SpfResult = EmailAuth["spf"];

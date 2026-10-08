@@ -49,6 +49,9 @@ from .models_generated import (
     EmailReceivedEvent as GeneratedEmailReceivedEvent,
 )
 from .models_generated import (
+    EmailRelay as GeneratedEmailRelay,
+)
+from .models_generated import (
     ForwardAnalysis as GeneratedForwardAnalysis,
 )
 from .models_generated import (
@@ -146,6 +149,7 @@ ForwardResultAttachmentSkipped = GeneratedForwardResultAttachmentSkipped
 ForwardOriginalSender = GeneratedForwardOriginalSender
 ForwardVerification = GeneratedForwardVerification
 EmailAuth = GeneratedEmailAuth
+EmailRelay = GeneratedEmailRelay
 DkimSignature = GeneratedDkimSignature
 
 

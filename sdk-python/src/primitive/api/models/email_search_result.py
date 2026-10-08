@@ -21,6 +21,7 @@ import datetime
 if TYPE_CHECKING:
   from ..models.email_search_highlights import EmailSearchHighlights
   from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
+  from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0
   from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0
   from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
   from ..models.presence_control_type_0 import PresenceControlType0
@@ -202,6 +203,8 @@ class EmailSearchResult:
                 placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name
                 a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is
                 anything other than `pending`.
+            relay (EmailSummaryRelayType0 | None | Unset): Set when the message reached Primitive through a Primitive mail
+                relay. Null for other mail. The field may be absent; treat a missing value the same as null.
             score (float | Unset): Relevance score. Present only when sorting by relevance.
             highlights (EmailSearchHighlights | Unset):
      """
@@ -238,6 +241,7 @@ class EmailSearchResult:
     interaction_hint: str | Unset = UNSET
     interaction_kind: None | str | Unset = UNSET
     interaction_candidate: bool | Unset = UNSET
+    relay: EmailSummaryRelayType0 | None | Unset = UNSET
     score: float | Unset = UNSET
     highlights: EmailSearchHighlights | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
@@ -249,6 +253,7 @@ class EmailSearchResult:
     def to_dict(self) -> dict[str, Any]:
         from ..models.email_search_highlights import EmailSearchHighlights # noqa: PLC0415
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0 # noqa: PLC0415
         from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0 # noqa: PLC0415
         from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
@@ -392,6 +397,14 @@ class EmailSearchResult:
 
         interaction_candidate = self.interaction_candidate
 
+        relay: dict[str, Any] | None | Unset
+        if isinstance(self.relay, Unset):
+            relay = UNSET
+        elif isinstance(self.relay, EmailSummaryRelayType0):
+            relay = self.relay.to_dict()
+        else:
+            relay = self.relay
+
         score = self.score
 
         highlights: dict[str, Any] | Unset = UNSET
@@ -450,6 +463,8 @@ class EmailSearchResult:
             field_dict["interaction_kind"] = interaction_kind
         if interaction_candidate is not UNSET:
             field_dict["interaction_candidate"] = interaction_candidate
+        if relay is not UNSET:
+            field_dict["relay"] = relay
         if score is not UNSET:
             field_dict["score"] = score
         if highlights is not UNSET:
@@ -463,6 +478,7 @@ class EmailSearchResult:
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.email_search_highlights import EmailSearchHighlights # noqa: PLC0415
         from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0 # noqa: PLC0415
         from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0 # noqa: PLC0415
         from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
@@ -768,6 +784,26 @@ class EmailSearchResult:
 
         interaction_candidate = d.pop("interaction_candidate", UNSET)
 
+        def _parse_relay(data: object) -> EmailSummaryRelayType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                relay_type_0 = EmailSummaryRelayType0.from_dict(data)
+
+
+
+                return relay_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummaryRelayType0 | None | Unset, data)
+
+        relay = _parse_relay(d.pop("relay", UNSET))
+
+
         score = d.pop("score", UNSET)
 
         _highlights = d.pop("highlights", UNSET)
@@ -813,6 +849,7 @@ class EmailSearchResult:
             interaction_hint=interaction_hint,
             interaction_kind=interaction_kind,
             interaction_candidate=interaction_candidate,
+            relay=relay,
             score=score,
             highlights=highlights,
         )
