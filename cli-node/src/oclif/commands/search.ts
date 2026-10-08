@@ -122,7 +122,7 @@ class SearchCommand extends Command {
     '<%= config.bin %> search "shipping" --mode keyword --corpus outbound',
     "<%= config.bin %> search \"needle\" --json | jq '.data[0].id'",
     '<%= config.bin %> search "invoice" --awaiting you',
-    '<%= config.bin %> search \'acme invoice OR receipt OR "past due"\'',
+    "<%= config.bin %> search 'acme invoice OR receipt OR \"past due\"'",
     '<%= config.bin %> search "invoice" --date-from 2026-10-01T00:00:00-04:00',
     '<%= config.bin %> search "quarterly invoi" --prefix --no-count',
     '<%= config.bin %> search "contract" --thread-id 11111111-1111-4111-8111-111111111111',
