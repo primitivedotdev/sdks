@@ -126,6 +126,10 @@ const SELECTORS = [
   ".a.b",
   ".b.a.c",
   ".a.a",
+  ".a.a.b",
+  "p.a.a",
+  "b.a",
+  "span.c.a",
   "p .a",
   ".a > .b",
   "#i",
@@ -406,6 +410,8 @@ describe("sanitizeHtml stays linear on crafted input", () => {
     ),
     "one selector repeated across many elements": `<style>${".a{display:none}".repeat(2500)}</style>${"<b class=a></b>".repeat(4000)}`,
     "many selectors sharing a class": `<style>${classes(3000, (i) => `.a.z${i}{display:none}`)}</style>${"<b class=a></b>".repeat(3000)}`,
+    "the same class repeated to raise specificity": `<style>${classes(200, (i) => `${".a".repeat(i + 1)}{display:none}`)}</style>${"<b class=a>x</b>".repeat(3500)}`,
+    "many tags sharing a class": `<style>${classes(3000, (i) => `x${i}.a{display:none}`)}</style>${"<b class=a>x</b>".repeat(3000)}`,
     "many restorers sharing a class": `<style>@media x{${classes(3000, (i) => `.a.z${i}{display:block}`)}}</style>${"<b class=a style=display:none></b>".repeat(2000)}`,
   };
 

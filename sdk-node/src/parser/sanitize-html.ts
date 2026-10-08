@@ -345,21 +345,29 @@ function clipsVertically(d: Map<string, string>): boolean {
 }
 
 /** A declaration's position in the stylesheet and its value. */
+/** A stylesheet declaration's rank in the cascade, and its value. */
 interface Ranked {
+  specificity: number;
   order: number;
   value: string;
 }
 
+const outranks = (a: Ranked, b: Ranked | undefined): boolean =>
+  !b ||
+  a.specificity > b.specificity ||
+  (a.specificity === b.specificity && a.order > b.order);
+
 /**
- * The simple class rules that share one selector (the same tag and classes,
- * so the same specificity). Among them only the last normal and the last
- * important declaration of each property can win, so a selector repeated any
- * number of times is one entry.
+ * The simple class rules that match exactly the same elements: the same tag
+ * and the same set of classes (`.a`, `.a.a` and `p.a` match alike only in
+ * the first two). They match together, so only the highest-ranked normal and
+ * important declaration of each property among them can ever win, and any
+ * number of such rules is one entry.
  */
 interface RuleGroup {
   tag: string;
+  /** Distinct classes, each of which the element must have. */
   classes: string[];
-  specificity: number;
   normal: Map<string, Ranked>;
   important: Map<string, Ranked>;
 }
@@ -381,8 +389,12 @@ interface Restorer {
 type Hide = "display" | "opacity" | "clip";
 
 interface Sheet {
-  /** Simple class rules grouped by selector, each group indexed by one class it names. */
-  byClass: Map<string, RuleGroup[]>;
+  /** Simple class rules grouped by what they match, each group indexed by one class (`.c`) or tag it requires. */
+  groups: Map<string, RuleGroup[]>;
+  /** Every class some group requires; other classes cannot change what matches. */
+  groupClasses: Set<string>;
+  /** Stylesheet winners already worked out, by tag and the element's classes in groupClasses. */
+  matched: Map<string, SheetWins>;
   /** Distinct unevaluated rules that could show something, each indexed by one class, id or tag it requires ("" for none). */
   restorers: Map<string, Restorer[]>;
 }
@@ -457,7 +469,13 @@ function readSheet(html: string): Sheet {
         important,
         [...undoes].sort().join(),
       ].join("|");
-      if (!restorers.has(key)) restorers.set(key, { ...r, important, undoes });
+      if (!restorers.has(key))
+        restorers.set(key, {
+          ...r,
+          classes: [...new Set(r.classes)],
+          important,
+          undoes,
+        });
     }
   };
   for (const sheet of styleSheets(html)) {
@@ -478,29 +496,35 @@ function readSheet(html: string): Sheet {
         }
         const classes = (simple[2] ?? "").split(".").filter(Boolean);
         const tag = (simple[1] ?? "").toLowerCase();
-        const key = `${tag}|${[...classes].sort().join(".")}`;
+        const distinct = [...new Set(classes)].sort();
+        const key = `${tag}|${distinct.join(".")}`;
         let group = groups.get(key);
         if (!group) {
           group = {
             tag,
-            classes,
-            specificity: classes.length * 1000 + (simple[1] ? 1 : 0),
+            classes: distinct,
             normal: new Map(),
             important: new Map(),
           };
           groups.set(key, group);
         }
+        const specificity = classes.length * 1000 + (simple[1] ? 1 : 0);
         const ranked = order++;
-        for (const [prop, d] of decls)
-          (d.important ? group.important : group.normal).set(prop, {
-            order: ranked,
-            value: d.value,
-          });
+        for (const [prop, d] of decls) {
+          const layer = d.important ? group.important : group.normal;
+          const entry = { specificity, order: ranked, value: d.value };
+          if (outranks(entry, layer.get(prop))) layer.set(prop, entry);
+        }
       }
     }
   }
   return {
-    byClass: indexByRarestKey([...groups.values()], (g) => g.classes),
+    groupClasses: new Set([...groups.values()].flatMap((g) => g.classes)),
+    matched: new Map(),
+    groups: indexByRarestKey([...groups.values()], (g) => [
+      ...g.classes.map((c) => `.${c}`),
+      ...(g.tag ? [g.tag] : []),
+    ]),
     restorers: indexByRarestKey([...restorers.values()], (r) => {
       const keys = [
         ...r.classes.map((c) => `.${c}`),
@@ -517,8 +541,11 @@ function readSheet(html: string): Sheet {
  * An element looks entries up by every key it has, and an entry applies only
  * to an element that has all of its keys, so any one of them finds it. The
  * rarest one spares an element from scanning entries that need some other
- * class it lacks: without it, many rules on `.a.x1`, `.a.x2`, ... would each
- * be checked against every element of class `a`.
+ * class or tag it lacks: without it, many rules on `.a.x1`, `.a.x2`, ... or
+ * `x1.a`, `x2.a`, ... would each be checked against every element of class
+ * `a`. What is left is the cost of the rules an element actually matches,
+ * which the cascade has to weigh; elements alike in tag and classes share
+ * that work (see sheetWins).
  */
 function indexByRarestKey<T>(
   entries: T[],
@@ -756,6 +783,39 @@ function mayBeRestored(
   return [...reasons].every(undoable);
 }
 
+/** Per property, the stylesheet declaration that wins at each importance. */
+interface SheetWins {
+  normal: Map<string, Ranked>;
+  important: Map<string, Ranked>;
+}
+
+/**
+ * The stylesheet's winning declarations for an element. They depend only on
+ * its tag and on which of the classes that groups require it has, so elements
+ * alike in those share one lookup.
+ */
+function sheetWins(tag: string, own: Set<string>, sheet: Sheet): SheetWins {
+  const relevant = [...own].filter((c) => sheet.groupClasses.has(c)).sort();
+  const key = `${tag} ${relevant.join(" ")}`;
+  const known = sheet.matched.get(key);
+  if (known) return known;
+  const wins: SheetWins = { normal: new Map(), important: new Map() };
+  const take = (into: Map<string, Ranked>, decls: Map<string, Ranked>) => {
+    for (const [prop, d] of decls)
+      if (outranks(d, into.get(prop))) into.set(prop, d);
+  };
+  for (const k of [tag, ...relevant.map((c) => `.${c}`)]) {
+    for (const g of sheet.groups.get(k) ?? []) {
+      if ((!g.tag || g.tag === tag) && g.classes.every((c) => own.has(c))) {
+        take(wins.normal, g.normal);
+        take(wins.important, g.important);
+      }
+    }
+  }
+  sheet.matched.set(key, wins);
+  return wins;
+}
+
 /** The winning value of each relevant property for one element. */
 function resolve(
   tagName: string,
@@ -763,34 +823,7 @@ function resolve(
   sheet: Sheet,
   own: Set<string>,
 ): Map<string, string> {
-  const tag = tagName.toLowerCase();
-  // Per property, the stylesheet declaration that wins at each importance: highest specificity, then latest.
-  type Win = { specificity: number; order: number; value: string };
-  const normal = new Map<string, Win>();
-  const important = new Map<string, Win>();
-  const take = (
-    wins: Map<string, Win>,
-    decls: Map<string, Ranked>,
-    specificity: number,
-  ) => {
-    for (const [prop, d] of decls) {
-      const cur = wins.get(prop);
-      if (
-        !cur ||
-        specificity > cur.specificity ||
-        (specificity === cur.specificity && d.order > cur.order)
-      )
-        wins.set(prop, { specificity, order: d.order, value: d.value });
-    }
-  };
-  for (const c of own) {
-    for (const g of sheet.byClass.get(c) ?? []) {
-      if ((!g.tag || g.tag === tag) && g.classes.every((x) => own.has(x))) {
-        take(normal, g.normal, g.specificity);
-        take(important, g.important, g.specificity);
-      }
-    }
-  }
+  const { normal, important } = sheetWins(tagName.toLowerCase(), own, sheet);
   const inline = declarations(attribs.style ?? "");
   const out = new Map<string, string>();
   // Cascade order, highest first: important inline, important stylesheet, normal inline, normal stylesheet.
