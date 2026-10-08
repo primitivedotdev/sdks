@@ -147,6 +147,7 @@ interface Decl {
 const RELEVANT = new Set([
   "display",
   "opacity",
+  "overflow-x",
   "overflow-y",
   "height",
   "max-height",
@@ -157,17 +158,22 @@ const NUMBER = String.raw`[+-]?(\d+\.?\d*|\.\d+)`;
 const LENGTH = new RegExp(
   `^${NUMBER}(px|pt|pc|in|cm|mm|q|em|rem|ex|ch|vw|vh|vmin|vmax|%)$`,
 );
+const BARE_NUMBER = new RegExp(`^${NUMBER}$`);
 const BARE_ZERO = /^[+-]?(0+\.?0*|\.0+)$/;
-const SIZE_KEYWORD =
-  /^(auto|none|inherit|initial|unset|revert|fit-content|min-content|max-content)$/;
+const NUMERIC = /^[+-]?[\d.]/;
 
-/** A browser ignores a declaration whose value is invalid, so it is ignored here too. */
+/**
+ * A browser ignores a declaration whose value is malformed (`height:0foo`),
+ * so it is ignored here too. Anything else is kept, including values this
+ * code cannot compute (calc(), var(), keywords): those never count as hiding,
+ * so an override it cannot evaluate errs towards keeping the content.
+ */
 function valid(prop: string, value: string): boolean {
-  if (prop === "opacity") return new RegExp(`^${NUMBER}%?$`).test(value);
+  if (!NUMERIC.test(value)) return true;
+  if (prop === "opacity")
+    return BARE_NUMBER.test(value) || new RegExp(`^${NUMBER}%$`).test(value);
   if (prop.endsWith("height"))
-    return (
-      LENGTH.test(value) || BARE_ZERO.test(value) || SIZE_KEYWORD.test(value)
-    );
+    return LENGTH.test(value) || BARE_ZERO.test(value);
   return true;
 }
 
@@ -176,6 +182,12 @@ const stripComments = (css: string): string =>
 
 function declarations(style: string): Map<string, Decl> {
   const out = new Map<string, Decl>();
+  const set = (prop: string, value: string, important: boolean) => {
+    if (!RELEVANT.has(prop) || !value || !valid(prop, value)) return;
+    // Within one block a later declaration wins unless an earlier one is important and it is not.
+    const prev = out.get(prop);
+    if (!(prev?.important && !important)) out.set(prop, { value, important });
+  };
   for (const part of stripComments(style).split(";")) {
     const i = part.indexOf(":");
     if (i < 0) continue;
@@ -186,15 +198,12 @@ function declarations(style: string): Map<string, Decl> {
       .toLowerCase();
     const important = /!\s*important\s*$/.test(value);
     if (important) value = value.replace(/!\s*important\s*$/, "").trim();
-    // `overflow` is shorthand for both axes; only the vertical one decides
-    // whether a zero-height box shows anything.
-    const prop = name === "overflow" ? "overflow-y" : name;
-    const v = name === "overflow" ? (value.split(/\s+/).at(-1) ?? "") : value;
-    if (!RELEVANT.has(prop) || !v || !valid(prop, v)) continue;
-    // Within one block a later declaration wins unless an earlier one is important and it is not.
-    const prev = out.get(prop);
-    if (!(prev?.important && !important))
-      out.set(prop, { value: v, important });
+    if (name === "overflow") {
+      // Shorthand: one value for both axes, or horizontal then vertical.
+      const [x = "", y = x] = value.split(/\s+/);
+      set("overflow-x", x, important);
+      set("overflow-y", y, important);
+    } else set(name, value, important);
   }
   return out;
 }
@@ -202,14 +211,28 @@ function declarations(style: string): Map<string, Decl> {
 const isZero = (v: string): boolean =>
   BARE_ZERO.test(v) ||
   (LENGTH.test(v) && BARE_ZERO.test(v.replace(/[a-z%]+$/, "")));
+const CLIPS = /^(hidden|clip|auto|scroll|overlay)$/;
+
+/** Whether the box clips vertically. Per CSS, a visible axis becomes auto when the other axis is not visible or clip. */
+function clipsVertically(d: Map<string, string>): boolean {
+  const x = d.get("overflow-x") ?? "visible";
+  const y = d.get("overflow-y") ?? "visible";
+  if (y === "visible") return !/^(visible|clip)$/.test(x);
+  return CLIPS.test(y);
+}
 
 function hidesByStyle(d: Map<string, string>): boolean {
   if (d.get("display") === "none") return true;
   const opacity = d.get("opacity");
-  if (opacity !== undefined && Number.parseFloat(opacity) === 0) return true;
-  if (!/hidden|clip/.test(d.get("overflow-y") ?? "")) return false;
+  if (
+    opacity !== undefined &&
+    (BARE_NUMBER.test(opacity) || opacity.endsWith("%")) &&
+    Number.parseFloat(opacity) === 0
+  )
+    return true;
+  if (!clipsVertically(d)) return false;
   const minHeight = d.get("min-height");
-  if (minHeight && LENGTH.test(minHeight) && !isZero(minHeight)) return false;
+  if (minHeight && !isZero(minHeight) && minHeight !== "auto") return false;
   return ["max-height", "height"].some((p) => isZero(d.get(p) ?? "x"));
 }
 

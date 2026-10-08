@@ -152,6 +152,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="height:0;overflow:visible hidden">${SECRET}</div>`,
     ],
     [
+      "a zero height where a hidden x axis turns a visible y axis into auto",
+      `<div style="height:0;overflow:hidden visible">${SECRET}</div>`,
+    ],
+    [
       "a zero height written as .0px",
       `<div style="height:.0px;overflow:hidden">${SECRET}</div>`,
     ],
@@ -215,6 +219,18 @@ describe("sanitizeHtml — content hidden from readers", () => {
     [
       "an inline overflow shorthand overriding a stylesheet overflow-y",
       `<style>.pre{height:0;overflow-y:hidden}</style><div class="pre" style="overflow:visible">Shown text</div>`,
+    ],
+    [
+      "a later height it cannot compute",
+      `<div style="height:0;height:calc(40px);overflow:hidden">Shown text</div>`,
+    ],
+    [
+      "a later opacity keyword",
+      `<div style="opacity:0;opacity:initial">Shown text</div>`,
+    ],
+    [
+      "a min-height it cannot compute",
+      `<div style="height:0;min-height:var(--h);overflow:hidden">Shown text</div>`,
     ],
     [
       "visibility:hidden, which a descendant can undo",
