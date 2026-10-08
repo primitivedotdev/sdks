@@ -240,7 +240,7 @@ function clipsVertically(d: Map<string, string>): boolean {
   return CLIPS.test(d.get("overflow-y") ?? "");
 }
 
-function hidesByStyle(d: Map<string, string>): boolean {
+function hidesByStyle(d: Map<string, string>, boxClips = true): boolean {
   if (d.get("display") === "none") return true;
   const opacity = d.get("opacity");
   if (
@@ -249,7 +249,7 @@ function hidesByStyle(d: Map<string, string>): boolean {
     Number.parseFloat(opacity) === 0
   )
     return true;
-  if (!clipsVertically(d)) return false;
+  if (!boxClips || !clipsVertically(d)) return false;
   const minHeight = d.get("min-height");
   if (minHeight && !isZero(minHeight) && minHeight !== "auto") return false;
   return ["max-height", "height"].some((p) => isZero(d.get(p) ?? "x"));
@@ -261,6 +261,123 @@ interface Rule {
   specificity: number;
   order: number;
   decls: Map<string, Decl>;
+}
+
+/**
+ * The target of a rule this code does not evaluate (inside a media query or
+ * other @-block, or with a complex selector) that could make an element
+ * visible: the tag, id and classes of its rightmost compound selector.
+ */
+interface Restorer {
+  tag: string;
+  id: string;
+  classes: string[];
+  important: boolean;
+}
+
+interface Sheet {
+  /** Simple class rules, indexed by each class they name. */
+  byClass: Map<string, Rule[]>;
+  restorers: Restorer[];
+}
+
+/** Whether these declarations could undo a hide: any display other than none, opacity above zero, a non-clipping overflow or a non-zero height. */
+function couldShow(decls: Map<string, Decl>): {
+  show: boolean;
+  important: boolean;
+} {
+  let show = false;
+  let important = false;
+  for (const [prop, d] of decls) {
+    const shows =
+      (prop === "display" && d.value !== "none") ||
+      (prop === "opacity" &&
+        !(BARE_NUMBER.test(d.value) && Number.parseFloat(d.value) === 0)) ||
+      (prop === "overflow-y" && !CLIPS.test(d.value)) ||
+      (prop.endsWith("height") && !isZero(d.value));
+    if (shows) {
+      show = true;
+      important ||= d.important;
+    }
+  }
+  return { show, important };
+}
+
+function rightmostCompound(selector: string): Restorer | null {
+  const last =
+    selector
+      .trim()
+      .split(/[\s>+~]+/)
+      .at(-1) ?? "";
+  if (!last) return null;
+  const tag = last.match(/^([a-z][a-z0-9-]*|\*)/i)?.[1]?.toLowerCase() ?? "";
+  const id = last.match(/#([\w-]+)/)?.[1] ?? "";
+  const classes = [...last.matchAll(/\.([\w-]+)/g)].map((m) => m[1] ?? "");
+  return { tag: tag === "*" ? "" : tag, id, classes, important: false };
+}
+
+function readSheet(html: string): Sheet {
+  const byClass = new Map<string, Rule[]>();
+  const restorers: Restorer[] = [];
+  let order = 0;
+  const addRestorers = (selectors: string, decls: Map<string, Decl>) => {
+    const { show, important } = couldShow(decls);
+    if (!show) return;
+    for (const sel of selectors.split(",")) {
+      const r = rightmostCompound(sel);
+      if (r) restorers.push({ ...r, important });
+    }
+  };
+  const sheets = html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) ?? [];
+  for (const sheet of sheets) {
+    const css = stripComments(
+      sheet.replace(/^<style\b[^>]*>|<\/style>$/gi, ""),
+    );
+    // Rules nested in @-blocks apply only to some readers, so they can only ever make the outcome uncertain.
+    for (const block of atBlocks(css)) {
+      for (const m of block.matchAll(/([^{}@]+)\{([^{}]*)\}/g))
+        addRestorers(m[1] ?? "", declarations(m[2] ?? ""));
+    }
+    for (const m of removeAtBlocks(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const decls = declarations(m[2] ?? "");
+      if (!decls.size) continue;
+      for (const sel of (m[1] ?? "").split(",")) {
+        const simple = sel.trim().match(/^([a-z][a-z0-9]*)?((?:\.[\w-]+)+)$/i);
+        if (!simple) {
+          addRestorers(sel, decls);
+          continue;
+        }
+        const classes = (simple[2] ?? "").split(".").filter(Boolean);
+        const rule: Rule = {
+          tag: (simple[1] ?? "").toLowerCase(),
+          classes,
+          specificity: classes.length * 1000 + (simple[1] ? 1 : 0),
+          order: order++,
+          decls,
+        };
+        for (const c of classes)
+          byClass.set(c, [...(byClass.get(c) ?? []), rule]);
+      }
+    }
+  }
+  return { byClass, restorers };
+}
+
+function atBlocks(css: string): string[] {
+  const out: string[] = [];
+  for (let at = css.search(/@[a-z-]+[^{;]*\{/i); at >= 0; ) {
+    let depth = 0;
+    let end = css.indexOf("{", at);
+    const start = end + 1;
+    for (; end < css.length; end++) {
+      if (css[end] === "{") depth++;
+      else if (css[end] === "}" && --depth === 0) break;
+    }
+    out.push(css.slice(start, end));
+    const next = css.slice(end + 1).search(/@[a-z-]+[^{;]*\{/i);
+    at = next < 0 ? -1 : end + 1 + next;
+  }
+  return out;
 }
 
 function removeAtBlocks(css: string): string {
@@ -281,48 +398,45 @@ function removeAtBlocks(css: string): string {
   return out;
 }
 
-/** Rules from the message's own stylesheets whose selector is a tag and/or classes only. */
-function classRules(html: string): Rule[] {
-  const rules: Rule[] = [];
-  const sheets = html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) ?? [];
-  for (const sheet of sheets) {
-    const css = removeAtBlocks(
-      stripComments(sheet.replace(/^<style\b[^>]*>|<\/style>$/gi, "")),
-    );
-    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      const decls = declarations(m[2] ?? "");
-      if (!decls.size) continue;
-      for (const sel of (m[1] ?? "").split(",")) {
-        const simple = sel.trim().match(/^([a-z][a-z0-9]*)?((?:\.[\w-]+)+)$/i);
-        if (!simple) continue;
-        const classes = (simple[2] ?? "").split(".").filter(Boolean);
-        rules.push({
-          tag: (simple[1] ?? "").toLowerCase(),
-          classes,
-          specificity: classes.length * 1000 + (simple[1] ? 1 : 0),
-          order: rules.length,
-          decls,
-        });
-      }
-    }
-  }
-  return rules;
+/** Whether a rule this code does not evaluate might target the element and show it. */
+function mayBeRestored(
+  tagName: string,
+  attribs: Record<string, string>,
+  own: Set<string>,
+  restorers: Restorer[],
+  inlineHide: boolean,
+): boolean {
+  return restorers.some((r) => {
+    // A normal stylesheet declaration cannot beat an inline one; only an important one can.
+    if (inlineHide && !r.important) return false;
+    if (r.id && r.id !== attribs.id) return false;
+    if (r.classes.some((c) => !own.has(c))) return false;
+    if (r.tag && r.tag !== tagName.toLowerCase()) return false;
+    return true;
+  });
 }
 
 /** The winning value of each relevant property for one element. */
 function resolve(
   tagName: string,
   attribs: Record<string, string>,
-  rules: Rule[],
+  sheet: Sheet,
+  own: Set<string>,
 ): Map<string, string> {
-  const own = new Set((attribs.class ?? "").split(/\s+/).filter(Boolean));
-  const matched = rules
-    .filter(
-      (r) =>
+  const seen = new Set<Rule>();
+  const matched: Rule[] = [];
+  for (const c of own) {
+    for (const r of sheet.byClass.get(c) ?? []) {
+      if (seen.has(r)) continue;
+      seen.add(r);
+      if (
         (!r.tag || r.tag === tagName.toLowerCase()) &&
-        r.classes.every((c) => own.has(c)),
-    )
-    .sort((x, y) => x.specificity - y.specificity || x.order - y.order);
+        r.classes.every((x) => own.has(x))
+      )
+        matched.push(r);
+    }
+  }
+  matched.sort((x, y) => x.specificity - y.specificity || x.order - y.order);
   const inline = declarations(attribs.style ?? "");
   const out = new Map<string, string>();
   // Cascade order, lowest first: normal stylesheet, normal inline, important stylesheet, important inline.
@@ -341,8 +455,56 @@ function resolve(
   return out;
 }
 
+// Block-level by default. height and overflow do not clip an inline box.
+const BLOCK_TAGS = new Set([
+  "div",
+  "p",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "ul",
+  "ol",
+  "li",
+  "center",
+  "blockquote",
+  "pre",
+  "address",
+  "dl",
+  "dt",
+  "dd",
+]);
+const BLOCK_DISPLAY =
+  /^(block|inline-block|flow-root|flex|inline-flex|grid|inline-grid|list-item)$/;
+
+function hiddenElement(
+  tagName: string,
+  attribs: Record<string, string>,
+  sheet: Sheet,
+): boolean {
+  if ("hidden" in attribs) return true;
+  const own = new Set((attribs.class ?? "").split(/\s+/).filter(Boolean));
+  if (!attribs.style && own.size === 0) return false;
+  const d = resolve(tagName, attribs, sheet, own);
+  const display = d.get("display");
+  const boxClips = display
+    ? BLOCK_DISPLAY.test(display)
+    : BLOCK_TAGS.has(tagName.toLowerCase());
+  if (!hidesByStyle(d, boxClips)) return false;
+  // Did the hide come from the inline style alone? Then only an important rule elsewhere could undo it.
+  const inlineHide = hidesByStyle(
+    new Map(
+      [...declarations(attribs.style ?? "")].map(([k, v]) => [k, v.value]),
+    ),
+    boxClips,
+  );
+  return !mayBeRestored(tagName, attribs, own, sheet.restorers, inlineHide);
+}
+
 function optionsFor(html: string): IOptions {
-  const rules = classRules(html);
+  const sheet = readSheet(html);
   // Attribute objects of hidden elements. transformTags sees each element's
   // original attributes; exclusiveFilter runs when it closes and removes it
   // with everything inside. The allow-list strips attributes in place, so the
@@ -354,11 +516,7 @@ function optionsFor(html: string): IOptions {
       ...OPTIONS.transformTags,
       "*": (tagName, attribs) => {
         const next = { ...attribs };
-        if (
-          "hidden" in attribs ||
-          hidesByStyle(resolve(tagName, attribs, rules))
-        )
-          hiddenElements.add(next);
+        if (hiddenElement(tagName, attribs, sheet)) hiddenElements.add(next);
         return { tagName, attribs: next };
       },
     },

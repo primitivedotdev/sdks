@@ -253,6 +253,26 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="opacity:0(5)%">Shown text</div>`,
     ],
     [
+      "a class hidden outside a media query but shown inside one",
+      `<style>.m{display:none}@media(max-width:480px){.m{display:block!important}}</style><div class="m">Shown text</div>`,
+    ],
+    [
+      "an inline hide undone by an important media-query rule (mobile-only block)",
+      `<style>@media only screen and (max-device-width:568px){.mobile{display:block!important}}</style><div class="mobile" style="display:none;max-height:0;overflow:hidden">Shown text</div>`,
+    ],
+    [
+      "a class hide that an id rule overrides",
+      `<style>.c{display:none} #content{display:block}</style><div id="content" class="c">Shown text</div>`,
+    ],
+    [
+      "a zero-height clip on an inline element",
+      `<span style="height:0;overflow:hidden">Shown text</span>`,
+    ],
+    [
+      "a zero-height clip on an element displayed inline",
+      `<div style="display:inline;height:0;overflow:hidden">Shown text</div>`,
+    ],
+    [
       "visibility:hidden, which a descendant can undo",
       `<div style="visibility:hidden"><span style="visibility:visible">Shown text</span></div>`,
     ],
@@ -270,5 +290,21 @@ describe("sanitizeHtml — content hidden from readers", () => {
       '<div><span style="display:none">a<b>b</b></span>after</div><p>next</p>',
     );
     expect(out).toBe("<div>after</div><p>next</p>");
+  });
+});
+
+describe("sanitizeHtml — stylesheet cost", () => {
+  test("stays fast with many rules and many classed elements", () => {
+    const rules = Array.from(
+      { length: 3000 },
+      (_, i) => `.c${i}{display:${i % 2 ? "none" : "block"}}`,
+    ).join("");
+    const body = Array.from(
+      { length: 5000 },
+      (_, i) => `<div class="c${i % 3000} x">t${i}</div>`,
+    ).join("");
+    const start = performance.now();
+    sanitizeHtml(`<style>${rules}</style>${body}`);
+    expect(performance.now() - start).toBeLessThan(2000);
   });
 });
