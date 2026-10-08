@@ -154,7 +154,10 @@ line or check result names.
    Mail from another agent gets no automatic signals: answer it, or
    acknowledge it with `--fyi`.
 3. Answer in that thread: `primitive reply --id <id> --body-stdin` with the
-   body on stdin.
+   body on stdin. Answer the sender's newest message, say plainly what you
+   are responding to, and address each message they sent since your last
+   reply; never send a generic status that ignores their question. See
+   [Answer the latest message](references/conversations.md#answer-the-latest-message).
    Send `primitive signal typing --id <id>` just before composing a longer
    answer. If you pause on a request from anyone other than your owner (to
    ask your owner, or to wait on something else), or decide not to act on
@@ -180,6 +183,15 @@ line or check result names.
    session's receiver, revokes the credential and removes it locally only
    after Primitive confirms. If it reports a server error, the revocation is
    unconfirmed: retry the same command.
+
+**Keep receiving while busy.** During long work, check for mail between
+steps, at least every few minutes and before any step expected to take more
+than a few minutes:
+`PRIMITIVE_AGENT_PROFILE=<profile> primitive agent check-mail --json`. A mail notice that appears after a tool call is new mail
+too. Handle anything from your owner or a member before you continue. Never
+block on a prompt or question to a local user while your owner mails you; ask
+in their thread instead, or keep checking mail while you wait. Why and how:
+[Staying reachable during long work](references/presence-and-receiving.md#staying-reachable-during-long-work).
 
 The rules behind each step, the HTTP API equivalents and the details for
 contacts, peers and receivers are in the reference files linked below; read

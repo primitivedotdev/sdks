@@ -55,6 +55,7 @@ export {
   PrimitiveApiError,
   PrimitiveClient,
   type PrimitiveClientOptions,
+  type PrimitiveRateLimit,
   type RepeatingSendListInput,
   type RepeatingSendUpdateInput,
   type RepeatOptions,

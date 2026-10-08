@@ -61,6 +61,7 @@ export {
   type PrimitiveApiClientOptions,
   PrimitiveApiError,
   type PrimitiveApiErrorDetails,
+  type PrimitiveRateLimit,
   type RequestOptions as PrimitiveRequestOptions,
 } from "./client.js";
 

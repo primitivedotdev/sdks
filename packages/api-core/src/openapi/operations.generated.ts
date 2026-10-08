@@ -536,7 +536,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "create-agent-account",
-    "description": "Creates an emailless agent account without authentication and returns a\none-time API key (prefixed `prim_`) plus a provisioned managed inbox.\nThe account is on the `agent` plan: reply-only (it can send only to\naddresses that have already sent it authenticated mail) with tight send\nlimits. Use the returned `api_key` as a Bearer token on later calls. The\naccount can be upgraded to a full developer account by confirming an\nemail through the claim flow. This endpoint does not require an API key.\n",
+    "description": "Creates an emailless agent account without authentication and returns a\none-time API key (prefixed `prim_`) plus a provisioned managed inbox.\nThe account is on the `agent` plan: reply-only (it can send only to\naddresses that have already sent it authenticated mail) with tight send\nlimits. Use the returned `api_key` as a Bearer token on later calls. The\naccount can be upgraded to a full developer account by confirming an\nemail through the claim flow. Upgrading raises the send cap and grants\nthe developer plan's default features (such as Functions); it does not\nunlock sending to arbitrary recipients, because the recipient rules on\nthe account still apply. `GET /send-permissions` reports those rules\n(its list of individual addresses can be partial), and\n`POST /sendability` answers for one specific recipient. This endpoint\ndoes not require an API key.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "createAgentAccount",
@@ -643,7 +643,8 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               ]
             },
             "description": {
-              "type": "string"
+              "type": "string",
+              "description": "What upgrading grants, in words meant to be repeated to a user: a higher send cap and the developer plan's default features. It does not unlock sending to arbitrary recipients; the account's recipient rules still apply (see `GET /send-permissions` and `POST /sendability`)."
             },
             "claim_path": {
               "type": "string"
@@ -904,7 +905,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "binaryResponse": false,
     "bodyRequired": true,
     "command": "verify-agent-claim",
-    "description": "Confirms the verification code emailed by `/agent/claim/start` and\nupgrades the account to the `developer` plan. The org id, API key, and\nmanaged inbox all carry over; the send cap lifts. Authenticated by the\nagent's own API key.\n",
+    "description": "Confirms the verification code emailed by `/agent/claim/start` and\nupgrades the account to the `developer` plan. The org id, API key, and\nmanaged inbox all carry over; the send cap lifts and the developer\nplan's default features (such as Functions) unlock. Upgrading does not\nunlock sending to arbitrary recipients: the recipient rules on the\naccount still apply. `GET /send-permissions` reports those rules (its\nlist of individual addresses can be partial), and `POST /sendability`\nanswers for one specific recipient. Authenticated by the agent's own\nAPI key.\n",
     "hasJsonBody": true,
     "method": "POST",
     "operationId": "verifyAgentClaim",
@@ -8014,6 +8015,54 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "via": {
               "type": "string",
               "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+            },
+            "delivery": {
+              "type": "array",
+              "description": "Per-recipient outcome of the relay forwarding the message to the recipient's mailbox provider. The field may be absent; treat a missing value as no delivery information being available.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "recipient": {
+                    "type": "string",
+                    "description": "The recipient address the relay forwarded to."
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "Outcome of the forward. Currently one of `delivered`, `deferred` or `bounced`. Treat an unfamiliar value as one added after your client was built."
+                  },
+                  "smtp_code": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "description": "SMTP reply code from the mailbox provider, when one was received."
+                  },
+                  "enhanced_status_code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Enhanced status code (for example `2.0.0`) from the mailbox provider, when one was received."
+                  },
+                  "smtp_response": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "SMTP reply text from the mailbox provider, when one was received."
+                  },
+                  "at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "When this outcome was recorded."
+                  }
+                },
+                "required": [
+                  "recipient",
+                  "status",
+                  "at"
+                ]
+              }
             }
           },
           "required": [
@@ -8099,14 +8148,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Filter emails created on or after this timestamp",
+        "description": "Filter emails created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.",
         "enum": null,
         "name": "date_from",
         "required": false,
         "type": "string"
       },
       {
-        "description": "Filter emails created on or before this timestamp",
+        "description": "Filter emails created on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.",
         "enum": null,
         "name": "date_to",
         "required": false,
@@ -8517,7 +8566,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [
       {
-        "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field.",
+        "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term must match. A term is a word, a `\"quoted phrase\"`, or a `field:value` filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`, `automated:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:` terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an unterminated quote, or only stop words is a `validation_error` that says what to change; it is never silently reinterpreted. Alternatives chain (`invoice OR receipt OR \"past due\"`), and each one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR` next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead); an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a search cannot exclude a term); and an alternative with no searchable word once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT` itself, write it in lower case or in double quotes (`\"OR\"`). With `prefix=true`, a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a URL, put it in double quotes.",
         "enum": null,
         "name": "q",
         "required": false,
@@ -8573,14 +8622,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Filter emails received on or after this timestamp.",
+        "description": "Filter emails received on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.",
         "enum": null,
         "name": "date_from",
         "required": false,
         "type": "string"
       },
       {
-        "description": "Filter emails received on or before this timestamp.",
+        "description": "Filter emails received on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.",
         "enum": null,
         "name": "date_to",
         "required": false,
@@ -8660,7 +8709,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       {
         "default": "true",
-        "description": "Include subject/body highlight snippets when text search is active.",
+        "description": "Include subject/body highlight snippets when text search is active. This switches only the `highlights` object on each result. The `snippet` field (the body preview) is on every result either way, and a search with no text (`q`, `subject` or `body`) has no highlights to leave out, so `false` changes nothing there.",
         "enum": [
           "true",
           "false"
@@ -8671,7 +8720,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       },
       {
         "default": "true",
-        "description": "Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet aggregation is not run at all.",
+        "description": "Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet aggregation is not run at all. Each of `by_sender`, `by_domain` and `by_status` lists its values by `count` descending, and values with the same count by `value` ascending in byte order of its UTF-8 encoding (upper case before lower case), a null `value` last. `by_sender` and `by_domain` keep the first 20 values in that order, so the same request over the same mail always lists the same values.",
         "enum": [
           "true",
           "false"
@@ -17267,12 +17316,12 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "date_from": {
           "type": "string",
           "format": "date-time",
-          "description": "Only include mail at or after this timestamp."
+          "description": "Only include mail at or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
         },
         "date_to": {
           "type": "string",
           "format": "date-time",
-          "description": "Only include mail at or before this timestamp."
+          "description": "Only include mail at or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
         },
         "include": {
           "type": "array",
@@ -19202,14 +19251,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Inclusive lower bound on `created_at`.",
+        "description": "Inclusive lower bound on `created_at`. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.",
         "enum": null,
         "name": "date_from",
         "required": false,
         "type": "string"
       },
       {
-        "description": "Inclusive upper bound on `created_at`.",
+        "description": "Inclusive upper bound on `created_at`. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.",
         "enum": null,
         "name": "date_to",
         "required": false,
@@ -19857,7 +19906,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "scheduled_at": {
           "type": "string",
           "format": "date-time",
-          "description": "New execution time (ISO 8601). Must be in the future and\nat most 30 days out, the same bounds as the create-time\nfield on /send-mail.\n"
+          "description": "New execution time (ISO 8601). Must be in the future and\nat most 30 days out, the same bounds as the create-time\nfield on /send-mail. Accepts `Z` or a numeric UTC offset\n(`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an\noffset is converted to UTC. A time with no zone, or a bare\ndate, is rejected.\n"
         }
       },
       "required": [
@@ -20669,7 +20718,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "scheduled_at": {
           "type": "string",
           "format": "date-time",
-          "description": "Optional future execution time (ISO 8601). When set, the\nsend is recorded with status `scheduled` and executed at\nthe requested time instead of immediately. Must be in the\nfuture and at most 30 days out. Incompatible with `wait`\n(a scheduled send resolves after this request completes)\nand with `attachments` / `payload_attachments` (not yet\nsupported on scheduled sends). Reschedule via PATCH\n/sent-emails/{id}; cancel via /sent-emails/{id}/cancel.\n"
+          "description": "Optional future execution time (ISO 8601). When set, the\nsend is recorded with status `scheduled` and executed at\nthe requested time instead of immediately. Must be in the\nfuture and at most 30 days out. Incompatible with `wait`\n(a scheduled send resolves after this request completes)\nand with `attachments` / `payload_attachments` (not yet\nsupported on scheduled sends). Reschedule via PATCH\n/sent-emails/{id}; cancel via /sent-emails/{id}/cancel.\nAccepts `Z` or a numeric UTC offset\n(`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an\noffset is converted to UTC, so the stored and echoed value\nis UTC. A time with no zone, or a bare date, is rejected.\n"
         }
       },
       "required": [
@@ -22736,14 +22785,14 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Filter deliveries created on or after this timestamp",
+        "description": "Filter deliveries created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.",
         "enum": null,
         "name": "date_from",
         "required": false,
         "type": "string"
       },
       {
-        "description": "Filter deliveries created on or before this timestamp",
+        "description": "Filter deliveries created on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.",
         "enum": null,
         "name": "date_to",
         "required": false,

@@ -1083,6 +1083,9 @@ export type CreateAgentAccountInput = {
  */
 export type AgentAccountUpgradeHint = {
     plan: 'developer';
+    /**
+     * What upgrading grants, in words meant to be repeated to a user: a higher send cap and the developer plan's default features. It does not unlock sending to arbitrary recipients; the account's recipient rules still apply (see `GET /send-permissions` and `POST /sendability`).
+     */
     description: string;
     claim_path: string;
 };
@@ -1925,8 +1928,17 @@ export type EmailSearchFacetBucket = {
 };
 
 export type EmailSearchFacets = {
+    /**
+     * Sender values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8 encoding, with a null `value` last. Keeps the first 20 values in that order.
+     */
     by_sender: Array<EmailSearchFacetBucket>;
+    /**
+     * Domain values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8 encoding, with a null `value` last. Keeps the first 20 values in that order.
+     */
     by_domain: Array<EmailSearchFacetBucket>;
+    /**
+     * Status values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8 encoding, with a null `value` last.
+     */
     by_status: Array<EmailSearchFacetBucket>;
     has_attachment: {
         true: number;
@@ -2229,6 +2241,35 @@ export type EmailDetail = {
          * How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built.
          */
         via: string;
+        /**
+         * Per-recipient outcome of the relay forwarding the message to the recipient's mailbox provider. The field may be absent; treat a missing value as no delivery information being available.
+         */
+        delivery?: Array<{
+            /**
+             * The recipient address the relay forwarded to.
+             */
+            recipient: string;
+            /**
+             * Outcome of the forward. Currently one of `delivered`, `deferred` or `bounced`. Treat an unfamiliar value as one added after your client was built.
+             */
+            status: string;
+            /**
+             * SMTP reply code from the mailbox provider, when one was received.
+             */
+            smtp_code?: number | null;
+            /**
+             * Enhanced status code (for example `2.0.0`) from the mailbox provider, when one was received.
+             */
+            enhanced_status_code?: string | null;
+            /**
+             * SMTP reply text from the mailbox provider, when one was received.
+             */
+            smtp_response?: string | null;
+            /**
+             * When this outcome was recorded.
+             */
+            at: string;
+        }>;
     } | null;
 };
 
@@ -2686,6 +2727,10 @@ export type SendMailInput = {
      * and with `attachments` / `payload_attachments` (not yet
      * supported on scheduled sends). Reschedule via PATCH
      * /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
+     * Accepts `Z` or a numeric UTC offset
+     * (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+     * offset is converted to UTC, so the stored and echoed value
+     * is UTC. A time with no zone, or a bare date, is rejected.
      *
      */
     scheduled_at?: string;
@@ -3044,11 +3089,11 @@ export type SemanticSearchInput = {
      */
     exclude?: Array<SemanticSearchField>;
     /**
-     * Only include mail at or after this timestamp.
+     * Only include mail at or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
      */
     date_from?: string;
     /**
-     * Only include mail at or before this timestamp.
+     * Only include mail at or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
      */
     date_to?: string;
     /**
@@ -3412,7 +3457,10 @@ export type SentEmailRescheduleInput = {
     /**
      * New execution time (ISO 8601). Must be in the future and
      * at most 30 days out, the same bounds as the create-time
-     * field on /send-mail.
+     * field on /send-mail. Accepts `Z` or a numeric UTC offset
+     * (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+     * offset is converted to UTC. A time with no zone, or a bare
+     * date, is rejected.
      *
      */
     scheduled_at: string;
@@ -5422,7 +5470,7 @@ export type StartCliLoginErrors = {
      */
     400: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -5484,7 +5532,7 @@ export type StartCliSignupErrors = {
      */
     400: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -5546,7 +5594,7 @@ export type VerifyCliSignupErrors = {
      */
     400: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -5577,7 +5625,7 @@ export type StartAgentSignupErrors = {
      */
     400: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -5647,7 +5695,7 @@ export type VerifyAgentSignupErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -5678,7 +5726,7 @@ export type CreateAgentAccountErrors = {
      */
     400: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -5721,7 +5769,7 @@ export type StartAgentClaimErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -5768,7 +5816,7 @@ export type VerifyAgentClaimErrors = {
      */
     410: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -5807,7 +5855,7 @@ export type CreateAgentClaimLinkErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -6013,7 +6061,7 @@ export type RotateWebhookSecretErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -6132,7 +6180,7 @@ export type GetCreditBalanceErrors = {
      */
     403: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -6374,7 +6422,7 @@ export type CheckDomainDnsErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -6426,7 +6474,7 @@ export type DownloadDomainZoneFileErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -6455,7 +6503,7 @@ export type GetInboxStatusErrors = {
      */
     401: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -6505,11 +6553,11 @@ export type ListEmailsData = {
          */
         search?: string;
         /**
-         * Filter emails created on or after this timestamp
+         * Filter emails created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
          */
         date_from?: string;
         /**
-         * Filter emails created on or before this timestamp
+         * Filter emails created on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
          */
         date_to?: string;
         /**
@@ -6630,7 +6678,7 @@ export type SearchEmailsData = {
     path?: never;
     query?: {
         /**
-         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field.
+         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term must match. A term is a word, a `"quoted phrase"`, or a `field:value` filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`, `automated:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:` terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an unterminated quote, or only stop words is a `validation_error` that says what to change; it is never silently reinterpreted. Alternatives chain (`invoice OR receipt OR "past due"`), and each one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR` next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead); an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a search cannot exclude a term); and an alternative with no searchable word once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT` itself, write it in lower case or in double quotes (`"OR"`). With `prefix=true`, a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a URL, put it in double quotes.
          */
         q?: string;
         /**
@@ -6673,11 +6721,11 @@ export type SearchEmailsData = {
          */
         status?: EmailStatus;
         /**
-         * Filter emails received on or after this timestamp.
+         * Filter emails received on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
          */
         date_from?: string;
         /**
-         * Filter emails received on or before this timestamp.
+         * Filter emails received on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
          */
         date_to?: string;
         /**
@@ -6760,11 +6808,11 @@ export type SearchEmailsData = {
          */
         limit?: number;
         /**
-         * Include subject/body highlight snippets when text search is active.
+         * Include subject/body highlight snippets when text search is active. This switches only the `highlights` object on each result. The `snippet` field (the body preview) is on every result either way, and a search with no text (`q`, `subject` or `body`) has no highlights to leave out, so `false` changes nothing there.
          */
         snippet?: 'true' | 'false';
         /**
-         * Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet aggregation is not run at all.
+         * Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet aggregation is not run at all. Each of `by_sender`, `by_domain` and `by_status` lists its values by `count` descending, and values with the same count by `value` ascending in byte order of its UTF-8 encoding (upper case before lower case), a null `value` last. `by_sender` and `by_domain` keep the first 20 values in that order, so the same request over the same mail always lists the same values.
          */
         include_facets?: 'true' | 'false';
         /**
@@ -7226,7 +7274,7 @@ export type ReplyToEmailErrors = {
      */
     422: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
     /**
@@ -7282,7 +7330,7 @@ export type ReplayEmailWebhooksErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -7330,7 +7378,7 @@ export type DiscardEmailContentErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
     /**
@@ -7617,7 +7665,7 @@ export type PullWebhookEventErrors = {
      */
     410: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
     /**
@@ -7679,7 +7727,7 @@ export type CompleteWebhookEventErrors = {
      */
     410: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
     /**
@@ -7725,7 +7773,7 @@ export type TestEndpointErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -8566,11 +8614,11 @@ export type ListDeliveriesData = {
          */
         status?: 'pending' | 'delivered' | 'header_confirmed' | 'failed';
         /**
-         * Filter deliveries created on or after this timestamp
+         * Filter deliveries created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
          */
         date_from?: string;
         /**
-         * Filter deliveries created on or before this timestamp
+         * Filter deliveries created on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
          */
         date_to?: string;
     };
@@ -8627,7 +8675,7 @@ export type ReplayDeliveryErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -8707,7 +8755,7 @@ export type SendEmailErrors = {
      */
     410: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
     /**
@@ -8758,7 +8806,7 @@ export type SemanticSearchErrors = {
      */
     403: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
     /**
@@ -9008,11 +9056,11 @@ export type ListSentEmailsData = {
          */
         idempotency_key?: string;
         /**
-         * Inclusive lower bound on `created_at`.
+         * Inclusive lower bound on `created_at`. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
          */
         date_from?: string;
         /**
-         * Inclusive upper bound on `created_at`.
+         * Inclusive upper bound on `created_at`. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
          */
         date_to?: string;
         /**
@@ -9141,7 +9189,7 @@ export type DeleteSentEmailErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
     /**
@@ -10829,7 +10877,7 @@ export type DeleteMemoryErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -10897,7 +10945,7 @@ export type GetMemoryErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -10952,7 +11000,7 @@ export type SetMemoryErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11051,7 +11099,7 @@ export type SearchMemoriesErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11099,7 +11147,7 @@ export type ListTemplatesErrors = {
      */
     400: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11139,7 +11187,7 @@ export type GetTemplateErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11199,7 +11247,7 @@ export type InstallTemplateErrors = {
      */
     422: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11247,7 +11295,7 @@ export type GetTemplateInstallErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11282,7 +11330,7 @@ export type ListPayoutAddressesErrors = {
      */
     403: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11329,7 +11377,7 @@ export type RegisterPayoutAddressErrors = {
      */
     422: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11389,7 +11437,7 @@ export type CreateEmailChallengeErrors = {
      */
     422: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11444,7 +11492,7 @@ export type CreateChallengeErrors = {
      */
     422: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11492,7 +11540,7 @@ export type GetChallengeErrors = {
      */
     404: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11552,7 +11600,7 @@ export type PayChallengeErrors = {
      */
     422: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
     /**
@@ -11591,7 +11639,7 @@ export type GetSpendPolicyErrors = {
      */
     403: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11630,7 +11678,7 @@ export type UpdateSpendPolicyErrors = {
      */
     403: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -11665,7 +11713,7 @@ export type ListDeclinedPaymentsErrors = {
      */
     403: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -13057,7 +13105,7 @@ export type GetContactPolicyErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -13104,7 +13152,7 @@ export type PutContactPolicyErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -13156,7 +13204,7 @@ export type GetAgentContactPolicyErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };
@@ -13208,7 +13256,7 @@ export type PutAgentContactPolicyErrors = {
      */
     409: ErrorResponse;
     /**
-     * Rate limit exceeded
+     * Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.
      */
     429: ErrorResponse;
 };

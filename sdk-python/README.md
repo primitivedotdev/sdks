@@ -143,6 +143,27 @@ client.forward(
 )
 ```
 
+### Errors and rate limits
+
+A failed call raises `primitive.PrimitiveAPIError`. It carries `status_code`,
+`code`, `request_id`, `details`, and `retry_after` (the `Retry-After` header in
+seconds, when the server sent one). On a 429 it also carries `rate_limit`, a
+`primitive.RateLimit` with `limit`, `remaining`, `reset` (Unix seconds) and
+`policy` from the `ratelimit-*` headers. These describe the limiter that
+rejected the request, with its own window, which may be a send cap
+(`1000;w=3600`) rather than the API request budget. `rate_limit` is `None` when
+a 429 carried only `Retry-After`; wait for `retry_after` either way.
+
+```python
+from primitive import PrimitiveAPIError
+
+try:
+    client.send(from_email=sender, to=to, subject="Hi", body_text="Hello")
+except PrimitiveAPIError as err:
+    if err.status_code == 429:
+        print(err.retry_after, err.rate_limit and err.rate_limit.policy)
+```
+
 ### Per-call request options
 
 `send`, `reply`, `forward` (and their `a*` async variants) accept the same
@@ -573,6 +594,20 @@ page = search_emails(
 `int` otherwise; use `page.meta.cursor` to tell whether another page exists.
 Turning `include_facets` off skips the facet aggregation entirely. Search text
 containing a NUL character is rejected with a 400 validation error.
+
+`q` takes words, `"quoted phrases"` and `field:value` filters, and every
+term must match. An upper-case `OR` between two text terms (words, phrases,
+`subject:` and `body:` terms) accepts either and binds tighter than the
+implicit AND, so `acme invoice OR receipt` means `acme` and either `invoice` or
+`receipt`. `OR` cannot join filters such as `from:`, and there is no `NOT`;
+either is a 400 validation error, as is a leading or trailing `OR`. To search
+for the word `OR` or `NOT` itself, write it in lower case or in double quotes.
+Facet values are ordered by count descending, ties by value in byte order, and
+`by_sender` and `by_domain` keep the first 20.
+
+Date filters such as `date_from` and `date_to` take an ISO 8601 timestamp with
+`Z` or a numeric UTC offset (`2026-10-02T00:00:00-04:00`); a time with no zone,
+or a bare date, is rejected.
 
 Upgrading to 2.0: `EmailSearchMeta.total` is now typed `int | None`. It is
 `None` only when the request sets `count=SearchEmailsCount.FALSE`; type-checked

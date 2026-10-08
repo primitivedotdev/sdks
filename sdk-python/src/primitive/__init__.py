@@ -1,6 +1,7 @@
 from .client import (
     PrimitiveAPIError,
     PrimitiveClient,
+    RateLimit,
     SendAttachment,
     SendResult,
     SendThread,
@@ -225,6 +226,7 @@ __all__ = [
     "PrimitiveClient",
     "PrimitiveWebhookError",
     "RAW_EMAIL_ERRORS",
+    "RateLimit",
     "RawContent",
     "RawContentDownloadOnly",
     "RawContentInline",

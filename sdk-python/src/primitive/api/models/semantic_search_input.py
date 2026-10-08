@@ -38,8 +38,12 @@ class SemanticSearchInput:
                 and sent (`outbound`).
             search_in (list[SemanticSearchField] | Unset): Restrict matching to these fields. Defaults to all.
             exclude (list[SemanticSearchField] | Unset): Exclude these fields from matching.
-            date_from (datetime.datetime | Unset): Only include mail at or after this timestamp.
-            date_to (datetime.datetime | Unset): Only include mail at or before this timestamp.
+            date_from (datetime.datetime | Unset): Only include mail at or after this timestamp. An ISO 8601 timestamp with
+                `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the
+                instant it names. A time with no zone, or a bare date, is rejected.
+            date_to (datetime.datetime | Unset): Only include mail at or before this timestamp. An ISO 8601 timestamp with
+                `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the
+                instant it names. A time with no zone, or a bare date, is rejected.
             include (list[SemanticSearchInputIncludeItem] | Unset): Opt-in extras. `coverage` adds an index-coverage
                 snapshot to
                 `meta`. Matched fields, snippets, and the score breakdown are

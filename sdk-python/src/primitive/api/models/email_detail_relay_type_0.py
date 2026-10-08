@@ -8,7 +8,10 @@ from attrs import field as _attrs_field
 
 from ..types import UNSET, Unset
 
+from typing import cast
 
+if TYPE_CHECKING:
+  from ..models.email_detail_relay_type_0_delivery_item import EmailDetailRelayType0DeliveryItem
 
 
 
@@ -27,10 +30,14 @@ class EmailDetailRelayType0:
             hostname (str): The relay hostname the domain's MX record points at.
             via (str): How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after
                 your client was built.
+            delivery (list[EmailDetailRelayType0DeliveryItem] | Unset): Per-recipient outcome of the relay forwarding the
+                message to the recipient's mailbox provider. The field may be absent; treat a missing value as no delivery
+                information being available.
      """
 
     hostname: str
     via: str
+    delivery: list[EmailDetailRelayType0DeliveryItem] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -38,9 +45,19 @@ class EmailDetailRelayType0:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.email_detail_relay_type_0_delivery_item import EmailDetailRelayType0DeliveryItem # noqa: PLC0415
         hostname = self.hostname
 
         via = self.via
+
+        delivery: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.delivery, Unset):
+            delivery = []
+            for delivery_item_data in self.delivery:
+                delivery_item = delivery_item_data.to_dict()
+                delivery.append(delivery_item)
+
+
 
 
         field_dict: dict[str, Any] = {}
@@ -49,6 +66,8 @@ class EmailDetailRelayType0:
             "hostname": hostname,
             "via": via,
         })
+        if delivery is not UNSET:
+            field_dict["delivery"] = delivery
 
         return field_dict
 
@@ -56,14 +75,28 @@ class EmailDetailRelayType0:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_detail_relay_type_0_delivery_item import EmailDetailRelayType0DeliveryItem # noqa: PLC0415
         d = dict(src_dict)
         hostname = d.pop("hostname")
 
         via = d.pop("via")
 
+        _delivery = d.pop("delivery", UNSET)
+        delivery: list[EmailDetailRelayType0DeliveryItem] | Unset = UNSET
+        if _delivery is not UNSET:
+            delivery = []
+            for delivery_item_data in _delivery:
+                delivery_item = EmailDetailRelayType0DeliveryItem.from_dict(delivery_item_data)
+
+
+
+                delivery.append(delivery_item)
+
+
         email_detail_relay_type_0 = cls(
             hostname=hostname,
             via=via,
+            delivery=delivery,
         )
 
 

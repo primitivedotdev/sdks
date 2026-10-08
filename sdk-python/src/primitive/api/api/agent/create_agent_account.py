@@ -92,7 +92,13 @@ def sync_detailed(
     addresses that have already sent it authenticated mail) with tight send
     limits. Use the returned `api_key` as a Bearer token on later calls. The
     account can be upgraded to a full developer account by confirming an
-    email through the claim flow. This endpoint does not require an API key.
+    email through the claim flow. Upgrading raises the send cap and grants
+    the developer plan's default features (such as Functions); it does not
+    unlock sending to arbitrary recipients, because the recipient rules on
+    the account still apply. `GET /send-permissions` reports those rules
+    (its list of individual addresses can be partial), and
+    `POST /sendability` answers for one specific recipient. This endpoint
+    does not require an API key.
 
     Args:
         body (CreateAgentAccountInput):
@@ -131,7 +137,13 @@ def sync(
     addresses that have already sent it authenticated mail) with tight send
     limits. Use the returned `api_key` as a Bearer token on later calls. The
     account can be upgraded to a full developer account by confirming an
-    email through the claim flow. This endpoint does not require an API key.
+    email through the claim flow. Upgrading raises the send cap and grants
+    the developer plan's default features (such as Functions); it does not
+    unlock sending to arbitrary recipients, because the recipient rules on
+    the account still apply. `GET /send-permissions` reports those rules
+    (its list of individual addresses can be partial), and
+    `POST /sendability` answers for one specific recipient. This endpoint
+    does not require an API key.
 
     Args:
         body (CreateAgentAccountInput):
@@ -165,7 +177,13 @@ async def asyncio_detailed(
     addresses that have already sent it authenticated mail) with tight send
     limits. Use the returned `api_key` as a Bearer token on later calls. The
     account can be upgraded to a full developer account by confirming an
-    email through the claim flow. This endpoint does not require an API key.
+    email through the claim flow. Upgrading raises the send cap and grants
+    the developer plan's default features (such as Functions); it does not
+    unlock sending to arbitrary recipients, because the recipient rules on
+    the account still apply. `GET /send-permissions` reports those rules
+    (its list of individual addresses can be partial), and
+    `POST /sendability` answers for one specific recipient. This endpoint
+    does not require an API key.
 
     Args:
         body (CreateAgentAccountInput):
@@ -204,7 +222,13 @@ async def asyncio(
     addresses that have already sent it authenticated mail) with tight send
     limits. Use the returned `api_key` as a Bearer token on later calls. The
     account can be upgraded to a full developer account by confirming an
-    email through the claim flow. This endpoint does not require an API key.
+    email through the claim flow. Upgrading raises the send cap and grants
+    the developer plan's default features (such as Functions); it does not
+    unlock sending to arbitrary recipients, because the recipient rules on
+    the account still apply. `GET /send-permissions` reports those rules
+    (its list of individual addresses can be partial), and
+    `POST /sendability` answers for one specific recipient. This endpoint
+    does not require an API key.
 
     Args:
         body (CreateAgentAccountInput):

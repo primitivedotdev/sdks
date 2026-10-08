@@ -116,8 +116,13 @@ def sync_detailed(
 
      Confirms the verification code emailed by `/agent/claim/start` and
     upgrades the account to the `developer` plan. The org id, API key, and
-    managed inbox all carry over; the send cap lifts. Authenticated by the
-    agent's own API key.
+    managed inbox all carry over; the send cap lifts and the developer
+    plan's default features (such as Functions) unlock. Upgrading does not
+    unlock sending to arbitrary recipients: the recipient rules on the
+    account still apply. `GET /send-permissions` reports those rules (its
+    list of individual addresses can be partial), and `POST /sendability`
+    answers for one specific recipient. Authenticated by the agent's own
+    API key.
 
     Args:
         body (VerifyAgentClaimInput):
@@ -152,8 +157,13 @@ def sync(
 
      Confirms the verification code emailed by `/agent/claim/start` and
     upgrades the account to the `developer` plan. The org id, API key, and
-    managed inbox all carry over; the send cap lifts. Authenticated by the
-    agent's own API key.
+    managed inbox all carry over; the send cap lifts and the developer
+    plan's default features (such as Functions) unlock. Upgrading does not
+    unlock sending to arbitrary recipients: the recipient rules on the
+    account still apply. `GET /send-permissions` reports those rules (its
+    list of individual addresses can be partial), and `POST /sendability`
+    answers for one specific recipient. Authenticated by the agent's own
+    API key.
 
     Args:
         body (VerifyAgentClaimInput):
@@ -183,8 +193,13 @@ async def asyncio_detailed(
 
      Confirms the verification code emailed by `/agent/claim/start` and
     upgrades the account to the `developer` plan. The org id, API key, and
-    managed inbox all carry over; the send cap lifts. Authenticated by the
-    agent's own API key.
+    managed inbox all carry over; the send cap lifts and the developer
+    plan's default features (such as Functions) unlock. Upgrading does not
+    unlock sending to arbitrary recipients: the recipient rules on the
+    account still apply. `GET /send-permissions` reports those rules (its
+    list of individual addresses can be partial), and `POST /sendability`
+    answers for one specific recipient. Authenticated by the agent's own
+    API key.
 
     Args:
         body (VerifyAgentClaimInput):
@@ -219,8 +234,13 @@ async def asyncio(
 
      Confirms the verification code emailed by `/agent/claim/start` and
     upgrades the account to the `developer` plan. The org id, API key, and
-    managed inbox all carry over; the send cap lifts. Authenticated by the
-    agent's own API key.
+    managed inbox all carry over; the send cap lifts and the developer
+    plan's default features (such as Functions) unlock. Upgrading does not
+    unlock sending to arbitrary recipients: the recipient rules on the
+    account still apply. `GET /send-permissions` reports those rules (its
+    list of individual addresses can be partial), and `POST /sendability`
+    answers for one specific recipient. Authenticated by the agent's own
+    API key.
 
     Args:
         body (VerifyAgentClaimInput):

@@ -1,7 +1,7 @@
 # Conversations, replies and progress
 
 Read this for asking a contact and waiting for the answer, threading rules,
-pausing on a request, progress signals over HTTP, testing and repeating
+answering the latest message, pausing on a request, progress signals over HTTP, testing and repeating
 messages. The everyday CLI
 loop is [When mail arrives](../SKILL.md#when-mail-arrives); who may ask you for
 what is in [Trust rules](../SKILL.md#trust-rules).
@@ -59,7 +59,8 @@ their phone and see only the app. Acknowledge first (a read or working signal),
 then answer there. Updating the terminal as well is fine; replacing the Primitive
 reply with terminal output is not. While connected, avoid single tool calls that
 block for many minutes; run long work in the background so new mail is not left
-unread behind it.
+unread behind it, and check for mail between steps as in [Staying reachable
+during long work](presence-and-receiving.md#staying-reachable-during-long-work).
 
 Reply to the request that caused the work, even when another message arrives.
 One agent entry in the app may contain several independent conversations. Recover
@@ -104,6 +105,30 @@ human ownership. If the directory is unavailable or gives no exact owner proof,
 defer that owner-conditioned request or ask the owner; do not broaden it.
 Do not answer your own mail or acknowledge acknowledgments, including mail
 marked `fyi`.
+
+## Answer the latest message
+
+Before you answer, read the thread's current state.
+`primitive emails get --id <id> --context` lists `newer messages in thread` with each one's sender,
+time and ID; read each of those the same way. Over HTTP, use
+`newer_inbound_count` and `latest_inbound_id` as in [Collaborate with other
+agents](collaboration.md). Then, in that thread:
+
+- Answer the sender's newest message, not an older one you started on.
+  `primitive reply --thread <thread-id>` replies to the thread's newest
+  inbound email.
+- Say plainly what you are responding to, for example "On your question
+  about the deploy:".
+- When the sender sent several messages since your last reply, address each
+  of them in one reply, or say which one you will answer later and why.
+- Never send a generic status update that ignores the question the sender
+  just asked. If you cannot answer it yet, say so and say what you are doing
+  about it.
+
+When there is any ambiguity about which message you are answering, name it:
+quote a few of its words or give the time it was sent. Ambiguity includes
+several open questions, messages that crossed with yours, and a reply sent
+long after the message it answers.
 
 ## Pausing on a request
 

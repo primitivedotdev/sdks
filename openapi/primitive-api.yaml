@@ -21,9 +21,55 @@ info:
 
     ## Rate Limiting
 
-    The API enforces a sliding window rate limit of **120 requests per
-    60 seconds** per organization. When exceeded, the API returns `429`
-    with a `Retry-After` header indicating how many seconds to wait.
+    The v1 API allows **3000 requests per 60 seconds** per Developer,
+    Power, or Platinum organization. API keys, OAuth access tokens, and
+    connected agent keys share their organization's budget. Agent-tier
+    organizations allow **120 requests per 60 seconds**. Requests without
+    valid organization credentials use a separate **120 requests per 60
+    seconds per IP** limit. Outbound sends and some resources have
+    additional limits, each with its own limit and window.
+
+    A request that exceeds its limit receives HTTP `429` with a
+    `Retry-After` header (seconds) and, where the limiter reports them,
+    `ratelimit-limit`, `ratelimit-remaining`, `ratelimit-reset` and
+    `ratelimit-policy` headers. On a `429` all four describe the limiter
+    that rejected the request, never a different budget that still has
+    room, and the `w=` value in `ratelimit-policy` is that limiter's own
+    window in seconds: 60 for the API request limits, 3600 and 86400 for
+    the hourly and daily send caps (for example `1000;w=3600`). The hourly
+    and daily send caps are rolling windows, so on those two `Retry-After`
+    and `ratelimit-reset` report when the bucket will next admit a request.
+    Branch on the `429` status rather than the error code: it is
+    `rate_limited` (organization-wide limiter, `/send-mail`) or
+    `rate_limit_exceeded` (per-resource limiters).
+
+    A few `429` responses carry `Retry-After` and no `ratelimit-*`
+    headers, because what refused the request reports only how long to
+    wait: the signup and OAuth `slow_down` responses, the public demo
+    endpoints, the hosted MCP server, and an abuse backstop in front of
+    the API that answers before a request reaches the rate limiters (code
+    `rate_limit_exceeded`, `Retry-After: 60`). A `429` whose code is not
+    `rate_limited`, `rate_limit_exceeded` or `slow_down` is a different
+    kind of cap, such as a concurrency or attempt limit, and may carry no
+    `Retry-After` at all; read its message. When `Retry-After` is present
+    it is the value to wait for.
+
+    Successful responses carry the same four `ratelimit-*` headers
+    describing the API request budget the request was charged to, so a
+    client can track its budget before it runs out. A `401` for a missing
+    or invalid token reports the per-IP bucket. Organizations exempted
+    from the API limit get no `ratelimit-*` headers, and while the limiter
+    is briefly unavailable a response carries no live bucket state. Treat
+    a missing `ratelimit-remaining` as unknown, not as zero.
+
+    ## Timestamps
+
+    Date filters (`date_from` / `date_to`) and schedule times
+    (`scheduled_at`) accept an ISO 8601 timestamp with `Z` or a numeric
+    UTC offset, such as `2026-10-02T00:00:00Z` or
+    `2026-10-02T00:00:00-04:00`. An offset is read as the instant it names
+    and converted to UTC. A time with no zone, or a bare date, is rejected
+    with a `validation_error`. Timestamps the API returns are UTC.
 
     ## Pagination
 
@@ -650,7 +696,13 @@ paths:
         addresses that have already sent it authenticated mail) with tight send
         limits. Use the returned `api_key` as a Bearer token on later calls. The
         account can be upgraded to a full developer account by confirming an
-        email through the claim flow. This endpoint does not require an API key.
+        email through the claim flow. Upgrading raises the send cap and grants
+        the developer plan's default features (such as Functions); it does not
+        unlock sending to arbitrary recipients, because the recipient rules on
+        the account still apply. `GET /send-permissions` reports those rules
+        (its list of individual addresses can be partial), and
+        `POST /sendability` answers for one specific recipient. This endpoint
+        does not require an API key.
       tags:
         - Agent
       security: []
@@ -739,8 +791,13 @@ paths:
       description: |
         Confirms the verification code emailed by `/agent/claim/start` and
         upgrades the account to the `developer` plan. The org id, API key, and
-        managed inbox all carry over; the send cap lifts. Authenticated by the
-        agent's own API key.
+        managed inbox all carry over; the send cap lifts and the developer
+        plan's default features (such as Functions) unlock. Upgrading does not
+        unlock sending to arbitrary recipients: the recipient rules on the
+        account still apply. `GET /send-permissions` reports those rules (its
+        list of individual addresses can be partial), and `POST /sendability`
+        answers for one specific recipient. Authenticated by the agent's own
+        API key.
       tags:
         - Agent
       requestBody:
@@ -1547,13 +1604,21 @@ paths:
           schema:
             type: string
             format: date-time
-          description: Filter emails created on or after this timestamp
+          description: >-
+            Filter emails created on or after this timestamp. An ISO 8601 timestamp
+            with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
         - name: date_to
           in: query
           schema:
             type: string
             format: date-time
-          description: Filter emails created on or before this timestamp
+          description: >-
+            Filter emails created on or before this timestamp. An ISO 8601 timestamp
+            with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
         - name: since
           in: query
           schema:
@@ -1771,10 +1836,32 @@ paths:
           schema:
             type: string
             maxLength: 500
-          description: Full-text search DSL query. Supports `awaiting:you` and
-            `awaiting:them` to filter on reply state (see the `awaiting` field;
-            delivered mail only, never `rejected`). Supports `automated:true`
-            and `automated:false` to filter on the `automated` field.
+          description: >-
+            Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to
+            filter on reply state (see the `awaiting` field; delivered mail only,
+            never `rejected`). Supports `automated:true` and `automated:false` to
+            filter on the `automated` field. Terms are separated by spaces and every
+            term must match. A term is a word, a `"quoted phrase"`, or a `field:value`
+            filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`,
+            `after:`, `domain:`, `status:`, `awaiting:`, `automated:`). An upper-case
+            `OR` between two text terms (words, phrases, `subject:` and `body:` terms)
+            accepts either, and binds tighter than the implicit AND: `acme invoice OR
+            receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the
+            other filters, and there is no `NOT` and no parentheses. A query that uses
+            an unsupported operator, an unknown field, an unterminated quote, or only
+            stop words is a `validation_error` that says what to change; it is never
+            silently reinterpreted. Alternatives chain (`invoice OR receipt OR "past
+            due"`), and each one counts toward the limit of 32 terms. These are
+            rejected with a 400 `validation_error`: `OR` next to a filter
+            (`from:a@example.com OR from:b@example.com`; run one search per value
+            instead); an `OR` with no term on one side (a leading, trailing or doubled
+            `OR`); an upper-case `NOT` (a search cannot exclude a term); and an
+            alternative with no searchable word once stop words are removed (`the OR
+            invoice`). Only upper case is an operator: to search for the word `OR` or
+            `NOT` itself, write it in lower case or in double quotes (`"OR"`). With
+            `prefix=true`, a trailing `OR` or `NOT` is read as a word still being
+            typed. To search for text that contains a colon, such as a URL, put it in
+            double quotes.
         - name: from
           in: query
           schema:
@@ -1832,13 +1919,21 @@ paths:
           schema:
             type: string
             format: date-time
-          description: Filter emails received on or after this timestamp.
+          description: >-
+            Filter emails received on or after this timestamp. An ISO 8601 timestamp
+            with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
         - name: date_to
           in: query
           schema:
             type: string
             format: date-time
-          description: Filter emails received on or before this timestamp.
+          description: >-
+            Filter emails received on or before this timestamp. An ISO 8601
+            timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
         - name: has_attachment
           in: query
           schema:
@@ -1994,7 +2089,12 @@ paths:
               - "true"
               - "false"
             default: "true"
-          description: Include subject/body highlight snippets when text search is active.
+          description: >-
+            Include subject/body highlight snippets when text search is active. This
+            switches only the `highlights` object on each result. The `snippet` field
+            (the body preview) is on every result either way, and a search with no
+            text (`q`, `subject` or `body`) has no highlights to leave out, so `false`
+            changes nothing there.
         - name: include_facets
           in: query
           schema:
@@ -2003,8 +2103,14 @@ paths:
               - "true"
               - "false"
             default: "true"
-          description: Include facet counts for sender, domain, status, and attachment
-            presence. When `false`, the facet aggregation is not run at all.
+          description: >-
+            Include facet counts for sender, domain, status, and attachment presence.
+            When `false`, the facet aggregation is not run at all. Each of
+            `by_sender`, `by_domain` and `by_status` lists its values by `count`
+            descending, and values with the same count by `value` ascending in byte
+            order of its UTF-8 encoding (upper case before lower case), a null `value`
+            last. `by_sender` and `by_domain` keep the first 20 values in that order,
+            so the same request over the same mail always lists the same values.
         - name: thread_id
           in: query
           required: false
@@ -3715,13 +3821,21 @@ paths:
           schema:
             type: string
             format: date-time
-          description: Filter deliveries created on or after this timestamp
+          description: >-
+            Filter deliveries created on or after this timestamp. An ISO 8601
+            timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
         - name: date_to
           in: query
           schema:
             type: string
             format: date-time
-          description: Filter deliveries created on or before this timestamp
+          description: >-
+            Filter deliveries created on or before this timestamp. An ISO 8601
+            timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
       responses:
         "200":
           description: Paginated list of deliveries
@@ -4194,13 +4308,21 @@ paths:
           schema:
             type: string
             format: date-time
-          description: Inclusive lower bound on `created_at`.
+          description: >-
+            Inclusive lower bound on `created_at`. An ISO 8601 timestamp with `Z` or
+            a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
         - name: date_to
           in: query
           schema:
             type: string
             format: date-time
-          description: Inclusive upper bound on `created_at`.
+          description: >-
+            Inclusive upper bound on `created_at`. An ISO 8601 timestamp with `Z` or
+            a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
         - name: q
           in: query
           schema:
@@ -10898,12 +11020,44 @@ components:
               code: deploy_failed
               message: Function deploy failed
     RateLimited:
-      description: Rate limit exceeded
+      description: >-
+        Rate limit exceeded. The `ratelimit-*` headers describe the limiter
+        that rejected this request, with its own limit and window, not the
+        API budget that successful responses report. A limiter that reports
+        only a wait sends `Retry-After` alone.
       headers:
         Retry-After:
           schema:
             type: integer
           description: Seconds to wait before retrying
+        ratelimit-limit:
+          description: >-
+            Limit of the limiter that rejected this request: the API limit, a
+            send cap, or a per-resource limit. Absent, with the other ratelimit
+            headers, when that limiter reports only a wait.
+          schema:
+            type: integer
+            minimum: 1
+            example: 3000
+        ratelimit-remaining:
+          description: Requests left in the limiter that rejected this request.
+          schema:
+            type: integer
+            minimum: 0
+            example: 0
+        ratelimit-reset:
+          description: Unix timestamp (seconds) when the limiter that rejected
+            this request resets.
+          schema:
+            type: integer
+            example: 1700000060
+        ratelimit-policy:
+          description: >-
+            That limiter as `limit;w=seconds`, with its own window: 60 for API
+            limits, 3600 or 86400 for send caps.
+          schema:
+            type: string
+            example: 3000;w=60
       content:
         application/json:
           schema:
@@ -12994,6 +13148,12 @@ components:
             - developer
         description:
           type: string
+          description: >-
+            What upgrading grants, in words meant to be repeated to a user:
+            a higher send cap and the developer plan's default features. It
+            does not unlock sending to arbitrary recipients; the account's
+            recipient rules still apply (see `GET /send-permissions` and
+            `POST /sendability`).
         claim_path:
           type: string
       required:
@@ -14415,14 +14575,20 @@ components:
       properties:
         by_sender:
           type: array
+          description: >-
+            Sender values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8 encoding, with a null `value` last. Keeps the first 20 values in that order.
           items:
             $ref: "#/components/schemas/EmailSearchFacetBucket"
         by_domain:
           type: array
+          description: >-
+            Domain values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8 encoding, with a null `value` last. Keeps the first 20 values in that order.
           items:
             $ref: "#/components/schemas/EmailSearchFacetBucket"
         by_status:
           type: array
+          description: >-
+            Status values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8 encoding, with a null `value` last.
           items:
             $ref: "#/components/schemas/EmailSearchFacetBucket"
         has_attachment:
@@ -14928,6 +15094,48 @@ components:
               type: string
               description: How the message arrived. Currently always `mail_relay`. Treat
                 an unfamiliar value as one added after your client was built.
+            delivery:
+              type: array
+              description: Per-recipient outcome of the relay forwarding the message to the
+                recipient's mailbox provider. The field may be absent; treat a
+                missing value as no delivery information being available.
+              items:
+                type: object
+                properties:
+                  recipient:
+                    type: string
+                    description: The recipient address the relay forwarded to.
+                  status:
+                    type: string
+                    description: Outcome of the forward. Currently one of `delivered`,
+                      `deferred` or `bounced`. Treat an unfamiliar value as one
+                      added after your client was built.
+                  smtp_code:
+                    type:
+                      - integer
+                      - "null"
+                    description: SMTP reply code from the mailbox provider, when one was
+                      received.
+                  enhanced_status_code:
+                    type:
+                      - string
+                      - "null"
+                    description: Enhanced status code (for example `2.0.0`) from the
+                      mailbox provider, when one was received.
+                  smtp_response:
+                    type:
+                      - string
+                      - "null"
+                    description: SMTP reply text from the mailbox provider, when one was
+                      received.
+                  at:
+                    type: string
+                    format: date-time
+                    description: When this outcome was recorded.
+                required:
+                  - recipient
+                  - status
+                  - at
           required:
             - hostname
             - via
@@ -15680,6 +15888,10 @@ components:
             and with `attachments` / `payload_attachments` (not yet
             supported on scheduled sends). Reschedule via PATCH
             /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
+            Accepts `Z` or a numeric UTC offset
+            (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+            offset is converted to UTC, so the stored and echoed value
+            is UTC. A time with no zone, or a bare date, is rejected.
       required:
         - from
         - to
@@ -16143,11 +16355,19 @@ components:
         date_from:
           type: string
           format: date-time
-          description: Only include mail at or after this timestamp.
+          description: >-
+            Only include mail at or after this timestamp. An ISO 8601 timestamp
+            with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
         date_to:
           type: string
           format: date-time
-          description: Only include mail at or before this timestamp.
+          description: >-
+            Only include mail at or before this timestamp. An ISO 8601 timestamp
+            with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`,
+            `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+            A time with no zone, or a bare date, is rejected.
         include:
           type: array
           items:
@@ -16708,7 +16928,10 @@ components:
           description: |
             New execution time (ISO 8601). Must be in the future and
             at most 30 days out, the same bounds as the create-time
-            field on /send-mail.
+            field on /send-mail. Accepts `Z` or a numeric UTC offset
+            (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+            offset is converted to UTC. A time with no zone, or a bare
+            date, is rejected.
       required:
         - scheduled_at
     ReplyInput:

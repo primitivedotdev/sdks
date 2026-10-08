@@ -26,7 +26,10 @@ class SentEmailRescheduleInput:
         Attributes:
             scheduled_at (datetime.datetime): New execution time (ISO 8601). Must be in the future and
                 at most 30 days out, the same bounds as the create-time
-                field on /send-mail.
+                field on /send-mail. Accepts `Z` or a numeric UTC offset
+                (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+                offset is converted to UTC. A time with no zone, or a bare
+                date, is rejected.
      """
 
     scheduled_at: datetime.datetime

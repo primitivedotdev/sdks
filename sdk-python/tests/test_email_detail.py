@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import datetime
+
 # Round-trip test that pins the new fields on EmailDetail (replies,
 # from_known_address, sender_connected_agent_verified, body_text, body_html). A future regen that
 # drops one of these fields would silently break the SDK contract;
@@ -7,8 +9,11 @@ from __future__ import annotations
 from primitive.api.models.email_detail import EmailDetail
 from primitive.api.models.email_detail_awaiting import EmailDetailAwaiting
 from primitive.api.models.email_detail_relay_type_0 import EmailDetailRelayType0
+from primitive.api.models.email_detail_relay_type_0_delivery_item import (
+    EmailDetailRelayType0DeliveryItem,
+)
 from primitive.api.models.email_detail_reply import EmailDetailReply
-from primitive.api.types import UNSET
+from primitive.api.types import UNSET, Unset
 
 SAMPLE = {
     "id": "00000000-0000-0000-0000-000000000001",
@@ -175,3 +180,57 @@ def test_email_detail_relay_is_optional_and_nullable() -> None:
         "hostname": "relay.example.com",
         "via": "mail_relay",
     }
+
+
+def test_email_detail_relay_delivery_is_optional() -> None:
+    relay = {"hostname": "relay.example.com", "via": "mail_relay"}
+
+    without = EmailDetail.from_dict({**SAMPLE, "relay": relay})
+    assert isinstance(without.relay, EmailDetailRelayType0)
+    assert without.relay.delivery is UNSET
+    assert "delivery" not in without.to_dict()["relay"]
+
+    null = EmailDetail.from_dict({**SAMPLE, "relay": None})
+    assert null.relay is None
+
+    delivery = [
+        {
+            "recipient": "alice@example.org",
+            "status": "delivered",
+            "smtp_code": 250,
+            "enhanced_status_code": "2.0.0",
+            "smtp_response": "250 2.0.0 OK",
+            "at": "2026-05-03T00:00:01Z",
+        },
+        {
+            # An unfamiliar status parses: status is an open string.
+            "recipient": "bob@example.org",
+            "status": "quarantined",
+            "smtp_code": None,
+            "enhanced_status_code": None,
+            "smtp_response": None,
+            "at": "2026-05-03T00:00:02+00:00",
+        },
+    ]
+    withd = EmailDetail.from_dict({**SAMPLE, "relay": {**relay, "delivery": delivery}})
+    assert isinstance(withd.relay, EmailDetailRelayType0)
+    items = withd.relay.delivery
+    assert not isinstance(items, Unset)
+    assert len(items) == 2
+    first, second = items
+    assert isinstance(first, EmailDetailRelayType0DeliveryItem)
+    assert first.recipient == "alice@example.org"
+    assert first.status == "delivered"
+    assert first.smtp_code == 250
+    assert first.enhanced_status_code == "2.0.0"
+    assert first.smtp_response == "250 2.0.0 OK"
+    assert first.at == datetime.datetime(2026, 5, 3, 0, 0, 1, tzinfo=datetime.UTC)
+    assert second.status == "quarantined"
+    assert second.smtp_code is None
+    assert second.enhanced_status_code is None
+    assert second.smtp_response is None
+
+    serialized = withd.to_dict()["relay"]["delivery"]
+    assert serialized[0]["status"] == "delivered"
+    assert serialized[1]["status"] == "quarantined"
+    assert serialized[1]["smtp_code"] is None

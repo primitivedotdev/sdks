@@ -151,4 +151,58 @@ describe("EmailDetail type contract", () => {
     expect(hostname).toBe("relay.example.com");
     expect(via).toBe("mail_relay");
   });
+
+  it("types relay.delivery as an optional per-recipient list", () => {
+    const relayed: EmailDetail = {
+      ...SAMPLE,
+      relay: { hostname: "relay.example.com", via: "mail_relay" },
+    };
+    // Servers that predate the field omit it.
+    expect(relayed.relay?.delivery).toBeUndefined();
+
+    const delivered: EmailDetail = {
+      ...SAMPLE,
+      relay: {
+        hostname: "relay.example.com",
+        via: "mail_relay",
+        delivery: [
+          {
+            recipient: "alice@example.org",
+            status: "delivered",
+            smtp_code: 250,
+            enhanced_status_code: "2.0.0",
+            smtp_response: "250 2.0.0 OK",
+            at: "2026-05-03T00:00:01.000Z",
+          },
+          {
+            recipient: "bob@example.org",
+            // An unfamiliar status must still type-check: status is an
+            // open string, not a closed union.
+            status: "quarantined",
+            smtp_code: null,
+            enhanced_status_code: null,
+            smtp_response: null,
+            at: "2026-05-03T00:00:02.000Z",
+          },
+        ],
+      },
+    };
+    const delivery = delivered.relay?.delivery ?? [];
+    expect(delivery).toHaveLength(2);
+    const first = delivery[0];
+    const second = delivery[1];
+    const status: string | undefined = first?.status;
+    const code: number | null | undefined = first?.smtp_code;
+    expect(status).toBe("delivered");
+    expect(code).toBe(250);
+    expect(first?.enhanced_status_code).toBe("2.0.0");
+    expect(first?.smtp_response).toBe("250 2.0.0 OK");
+    expect(first?.at).toBe("2026-05-03T00:00:01.000Z");
+    expect(second?.status).toBe("quarantined");
+    expect(second?.smtp_code).toBeNull();
+
+    // relay stays nullable with the new field in place.
+    const unrelayed: EmailDetail = { ...SAMPLE, relay: null };
+    expect(unrelayed.relay?.delivery).toBeUndefined();
+  });
 });
