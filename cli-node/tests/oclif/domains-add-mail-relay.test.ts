@@ -188,6 +188,45 @@ describe("domains add --mail-relay", () => {
   });
 });
 
+describe("domains add --mail-relay --json", () => {
+  it.each([
+    [
+      403,
+      "feature_disabled",
+      "Mail relay domains are not enabled for this organization.",
+      MAIL_RELAY_NOT_ENABLED_MESSAGE,
+    ],
+    [
+      503,
+      "mail_relay_unavailable",
+      "No mail relay is configured in this environment.",
+      MAIL_RELAY_UNAVAILABLE_MESSAGE,
+    ],
+  ])(
+    "prints one document carrying the %i %s error and its explanation",
+    async (status, code, message, explanation) => {
+      response = () =>
+        jsonResponse(status, { success: false, error: { code, message } });
+      const result = await runAdd([
+        "--domain",
+        "example.com",
+        "--mail-relay",
+        "--json",
+      ]);
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toBe("");
+      const document = JSON.parse(result.stdout) as {
+        error?: unknown;
+        exit_code?: unknown;
+        warnings?: unknown;
+      };
+      expect(document.exit_code).toBe(1);
+      expect(JSON.stringify(document.error)).toContain(code);
+      expect(document.warnings).toEqual(expect.arrayContaining([explanation]));
+    },
+  );
+});
+
 describe("OPERATION_ERROR_HINTS.addDomain", () => {
   const hint = OPERATION_ERROR_HINTS.addDomain;
 
