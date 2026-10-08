@@ -135,4 +135,20 @@ describe("EmailDetail type contract", () => {
     expect(SAMPLE.automated).toBe(true);
     expect(SAMPLE.automated_reasons).toEqual(["list_unsubscribe", "list_id"]);
   });
+
+  it("types relay as an optional, nullable object", () => {
+    // SAMPLE omits relay, as responses from servers without the field do.
+    expect(SAMPLE.relay).toBeUndefined();
+    const withNull: EmailDetail = { ...SAMPLE, relay: null };
+    expect(withNull.relay).toBeNull();
+    const relayed: EmailDetail = {
+      ...SAMPLE,
+      relay: { hostname: "relay.example.com", via: "mail_relay" },
+    };
+    // Reads without a cast: the generated type is the object, not unknown.
+    const hostname: string | undefined = relayed.relay?.hostname;
+    const via: string | undefined = relayed.relay?.via;
+    expect(hostname).toBe("relay.example.com");
+    expect(via).toBe("mail_relay");
+  });
 });

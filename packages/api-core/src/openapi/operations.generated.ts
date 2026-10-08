@@ -8001,30 +8001,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "description": "UNVERIFIED early signal for the `pending` window: true when the raw message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is anything other than `pending`.\n"
         },
         "relay": {
-          "oneOf": [
-            {
-              "type": "object",
-              "description": "How an inbound message reached Primitive when it arrived through a Primitive mail relay.",
-              "properties": {
-                "hostname": {
-                  "type": "string",
-                  "description": "The relay hostname the domain's MX record points at."
-                },
-                "via": {
-                  "type": "string",
-                  "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
-                }
-              },
-              "required": [
-                "hostname",
-                "via"
-              ]
-            },
-            {
-              "type": "null"
-            }
+          "type": [
+            "object",
+            "null"
           ],
-          "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.\n"
+          "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.",
+          "properties": {
+            "hostname": {
+              "type": "string",
+              "description": "The relay hostname the domain's MX record points at."
+            },
+            "via": {
+              "type": "string",
+              "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+            }
+          },
+          "required": [
+            "hostname",
+            "via"
+          ]
         }
       },
       "required": [
@@ -8425,30 +8420,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "description": "UNVERIFIED early signal for the `pending` window: true when the raw message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is anything other than `pending`.\n"
           },
           "relay": {
-            "oneOf": [
-              {
-                "type": "object",
-                "description": "How an inbound message reached Primitive when it arrived through a Primitive mail relay.",
-                "properties": {
-                  "hostname": {
-                    "type": "string",
-                    "description": "The relay hostname the domain's MX record points at."
-                  },
-                  "via": {
-                    "type": "string",
-                    "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
-                  }
-                },
-                "required": [
-                  "hostname",
-                  "via"
-                ]
-              },
-              {
-                "type": "null"
-              }
+            "type": [
+              "object",
+              "null"
             ],
-            "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.\n"
+            "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.",
+            "properties": {
+              "hostname": {
+                "type": "string",
+                "description": "The relay hostname the domain's MX record points at."
+              },
+              "via": {
+                "type": "string",
+                "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+              }
+            },
+            "required": [
+              "hostname",
+              "via"
+            ]
           }
         },
         "required": [
@@ -8976,30 +8966,25 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "description": "UNVERIFIED early signal for the `pending` window: true when the raw message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is anything other than `pending`.\n"
               },
               "relay": {
-                "oneOf": [
-                  {
-                    "type": "object",
-                    "description": "How an inbound message reached Primitive when it arrived through a Primitive mail relay.",
-                    "properties": {
-                      "hostname": {
-                        "type": "string",
-                        "description": "The relay hostname the domain's MX record points at."
-                      },
-                      "via": {
-                        "type": "string",
-                        "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
-                      }
-                    },
-                    "required": [
-                      "hostname",
-                      "via"
-                    ]
-                  },
-                  {
-                    "type": "null"
-                  }
+                "type": [
+                  "object",
+                  "null"
                 ],
-                "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.\n"
+                "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.",
+                "properties": {
+                  "hostname": {
+                    "type": "string",
+                    "description": "The relay hostname the domain's MX record points at."
+                  },
+                  "via": {
+                    "type": "string",
+                    "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+                  }
+                },
+                "required": [
+                  "hostname",
+                  "via"
+                ]
               }
             },
             "required": [

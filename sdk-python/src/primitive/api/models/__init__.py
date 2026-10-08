@@ -201,10 +201,10 @@ from .email_auth import EmailAuth
 from .email_detail import EmailDetail
 from .email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
 from .email_detail_awaiting import EmailDetailAwaiting
+from .email_detail_relay_type_0 import EmailDetailRelayType0
 from .email_detail_repeat_type_0 import EmailDetailRepeatType0
 from .email_detail_reply import EmailDetailReply
 from .email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
-from .email_relay import EmailRelay
 from .email_search_facet_bucket import EmailSearchFacetBucket
 from .email_search_facets import EmailSearchFacets
 from .email_search_facets_has_attachment import EmailSearchFacetsHasAttachment
@@ -217,6 +217,7 @@ from .email_status import EmailStatus
 from .email_summary import EmailSummary
 from .email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
 from .email_summary_awaiting import EmailSummaryAwaiting
+from .email_summary_relay_type_0 import EmailSummaryRelayType0
 from .email_summary_repeat_type_0 import EmailSummaryRepeatType0
 from .email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
 from .email_webhook_status_type_1 import EmailWebhookStatusType1
@@ -859,10 +860,10 @@ __all__ = (
     "EmailDetail",
     "EmailDetailAutomationHeadersType0",
     "EmailDetailAwaiting",
+    "EmailDetailRelayType0",
     "EmailDetailRepeatType0",
     "EmailDetailReply",
     "EmailDetailSenderMemberType0",
-    "EmailRelay",
     "EmailSearchFacetBucket",
     "EmailSearchFacets",
     "EmailSearchFacetsHasAttachment",
@@ -875,6 +876,7 @@ __all__ = (
     "EmailSummary",
     "EmailSummaryAutomationHeadersType0",
     "EmailSummaryAwaiting",
+    "EmailSummaryRelayType0",
     "EmailSummaryRepeatType0",
     "EmailSummarySenderMemberType0",
     "EmailWebhookStatusType1",

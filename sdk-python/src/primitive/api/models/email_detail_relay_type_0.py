@@ -14,13 +14,14 @@ from ..types import UNSET, Unset
 
 
 
-T = TypeVar("T", bound="EmailRelay")
+T = TypeVar("T", bound="EmailDetailRelayType0")
 
 
 
 @_attrs_define
-class EmailRelay:
-    """ How an inbound message reached Primitive when it arrived through a Primitive mail relay.
+class EmailDetailRelayType0:
+    """ Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent;
+    treat a missing value the same as null.
 
         Attributes:
             hostname (str): The relay hostname the domain's MX record points at.
@@ -60,14 +61,14 @@ class EmailRelay:
 
         via = d.pop("via")
 
-        email_relay = cls(
+        email_detail_relay_type_0 = cls(
             hostname=hostname,
             via=via,
         )
 
 
-        email_relay.additional_properties = d
-        return email_relay
+        email_detail_relay_type_0.additional_properties = d
+        return email_detail_relay_type_0
 
     @property
     def additional_keys(self) -> list[str]:

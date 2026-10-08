@@ -6,8 +6,8 @@ from __future__ import annotations
 # this test fails loudly when that happens.
 from primitive.api.models.email_detail import EmailDetail
 from primitive.api.models.email_detail_awaiting import EmailDetailAwaiting
+from primitive.api.models.email_detail_relay_type_0 import EmailDetailRelayType0
 from primitive.api.models.email_detail_reply import EmailDetailReply
-from primitive.api.models.email_relay import EmailRelay
 from primitive.api.types import UNSET
 
 SAMPLE = {
@@ -168,7 +168,7 @@ def test_email_detail_relay_is_optional_and_nullable() -> None:
     relayed = EmailDetail.from_dict(
         {**SAMPLE, "relay": {"hostname": "relay.example.com", "via": "mail_relay"}}
     )
-    assert isinstance(relayed.relay, EmailRelay)
+    assert isinstance(relayed.relay, EmailDetailRelayType0)
     assert relayed.relay.hostname == "relay.example.com"
     assert relayed.relay.via == "mail_relay"
     assert relayed.to_dict()["relay"] == {
