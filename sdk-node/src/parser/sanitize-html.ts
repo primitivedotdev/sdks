@@ -187,7 +187,7 @@ function valid(prop: string, value: string): boolean {
 }
 
 const DISPLAY =
-  /^(none|contents|block|inline|run-in|flow|flow-root|table|flex|grid|ruby|list-item|inline-block|inline-table|inline-flex|inline-grid|table-[a-z-]+|ruby-[a-z-]+|inherit|initial|unset|revert|revert-layer)( (block|inline|run-in|flow|flow-root|table|flex|grid|ruby|list-item))*$/;
+  /^(none|contents|block|inline|run-in|flow|flow-root|table|flex|grid|ruby|list-item|inline-block|inline-table|inline-flex|inline-grid|table-[a-z-]+|ruby-[a-z-]+|inherit|initial|unset|revert|revert-layer|(block|inline|run-in) (flow|flow-root|table|flex|grid|ruby)|list-item( (block|inline|run-in))?( (flow|flow-root))?)$/;
 const OVERFLOW = /^(visible|hidden|clip|scroll|auto|overlay)$/;
 
 const stripComments = (css: string): string =>
@@ -536,7 +536,7 @@ const BLOCK_TAGS = new Set([
 ]);
 // One-keyword forms, and two-keyword forms whose outer type is block or whose inner type makes an inline box a block container.
 const BLOCK_DISPLAY =
-  /^((block|inline-block|flow-root|flex|inline-flex|grid|inline-grid|list-item)( .*)?|inline (flow-root|flex|grid|table))$/;
+  /^(block|inline-block|flow-root|flex|inline-flex|grid|inline-grid|list-item( .*)?|block (flow|flow-root|flex|grid)|inline (flow-root|flex|grid))$/;
 
 function hiddenElement(
   tagName: string,

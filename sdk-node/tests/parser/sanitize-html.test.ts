@@ -297,6 +297,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       '<div style="display:none;display:inline \t flow">Shown text</div>',
     ],
     [
+      "an invalid two-keyword display on an inline element",
+      `<span style="display:block inline;height:0;overflow:hidden">Shown text</span>`,
+    ],
+    [
       "visibility:hidden, which a descendant can undo",
       `<div style="visibility:hidden"><span style="visibility:visible">Shown text</span></div>`,
     ],
