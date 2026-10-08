@@ -1,3 +1,9 @@
+// The sanitizer as it was before its stylesheet and number scans were made
+// linear, kept unchanged as the oracle the differential tests compare the
+// current implementation with. Its regexes backtrack on crafted input (seconds
+// for a 100 KB message), so feed it only small inputs. Do not import it from
+// src.
+
 import sanitizeHtmlLib, { type IOptions } from "sanitize-html";
 
 // HTML sanitizer for parsed email bodies.
@@ -154,74 +160,13 @@ const RELEVANT = new Set([
   "min-height",
 ]);
 
-// Every scan of sender-controlled text below is linear in its length. This
-// runs on each inbound message before it is stored, so a pattern that
-// backtracks (a regex with overlapping quantifiers, or a lazy search retried
-// from every start position) lets one crafted message hold the parser for
-// seconds. CSS is scanned by hand for that reason; the remaining regexes are
-// anchored keyword lists or single character classes.
-
-/**
- * Where a CSS number (`[+-]?(\d+\.?\d*|\.\d+)`) at the start of `v` ends,
- * or -1 if `v` does not start with one. A unit or `%` never contains a digit
- * or a dot, so the number is the whole run of digits and dots after the sign.
- */
-function numberEnd(v: string): number {
-  let i = v[0] === "+" || v[0] === "-" ? 1 : 0;
-  let digits = 0;
-  let dots = 0;
-  for (; i < v.length; i++) {
-    const c = v.charCodeAt(i);
-    if (c >= 48 && c <= 57) digits++;
-    else if (c === 46) dots++;
-    else break;
-  }
-  return digits > 0 && dots <= 1 ? i : -1;
-}
-
-const UNITS = new Set([
-  "px",
-  "pt",
-  "pc",
-  "in",
-  "cm",
-  "mm",
-  "q",
-  "em",
-  "rem",
-  "ex",
-  "ch",
-  "vw",
-  "vh",
-  "vmin",
-  "vmax",
-  "%",
-]);
-
-/** A number followed by a length unit or `%`. */
-function isLength(v: string): boolean {
-  const end = numberEnd(v);
-  return end >= 0 && UNITS.has(v.slice(end));
-}
-
-const isBareNumber = (v: string): boolean =>
-  v.length > 0 && numberEnd(v) === v.length;
-
-function isPercent(v: string): boolean {
-  const end = numberEnd(v);
-  return end >= 0 && end === v.length - 1 && v[end] === "%";
-}
-
-/** A number written with zeros only (`0`, `-0.0`, `.00`). */
-function isBareZero(v: string): boolean {
-  if (!isBareNumber(v)) return false;
-  for (let i = 0; i < v.length; i++) {
-    const c = v[i];
-    if (c !== "0" && c !== "." && c !== "+" && c !== "-") return false;
-  }
-  return true;
-}
-
+const NUMBER = String.raw`[+-]?(\d+\.?\d*|\.\d+)`;
+const LENGTH = new RegExp(
+  `^${NUMBER}(px|pt|pc|in|cm|mm|q|em|rem|ex|ch|vw|vh|vmin|vmax|%)$`,
+);
+const BARE_NUMBER = new RegExp(`^${NUMBER}$`);
+const PERCENT = new RegExp(`^${NUMBER}%$`);
+const BARE_ZERO = /^[+-]?(0+\.?0*|\.0+)$/;
 const NUMERIC = /^[+-]?[\d.]/;
 
 /**
@@ -240,8 +185,10 @@ function valid(prop: string, value: string): boolean {
       /^(inherit|initial|unset|revert|revert-layer)$/.test(value)
     );
   if (!NUMERIC.test(value)) return true;
-  if (prop === "opacity") return isBareNumber(value) || isPercent(value);
-  if (prop.endsWith("height")) return isLength(value) || isBareZero(value);
+  if (prop === "opacity")
+    return BARE_NUMBER.test(value) || new RegExp(`^${NUMBER}%$`).test(value);
+  if (prop.endsWith("height"))
+    return LENGTH.test(value) || BARE_ZERO.test(value);
   return true;
 }
 
@@ -276,23 +223,8 @@ const validDisplay = (value: string): boolean =>
     : DISPLAY_SINGLE.test(value);
 const OVERFLOW = /^(visible|hidden|clip|scroll|auto|overlay)$/;
 
-/**
- * Replaces each comment with a space. An unclosed comment is left as text:
- * once one has no end, no later one has either, so the scan stops there.
- */
-function stripComments(css: string): string {
-  let out = "";
-  let from = 0;
-  for (;;) {
-    const open = css.indexOf("/*", from);
-    if (open < 0) break;
-    const close = css.indexOf("*/", open + 2);
-    if (close < 0) break;
-    out += `${css.slice(from, open)} `;
-    from = close + 2;
-  }
-  return out + css.slice(from);
-}
+const stripComments = (css: string): string =>
+  css.replace(/\/\*[\s\S]*?\*\//g, " ");
 
 function declarations(style: string): Map<string, Decl> {
   const out = new Map<string, Decl>();
@@ -331,7 +263,8 @@ function declarations(style: string): Map<string, Decl> {
 }
 
 const isZero = (v: string): boolean =>
-  isBareZero(v) || (isLength(v) && isBareZero(v.slice(0, numberEnd(v))));
+  BARE_ZERO.test(v) ||
+  (LENGTH.test(v) && BARE_ZERO.test(v.replace(/[a-z%]+$/, "")));
 const CLIPS = /^(hidden|clip|auto|scroll|overlay)$/;
 
 /**
@@ -344,24 +277,12 @@ function clipsVertically(d: Map<string, string>): boolean {
   return CLIPS.test(d.get("overflow-y") ?? "");
 }
 
-/** A declaration's position in the stylesheet and its value. */
-interface Ranked {
-  order: number;
-  value: string;
-}
-
-/**
- * The simple class rules that share one selector (the same tag and classes,
- * so the same specificity). Among them only the last normal and the last
- * important declaration of each property can win, so a selector repeated any
- * number of times is one entry.
- */
-interface RuleGroup {
+interface Rule {
   tag: string;
   classes: string[];
   specificity: number;
-  normal: Map<string, Ranked>;
-  important: Map<string, Ranked>;
+  order: number;
+  decls: Map<string, Decl>;
 }
 
 /**
@@ -381,9 +302,9 @@ interface Restorer {
 type Hide = "display" | "opacity" | "clip";
 
 interface Sheet {
-  /** Simple class rules grouped by selector, each group indexed by one class it names. */
-  byClass: Map<string, RuleGroup[]>;
-  /** Distinct unevaluated rules that could show something, each indexed by one class, id or tag it requires ("" for none). */
+  /** Simple class rules, indexed by each class they name. */
+  byClass: Map<string, Rule[]>;
+  /** Unevaluated rules that could show something, indexed by a class, id or tag they require ("" for none). */
   restorers: Map<string, Restorer[]>;
 }
 
@@ -402,7 +323,7 @@ function couldShow(decls: Map<string, Decl>): {
       if (!isClippingBox(d.value)) undoes.add("clip");
     } else if (
       prop === "opacity" &&
-      !(isBareNumber(d.value) && Number.parseFloat(d.value) === 0)
+      !(BARE_NUMBER.test(d.value) && Number.parseFloat(d.value) === 0)
     )
       undo = "opacity";
     else if (
@@ -437,11 +358,9 @@ function rightmostCompound(selector: string): Restorer | null {
   };
 }
 
-const SIMPLE_SELECTOR = /^([a-z][a-z0-9]*)?((?:\.[\w-]+)+)$/i;
-
 function readSheet(html: string): Sheet {
-  const groups = new Map<string, RuleGroup>();
-  const restorers = new Map<string, Restorer>();
+  const byClass = new Map<string, Rule[]>();
+  const restorers = new Map<string, Restorer[]>();
   let order = 0;
   const addRestorers = (selectors: string, decls: Map<string, Decl>) => {
     const { undoes, important } = couldShow(decls);
@@ -449,255 +368,87 @@ function readSheet(html: string): Sheet {
     for (const sel of selectors.split(",")) {
       const r = rightmostCompound(sel);
       if (!r) continue;
-      // Two rules with the same target and effect decide the same elements.
-      const key = [
-        r.tag,
-        r.id,
-        [...new Set(r.classes)].sort().join("."),
-        important,
-        [...undoes].sort().join(),
-      ].join("|");
-      if (!restorers.has(key)) restorers.set(key, { ...r, important, undoes });
+      const key = r.classes[0] ? `.${r.classes[0]}` : r.id ? `#${r.id}` : r.tag;
+      const list = restorers.get(key);
+      const entry = { ...r, important, undoes };
+      if (list) list.push(entry);
+      else restorers.set(key, [entry]);
     }
   };
-  for (const sheet of styleSheets(html)) {
-    const css = stripComments(sheet);
+  const sheets = html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) ?? [];
+  for (const sheet of sheets) {
+    const css = stripComments(
+      sheet.replace(/^<style\b[^>]*>|<\/style>$/gi, ""),
+    );
     // Rules nested in @-blocks apply only to some readers, so they can only ever make the outcome uncertain.
     for (const block of atBlocks(css)) {
-      for (const [selectors, body] of cssRules(block, true))
-        addRestorers(selectors, declarations(body));
+      for (const m of block.matchAll(/([^{}@]+)\{([^{}]*)\}/g))
+        addRestorers(m[1] ?? "", declarations(m[2] ?? ""));
     }
-    for (const [selectors, body] of cssRules(removeAtBlocks(css), false)) {
-      const decls = declarations(body);
+    for (const m of removeAtBlocks(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const decls = declarations(m[2] ?? "");
       if (!decls.size) continue;
-      for (const sel of selectors.split(",")) {
-        const simple = sel.trim().match(SIMPLE_SELECTOR);
+      for (const sel of (m[1] ?? "").split(",")) {
+        const simple = sel.trim().match(/^([a-z][a-z0-9]*)?((?:\.[\w-]+)+)$/i);
         if (!simple) {
           addRestorers(sel, decls);
           continue;
         }
         const classes = (simple[2] ?? "").split(".").filter(Boolean);
-        const tag = (simple[1] ?? "").toLowerCase();
-        const key = `${tag}|${[...classes].sort().join(".")}`;
-        let group = groups.get(key);
-        if (!group) {
-          group = {
-            tag,
-            classes,
-            specificity: classes.length * 1000 + (simple[1] ? 1 : 0),
-            normal: new Map(),
-            important: new Map(),
-          };
-          groups.set(key, group);
+        const rule: Rule = {
+          tag: (simple[1] ?? "").toLowerCase(),
+          classes,
+          specificity: classes.length * 1000 + (simple[1] ? 1 : 0),
+          order: order++,
+          decls,
+        };
+        for (const c of classes) {
+          const list = byClass.get(c);
+          if (list) list.push(rule);
+          else byClass.set(c, [rule]);
         }
-        const ranked = order++;
-        for (const [prop, d] of decls)
-          (d.important ? group.important : group.normal).set(prop, {
-            order: ranked,
-            value: d.value,
-          });
       }
     }
   }
-  return {
-    byClass: indexByRarestKey([...groups.values()], (g) => g.classes),
-    restorers: indexByRarestKey([...restorers.values()], (r) => {
-      const keys = [
-        ...r.classes.map((c) => `.${c}`),
-        ...(r.id ? [`#${r.id}`] : []),
-        ...(r.tag ? [r.tag] : []),
-      ];
-      return keys.length ? keys : [""];
-    }),
-  };
+  return { byClass, restorers };
 }
 
-/**
- * Indexes each entry under one of its keys, the one the fewest entries share.
- * An element looks entries up by every key it has, and an entry applies only
- * to an element that has all of its keys, so any one of them finds it. The
- * rarest one spares an element from scanning entries that need some other
- * class it lacks: without it, many rules on `.a.x1`, `.a.x2`, ... would each
- * be checked against every element of class `a`.
- */
-function indexByRarestKey<T>(
-  entries: T[],
-  keysOf: (entry: T) => string[],
-): Map<string, T[]> {
-  const shared = new Map<string, number>();
-  for (const e of entries)
-    for (const k of new Set(keysOf(e))) shared.set(k, (shared.get(k) ?? 0) + 1);
-  const index = new Map<string, T[]>();
-  for (const e of entries) {
-    let key = "";
-    let fewest = Number.POSITIVE_INFINITY;
-    for (const k of keysOf(e)) {
-      const n = shared.get(k) ?? 0;
-      if (n < fewest) {
-        key = k;
-        fewest = n;
-      }
-    }
-    const list = index.get(key);
-    if (list) list.push(e);
-    else index.set(key, [e]);
-  }
-  return index;
-}
-
-/**
- * The contents of each `<style>` element, as the case-insensitive pattern
- * `<style\b[^>]*>[\s\S]*?<\/style>` would find them. Once an opening tag has
- * no `>` or no closing tag after it, neither does any later one, so the scan
- * stops there instead of retrying from each later `<style`.
- */
-function styleSheets(html: string): string[] {
-  const out: string[] = [];
-  const open = /<style\b/gi;
-  const close = /<\/style>/gi;
-  for (let tag = open.exec(html); tag; tag = open.exec(html)) {
-    const body = html.indexOf(">", tag.index + 6);
-    if (body < 0) break;
-    close.lastIndex = body + 1;
-    const end = close.exec(html);
-    if (!end) break;
-    out.push(html.slice(body + 1, end.index));
-    open.lastIndex = end.index + 8;
-  }
-  return out;
-}
-
-/**
- * Each `selectors{declarations}` pair with no brace inside either part (and
- * no `@` in the selectors when `noAt`), as `/([^{}]+)\{([^{}]*)\}/g` would
- * find them. A start that fails, fails for every position up to the brace
- * that stopped it, so the scan resumes after that brace and reads each
- * character at most twice.
- */
-function cssRules(css: string, noAt: boolean): Array<[string, string]> {
-  const out: Array<[string, string]> = [];
-  for (let start = 0; start < css.length; ) {
-    let open = start;
-    while (
-      open < css.length &&
-      css[open] !== "{" &&
-      css[open] !== "}" &&
-      !(noAt && css[open] === "@")
-    )
-      open++;
-    if (open === css.length) break;
-    if (css[open] !== "{" || open === start) {
-      start = open + 1;
-      continue;
-    }
-    let close = open + 1;
-    while (close < css.length && css[close] !== "{" && css[close] !== "}")
-      close++;
-    if (css[close] !== "}") {
-      start = open + 1;
-      continue;
-    }
-    out.push([css.slice(start, open), css.slice(open + 1, close)]);
-    start = close + 1;
-  }
-  return out;
-}
-
-const isAtNameChar = (c: number): boolean =>
-  (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || c === 45;
-
-/** For each index, the first `{` or `;` at or after it (css.length if none). */
-function stops(css: string): Int32Array {
-  const next = new Int32Array(css.length + 1);
-  next[css.length] = css.length;
-  for (let i = css.length - 1; i >= 0; i--)
-    next[i] =
-      css[i] === "{" || css[i] === ";" ? i : (next[i + 1] ?? css.length);
-  return next;
-}
-
-/**
- * Where the block opens of an @-rule whose name starts at `name` (just after
- * the `@`), or -1 if none does: the name is a letter or dash, and the first
- * `{` or `;` after it is a `{`. This is the shape `/@[a-z-]+[^{;]*\{/i`
- * matches, answered from `next` without rescanning.
- */
-function blockOpen(css: string, next: Int32Array, name: number): number {
-  if (name >= css.length || !isAtNameChar(css.charCodeAt(name))) return -1;
-  const open = next[name] ?? css.length;
-  return css[open] === "{" ? open : -1;
-}
-
-/** The first @-rule with a block at or after `from`. */
-function firstAtBlock(
-  css: string,
-  next: Int32Array,
-  from: number,
-): { at: number; open: number } | null {
-  for (
-    let at = css.indexOf("@", from);
-    at >= 0;
-    at = css.indexOf("@", at + 1)
-  ) {
-    const open = blockOpen(css, next, at + 1);
-    if (open >= 0) return { at, open };
-  }
-  return null;
-}
-
-/** The index of the brace that closes the block opened at `open`, or css.length if it never closes. */
-function blockEnd(css: string, open: number): number {
-  let depth = 0;
-  let end = open;
-  for (; end < css.length; end++) {
-    if (css[end] === "{") depth++;
-    else if (css[end] === "}" && --depth === 0) break;
-  }
-  return end;
-}
-
-/** The contents of each top-level @-rule block. */
 function atBlocks(css: string): string[] {
   const out: string[] = [];
-  const next = stops(css);
-  for (let found = firstAtBlock(css, next, 0); found; ) {
-    const end = blockEnd(css, found.open);
-    out.push(css.slice(found.open + 1, end));
-    found = firstAtBlock(css, next, end + 1);
+  for (let at = css.search(/@[a-z-]+[^{;]*\{/i); at >= 0; ) {
+    let depth = 0;
+    let end = css.indexOf("{", at);
+    const start = end + 1;
+    for (; end < css.length; end++) {
+      if (css[end] === "{") depth++;
+      else if (css[end] === "}" && --depth === 0) break;
+    }
+    out.push(css.slice(start, end));
+    const next = css.slice(end + 1).search(/@[a-z-]+[^{;]*\{/i);
+    at = next < 0 ? -1 : end + 1 + next;
   }
   return out;
 }
 
-/**
- * The stylesheet with each @-rule block cut out, as repeatedly cutting the
- * first one and searching again from the start would leave it. Text before a
- * cut held no @-rule before the cut and still holds none, except that an `@`
- * just before the cut can now meet a name just after it, so the search
- * resumes at the cut rather than from the start.
- */
 function removeAtBlocks(css: string): string {
-  const next = stops(css);
-  // Kept ranges of css, in order, none empty; then everything from `rest` on.
-  const kept: Array<[number, number]> = [];
-  let rest = 0;
-  for (;;) {
-    const last = kept.at(-1);
-    let open =
-      last && css[last[1] - 1] === "@" ? blockOpen(css, next, rest) : -1;
-    if (last && open >= 0) {
-      last[1]--;
-      if (last[0] === last[1]) kept.pop();
-    } else {
-      const found = firstAtBlock(css, next, rest);
-      if (!found) break;
-      if (found.at > rest) kept.push([rest, found.at]);
-      open = found.open;
+  let out = css;
+  for (
+    let at = out.search(/@[a-z-]+[^{;]*\{/i);
+    at >= 0;
+    at = out.search(/@[a-z-]+[^{;]*\{/i)
+  ) {
+    let depth = 0;
+    let end = out.indexOf("{", at);
+    for (; end < out.length; end++) {
+      if (out[end] === "{") depth++;
+      else if (out[end] === "}" && --depth === 0) break;
     }
-    rest = Math.min(blockEnd(css, open) + 1, css.length);
+    out = out.slice(0, at) + out.slice(end + 1);
   }
-  return kept.map(([a, b]) => css.slice(a, b)).join("") + css.slice(rest);
+  return out;
 }
 
+/** Whether a rule this code does not evaluate might target the element and show it. */
 /** Every way the resolved declarations hide the element; each one alone is enough to hide it. */
 function hideReasons(d: Map<string, string>, boxClips: boolean): Set<Hide> {
   const out = new Set<Hide>();
@@ -705,7 +456,7 @@ function hideReasons(d: Map<string, string>, boxClips: boolean): Set<Hide> {
   const opacity = d.get("opacity");
   if (
     opacity !== undefined &&
-    (isBareNumber(opacity) || isPercent(opacity)) &&
+    (BARE_NUMBER.test(opacity) || PERCENT.test(opacity)) &&
     Number.parseFloat(opacity) === 0
   )
     out.add("opacity");
@@ -763,45 +514,34 @@ function resolve(
   sheet: Sheet,
   own: Set<string>,
 ): Map<string, string> {
-  const tag = tagName.toLowerCase();
-  // Per property, the stylesheet declaration that wins at each importance: highest specificity, then latest.
-  type Win = { specificity: number; order: number; value: string };
-  const normal = new Map<string, Win>();
-  const important = new Map<string, Win>();
-  const take = (
-    wins: Map<string, Win>,
-    decls: Map<string, Ranked>,
-    specificity: number,
-  ) => {
-    for (const [prop, d] of decls) {
-      const cur = wins.get(prop);
-      if (
-        !cur ||
-        specificity > cur.specificity ||
-        (specificity === cur.specificity && d.order > cur.order)
-      )
-        wins.set(prop, { specificity, order: d.order, value: d.value });
-    }
-  };
+  const seen = new Set<Rule>();
+  const matched: Rule[] = [];
   for (const c of own) {
-    for (const g of sheet.byClass.get(c) ?? []) {
-      if ((!g.tag || g.tag === tag) && g.classes.every((x) => own.has(x))) {
-        take(normal, g.normal, g.specificity);
-        take(important, g.important, g.specificity);
-      }
+    for (const r of sheet.byClass.get(c) ?? []) {
+      if (seen.has(r)) continue;
+      seen.add(r);
+      if (
+        (!r.tag || r.tag === tagName.toLowerCase()) &&
+        r.classes.every((x) => own.has(x))
+      )
+        matched.push(r);
     }
   }
+  matched.sort((x, y) => x.specificity - y.specificity || x.order - y.order);
   const inline = declarations(attribs.style ?? "");
   const out = new Map<string, string>();
-  // Cascade order, highest first: important inline, important stylesheet, normal inline, normal stylesheet.
-  for (const prop of RELEVANT) {
-    const set = inline.get(prop);
-    const value =
-      (set?.important ? set.value : undefined) ??
-      important.get(prop)?.value ??
-      (set && !set.important ? set.value : undefined) ??
-      normal.get(prop)?.value;
-    if (value !== undefined) out.set(prop, value);
+  // Cascade order, lowest first: normal stylesheet, normal inline, important stylesheet, important inline.
+  const layers: Array<Array<Map<string, Decl>>> = [
+    matched.map((r) => r.decls),
+    [inline],
+  ];
+  for (const important of [false, true]) {
+    for (const layer of layers) {
+      for (const decls of layer) {
+        for (const [prop, d] of decls)
+          if (d.important === important) out.set(prop, d.value);
+      }
+    }
   }
   return out;
 }
@@ -927,19 +667,24 @@ export function sanitizeHtml(html: string): string {
   return sanitizeHtmlLib(html, optionsFor(html));
 }
 
-/**
- * The scanning steps, exposed only so tests can compare each one with the
- * regex it replaced. Not part of the package API.
- */
-export const internalScans = {
-  styleSheets,
+/** The original scanning steps, for comparing one step at a time. */
+export const referenceScans = {
+  styleSheets: (html: string): string[] =>
+    (html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) ?? []).map((sheet) =>
+      sheet.replace(/^<style\b[^>]*>|<\/style>$/gi, ""),
+    ),
   stripComments,
   atBlocks,
   removeAtBlocks,
-  cssRules,
-  isLength,
-  isBareNumber,
-  isPercent,
-  isBareZero,
+  cssRules: (css: string, noAt: boolean): Array<[string, string]> =>
+    [
+      ...css.matchAll(
+        noAt ? /([^{}@]+)\{([^{}]*)\}/g : /([^{}]+)\{([^{}]*)\}/g,
+      ),
+    ].map((m) => [m[1] ?? "", m[2] ?? ""]),
+  isLength: (v: string) => LENGTH.test(v),
+  isBareNumber: (v: string) => BARE_NUMBER.test(v),
+  isPercent: (v: string) => PERCENT.test(v),
+  isBareZero: (v: string) => BARE_ZERO.test(v),
   isZero,
 };
