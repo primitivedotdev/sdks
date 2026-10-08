@@ -160,6 +160,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<style>@media screen{.pre{height:auto!important}}</style><div class="pre" style="display:none">${SECRET}</div>`,
     ],
     [
+      "a clip an invalid display value cannot undo",
+      `<style>@media screen{.pre{display:bogus!important}}</style><div class="pre" style="height:0;overflow:hidden">${SECRET}</div>`,
+    ],
+    [
       "a zero height written as .0px",
       `<div style="height:.0px;overflow:hidden">${SECRET}</div>`,
     ],

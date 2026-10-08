@@ -172,6 +172,7 @@ const NUMERIC = /^[+-]?[\d.]/;
 function valid(prop: string, value: string): boolean {
   // A function value (var(), calc(), env()) may be valid and cannot be computed here: keep it as unknown.
   if (value.includes("(")) return true;
+  if (prop === "display") return DISPLAY.test(value);
   if (prop.startsWith("overflow"))
     return (
       OVERFLOW.test(value) ||
@@ -185,6 +186,8 @@ function valid(prop: string, value: string): boolean {
   return true;
 }
 
+const DISPLAY =
+  /^(none|contents|block|inline|run-in|flow|flow-root|table|flex|grid|ruby|list-item|inline-block|inline-table|inline-flex|inline-grid|table-[a-z-]+|ruby-[a-z-]+|inherit|initial|unset|revert|revert-layer)( (block|inline|run-in|flow|flow-root|table|flex|grid|ruby|list-item))*$/;
 const OVERFLOW = /^(visible|hidden|clip|scroll|auto|overlay)$/;
 
 const stripComments = (css: string): string =>
