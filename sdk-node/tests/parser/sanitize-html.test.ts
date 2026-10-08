@@ -172,6 +172,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="display:block  flow;height:0;overflow:hidden">${SECRET}</div>`,
     ],
     [
+      "a later display keyword that does not exist",
+      `<div style="display:none;display:inline-list-item">${SECRET}</div>`,
+    ],
+    [
       "a zero height written as .0px",
       `<div style="height:.0px;overflow:hidden">${SECRET}</div>`,
     ],

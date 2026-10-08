@@ -187,7 +187,7 @@ function valid(prop: string, value: string): boolean {
 }
 
 const DISPLAY_SINGLE =
-  /^(none|contents|block|inline|run-in|flow|flow-root|table|flex|grid|ruby|list-item|inline-block|inline-table|inline-flex|inline-grid|inline-list-item|table-[a-z-]+|ruby-[a-z-]+|inherit|initial|unset|revert|revert-layer)$/;
+  /^(none|contents|block|inline|run-in|flow|flow-root|table|flex|grid|ruby|list-item|inline-block|inline-table|inline-flex|inline-grid|table-[a-z-]+|ruby-[a-z-]+|inherit|initial|unset|revert|revert-layer)$/;
 const OUTER = /^(block|inline|run-in)$/;
 const INNER = /^(flow|flow-root|table|flex|grid|ruby)$/;
 
@@ -563,7 +563,7 @@ const BLOCK_TAGS = new Set([
 ]);
 // One-keyword forms, and two-keyword forms whose outer type is block or whose inner type makes an inline box a block container.
 const BLOCK_SINGLE =
-  /^(block|inline-block|flow-root|flex|inline-flex|grid|inline-grid|list-item|inline-list-item)$/;
+  /^(block|inline-block|flow-root|flex|inline-flex|grid|inline-grid|list-item)$/;
 
 /** Whether a display value makes a box that height and overflow can clip (not inline, table or ruby). */
 function isClippingBox(value: string): boolean {
