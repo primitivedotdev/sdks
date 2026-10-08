@@ -245,6 +245,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="height:0;overflow:hidden;overflow:initial">Shown text</div>`,
     ],
     [
+      "a later overflow-y it cannot compute",
+      `<div style="height:0;overflow-y:hidden;overflow-y:var(--missing,visible)">Shown text</div>`,
+    ],
+    [
       "visibility:hidden, which a descendant can undo",
       `<div style="visibility:hidden"><span style="visibility:visible">Shown text</span></div>`,
     ],

@@ -169,6 +169,8 @@ const NUMERIC = /^[+-]?[\d.]/;
  * so an override it cannot evaluate errs towards keeping the content.
  */
 function valid(prop: string, value: string): boolean {
+  // A function value (var(), calc(), env()) may be valid and cannot be computed here: keep it as unknown.
+  if (value.includes("(")) return true;
   if (prop.startsWith("overflow"))
     return (
       OVERFLOW.test(value) ||
