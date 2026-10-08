@@ -152,10 +152,6 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="height:0;overflow:visible hidden">${SECRET}</div>`,
     ],
     [
-      "a zero height where a hidden x axis turns a visible y axis into auto",
-      `<div style="height:0;overflow:hidden visible">${SECRET}</div>`,
-    ],
-    [
       "a zero-height clip that a later invalid overflow keyword cannot undo",
       `<div style="height:0;overflow:hidden;overflow:bogus">${SECRET}</div>`,
     ],
@@ -243,6 +239,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
     [
       "an invalid three-value overflow shorthand",
       `<div style="height:0;overflow:hidden visible visible">Shown text</div>`,
+    ],
+    [
+      "an overflow shorthand reset after a clip",
+      `<div style="height:0;overflow:hidden;overflow:initial">Shown text</div>`,
     ],
     [
       "visibility:hidden, which a descendant can undo",

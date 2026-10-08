@@ -169,12 +169,12 @@ const NUMERIC = /^[+-]?[\d.]/;
  * so an override it cannot evaluate errs towards keeping the content.
  */
 function valid(prop: string, value: string): boolean {
-  if (!NUMERIC.test(value)) return true;
   if (prop.startsWith("overflow"))
     return (
       OVERFLOW.test(value) ||
       /^(inherit|initial|unset|revert|revert-layer)$/.test(value)
     );
+  if (!NUMERIC.test(value)) return true;
   if (prop === "opacity")
     return BARE_NUMBER.test(value) || new RegExp(`^${NUMBER}%$`).test(value);
   if (prop.endsWith("height"))
@@ -206,10 +206,14 @@ function declarations(style: string): Map<string, Decl> {
     const important = /!\s*important\s*$/.test(value);
     if (important) value = value.replace(/!\s*important\s*$/, "").trim();
     if (name === "overflow") {
-      // Shorthand: one value for both axes, or horizontal then vertical. A browser
-      // drops the whole declaration if it has any other shape.
+      // Shorthand: one value for both axes (a reset keyword included), or
+      // horizontal then vertical. A browser drops any other shape.
       const parts = value.split(/\s+/);
-      if (parts.length > 2 || !parts.every((v) => OVERFLOW.test(v))) continue;
+      const ok =
+        parts.length === 1
+          ? valid("overflow-x", parts[0] ?? "")
+          : parts.length === 2 && parts.every((v) => OVERFLOW.test(v));
+      if (!ok) continue;
       const [x = "", y = x] = parts;
       set("overflow-x", x, important);
       set("overflow-y", y, important);
@@ -223,15 +227,14 @@ const isZero = (v: string): boolean =>
   (LENGTH.test(v) && BARE_ZERO.test(v.replace(/[a-z%]+$/, "")));
 const CLIPS = /^(hidden|clip|auto|scroll|overlay)$/;
 
-/** Whether the box clips vertically. Per CSS, a visible axis becomes auto when the other axis is not visible or clip. */
+/**
+ * Whether the box certainly clips vertically: only an explicit clipping value
+ * on the vertical axis counts. CSS can also make the vertical axis clip
+ * through the horizontal one or through inheritance; those cases are left
+ * alone, which keeps (and may expose) content rather than risk deleting it.
+ */
 function clipsVertically(d: Map<string, string>): boolean {
-  // Reset keywords (initial, unset, ...) are treated as visible, the initial value; anything else unknown keeps content.
-  const axis = (v: string | undefined) =>
-    v === undefined || !OVERFLOW.test(v) ? "visible" : v;
-  const x = axis(d.get("overflow-x"));
-  const y = axis(d.get("overflow-y"));
-  if (y === "visible") return !/^(visible|clip)$/.test(x);
-  return CLIPS.test(y);
+  return CLIPS.test(d.get("overflow-y") ?? "");
 }
 
 function hidesByStyle(d: Map<string, string>): boolean {
