@@ -172,7 +172,7 @@ const NUMERIC = /^[+-]?[\d.]/;
 function valid(prop: string, value: string): boolean {
   // A function value (var(), calc(), env()) may be valid and cannot be computed here: keep it as unknown.
   if (value.includes("(")) return true;
-  if (prop === "display") return DISPLAY.test(value);
+  if (prop === "display") return validDisplay(value);
   if (prop.startsWith("overflow"))
     return (
       OVERFLOW.test(value) ||
@@ -186,8 +186,35 @@ function valid(prop: string, value: string): boolean {
   return true;
 }
 
-const DISPLAY =
-  /^(none|contents|block|inline|run-in|flow|flow-root|table|flex|grid|ruby|list-item|inline-block|inline-table|inline-flex|inline-grid|table-[a-z-]+|ruby-[a-z-]+|inherit|initial|unset|revert|revert-layer|(block|inline|run-in) (flow|flow-root|table|flex|grid|ruby)|list-item( (block|inline|run-in))?( (flow|flow-root))?)$/;
+const DISPLAY_SINGLE =
+  /^(none|contents|block|inline|run-in|flow|flow-root|table|flex|grid|ruby|list-item|inline-block|inline-table|inline-flex|inline-grid|inline-list-item|table-[a-z-]+|ruby-[a-z-]+|inherit|initial|unset|revert|revert-layer)$/;
+const OUTER = /^(block|inline|run-in)$/;
+const INNER = /^(flow|flow-root|table|flex|grid|ruby)$/;
+
+interface DisplayParts {
+  outer?: string;
+  inner?: string;
+  listItem: boolean;
+}
+
+/** Multi-keyword display (CSS Display 3): an outer and/or inner type and list-item, in any order, each at most once. */
+function displayParts(value: string): DisplayParts | null {
+  const parts: DisplayParts = { listItem: false };
+  for (const t of value.split(" ")) {
+    if (OUTER.test(t) && !parts.outer) parts.outer = t;
+    else if (INNER.test(t) && !parts.inner) parts.inner = t;
+    else if (t === "list-item" && !parts.listItem) parts.listItem = true;
+    else return null;
+  }
+  if (parts.listItem && parts.inner && !/^flow(-root)?$/.test(parts.inner))
+    return null;
+  return parts;
+}
+
+const validDisplay = (value: string): boolean =>
+  value.includes(" ")
+    ? displayParts(value) !== null
+    : DISPLAY_SINGLE.test(value);
 const OVERFLOW = /^(visible|hidden|clip|scroll|auto|overlay)$/;
 
 const stripComments = (css: string): string =>
@@ -287,7 +314,7 @@ function couldShow(decls: Map<string, Decl>): {
     if (prop === "display" && d.value !== "none") {
       undo = "display";
       // An element made inline is no longer a box that height and overflow can clip.
-      if (!BLOCK_DISPLAY.test(d.value)) undoes.add("clip");
+      if (!isClippingBox(d.value)) undoes.add("clip");
     } else if (
       prop === "opacity" &&
       !(BARE_NUMBER.test(d.value) && Number.parseFloat(d.value) === 0)
@@ -535,8 +562,19 @@ const BLOCK_TAGS = new Set([
   "dd",
 ]);
 // One-keyword forms, and two-keyword forms whose outer type is block or whose inner type makes an inline box a block container.
-const BLOCK_DISPLAY =
-  /^(block|inline-block|flow-root|flex|inline-flex|grid|inline-grid|list-item( .*)?|block (flow|flow-root|flex|grid)|inline (flow-root|flex|grid))$/;
+const BLOCK_SINGLE =
+  /^(block|inline-block|flow-root|flex|inline-flex|grid|inline-grid|list-item|inline-list-item)$/;
+
+/** Whether a display value makes a box that height and overflow can clip (not inline, table or ruby). */
+function isClippingBox(value: string): boolean {
+  if (!value.includes(" ")) return BLOCK_SINGLE.test(value);
+  const p = displayParts(value);
+  if (!p) return false;
+  const outer = p.outer ?? "block";
+  const inner = p.inner ?? "flow";
+  if (/^(table|ruby)$/.test(inner)) return false;
+  return outer !== "inline" || inner !== "flow";
+}
 
 function hiddenElement(
   tagName: string,
@@ -549,7 +587,7 @@ function hiddenElement(
   const d = resolve(tagName, attribs, sheet, own);
   const display = d.get("display");
   const boxClips = display
-    ? BLOCK_DISPLAY.test(display)
+    ? isClippingBox(display)
     : BLOCK_TAGS.has(tagName.toLowerCase());
   const reasons = hideReasons(d, boxClips);
   if (!reasons.size) return false;

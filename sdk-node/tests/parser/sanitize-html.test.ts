@@ -301,6 +301,14 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<span style="display:block inline;height:0;overflow:hidden">Shown text</span>`,
     ],
     [
+      "a later display with its keywords in another order",
+      `<div style="display:none;display:flow inline">Shown text</div>`,
+    ],
+    [
+      "a later three-keyword list-item display",
+      `<div style="display:none;display:block flow list-item">Shown text</div>`,
+    ],
+    [
       "visibility:hidden, which a descendant can undo",
       `<div style="visibility:hidden"><span style="visibility:visible">Shown text</span></div>`,
     ],
