@@ -208,7 +208,8 @@ function declarations(style: string): Map<string, Decl> {
     let value = part
       .slice(i + 1)
       .trim()
-      .toLowerCase();
+      .toLowerCase()
+      .replace(/\s+/g, " ");
     const important = /!\s*important\s*$/.test(value);
     if (important) value = value.replace(/!\s*important\s*$/, "").trim();
     if (name === "overflow") {

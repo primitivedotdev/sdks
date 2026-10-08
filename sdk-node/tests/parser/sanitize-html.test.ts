@@ -285,6 +285,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<style>.m{height:0;overflow:hidden}@media(max-width:480px){.m{display:inline}}</style><div class="m">Shown text</div>`,
     ],
     [
+      "a later two-keyword display with extra whitespace",
+      '<div style="display:none;display:inline \t flow">Shown text</div>',
+    ],
+    [
       "visibility:hidden, which a descendant can undo",
       `<div style="visibility:hidden"><span style="visibility:visible">Shown text</span></div>`,
     ],
