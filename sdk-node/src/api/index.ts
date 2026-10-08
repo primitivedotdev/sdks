@@ -534,7 +534,7 @@ function parseIntegerHeader(
 function parseRateLimitHeaders(
   response: Response | undefined,
 ): PrimitiveRateLimit | undefined {
-  if (!response || response.status !== 429) return undefined;
+  if (response?.status !== 429) return undefined;
   const rateLimit: PrimitiveRateLimit = {
     limit: parseIntegerHeader(response, "ratelimit-limit"),
     remaining: parseIntegerHeader(response, "ratelimit-remaining"),
