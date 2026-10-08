@@ -170,12 +170,19 @@ const NUMERIC = /^[+-]?[\d.]/;
  */
 function valid(prop: string, value: string): boolean {
   if (!NUMERIC.test(value)) return true;
+  if (prop.startsWith("overflow"))
+    return (
+      OVERFLOW.test(value) ||
+      /^(inherit|initial|unset|revert|revert-layer)$/.test(value)
+    );
   if (prop === "opacity")
     return BARE_NUMBER.test(value) || new RegExp(`^${NUMBER}%$`).test(value);
   if (prop.endsWith("height"))
     return LENGTH.test(value) || BARE_ZERO.test(value);
   return true;
 }
+
+const OVERFLOW = /^(visible|hidden|clip|scroll|auto|overlay)$/;
 
 const stripComments = (css: string): string =>
   css.replace(/\/\*[\s\S]*?\*\//g, " ");
@@ -199,8 +206,11 @@ function declarations(style: string): Map<string, Decl> {
     const important = /!\s*important\s*$/.test(value);
     if (important) value = value.replace(/!\s*important\s*$/, "").trim();
     if (name === "overflow") {
-      // Shorthand: one value for both axes, or horizontal then vertical.
-      const [x = "", y = x] = value.split(/\s+/);
+      // Shorthand: one value for both axes, or horizontal then vertical. A browser
+      // drops the whole declaration if it has any other shape.
+      const parts = value.split(/\s+/);
+      if (parts.length > 2 || !parts.every((v) => OVERFLOW.test(v))) continue;
+      const [x = "", y = x] = parts;
       set("overflow-x", x, important);
       set("overflow-y", y, important);
     } else set(name, value, important);
@@ -215,8 +225,11 @@ const CLIPS = /^(hidden|clip|auto|scroll|overlay)$/;
 
 /** Whether the box clips vertically. Per CSS, a visible axis becomes auto when the other axis is not visible or clip. */
 function clipsVertically(d: Map<string, string>): boolean {
-  const x = d.get("overflow-x") ?? "visible";
-  const y = d.get("overflow-y") ?? "visible";
+  // Reset keywords (initial, unset, ...) are treated as visible, the initial value; anything else unknown keeps content.
+  const axis = (v: string | undefined) =>
+    v === undefined || !OVERFLOW.test(v) ? "visible" : v;
+  const x = axis(d.get("overflow-x"));
+  const y = axis(d.get("overflow-y"));
   if (y === "visible") return !/^(visible|clip)$/.test(x);
   return CLIPS.test(y);
 }

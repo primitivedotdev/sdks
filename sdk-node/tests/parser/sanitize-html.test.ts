@@ -156,6 +156,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="height:0;overflow:hidden visible">${SECRET}</div>`,
     ],
     [
+      "a zero-height clip that a later invalid overflow keyword cannot undo",
+      `<div style="height:0;overflow:hidden;overflow:bogus">${SECRET}</div>`,
+    ],
+    [
       "a zero height written as .0px",
       `<div style="height:.0px;overflow:hidden">${SECRET}</div>`,
     ],
@@ -231,6 +235,14 @@ describe("sanitizeHtml — content hidden from readers", () => {
     [
       "a min-height it cannot compute",
       `<div style="height:0;min-height:var(--h);overflow:hidden">Shown text</div>`,
+    ],
+    [
+      "a reset horizontal overflow",
+      `<div style="height:0;overflow-x:initial">Shown text</div>`,
+    ],
+    [
+      "an invalid three-value overflow shorthand",
+      `<div style="height:0;overflow:hidden visible visible">Shown text</div>`,
     ],
     [
       "visibility:hidden, which a descendant can undo",
