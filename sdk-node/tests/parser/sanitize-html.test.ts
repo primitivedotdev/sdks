@@ -139,6 +139,30 @@ describe("sanitizeHtml — content hidden from readers", () => {
       "a tag-qualified class in a selector list",
       `<style>p.a, div.pre{display:none}</style><div class="pre">${SECRET}</div>`,
     ],
+    [
+      "display:none written around a comment",
+      `<div style="display:/* preheader */none">${SECRET}</div>`,
+    ],
+    [
+      "a zero height in other units",
+      `<div style="max-height:0in;overflow:hidden">${SECRET}</div>`,
+    ],
+    [
+      "a zero height written as .0px",
+      `<div style="height:.0px;overflow:hidden">${SECRET}</div>`,
+    ],
+    [
+      "an important hide that a later normal declaration cannot undo",
+      `<div style="display:none!important;display:block">${SECRET}</div>`,
+    ],
+    [
+      "a more specific stylesheet rule that hides",
+      `<style>.a.b{display:none} .a{display:block}</style><div class="a b">${SECRET}</div>`,
+    ],
+    [
+      "an important stylesheet hide over a normal inline display",
+      `<style>.pre{display:none!important}</style><div class="pre" style="display:block">${SECRET}</div>`,
+    ],
   ])("drops text hidden by %s", (_name, html) => {
     const out = sanitizeHtml(`${html}<p>Visible text</p>`);
     expect(out).not.toContain(SECRET);
@@ -160,6 +184,26 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<style>.m{display:none}</style><div class="m" style="display:block">Shown text</div>`,
     ],
     ["a zero height without clipping", `<td style="height:0">Shown text</td>`],
+    [
+      "a class hidden for a different tag",
+      `<style>p.note{display:none}</style><div class="note">Shown text</div>`,
+    ],
+    [
+      "a hiding rule overridden by a later rule",
+      `<style>.note{display:none} .note{display:block}</style><div class="note">Shown text</div>`,
+    ],
+    [
+      "a stylesheet opacity:0 overridden inline",
+      `<style>.f{opacity:0}</style><div class="f" style="opacity:1">Shown text</div>`,
+    ],
+    [
+      "an important inline display over a later normal one",
+      `<div style="display:block!important;display:none">Shown text</div>`,
+    ],
+    [
+      "a zero-height clipped box with a minimum height",
+      `<div style="height:0;min-height:40px;overflow:hidden">Shown text</div>`,
+    ],
     [
       "visibility:hidden, which a descendant can undo",
       `<div style="visibility:hidden"><span style="visibility:visible">Shown text</span></div>`,

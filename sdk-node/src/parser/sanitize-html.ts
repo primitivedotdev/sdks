@@ -128,27 +128,58 @@ const NON_TEXT_TAGS = [
 //
 // Only declarations that hide an element and everything inside it, with no
 // way for a descendant to show again, are honoured: display:none, zero
-// opacity, the `hidden` attribute, and a zero-height box with overflow hidden.
-// visibility:hidden and font-size:0 are not, since a descendant can reset
-// them (email builders put font-size:0 on layout wrappers routinely), and
-// neither is mso-hide, which only Outlook applies.
-function declarations(style: string): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const part of style.split(";")) {
+// opacity, the `hidden` attribute, and a zero-height clipped box with no
+// minimum height. visibility:hidden and font-size:0 are not, since a
+// descendant can reset them (email builders put font-size:0 on layout
+// wrappers routinely), and neither is mso-hide, which only Outlook applies.
+//
+// Stylesheet rules are honoured only for simple selectors (`.c`, `tag.c`,
+// `.a.b`) outside @-blocks, resolved with the cascade: !important, then
+// specificity, then source order, with inline declarations above normal
+// stylesheet ones. Anything more complex is left alone, which errs towards
+// keeping content.
+
+interface Decl {
+  value: string;
+  important: boolean;
+}
+
+const RELEVANT = new Set([
+  "display",
+  "opacity",
+  "overflow",
+  "overflow-y",
+  "height",
+  "max-height",
+  "min-height",
+]);
+
+const stripComments = (css: string): string =>
+  css.replace(/\/\*[\s\S]*?\*\//g, " ");
+
+function declarations(style: string): Map<string, Decl> {
+  const out = new Map<string, Decl>();
+  for (const part of stripComments(style).split(";")) {
     const i = part.indexOf(":");
     if (i < 0) continue;
     const prop = part.slice(0, i).trim().toLowerCase();
-    const value = part
+    if (!RELEVANT.has(prop)) continue;
+    let value = part
       .slice(i + 1)
-      .replace(/!\s*important/i, "")
       .trim()
       .toLowerCase();
-    if (prop) out.set(prop, value);
+    const important = /!\s*important\s*$/.test(value);
+    if (important) value = value.replace(/!\s*important\s*$/, "").trim();
+    // Within one block a later declaration wins unless an earlier one is important and it is not.
+    const prev = out.get(prop);
+    if (value && !(prev?.important && !important))
+      out.set(prop, { value, important });
   }
   return out;
 }
 
-const ZERO = /^0+(\.0+)?(px|pt|em|rem|%)?$/;
+const ZERO = /^[+-]?(0+(\.0*)?|\.0+)([a-z]+|%)?$/;
+const NON_ZERO_LENGTH = /^[+-]?(\d*\.?\d+)/;
 
 function hidesByStyle(d: Map<string, string>): boolean {
   if (d.get("display") === "none") return true;
@@ -157,42 +188,97 @@ function hidesByStyle(d: Map<string, string>): boolean {
   const clipped = /hidden|clip/.test(
     `${d.get("overflow") ?? ""} ${d.get("overflow-y") ?? ""}`,
   );
-  return (
-    clipped && ["max-height", "height"].some((p) => ZERO.test(d.get(p) ?? "x"))
-  );
+  if (!clipped) return false;
+  const minHeight = d.get("min-height");
+  if (
+    minHeight &&
+    !ZERO.test(minHeight) &&
+    Number(minHeight.match(NON_ZERO_LENGTH)?.[1] ?? 0) > 0
+  )
+    return false;
+  return ["max-height", "height"].some((p) => ZERO.test(d.get(p) ?? "x"));
 }
 
-/**
- * Class names a document's own stylesheet hides outright: rules outside any
- * @media block whose selector is a single class (optionally tag-qualified).
- * Rules inside media queries only apply to some screens, so they are ignored.
- */
-function hiddenClasses(html: string): Set<string> {
-  const out = new Set<string>();
+interface Rule {
+  tag: string;
+  classes: string[];
+  specificity: number;
+  order: number;
+  decls: Map<string, Decl>;
+}
+
+function removeAtBlocks(css: string): string {
+  let out = css;
+  for (
+    let at = out.search(/@[a-z-]+[^{;]*\{/i);
+    at >= 0;
+    at = out.search(/@[a-z-]+[^{;]*\{/i)
+  ) {
+    let depth = 0;
+    let end = out.indexOf("{", at);
+    for (; end < out.length; end++) {
+      if (out[end] === "{") depth++;
+      else if (out[end] === "}" && --depth === 0) break;
+    }
+    out = out.slice(0, at) + out.slice(end + 1);
+  }
+  return out;
+}
+
+/** Rules from the message's own stylesheets whose selector is a tag and/or classes only. */
+function classRules(html: string): Rule[] {
+  const rules: Rule[] = [];
   const sheets = html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) ?? [];
   for (const sheet of sheets) {
-    let css = sheet
-      .replace(/^<style\b[^>]*>|<\/style>$/gi, "")
-      .replace(/\/\*[\s\S]*?\*\//g, "");
-    // Remove @-blocks (media queries and the like) including their nested rules.
-    for (
-      let at = css.search(/@[a-z-]+[^{;]*\{/i);
-      at >= 0;
-      at = css.search(/@[a-z-]+[^{;]*\{/i)
-    ) {
-      let depth = 0;
-      let end = css.indexOf("{", at);
-      for (; end < css.length; end++) {
-        if (css[end] === "{") depth++;
-        else if (css[end] === "}" && --depth === 0) break;
-      }
-      css = css.slice(0, at) + css.slice(end + 1);
-    }
+    const css = removeAtBlocks(
+      stripComments(sheet.replace(/^<style\b[^>]*>|<\/style>$/gi, "")),
+    );
     for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-      if (!hidesByStyle(declarations(m[2] ?? ""))) continue;
+      const decls = declarations(m[2] ?? "");
+      if (!decls.size) continue;
       for (const sel of (m[1] ?? "").split(",")) {
-        const cls = sel.trim().match(/^[a-z0-9]*\.([\w-]+)$/i);
-        if (cls?.[1]) out.add(cls[1]);
+        const simple = sel.trim().match(/^([a-z][a-z0-9]*)?((?:\.[\w-]+)+)$/i);
+        if (!simple) continue;
+        const classes = (simple[2] ?? "").split(".").filter(Boolean);
+        rules.push({
+          tag: (simple[1] ?? "").toLowerCase(),
+          classes,
+          specificity: classes.length * 1000 + (simple[1] ? 1 : 0),
+          order: rules.length,
+          decls,
+        });
+      }
+    }
+  }
+  return rules;
+}
+
+/** The winning value of each relevant property for one element. */
+function resolve(
+  tagName: string,
+  attribs: Record<string, string>,
+  rules: Rule[],
+): Map<string, string> {
+  const own = new Set((attribs.class ?? "").split(/\s+/).filter(Boolean));
+  const matched = rules
+    .filter(
+      (r) =>
+        (!r.tag || r.tag === tagName.toLowerCase()) &&
+        r.classes.every((c) => own.has(c)),
+    )
+    .sort((x, y) => x.specificity - y.specificity || x.order - y.order);
+  const inline = declarations(attribs.style ?? "");
+  const out = new Map<string, string>();
+  // Cascade order, lowest first: normal stylesheet, normal inline, important stylesheet, important inline.
+  const layers: Array<Array<Map<string, Decl>>> = [
+    matched.map((r) => r.decls),
+    [inline],
+  ];
+  for (const important of [false, true]) {
+    for (const layer of layers) {
+      for (const decls of layer) {
+        for (const [prop, d] of decls)
+          if (d.important === important) out.set(prop, d.value);
       }
     }
   }
@@ -200,7 +286,7 @@ function hiddenClasses(html: string): Set<string> {
 }
 
 function optionsFor(html: string): IOptions {
-  const hidden = hiddenClasses(html);
+  const rules = classRules(html);
   // Attribute objects of hidden elements. transformTags sees each element's
   // original attributes; exclusiveFilter runs when it closes and removes it
   // with everything inside. The allow-list strips attributes in place, so the
@@ -211,13 +297,11 @@ function optionsFor(html: string): IOptions {
     transformTags: {
       ...OPTIONS.transformTags,
       "*": (tagName, attribs) => {
-        const inline = declarations(attribs.style ?? "");
-        const byClass =
-          hidden.size > 0 &&
-          (attribs.class ?? "").split(/\s+/).some((c) => hidden.has(c)) &&
-          !(inline.has("display") && inline.get("display") !== "none");
         const next = { ...attribs };
-        if ("hidden" in attribs || hidesByStyle(inline) || byClass)
+        if (
+          "hidden" in attribs ||
+          hidesByStyle(resolve(tagName, attribs, rules))
+        )
           hiddenElements.add(next);
         return { tagName, attribs: next };
       },
