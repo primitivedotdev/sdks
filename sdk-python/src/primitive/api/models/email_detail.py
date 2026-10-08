@@ -23,6 +23,7 @@ if TYPE_CHECKING:
   from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0
   from ..models.email_detail_reply import EmailDetailReply
   from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
+  from ..models.email_relay import EmailRelay
   from ..models.parsed_email_data import ParsedEmailData
   from ..models.presence_control_type_0 import PresenceControlType0
 
@@ -278,6 +279,8 @@ class EmailDetail:
                 placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name
                 a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is
                 anything other than `pending`.
+            relay (EmailRelay | None | Unset): Set when the message reached Primitive through a Primitive mail relay. Null
+                for other mail. The field may be absent; treat a missing value the same as null.
      """
 
     id: UUID
@@ -331,6 +334,7 @@ class EmailDetail:
     interaction_hint: str | Unset = UNSET
     interaction_kind: None | str | Unset = UNSET
     interaction_candidate: bool | Unset = UNSET
+    relay: EmailRelay | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -343,6 +347,7 @@ class EmailDetail:
         from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
         from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
         from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0 # noqa: PLC0415
+        from ..models.email_relay import EmailRelay # noqa: PLC0415
         from ..models.parsed_email_data import ParsedEmailData # noqa: PLC0415
         from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
         id = str(self.id)
@@ -602,6 +607,14 @@ class EmailDetail:
 
         interaction_candidate = self.interaction_candidate
 
+        relay: dict[str, Any] | None | Unset
+        if isinstance(self.relay, Unset):
+            relay = UNSET
+        elif isinstance(self.relay, EmailRelay):
+            relay = self.relay.to_dict()
+        else:
+            relay = self.relay
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -690,6 +703,8 @@ class EmailDetail:
             field_dict["interaction_kind"] = interaction_kind
         if interaction_candidate is not UNSET:
             field_dict["interaction_candidate"] = interaction_candidate
+        if relay is not UNSET:
+            field_dict["relay"] = relay
 
         return field_dict
 
@@ -702,6 +717,7 @@ class EmailDetail:
         from ..models.email_detail_repeat_type_0 import EmailDetailRepeatType0 # noqa: PLC0415
         from ..models.email_detail_reply import EmailDetailReply # noqa: PLC0415
         from ..models.email_detail_sender_member_type_0 import EmailDetailSenderMemberType0 # noqa: PLC0415
+        from ..models.email_relay import EmailRelay # noqa: PLC0415
         from ..models.parsed_email_data import ParsedEmailData # noqa: PLC0415
         from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
         d = dict(src_dict)
@@ -1225,6 +1241,26 @@ class EmailDetail:
 
         interaction_candidate = d.pop("interaction_candidate", UNSET)
 
+        def _parse_relay(data: object) -> EmailRelay | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                relay_type_0 = EmailRelay.from_dict(data)
+
+
+
+                return relay_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailRelay | None | Unset, data)
+
+        relay = _parse_relay(d.pop("relay", UNSET))
+
+
         email_detail = cls(
             id=id,
             sender=sender,
@@ -1277,6 +1313,7 @@ class EmailDetail:
             interaction_hint=interaction_hint,
             interaction_kind=interaction_kind,
             interaction_candidate=interaction_candidate,
+            relay=relay,
         )
 
 

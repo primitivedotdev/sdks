@@ -7,6 +7,8 @@ from __future__ import annotations
 from primitive.api.models.email_detail import EmailDetail
 from primitive.api.models.email_detail_awaiting import EmailDetailAwaiting
 from primitive.api.models.email_detail_reply import EmailDetailReply
+from primitive.api.models.email_relay import EmailRelay
+from primitive.api.types import UNSET
 
 SAMPLE = {
     "id": "00000000-0000-0000-0000-000000000001",
@@ -152,3 +154,24 @@ def test_email_detail_round_trips_to_dict() -> None:
     assert len(serialized["replies"]) == 1
     assert serialized["parsed"]["status"] == "complete"
     assert serialized["auth"]["spf"] == "pass"
+
+
+def test_email_detail_relay_is_optional_and_nullable() -> None:
+    absent = EmailDetail.from_dict(SAMPLE)
+    assert absent.relay is UNSET
+    assert "relay" not in absent.to_dict()
+
+    null = EmailDetail.from_dict({**SAMPLE, "relay": None})
+    assert null.relay is None
+    assert null.to_dict()["relay"] is None
+
+    relayed = EmailDetail.from_dict(
+        {**SAMPLE, "relay": {"hostname": "relay.example.com", "via": "mail_relay"}}
+    )
+    assert isinstance(relayed.relay, EmailRelay)
+    assert relayed.relay.hostname == "relay.example.com"
+    assert relayed.relay.via == "mail_relay"
+    assert relayed.to_dict()["relay"] == {
+        "hostname": "relay.example.com",
+        "via": "mail_relay",
+    }

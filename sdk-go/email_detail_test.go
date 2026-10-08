@@ -2,6 +2,7 @@ package primitive
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -171,5 +172,40 @@ func TestEmailDetailUnmarshalsAutomatedVerdict(t *testing.T) {
 	}
 	if len(detail.AutomatedReasons) != 2 || detail.AutomatedReasons[0] != "list_unsubscribe" || detail.AutomatedReasons[1] != "list_id" {
 		t.Errorf("automated_reasons: got %v", detail.AutomatedReasons)
+	}
+}
+
+func TestEmailDetailUnmarshalsOptionalRelay(t *testing.T) {
+	const anchor = `"automated": true,`
+	if !strings.Contains(emailDetailSampleJSON, anchor) {
+		t.Fatalf("sample JSON no longer contains %q", anchor)
+	}
+	withRelay := func(value string) string {
+		return strings.Replace(emailDetailSampleJSON, anchor, `"relay": `+value+`, `+anchor, 1)
+	}
+
+	var absent primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(emailDetailSampleJSON), &absent); err != nil {
+		t.Fatalf("unmarshal without relay: %v", err)
+	}
+	if _, ok := absent.Relay.Get(); ok {
+		t.Errorf("relay without the field: got %+v, want unset", absent.Relay)
+	}
+
+	var null primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(withRelay("null")), &null); err != nil {
+		t.Fatalf("unmarshal with null relay: %v", err)
+	}
+	if _, ok := null.Relay.Get(); ok || !null.Relay.Null {
+		t.Errorf("relay null: got %+v, want null", null.Relay)
+	}
+
+	var relayed primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(withRelay(`{"hostname": "relay.example.com", "via": "mail_relay"}`)), &relayed); err != nil {
+		t.Fatalf("unmarshal with relay: %v", err)
+	}
+	relay, ok := relayed.Relay.Get()
+	if !ok || relay.Hostname != "relay.example.com" || relay.Via != "mail_relay" {
+		t.Errorf("relay: got (%+v, %v), want relay.example.com via mail_relay", relay, ok)
 	}
 }

@@ -137,6 +137,7 @@ export type {
   // Auth types
   EmailAuth,
   EmailReceivedEvent,
+  EmailRelay,
   // Forward analysis types
   ForwardAnalysis,
   ForwardOriginalSender,

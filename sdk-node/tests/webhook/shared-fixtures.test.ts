@@ -7,6 +7,7 @@ import {
   buildReplySubject,
   decodeRawEmail,
   type EmailReceivedEvent,
+  type EmailRelay,
   handleWebhook,
   isRawIncluded,
   isTrustedSender,
@@ -45,7 +46,12 @@ describe("shared compatibility fixtures", () => {
       cases: Array<{
         name: string;
         payload: unknown;
-        expected: { valid: boolean; id?: string; error_code?: string };
+        expected: {
+          valid: boolean;
+          id?: string;
+          error_code?: string;
+          relay?: EmailRelay | null;
+        };
       }>;
     }>("webhook", "validation-cases.json");
 
@@ -53,6 +59,11 @@ describe("shared compatibility fixtures", () => {
       if (testCase.expected.valid) {
         const event = validateEmailReceivedEvent(testCase.payload);
         expect(event.id, testCase.name).toBe(testCase.expected.id);
+        if (testCase.expected.relay !== undefined) {
+          expect(event.email.relay ?? null, testCase.name).toEqual(
+            testCase.expected.relay,
+          );
+        }
         const safeResult = safeValidateEmailReceivedEvent(testCase.payload);
         expect(safeResult.success, testCase.name).toBe(true);
       } else {

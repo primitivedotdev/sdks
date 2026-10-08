@@ -13,6 +13,7 @@ from primitive import (
     DmarcPolicy,
     Download,
     Email,
+    EmailRelay,
     Headers,
     PrimitiveWebhookError,
     RawEmailDecodeError,
@@ -242,6 +243,37 @@ def test_handle_webhook_round_trip(valid_payload: dict[str, Any]) -> None:
         secret=secret,
     )
     assert event.event == "email.received"
+
+
+@pytest.mark.parametrize(
+    "relay",
+    [
+        {"hostname": "relay.example.com", "via": "mail_relay"},
+        None,
+        "absent",
+    ],
+)
+def test_handle_webhook_exposes_optional_relay(
+    valid_payload: dict[str, Any], relay: dict[str, str] | str | None
+) -> None:
+    if relay == "absent":
+        valid_payload["email"].pop("relay", None)
+    else:
+        valid_payload["email"]["relay"] = relay
+    secret = "test-webhook-secret"
+    body = json.dumps(valid_payload)
+    header = sign_webhook_payload(body, secret)["header"]
+    event = handle_webhook(
+        body=body,
+        headers={"primitive-signature": str(header)},
+        secret=secret,
+    )
+    if isinstance(relay, dict):
+        assert isinstance(event.email.relay, EmailRelay)
+        assert event.email.relay.hostname == "relay.example.com"
+        assert event.email.relay.via == "mail_relay"
+    else:
+        assert event.email.relay is None
 
 
 def test_handle_webhook_accepts_bytes_body(valid_payload: dict[str, Any]) -> None:

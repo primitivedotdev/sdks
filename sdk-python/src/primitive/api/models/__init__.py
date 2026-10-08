@@ -204,6 +204,7 @@ from .email_detail_awaiting import EmailDetailAwaiting
 from .email_detail_repeat_type_0 import EmailDetailRepeatType0
 from .email_detail_reply import EmailDetailReply
 from .email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
+from .email_relay import EmailRelay
 from .email_search_facet_bucket import EmailSearchFacetBucket
 from .email_search_facets import EmailSearchFacets
 from .email_search_facets_has_attachment import EmailSearchFacetsHasAttachment
@@ -861,6 +862,7 @@ __all__ = (
     "EmailDetailRepeatType0",
     "EmailDetailReply",
     "EmailDetailSenderMemberType0",
+    "EmailRelay",
     "EmailSearchFacetBucket",
     "EmailSearchFacets",
     "EmailSearchFacetsHasAttachment",

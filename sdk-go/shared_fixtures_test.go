@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"testing"
 )
@@ -68,6 +69,9 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 					Valid     bool   `json:"valid"`
 					ID        string `json:"id"`
 					ErrorCode string `json:"error_code"`
+					// Relay stays raw so a case can tell "not asserted"
+					// (absent) apart from "expect no relay" (JSON null).
+					Relay json.RawMessage `json:"relay"`
 				} `json:"expected"`
 			} `json:"cases"`
 		}](t, "webhook", "validation-cases.json")
@@ -80,6 +84,15 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 				}
 				if event.ID != testCase.Expected.ID {
 					t.Fatalf("%s: unexpected event ID %q", testCase.Name, event.ID)
+				}
+				if len(testCase.Expected.Relay) > 0 {
+					var wantRelay *EmailRelay
+					if err := json.Unmarshal(testCase.Expected.Relay, &wantRelay); err != nil {
+						t.Fatalf("%s: decode expected relay: %v", testCase.Name, err)
+					}
+					if !reflect.DeepEqual(event.Email.Relay, wantRelay) {
+						t.Fatalf("%s: unexpected relay %+v, want %+v", testCase.Name, event.Email.Relay, wantRelay)
+					}
 				}
 				if !SafeValidateEmailReceivedEvent(testCase.Payload).Success {
 					t.Fatalf("%s: expected safe validation success", testCase.Name)

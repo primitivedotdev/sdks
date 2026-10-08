@@ -11322,6 +11322,9 @@ type EmailDetail struct {
 	// that header or name a part that way, so it must not grant trust or select an interaction kind.
 	// Ignore it once `interaction_hint` is anything other than `pending`.
 	InteractionCandidate OptBool `json:"interaction_candidate"`
+	// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
+	// field may be absent; treat a missing value the same as null.
+	Relay OptNilEmailRelay `json:"relay"`
 }
 
 // GetID returns the value of ID.
@@ -11579,6 +11582,11 @@ func (s *EmailDetail) GetInteractionCandidate() OptBool {
 	return s.InteractionCandidate
 }
 
+// GetRelay returns the value of Relay.
+func (s *EmailDetail) GetRelay() OptNilEmailRelay {
+	return s.Relay
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -11832,6 +11840,11 @@ func (s *EmailDetail) SetInteractionKind(val OptNilString) {
 // SetInteractionCandidate sets the value of InteractionCandidate.
 func (s *EmailDetail) SetInteractionCandidate(val OptBool) {
 	s.InteractionCandidate = val
+}
+
+// SetRelay sets the value of Relay.
+func (s *EmailDetail) SetRelay(val OptNilEmailRelay) {
+	s.Relay = val
 }
 
 // What the message declared about being automated, verbatim:
@@ -12175,6 +12188,36 @@ func (s *EmailDetailSenderMember) SetUserID(val string) {
 // SetName sets the value of Name.
 func (s *EmailDetailSenderMember) SetName(val NilString) {
 	s.Name = val
+}
+
+// How an inbound message reached Primitive when it arrived through a Primitive mail relay.
+// Ref: #/components/schemas/EmailRelay
+type EmailRelay struct {
+	// The relay hostname the domain's MX record points at.
+	Hostname string `json:"hostname"`
+	// How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added
+	// after your client was built.
+	Via string `json:"via"`
+}
+
+// GetHostname returns the value of Hostname.
+func (s *EmailRelay) GetHostname() string {
+	return s.Hostname
+}
+
+// GetVia returns the value of Via.
+func (s *EmailRelay) GetVia() string {
+	return s.Via
+}
+
+// SetHostname sets the value of Hostname.
+func (s *EmailRelay) SetHostname(val string) {
+	s.Hostname = val
+}
+
+// SetVia sets the value of Via.
+func (s *EmailRelay) SetVia(val string) {
+	s.Via = val
 }
 
 // Ref: #/components/schemas/EmailSearchFacetBucket
@@ -12544,6 +12587,9 @@ type EmailSearchResult struct {
 	// that header or name a part that way, so it must not grant trust or select an interaction kind.
 	// Ignore it once `interaction_hint` is anything other than `pending`.
 	InteractionCandidate OptBool `json:"interaction_candidate"`
+	// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
+	// field may be absent; treat a missing value the same as null.
+	Relay OptNilEmailRelay `json:"relay"`
 	// Number of parsed attachments on the email.
 	AttachmentCount int `json:"attachment_count"`
 	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
@@ -12700,6 +12746,11 @@ func (s *EmailSearchResult) GetInteractionKind() OptNilString {
 // GetInteractionCandidate returns the value of InteractionCandidate.
 func (s *EmailSearchResult) GetInteractionCandidate() OptBool {
 	return s.InteractionCandidate
+}
+
+// GetRelay returns the value of Relay.
+func (s *EmailSearchResult) GetRelay() OptNilEmailRelay {
+	return s.Relay
 }
 
 // GetAttachmentCount returns the value of AttachmentCount.
@@ -12870,6 +12921,11 @@ func (s *EmailSearchResult) SetInteractionKind(val OptNilString) {
 // SetInteractionCandidate sets the value of InteractionCandidate.
 func (s *EmailSearchResult) SetInteractionCandidate(val OptBool) {
 	s.InteractionCandidate = val
+}
+
+// SetRelay sets the value of Relay.
+func (s *EmailSearchResult) SetRelay(val OptNilEmailRelay) {
+	s.Relay = val
 }
 
 // SetAttachmentCount sets the value of AttachmentCount.
@@ -13419,6 +13475,9 @@ type EmailSummary struct {
 	// that header or name a part that way, so it must not grant trust or select an interaction kind.
 	// Ignore it once `interaction_hint` is anything other than `pending`.
 	InteractionCandidate OptBool `json:"interaction_candidate"`
+	// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
+	// field may be absent; treat a missing value the same as null.
+	Relay OptNilEmailRelay `json:"relay"`
 }
 
 // GetID returns the value of ID.
@@ -13566,6 +13625,11 @@ func (s *EmailSummary) GetInteractionCandidate() OptBool {
 	return s.InteractionCandidate
 }
 
+// GetRelay returns the value of Relay.
+func (s *EmailSummary) GetRelay() OptNilEmailRelay {
+	return s.Relay
+}
+
 // SetID sets the value of ID.
 func (s *EmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -13709,6 +13773,11 @@ func (s *EmailSummary) SetInteractionKind(val OptNilString) {
 // SetInteractionCandidate sets the value of InteractionCandidate.
 func (s *EmailSummary) SetInteractionCandidate(val OptBool) {
 	s.InteractionCandidate = val
+}
+
+// SetRelay sets the value of Relay.
+func (s *EmailSummary) SetRelay(val OptNilEmailRelay) {
+	s.Relay = val
 }
 
 // What the message declared about being automated, verbatim:
@@ -26929,6 +26998,69 @@ func (o OptNilEmailDetailSenderMember) Get() (v EmailDetailSenderMember, ok bool
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailDetailSenderMember) Or(d EmailDetailSenderMember) EmailDetailSenderMember {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailRelay returns new OptNilEmailRelay with value set to v.
+func NewOptNilEmailRelay(v EmailRelay) OptNilEmailRelay {
+	return OptNilEmailRelay{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailRelay is optional nullable EmailRelay.
+type OptNilEmailRelay struct {
+	Value EmailRelay
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailRelay was set.
+func (o OptNilEmailRelay) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailRelay) Reset() {
+	var v EmailRelay
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailRelay) SetTo(v EmailRelay) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailRelay) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailRelay) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailRelay
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailRelay) Get() (v EmailRelay, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailRelay) Or(d EmailRelay) EmailRelay {
 	if v, ok := o.Get(); ok {
 		return v
 	}
