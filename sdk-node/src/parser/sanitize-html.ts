@@ -159,6 +159,7 @@ const LENGTH = new RegExp(
   `^${NUMBER}(px|pt|pc|in|cm|mm|q|em|rem|ex|ch|vw|vh|vmin|vmax|%)$`,
 );
 const BARE_NUMBER = new RegExp(`^${NUMBER}$`);
+const PERCENT = new RegExp(`^${NUMBER}%$`);
 const BARE_ZERO = /^[+-]?(0+\.?0*|\.0+)$/;
 const NUMERIC = /^[+-]?[\d.]/;
 
@@ -244,7 +245,7 @@ function hidesByStyle(d: Map<string, string>): boolean {
   const opacity = d.get("opacity");
   if (
     opacity !== undefined &&
-    (BARE_NUMBER.test(opacity) || opacity.endsWith("%")) &&
+    (BARE_NUMBER.test(opacity) || PERCENT.test(opacity)) &&
     Number.parseFloat(opacity) === 0
   )
     return true;

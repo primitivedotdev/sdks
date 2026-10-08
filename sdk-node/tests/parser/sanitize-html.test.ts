@@ -249,6 +249,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="height:0;overflow-y:hidden;overflow-y:var(--missing,visible)">Shown text</div>`,
     ],
     [
+      "a malformed opacity percentage",
+      `<div style="opacity:0(5)%">Shown text</div>`,
+    ],
+    [
       "visibility:hidden, which a descendant can undo",
       `<div style="visibility:hidden"><span style="visibility:visible">Shown text</span></div>`,
     ],
