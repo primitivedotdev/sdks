@@ -147,12 +147,29 @@ interface Decl {
 const RELEVANT = new Set([
   "display",
   "opacity",
-  "overflow",
   "overflow-y",
   "height",
   "max-height",
   "min-height",
 ]);
+
+const NUMBER = String.raw`[+-]?(\d+\.?\d*|\.\d+)`;
+const LENGTH = new RegExp(
+  `^${NUMBER}(px|pt|pc|in|cm|mm|q|em|rem|ex|ch|vw|vh|vmin|vmax|%)$`,
+);
+const BARE_ZERO = /^[+-]?(0+\.?0*|\.0+)$/;
+const SIZE_KEYWORD =
+  /^(auto|none|inherit|initial|unset|revert|fit-content|min-content|max-content)$/;
+
+/** A browser ignores a declaration whose value is invalid, so it is ignored here too. */
+function valid(prop: string, value: string): boolean {
+  if (prop === "opacity") return new RegExp(`^${NUMBER}%?$`).test(value);
+  if (prop.endsWith("height"))
+    return (
+      LENGTH.test(value) || BARE_ZERO.test(value) || SIZE_KEYWORD.test(value)
+    );
+  return true;
+}
 
 const stripComments = (css: string): string =>
   css.replace(/\/\*[\s\S]*?\*\//g, " ");
@@ -162,41 +179,38 @@ function declarations(style: string): Map<string, Decl> {
   for (const part of stripComments(style).split(";")) {
     const i = part.indexOf(":");
     if (i < 0) continue;
-    const prop = part.slice(0, i).trim().toLowerCase();
-    if (!RELEVANT.has(prop)) continue;
+    const name = part.slice(0, i).trim().toLowerCase();
     let value = part
       .slice(i + 1)
       .trim()
       .toLowerCase();
     const important = /!\s*important\s*$/.test(value);
     if (important) value = value.replace(/!\s*important\s*$/, "").trim();
+    // `overflow` is shorthand for both axes; only the vertical one decides
+    // whether a zero-height box shows anything.
+    const prop = name === "overflow" ? "overflow-y" : name;
+    const v = name === "overflow" ? (value.split(/\s+/).at(-1) ?? "") : value;
+    if (!RELEVANT.has(prop) || !v || !valid(prop, v)) continue;
     // Within one block a later declaration wins unless an earlier one is important and it is not.
     const prev = out.get(prop);
-    if (value && !(prev?.important && !important))
-      out.set(prop, { value, important });
+    if (!(prev?.important && !important))
+      out.set(prop, { value: v, important });
   }
   return out;
 }
 
-const ZERO = /^[+-]?(0+(\.0*)?|\.0+)([a-z]+|%)?$/;
-const NON_ZERO_LENGTH = /^[+-]?(\d*\.?\d+)/;
+const isZero = (v: string): boolean =>
+  BARE_ZERO.test(v) ||
+  (LENGTH.test(v) && BARE_ZERO.test(v.replace(/[a-z%]+$/, "")));
 
 function hidesByStyle(d: Map<string, string>): boolean {
   if (d.get("display") === "none") return true;
   const opacity = d.get("opacity");
   if (opacity !== undefined && Number.parseFloat(opacity) === 0) return true;
-  const clipped = /hidden|clip/.test(
-    `${d.get("overflow") ?? ""} ${d.get("overflow-y") ?? ""}`,
-  );
-  if (!clipped) return false;
+  if (!/hidden|clip/.test(d.get("overflow-y") ?? "")) return false;
   const minHeight = d.get("min-height");
-  if (
-    minHeight &&
-    !ZERO.test(minHeight) &&
-    Number(minHeight.match(NON_ZERO_LENGTH)?.[1] ?? 0) > 0
-  )
-    return false;
-  return ["max-height", "height"].some((p) => ZERO.test(d.get(p) ?? "x"));
+  if (minHeight && LENGTH.test(minHeight) && !isZero(minHeight)) return false;
+  return ["max-height", "height"].some((p) => isZero(d.get(p) ?? "x"));
 }
 
 interface Rule {

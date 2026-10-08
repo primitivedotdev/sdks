@@ -148,6 +148,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="max-height:0in;overflow:hidden">${SECRET}</div>`,
     ],
     [
+      "a zero height clipped by the overflow shorthand on two axes",
+      `<div style="height:0;overflow:visible hidden">${SECRET}</div>`,
+    ],
+    [
       "a zero height written as .0px",
       `<div style="height:.0px;overflow:hidden">${SECRET}</div>`,
     ],
@@ -203,6 +207,14 @@ describe("sanitizeHtml — content hidden from readers", () => {
     [
       "a zero-height clipped box with a minimum height",
       `<div style="height:0;min-height:40px;overflow:hidden">Shown text</div>`,
+    ],
+    [
+      "a later invalid zero height",
+      `<div style="height:40px;height:0foo;overflow:hidden">Shown text</div>`,
+    ],
+    [
+      "an inline overflow shorthand overriding a stylesheet overflow-y",
+      `<style>.pre{height:0;overflow-y:hidden}</style><div class="pre" style="overflow:visible">Shown text</div>`,
     ],
     [
       "visibility:hidden, which a descendant can undo",
