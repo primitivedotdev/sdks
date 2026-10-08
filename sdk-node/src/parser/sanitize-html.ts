@@ -120,6 +120,112 @@ const NON_TEXT_TAGS = [
   "input",
 ];
 
+// Content the sender hid from readers. Dropping `style` attributes and
+// `<style>` blocks (above) would otherwise make it visible: a preheader or a
+// prompt injection in a display:none div would render in the inbox and reach
+// every consumer of body_html as ordinary text. Such elements are therefore
+// discarded with their contents, before their styles are stripped.
+//
+// Only declarations that hide an element and everything inside it, with no
+// way for a descendant to show again, are honoured: display:none, zero
+// opacity, the `hidden` attribute, and a zero-height box with overflow hidden.
+// visibility:hidden and font-size:0 are not, since a descendant can reset
+// them (email builders put font-size:0 on layout wrappers routinely), and
+// neither is mso-hide, which only Outlook applies.
+function declarations(style: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const part of style.split(";")) {
+    const i = part.indexOf(":");
+    if (i < 0) continue;
+    const prop = part.slice(0, i).trim().toLowerCase();
+    const value = part
+      .slice(i + 1)
+      .replace(/!\s*important/i, "")
+      .trim()
+      .toLowerCase();
+    if (prop) out.set(prop, value);
+  }
+  return out;
+}
+
+const ZERO = /^0+(\.0+)?(px|pt|em|rem|%)?$/;
+
+function hidesByStyle(d: Map<string, string>): boolean {
+  if (d.get("display") === "none") return true;
+  const opacity = d.get("opacity");
+  if (opacity !== undefined && Number.parseFloat(opacity) === 0) return true;
+  const clipped = /hidden|clip/.test(
+    `${d.get("overflow") ?? ""} ${d.get("overflow-y") ?? ""}`,
+  );
+  return (
+    clipped && ["max-height", "height"].some((p) => ZERO.test(d.get(p) ?? "x"))
+  );
+}
+
+/**
+ * Class names a document's own stylesheet hides outright: rules outside any
+ * @media block whose selector is a single class (optionally tag-qualified).
+ * Rules inside media queries only apply to some screens, so they are ignored.
+ */
+function hiddenClasses(html: string): Set<string> {
+  const out = new Set<string>();
+  const sheets = html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) ?? [];
+  for (const sheet of sheets) {
+    let css = sheet
+      .replace(/^<style\b[^>]*>|<\/style>$/gi, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    // Remove @-blocks (media queries and the like) including their nested rules.
+    for (
+      let at = css.search(/@[a-z-]+[^{;]*\{/i);
+      at >= 0;
+      at = css.search(/@[a-z-]+[^{;]*\{/i)
+    ) {
+      let depth = 0;
+      let end = css.indexOf("{", at);
+      for (; end < css.length; end++) {
+        if (css[end] === "{") depth++;
+        else if (css[end] === "}" && --depth === 0) break;
+      }
+      css = css.slice(0, at) + css.slice(end + 1);
+    }
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!hidesByStyle(declarations(m[2] ?? ""))) continue;
+      for (const sel of (m[1] ?? "").split(",")) {
+        const cls = sel.trim().match(/^[a-z0-9]*\.([\w-]+)$/i);
+        if (cls?.[1]) out.add(cls[1]);
+      }
+    }
+  }
+  return out;
+}
+
+function optionsFor(html: string): IOptions {
+  const hidden = hiddenClasses(html);
+  // Attribute objects of hidden elements. transformTags sees each element's
+  // original attributes; exclusiveFilter runs when it closes and removes it
+  // with everything inside. The allow-list strips attributes in place, so the
+  // object identity carries the decision from one hook to the other.
+  const hiddenElements = new WeakSet<object>();
+  return {
+    ...OPTIONS,
+    transformTags: {
+      ...OPTIONS.transformTags,
+      "*": (tagName, attribs) => {
+        const inline = declarations(attribs.style ?? "");
+        const byClass =
+          hidden.size > 0 &&
+          (attribs.class ?? "").split(/\s+/).some((c) => hidden.has(c)) &&
+          !(inline.has("display") && inline.get("display") !== "none");
+        const next = { ...attribs };
+        if ("hidden" in attribs || hidesByStyle(inline) || byClass)
+          hiddenElements.add(next);
+        return { tagName, attribs: next };
+      },
+    },
+    exclusiveFilter: (frame) => hiddenElements.has(frame.attribs),
+  };
+}
+
 const OPTIONS: IOptions = {
   allowedTags: ALLOWED_TAGS,
   // DOMPurify's ALLOWED_ATTR was a global allow-list; "*" applies it to every
@@ -153,5 +259,5 @@ const OPTIONS: IOptions = {
 };
 
 export function sanitizeHtml(html: string): string {
-  return sanitizeHtmlLib(html, OPTIONS);
+  return sanitizeHtmlLib(html, optionsFor(html));
 }
