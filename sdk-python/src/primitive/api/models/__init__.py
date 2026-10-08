@@ -202,6 +202,7 @@ from .email_detail import EmailDetail
 from .email_detail_automation_headers_type_0 import EmailDetailAutomationHeadersType0
 from .email_detail_awaiting import EmailDetailAwaiting
 from .email_detail_relay_type_0 import EmailDetailRelayType0
+from .email_detail_relay_type_0_delivery_item import EmailDetailRelayType0DeliveryItem
 from .email_detail_repeat_type_0 import EmailDetailRepeatType0
 from .email_detail_reply import EmailDetailReply
 from .email_detail_sender_member_type_0 import EmailDetailSenderMemberType0
@@ -861,6 +862,7 @@ __all__ = (
     "EmailDetailAutomationHeadersType0",
     "EmailDetailAwaiting",
     "EmailDetailRelayType0",
+    "EmailDetailRelayType0DeliveryItem",
     "EmailDetailRepeatType0",
     "EmailDetailReply",
     "EmailDetailSenderMemberType0",

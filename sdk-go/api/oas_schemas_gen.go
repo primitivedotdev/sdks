@@ -12059,6 +12059,9 @@ type EmailDetailRelay struct {
 	// How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added
 	// after your client was built.
 	Via string `json:"via"`
+	// Per-recipient outcome of the relay forwarding the message to the recipient's mailbox provider. The
+	// field may be absent; treat a missing value as no delivery information being available.
+	Delivery []EmailDetailRelayDeliveryItem `json:"delivery"`
 }
 
 // GetHostname returns the value of Hostname.
@@ -12071,6 +12074,11 @@ func (s *EmailDetailRelay) GetVia() string {
 	return s.Via
 }
 
+// GetDelivery returns the value of Delivery.
+func (s *EmailDetailRelay) GetDelivery() []EmailDetailRelayDeliveryItem {
+	return s.Delivery
+}
+
 // SetHostname sets the value of Hostname.
 func (s *EmailDetailRelay) SetHostname(val string) {
 	s.Hostname = val
@@ -12079,6 +12087,87 @@ func (s *EmailDetailRelay) SetHostname(val string) {
 // SetVia sets the value of Via.
 func (s *EmailDetailRelay) SetVia(val string) {
 	s.Via = val
+}
+
+// SetDelivery sets the value of Delivery.
+func (s *EmailDetailRelay) SetDelivery(val []EmailDetailRelayDeliveryItem) {
+	s.Delivery = val
+}
+
+type EmailDetailRelayDeliveryItem struct {
+	// The recipient address the relay forwarded to.
+	Recipient string `json:"recipient"`
+	// Outcome of the forward. Currently one of `delivered`, `deferred` or `bounced`. Treat an unfamiliar
+	// value as one added after your client was built.
+	Status string `json:"status"`
+	// SMTP reply code from the mailbox provider, when one was received.
+	SMTPCode OptNilInt `json:"smtp_code"`
+	// Enhanced status code (for example `2.0.0`) from the mailbox provider, when one was received.
+	EnhancedStatusCode OptNilString `json:"enhanced_status_code"`
+	// SMTP reply text from the mailbox provider, when one was received.
+	SMTPResponse OptNilString `json:"smtp_response"`
+	// When this outcome was recorded.
+	At time.Time `json:"at"`
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *EmailDetailRelayDeliveryItem) GetRecipient() string {
+	return s.Recipient
+}
+
+// GetStatus returns the value of Status.
+func (s *EmailDetailRelayDeliveryItem) GetStatus() string {
+	return s.Status
+}
+
+// GetSMTPCode returns the value of SMTPCode.
+func (s *EmailDetailRelayDeliveryItem) GetSMTPCode() OptNilInt {
+	return s.SMTPCode
+}
+
+// GetEnhancedStatusCode returns the value of EnhancedStatusCode.
+func (s *EmailDetailRelayDeliveryItem) GetEnhancedStatusCode() OptNilString {
+	return s.EnhancedStatusCode
+}
+
+// GetSMTPResponse returns the value of SMTPResponse.
+func (s *EmailDetailRelayDeliveryItem) GetSMTPResponse() OptNilString {
+	return s.SMTPResponse
+}
+
+// GetAt returns the value of At.
+func (s *EmailDetailRelayDeliveryItem) GetAt() time.Time {
+	return s.At
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *EmailDetailRelayDeliveryItem) SetRecipient(val string) {
+	s.Recipient = val
+}
+
+// SetStatus sets the value of Status.
+func (s *EmailDetailRelayDeliveryItem) SetStatus(val string) {
+	s.Status = val
+}
+
+// SetSMTPCode sets the value of SMTPCode.
+func (s *EmailDetailRelayDeliveryItem) SetSMTPCode(val OptNilInt) {
+	s.SMTPCode = val
+}
+
+// SetEnhancedStatusCode sets the value of EnhancedStatusCode.
+func (s *EmailDetailRelayDeliveryItem) SetEnhancedStatusCode(val OptNilString) {
+	s.EnhancedStatusCode = val
+}
+
+// SetSMTPResponse sets the value of SMTPResponse.
+func (s *EmailDetailRelayDeliveryItem) SetSMTPResponse(val OptNilString) {
+	s.SMTPResponse = val
+}
+
+// SetAt sets the value of At.
+func (s *EmailDetailRelayDeliveryItem) SetAt(val time.Time) {
+	s.At = val
 }
 
 // Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own

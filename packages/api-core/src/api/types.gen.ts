@@ -2229,6 +2229,35 @@ export type EmailDetail = {
          * How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built.
          */
         via: string;
+        /**
+         * Per-recipient outcome of the relay forwarding the message to the recipient's mailbox provider. The field may be absent; treat a missing value as no delivery information being available.
+         */
+        delivery?: Array<{
+            /**
+             * The recipient address the relay forwarded to.
+             */
+            recipient: string;
+            /**
+             * Outcome of the forward. Currently one of `delivered`, `deferred` or `bounced`. Treat an unfamiliar value as one added after your client was built.
+             */
+            status: string;
+            /**
+             * SMTP reply code from the mailbox provider, when one was received.
+             */
+            smtp_code?: number | null;
+            /**
+             * Enhanced status code (for example `2.0.0`) from the mailbox provider, when one was received.
+             */
+            enhanced_status_code?: string | null;
+            /**
+             * SMTP reply text from the mailbox provider, when one was received.
+             */
+            smtp_response?: string | null;
+            /**
+             * When this outcome was recorded.
+             */
+            at: string;
+        }>;
     } | null;
 };
 
