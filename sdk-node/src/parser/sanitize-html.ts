@@ -240,21 +240,6 @@ function clipsVertically(d: Map<string, string>): boolean {
   return CLIPS.test(d.get("overflow-y") ?? "");
 }
 
-function hidesByStyle(d: Map<string, string>, boxClips = true): boolean {
-  if (d.get("display") === "none") return true;
-  const opacity = d.get("opacity");
-  if (
-    opacity !== undefined &&
-    (BARE_NUMBER.test(opacity) || PERCENT.test(opacity)) &&
-    Number.parseFloat(opacity) === 0
-  )
-    return true;
-  if (!boxClips || !clipsVertically(d)) return false;
-  const minHeight = d.get("min-height");
-  if (minHeight && !isZero(minHeight) && minHeight !== "auto") return false;
-  return ["max-height", "height"].some((p) => isZero(d.get(p) ?? "x"));
-}
-
 interface Rule {
   tag: string;
   classes: string[];
@@ -273,7 +258,11 @@ interface Restorer {
   id: string;
   classes: string[];
   important: boolean;
+  /** Which ways of hiding this rule could undo. */
+  undoes: Set<Hide>;
 }
+
+type Hide = "display" | "opacity" | "clip";
 
 interface Sheet {
   /** Simple class rules, indexed by each class they name. */
@@ -281,26 +270,32 @@ interface Sheet {
   restorers: Restorer[];
 }
 
-/** Whether these declarations could undo a hide: any display other than none, opacity above zero, a non-clipping overflow or a non-zero height. */
+/** Which ways of hiding these declarations could undo, and whether any of those declarations is important. */
 function couldShow(decls: Map<string, Decl>): {
-  show: boolean;
+  undoes: Set<Hide>;
   important: boolean;
 } {
-  let show = false;
+  const undoes = new Set<Hide>();
   let important = false;
   for (const [prop, d] of decls) {
-    const shows =
-      (prop === "display" && d.value !== "none") ||
-      (prop === "opacity" &&
-        !(BARE_NUMBER.test(d.value) && Number.parseFloat(d.value) === 0)) ||
+    let undo: Hide | null = null;
+    if (prop === "display" && d.value !== "none") undo = "display";
+    else if (
+      prop === "opacity" &&
+      !(BARE_NUMBER.test(d.value) && Number.parseFloat(d.value) === 0)
+    )
+      undo = "opacity";
+    else if (
       (prop === "overflow-y" && !CLIPS.test(d.value)) ||
-      (prop.endsWith("height") && !isZero(d.value));
-    if (shows) {
-      show = true;
+      (prop.endsWith("height") && !isZero(d.value))
+    )
+      undo = "clip";
+    if (undo) {
+      undoes.add(undo);
       important ||= d.important;
     }
   }
-  return { show, important };
+  return { undoes, important };
 }
 
 function rightmostCompound(selector: string): Restorer | null {
@@ -313,7 +308,13 @@ function rightmostCompound(selector: string): Restorer | null {
   const tag = last.match(/^([a-z][a-z0-9-]*|\*)/i)?.[1]?.toLowerCase() ?? "";
   const id = last.match(/#([\w-]+)/)?.[1] ?? "";
   const classes = [...last.matchAll(/\.([\w-]+)/g)].map((m) => m[1] ?? "");
-  return { tag: tag === "*" ? "" : tag, id, classes, important: false };
+  return {
+    tag: tag === "*" ? "" : tag,
+    id,
+    classes,
+    important: false,
+    undoes: new Set(),
+  };
 }
 
 function readSheet(html: string): Sheet {
@@ -321,11 +322,11 @@ function readSheet(html: string): Sheet {
   const restorers: Restorer[] = [];
   let order = 0;
   const addRestorers = (selectors: string, decls: Map<string, Decl>) => {
-    const { show, important } = couldShow(decls);
-    if (!show) return;
+    const { undoes, important } = couldShow(decls);
+    if (!undoes.size) return;
     for (const sel of selectors.split(",")) {
       const r = rightmostCompound(sel);
-      if (r) restorers.push({ ...r, important });
+      if (r) restorers.push({ ...r, important, undoes });
     }
   };
   const sheets = html.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi) ?? [];
@@ -355,8 +356,11 @@ function readSheet(html: string): Sheet {
           order: order++,
           decls,
         };
-        for (const c of classes)
-          byClass.set(c, [...(byClass.get(c) ?? []), rule]);
+        for (const c of classes) {
+          const list = byClass.get(c);
+          if (list) list.push(rule);
+          else byClass.set(c, [rule]);
+        }
       }
     }
   }
@@ -399,21 +403,54 @@ function removeAtBlocks(css: string): string {
 }
 
 /** Whether a rule this code does not evaluate might target the element and show it. */
+/** Every way the resolved declarations hide the element; each one alone is enough to hide it. */
+function hideReasons(d: Map<string, string>, boxClips: boolean): Set<Hide> {
+  const out = new Set<Hide>();
+  if (d.get("display") === "none") out.add("display");
+  const opacity = d.get("opacity");
+  if (
+    opacity !== undefined &&
+    (BARE_NUMBER.test(opacity) || PERCENT.test(opacity)) &&
+    Number.parseFloat(opacity) === 0
+  )
+    out.add("opacity");
+  if (boxClips && clipsVertically(d)) {
+    const minHeight = d.get("min-height");
+    const keepsHeight = minHeight && !isZero(minHeight) && minHeight !== "auto";
+    if (
+      !keepsHeight &&
+      ["max-height", "height"].some((p) => isZero(d.get(p) ?? "x"))
+    )
+      out.add("clip");
+  }
+  return out;
+}
+
+/**
+ * Whether rules this code does not evaluate might show the element. Every way
+ * it is hidden has to be undoable by some rule that might target it, since any
+ * one of them alone keeps it hidden. A hide set by the inline style can only
+ * be undone by an important rule.
+ */
 function mayBeRestored(
   tagName: string,
   attribs: Record<string, string>,
   own: Set<string>,
   restorers: Restorer[],
-  inlineHide: boolean,
+  reasons: Set<Hide>,
+  inlineReasons: Set<Hide>,
 ): boolean {
-  return restorers.some((r) => {
-    // A normal stylesheet declaration cannot beat an inline one; only an important one can.
-    if (inlineHide && !r.important) return false;
-    if (r.id && r.id !== attribs.id) return false;
-    if (r.classes.some((c) => !own.has(c))) return false;
-    if (r.tag && r.tag !== tagName.toLowerCase()) return false;
-    return true;
-  });
+  const targets = restorers.filter(
+    (r) =>
+      (!r.id || r.id === attribs.id) &&
+      r.classes.every((c) => own.has(c)) &&
+      (!r.tag || r.tag === tagName.toLowerCase()),
+  );
+  return [...reasons].every((why) =>
+    targets.some(
+      (r) => r.undoes.has(why) && (!inlineReasons.has(why) || r.important),
+    ),
+  );
 }
 
 /** The winning value of each relevant property for one element. */
@@ -492,15 +529,19 @@ function hiddenElement(
   const boxClips = display
     ? BLOCK_DISPLAY.test(display)
     : BLOCK_TAGS.has(tagName.toLowerCase());
-  if (!hidesByStyle(d, boxClips)) return false;
-  // Did the hide come from the inline style alone? Then only an important rule elsewhere could undo it.
-  const inlineHide = hidesByStyle(
-    new Map(
-      [...declarations(attribs.style ?? "")].map(([k, v]) => [k, v.value]),
-    ),
-    boxClips,
+  const reasons = hideReasons(d, boxClips);
+  if (!reasons.size) return false;
+  const inline = new Map(
+    [...declarations(attribs.style ?? "")].map(([k, v]) => [k, v.value]),
   );
-  return !mayBeRestored(tagName, attribs, own, sheet.restorers, inlineHide);
+  return !mayBeRestored(
+    tagName,
+    attribs,
+    own,
+    sheet.restorers,
+    reasons,
+    hideReasons(inline, boxClips),
+  );
 }
 
 function optionsFor(html: string): IOptions {

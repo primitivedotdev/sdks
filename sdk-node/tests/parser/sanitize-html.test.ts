@@ -156,6 +156,10 @@ describe("sanitizeHtml — content hidden from readers", () => {
       `<div style="height:0;overflow:hidden;overflow:bogus">${SECRET}</div>`,
     ],
     [
+      "display:none that an unevaluated height rule cannot undo",
+      `<style>@media screen{.pre{height:auto!important}}</style><div class="pre" style="display:none">${SECRET}</div>`,
+    ],
+    [
       "a zero height written as .0px",
       `<div style="height:.0px;overflow:hidden">${SECRET}</div>`,
     ],
@@ -294,6 +298,12 @@ describe("sanitizeHtml — content hidden from readers", () => {
 });
 
 describe("sanitizeHtml — stylesheet cost", () => {
+  test("stays fast with a stylesheet repeating one rule many times", () => {
+    const start = performance.now();
+    sanitizeHtml(`<style>${".a{display:none}".repeat(100000)}</style><p>x</p>`);
+    expect(performance.now() - start).toBeLessThan(2000);
+  });
+
   test("stays fast with many rules and many classed elements", () => {
     const rules = Array.from(
       { length: 3000 },
