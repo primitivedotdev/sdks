@@ -675,6 +675,11 @@ export function reportSendCommandResult(params: {
   attemptStartedAtIso: string;
   extraEnvelopeFields?: Record<string, unknown>;
   idempotencyKey?: string | null;
+  /**
+   * Whether `idempotencyKey` is one the caller passed or one the command
+   * derived from the content. Words the replay notice. Default `caller`.
+   */
+  idempotencyKeyOrigin?: "caller" | "cli_derived";
   json: boolean;
   log: (line: string) => void;
   noun: "Message" | "Reply";
@@ -712,7 +717,10 @@ export function reportSendCommandResult(params: {
         outcome === "not_sent" || outcome === "uncertain"
           ? formatSendRecordFailureSummary(params.noun, outcome, sent)
           : outcome === "already_sent"
-            ? formatAlreadySentNotice(sent)
+            ? formatAlreadySentNotice(sent, {
+                keyOrigin: params.idempotencyKeyOrigin ?? "caller",
+                keyHint: "--idempotency-key with a new key",
+              })
             : formatSentSummary(params.noun, sent);
     }
     if (!params.json) params.writeStderr(`${outcomeMessage}\n`);

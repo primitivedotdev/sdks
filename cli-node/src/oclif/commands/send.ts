@@ -416,6 +416,8 @@ class SendCommand extends Command {
           ? { extraEnvelopeFields: { wait_notice: this.waitNotice } }
           : {}),
         idempotencyKey,
+        idempotencyKeyOrigin:
+          flags["idempotency-key"] === undefined ? "cli_derived" : "caller",
         json: flags.json,
         log: (line) => this.log(line),
         noun: "Message",

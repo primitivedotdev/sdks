@@ -327,6 +327,41 @@ export interface ForwardInput {
   scheduledAt?: string;
 }
 
+/**
+ * How the idempotency key of a replayed send was derived.
+ *
+ * - `explicit`: the request carried an idempotency key.
+ * - `auto_content`: the request carried none, so the API derived one from
+ *   the request content (recipients included) and a fixed 5-minute window.
+ * - `function_trigger`: a keyless send made by a Function; the key came
+ *   from the content, the Function and the email or event that invoked it.
+ */
+export type SendIdempotencyKeySource = NonNullable<
+  GeneratedSendMailResult["idempotency"]
+>["key_source"];
+
+/**
+ * Why a send was answered with an existing send instead of being made.
+ * Present on {@link SendResult} only when `idempotentReplay` is true:
+ * nothing was sent for that request.
+ */
+export interface SendIdempotency {
+  /** Always true. The object is absent on a request that sent. */
+  replayed: true;
+  keySource: SendIdempotencyKeySource;
+  /** The send this request collapsed onto. Same value as `SendResult.id`. */
+  originalSentEmailId: string;
+  /** When that send was created (ISO 8601). */
+  originalCreatedAt: string | null;
+  /**
+   * Length of the content window (300) when an `auto_content` key matched
+   * on content. Null for `explicit` and `function_trigger` keys, which
+   * have no window, and for a keyless reply matched because its parent
+   * already has a reply (`dedupReason: "parent_already_replied"`).
+   */
+  windowSeconds: number | null;
+}
+
 export interface SendResult {
   id: string;
   status: GeneratedSendMailResult["status"];
@@ -348,6 +383,17 @@ export interface SendResult {
    * a fresh send and on gate-denied responses.
    */
   idempotentReplay: boolean;
+  /**
+   * Present only when `idempotentReplay` is true. Says how the key that
+   * matched was derived and which earlier send answered this request.
+   */
+  idempotency?: SendIdempotency;
+  /**
+   * Why the response was a replay: `content_hash_match` (the idempotency
+   * key matched an earlier send) or `parent_already_replied` (a keyless
+   * reply to an email that already has a reply). Absent on a fresh send.
+   */
+  dedupReason?: string;
   deliveryStatus?: GeneratedSendMailResult["delivery_status"];
   smtpResponseCode?: number | null;
   smtpResponseText?: string;
@@ -1726,6 +1772,20 @@ function mapSendResult(result: GeneratedSendMailResult): SendResult {
     // response, mocked partial response in a customer's tests). The
     // type signature claims `boolean`, so undefined would be a lie.
     idempotentReplay: result.idempotent_replay ?? false,
+    ...(result.idempotency
+      ? {
+          idempotency: {
+            replayed: true as const,
+            keySource: result.idempotency.key_source,
+            originalSentEmailId: result.idempotency.original_sent_email_id,
+            originalCreatedAt: result.idempotency.original_created_at,
+            windowSeconds: result.idempotency.window_seconds,
+          },
+        }
+      : {}),
+    ...(typeof result.dedup_reason === "string"
+      ? { dedupReason: result.dedup_reason }
+      : {}),
     ...(result.delivery_status !== undefined
       ? { deliveryStatus: result.delivery_status }
       : {}),

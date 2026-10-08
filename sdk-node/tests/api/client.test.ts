@@ -260,6 +260,129 @@ describe("PrimitiveClient", () => {
     });
   });
 
+  it("surfaces the idempotency object when a send is answered by an earlier one", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: vi.fn<typeof fetch>(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                ...SEND_RESULT,
+                idempotent_replay: true,
+                dedup_reason: "content_hash_match",
+                idempotency: {
+                  replayed: true,
+                  key_source: "auto_content",
+                  original_sent_email_id:
+                    "3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d",
+                  original_created_at: "2026-10-06T12:00:07.412Z",
+                  window_seconds: 300,
+                },
+              },
+            }),
+            {
+              status: 200,
+              headers: {
+                "content-type": "application/json",
+                "idempotent-replayed": "true",
+              },
+            },
+          ),
+      ) as typeof fetch,
+    });
+
+    await expect(
+      client.send({
+        from: "support@example.com",
+        to: "alice@example.com",
+        subject: "Hello",
+        bodyText: "Hi there",
+      }),
+    ).resolves.toEqual({
+      ...NORMALIZED_SEND_RESULT,
+      idempotentReplay: true,
+      dedupReason: "content_hash_match",
+      idempotency: {
+        replayed: true,
+        keySource: "auto_content",
+        originalSentEmailId: "3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d",
+        originalCreatedAt: "2026-10-06T12:00:07.412Z",
+        windowSeconds: 300,
+      },
+    });
+  });
+
+  it("reports no window for a reply collapsed because its parent already has one", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: vi.fn<typeof fetch>(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                ...SEND_RESULT,
+                idempotent_replay: true,
+                dedup_reason: "parent_already_replied",
+                idempotency: {
+                  replayed: true,
+                  key_source: "auto_content",
+                  original_sent_email_id:
+                    "3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d",
+                  original_created_at: null,
+                  window_seconds: null,
+                },
+              },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      ) as typeof fetch,
+    });
+
+    const result = await client.reply(RECEIVED_EMAIL, "Thanks");
+
+    expect(result.dedupReason).toBe("parent_already_replied");
+    expect(result.idempotency).toEqual({
+      replayed: true,
+      keySource: "auto_content",
+      originalSentEmailId: "3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d",
+      originalCreatedAt: null,
+      windowSeconds: null,
+    });
+  });
+
+  it("leaves idempotency and dedupReason off a send that went out", async () => {
+    const client = new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: vi.fn<typeof fetch>(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: true,
+              data: { ...SEND_RESULT, dedup_reason: null },
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      ) as typeof fetch,
+    });
+
+    const result = await client.send({
+      from: "support@example.com",
+      to: "alice@example.com",
+      subject: "Hello",
+      bodyText: "Hi there",
+    });
+
+    expect(result.idempotentReplay).toBe(false);
+    expect("idempotency" in result).toBe(false);
+    expect("dedupReason" in result).toBe(false);
+  });
+
   it("sends wait options and idempotency key", async () => {
     const client = new PrimitiveClient({
       apiKey: "prim_test",

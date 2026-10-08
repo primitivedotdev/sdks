@@ -252,6 +252,14 @@ function chatHeading(text: string): string {
   return chatColor("bold", text);
 }
 
+// A chat send always carries a key the CLI made itself, and each chat
+// notice already says what to do next (read the reply, wait, inspect),
+// so the replay notice names the earlier send and gives no resend advice.
+const CHAT_REPLAY_NOTICE = {
+  keyOrigin: "cli_derived",
+  advise: false,
+} as const;
+
 function chatNoticeText(message: string): string {
   return chatColor("yellow", message);
 }
@@ -760,7 +768,7 @@ export function formatChatRepliedMessage(
   outcome: "already_sent" | "replied",
 ): string {
   if (outcome === "already_sent") {
-    return `${formatAlreadySentNotice(context.sent)} Its existing reply from ${context.reply.from_email} is shown.`;
+    return `${formatAlreadySentNotice(context.sent, CHAT_REPLAY_NOTICE)} Its existing reply from ${context.reply.from_email} is shown.`;
   }
   return `${chatNoun(context)} sent (id ${context.sent.id}) and a reply arrived from ${context.reply.from_email}.`;
 }
@@ -859,7 +867,7 @@ export function formatChatAwaitingReplyMessage(
         : next.kind === "inspect_inbox"
           ? "inspect the inbox with"
           : "wait with";
-    return `${formatAlreadySentNotice(context.sent)} ${status} Do NOT resend; ${action}: ${next.command}`;
+    return `${formatAlreadySentNotice(context.sent, CHAT_REPLAY_NOTICE)} ${status} Do NOT resend; ${action}: ${next.command}`;
   }
   const [wait] = buildChatRecoveryCommands(context);
   const status =
@@ -2145,7 +2153,7 @@ class ChatCommand extends Command {
         if (flags.async) {
           const outcome = sent.idempotent_replay ? "already_sent" : "sent";
           const message = sent.idempotent_replay
-            ? `${formatAlreadySentNotice(sent)} This conversation remains bound to this session; inspect it if the answer may have arrived already.`
+            ? `${formatAlreadySentNotice(sent, CHAT_REPLAY_NOTICE)} This conversation remains bound to this session; inspect it if the answer may have arrived already.`
             : `${chatNoun(baseContext)} sent (id ${sent.id}). This conversation is bound to this session for status and later replies. Keep its configured receiver active.`;
           const result: ChatNoReplyEnvelope = {
             outcome,
@@ -2390,7 +2398,7 @@ class ChatCommand extends Command {
     this.chatProgress.outcomeReported = true;
     if (outcome === "already_sent") {
       process.stderr.write(
-        `${chatNoticeText(formatAlreadySentNotice(context.sent))}\n`,
+        `${chatNoticeText(formatAlreadySentNotice(context.sent, CHAT_REPLAY_NOTICE))}\n`,
       );
     }
     if (context.json) {

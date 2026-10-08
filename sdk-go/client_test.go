@@ -2,9 +2,13 @@ package primitive
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 
 	primitiveapi "github.com/primitivedotdev/sdks/sdk-go/v2/api"
 )
@@ -56,6 +60,20 @@ func sendMailResult() primitiveapi.SendMailResult {
 		ClientIdempotencyKey: "idem-123",
 		RequestID:            "req-123",
 		ContentHash:          "hash-123",
+	}
+}
+
+// sendOK and replyOK wrap a send result the way the generated client
+// returns a 200: the body under Response, beside the response headers.
+func sendOK(data primitiveapi.SendMailResult) *primitiveapi.SendEmailOKHeaders {
+	return &primitiveapi.SendEmailOKHeaders{
+		Response: primitiveapi.SendEmailOK{Success: true, Data: data},
+	}
+}
+
+func replyOK(data primitiveapi.SendMailResult) *primitiveapi.ReplyToEmailOKHeaders {
+	return &primitiveapi.ReplyToEmailOKHeaders{
+		Response: primitiveapi.ReplyToEmailOK{Success: true, Data: data},
 	}
 }
 
@@ -131,10 +149,7 @@ func TestClientSendValidatesRecipientBeforeRequest(t *testing.T) {
 
 func TestClientSendReturnsSendResult(t *testing.T) {
 	stub := &stubSendAPI{
-		result: &primitiveapi.SendEmailOK{
-			Success: true,
-			Data:    sendMailResult(),
-		},
+		result: sendOK(sendMailResult()),
 	}
 	client := NewClientFromAPI(stub)
 
@@ -165,7 +180,7 @@ func TestClientSendReturnsSendResult(t *testing.T) {
 }
 
 func TestClientSendAcceptsDisplayNameFrom(t *testing.T) {
-	stub := &stubSendAPI{result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()}}
+	stub := &stubSendAPI{result: sendOK(sendMailResult())}
 	client := NewClientFromAPI(stub)
 
 	_, err := client.Send(context.Background(), SendParams{
@@ -188,7 +203,7 @@ func TestClientSendPassesWaitOptionsAndIdempotencyKey(t *testing.T) {
 	data.DeliveryStatus = primitiveapi.NewOptDeliveryStatus(primitiveapi.DeliveryStatusDelivered)
 	data.SMTPResponseCode = primitiveapi.NewOptNilInt(250)
 	data.SMTPResponseText = primitiveapi.NewOptString("250 OK")
-	stub := &stubSendAPI{result: &primitiveapi.SendEmailOK{Success: true, Data: data}}
+	stub := &stubSendAPI{result: sendOK(data)}
 	client := NewClientFromAPI(stub)
 	wait := true
 
@@ -224,7 +239,7 @@ func TestClientReplyPostsToReplyEndpointWithMinimalBody(t *testing.T) {
 	// recipients, and the Re: subject are all server-derived. The
 	// path id assertion pins which inbound the reply targets.
 	stub := &stubSendAPI{
-		replyResult: &primitiveapi.ReplyToEmailOK{Success: true, Data: sendMailResult()},
+		replyResult: replyOK(sendMailResult()),
 	}
 	client := NewClientFromAPI(stub)
 
@@ -252,7 +267,7 @@ func TestClientReplyPostsToReplyEndpointWithMinimalBody(t *testing.T) {
 func TestClientReplyPassesAttachmentsViaSendHost(t *testing.T) {
 	primary := &stubSendAPI{}
 	sendHost := &stubSendAPI{
-		replyResult: &primitiveapi.ReplyToEmailOK{Success: true, Data: sendMailResult()},
+		replyResult: replyOK(sendMailResult()),
 	}
 	client := &Client{api: primary, apiSend: sendHost}
 
@@ -292,7 +307,7 @@ func TestClientSendForwardsIdempotentReplay(t *testing.T) {
 	// covers Reply.
 	data := sendMailResult()
 	data.IdempotentReplay = true
-	stub := &stubSendAPI{result: &primitiveapi.SendEmailOK{Success: true, Data: data}}
+	stub := &stubSendAPI{result: sendOK(data)}
 	client := NewClientFromAPI(stub)
 
 	result, err := client.Send(context.Background(), SendParams{
@@ -309,11 +324,105 @@ func TestClientSendForwardsIdempotentReplay(t *testing.T) {
 	}
 }
 
+func replayedSendMailResult(source primitiveapi.SendMailIdempotencyReplayKeySource, window primitiveapi.NilInt) primitiveapi.SendMailResult {
+	data := sendMailResult()
+	data.IdempotentReplay = true
+	data.DedupReason = primitiveapi.NewOptNilString(DedupReasonContentHashMatch)
+	data.Idempotency = primitiveapi.NewOptSendMailIdempotencyReplay(primitiveapi.SendMailIdempotencyReplay{
+		Replayed:            true,
+		KeySource:           source,
+		OriginalSentEmailID: uuid.MustParse("3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d"),
+		OriginalCreatedAt:   primitiveapi.NewNilDateTime(time.Date(2026, 10, 6, 12, 0, 7, 412000000, time.UTC)),
+		WindowSeconds:       window,
+	})
+	return data
+}
+
+func TestClientSendSurfacesIdempotencyOnReplay(t *testing.T) {
+	stub := &stubSendAPI{result: sendOK(replayedSendMailResult(
+		primitiveapi.SendMailIdempotencyReplayKeySourceAutoContent,
+		primitiveapi.NewNilInt(300),
+	))}
+	client := NewClientFromAPI(stub)
+
+	result, err := client.Send(context.Background(), SendParams{
+		From:     "support@example.com",
+		To:       "alice@example.com",
+		Subject:  "Hello",
+		BodyText: "Hi",
+	})
+	if err != nil {
+		t.Fatalf("Send returned error: %v", err)
+	}
+	if !result.IdempotentReplay || result.Idempotency == nil {
+		t.Fatalf("expected a replay with Idempotency set, got %+v", result)
+	}
+	got := result.Idempotency
+	if !got.Replayed || got.KeySource != SendIdempotencyKeySourceAutoContent {
+		t.Fatalf("unexpected idempotency: %+v", got)
+	}
+	if got.OriginalSentEmailID != "3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d" {
+		t.Fatalf("unexpected original id %q", got.OriginalSentEmailID)
+	}
+	if got.OriginalCreatedAt == nil || !got.OriginalCreatedAt.Equal(time.Date(2026, 10, 6, 12, 0, 7, 412000000, time.UTC)) {
+		t.Fatalf("unexpected original created at %v", got.OriginalCreatedAt)
+	}
+	if got.WindowSeconds == nil || *got.WindowSeconds != 300 {
+		t.Fatalf("unexpected window %v", got.WindowSeconds)
+	}
+	if result.DedupReason != DedupReasonContentHashMatch {
+		t.Fatalf("unexpected dedup reason %q", result.DedupReason)
+	}
+}
+
+func TestClientReplySurfacesParentDedupWithoutWindow(t *testing.T) {
+	data := replayedSendMailResult(
+		primitiveapi.SendMailIdempotencyReplayKeySourceAutoContent,
+		primitiveapi.NilInt{Null: true},
+	)
+	data.DedupReason = primitiveapi.NewOptNilString(DedupReasonParentAlreadyReplied)
+	replay := data.Idempotency.Value
+	replay.OriginalCreatedAt = primitiveapi.NilDateTime{Null: true}
+	data.Idempotency.SetTo(replay)
+	client := NewClientFromAPI(&stubSendAPI{replyResult: replyOK(data)})
+
+	result, err := client.Reply(context.Background(), receivedEmailFixture(), ReplyParams{BodyText: "Thanks"})
+	if err != nil {
+		t.Fatalf("Reply returned error: %v", err)
+	}
+	if result.Idempotency == nil {
+		t.Fatalf("expected Idempotency on a parent dedup replay")
+	}
+	if result.Idempotency.WindowSeconds != nil || result.Idempotency.OriginalCreatedAt != nil {
+		t.Fatalf("expected no window and no created at, got %+v", result.Idempotency)
+	}
+	if result.DedupReason != DedupReasonParentAlreadyReplied {
+		t.Fatalf("unexpected dedup reason %q", result.DedupReason)
+	}
+}
+
+func TestClientSendLeavesIdempotencyNilOnFreshSend(t *testing.T) {
+	client := NewClientFromAPI(&stubSendAPI{result: sendOK(sendMailResult())})
+
+	result, err := client.Send(context.Background(), SendParams{
+		From:     "support@example.com",
+		To:       "alice@example.com",
+		Subject:  "Hello",
+		BodyText: "Hi",
+	})
+	if err != nil {
+		t.Fatalf("Send returned error: %v", err)
+	}
+	if result.IdempotentReplay || result.Idempotency != nil || result.DedupReason != "" {
+		t.Fatalf("a fresh send must carry no replay signal, got %+v", result)
+	}
+}
+
 func TestClientReplyForwardsIdempotentReplay(t *testing.T) {
 	data := sendMailResult()
 	data.IdempotentReplay = true
 	stub := &stubSendAPI{
-		replyResult: &primitiveapi.ReplyToEmailOK{Success: true, Data: data},
+		replyResult: replyOK(data),
 	}
 	client := NewClientFromAPI(stub)
 
@@ -330,7 +439,7 @@ func TestClientReplyForwardsIdempotentReplay(t *testing.T) {
 
 func TestClientForwardBuildsSend(t *testing.T) {
 	stub := &stubSendAPI{
-		result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()},
+		result: sendOK(sendMailResult()),
 	}
 	client := NewClientFromAPI(stub)
 
@@ -357,7 +466,7 @@ func TestClientForwardBuildsSend(t *testing.T) {
 
 func TestClientForwardThreadsIdempotencyKeyToSend(t *testing.T) {
 	stub := &stubSendAPI{
-		result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()},
+		result: sendOK(sendMailResult()),
 	}
 	client := NewClientFromAPI(stub)
 
@@ -376,7 +485,7 @@ func TestClientForwardThreadsIdempotencyKeyToSend(t *testing.T) {
 
 func TestClientForwardThreadsScheduledAtToSend(t *testing.T) {
 	stub := &stubSendAPI{
-		result: &primitiveapi.SendEmailOK{Success: true, Data: sendMailResult()},
+		result: sendOK(sendMailResult()),
 	}
 	client := NewClientFromAPI(stub)
 
@@ -529,7 +638,7 @@ func TestClientSendSurfacesRetryAfterOn429(t *testing.T) {
 
 func TestClientReplyHonorsFromOverride(t *testing.T) {
 	stub := &stubSendAPI{
-		replyResult: &primitiveapi.ReplyToEmailOK{Success: true, Data: sendMailResult()},
+		replyResult: replyOK(sendMailResult()),
 	}
 	client := NewClientFromAPI(stub)
 
@@ -740,5 +849,61 @@ func TestClientSemanticSearchWrapsServiceUnavailable(t *testing.T) {
 	}
 	if apiErr.StatusCode != 503 {
 		t.Fatalf("unexpected API error: %#v", apiErr)
+	}
+}
+
+// The replay signal has to survive the generated decoder, not only the
+// hand-written mapping, so this one goes over HTTP with the JSON and the
+// header the API answers with.
+func TestClientSendDecodesReplaySignalFromTheWire(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Idempotent-Replayed", "true")
+		_, _ = w.Write([]byte(`{"success":true,"data":{
+			"id":"3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d",
+			"status":"delivered",
+			"from":"support@example.com",
+			"queue_id":null,
+			"accepted":["alice@example.com"],
+			"rejected":[],
+			"client_idempotency_key":"auto-key",
+			"request_id":"req-123",
+			"content_hash":"hash-123",
+			"idempotent_replay":true,
+			"dedup_reason":"content_hash_match",
+			"idempotency":{
+				"replayed":true,
+				"key_source":"auto_content",
+				"original_sent_email_id":"3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d",
+				"original_created_at":"2026-10-06T12:00:07.412Z",
+				"window_seconds":300
+			}
+		}}`))
+	}))
+	defer server.Close()
+	apiClient, err := primitiveapi.NewClient(server.URL, attachmentPartSecurity{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := NewClientFromAPI(apiClient).Send(context.Background(), SendParams{
+		From:     "support@example.com",
+		To:       "alice@example.com",
+		Subject:  "Hello",
+		BodyText: "Hi",
+	})
+	if err != nil {
+		t.Fatalf("Send returned error: %v", err)
+	}
+	if result.Idempotency == nil {
+		t.Fatalf("expected Idempotency from the wire, got %+v", result)
+	}
+	if result.Idempotency.KeySource != SendIdempotencyKeySourceAutoContent ||
+		result.Idempotency.WindowSeconds == nil || *result.Idempotency.WindowSeconds != 300 ||
+		result.Idempotency.OriginalSentEmailID != "3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d" {
+		t.Fatalf("unexpected idempotency: %+v", result.Idempotency)
+	}
+	if result.DedupReason != DedupReasonContentHashMatch {
+		t.Fatalf("unexpected dedup reason %q", result.DedupReason)
 	}
 }

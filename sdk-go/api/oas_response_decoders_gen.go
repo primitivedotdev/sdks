@@ -31069,7 +31069,47 @@ func decodeReplyToEmailResponse(resp *http.Response) (res ReplyToEmailRes, _ err
 			}(); err != nil {
 				return res, errors.Wrap(err, "validate")
 			}
-			return &response, nil
+			var wrapper ReplyToEmailOKHeaders
+			wrapper.Response = response
+			h := uri.NewHeaderDecoder(resp.Header)
+			// Parse "Idempotent-Replayed" header.
+			{
+				cfg := uri.HeaderParameterDecodingConfig{
+					Name:    "Idempotent-Replayed",
+					Explode: false,
+				}
+				if err := func() error {
+					if err := h.HasParam(cfg); err == nil {
+						if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+							var wrapperDotIdempotentReplayedVal string
+							if err := func() error {
+								val, err := d.DecodeValue()
+								if err != nil {
+									return err
+								}
+
+								c, err := conv.ToString(val)
+								if err != nil {
+									return err
+								}
+
+								wrapperDotIdempotentReplayedVal = c
+								return nil
+							}(); err != nil {
+								return err
+							}
+							wrapper.IdempotentReplayed.SetTo(wrapperDotIdempotentReplayedVal)
+							return nil
+						}); err != nil {
+							return err
+						}
+					}
+					return nil
+				}(); err != nil {
+					return res, errors.Wrap(err, "parse Idempotent-Replayed header")
+				}
+			}
+			return &wrapper, nil
 		default:
 			return res, validate.InvalidContentType(ct)
 		}
@@ -34369,7 +34409,47 @@ func decodeSendEmailResponse(resp *http.Response) (res SendEmailRes, _ error) {
 			}(); err != nil {
 				return res, errors.Wrap(err, "validate")
 			}
-			return &response, nil
+			var wrapper SendEmailOKHeaders
+			wrapper.Response = response
+			h := uri.NewHeaderDecoder(resp.Header)
+			// Parse "Idempotent-Replayed" header.
+			{
+				cfg := uri.HeaderParameterDecodingConfig{
+					Name:    "Idempotent-Replayed",
+					Explode: false,
+				}
+				if err := func() error {
+					if err := h.HasParam(cfg); err == nil {
+						if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+							var wrapperDotIdempotentReplayedVal string
+							if err := func() error {
+								val, err := d.DecodeValue()
+								if err != nil {
+									return err
+								}
+
+								c, err := conv.ToString(val)
+								if err != nil {
+									return err
+								}
+
+								wrapperDotIdempotentReplayedVal = c
+								return nil
+							}(); err != nil {
+								return err
+							}
+							wrapper.IdempotentReplayed.SetTo(wrapperDotIdempotentReplayedVal)
+							return nil
+						}); err != nil {
+							return err
+						}
+					}
+					return nil
+				}(); err != nil {
+					return res, errors.Wrap(err, "parse Idempotent-Replayed header")
+				}
+			}
+			return &wrapper, nil
 		default:
 			return res, validate.InvalidContentType(ct)
 		}

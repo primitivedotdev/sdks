@@ -498,6 +498,8 @@ from .semantic_search_score_breakdown import SemanticSearchScoreBreakdown
 from .semantic_search_snippet import SemanticSearchSnippet
 from .send_email_response_200 import SendEmailResponse200
 from .send_mail_attachment import SendMailAttachment
+from .send_mail_idempotency_replay import SendMailIdempotencyReplay
+from .send_mail_idempotency_replay_key_source import SendMailIdempotencyReplayKeySource
 from .send_mail_input import SendMailInput
 from .send_mail_payload_ref import SendMailPayloadRef
 from .send_mail_result import SendMailResult
@@ -1155,6 +1157,8 @@ __all__ = (
     "SemanticSearchSnippet",
     "SendEmailResponse200",
     "SendMailAttachment",
+    "SendMailIdempotencyReplay",
+    "SendMailIdempotencyReplayKeySource",
     "SendMailInput",
     "SendMailPayloadRef",
     "SendMailResult",

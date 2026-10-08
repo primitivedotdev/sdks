@@ -64,10 +64,11 @@ func main() {
 		fmt.Println(string(output))
 		return
 	}
-	response, ok := result.Result.(*api.SendEmailOK)
+	wrapped, ok := result.Result.(*api.SendEmailOKHeaders)
 	if !ok {
 		panic("ordinary send failed")
 	}
+	response := wrapped.Response
 	output, err := json.Marshal(map[string]any{"status": "response", "result": map[string]any{"success": response.Success, "data": map[string]any{"id": response.Data.ID, "idempotent_replay": response.Data.IdempotentReplay}}})
 	must(err)
 	fmt.Println(string(output))

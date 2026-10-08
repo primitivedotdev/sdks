@@ -531,6 +531,9 @@ class PaymentsPayEmailCommand extends Command {
       const replayed = sent?.idempotent_replay === true;
       if (replayed) {
         writeIdempotentReplayBannerIfReplay(sent, {
+          // This command takes no idempotency key, so advice to pass one
+          // would point at a flag that does not exist here.
+          advise: false,
           write: (chunk) => {
             process.stderr.write(chunk);
           },
