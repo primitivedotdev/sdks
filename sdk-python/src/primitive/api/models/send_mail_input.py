@@ -69,6 +69,10 @@ class SendMailInput:
                 and with `attachments` / `payload_attachments` (not yet
                 supported on scheduled sends). Reschedule via PATCH
                 /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
+                Accepts `Z` or a numeric UTC offset
+                (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+                offset is converted to UTC, so the stored and echoed value
+                is UTC. A time with no zone, or a bare date, is rejected.
      """
 
     from_: str

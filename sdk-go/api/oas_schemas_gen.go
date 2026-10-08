@@ -475,9 +475,12 @@ func (s *AgentAccountResultPlan) UnmarshalText(data []byte) error {
 // In-band pointer to the upgrade path for an agent account.
 // Ref: #/components/schemas/AgentAccountUpgradeHint
 type AgentAccountUpgradeHint struct {
-	Plan        AgentAccountUpgradeHintPlan `json:"plan"`
-	Description string                      `json:"description"`
-	ClaimPath   string                      `json:"claim_path"`
+	Plan AgentAccountUpgradeHintPlan `json:"plan"`
+	// What upgrading grants, in words meant to be repeated to a user: a higher send cap and the
+	// developer plan's default features. It does not unlock sending to arbitrary recipients; the
+	// account's recipient rules still apply (see `GET /send-permissions` and `POST /sendability`).
+	Description string `json:"description"`
+	ClaimPath   string `json:"claim_path"`
 }
 
 // GetPlan returns the value of Plan.
@@ -12337,8 +12340,14 @@ func (s *EmailSearchFacetBucket) SetCount(val int) {
 
 // Ref: #/components/schemas/EmailSearchFacets
 type EmailSearchFacets struct {
-	BySender      []EmailSearchFacetBucket       `json:"by_sender"`
-	ByDomain      []EmailSearchFacetBucket       `json:"by_domain"`
+	// Sender values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8
+	// encoding, with a null `value` last. Keeps the first 20 values in that order.
+	BySender []EmailSearchFacetBucket `json:"by_sender"`
+	// Domain values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8
+	// encoding, with a null `value` last. Keeps the first 20 values in that order.
+	ByDomain []EmailSearchFacetBucket `json:"by_domain"`
+	// Status values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8
+	// encoding, with a null `value` last.
 	ByStatus      []EmailSearchFacetBucket       `json:"by_status"`
 	HasAttachment EmailSearchFacetsHasAttachment `json:"has_attachment"`
 }
@@ -33776,13 +33785,37 @@ func (*PutContactUnauthorized) putContactRes() {}
 
 // RateLimitedHeaders wraps ErrorResponse with response headers.
 type RateLimitedHeaders struct {
-	RetryAfter OptInt
-	Response   ErrorResponse
+	RetryAfter         OptInt
+	RatelimitLimit     OptInt
+	RatelimitPolicy    OptString
+	RatelimitRemaining OptInt
+	RatelimitReset     OptInt
+	Response           ErrorResponse
 }
 
 // GetRetryAfter returns the value of RetryAfter.
 func (s *RateLimitedHeaders) GetRetryAfter() OptInt {
 	return s.RetryAfter
+}
+
+// GetRatelimitLimit returns the value of RatelimitLimit.
+func (s *RateLimitedHeaders) GetRatelimitLimit() OptInt {
+	return s.RatelimitLimit
+}
+
+// GetRatelimitPolicy returns the value of RatelimitPolicy.
+func (s *RateLimitedHeaders) GetRatelimitPolicy() OptString {
+	return s.RatelimitPolicy
+}
+
+// GetRatelimitRemaining returns the value of RatelimitRemaining.
+func (s *RateLimitedHeaders) GetRatelimitRemaining() OptInt {
+	return s.RatelimitRemaining
+}
+
+// GetRatelimitReset returns the value of RatelimitReset.
+func (s *RateLimitedHeaders) GetRatelimitReset() OptInt {
+	return s.RatelimitReset
 }
 
 // GetResponse returns the value of Response.
@@ -33793,6 +33826,26 @@ func (s *RateLimitedHeaders) GetResponse() ErrorResponse {
 // SetRetryAfter sets the value of RetryAfter.
 func (s *RateLimitedHeaders) SetRetryAfter(val OptInt) {
 	s.RetryAfter = val
+}
+
+// SetRatelimitLimit sets the value of RatelimitLimit.
+func (s *RateLimitedHeaders) SetRatelimitLimit(val OptInt) {
+	s.RatelimitLimit = val
+}
+
+// SetRatelimitPolicy sets the value of RatelimitPolicy.
+func (s *RateLimitedHeaders) SetRatelimitPolicy(val OptString) {
+	s.RatelimitPolicy = val
+}
+
+// SetRatelimitRemaining sets the value of RatelimitRemaining.
+func (s *RateLimitedHeaders) SetRatelimitRemaining(val OptInt) {
+	s.RatelimitRemaining = val
+}
+
+// SetRatelimitReset sets the value of RatelimitReset.
+func (s *RateLimitedHeaders) SetRatelimitReset(val OptInt) {
+	s.RatelimitReset = val
 }
 
 // SetResponse sets the value of Response.
@@ -37347,9 +37400,13 @@ type SemanticSearchInput struct {
 	SearchIn []SemanticSearchField `json:"search_in"`
 	// Exclude these fields from matching.
 	Exclude []SemanticSearchField `json:"exclude"`
-	// Only include mail at or after this timestamp.
+	// Only include mail at or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC
+	// offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it
+	// names. A time with no zone, or a bare date, is rejected.
 	DateFrom OptDateTime `json:"date_from"`
-	// Only include mail at or before this timestamp.
+	// Only include mail at or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC
+	// offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it
+	// names. A time with no zone, or a bare date, is rejected.
 	DateTo OptDateTime `json:"date_to"`
 	// Opt-in extras. `coverage` adds an index-coverage snapshot to
 	// `meta`. Matched fields, snippets, and the score breakdown are
@@ -38172,6 +38229,10 @@ type SendMailInput struct {
 	// and with `attachments` / `payload_attachments` (not yet
 	// supported on scheduled sends). Reschedule via PATCH
 	// /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
+	// Accepts `Z` or a numeric UTC offset
+	// (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+	// offset is converted to UTC, so the stored and echoed value
+	// is UTC. A time with no zone, or a bare date, is rejected.
 	ScheduledAt OptDateTime `json:"scheduled_at"`
 }
 
@@ -40102,7 +40163,10 @@ func (s *SentEmailDetailTagsItem) SetValue(val string) {
 type SentEmailRescheduleInput struct {
 	// New execution time (ISO 8601). Must be in the future and
 	// at most 30 days out, the same bounds as the create-time
-	// field on /send-mail.
+	// field on /send-mail. Accepts `Z` or a numeric UTC offset
+	// (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+	// offset is converted to UTC. A time with no zone, or a bare
+	// date, is rejected.
 	ScheduledAt time.Time `json:"scheduled_at"`
 }
 

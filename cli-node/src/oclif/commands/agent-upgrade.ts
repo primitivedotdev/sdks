@@ -14,7 +14,7 @@ import { extractErrorPayload, writeErrorWithHints } from "../api-command.js";
  */
 export default class AgentUpgradeCommand extends Command {
   static description =
-    "Upgrade an emailless agent account to a full developer account by confirming an email. Authenticated by the agent's own API key (PRIMITIVE_API_KEY).";
+    "Upgrade an emailless agent account to a full developer account by confirming an email. Authenticated by the agent's own API key (PRIMITIVE_API_KEY). Upgrading raises the send cap and grants the developer plan's default features (such as Functions). It does not unlock sending to arbitrary recipients: the account's recipient rules still apply (see `primitive sending permissions`).";
 
   static summary = "Upgrade an agent account to developer (email confirmation)";
 
@@ -68,7 +68,7 @@ export default class AgentUpgradeCommand extends Command {
     if (result) {
       this.log(JSON.stringify(result, null, 2));
       process.stderr.write(
-        `Upgraded to ${result.plan}. Your API key and managed inbox carry over; the send cap is lifted.\n`,
+        `Upgraded to ${result.plan}. Your API key and managed inbox carry over; the send cap is lifted. Recipient rules still apply: run \`primitive sending permissions\` to see who this account can send to.\n`,
       );
       return;
     }

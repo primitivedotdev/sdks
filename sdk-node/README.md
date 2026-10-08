@@ -189,6 +189,29 @@ await client.forward(email, {
 });
 ```
 
+### Errors and rate limits
+
+A failed call throws `PrimitiveApiError`. It carries `status`, `code`,
+`message`, `requestId`, `details`, and `retryAfter` (the `Retry-After` header in
+seconds, when the server sent one). On a 429 it also carries `rateLimit`, the
+`ratelimit-limit`, `ratelimit-remaining`, `ratelimit-reset` (Unix seconds) and
+`ratelimit-policy` headers. These describe the limiter that rejected the
+request, with its own window, which may be a send cap (`1000;w=3600`) rather
+than the API request budget. `rateLimit` is `undefined` when a 429 carried only
+`Retry-After`; wait for `retryAfter` either way.
+
+```ts
+import { PrimitiveApiError } from "@primitivedotdev/sdk";
+
+try {
+  await client.send({ from, to, subject, bodyText });
+} catch (err) {
+  if (err instanceof PrimitiveApiError && err.status === 429) {
+    console.log(err.retryAfter, err.rateLimit?.policy);
+  }
+}
+```
+
 ## The normalized email object
 
 `primitive.receive(...)` returns a normalized inbound email object that keeps the common case clean:
@@ -561,6 +584,20 @@ const hasMore = page?.meta.cursor != null;
 With `count` left at its default, `meta.total` is a number. `include_facets:
 "false"` skips the facet aggregation entirely. Search text containing a NUL
 character is rejected with a 400 validation error.
+
+`q` takes words, `"quoted phrases"` and `field:value` filters, and every
+term must match. An upper-case `OR` between two text terms (words, phrases,
+`subject:` and `body:` terms) accepts either and binds tighter than the
+implicit AND, so `acme invoice OR receipt` means `acme` and either `invoice` or
+`receipt`. `OR` cannot join filters such as `from:`, and there is no `NOT`;
+either is a 400 validation error, as is a leading or trailing `OR`. To search
+for the word `OR` or `NOT` itself, write it in lower case or in double quotes.
+Facet values are ordered by count descending, ties by value in byte order, and
+`by_sender` and `by_domain` keep the first 20.
+
+Date filters such as `date_from` and `date_to` take an ISO 8601 timestamp with
+`Z` or a numeric UTC offset (`2026-10-02T00:00:00-04:00`); a time with no zone,
+or a bare date, is rejected.
 
 #### Repeating sends
 

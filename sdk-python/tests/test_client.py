@@ -16,6 +16,7 @@ from primitive.api.models.send_email_response_200 import SendEmailResponse200
 from primitive.client import (
     PrimitiveAPIError,
     PrimitiveClient,
+    RateLimit,
     SendAttachment,
     SendThread,
 )
@@ -763,6 +764,79 @@ def test_send_surfaces_retry_after(
     assert exc_info.value.status_code == 429
     assert exc_info.value.code == "rate_limit_exceeded"
     assert exc_info.value.retry_after == 12
+    assert exc_info.value.rate_limit is None
+
+
+def _fake_error_send(
+    monkeypatch: pytest.MonkeyPatch, status: HTTPStatus, headers: dict[str, str]
+) -> PrimitiveClient:
+    def fake_send_email_sync_detailed(*, client, body):
+        del client, body
+        return SimpleNamespace(
+            status_code=status,
+            parsed=ErrorResponse.from_dict(
+                {
+                    "success": False,
+                    "error": {"code": "rate_limited", "message": "Refused"},
+                }
+            ),
+            content=b"",
+            headers=headers,
+        )
+
+    monkeypatch.setattr(
+        client_module, "send_email_sync_detailed", fake_send_email_sync_detailed
+    )
+    return PrimitiveClient("prim_test")
+
+
+def _send(client: PrimitiveClient) -> None:
+    client.send(
+        from_email="support@example.com",
+        to="alice@example.com",
+        subject="Hello",
+        body_text="Hi",
+    )
+
+
+def test_send_surfaces_rejecting_limiter_on_429(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _fake_error_send(
+        monkeypatch,
+        HTTPStatus.TOO_MANY_REQUESTS,
+        {
+            "Retry-After": "1800",
+            "RateLimit-Limit": "1000",
+            "ratelimit-remaining": "0",
+            "ratelimit-reset": "1700003600",
+            "ratelimit-policy": "1000;w=3600",
+        },
+    )
+
+    with pytest.raises(PrimitiveAPIError) as exc_info:
+        _send(client)
+
+    assert exc_info.value.retry_after == 1800
+    assert exc_info.value.rate_limit == RateLimit(
+        limit=1000, remaining=0, reset=1700003600, policy="1000;w=3600"
+    )
+
+
+def test_send_ignores_budget_headers_on_non_429(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _fake_error_send(
+        monkeypatch,
+        HTTPStatus.BAD_REQUEST,
+        {"ratelimit-limit": "3000", "ratelimit-policy": "3000;w=60"},
+    )
+
+    with pytest.raises(PrimitiveAPIError) as exc_info:
+        _send(client)
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.rate_limit is None
 
 
 def test_reply_honors_from_override(monkeypatch: pytest.MonkeyPatch) -> None:

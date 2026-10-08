@@ -216,6 +216,26 @@ _, err = client.Forward(context.Background(), email, primitive.ForwardParams{
 })
 ```
 
+### Errors and rate limits
+
+A failed call returns a `*primitive.APIError` (use `errors.As`). It carries
+`StatusCode`, `Code`, `Message`, `RequestID`, `Details`, and `RetryAfter` (the
+`Retry-After` header in seconds, when the server sent one). On a 429 it also
+carries `RateLimit`, with `Limit`, `Remaining`, `Reset` (Unix seconds) and
+`Policy` from the `ratelimit-*` headers. These describe the limiter that
+rejected the request, with its own window, which may be a send cap
+(`1000;w=3600`) rather than the API request budget. `RateLimit` is nil when a
+429 carried only `Retry-After`; wait for `RetryAfter` either way.
+
+```go
+var apiErr *primitive.APIError
+if errors.As(err, &apiErr) && apiErr.StatusCode == 429 {
+	if apiErr.RateLimit != nil && apiErr.RateLimit.Policy != nil {
+		fmt.Println("limited by", *apiErr.RateLimit.Policy)
+	}
+}
+```
+
 ## The normalized email object
 
 `primitive.Receive(...)` returns a normalized inbound email object with fields
@@ -618,6 +638,21 @@ if page, ok := res.(*primitiveapi.SearchEmailsOK); ok {
 `Meta.Total` is a `NilInt`: null when the request sets `Count` to false, a
 number otherwise. Use `Meta.Cursor` to tell whether another page exists. Search
 text containing a NUL character is rejected with a 400 validation error.
+
+`q` takes words, `"quoted phrases"` and `field:value` filters, and every
+term must match. An upper-case `OR` between two text terms (words, phrases,
+`subject:` and `body:` terms) accepts either and binds tighter than the
+implicit AND, so `acme invoice OR receipt` means `acme` and either `invoice` or
+`receipt`. `OR` cannot join filters such as `from:`, and there is no `NOT`;
+either is a 400 validation error, as is a leading or trailing `OR`. To search
+for the word `OR` or `NOT` itself, write it in lower case or in double quotes.
+Facet values are ordered by count descending, ties by value in byte order, and
+`by_sender` and `by_domain` keep the first 20.
+
+Date filters such as `DateFrom` and `DateTo` take an ISO 8601 timestamp with
+`Z` or a numeric UTC offset (`2026-10-02T00:00:00-04:00`); a time with no zone,
+or a bare date, is rejected.
+A `time.Time` in any location is sent with its offset.
 
 ### Payment and interaction webhook events
 

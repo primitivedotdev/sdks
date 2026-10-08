@@ -180,7 +180,13 @@ func (UnimplementedHandler) CompleteWebhookEvent(ctx context.Context, req Comple
 // addresses that have already sent it authenticated mail) with tight send
 // limits. Use the returned `api_key` as a Bearer token on later calls. The
 // account can be upgraded to a full developer account by confirming an
-// email through the claim flow. This endpoint does not require an API key.
+// email through the claim flow. Upgrading raises the send cap and grants
+// the developer plan's default features (such as Functions); it does not
+// unlock sending to arbitrary recipients, because the recipient rules on
+// the account still apply. `GET /send-permissions` reports those rules
+// (its list of individual addresses can be partial), and
+// `POST /sendability` answers for one specific recipient. This endpoint
+// does not require an API key.
 //
 // POST /agent/accounts
 func (UnimplementedHandler) CreateAgentAccount(ctx context.Context, req *CreateAgentAccountInput) (r CreateAgentAccountRes, _ error) {
@@ -2422,8 +2428,13 @@ func (UnimplementedHandler) UpdateWakeSchedule(ctx context.Context, req *UpdateW
 //
 // Confirms the verification code emailed by `/agent/claim/start` and
 // upgrades the account to the `developer` plan. The org id, API key, and
-// managed inbox all carry over; the send cap lifts. Authenticated by the
-// agent's own API key.
+// managed inbox all carry over; the send cap lifts and the developer
+// plan's default features (such as Functions) unlock. Upgrading does not
+// unlock sending to arbitrary recipients: the recipient rules on the
+// account still apply. `GET /send-permissions` reports those rules (its
+// list of individual addresses can be partial), and `POST /sendability`
+// answers for one specific recipient. Authenticated by the agent's own
+// API key.
 //
 // POST /agent/claim/verify
 func (UnimplementedHandler) VerifyAgentClaim(ctx context.Context, req *VerifyAgentClaimInput) (r VerifyAgentClaimRes, _ error) {
