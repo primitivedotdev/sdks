@@ -3,7 +3,7 @@ import primitive, {
   type EmailAnalysis,
   type EmailAuth,
   type MemoryJsonValue,
-  type PrimitiveApiError,
+  PrimitiveApiError,
   PrimitiveClient,
   type ReceivedEmail,
 } from "../../src/index.js";
@@ -1215,6 +1215,78 @@ describe("PrimitiveClient", () => {
       code: "rate_limit_exceeded",
       retryAfter: 12,
     } satisfies Partial<PrimitiveApiError>);
+  });
+
+  const errorClient = (status: number, headers: Record<string, string>) =>
+    new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: vi.fn<typeof fetch>(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: false,
+              error: {
+                code: status === 429 ? "rate_limited" : "validation_error",
+                message: "Request refused",
+              },
+            }),
+            {
+              status,
+              headers: { "content-type": "application/json", ...headers },
+            },
+          ),
+      ) as typeof fetch,
+    });
+  const sendInput = {
+    from: "support@example.com",
+    to: "alice@example.com",
+    subject: "Hello",
+    bodyText: "Hi",
+  };
+
+  it("surfaces the rejecting limiter's ratelimit headers on a 429", async () => {
+    const client = errorClient(429, {
+      "retry-after": "1800",
+      "ratelimit-limit": "1000",
+      "ratelimit-remaining": "0",
+      "ratelimit-reset": "1700003600",
+      "ratelimit-policy": "1000;w=3600",
+    });
+
+    await expect(client.send(sendInput)).rejects.toMatchObject({
+      status: 429,
+      retryAfter: 1800,
+      rateLimit: {
+        limit: 1000,
+        remaining: 0,
+        reset: 1700003600,
+        policy: "1000;w=3600",
+      },
+    } satisfies Partial<PrimitiveApiError>);
+  });
+
+  it("leaves rateLimit undefined on a 429 that carries only Retry-After", async () => {
+    const client = errorClient(429, { "retry-after": "60" });
+
+    const error = await client.send(sendInput).catch((caught) => caught);
+    expect(error).toBeInstanceOf(PrimitiveApiError);
+    expect(error.retryAfter).toBe(60);
+    expect(error.rateLimit).toBeUndefined();
+  });
+
+  it("does not attach the API budget headers to a non-429 error", async () => {
+    const client = errorClient(400, {
+      "ratelimit-limit": "3000",
+      "ratelimit-remaining": "2998",
+      "ratelimit-reset": "1700000060",
+      "ratelimit-policy": "3000;w=60",
+    });
+
+    const error = await client.send(sendInput).catch((caught) => caught);
+    expect(error).toBeInstanceOf(PrimitiveApiError);
+    expect(error.status).toBe(400);
+    expect(error.rateLimit).toBeUndefined();
   });
 });
 

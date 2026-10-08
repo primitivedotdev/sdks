@@ -25,7 +25,9 @@ class AgentAccountUpgradeHint:
 
         Attributes:
             plan (AgentAccountUpgradeHintPlan):
-            description (str):
+            description (str): What upgrading grants, in words meant to be repeated to a user: a higher send cap and the
+                developer plan's default features. It does not unlock sending to arbitrary recipients; the account's recipient
+                rules still apply (see `GET /send-permissions` and `POST /sendability`).
             claim_path (str):
      """
 

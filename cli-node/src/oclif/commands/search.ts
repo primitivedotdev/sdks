@@ -105,6 +105,10 @@ class SearchCommand extends Command {
 
   Default behavior is lexical full-text matching: the positional query is sent as \`q=<query>\` to the inbound search endpoint, which matches against subject, body, sender, and recipient in a single pass. Structured filters (--from, --to, --subject, --body, --domain, --has-attachment, --date-from, --date-to, --status, --thread-id) AND with the text query. --prefix treats the last word of the query as a prefix for search-as-you-type, and --no-count skips the total match count so meta.total is null.
 
+  Lexical query syntax: words and "quoted phrases" must all match, and field:value filters (from:, to:, subject:, body:, has:attachment, before:, after:, domain:, status:, awaiting:, automated:) narrow the set. An upper-case OR between two text terms (words, phrases, subject: and body: terms) accepts either and binds tighter than the implicit AND: "acme invoice OR receipt" is acme and either invoice or receipt. OR cannot join other filters (run one search per from: value), and there is no NOT or parentheses; those, a leading or trailing OR, and an alternative made only of stop words are rejected with a validation error. To search for the word OR or NOT itself, write it in lower case or in double quotes. Facets list values by count, ties by value; senders and domains keep the first 20.
+
+  --date-from and --date-to take an ISO 8601 timestamp with Z or a numeric UTC offset (2026-10-02T00:00:00Z, 2026-10-02T00:00:00-04:00). A time with no zone, or a bare date, is rejected.
+
   Pass --mode to switch to the cross-corpus semantic backend (covers inbound and outbound). \`--mode keyword\` is plain full-text; \`--mode semantic\` is embedding-only; \`--mode hybrid\` blends both. Semantic modes require the Pro plan with the semantic_search_enabled entitlement.
 
   Output is a fixed-width text table by default (header on STDERR so rows stay grep/awk-friendly). Use --json for the raw envelope.`;
@@ -118,6 +122,8 @@ class SearchCommand extends Command {
     '<%= config.bin %> search "shipping" --mode keyword --corpus outbound',
     "<%= config.bin %> search \"needle\" --json | jq '.data[0].id'",
     '<%= config.bin %> search "invoice" --awaiting you',
+    '<%= config.bin %> search \'acme invoice OR receipt OR "past due"\'',
+    '<%= config.bin %> search "invoice" --date-from 2026-10-01T00:00:00-04:00',
     '<%= config.bin %> search "quarterly invoi" --prefix --no-count',
     '<%= config.bin %> search "contract" --thread-id 11111111-1111-4111-8111-111111111111',
   ];
@@ -217,10 +223,12 @@ class SearchCommand extends Command {
     }),
     // Shared filters.
     "date-from": Flags.string({
-      description: "Only include mail at or after this ISO-8601 timestamp.",
+      description:
+        "Only include mail at or after this ISO 8601 timestamp, with Z or a UTC offset (2026-10-02T00:00:00-04:00). A time with no zone is rejected.",
     }),
     "date-to": Flags.string({
-      description: "Only include mail at or before this ISO-8601 timestamp.",
+      description:
+        "Only include mail at or before this ISO 8601 timestamp, with Z or a UTC offset (2026-10-02T00:00:00-04:00). A time with no zone is rejected.",
     }),
     limit: Flags.integer({
       description: `Maximum results to return (1-${MAX_LIMIT}, default ${DEFAULT_LIMIT}).`,
