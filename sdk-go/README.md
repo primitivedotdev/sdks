@@ -654,6 +654,38 @@ Date filters such as `DateFrom` and `DateTo` take an ISO 8601 timestamp with
 or a bare date, is rejected.
 A `time.Time` in any location is sent with its offset.
 
+### Sent email webhook events
+
+Endpoints can also receive events about mail you send: `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed` and `sent_email.completed`. They are opt-in: an endpoint receives them only when its `rules.event_types` lists them (with the CLI, `primitive endpoints create --url <url> --event-types sent_email.*`). An endpoint that lists them and also handles inbound mail must keep `email.received` in the list.
+
+Each body carries `event`, and is validated against the `sent_email.*` JSON schema when parsed. Each recipient (To, Cc and Bcc) of a send gets exactly one `sent_email.delivered` or `sent_email.failed` with `scope` `"recipient"`, for up to 100 recipients. Mail relay sends with more recipients report the rest in roll-ups (`scope` `"message"`, `reason` `"rollup"`), sends recorded before per-recipient results can report one legacy message-level result (`reason` `"legacy_message_result"`), and relay recipients delivered inside the sender's own mail system get no event and are listed in `summary.not_relayed_recipients`. So do not wait for a per-recipient event per address: use `sent_email.completed`, which carries the totals once every recipient is final. Deduplicate on the event `id` (equal to the `X-Webhook-Id` header), and check that `delivery.endpoint_id` is the endpoint that received the request.
+
+```go
+event, err := primitive.HandleWebhookEvent(primitive.HandleWebhookOptions{
+	Body:    rawBody,
+	Headers: r.Header,
+	Secret:  secret,
+})
+if err != nil {
+	return err
+}
+if sent, ok := event.(primitive.SentEmailEvent); ok {
+	switch {
+	case sent.Event == primitive.SentEmailEventFailed && sent.IsRecipientResult():
+		// sent.Recipient.Type is "to", "cc" or "bcc"
+		status := "(none)"
+		if code := sent.Outcome.SMTPEnhancedStatusCode; code != nil {
+			status = *code
+		}
+		log.Println(sent.Recipient.Address, status)
+	case sent.Event == primitive.SentEmailEventCompleted:
+		log.Println(sent.Summary.RecipientCount, sent.Summary.Delivered, sent.Summary.Failed)
+	}
+}
+```
+
+`ValidateSentEmailEvent` / `SafeValidateSentEmailEvent` validate an already parsed body, and the schema is exported as `SentEmailEventJSONSchema`. An `email.bounced` event's `Email.Analysis.Bounce` carries `SentEmailID` (the send the bounce belongs to, or nil when it could not be linked) and `FailedRecipients` (every failed address, up to 100).
+
 ### Payment and interaction webhook events
 
 Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{"interaction": {...}}` with no event/type field at all.
@@ -683,6 +715,7 @@ case primitive.IsInteractionX402Event(event):
 The full catalog of header values is exported as the `WebhookEventTypes` slice:
 
 - `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
+- `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed` (opt-in)
 - `payment.settled`, `payment.failed`
 - `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`

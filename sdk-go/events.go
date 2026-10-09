@@ -5,10 +5,11 @@ package primitive
 //
 // Primitive posts every webhook with the event name in the X-Webhook-Event
 // HEADER, not in the body. The stored payload is sent verbatim with no
-// envelope: an email.* body carries "event", a payment.* body carries the name
-// in "type", and an interaction.* body is just {"interaction": {...}} with no
-// event/type field at all. The HEADER is therefore the only reliable
-// discriminator across all three families, which is why the parser keys on it.
+// envelope: an email.* or sent_email.* body carries "event", a payment.* body
+// carries the name in "type", and an interaction.* body is just
+// {"interaction": {...}} with no event/type field at all. The HEADER is
+// therefore the only reliable discriminator across all the families, which is
+// why the parser keys on it.
 
 // EmailEventTypes are the five first-party email events (subject = an email).
 var EmailEventTypes = []string{
@@ -44,11 +45,12 @@ var InteractionEventTypes = []string{
 }
 
 // WebhookEventTypes is the full enumerated catalog of every current webhook
-// event type: the five email.*, the two payment.*, and every
-// interaction.<protocol>.<suffix>.
+// event type: the five email.*, the four opt-in sent_email.*, the two
+// payment.*, and every interaction.<protocol>.<suffix>.
 var WebhookEventTypes = func() []string {
-	all := make([]string, 0, len(EmailEventTypes)+len(PaymentEventTypes)+len(InteractionEventTypes))
+	all := make([]string, 0, len(EmailEventTypes)+len(SentEmailEventTypes)+len(PaymentEventTypes)+len(InteractionEventTypes))
 	all = append(all, EmailEventTypes...)
+	all = append(all, SentEmailEventTypes...)
 	all = append(all, PaymentEventTypes...)
 	all = append(all, InteractionEventTypes...)
 	return all

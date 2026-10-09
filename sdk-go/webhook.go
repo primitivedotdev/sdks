@@ -217,6 +217,18 @@ func ParseWebhookEvent(input any, eventType ...string) (WebhookEvent, error) {
 		return *event, nil
 	}
 
+	if IsSentEmailEventType(resolvedEvent) {
+		// sent_email.* bodies carry their own "event" and are validated
+		// against the sent_email schema. The returned event is the validated
+		// body: its "event" field is covered by the signature, the header is
+		// not.
+		event, err := ValidateSentEmailEvent(obj)
+		if err != nil {
+			return nil, err
+		}
+		return *event, nil
+	}
+
 	preserved, err := mapFromInputPreservingNumbers(input)
 	if err != nil {
 		return nil, err

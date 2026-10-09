@@ -114,6 +114,13 @@ from .models_generated import (
 from .models_generated import (
     WebhookVersion as GeneratedWebhookVersion,
 )
+from .sent_email_models_generated import (
+    SentEmailAcceptedEvent,
+    SentEmailCompletedEvent,
+    SentEmailLegacyMessageResultEvent,
+    SentEmailRecipientResultEvent,
+    SentEmailRollupResultEvent,
+)
 
 
 def _add_enum_aliases(enum_cls, aliases: dict[str, object]):
@@ -250,6 +257,11 @@ class UnknownEvent(TypedDict):
 
 KnownWebhookEvent: TypeAlias = (
     GeneratedEmailReceivedEvent
+    | SentEmailAcceptedEvent
+    | SentEmailRecipientResultEvent
+    | SentEmailRollupResultEvent
+    | SentEmailLegacyMessageResultEvent
+    | SentEmailCompletedEvent
     | PaymentSettledEvent
     | PaymentFailedEvent
     | InteractionX402Event

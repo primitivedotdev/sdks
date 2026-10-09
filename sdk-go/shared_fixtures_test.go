@@ -72,6 +72,12 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 					// Relay stays raw so a case can tell "not asserted"
 					// (absent) apart from "expect no relay" (JSON null).
 					Relay json.RawMessage `json:"relay"`
+					// Bounce, when set, asserts the bounce link fields;
+					// null values mean nil.
+					Bounce *struct {
+						SentEmailID      *string  `json:"sent_email_id"`
+						FailedRecipients []string `json:"failed_recipients"`
+					} `json:"bounce"`
 				} `json:"expected"`
 			} `json:"cases"`
 		}](t, "webhook", "validation-cases.json")
@@ -92,6 +98,18 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 					}
 					if !reflect.DeepEqual(event.Email.Relay, wantRelay) {
 						t.Fatalf("%s: unexpected relay %+v, want %+v", testCase.Name, event.Email.Relay, wantRelay)
+					}
+				}
+				if want := testCase.Expected.Bounce; want != nil {
+					bounce := event.Email.Analysis.Bounce
+					if bounce == nil {
+						t.Fatalf("%s: expected a bounce analysis", testCase.Name)
+					}
+					if !reflect.DeepEqual(bounce.SentEmailID, want.SentEmailID) {
+						t.Fatalf("%s: unexpected sent_email_id %v, want %v", testCase.Name, bounce.SentEmailID, want.SentEmailID)
+					}
+					if !reflect.DeepEqual(bounce.FailedRecipients, want.FailedRecipients) {
+						t.Fatalf("%s: unexpected failed_recipients %#v, want %#v", testCase.Name, bounce.FailedRecipients, want.FailedRecipients)
 					}
 				}
 				if !SafeValidateEmailReceivedEvent(testCase.Payload).Success {

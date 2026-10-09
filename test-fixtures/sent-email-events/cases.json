@@ -1,0 +1,571 @@
+{
+  "parse_cases": [
+    {
+      "name": "accepted",
+      "input_fixture": [
+        "sent-email-events",
+        "accepted.json"
+      ],
+      "event_type": "sent_email.accepted",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.accepted",
+        "id": "1a2b3c4d-0001-4000-8000-000000000001",
+        "fields": {
+          "version": "2026-12-18",
+          "sent_email.id": "0b1c2d3e-4f50-4172-8394-a5b6c7d8e9f0",
+          "sent_email.status": "queued",
+          "sent_email.recipient_count": 3,
+          "sent_email.source": "api",
+          "sent_email.tags.0.name": "campaign",
+          "delivery.attempt": 1
+        },
+        "absent": [
+          "scope",
+          "recipient",
+          "outcome",
+          "summary"
+        ]
+      }
+    },
+    {
+      "name": "delivered_to_recipient",
+      "input_fixture": [
+        "sent-email-events",
+        "delivered-recipient.json"
+      ],
+      "event_type": "sent_email.delivered",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.delivered",
+        "id": "1a2b3c4d-0002-4000-8000-000000000002",
+        "fields": {
+          "scope": "recipient",
+          "recipient.address": "alice@example.org",
+          "recipient.type": "to",
+          "outcome.result": "delivered",
+          "outcome.smtp_response_code": 250,
+          "outcome.smtp_enhanced_status_code": "2.0.0"
+        },
+        "absent": [
+          "recipient_count",
+          "reason",
+          "recipients",
+          "summary"
+        ]
+      }
+    },
+    {
+      "name": "failed_cc_recipient",
+      "input_fixture": [
+        "sent-email-events",
+        "failed-recipient.json"
+      ],
+      "event_type": "sent_email.failed",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.failed",
+        "id": "1a2b3c4d-0003-4000-8000-000000000003",
+        "fields": {
+          "scope": "recipient",
+          "recipient.address": "bob@example.net",
+          "recipient.type": "cc",
+          "outcome.result": "failed",
+          "outcome.failure_kind": "rejected",
+          "outcome.smtp_response_code": 550,
+          "outcome.smtp_enhanced_status_code": "5.1.1",
+          "delivery.attempt": 2,
+          "sent_email.bcc.0": "audit@example.com"
+        },
+        "absent": [
+          "recipient_count",
+          "reason",
+          "recipients",
+          "summary"
+        ]
+      }
+    },
+    {
+      "name": "failed_rollup",
+      "input_fixture": [
+        "sent-email-events",
+        "failed-rollup.json"
+      ],
+      "event_type": "sent_email.failed",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.failed",
+        "id": "1a2b3c4d-0004-4000-8000-000000000004",
+        "fields": {
+          "scope": "message",
+          "reason": "rollup",
+          "recipient_count": 2,
+          "outcome.result": "failed",
+          "outcome.failure_kind": "rejected",
+          "recipients.0.address": "r99@example.org",
+          "recipients.1.address": "r100@example.org",
+          "recipients.1.type": "bcc",
+          "recipients.1.smtp_enhanced_status_code": "5.7.1",
+          "sent_email.source": "mail_relay",
+          "sent_email.relay.via": "mail_relay"
+        },
+        "absent": [
+          "summary"
+        ]
+      }
+    },
+    {
+      "name": "delivered_rollup",
+      "input_fixture": [
+        "sent-email-events",
+        "delivered-rollup.json"
+      ],
+      "event_type": "sent_email.delivered",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.delivered",
+        "id": "1a2b3c4d-0005-4000-8000-000000000005",
+        "fields": {
+          "scope": "message",
+          "reason": "rollup",
+          "recipient_count": 1,
+          "outcome.result": "delivered"
+        },
+        "absent": [
+          "recipients",
+          "summary"
+        ]
+      }
+    },
+    {
+      "name": "legacy_message_result",
+      "input_fixture": [
+        "sent-email-events",
+        "legacy-message-result.json"
+      ],
+      "event_type": "sent_email.delivered",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.delivered",
+        "id": "1a2b3c4d-0006-4000-8000-000000000006",
+        "fields": {
+          "scope": "message",
+          "reason": "legacy_message_result",
+          "recipient_count": 2,
+          "outcome.smtp_response_code": 250
+        },
+        "absent": [
+          "recipients",
+          "summary"
+        ]
+      }
+    },
+    {
+      "name": "completed",
+      "input_fixture": [
+        "sent-email-events",
+        "completed.json"
+      ],
+      "event_type": "sent_email.completed",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.completed",
+        "id": "1a2b3c4d-0007-4000-8000-000000000007",
+        "fields": {
+          "summary.recipient_count": 3,
+          "summary.delivered": 2,
+          "summary.failed": 1,
+          "summary.failed_by_kind.rejected": 1,
+          "summary.failed_by_kind.expired": 0,
+          "summary.not_relayed": 0,
+          "sent_email.status": "delivered"
+        },
+        "absent": [
+          "scope",
+          "recipient",
+          "outcome"
+        ]
+      }
+    },
+    {
+      "name": "completed_with_not_relayed",
+      "input_fixture": [
+        "sent-email-events",
+        "completed-not-relayed.json"
+      ],
+      "event_type": "sent_email.completed",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.completed",
+        "id": "1a2b3c4d-0008-4000-8000-000000000008",
+        "fields": {
+          "summary.recipient_count": 103,
+          "summary.delivered": 100,
+          "summary.failed": 2,
+          "summary.not_relayed": 1,
+          "summary.not_relayed_recipients.0.address": "colleague@example.com",
+          "summary.not_relayed_recipients.0.type": "to",
+          "sent_email.relay.hostname": "relay.example.net"
+        },
+        "absent": [
+          "scope",
+          "recipient",
+          "outcome"
+        ]
+      }
+    },
+    {
+      "name": "body_event_without_header",
+      "input_fixture": [
+        "sent-email-events",
+        "failed-recipient.json"
+      ],
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.failed",
+        "id": "1a2b3c4d-0003-4000-8000-000000000003",
+        "fields": {
+          "recipient.address": "bob@example.net"
+        }
+      }
+    },
+    {
+      "name": "result_without_outcome",
+      "input": {
+        "id": "evt_x",
+        "event": "sent_email.failed",
+        "version": "2026-12-18",
+        "created_at": "2026-12-18T10:00:04.000Z",
+        "delivery": {
+          "endpoint_id": "ep_1",
+          "attempt": 1,
+          "attempted_at": "2026-12-18T10:00:05.000Z"
+        },
+        "sent_email": {
+          "id": "0b1c2d3e-4f50-4172-8394-a5b6c7d8e9f0",
+          "status": "queued",
+          "status_changed_at": "2026-12-18T10:00:00.000Z",
+          "created_at": "2026-12-18T10:00:00.000Z",
+          "source": "api",
+          "from_address": "agent@example.com",
+          "to_addresses": [
+            "alice@example.org"
+          ],
+          "cc": [
+            "bob@example.net"
+          ],
+          "bcc": [
+            "audit@example.com"
+          ],
+          "recipient_count": 3,
+          "subject": "Your quote",
+          "message_id": "<abc123@example.com>",
+          "thread_id": "5d1f7a3c-2b9e-4c6d-8a0f-1e2d3c4b5a69",
+          "tags": [
+            {
+              "name": "campaign",
+              "value": "q4-renewals"
+            }
+          ],
+          "relay": null
+        },
+        "scope": "recipient",
+        "recipient": {
+          "address": "bob@example.net",
+          "type": "cc"
+        }
+      },
+      "event_type": "sent_email.failed",
+      "expected": {
+        "kind": "error",
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "accepted_with_result_fields",
+      "input_patch": {
+        "fixture": [
+          "sent-email-events",
+          "accepted.json"
+        ],
+        "set": {
+          "scope": "recipient"
+        }
+      },
+      "event_type": "sent_email.accepted",
+      "expected": {
+        "kind": "error",
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "failed_rollup_without_recipients",
+      "input_patch": {
+        "fixture": [
+          "sent-email-events",
+          "failed-rollup.json"
+        ],
+        "delete": [
+          "recipients"
+        ]
+      },
+      "event_type": "sent_email.failed",
+      "expected": {
+        "kind": "error",
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "delivered_rollup_with_recipients",
+      "input_patch": {
+        "fixture": [
+          "sent-email-events",
+          "delivered-rollup.json"
+        ],
+        "set": {
+          "recipients": [
+            {
+              "address": "r98@example.org",
+              "type": "bcc",
+              "smtp_response_code": 250,
+              "smtp_enhanced_status_code": "2.0.0",
+              "smtp_response_text": "ok",
+              "at": "2026-12-18T11:00:09.000Z"
+            }
+          ]
+        }
+      },
+      "event_type": "sent_email.delivered",
+      "expected": {
+        "kind": "error",
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "completed_missing_summary",
+      "input_patch": {
+        "fixture": [
+          "sent-email-events",
+          "completed.json"
+        ],
+        "delete": [
+          "summary"
+        ]
+      },
+      "event_type": "sent_email.completed",
+      "expected": {
+        "kind": "error",
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "unknown_recipient_type",
+      "input_patch": {
+        "fixture": [
+          "sent-email-events",
+          "failed-recipient.json"
+        ],
+        "set": {
+          "recipient": {
+            "address": "bob@example.net",
+            "type": "reply_to"
+          }
+        }
+      },
+      "event_type": "sent_email.failed",
+      "expected": {
+        "kind": "error",
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "inbound_body_under_sent_email_header",
+      "input_fixture": [
+        "webhook",
+        "valid-email-received.json"
+      ],
+      "event_type": "sent_email.delivered",
+      "expected": {
+        "kind": "error",
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "open_status_and_source_values",
+      "input_patch": {
+        "fixture": [
+          "sent-email-events",
+          "accepted.json"
+        ],
+        "set": {
+          "sent_email.status": "some_future_status",
+          "sent_email.source": "some_future_source"
+        }
+      },
+      "event_type": "sent_email.accepted",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.accepted",
+        "id": "1a2b3c4d-0001-4000-8000-000000000001",
+        "fields": {
+          "sent_email.status": "some_future_status",
+          "sent_email.source": "some_future_source"
+        }
+      }
+    },
+    {
+      "name": "extra_fields_allowed",
+      "input_patch": {
+        "fixture": [
+          "sent-email-events",
+          "completed.json"
+        ],
+        "set": {
+          "some_future_field": {
+            "nested": true
+          }
+        }
+      },
+      "event_type": "sent_email.completed",
+      "expected": {
+        "kind": "sent_email",
+        "event": "sent_email.completed",
+        "id": "1a2b3c4d-0007-4000-8000-000000000007",
+        "fields": {
+          "summary.delivered": 2
+        }
+      }
+    },
+    {
+      "name": "future_sent_email_event_is_unknown",
+      "input": {
+        "id": "evt_future",
+        "event": "sent_email.opened",
+        "version": "2026-12-18"
+      },
+      "event_type": "sent_email.opened",
+      "expected": {
+        "kind": "unknown",
+        "event": "sent_email.opened",
+        "id": "evt_future",
+        "fields": {}
+      }
+    }
+  ],
+  "handle_cases": [
+    {
+      "name": "accepted_signed",
+      "body_fixture": [
+        "sent-email-events",
+        "accepted.json"
+      ],
+      "headers": {
+        "Primitive-Signature": "{signed}",
+        "X-Webhook-Event": "sent_email.accepted",
+        "X-Webhook-Id": "1a2b3c4d-0001-4000-8000-000000000001"
+      },
+      "secret": "whsec_test_sent_email",
+      "expected": {
+        "valid": true,
+        "event": "sent_email.accepted",
+        "id": "1a2b3c4d-0001-4000-8000-000000000001"
+      }
+    },
+    {
+      "name": "failed_lowercase_headers",
+      "body_fixture": [
+        "sent-email-events",
+        "failed-recipient.json"
+      ],
+      "headers": {
+        "primitive-signature": "{signed}",
+        "x-webhook-event": "sent_email.failed"
+      },
+      "secret": "whsec_test_sent_email",
+      "expected": {
+        "valid": true,
+        "event": "sent_email.failed",
+        "id": "1a2b3c4d-0003-4000-8000-000000000003"
+      }
+    },
+    {
+      "name": "completed_signed",
+      "body_fixture": [
+        "sent-email-events",
+        "completed.json"
+      ],
+      "headers": {
+        "Primitive-Signature": "{signed}",
+        "X-Webhook-Event": "sent_email.completed"
+      },
+      "secret": "whsec_test_sent_email",
+      "expected": {
+        "valid": true,
+        "event": "sent_email.completed",
+        "id": "1a2b3c4d-0007-4000-8000-000000000007"
+      }
+    },
+    {
+      "name": "wrong_secret",
+      "body_fixture": [
+        "sent-email-events",
+        "delivered-recipient.json"
+      ],
+      "headers": {
+        "Primitive-Signature": "{signed}",
+        "X-Webhook-Event": "sent_email.delivered"
+      },
+      "secret": "whsec_wrong",
+      "sign_secret": "whsec_test_sent_email",
+      "expected": {
+        "valid": false,
+        "error_code": "SIGNATURE_MISMATCH"
+      }
+    },
+    {
+      "name": "expired_signature",
+      "body_fixture": [
+        "sent-email-events",
+        "delivered-recipient.json"
+      ],
+      "headers": {
+        "Primitive-Signature": "{signed}",
+        "X-Webhook-Event": "sent_email.delivered"
+      },
+      "secret": "whsec_test_sent_email",
+      "timestamp": 1734567000,
+      "expected": {
+        "valid": false,
+        "error_code": "TIMESTAMP_OUT_OF_RANGE"
+      }
+    },
+    {
+      "name": "missing_signature",
+      "body_fixture": [
+        "sent-email-events",
+        "delivered-recipient.json"
+      ],
+      "headers": {
+        "X-Webhook-Event": "sent_email.delivered"
+      },
+      "secret": "whsec_test_sent_email",
+      "expected": {
+        "valid": false,
+        "error_code": "INVALID_SIGNATURE_HEADER"
+      }
+    },
+    {
+      "name": "signed_but_malformed",
+      "body": "{\"id\":\"evt_x\",\"event\":\"sent_email.completed\"}",
+      "headers": {
+        "Primitive-Signature": "{signed}",
+        "X-Webhook-Event": "sent_email.completed"
+      },
+      "secret": "whsec_test_sent_email",
+      "expected": {
+        "valid": false,
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    }
+  ]
+}

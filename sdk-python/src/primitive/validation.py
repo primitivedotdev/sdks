@@ -89,7 +89,9 @@ def _format_validation_issue(error: Any) -> tuple[str, str, str]:
     )
 
 
-def _create_validation_error(errors: list[Any]) -> WebhookValidationError:
+def _create_validation_error(
+    errors: list[Any], schema_name: str = "email_received_event_json_schema"
+) -> WebhookValidationError:
     issues = [
         ValidationIssue(
             path=_validation_issue_field(error),
@@ -103,7 +105,7 @@ def _create_validation_error(errors: list[Any]) -> WebhookValidationError:
         return WebhookValidationError(
             "payload",
             "Webhook payload failed schema validation",
-            'Check the structure of the webhook payload against "email_received_event_json_schema".',
+            f'Check the structure of the webhook payload against "{schema_name}".',
             issues,
         )
 
@@ -111,7 +113,9 @@ def _create_validation_error(errors: list[Any]) -> WebhookValidationError:
     return WebhookValidationError(field, message, suggestion, issues)
 
 
-def _create_model_validation_error(error: ValidationError) -> WebhookValidationError:
+def _create_model_validation_error(
+    error: ValidationError, model_name: str = "EmailReceivedEvent"
+) -> WebhookValidationError:
     issues = [
         ValidationIssue(
             path=_to_field_path(list(issue["loc"])),
@@ -125,7 +129,7 @@ def _create_model_validation_error(error: ValidationError) -> WebhookValidationE
         return WebhookValidationError(
             "payload",
             "Webhook payload failed model validation",
-            'Check the structure of the webhook payload against "EmailReceivedEvent".',
+            f'Check the structure of the webhook payload against "{model_name}".',
             issues,
         )
 

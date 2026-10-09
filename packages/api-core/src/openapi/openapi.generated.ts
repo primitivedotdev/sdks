@@ -4567,7 +4567,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listDeliveries",
         "summary": "List webhook deliveries",
-        "description": "Returns a paginated list of webhook delivery attempts. Each delivery\nincludes a nested `email` object with sender, recipient, and subject.\n",
+        "description": "Returns a paginated list of webhook delivery attempts, newest first.\nA delivery of an inbound email includes a nested `email` object with\nsender, recipient, and subject. A delivery of an opt-in\n`sent_email.*` event has `email_id` and `email` set to null and\n`sent_email_id` set to the send it is about. Filter by `event_type`\nand `sent_email_id` to find the deliveries of one send.\n",
         "tags": [
           "Webhook Deliveries"
         ],
@@ -4588,6 +4588,25 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "Filter by email ID"
           },
           {
+            "name": "event_type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "description": "Only deliveries of this event type, for example `sent_email.failed`. Deliveries recorded before event types existed have none and never match."
+          },
+          {
+            "name": "sent_email_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Only deliveries of `sent_email.*` events about this sent email."
+          },
+          {
             "name": "status",
             "in": "query",
             "schema": {
@@ -4596,7 +4615,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "pending",
                 "delivered",
                 "header_confirmed",
-                "failed"
+                "failed",
+                "skipped_by_rules"
               ]
             },
             "description": "Filter by delivery status"
@@ -4663,15 +4683,15 @@ export const openapiDocument: Record<string, unknown> = {
           "required": true,
           "schema": {
             "type": "string",
-            "pattern": "^\\d+$"
+            "pattern": "^(\\d+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
           },
-          "description": "Delivery ID (numeric)"
+          "description": "Delivery ID, as `id` in the deliveries list: a numeric string or a UUID."
         }
       ],
       "post": {
         "operationId": "replayDelivery",
         "summary": "Replay a webhook delivery",
-        "description": "Re-sends the stored webhook payload from a previous delivery attempt.\nIf the original endpoint is still active, it is targeted. If the\noriginal endpoint was deleted, the oldest active endpoint is used.\nDeactivated endpoints cannot be replayed to. Rate limited per-org,\nsharing an org-wide budget with email replays.\n",
+        "description": "Re-sends a previous delivery to its original endpoint. If that\nendpoint was deleted or deactivated, the replay is rejected.\nSupports inbound email deliveries and `sent_email.*` deliveries.\nAn inbound email delivery is replayed with its original stored\npayload and event id. A `sent_email.*` delivery is replayed with the\nsame event id but a payload rebuilt from the send as it is now; it\nis rejected if the send was deleted or the endpoint is no longer an\nactive http endpoint. Rate limited per-org, sharing an org-wide\nbudget with email replays.\n",
         "tags": [
           "Webhook Deliveries"
         ],
@@ -19981,6 +20001,14 @@ export const openapiDocument: Record<string, unknown> = {
             "type": "string",
             "description": "Bare email address parsed from `to_header`."
           },
+          "recipient_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "Every recipient of the send, To, Cc and Bcc together, each address counted once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not the sender, because the count would reveal Bcc recipients. The `sent_email` object of the `sent_email.*` webhook events carries the same field."
+          },
           "subject": {
             "type": "string"
           },
@@ -22015,7 +22043,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "items": {
                   "type": "string",
                   "minLength": 1
-                }
+                },
+                "description": "Event types this endpoint subscribes to, matched by exact string. Omitted means every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the field instead."
               }
             }
           },
@@ -22161,7 +22190,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "items": {
                   "type": "string",
                   "minLength": 1
-                }
+                },
+                "description": "Event types this endpoint subscribes to, matched by exact string. Omitted means every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the field instead."
               }
             }
           },
@@ -22206,7 +22236,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "items": {
                   "type": "string",
                   "minLength": 1
-                }
+                },
+                "description": "Event types this endpoint subscribes to, matched by exact string. Omitted means every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the field instead."
               }
             }
           }
@@ -23087,11 +23118,30 @@ export const openapiDocument: Record<string, unknown> = {
         "properties": {
           "id": {
             "type": "string",
-            "description": "Delivery ID (numeric string)"
+            "description": "Delivery ID: a numeric string or a UUID. Pass it to the replay operation as is."
           },
           "email_id": {
-            "type": "string",
-            "format": "uuid"
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The inbound email this delivery is about. Null for deliveries that are not about a received email, such as `sent_email.*` events."
+          },
+          "event_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The delivered event type, for example `email.received` or `sent_email.delivered`. Null for deliveries recorded before event types existed."
+          },
+          "sent_email_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The sent email a `sent_email.*` delivery is about. Null for every other delivery."
           },
           "org_id": {
             "type": "string",
@@ -23102,7 +23152,11 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "uuid"
           },
           "endpoint_url": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The endpoint's URL. For a function-backed endpoint, an opaque `function://<id>` identifier rather than a callable URL."
           },
           "status": {
             "type": "string",
@@ -23110,7 +23164,8 @@ export const openapiDocument: Record<string, unknown> = {
               "pending",
               "delivered",
               "header_confirmed",
-              "failed"
+              "failed",
+              "skipped_by_rules"
             ]
           },
           "attempt_count": {
@@ -23127,6 +23182,13 @@ export const openapiDocument: Record<string, unknown> = {
               "string",
               "null"
             ]
+          },
+          "last_error_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A stable code for the last failure, for example `http_500`."
           },
           "created_at": {
             "type": "string",
@@ -23146,7 +23208,10 @@ export const openapiDocument: Record<string, unknown> = {
                 "type": "string"
               },
               "recipient": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "subject": {
                 "type": [
@@ -23158,7 +23223,8 @@ export const openapiDocument: Record<string, unknown> = {
             "required": [
               "sender",
               "recipient"
-            ]
+            ],
+            "description": "Null for deliveries that are not about a received email."
           }
         },
         "required": [

@@ -23,6 +23,8 @@ def _get_kwargs(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -42,6 +44,13 @@ def _get_kwargs(
     if not isinstance(email_id, Unset):
         json_email_id = str(email_id)
     params["email_id"] = json_email_id
+
+    params["event_type"] = event_type
+
+    json_sent_email_id: str | Unset = UNSET
+    if not isinstance(sent_email_id, Unset):
+        json_sent_email_id = str(sent_email_id)
+    params["sent_email_id"] = json_sent_email_id
 
     json_status: str | Unset = UNSET
     if not isinstance(status, Unset):
@@ -117,6 +126,8 @@ def sync_detailed(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -124,13 +135,19 @@ def sync_detailed(
 ) -> Response[ErrorResponse | ListDeliveriesResponse200]:
     """ List webhook deliveries
 
-     Returns a paginated list of webhook delivery attempts. Each delivery
-    includes a nested `email` object with sender, recipient, and subject.
+     Returns a paginated list of webhook delivery attempts, newest first.
+    A delivery of an inbound email includes a nested `email` object with
+    sender, recipient, and subject. A delivery of an opt-in
+    `sent_email.*` event has `email_id` and `email` set to null and
+    `sent_email_id` set to the send it is about. Filter by `event_type`
+    and `sent_email_id` to find the deliveries of one send.
 
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         email_id (UUID | Unset):
+        event_type (str | Unset):
+        sent_email_id (UUID | Unset):
         status (ListDeliveriesStatus | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
@@ -148,6 +165,8 @@ def sync_detailed(
         cursor=cursor,
 limit=limit,
 email_id=email_id,
+event_type=event_type,
+sent_email_id=sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
@@ -166,6 +185,8 @@ def sync(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -173,13 +194,19 @@ def sync(
 ) -> ErrorResponse | ListDeliveriesResponse200 | None:
     """ List webhook deliveries
 
-     Returns a paginated list of webhook delivery attempts. Each delivery
-    includes a nested `email` object with sender, recipient, and subject.
+     Returns a paginated list of webhook delivery attempts, newest first.
+    A delivery of an inbound email includes a nested `email` object with
+    sender, recipient, and subject. A delivery of an opt-in
+    `sent_email.*` event has `email_id` and `email` set to null and
+    `sent_email_id` set to the send it is about. Filter by `event_type`
+    and `sent_email_id` to find the deliveries of one send.
 
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         email_id (UUID | Unset):
+        event_type (str | Unset):
+        sent_email_id (UUID | Unset):
         status (ListDeliveriesStatus | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
@@ -198,6 +225,8 @@ def sync(
 cursor=cursor,
 limit=limit,
 email_id=email_id,
+event_type=event_type,
+sent_email_id=sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
@@ -210,6 +239,8 @@ async def asyncio_detailed(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -217,13 +248,19 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | ListDeliveriesResponse200]:
     """ List webhook deliveries
 
-     Returns a paginated list of webhook delivery attempts. Each delivery
-    includes a nested `email` object with sender, recipient, and subject.
+     Returns a paginated list of webhook delivery attempts, newest first.
+    A delivery of an inbound email includes a nested `email` object with
+    sender, recipient, and subject. A delivery of an opt-in
+    `sent_email.*` event has `email_id` and `email` set to null and
+    `sent_email_id` set to the send it is about. Filter by `event_type`
+    and `sent_email_id` to find the deliveries of one send.
 
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         email_id (UUID | Unset):
+        event_type (str | Unset):
+        sent_email_id (UUID | Unset):
         status (ListDeliveriesStatus | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
@@ -241,6 +278,8 @@ async def asyncio_detailed(
         cursor=cursor,
 limit=limit,
 email_id=email_id,
+event_type=event_type,
+sent_email_id=sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,
@@ -259,6 +298,8 @@ async def asyncio(
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
     email_id: UUID | Unset = UNSET,
+    event_type: str | Unset = UNSET,
+    sent_email_id: UUID | Unset = UNSET,
     status: ListDeliveriesStatus | Unset = UNSET,
     date_from: datetime.datetime | Unset = UNSET,
     date_to: datetime.datetime | Unset = UNSET,
@@ -266,13 +307,19 @@ async def asyncio(
 ) -> ErrorResponse | ListDeliveriesResponse200 | None:
     """ List webhook deliveries
 
-     Returns a paginated list of webhook delivery attempts. Each delivery
-    includes a nested `email` object with sender, recipient, and subject.
+     Returns a paginated list of webhook delivery attempts, newest first.
+    A delivery of an inbound email includes a nested `email` object with
+    sender, recipient, and subject. A delivery of an opt-in
+    `sent_email.*` event has `email_id` and `email` set to null and
+    `sent_email_id` set to the send it is about. Filter by `event_type`
+    and `sent_email_id` to find the deliveries of one send.
 
     Args:
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
         email_id (UUID | Unset):
+        event_type (str | Unset):
+        sent_email_id (UUID | Unset):
         status (ListDeliveriesStatus | Unset):
         date_from (datetime.datetime | Unset):
         date_to (datetime.datetime | Unset):
@@ -291,6 +338,8 @@ async def asyncio(
 cursor=cursor,
 limit=limit,
 email_id=email_id,
+event_type=event_type,
+sent_email_id=sent_email_id,
 status=status,
 date_from=date_from,
 date_to=date_to,

@@ -481,9 +481,22 @@ class BounceAnalysis(BaseModel):
     failed_recipient: Annotated[
         str | None,
         Field(
-            description="The recipient address that failed, if the report identifies one."
+            description="The first failed recipient, as the bounce wrote it, if the report identifies one. The status and diagnostic fields describe this recipient."
         ),
     ]
+    failed_recipients: Annotated[
+        list[str] | None,
+        Field(
+            description="Every address the bounce reports as failed, lowercased and deduplicated, up to 100. Includes both the final and the original recipient when an alias or forward rewrote the address. Empty when the bounce names no usable address. Absent on payloads built before this field existed.",
+            max_length=100,
+        ),
+    ] = None
+    sent_email_id: Annotated[
+        str | None,
+        Field(
+            description="The id of your send this bounce belongs to (the same id as `GET /v1/sent-emails/{id}`), or null when it could not be linked. Linking is best effort: a bounce links only when it quotes the original Message-ID of a send from your organization and one of its failed recipients was on that send. Absent on payloads built before this field existed."
+        ),
+    ] = None
     smtp_code: Annotated[
         int | None, Field(description="SMTP reply code (e.g. `550`), if reported.")
     ]

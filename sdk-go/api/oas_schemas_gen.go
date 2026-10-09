@@ -6946,6 +6946,12 @@ func (s *CreateEndpointInputKind) UnmarshalText(data []byte) error {
 
 // Endpoint-specific filtering rules.
 type CreateEndpointInputRules struct {
+	// Event types this endpoint subscribes to, matched by exact string. Omitted means every event type
+	// except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`,
+	// `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them,
+	// and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events
+	// and also handles inbound mail must keep its inbound event types (such as `email.received`) in the
+	// list. An empty array is rejected; omit the field instead.
 	EventTypes      []string `json:"event_types"`
 	AdditionalProps CreateEndpointInputRulesAdditional
 }
@@ -9289,19 +9295,31 @@ func (s *DeliveryStatus) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/DeliverySummary
 type DeliverySummary struct {
-	// Delivery ID (numeric string).
-	ID           string                     `json:"id"`
-	EmailID      uuid.UUID                  `json:"email_id"`
-	OrgID        uuid.UUID                  `json:"org_id"`
-	EndpointID   uuid.UUID                  `json:"endpoint_id"`
-	EndpointURL  string                     `json:"endpoint_url"`
-	Status       DeliverySummaryStatus      `json:"status"`
-	AttemptCount int                        `json:"attempt_count"`
-	DurationMs   OptNilInt                  `json:"duration_ms"`
-	LastError    OptNilString               `json:"last_error"`
-	CreatedAt    time.Time                  `json:"created_at"`
-	UpdatedAt    time.Time                  `json:"updated_at"`
-	Email        OptNilDeliverySummaryEmail `json:"email"`
+	// Delivery ID: a numeric string or a UUID. Pass it to the replay operation as is.
+	ID string `json:"id"`
+	// The inbound email this delivery is about. Null for deliveries that are not about a received email,
+	// such as `sent_email.*` events.
+	EmailID NilUUID `json:"email_id"`
+	// The delivered event type, for example `email.received` or `sent_email.delivered`. Null for
+	// deliveries recorded before event types existed.
+	EventType OptNilString `json:"event_type"`
+	// The sent email a `sent_email.*` delivery is about. Null for every other delivery.
+	SentEmailID OptNilUUID `json:"sent_email_id"`
+	OrgID       uuid.UUID  `json:"org_id"`
+	EndpointID  uuid.UUID  `json:"endpoint_id"`
+	// The endpoint's URL. For a function-backed endpoint, an opaque `function://<id>` identifier rather
+	// than a callable URL.
+	EndpointURL  NilString             `json:"endpoint_url"`
+	Status       DeliverySummaryStatus `json:"status"`
+	AttemptCount int                   `json:"attempt_count"`
+	DurationMs   OptNilInt             `json:"duration_ms"`
+	LastError    OptNilString          `json:"last_error"`
+	// A stable code for the last failure, for example `http_500`.
+	LastErrorCode OptNilString `json:"last_error_code"`
+	CreatedAt     time.Time    `json:"created_at"`
+	UpdatedAt     time.Time    `json:"updated_at"`
+	// Null for deliveries that are not about a received email.
+	Email OptNilDeliverySummaryEmail `json:"email"`
 }
 
 // GetID returns the value of ID.
@@ -9310,8 +9328,18 @@ func (s *DeliverySummary) GetID() string {
 }
 
 // GetEmailID returns the value of EmailID.
-func (s *DeliverySummary) GetEmailID() uuid.UUID {
+func (s *DeliverySummary) GetEmailID() NilUUID {
 	return s.EmailID
+}
+
+// GetEventType returns the value of EventType.
+func (s *DeliverySummary) GetEventType() OptNilString {
+	return s.EventType
+}
+
+// GetSentEmailID returns the value of SentEmailID.
+func (s *DeliverySummary) GetSentEmailID() OptNilUUID {
+	return s.SentEmailID
 }
 
 // GetOrgID returns the value of OrgID.
@@ -9325,7 +9353,7 @@ func (s *DeliverySummary) GetEndpointID() uuid.UUID {
 }
 
 // GetEndpointURL returns the value of EndpointURL.
-func (s *DeliverySummary) GetEndpointURL() string {
+func (s *DeliverySummary) GetEndpointURL() NilString {
 	return s.EndpointURL
 }
 
@@ -9349,6 +9377,11 @@ func (s *DeliverySummary) GetLastError() OptNilString {
 	return s.LastError
 }
 
+// GetLastErrorCode returns the value of LastErrorCode.
+func (s *DeliverySummary) GetLastErrorCode() OptNilString {
+	return s.LastErrorCode
+}
+
 // GetCreatedAt returns the value of CreatedAt.
 func (s *DeliverySummary) GetCreatedAt() time.Time {
 	return s.CreatedAt
@@ -9370,8 +9403,18 @@ func (s *DeliverySummary) SetID(val string) {
 }
 
 // SetEmailID sets the value of EmailID.
-func (s *DeliverySummary) SetEmailID(val uuid.UUID) {
+func (s *DeliverySummary) SetEmailID(val NilUUID) {
 	s.EmailID = val
+}
+
+// SetEventType sets the value of EventType.
+func (s *DeliverySummary) SetEventType(val OptNilString) {
+	s.EventType = val
+}
+
+// SetSentEmailID sets the value of SentEmailID.
+func (s *DeliverySummary) SetSentEmailID(val OptNilUUID) {
+	s.SentEmailID = val
 }
 
 // SetOrgID sets the value of OrgID.
@@ -9385,7 +9428,7 @@ func (s *DeliverySummary) SetEndpointID(val uuid.UUID) {
 }
 
 // SetEndpointURL sets the value of EndpointURL.
-func (s *DeliverySummary) SetEndpointURL(val string) {
+func (s *DeliverySummary) SetEndpointURL(val NilString) {
 	s.EndpointURL = val
 }
 
@@ -9409,6 +9452,11 @@ func (s *DeliverySummary) SetLastError(val OptNilString) {
 	s.LastError = val
 }
 
+// SetLastErrorCode sets the value of LastErrorCode.
+func (s *DeliverySummary) SetLastErrorCode(val OptNilString) {
+	s.LastErrorCode = val
+}
+
 // SetCreatedAt sets the value of CreatedAt.
 func (s *DeliverySummary) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
@@ -9424,9 +9472,10 @@ func (s *DeliverySummary) SetEmail(val OptNilDeliverySummaryEmail) {
 	s.Email = val
 }
 
+// Null for deliveries that are not about a received email.
 type DeliverySummaryEmail struct {
 	Sender    string       `json:"sender"`
-	Recipient string       `json:"recipient"`
+	Recipient NilString    `json:"recipient"`
 	Subject   OptNilString `json:"subject"`
 }
 
@@ -9436,7 +9485,7 @@ func (s *DeliverySummaryEmail) GetSender() string {
 }
 
 // GetRecipient returns the value of Recipient.
-func (s *DeliverySummaryEmail) GetRecipient() string {
+func (s *DeliverySummaryEmail) GetRecipient() NilString {
 	return s.Recipient
 }
 
@@ -9451,7 +9500,7 @@ func (s *DeliverySummaryEmail) SetSender(val string) {
 }
 
 // SetRecipient sets the value of Recipient.
-func (s *DeliverySummaryEmail) SetRecipient(val string) {
+func (s *DeliverySummaryEmail) SetRecipient(val NilString) {
 	s.Recipient = val
 }
 
@@ -9467,6 +9516,7 @@ const (
 	DeliverySummaryStatusDelivered       DeliverySummaryStatus = "delivered"
 	DeliverySummaryStatusHeaderConfirmed DeliverySummaryStatus = "header_confirmed"
 	DeliverySummaryStatusFailed          DeliverySummaryStatus = "failed"
+	DeliverySummaryStatusSkippedByRules  DeliverySummaryStatus = "skipped_by_rules"
 )
 
 // AllValues returns all DeliverySummaryStatus values.
@@ -9476,6 +9526,7 @@ func (DeliverySummaryStatus) AllValues() []DeliverySummaryStatus {
 		DeliverySummaryStatusDelivered,
 		DeliverySummaryStatusHeaderConfirmed,
 		DeliverySummaryStatusFailed,
+		DeliverySummaryStatusSkippedByRules,
 	}
 }
 
@@ -9489,6 +9540,8 @@ func (s DeliverySummaryStatus) MarshalText() ([]byte, error) {
 	case DeliverySummaryStatusHeaderConfirmed:
 		return []byte(s), nil
 	case DeliverySummaryStatusFailed:
+		return []byte(s), nil
+	case DeliverySummaryStatusSkippedByRules:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -9509,6 +9562,9 @@ func (s *DeliverySummaryStatus) UnmarshalText(data []byte) error {
 		return nil
 	case DeliverySummaryStatusFailed:
 		*s = DeliverySummaryStatusFailed
+		return nil
+	case DeliverySummaryStatusSkippedByRules:
+		*s = DeliverySummaryStatusSkippedByRules
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -14715,6 +14771,12 @@ func (s *EndpointReceiverCapabilitiesStreamProtocolsItem) UnmarshalText(data []b
 
 // Endpoint-specific filtering rules.
 type EndpointRules struct {
+	// Event types this endpoint subscribes to, matched by exact string. Omitted means every event type
+	// except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`,
+	// `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them,
+	// and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events
+	// and also handles inbound mail must keep its inbound event types (such as `email.received`) in the
+	// list. An empty array is rejected; omit the field instead.
 	EventTypes      []string `json:"event_types"`
 	AdditionalProps EndpointRulesAdditional
 }
@@ -21635,6 +21697,7 @@ const (
 	ListDeliveriesStatusDelivered       ListDeliveriesStatus = "delivered"
 	ListDeliveriesStatusHeaderConfirmed ListDeliveriesStatus = "header_confirmed"
 	ListDeliveriesStatusFailed          ListDeliveriesStatus = "failed"
+	ListDeliveriesStatusSkippedByRules  ListDeliveriesStatus = "skipped_by_rules"
 )
 
 // AllValues returns all ListDeliveriesStatus values.
@@ -21644,6 +21707,7 @@ func (ListDeliveriesStatus) AllValues() []ListDeliveriesStatus {
 		ListDeliveriesStatusDelivered,
 		ListDeliveriesStatusHeaderConfirmed,
 		ListDeliveriesStatusFailed,
+		ListDeliveriesStatusSkippedByRules,
 	}
 }
 
@@ -21657,6 +21721,8 @@ func (s ListDeliveriesStatus) MarshalText() ([]byte, error) {
 	case ListDeliveriesStatusHeaderConfirmed:
 		return []byte(s), nil
 	case ListDeliveriesStatusFailed:
+		return []byte(s), nil
+	case ListDeliveriesStatusSkippedByRules:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -21677,6 +21743,9 @@ func (s *ListDeliveriesStatus) UnmarshalText(data []byte) error {
 		return nil
 	case ListDeliveriesStatusFailed:
 		*s = ListDeliveriesStatusFailed
+		return nil
+	case ListDeliveriesStatusSkippedByRules:
+		*s = ListDeliveriesStatusSkippedByRules
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -39312,7 +39381,13 @@ type SentEmailDetail struct {
 	ToHeader string `json:"to_header"`
 	// Bare email address parsed from `to_header`.
 	ToAddress string `json:"to_address"`
-	Subject   string `json:"subject"`
+	// Every recipient of the send, To, Cc and Bcc together, each address counted once: the size of
+	// `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists every
+	// hidden recipient. Null when the request uses an address-bound agent connection key whose address
+	// is not the sender, because the count would reveal Bcc recipients. The `sent_email` object of the
+	// `sent_email.*` webhook events carries the same field.
+	RecipientCount OptNilInt `json:"recipient_count"`
+	Subject        string    `json:"subject"`
 	// Total UTF-8 byte length of `body_text` + `body_html`.
 	// Surfaced on the list endpoint so callers can see "this
 	// row has a 4MB body" without fetching it.
@@ -39506,6 +39581,11 @@ func (s *SentEmailDetail) GetToHeader() string {
 // GetToAddress returns the value of ToAddress.
 func (s *SentEmailDetail) GetToAddress() string {
 	return s.ToAddress
+}
+
+// GetRecipientCount returns the value of RecipientCount.
+func (s *SentEmailDetail) GetRecipientCount() OptNilInt {
+	return s.RecipientCount
 }
 
 // GetSubject returns the value of Subject.
@@ -39731,6 +39811,11 @@ func (s *SentEmailDetail) SetToHeader(val string) {
 // SetToAddress sets the value of ToAddress.
 func (s *SentEmailDetail) SetToAddress(val string) {
 	s.ToAddress = val
+}
+
+// SetRecipientCount sets the value of RecipientCount.
+func (s *SentEmailDetail) SetRecipientCount(val OptNilInt) {
+	s.RecipientCount = val
 }
 
 // SetSubject sets the value of Subject.
@@ -40343,7 +40428,13 @@ type SentEmailSummary struct {
 	ToHeader string `json:"to_header"`
 	// Bare email address parsed from `to_header`.
 	ToAddress string `json:"to_address"`
-	Subject   string `json:"subject"`
+	// Every recipient of the send, To, Cc and Bcc together, each address counted once: the size of
+	// `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists every
+	// hidden recipient. Null when the request uses an address-bound agent connection key whose address
+	// is not the sender, because the count would reveal Bcc recipients. The `sent_email` object of the
+	// `sent_email.*` webhook events carries the same field.
+	RecipientCount OptNilInt `json:"recipient_count"`
+	Subject        string    `json:"subject"`
 	// Total UTF-8 byte length of `body_text` + `body_html`.
 	// Surfaced on the list endpoint so callers can see "this
 	// row has a 4MB body" without fetching it.
@@ -40489,6 +40580,11 @@ func (s *SentEmailSummary) GetToHeader() string {
 // GetToAddress returns the value of ToAddress.
 func (s *SentEmailSummary) GetToAddress() string {
 	return s.ToAddress
+}
+
+// GetRecipientCount returns the value of RecipientCount.
+func (s *SentEmailSummary) GetRecipientCount() OptNilInt {
+	return s.RecipientCount
 }
 
 // GetSubject returns the value of Subject.
@@ -40659,6 +40755,11 @@ func (s *SentEmailSummary) SetToHeader(val string) {
 // SetToAddress sets the value of ToAddress.
 func (s *SentEmailSummary) SetToAddress(val string) {
 	s.ToAddress = val
+}
+
+// SetRecipientCount sets the value of RecipientCount.
+func (s *SentEmailSummary) SetRecipientCount(val OptNilInt) {
+	s.RecipientCount = val
 }
 
 // SetSubject sets the value of Subject.
@@ -44727,6 +44828,12 @@ func (s *UpdateEndpointInput) SetRules(val OptUpdateEndpointInputRules) {
 }
 
 type UpdateEndpointInputRules struct {
+	// Event types this endpoint subscribes to, matched by exact string. Omitted means every event type
+	// except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`,
+	// `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them,
+	// and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events
+	// and also handles inbound mail must keep its inbound event types (such as `email.received`) in the
+	// list. An empty array is rejected; omit the field instead.
 	EventTypes      []string `json:"event_types"`
 	AdditionalProps UpdateEndpointInputRulesAdditional
 }

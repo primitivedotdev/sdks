@@ -873,7 +873,22 @@ export const emailReceivedEventJsonSchema = {
             "string",
             "null"
           ],
-          "description": "The recipient address that failed, if the report identifies one."
+          "description": "The first failed recipient, as the bounce wrote it, if the report identifies one. The status and diagnostic fields describe this recipient."
+        },
+        "failed_recipients": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string"
+          },
+          "description": "Every address the bounce reports as failed, lowercased and deduplicated, up to 100. Includes both the final and the original recipient when an alias or forward rewrote the address. Empty when the bounce names no usable address. Absent on payloads built before this field existed."
+        },
+        "sent_email_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The id of your send this bounce belongs to (the same id as `GET /v1/sent-emails/{id}`), or null when it could not be linked. Linking is best effort: a bounce links only when it quotes the original Message-ID of a send from your organization and one of its failed recipients was on that send. Absent on payloads built before this field existed."
         },
         "smtp_code": {
           "type": [

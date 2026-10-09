@@ -1088,8 +1088,12 @@ type Invoker interface {
 	ListDefaultNetworkMembers(ctx context.Context, params ListDefaultNetworkMembersParams) (ListDefaultNetworkMembersRes, error)
 	// ListDeliveries invokes listDeliveries operation.
 	//
-	// Returns a paginated list of webhook delivery attempts. Each delivery
-	// includes a nested `email` object with sender, recipient, and subject.
+	// Returns a paginated list of webhook delivery attempts, newest first.
+	// A delivery of an inbound email includes a nested `email` object with
+	// sender, recipient, and subject. A delivery of an opt-in
+	// `sent_email.*` event has `email_id` and `email` set to null and
+	// `sent_email_id` set to the send it is about. Filter by `event_type`
+	// and `sent_email_id` to find the deliveries of one send.
 	//
 	// GET /webhooks/deliveries
 	ListDeliveries(ctx context.Context, params ListDeliveriesParams) (ListDeliveriesRes, error)
@@ -1490,11 +1494,15 @@ type Invoker interface {
 	ReorderRoutes(ctx context.Context, request *ReorderRoutesInput) (ReorderRoutesRes, error)
 	// ReplayDelivery invokes replayDelivery operation.
 	//
-	// Re-sends the stored webhook payload from a previous delivery attempt.
-	// If the original endpoint is still active, it is targeted. If the
-	// original endpoint was deleted, the oldest active endpoint is used.
-	// Deactivated endpoints cannot be replayed to. Rate limited per-org,
-	// sharing an org-wide budget with email replays.
+	// Re-sends a previous delivery to its original endpoint. If that
+	// endpoint was deleted or deactivated, the replay is rejected.
+	// Supports inbound email deliveries and `sent_email.*` deliveries.
+	// An inbound email delivery is replayed with its original stored
+	// payload and event id. A `sent_email.*` delivery is replayed with the
+	// same event id but a payload rebuilt from the send as it is now; it
+	// is rejected if the send was deleted or the endpoint is no longer an
+	// active http endpoint. Rate limited per-org, sharing an org-wide
+	// budget with email replays.
 	//
 	// POST /webhooks/deliveries/{id}/replay
 	ReplayDelivery(ctx context.Context, params ReplayDeliveryParams) (ReplayDeliveryRes, error)
@@ -13201,8 +13209,12 @@ func (c *Client) sendListDefaultNetworkMembers(ctx context.Context, params ListD
 
 // ListDeliveries invokes listDeliveries operation.
 //
-// Returns a paginated list of webhook delivery attempts. Each delivery
-// includes a nested `email` object with sender, recipient, and subject.
+// Returns a paginated list of webhook delivery attempts, newest first.
+// A delivery of an inbound email includes a nested `email` object with
+// sender, recipient, and subject. A delivery of an opt-in
+// `sent_email.*` event has `email_id` and `email` set to null and
+// `sent_email_id` set to the send it is about. Filter by `event_type`
+// and `sent_email_id` to find the deliveries of one send.
 //
 // GET /webhooks/deliveries
 func (c *Client) ListDeliveries(ctx context.Context, params ListDeliveriesParams) (ListDeliveriesRes, error) {
@@ -13297,6 +13309,40 @@ func (c *Client) sendListDeliveries(ctx context.Context, params ListDeliveriesPa
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.EmailID.Get(); ok {
+				return e.EncodeValue(conv.UUIDToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "event_type" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "event_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.EventType.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "sent_email_id" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "sent_email_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.SentEmailID.Get(); ok {
 				return e.EncodeValue(conv.UUIDToString(val))
 			}
 			return nil
@@ -17997,11 +18043,15 @@ func (c *Client) sendReorderRoutes(ctx context.Context, request *ReorderRoutesIn
 
 // ReplayDelivery invokes replayDelivery operation.
 //
-// Re-sends the stored webhook payload from a previous delivery attempt.
-// If the original endpoint is still active, it is targeted. If the
-// original endpoint was deleted, the oldest active endpoint is used.
-// Deactivated endpoints cannot be replayed to. Rate limited per-org,
-// sharing an org-wide budget with email replays.
+// Re-sends a previous delivery to its original endpoint. If that
+// endpoint was deleted or deactivated, the replay is rejected.
+// Supports inbound email deliveries and `sent_email.*` deliveries.
+// An inbound email delivery is replayed with its original stored
+// payload and event id. A `sent_email.*` delivery is replayed with the
+// same event id but a payload rebuilt from the send as it is now; it
+// is rejected if the send was deleted or the endpoint is no longer an
+// active http endpoint. Rate limited per-org, sharing an org-wide
+// budget with email replays.
 //
 // POST /webhooks/deliveries/{id}/replay
 func (c *Client) ReplayDelivery(ctx context.Context, params ReplayDeliveryParams) (ReplayDeliveryRes, error) {

@@ -32,7 +32,7 @@ At minimum, run `make node-check cli-check go-check shared-check` before every p
 
 ## Schema is the source of truth
 
-`json-schema/email-received-event.schema.json` is the canonical schema. All SDK types, validators, and models are generated from it:
+`json-schema/email-received-event.schema.json` (inbound `email.*` events) and `json-schema/sent-email-event.schema.json` (outbound `sent_email.*` events) are the canonical webhook schemas. All SDK types, validators, and models are generated from them:
 
 - Node: `pnpm --dir sdk-node generate` (produces types, validator, schema module)
 - Python: `cd sdk-python && uv run python scripts/generate_models.py` (produces Pydantic models + schema copy)
