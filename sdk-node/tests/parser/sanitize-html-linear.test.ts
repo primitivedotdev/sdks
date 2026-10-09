@@ -7,6 +7,7 @@ import {
   sanitizeHtml,
   sanitizeHtmlWithReport,
 } from "../../src/parser/sanitize-html.js";
+import { leastCpuMs, ordinaryHtml } from "./cpu-time.js";
 import {
   sanitizeHtml as referenceSanitizeHtml,
   referenceScans,
@@ -16,7 +17,8 @@ import {
 // backtracked on crafted input. These tests hold the replacements to exactly
 // the output of the original implementation (kept in
 // sanitize-html.reference.ts), on real email HTML and on seeded random input,
-// and hold each known worst case to a linear-time budget.
+// and hold each known worst case to a small multiple of an ordinary body of
+// the same size (timed on thread CPU, see cpu-time.ts).
 
 const FIXTURES = join(import.meta.dirname, "fixtures", "html");
 const fixtures = readdirSync(FIXTURES)
@@ -237,6 +239,17 @@ function randomDocument(r: Rand): string {
   return sheets + many(r, 6, () => randomElement(r, 3));
 }
 
+// The differential tests below sanitize every input three times (the report,
+// the new implementation and the reference), all linear: the largest, 800
+// mutated fixtures or about 8.6 MB of HTML, is about 2.2 seconds of CPU on a
+// laptop collecting coverage, and over 5 seconds of wall time on a CI runner,
+// past vitest's default timeout. Wall time is what a timeout counts, and with
+// 72 test workers on 18 cores the same work took up to 66 seconds, so each
+// differential test gets 120 seconds: room for a saturated machine, while a
+// hang still fails. The corpus is what catches mismatches, so it is not cut to
+// fit the clock.
+const DIFFERENTIAL_TIMEOUT_MS = 120_000;
+
 describe("sanitizeHtml matches the original implementation", () => {
   // Every input here must stay inside the cascade budget: the budget was
   // chosen so real mail never meets it, and an input that did would be
@@ -258,62 +271,76 @@ describe("sanitizeHtml matches the original implementation", () => {
     expect(fixtures.length).toBeGreaterThanOrEqual(15);
   });
 
-  test("mutated real email HTML (seeded)", () => {
-    let mismatches = 0;
-    let checked = 0;
-    let hits = 0;
-    for (const { name, html } of fixtures) {
-      const r = mulberry32(name.length * 7919 + html.length);
-      for (let i = 0; i < 40; i++) {
-        const at = Math.floor(r() * html.length);
-        const len = Math.floor(r() * 400);
-        const roll = r();
-        const mutated =
-          roll < 0.3
-            ? html.slice(0, at) + html.slice(at + len)
-            : roll < 0.6
-              ? html.slice(0, at) + randomCss(r, 8) + html.slice(at)
-              : roll < 0.8
-                ? html.slice(0, at)
-                : html.slice(0, at) + html.slice(at, at + len) + html.slice(at);
-        checked++;
-        hits += budgetHits(mutated);
-        if (sanitizeHtml(mutated) !== referenceSanitizeHtml(mutated))
-          mismatches++;
+  test(
+    "mutated real email HTML (seeded)",
+    () => {
+      let mismatches = 0;
+      let checked = 0;
+      let hits = 0;
+      for (const { name, html } of fixtures) {
+        const r = mulberry32(name.length * 7919 + html.length);
+        for (let i = 0; i < 40; i++) {
+          const at = Math.floor(r() * html.length);
+          const len = Math.floor(r() * 400);
+          const roll = r();
+          const mutated =
+            roll < 0.3
+              ? html.slice(0, at) + html.slice(at + len)
+              : roll < 0.6
+                ? html.slice(0, at) + randomCss(r, 8) + html.slice(at)
+                : roll < 0.8
+                  ? html.slice(0, at)
+                  : html.slice(0, at) +
+                    html.slice(at, at + len) +
+                    html.slice(at);
+          checked++;
+          hits += budgetHits(mutated);
+          if (sanitizeHtml(mutated) !== referenceSanitizeHtml(mutated))
+            mismatches++;
+        }
       }
-    }
-    expect(checked).toBe(fixtures.length * 40);
-    expect(mismatches).toBe(0);
-    expect(hits).toBe(0);
-  });
+      expect(checked).toBe(fixtures.length * 40);
+      expect(mismatches).toBe(0);
+      expect(hits).toBe(0);
+    },
+    DIFFERENTIAL_TIMEOUT_MS,
+  );
 
-  test("random documents with stylesheets and styled elements (seeded)", () => {
-    const r = mulberry32(20261008);
-    const failures: string[] = [];
-    let hits = 0;
-    for (let i = 0; i < 4000; i++) {
-      const html = randomDocument(r);
-      hits += budgetHits(html);
-      if (sanitizeHtml(html) !== referenceSanitizeHtml(html))
-        failures.push(html);
-    }
-    expect(failures.slice(0, 3)).toEqual([]);
-    expect(hits).toBe(0);
-  });
+  test(
+    "random documents with stylesheets and styled elements (seeded)",
+    () => {
+      const r = mulberry32(20261008);
+      const failures: string[] = [];
+      let hits = 0;
+      for (let i = 0; i < 4000; i++) {
+        const html = randomDocument(r);
+        hits += budgetHits(html);
+        if (sanitizeHtml(html) !== referenceSanitizeHtml(html))
+          failures.push(html);
+      }
+      expect(failures.slice(0, 3)).toEqual([]);
+      expect(hits).toBe(0);
+    },
+    DIFFERENTIAL_TIMEOUT_MS,
+  );
 
-  test("random CSS-heavy text (seeded)", () => {
-    const r = mulberry32(7467);
-    const failures: string[] = [];
-    let hits = 0;
-    for (let i = 0; i < 4000; i++) {
-      const html = `${randomCss(r, 60)}<p class="a b" id="i" style="${randomCss(r, 4)}">x</p><div class=c>y</div>`;
-      hits += budgetHits(html);
-      if (sanitizeHtml(html) !== referenceSanitizeHtml(html))
-        failures.push(html);
-    }
-    expect(failures.slice(0, 3)).toEqual([]);
-    expect(hits).toBe(0);
-  });
+  test(
+    "random CSS-heavy text (seeded)",
+    () => {
+      const r = mulberry32(7467);
+      const failures: string[] = [];
+      let hits = 0;
+      for (let i = 0; i < 4000; i++) {
+        const html = `${randomCss(r, 60)}<p class="a b" id="i" style="${randomCss(r, 4)}">x</p><div class=c>y</div>`;
+        hits += budgetHits(html);
+        if (sanitizeHtml(html) !== referenceSanitizeHtml(html))
+          failures.push(html);
+      }
+      expect(failures.slice(0, 3)).toEqual([]);
+      expect(hits).toBe(0);
+    },
+    DIFFERENTIAL_TIMEOUT_MS,
+  );
 });
 
 describe("each scan matches the regex it replaced", () => {
@@ -404,7 +431,13 @@ describe("sanitizeHtml stays linear on crafted input", () => {
   const classes = (n: number, f: (i: number) => string) =>
     Array.from({ length: n }, (_, i) => f(i)).join("");
 
-  // Each of these took between 0.2 and 12 seconds with the original regexes.
+  // Each of these took between 0.2 and 12 seconds with the original regexes,
+  // and repeated selectors cost rules times elements. Each is timed against
+  // an ordinary body of the same length, round robin, on the CPU time of the
+  // test's own thread, and must stay under ten times it. The heaviest shape
+  // costs about twice the ordinary body; the old implementations cost 20 to
+  // over 1,000 times it, so the bound has room on both sides. A fixed bound in
+  // milliseconds did not: it measured the runner as much as the sanitizer.
   const cases: Record<string, string> = {
     "@-rule name that never reaches a brace": fill(
       "<style>@-",
@@ -436,17 +469,19 @@ describe("sanitizeHtml stays linear on crafted input", () => {
     "many restorers sharing a class": `<style>@media x{${classes(3000, (i) => `.a.z${i}{display:block}`)}}</style>${"<b class=a style=display:none></b>".repeat(2000)}`,
   };
 
-  test.each(Object.entries(cases))("%s", (_, html) => {
-    expect(html.length).toBeGreaterThan(SIZE * 0.8);
-    sanitizeHtml(html);
-    let best = Number.POSITIVE_INFINITY;
-    for (let i = 0; i < 3; i++) {
-      const start = performance.now();
-      sanitizeHtml(html);
-      best = Math.min(best, performance.now() - start);
-    }
-    expect(best).toBeLessThan(50);
-  });
+  test.each(Object.entries(cases))(
+    "%s",
+    (_, html) => {
+      expect(html.length).toBeGreaterThan(SIZE * 0.8);
+      const ordinary = ordinaryHtml(html.length);
+      const [crafted = 0, baseline = 0] = leastCpuMs(
+        [() => sanitizeHtml(html), () => sanitizeHtml(ordinary)],
+        5,
+      );
+      expect(crafted).toBeLessThan(10 * baseline);
+    },
+    60_000,
+  );
 });
 
 describe("the cascade budget fails closed", () => {
@@ -474,14 +509,15 @@ describe("the cascade budget fails closed", () => {
     const shown = (text: string) => (text.match(/shown-/g) ?? []).length;
     expect(shown(out)).toBe(shown(html) - report.cascadeBudgetExceeded);
     expect(out).toContain("plain text stays");
-    let best = Number.POSITIVE_INFINITY;
-    for (let i = 0; i < 3; i++) {
-      const start = performance.now();
-      sanitizeHtmlWithReport(html);
-      best = Math.min(best, performance.now() - start);
-    }
-    expect(best).toBeLessThan(100);
-  });
+    // Under twice an ordinary body of the same size in thread CPU time; with
+    // no budget, weighing every element in full costs over twenty times it.
+    const ordinary = ordinaryHtml(html.length);
+    const [cost = 0, baseline = 0] = leastCpuMs(
+      [() => sanitizeHtmlWithReport(html), () => sanitizeHtml(ordinary)],
+      3,
+    );
+    expect(cost).toBeLessThan(8 * baseline);
+  }, 60_000);
 
   test("elements whose possible restorers run past the budget are dropped too", () => {
     // Every element is hidden by .h and shown again by a media-query rule on

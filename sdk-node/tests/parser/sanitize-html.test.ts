@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { sanitizeHtml } from "../../src/parser/sanitize-html.js";
+import { leastCpuMs, ordinaryHtml } from "./cpu-time.js";
 
 describe("sanitizeHtml — XSS removal", () => {
   test("drops <script> tags and their contents", () => {
@@ -334,19 +335,31 @@ describe("sanitizeHtml — content hidden from readers", () => {
 });
 
 describe("sanitizeHtml — stylesheet cost", () => {
+  // Each body is timed against an ordinary body of the same length, round
+  // robin, on the CPU time of the test's own thread (see cpu-time.ts), and
+  // must stay under ten times it. They cost at most about twice the ordinary
+  // body; a cascade that weighed every rule for every element would cost
+  // rules times elements.
+  const withinTenTimesOrdinary = (html: string) => {
+    const ordinary = ordinaryHtml(html.length);
+    const [cost = 0, baseline = 0] = leastCpuMs(
+      [() => sanitizeHtml(html), () => sanitizeHtml(ordinary)],
+      2,
+    );
+    expect(cost).toBeLessThan(10 * baseline);
+  };
+
   test("stays fast with a stylesheet repeating one rule many times", () => {
-    const start = performance.now();
-    sanitizeHtml(`<style>${".a{display:none}".repeat(100000)}</style><p>x</p>`);
-    expect(performance.now() - start).toBeLessThan(2000);
-  });
+    withinTenTimesOrdinary(
+      `<style>${".a{display:none}".repeat(100000)}</style><p>x</p>`,
+    );
+  }, 60_000);
 
   test("stays fast with many conditional rules and many hidden elements", () => {
     const css = `.m{display:none}@media(max-width:480px){${".m{display:block}".repeat(100000)}}`;
     const body = '<div class="m">x</div>'.repeat(10000);
-    const start = performance.now();
-    sanitizeHtml(`<style>${css}</style>${body}`);
-    expect(performance.now() - start).toBeLessThan(3000);
-  });
+    withinTenTimesOrdinary(`<style>${css}</style>${body}`);
+  }, 60_000);
 
   test("stays fast with many rules and many classed elements", () => {
     const rules = Array.from(
@@ -357,8 +370,6 @@ describe("sanitizeHtml — stylesheet cost", () => {
       { length: 5000 },
       (_, i) => `<div class="c${i % 3000} x">t${i}</div>`,
     ).join("");
-    const start = performance.now();
-    sanitizeHtml(`<style>${rules}</style>${body}`);
-    expect(performance.now() - start).toBeLessThan(2000);
-  });
+    withinTenTimesOrdinary(`<style>${rules}</style>${body}`);
+  }, 60_000);
 });
