@@ -12,7 +12,11 @@ import {
   invitationProfileName,
   runAgentConnect,
 } from "../agent-connect-flow.js";
-import { clearRevokedAddresses, disconnectAgent } from "../agent-disconnect.js";
+import {
+  claimOverRevokedSetup,
+  clearRevokedAddresses,
+  disconnectAgent,
+} from "../agent-disconnect.js";
 import {
   connectNextSteps,
   identitySuggestions,
@@ -476,13 +480,25 @@ export default class AgentConnectCommand extends Command {
       // A rerun of an already configured profile refreshes the owner's
       // personal address, which may have been set up after the claim.
       const invitation = await readInvitationOnce();
-      agentInvitationHash(invitation);
+      const invitationHash = agentInvitationHash(invitation);
       await replaceExisting?.();
-      const claimed = await connectAgent({
-        configDir: this.config.configDir,
-        profileName: flags.profile,
-        invitation,
-      });
+      const profileName = flags.profile;
+      // A setup left by a credential confirmed revoked (cleared above, or
+      // earlier) is moved aside under the claim lock before claiming.
+      const claimed = await claimOverRevokedSetup(
+        {
+          configDir: this.config.configDir,
+          profileName,
+          invitationHash,
+        },
+        (claimLockHeld) =>
+          connectAgent({
+            configDir: this.config.configDir,
+            profileName,
+            invitation,
+            claimLockHeld,
+          }),
+      );
       const result = await withOwnerMemberAddress(claimed, {
         configDir: this.config.configDir,
         onlyIfUnknown: claimed.status === "claimed",

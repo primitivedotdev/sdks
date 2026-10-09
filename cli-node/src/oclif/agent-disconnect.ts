@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import { renameSync } from "node:fs";
+import { existsSync, renameSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { uninstallClaudeWakeHook } from "./claude-wake-install.js";
 import {
+  AgentConnectionSetupError,
   agentProfileDirectory,
   agentProfileName,
   agentProfilesDirectory,
@@ -442,6 +443,68 @@ export function archiveRevokedSetup(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
+  }
+}
+
+/**
+ * Run a claim into `profileName`, first moving aside a saved setup whose
+ * credential is confirmed revoked, so the new credential is never saved
+ * beside a setup naming the old invitation. The profile's setup lock and the
+ * machine-wide claim lock are taken (in the order setup and disconnect use)
+ * before anything is checked or moved, and held through the claim, which is
+ * told the claim lock is already held. A profile with no saved setup is
+ * claimed as before, without these locks.
+ */
+export async function claimOverRevokedSetup<T>(
+  params: {
+    configDir: string;
+    profileName: string;
+    invitationHash: string;
+    now?: () => Date;
+  },
+  claim: (claimLockHeld: boolean) => Promise<T>,
+): Promise<T> {
+  const directory = agentProfileDirectory(params.configDir, params.profileName);
+  const path = join(directory, "setup.json");
+  if (!existsSync(path)) return claim(false);
+  let releaseSetup: (() => void) | undefined;
+  let releaseClaim: (() => void) | undefined;
+  try {
+    try {
+      releaseSetup = acquireListenLock(directory, "setup");
+      releaseClaim = acquireListenLock(
+        agentProfilesDirectory(params.configDir),
+        "agent-connection-setup",
+      );
+    } catch {
+      throw new AgentConnectionSetupError(
+        "Another agent setup is running on this machine. No invitation was claimed and nothing was changed; retry when it finishes.",
+      );
+    }
+    let saved: unknown = null;
+    try {
+      saved = readMailJson(path);
+    } catch {
+      /* An unreadable setup is left for the claim to report. */
+    }
+    const savedHash =
+      saved && typeof saved === "object" && !Array.isArray(saved)
+        ? (saved as Record<string, unknown>).invitationHash
+        : undefined;
+    if (
+      typeof savedHash === "string" &&
+      savedHash !== params.invitationHash &&
+      savedSetupRevoked(params.configDir, params.profileName, savedHash)
+    )
+      archiveRevokedSetup(
+        params.configDir,
+        params.profileName,
+        (params.now ?? (() => new Date()))(),
+      );
+    return await claim(true);
+  } finally {
+    releaseClaim?.();
+    releaseSetup?.();
   }
 }
 
