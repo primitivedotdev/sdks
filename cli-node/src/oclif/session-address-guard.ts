@@ -9,6 +9,7 @@ import {
 } from "./connected-agent-profile.js";
 import { connectedProfilesForSession } from "./machine-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import { releaseRegistrationsForProfile } from "./session-records.js";
 
 /** Exit code for a connect or enroll refused because the session already has an address. */
 export const ALREADY_CONNECTED_EXIT_CODE = 3;
@@ -173,6 +174,12 @@ export async function replaceSessionAddresses(params: {
         const directory = agentProfileDirectory(params.configDir, profile);
         archive(join(directory, "setup.json"), stamp);
         archive(join(directory, "enrollment", "state.json"), stamp);
+        // The profile is about to hold a different credential.
+        await releaseRegistrationsForProfile({
+          configDir: params.configDir,
+          profileName: profile,
+          now: params.now,
+        });
       }
     } catch (error) {
       const done = replaced.length

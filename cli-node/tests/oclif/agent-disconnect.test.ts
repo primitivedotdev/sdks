@@ -449,6 +449,29 @@ describe("connected agent self-disconnect", () => {
     ).rejects.toThrow("does not match");
     expect(api.calls).toHaveLength(0);
   });
+
+  it("refuses without an API call when the profile holds a different credential than expected", async () => {
+    const directory = configDir();
+    const api = server();
+    saved(directory, "work", true);
+    for (const expected of [
+      {
+        address: "other@example.test",
+        invitationHash: profile.invitation_hash,
+      },
+      { address: profile.agent_address, invitationHash: "b".repeat(64) },
+    ])
+      await expect(
+        disconnectAgent({
+          configDir: directory,
+          profileName: "work",
+          fetch: api.fetch,
+          expected,
+        }),
+      ).rejects.toBeInstanceOf(AgentCredentialChangedError);
+    expect(api.calls).toHaveLength(0);
+    expect(loadConnectedAgentProfile(directory, "work")).not.toBeNull();
+  });
 });
 
 describe("addresses revoked elsewhere", () => {
