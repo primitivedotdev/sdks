@@ -483,6 +483,23 @@ describe("the cascade budget fails closed", () => {
     expect(best).toBeLessThan(100);
   });
 
+  test("elements whose possible restorers run past the budget are dropped too", () => {
+    // Every element is hidden by .h and shown again by a media-query rule on
+    // its last class, reached only after thousands of showing rules that each
+    // need a class (q) no element has.
+    const restorers = subsets
+      .map((s) => `.${["a", ...s, "q"].join(".")}{display:block}`)
+      .join("");
+    let html = `<style>.h{display:none}@media screen{.zz{display:block}${restorers}}</style><p>plain text stays</p>`;
+    for (let i = 0; html.length < 300_000; i++)
+      html += `<b class="h a ${U.filter((_, j) => ((i % 4096) >> j) & 1).join(" ")} zz">shown-${i}</b>`;
+    const { html: out, report } = sanitizeHtmlWithReport(html);
+    expect(report.cascadeBudgetExceeded).toBeGreaterThan(0);
+    const shown = (text: string) => (text.match(/shown-/g) ?? []).length;
+    expect(shown(out)).toBe(shown(html) - report.cascadeBudgetExceeded);
+    expect(out).toContain("plain text stays");
+  });
+
   test("parsed emails carry the report", async () => {
     const mime = (type: string, body: string) =>
       Buffer.from(
