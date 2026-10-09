@@ -28,7 +28,7 @@ T = TypeVar("T", bound="DeliverySummary")
 class DeliverySummary:
     """ 
         Attributes:
-            id (str): Delivery ID (numeric string)
+            id (str): Delivery ID: a numeric string or a UUID. Pass it to the replay operation as is.
             email_id (None | UUID): The inbound email this delivery is about. Null for deliveries that are not about a
                 received email, such as `sent_email.*` events.
             org_id (UUID):

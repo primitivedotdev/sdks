@@ -9295,7 +9295,7 @@ func (s *DeliveryStatus) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/DeliverySummary
 type DeliverySummary struct {
-	// Delivery ID (numeric string).
+	// Delivery ID: a numeric string or a UUID. Pass it to the replay operation as is.
 	ID string `json:"id"`
 	// The inbound email this delivery is about. Null for deliveries that are not about a received email,
 	// such as `sent_email.*` events.

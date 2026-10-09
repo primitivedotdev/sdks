@@ -10446,7 +10446,7 @@ func decodeRemoveDefaultNetworkMemberParams(args [1]string, argsEscaped bool, r 
 
 // ReplayDeliveryParams is parameters of replayDelivery operation.
 type ReplayDeliveryParams struct {
-	// Delivery ID (numeric).
+	// Delivery ID, as `id` in the deliveries list: a numeric string or a UUID.
 	ID string
 }
 
@@ -10504,7 +10504,7 @@ func decodeReplayDeliveryParams(args [1]string, argsEscaped bool, r *http.Reques
 					MaxLengthSet:  false,
 					Email:         false,
 					Hostname:      false,
-					Regex:         regexMap["^\\d+$"],
+					Regex:         regexMap["^(\\d+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"],
 					MinNumeric:    0,
 					MinNumericSet: false,
 					MaxNumeric:    0,

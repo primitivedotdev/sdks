@@ -3882,8 +3882,10 @@ paths:
         required: true
         schema:
           type: string
-          pattern: ^\d+$
-        description: Delivery ID (numeric)
+          pattern: ^(\d+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$
+        description: >-
+          Delivery ID, as `id` in the deliveries list: a numeric string or a
+          UUID.
     post:
       operationId: replayDelivery
       summary: Replay a webhook delivery
@@ -18760,7 +18762,9 @@ components:
       properties:
         id:
           type: string
-          description: Delivery ID (numeric string)
+          description: >-
+            Delivery ID: a numeric string or a UUID. Pass it to the replay
+            operation as is.
         email_id:
           type:
             - string

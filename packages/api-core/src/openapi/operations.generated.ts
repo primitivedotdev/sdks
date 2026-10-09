@@ -22859,7 +22859,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "properties": {
           "id": {
             "type": "string",
-            "description": "Delivery ID (numeric string)"
+            "description": "Delivery ID: a numeric string or a UUID. Pass it to the replay operation as is."
           },
           "email_id": {
             "type": [
@@ -22997,7 +22997,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/webhooks/deliveries/{id}/replay",
     "pathParams": [
       {
-        "description": "Delivery ID (numeric)",
+        "description": "Delivery ID, as `id` in the deliveries list: a numeric string or a UUID.",
         "enum": null,
         "name": "id",
         "required": true,

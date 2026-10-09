@@ -4683,9 +4683,9 @@ export const openapiDocument: Record<string, unknown> = {
           "required": true,
           "schema": {
             "type": "string",
-            "pattern": "^\\d+$"
+            "pattern": "^(\\d+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
           },
-          "description": "Delivery ID (numeric)"
+          "description": "Delivery ID, as `id` in the deliveries list: a numeric string or a UUID."
         }
       ],
       "post": {
@@ -23118,7 +23118,7 @@ export const openapiDocument: Record<string, unknown> = {
         "properties": {
           "id": {
             "type": "string",
-            "description": "Delivery ID (numeric string)"
+            "description": "Delivery ID: a numeric string or a UUID. Pass it to the replay operation as is."
           },
           "email_id": {
             "type": [

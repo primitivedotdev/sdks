@@ -4428,7 +4428,7 @@ export type SimulateRouteResult = {
 
 export type DeliverySummary = {
     /**
-     * Delivery ID (numeric string)
+     * Delivery ID: a numeric string or a UUID. Pass it to the replay operation as is.
      */
     id: string;
     /**
@@ -8695,7 +8695,7 @@ export type ReplayDeliveryData = {
     body?: never;
     path: {
         /**
-         * Delivery ID (numeric)
+         * Delivery ID, as `id` in the deliveries list: a numeric string or a UUID.
          */
         id: string;
     };
