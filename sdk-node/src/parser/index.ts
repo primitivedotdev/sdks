@@ -44,4 +44,8 @@ export {
 } from "./mapping.js";
 
 // sanitize-html: pure-JS (DOM-free) email HTML sanitizer
-export { sanitizeHtml } from "./sanitize-html.js";
+export {
+  type SanitizeHtmlReport,
+  sanitizeHtml,
+  sanitizeHtmlWithReport,
+} from "./sanitize-html.js";
