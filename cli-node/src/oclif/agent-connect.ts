@@ -22,6 +22,7 @@ import { backgroundListenStatus } from "./listen-background.js";
 import { acquireListenLock } from "./listen-state.js";
 import { notificationScope } from "./notify-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
+import { releaseRegistrationsForClaim } from "./session-records.js";
 import {
   mailAddress,
   privateMailDirectory,
@@ -707,6 +708,19 @@ export async function connectAgent(params: {
       );
       const name = claimedConnectionName(body);
       saveConnectedAgentProfile(params.configDir, profileName, profile);
+      // A session record that says `session-register` created this
+      // profile's agent no longer describes it, so a session end must not
+      // disconnect the agent just claimed.
+      try {
+        await releaseRegistrationsForClaim({
+          configDir: params.configDir,
+          profileName,
+          address: profile.agent_address,
+          invitationHash: profile.invitation_hash,
+        });
+      } catch {
+        /* The end-time credential check still protects this profile. */
+      }
       // Lets a later run with the same invitation say plainly where it went.
       try {
         writeMailJson(journal, {
