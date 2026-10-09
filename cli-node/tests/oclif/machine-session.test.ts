@@ -11,7 +11,10 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 import { connectAgent } from "../../src/oclif/agent-connect.js";
-import type { disconnectAgent } from "../../src/oclif/agent-disconnect.js";
+import {
+  AgentCredentialChangedError,
+  disconnectAgent,
+} from "../../src/oclif/agent-disconnect.js";
 import type { enrollAgent } from "../../src/oclif/agent-enroll.js";
 import { saveCliCredentials } from "../../src/oclif/auth.js";
 import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
@@ -1126,6 +1129,112 @@ describe("agent session-end after the profile was reconnected", () => {
       release: { reason: "credential_changed" },
     });
     expect(pendingSessionDisconnects(configDir)).toEqual([]);
+  });
+
+  it("never revokes by address when the same address was reconnected with a new credential", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const disconnected: string[] = [];
+    const disconnect = recordingDisconnect(configDir, disconnected);
+    const revoked: string[] = [];
+    const unhooked: string[] = [];
+    const ownProfile = `session-${session}`;
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    // The same address, connected again from a new invitation.
+    removeMailFile(
+      join(agentProfileDirectory(configDir, ownProfile), "connection.json"),
+    );
+    saveConnectedAgentProfile(configDir, ownProfile, {
+      ...profile("agent@example.test"),
+      api_key: ["pconn", "renewed", "x"].join("_"),
+      invitation_hash: "b".repeat(64),
+    });
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: {
+        disconnect,
+        revokeByAddress: async (_dir, address) => {
+          revoked.push(address);
+          return true;
+        },
+        uninstallHook: (options) => {
+          unhooked.push(options.agentAddress);
+          return true;
+        },
+      },
+    });
+    expect(ended.status).toBe("left_connected");
+    expect(disconnected).toEqual([]);
+    expect(revoked).toEqual([]);
+    expect(unhooked).toEqual([]);
+    expect(
+      loadConnectedAgentProfile(configDir, ownProfile)?.invitation_hash,
+    ).toBe("b".repeat(64));
+  });
+
+  it("does not revoke a credential connected between the check and the disconnect", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const ownProfile = `session-${session}`;
+    const calls: string[] = [];
+    let refused: unknown = null;
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: {
+        revokeByAddress: async () => true,
+        uninstallHook: () => true,
+        disconnect: (async (params: Parameters<typeof disconnectAgent>[0]) => {
+          // `agent connect` replaces the credential just before the
+          // disconnect takes its locks.
+          removeMailFile(
+            join(
+              agentProfileDirectory(configDir, ownProfile),
+              "connection.json",
+            ),
+          );
+          saveConnectedAgentProfile(configDir, ownProfile, {
+            ...profile(invited),
+            api_key: ["pconn", "other", "x"].join("_"),
+            invitation_hash: "b".repeat(64),
+          });
+          try {
+            return await disconnectAgent({
+              ...params,
+              fetch: (async (input: RequestInfo | URL) => {
+                calls.push(String(input));
+                return new Response("{}", { status: 500 });
+              }) as typeof fetch,
+            });
+          } catch (error) {
+            refused = error;
+            throw error;
+          }
+        }) as typeof disconnectAgent,
+      },
+    });
+    expect(refused).toBeInstanceOf(AgentCredentialChangedError);
+    expect(calls).toEqual([]);
+    expect(ended.status).toBe("left_connected");
+    expect(
+      loadConnectedAgentProfile(configDir, ownProfile)?.agent_address,
+    ).toBe(invited);
   });
 
   it("applies the same check when a pending disconnect is retried", async () => {

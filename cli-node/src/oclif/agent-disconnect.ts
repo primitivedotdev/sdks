@@ -26,6 +26,9 @@ import {
 
 export class AgentDisconnectError extends Error {}
 
+/** The profile no longer holds the credential the caller expected to revoke. */
+export class AgentCredentialChangedError extends AgentDisconnectError {}
+
 type DisconnectResult = {
   status: "disconnected";
   identity: ReturnType<typeof connectedAgentIdentity>;
@@ -41,6 +44,12 @@ type DisconnectDependencies = {
   ) => Promise<BackgroundListenStatus>;
   now?: () => Date;
   env?: NodeJS.ProcessEnv;
+  /**
+   * Revoke only if the profile still holds this credential when checked
+   * under the setup locks, so a credential connected meanwhile is never
+   * revoked in its place.
+   */
+  expected?: { address: string; invitationHash: string };
 };
 
 function credentialDigest(profile: ConnectedAgentProfile): string {
@@ -223,6 +232,15 @@ export async function disconnectAgent(
     if (!profile)
       throw new AgentDisconnectError(
         "The selected profile changed before disconnect. Nothing was changed.",
+      );
+    if (
+      params.expected &&
+      (profile.agent_address.toLowerCase() !==
+        params.expected.address.toLowerCase() ||
+        profile.invitation_hash !== params.expected.invitationHash)
+    )
+      throw new AgentCredentialChangedError(
+        "The profile holds a different credential than expected. Nothing was changed.",
       );
     const session = boundSession(directory, profile);
     const receiver = session

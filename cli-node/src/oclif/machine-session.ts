@@ -11,7 +11,11 @@ import {
 import { basename, dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { seedAgentInfoNote } from "./agent-connect-flow.js";
-import { AgentDisconnectError, disconnectAgent } from "./agent-disconnect.js";
+import {
+  AgentCredentialChangedError,
+  AgentDisconnectError,
+  disconnectAgent,
+} from "./agent-disconnect.js";
 import { enrollAgent } from "./agent-enroll.js";
 import { verificationReplySubmitted } from "./agent-setup.js";
 import { refreshStoredCliCredentials } from "./api-client.js";
@@ -618,16 +622,20 @@ function addressRevokedLocally(
  * the registered agent's own exact-session hooks (they are keyed by its
  * address, so the current agent's hooks are untouched), and revoke the
  * registered agent by address if nothing confirms it is already revoked.
+ * When the current credential has the registered address (the same address
+ * reconnected with a new credential), hooks and a revocation by address would
+ * both hit the current agent, so nothing is touched.
  */
 async function cleanUpReplacedRegistration(
   configDir: string,
   record: SessionRecord,
+  current: ConnectedAgentProfile,
   deps: SessionDisconnectDependencies,
   env: Env,
   fetchImpl?: typeof fetch,
 ): Promise<void> {
   const address = record.address;
-  if (!address) return;
+  if (!address || sameAddress(address, current.agent_address)) return;
   if (record.runtime === "claude")
     try {
       deps.uninstallHook({
@@ -659,22 +667,37 @@ async function disconnectSessionAgent(
   try {
     const current = loadConnectedAgentProfile(configDir, record.profile);
     if (current) {
-      if (!holdsRegisteredCredential(configDir, record, current)) {
+      const release = async (holder: ConnectedAgentProfile) => {
         await cleanUpReplacedRegistration(
           configDir,
           record,
+          holder,
           deps,
           env,
           fetchImpl,
         );
-        return "released";
+        return "released" as const;
+      };
+      if (!holdsRegisteredCredential(configDir, record, current))
+        return await release(current);
+      try {
+        // Rechecked under the locks `agent connect` also takes, so a
+        // credential connected after the check above is never revoked.
+        await deps.disconnect({
+          configDir,
+          profileName: record.profile,
+          fetch: fetchImpl,
+          env: env as NodeJS.ProcessEnv,
+          expected: {
+            address: current.agent_address,
+            invitationHash: current.invitation_hash,
+          },
+        });
+      } catch (error) {
+        if (!(error instanceof AgentCredentialChangedError)) throw error;
+        const holder = loadConnectedAgentProfile(configDir, record.profile);
+        return holder ? await release(holder) : "pending";
       }
-      await deps.disconnect({
-        configDir,
-        profileName: record.profile,
-        fetch: fetchImpl,
-        env: env as NodeJS.ProcessEnv,
-      });
       return "done";
     }
     if (disconnectConfirmedLocally(configDir, record.profile)) return "done";
