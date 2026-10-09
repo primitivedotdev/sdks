@@ -817,6 +817,17 @@ function buildFlags(operation: PrimitiveOperationManifest): {
       flags[name] = bodyFieldFlag(field, aliasesForOperation?.[field.name]);
       bodyFieldFlagToProperty.set(name, field.name);
     }
+
+    // CLI-only body flags for fields the request schema does not
+    // declare. A generated flag of the same name wins, so once the
+    // field lands in the schema this entry becomes inert.
+    const extraFlags = OPERATION_EXTRA_BODY_FLAGS[operation.sdkName] ?? {};
+    for (const [name, extra] of Object.entries(extraFlags)) {
+      if (RESERVED_FLAG_NAMES.has(name)) continue;
+      if (flags[name] !== undefined) continue;
+      flags[name] = Flags.boolean({ description: extra.description });
+      bodyFieldFlagToProperty.set(name, extra.property);
+    }
   }
 
   if (EVENT_TYPES_FLAG_OPERATIONS.has(operation.sdkName)) {
@@ -1023,6 +1034,51 @@ export const OPERATION_FLAG_ALIASES: Record<
   Record<string, string[]>
 > = {
   verifyAgentSignup: { verification_code: ["code"] },
+};
+
+export const MAIL_RELAY_FLAG_DESCRIPTION =
+  "Keep your existing mailbox provider: the domain's MX points at a Primitive mail relay, which forwards mail to your mailboxes and stores a copy in Primitive. Requires mail relay to be enabled for your account. Google Workspace only for now.";
+
+// CLI-only boolean body flags keyed by operation.sdkName, then by
+// kebab-case flag name. Each flag, when passed, sets `property` to
+// true in the request body. Use for request fields the server accepts
+// but the published request schema does not declare yet, so the flag
+// does not show up in the generated SDK types.
+export const OPERATION_EXTRA_BODY_FLAGS: Record<
+  string,
+  Record<string, { property: string; description: string }>
+> = {
+  addDomain: {
+    "mail-relay": {
+      property: "mail_relay",
+      description: MAIL_RELAY_FLAG_DESCRIPTION,
+    },
+  },
+};
+
+export const MAIL_RELAY_NOT_ENABLED_MESSAGE =
+  "Mail relay is not enabled for this account, so the domain was not added. Retry without --mail-relay to point the domain's MX at Primitive directly, or ask Primitive to enable mail relay for your account.";
+export const MAIL_RELAY_UNAVAILABLE_MESSAGE =
+  "No mail relay is available on this API server right now, so the domain was not added. Retry later, or retry without --mail-relay to point the domain's MX at Primitive directly.";
+
+// Per-operation error explanations keyed by operation.sdkName. Called
+// with the error code and the request body that was sent; returns a
+// line to print after the error envelope, or undefined for none.
+export const OPERATION_ERROR_HINTS: Record<
+  string,
+  (code: string | undefined, body: unknown) => string | undefined
+> = {
+  addDomain: (code, body) => {
+    if (code === "mail_relay_unavailable")
+      return MAIL_RELAY_UNAVAILABLE_MESSAGE;
+    const mailRelay =
+      body !== null &&
+      typeof body === "object" &&
+      (body as { mail_relay?: unknown }).mail_relay === true;
+    if (code === "feature_disabled" && mailRelay)
+      return MAIL_RELAY_NOT_ENABLED_MESSAGE;
+    return undefined;
+  },
 };
 
 // Per-operation post-success hooks keyed by operation.sdkName. Fires
@@ -1249,6 +1305,13 @@ export function createOperationCommand(
         if (result.error) {
           const errorPayload = extractErrorPayload(result.error);
           writeErrorWithHints(errorPayload);
+          const operationErrorHint = OPERATION_ERROR_HINTS[operation.sdkName]?.(
+            extractErrorCode(errorPayload),
+            body,
+          );
+          if (operationErrorHint) {
+            process.stderr.write(`${operationErrorHint}\n`);
+          }
           if (replyStateSurface && isAwaitingRejectedError(errorPayload)) {
             process.stderr.write(
               `${awaitingRejectedError(replyStateSurface).message}\n`,
