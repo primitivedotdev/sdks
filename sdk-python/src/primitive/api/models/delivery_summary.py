@@ -29,30 +29,40 @@ class DeliverySummary:
     """ 
         Attributes:
             id (str): Delivery ID (numeric string)
-            email_id (UUID):
+            email_id (None | UUID): The inbound email this delivery is about. Null for deliveries that are not about a
+                received email, such as `sent_email.*` events.
             org_id (UUID):
             endpoint_id (UUID):
-            endpoint_url (str):
+            endpoint_url (None | str): The endpoint's URL. For a function-backed endpoint, an opaque `function://<id>`
+                identifier rather than a callable URL.
             status (DeliverySummaryStatus):
             attempt_count (int):
             created_at (datetime.datetime):
             updated_at (datetime.datetime):
+            event_type (None | str | Unset): The delivered event type, for example `email.received` or
+                `sent_email.delivered`. Null for deliveries recorded before event types existed.
+            sent_email_id (None | Unset | UUID): The sent email a `sent_email.*` delivery is about. Null for every other
+                delivery.
             duration_ms (int | None | Unset):
             last_error (None | str | Unset):
-            email (DeliverySummaryEmailType0 | None | Unset):
+            last_error_code (None | str | Unset): A stable code for the last failure, for example `http_500`.
+            email (DeliverySummaryEmailType0 | None | Unset): Null for deliveries that are not about a received email.
      """
 
     id: str
-    email_id: UUID
+    email_id: None | UUID
     org_id: UUID
     endpoint_id: UUID
-    endpoint_url: str
+    endpoint_url: None | str
     status: DeliverySummaryStatus
     attempt_count: int
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    event_type: None | str | Unset = UNSET
+    sent_email_id: None | Unset | UUID = UNSET
     duration_ms: int | None | Unset = UNSET
     last_error: None | str | Unset = UNSET
+    last_error_code: None | str | Unset = UNSET
     email: DeliverySummaryEmailType0 | None | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -64,12 +74,17 @@ class DeliverySummary:
         from ..models.delivery_summary_email_type_0 import DeliverySummaryEmailType0 # noqa: PLC0415
         id = self.id
 
-        email_id = str(self.email_id)
+        email_id: None | str
+        if isinstance(self.email_id, UUID):
+            email_id = str(self.email_id)
+        else:
+            email_id = self.email_id
 
         org_id = str(self.org_id)
 
         endpoint_id = str(self.endpoint_id)
 
+        endpoint_url: None | str
         endpoint_url = self.endpoint_url
 
         status = self.status.value
@@ -79,6 +94,20 @@ class DeliverySummary:
         created_at = self.created_at.isoformat()
 
         updated_at = self.updated_at.isoformat()
+
+        event_type: None | str | Unset
+        if isinstance(self.event_type, Unset):
+            event_type = UNSET
+        else:
+            event_type = self.event_type
+
+        sent_email_id: None | str | Unset
+        if isinstance(self.sent_email_id, Unset):
+            sent_email_id = UNSET
+        elif isinstance(self.sent_email_id, UUID):
+            sent_email_id = str(self.sent_email_id)
+        else:
+            sent_email_id = self.sent_email_id
 
         duration_ms: int | None | Unset
         if isinstance(self.duration_ms, Unset):
@@ -91,6 +120,12 @@ class DeliverySummary:
             last_error = UNSET
         else:
             last_error = self.last_error
+
+        last_error_code: None | str | Unset
+        if isinstance(self.last_error_code, Unset):
+            last_error_code = UNSET
+        else:
+            last_error_code = self.last_error_code
 
         email: dict[str, Any] | None | Unset
         if isinstance(self.email, Unset):
@@ -114,10 +149,16 @@ class DeliverySummary:
             "created_at": created_at,
             "updated_at": updated_at,
         })
+        if event_type is not UNSET:
+            field_dict["event_type"] = event_type
+        if sent_email_id is not UNSET:
+            field_dict["sent_email_id"] = sent_email_id
         if duration_ms is not UNSET:
             field_dict["duration_ms"] = duration_ms
         if last_error is not UNSET:
             field_dict["last_error"] = last_error
+        if last_error_code is not UNSET:
+            field_dict["last_error_code"] = last_error_code
         if email is not UNSET:
             field_dict["email"] = email
 
@@ -131,9 +172,22 @@ class DeliverySummary:
         d = dict(src_dict)
         id = d.pop("id")
 
-        email_id = UUID(d.pop("email_id"))
+        def _parse_email_id(data: object) -> None | UUID:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                email_id_type_0 = UUID(data)
 
 
+
+                return email_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | UUID, data)
+
+        email_id = _parse_email_id(d.pop("email_id"))
 
 
         org_id = UUID(d.pop("org_id"))
@@ -146,7 +200,13 @@ class DeliverySummary:
 
 
 
-        endpoint_url = d.pop("endpoint_url")
+        def _parse_endpoint_url(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        endpoint_url = _parse_endpoint_url(d.pop("endpoint_url"))
+
 
         status = DeliverySummaryStatus(d.pop("status"))
 
@@ -163,6 +223,36 @@ class DeliverySummary:
         updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
 
 
+
+
+        def _parse_event_type(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        event_type = _parse_event_type(d.pop("event_type", UNSET))
+
+
+        def _parse_sent_email_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                sent_email_id_type_0 = UUID(data)
+
+
+
+                return sent_email_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        sent_email_id = _parse_sent_email_id(d.pop("sent_email_id", UNSET))
 
 
         def _parse_duration_ms(data: object) -> int | None | Unset:
@@ -183,6 +273,16 @@ class DeliverySummary:
             return cast(None | str | Unset, data)
 
         last_error = _parse_last_error(d.pop("last_error", UNSET))
+
+
+        def _parse_last_error_code(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        last_error_code = _parse_last_error_code(d.pop("last_error_code", UNSET))
 
 
         def _parse_email(data: object) -> DeliverySummaryEmailType0 | None | Unset:
@@ -215,8 +315,11 @@ class DeliverySummary:
             attempt_count=attempt_count,
             created_at=created_at,
             updated_at=updated_at,
+            event_type=event_type,
+            sent_email_id=sent_email_id,
             duration_ms=duration_ms,
             last_error=last_error,
+            last_error_code=last_error_code,
             email=email,
         )
 

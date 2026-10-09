@@ -2900,6 +2900,10 @@ export type SentEmailSummary = {
      * Bare email address parsed from `to_header`.
      */
     to_address: string;
+    /**
+     * Every recipient of the send, To, Cc and Bcc together, each address counted once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not the sender, because the count would reveal Bcc recipients. The `sent_email` object of the `sent_email.*` webhook events carries the same field.
+     */
+    recipient_count?: number | null;
     subject: string;
     /**
      * Total UTF-8 byte length of `body_text` + `body_html`.
@@ -3960,6 +3964,9 @@ export type Endpoint = {
      * Endpoint-specific filtering rules
      */
     rules: {
+        /**
+         * Event types this endpoint subscribes to, matched by exact string. Omitted means every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the field instead.
+         */
         event_types?: Array<string>;
         [key: string]: unknown;
     };
@@ -4031,6 +4038,9 @@ export type CreateEndpointInput = {
      * Endpoint-specific filtering rules
      */
     rules?: {
+        /**
+         * Event types this endpoint subscribes to, matched by exact string. Omitted means every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the field instead.
+         */
         event_types?: Array<string>;
         [key: string]: unknown;
     };
@@ -4055,6 +4065,9 @@ export type UpdateEndpointInput = {
     enabled?: boolean;
     domain_id?: string | null;
     rules?: {
+        /**
+         * Event types this endpoint subscribes to, matched by exact string. Omitted means every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the field instead.
+         */
         event_types?: Array<string>;
         [key: string]: unknown;
     };
@@ -4418,19 +4431,40 @@ export type DeliverySummary = {
      * Delivery ID (numeric string)
      */
     id: string;
-    email_id: string;
+    /**
+     * The inbound email this delivery is about. Null for deliveries that are not about a received email, such as `sent_email.*` events.
+     */
+    email_id: string | null;
+    /**
+     * The delivered event type, for example `email.received` or `sent_email.delivered`. Null for deliveries recorded before event types existed.
+     */
+    event_type?: string | null;
+    /**
+     * The sent email a `sent_email.*` delivery is about. Null for every other delivery.
+     */
+    sent_email_id?: string | null;
     org_id: string;
     endpoint_id: string;
-    endpoint_url: string;
-    status: 'pending' | 'delivered' | 'header_confirmed' | 'failed';
+    /**
+     * The endpoint's URL. For a function-backed endpoint, an opaque `function://<id>` identifier rather than a callable URL.
+     */
+    endpoint_url: string | null;
+    status: 'pending' | 'delivered' | 'header_confirmed' | 'failed' | 'skipped_by_rules';
     attempt_count: number;
     duration_ms?: number | null;
     last_error?: string | null;
+    /**
+     * A stable code for the last failure, for example `http_500`.
+     */
+    last_error_code?: string | null;
     created_at: string;
     updated_at: string;
+    /**
+     * Null for deliveries that are not about a received email.
+     */
     email?: {
         sender: string;
-        recipient: string;
+        recipient: string | null;
         subject?: string | null;
     } | null;
 };
@@ -8610,9 +8644,17 @@ export type ListDeliveriesData = {
          */
         email_id?: string;
         /**
+         * Only deliveries of this event type, for example `sent_email.failed`. Deliveries recorded before event types existed have none and never match.
+         */
+        event_type?: string;
+        /**
+         * Only deliveries of `sent_email.*` events about this sent email.
+         */
+        sent_email_id?: string;
+        /**
          * Filter by delivery status
          */
-        status?: 'pending' | 'delivered' | 'header_confirmed' | 'failed';
+        status?: 'pending' | 'delivered' | 'header_confirmed' | 'failed' | 'skipped_by_rules';
         /**
          * Filter deliveries created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected.
          */

@@ -10,6 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = ROOT / "src" / "primitive" / "schemas" / "email_received_event.schema.json"
 OUTPUT = ROOT / "src" / "primitive" / "models_generated.py"
+SENT_EMAIL_SCHEMA = ROOT / "src" / "primitive" / "schemas" / "sent_email_event.schema.json"
+SENT_EMAIL_OUTPUT = ROOT / "src" / "primitive" / "sent_email_models_generated.py"
 
 
 def _should_fall_back_to_system_ruff(result: subprocess.CompletedProcess[str]) -> bool:
@@ -178,18 +180,49 @@ def _patch_generated_models() -> None:
     OUTPUT.write_text(text)
 
 
-def main() -> None:
+def _patch_sent_email_models() -> None:
+    """Share the email models' BaseModel and RootModel, so both payload
+    families dump the same way, and drop the unnamed root wrapper."""
+    text = SENT_EMAIL_OUTPUT.read_text()
+
+    text = _replace_once(
+        text,
+        "from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel\n",
+        "from pydantic import AwareDatetime, ConfigDict, Field\n\n"
+        "from .models_generated import BaseModel, RootModel\n",
+    )
+    if "from enum import StrEnum\n" in text:
+        text = text.replace(
+            "from enum import StrEnum\n", "from ._compat import StrEnum\n", 1
+        )
+    elif "from enum import Enum\n" in text:
+        text = text.replace("from enum import Enum\n", "from ._compat import StrEnum\n", 1)
+        text = text.replace("(Enum):", "(StrEnum):")
+    text = text.replace("class Event(StrEnum):", "class SentEmailResultEventType(StrEnum):")
+    text = text.replace("    event: Event\n", "    event: SentEmailResultEventType\n")
+    text = text.replace("class Result(StrEnum):", "class SentEmailResult(StrEnum):")
+    text = text.replace("    result: Result\n", "    result: SentEmailResult\n")
+    text = _replace_once(
+        text,
+        "\n\nclass Model(RootModel[SentEmailEvent]):\n    root: SentEmailEvent\n",
+        "\n",
+    )
+
+    SENT_EMAIL_OUTPUT.write_text(text)
+
+
+def _generate(schema: Path, output: Path) -> None:
     subprocess.run(
         [
             sys.executable,
             "-m",
             "datamodel_code_generator",
             "--input",
-            str(SCHEMA),
+            str(schema),
             "--input-file-type",
             "jsonschema",
             "--output",
-            str(OUTPUT),
+            str(output),
             "--output-model-type",
             "pydantic_v2.BaseModel",
             "--snake-case-field",
@@ -207,9 +240,18 @@ def main() -> None:
         ],
         check=True,
     )
+
+
+def main() -> None:
+    _generate(SCHEMA, OUTPUT)
     _patch_generated_models()
     _run_ruff("check", "--fix", str(OUTPUT))
     _run_ruff("format", str(OUTPUT))
+
+    _generate(SENT_EMAIL_SCHEMA, SENT_EMAIL_OUTPUT)
+    _patch_sent_email_models()
+    _run_ruff("check", "--fix", str(SENT_EMAIL_OUTPUT))
+    _run_ruff("format", str(SENT_EMAIL_OUTPUT))
 
 
 if __name__ == "__main__":

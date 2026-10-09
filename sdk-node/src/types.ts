@@ -176,15 +176,18 @@ import type {
   PaymentFailedEvent,
   PaymentSettledEvent,
 } from "./webhook/events.js";
+import type { SentEmailEvent } from "./webhook/sent-email-events.js";
 
 /**
  * The webhook events the SDK returns as fully typed values. The email.received
- * body is schema-validated; the payment.* and interaction.x402.* shapes are
- * keyed off the `X-Webhook-Event` header and surfaced with a canonical `event`
- * field so consumers can branch on a single discriminator.
+ * and sent_email.* bodies are schema-validated; the payment.* and
+ * interaction.x402.* shapes are keyed off the `X-Webhook-Event` header and
+ * surfaced with a canonical `event` field so consumers can branch on a single
+ * discriminator.
  */
 export type KnownWebhookEvent =
   | EmailReceivedEvent
+  | SentEmailEvent
   | PaymentSettledEvent
   | PaymentFailedEvent
   | InteractionX402Event;

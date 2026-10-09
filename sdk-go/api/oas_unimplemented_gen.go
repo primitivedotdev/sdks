@@ -1346,8 +1346,12 @@ func (UnimplementedHandler) ListDefaultNetworkMembers(ctx context.Context, param
 
 // ListDeliveries implements listDeliveries operation.
 //
-// Returns a paginated list of webhook delivery attempts. Each delivery
-// includes a nested `email` object with sender, recipient, and subject.
+// Returns a paginated list of webhook delivery attempts, newest first.
+// A delivery of an inbound email includes a nested `email` object with
+// sender, recipient, and subject. A delivery of an opt-in
+// `sent_email.*` event has `email_id` and `email` set to null and
+// `sent_email_id` set to the send it is about. Filter by `event_type`
+// and `sent_email_id` to find the deliveries of one send.
 //
 // GET /webhooks/deliveries
 func (UnimplementedHandler) ListDeliveries(ctx context.Context, params ListDeliveriesParams) (r ListDeliveriesRes, _ error) {
@@ -1862,11 +1866,15 @@ func (UnimplementedHandler) ReorderRoutes(ctx context.Context, req *ReorderRoute
 
 // ReplayDelivery implements replayDelivery operation.
 //
-// Re-sends the stored webhook payload from a previous delivery attempt.
-// If the original endpoint is still active, it is targeted. If the
-// original endpoint was deleted, the oldest active endpoint is used.
-// Deactivated endpoints cannot be replayed to. Rate limited per-org,
-// sharing an org-wide budget with email replays.
+// Re-sends a previous delivery to its original endpoint. If that
+// endpoint was deleted or deactivated, the replay is rejected.
+// Supports inbound email deliveries and `sent_email.*` deliveries.
+// An inbound email delivery is replayed with its original stored
+// payload and event id. A `sent_email.*` delivery is replayed with the
+// same event id but a payload rebuilt from the send as it is now; it
+// is rejected if the send was deleted or the endpoint is no longer an
+// active http endpoint. Rate limited per-org, sharing an org-wide
+// budget with email replays.
 //
 // POST /webhooks/deliveries/{id}/replay
 func (UnimplementedHandler) ReplayDelivery(ctx context.Context, params ReplayDeliveryParams) (r ReplayDeliveryRes, _ error) {

@@ -30,6 +30,17 @@ import {
 } from "./automated-filter.js";
 import { requireDefaultLoginProfile } from "./connected-agent-profile.js";
 import {
+  bodyHasRules,
+  currentEndpointRules,
+  EVENT_TYPES_FLAG_DESCRIPTION,
+  EVENT_TYPES_FLAG_OPERATIONS,
+  EventTypesFlagError,
+  parseEventTypesFlag,
+  unknownEventTypes,
+  unknownEventTypesWarning,
+  withEventTypes,
+} from "./endpoint-event-types.js";
+import {
   type ListEndpointsFn,
   maybeWriteFunctionEndpointRedirect,
 } from "./endpoints-test-redirect.js";
@@ -808,6 +819,13 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     }
   }
 
+  if (EVENT_TYPES_FLAG_OPERATIONS.has(operation.sdkName)) {
+    flags["event-types"] = Flags.string({
+      description: EVENT_TYPES_FLAG_DESCRIPTION,
+      multiple: true,
+    });
+  }
+
   if (operation.binaryResponse) {
     flags.output = Flags.string({
       description: "Write binary response bytes to a file",
@@ -848,6 +866,35 @@ function collectBodyFieldFlags(
     result[property] = value;
   }
   return result;
+}
+
+// Fold `--event-types` into the request body's rules.event_types. On update
+// it starts from the endpoint's current rules unless the body already carries
+// rules, because PATCH replaces rules as a whole.
+async function applyEventTypesFlag(params: {
+  body: unknown;
+  values: string[];
+  endpointId: string | undefined;
+  listEndpoints: ListEndpointsFn;
+  quiet: boolean;
+}): Promise<Record<string, unknown>> {
+  try {
+    const eventTypes = parseEventTypesFlag(params.values);
+    const unknown = unknownEventTypes(eventTypes);
+    if (unknown.length > 0 && !params.quiet) {
+      process.stderr.write(unknownEventTypesWarning(unknown));
+    }
+    const baseRules =
+      params.endpointId !== undefined && !bodyHasRules(params.body)
+        ? await currentEndpointRules(params.endpointId, params.listEndpoints)
+        : {};
+    return withEventTypes(params.body, eventTypes, baseRules);
+  } catch (error) {
+    if (error instanceof EventTypesFlagError) {
+      throw new Errors.CLIError(error.message);
+    }
+    throw error;
+  }
 }
 
 function collectValues(
@@ -1129,6 +1176,27 @@ export function createOperationCommand(
           } else {
             body = explicit;
           }
+        }
+
+        if (
+          EVENT_TYPES_FLAG_OPERATIONS.has(operation.sdkName) &&
+          Array.isArray(parsedFlags["event-types"])
+        ) {
+          body = await applyEventTypesFlag({
+            body,
+            values: parsedFlags["event-types"] as string[],
+            endpointId:
+              operation.sdkName === "updateEndpoint" &&
+              typeof parsedFlags.id === "string"
+                ? parsedFlags.id
+                : undefined,
+            listEndpoints: () =>
+              operations.listEndpoints({
+                client: apiClient.client,
+                responseStyle: "fields",
+              }) as ReturnType<ListEndpointsFn>,
+            quiet: parsedFlags.json === true,
+          });
         }
 
         if (operation.bodyRequired && body === undefined) {

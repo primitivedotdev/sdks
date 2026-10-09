@@ -93,11 +93,15 @@ def sync_detailed(
 ) -> Response[ErrorResponse | ReplayDeliveryResponse200]:
     """ Replay a webhook delivery
 
-     Re-sends the stored webhook payload from a previous delivery attempt.
-    If the original endpoint is still active, it is targeted. If the
-    original endpoint was deleted, the oldest active endpoint is used.
-    Deactivated endpoints cannot be replayed to. Rate limited per-org,
-    sharing an org-wide budget with email replays.
+     Re-sends a previous delivery to its original endpoint. If that
+    endpoint was deleted or deactivated, the replay is rejected.
+    Supports inbound email deliveries and `sent_email.*` deliveries.
+    An inbound email delivery is replayed with its original stored
+    payload and event id. A `sent_email.*` delivery is replayed with the
+    same event id but a payload rebuilt from the send as it is now; it
+    is rejected if the send was deleted or the endpoint is no longer an
+    active http endpoint. Rate limited per-org, sharing an org-wide
+    budget with email replays.
 
     Args:
         id (str):
@@ -130,11 +134,15 @@ def sync(
 ) -> ErrorResponse | ReplayDeliveryResponse200 | None:
     """ Replay a webhook delivery
 
-     Re-sends the stored webhook payload from a previous delivery attempt.
-    If the original endpoint is still active, it is targeted. If the
-    original endpoint was deleted, the oldest active endpoint is used.
-    Deactivated endpoints cannot be replayed to. Rate limited per-org,
-    sharing an org-wide budget with email replays.
+     Re-sends a previous delivery to its original endpoint. If that
+    endpoint was deleted or deactivated, the replay is rejected.
+    Supports inbound email deliveries and `sent_email.*` deliveries.
+    An inbound email delivery is replayed with its original stored
+    payload and event id. A `sent_email.*` delivery is replayed with the
+    same event id but a payload rebuilt from the send as it is now; it
+    is rejected if the send was deleted or the endpoint is no longer an
+    active http endpoint. Rate limited per-org, sharing an org-wide
+    budget with email replays.
 
     Args:
         id (str):
@@ -162,11 +170,15 @@ async def asyncio_detailed(
 ) -> Response[ErrorResponse | ReplayDeliveryResponse200]:
     """ Replay a webhook delivery
 
-     Re-sends the stored webhook payload from a previous delivery attempt.
-    If the original endpoint is still active, it is targeted. If the
-    original endpoint was deleted, the oldest active endpoint is used.
-    Deactivated endpoints cannot be replayed to. Rate limited per-org,
-    sharing an org-wide budget with email replays.
+     Re-sends a previous delivery to its original endpoint. If that
+    endpoint was deleted or deactivated, the replay is rejected.
+    Supports inbound email deliveries and `sent_email.*` deliveries.
+    An inbound email delivery is replayed with its original stored
+    payload and event id. A `sent_email.*` delivery is replayed with the
+    same event id but a payload rebuilt from the send as it is now; it
+    is rejected if the send was deleted or the endpoint is no longer an
+    active http endpoint. Rate limited per-org, sharing an org-wide
+    budget with email replays.
 
     Args:
         id (str):
@@ -199,11 +211,15 @@ async def asyncio(
 ) -> ErrorResponse | ReplayDeliveryResponse200 | None:
     """ Replay a webhook delivery
 
-     Re-sends the stored webhook payload from a previous delivery attempt.
-    If the original endpoint is still active, it is targeted. If the
-    original endpoint was deleted, the oldest active endpoint is used.
-    Deactivated endpoints cannot be replayed to. Rate limited per-org,
-    sharing an org-wide budget with email replays.
+     Re-sends a previous delivery to its original endpoint. If that
+    endpoint was deleted or deactivated, the replay is rejected.
+    Supports inbound email deliveries and `sent_email.*` deliveries.
+    An inbound email delivery is replayed with its original stored
+    payload and event id. A `sent_email.*` delivery is replayed with the
+    same event id but a payload rebuilt from the send as it is now; it
+    is rejected if the send was deleted or the endpoint is no longer an
+    active http endpoint. Rate limited per-org, sharing an org-wide
+    budget with email replays.
 
     Args:
         id (str):

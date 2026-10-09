@@ -2,10 +2,11 @@
 
 Primitive posts every webhook with the event name in the ``X-Webhook-Event``
 HEADER, not in the body. The stored payload is sent verbatim with no envelope:
-an ``email.*`` body carries ``event``, a ``payment.*`` body carries the name in
-``type``, and an ``interaction.*`` body is just ``{"interaction": {...}}`` with no
-event/type field at all. The HEADER is therefore the only reliable discriminator
-across all three families, which is why the parser keys on it.
+an ``email.*`` or ``sent_email.*`` body carries ``event``, a ``payment.*`` body
+carries the name in ``type``, and an ``interaction.*`` body is just
+``{"interaction": {...}}`` with no event/type field at all. The HEADER is
+therefore the only reliable discriminator across all the families, which is
+why the parser keys on it.
 """
 
 from __future__ import annotations
@@ -25,6 +26,15 @@ EMAIL_EVENT_TYPES: tuple[str, ...] = (
     "email.tls_report",
     "email.dmarc_report",
     "email.dmarc_failure",
+)
+
+#: The four opt-in ``sent_email.*`` events (subject = a send). An endpoint
+#: receives them only when its ``rules.event_types`` lists them.
+SENT_EMAIL_EVENT_TYPES: tuple[str, ...] = (
+    "sent_email.accepted",
+    "sent_email.delivered",
+    "sent_email.failed",
+    "sent_email.completed",
 )
 
 #: The two x402 settlement-notification events (subject = a payment).
@@ -53,6 +63,7 @@ INTERACTION_EVENT_TYPES: tuple[str, ...] = (
 #: The full enumerated catalog of every current webhook event type.
 WEBHOOK_EVENT_TYPES: tuple[str, ...] = (
     *EMAIL_EVENT_TYPES,
+    *SENT_EMAIL_EVENT_TYPES,
     *PAYMENT_EVENT_TYPES,
     *INTERACTION_EVENT_TYPES,
 )

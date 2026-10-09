@@ -66,6 +66,15 @@ def test_shared_webhook_validation_cases() -> None:
                 relay = event.email.relay
                 actual_relay = None if relay is None else relay.model_dump(mode="json")
                 assert actual_relay == case["expected"]["relay"], case["name"]
+            if "bounce" in case["expected"]:
+                bounce = event.email.analysis.bounce
+                actual_bounce = {
+                    "sent_email_id": None if bounce is None else bounce.sent_email_id,
+                    "failed_recipients": (
+                        None if bounce is None else bounce.failed_recipients
+                    ),
+                }
+                assert actual_bounce == case["expected"]["bounce"], case["name"]
             safe_result = safe_validate_email_received_event(case["payload"])
             assert safe_result.success is True
         else:

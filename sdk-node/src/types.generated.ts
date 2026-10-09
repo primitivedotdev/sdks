@@ -737,9 +737,19 @@ category: ("mailbox_does_not_exist" | "domain_does_not_exist" | "domain_not_acce
  */
 classified_by: ("status_code" | "smtp_code" | "pattern" | "provider" | "none")
 /**
- * The recipient address that failed, if the report identifies one.
+ * The first failed recipient, as the bounce wrote it, if the report identifies one. The status and diagnostic fields describe this recipient.
  */
 failed_recipient: (string | null)
+/**
+ * Every address the bounce reports as failed, lowercased and deduplicated, up to 100. Includes both the final and the original recipient when an alias or forward rewrote the address. Empty when the bounce names no usable address. Absent on payloads built before this field existed.
+ *
+ * @maxItems 100
+ */
+failed_recipients?: string[]
+/**
+ * The id of your send this bounce belongs to (the same id as `GET /v1/sent-emails/{id}`), or null when it could not be linked. Linking is best effort: a bounce links only when it quotes the original Message-ID of a send from your organization and one of its failed recipients was on that send. Absent on payloads built before this field existed.
+ */
+sent_email_id?: (string | null)
 /**
  * SMTP reply code (e.g. `550`), if reported.
  */
@@ -1278,9 +1288,19 @@ category: ("mailbox_does_not_exist" | "domain_does_not_exist" | "domain_not_acce
  */
 classified_by: ("status_code" | "smtp_code" | "pattern" | "provider" | "none")
 /**
- * The recipient address that failed, if the report identifies one.
+ * The first failed recipient, as the bounce wrote it, if the report identifies one. The status and diagnostic fields describe this recipient.
  */
 failed_recipient: (string | null)
+/**
+ * Every address the bounce reports as failed, lowercased and deduplicated, up to 100. Includes both the final and the original recipient when an alias or forward rewrote the address. Empty when the bounce names no usable address. Absent on payloads built before this field existed.
+ *
+ * @maxItems 100
+ */
+failed_recipients?: string[]
+/**
+ * The id of your send this bounce belongs to (the same id as `GET /v1/sent-emails/{id}`), or null when it could not be linked. Linking is best effort: a bounce links only when it quotes the original Message-ID of a send from your organization and one of its failed recipients was on that send. Absent on payloads built before this field existed.
+ */
+sent_email_id?: (string | null)
 /**
  * SMTP reply code (e.g. `550`), if reported.
  */

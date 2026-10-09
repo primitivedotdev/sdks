@@ -48,6 +48,10 @@ func validationIssuePath(issue gojsonschema.ResultError) string {
 }
 
 func createValidationError(issues []gojsonschema.ResultError) *WebhookValidationError {
+	return createSchemaValidationError(issues, "EmailReceivedEventJSONSchema")
+}
+
+func createSchemaValidationError(issues []gojsonschema.ResultError, schemaName string) *WebhookValidationError {
 	validationIssues := make([]ValidationIssue, 0, len(issues))
 	for _, issue := range issues {
 		validationIssues = append(validationIssues, ValidationIssue{
@@ -60,7 +64,7 @@ func createValidationError(issues []gojsonschema.ResultError) *WebhookValidation
 		return NewWebhookValidationError(
 			"payload",
 			"Webhook payload failed schema validation",
-			"Check the structure of the webhook payload against \"EmailReceivedEventJSONSchema\".",
+			fmt.Sprintf("Check the structure of the webhook payload against \"%s\".", schemaName),
 			validationIssues,
 		)
 	}

@@ -666,6 +666,31 @@ For most app-code callers, `primitive.receive(...)` from the root import handles
 
 For the full reference (response codes, replay protection details), see the API-level "Webhook signing" section in the [OpenAPI spec](https://api.primitive.dev/v1/openapi).
 
+### Sent email webhook events
+
+Endpoints can also receive events about mail you send: `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed` and `sent_email.completed`. They are opt-in: an endpoint receives them only when its `rules.event_types` lists them (with the CLI, `primitive endpoints create --url <url> --event-types sent_email.*`). An endpoint that lists them and also handles inbound mail must keep `email.received` in the list.
+
+Each body carries `event`, and is validated against the `sent_email.*` JSON schema when parsed. Every recipient (To, Cc and Bcc) gets exactly one `sent_email.delivered` or `sent_email.failed` with `scope` `"recipient"`, and `sent_email.completed` carries the totals once every recipient is final. Deduplicate on the event `id` (equal to the `X-Webhook-Id` header), and check that `delivery.endpoint_id` is the endpoint that received the request.
+
+```typescript
+import {
+  handleWebhookEvent,
+  isSentEmailCompletedEvent,
+  isSentEmailFailedEvent,
+} from "@primitivedotdev/sdk";
+
+const event = handleWebhookEvent({ body: rawBody, headers, secret });
+
+if (isSentEmailFailedEvent(event) && event.scope === "recipient") {
+  // event.recipient.type is "to", "cc" or "bcc"
+  console.log(event.recipient.address, event.outcome.smtp_enhanced_status_code);
+} else if (isSentEmailCompletedEvent(event)) {
+  const { recipient_count, delivered, failed } = event.summary;
+}
+```
+
+`validateSentEmailEvent` / `safeValidateSentEmailEvent` validate an already parsed body, and the schema is exported as `sentEmailEventJsonSchema`. An `email.bounced` event's `email.analysis.bounce` carries `sent_email_id` (the send the bounce belongs to, or null when it could not be linked) and `failed_recipients` (every failed address, up to 100).
+
 ### Payment and interaction webhook events
 
 Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{ interaction: { ... } }` with no event/type field at all.
@@ -697,6 +722,7 @@ if (isPaymentSettledEvent(event)) {
 The full catalog of header values is the `WebhookEventType` union, also exported as the `WEBHOOK_EVENT_TYPES` array:
 
 - `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
+- `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed` (opt-in)
 - `payment.settled`, `payment.failed`
 - `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`

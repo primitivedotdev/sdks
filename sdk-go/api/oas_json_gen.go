@@ -25677,7 +25677,19 @@ func (s *DeliverySummary) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("email_id")
-		json.EncodeUUID(e, s.EmailID)
+		s.EmailID.Encode(e)
+	}
+	{
+		if s.EventType.Set {
+			e.FieldStart("event_type")
+			s.EventType.Encode(e)
+		}
+	}
+	{
+		if s.SentEmailID.Set {
+			e.FieldStart("sent_email_id")
+			s.SentEmailID.Encode(e)
+		}
 	}
 	{
 		e.FieldStart("org_id")
@@ -25689,7 +25701,7 @@ func (s *DeliverySummary) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("endpoint_url")
-		e.Str(s.EndpointURL)
+		s.EndpointURL.Encode(e)
 	}
 	{
 		e.FieldStart("status")
@@ -25712,6 +25724,12 @@ func (s *DeliverySummary) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.LastErrorCode.Set {
+			e.FieldStart("last_error_code")
+			s.LastErrorCode.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("created_at")
 		json.EncodeDateTime(e, s.CreatedAt)
 	}
@@ -25727,19 +25745,22 @@ func (s *DeliverySummary) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfDeliverySummary = [12]string{
+var jsonFieldsNameOfDeliverySummary = [15]string{
 	0:  "id",
 	1:  "email_id",
-	2:  "org_id",
-	3:  "endpoint_id",
-	4:  "endpoint_url",
-	5:  "status",
-	6:  "attempt_count",
-	7:  "duration_ms",
-	8:  "last_error",
-	9:  "created_at",
-	10: "updated_at",
-	11: "email",
+	2:  "event_type",
+	3:  "sent_email_id",
+	4:  "org_id",
+	5:  "endpoint_id",
+	6:  "endpoint_url",
+	7:  "status",
+	8:  "attempt_count",
+	9:  "duration_ms",
+	10: "last_error",
+	11: "last_error_code",
+	12: "created_at",
+	13: "updated_at",
+	14: "email",
 }
 
 // Decode decodes DeliverySummary from json.
@@ -25766,17 +25787,35 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 		case "email_id":
 			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				v, err := json.DecodeUUID(d)
-				s.EmailID = v
-				if err != nil {
+				if err := s.EmailID.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"email_id\"")
 			}
+		case "event_type":
+			if err := func() error {
+				s.EventType.Reset()
+				if err := s.EventType.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"event_type\"")
+			}
+		case "sent_email_id":
+			if err := func() error {
+				s.SentEmailID.Reset()
+				if err := s.SentEmailID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sent_email_id\"")
+			}
 		case "org_id":
-			requiredBitSet[0] |= 1 << 2
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.OrgID = v
@@ -25788,7 +25827,7 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"org_id\"")
 			}
 		case "endpoint_id":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := json.DecodeUUID(d)
 				s.EndpointID = v
@@ -25800,11 +25839,9 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"endpoint_id\"")
 			}
 		case "endpoint_url":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
-				v, err := d.Str()
-				s.EndpointURL = string(v)
-				if err != nil {
+				if err := s.EndpointURL.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -25812,7 +25849,7 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"endpoint_url\"")
 			}
 		case "status":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				if err := s.Status.Decode(d); err != nil {
 					return err
@@ -25822,7 +25859,7 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"status\"")
 			}
 		case "attempt_count":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[1] |= 1 << 0
 			if err := func() error {
 				v, err := d.Int()
 				s.AttemptCount = int(v)
@@ -25853,8 +25890,18 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"last_error\"")
 			}
+		case "last_error_code":
+			if err := func() error {
+				s.LastErrorCode.Reset()
+				if err := s.LastErrorCode.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"last_error_code\"")
+			}
 		case "created_at":
-			requiredBitSet[1] |= 1 << 1
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.CreatedAt = v
@@ -25866,7 +25913,7 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"created_at\"")
 			}
 		case "updated_at":
-			requiredBitSet[1] |= 1 << 2
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				v, err := json.DecodeDateTime(d)
 				s.UpdatedAt = v
@@ -25897,8 +25944,8 @@ func (s *DeliverySummary) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
-		0b01111111,
-		0b00000110,
+		0b11110011,
+		0b00110001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -25959,7 +26006,7 @@ func (s *DeliverySummaryEmail) encodeFields(e *jx.Encoder) {
 	}
 	{
 		e.FieldStart("recipient")
-		e.Str(s.Recipient)
+		s.Recipient.Encode(e)
 	}
 	{
 		if s.Subject.Set {
@@ -25999,9 +26046,7 @@ func (s *DeliverySummaryEmail) Decode(d *jx.Decoder) error {
 		case "recipient":
 			requiredBitSet[0] |= 1 << 1
 			if err := func() error {
-				v, err := d.Str()
-				s.Recipient = string(v)
-				if err != nil {
+				if err := s.Recipient.Decode(d); err != nil {
 					return err
 				}
 				return nil
@@ -26098,6 +26143,8 @@ func (s *DeliverySummaryStatus) Decode(d *jx.Decoder) error {
 		*s = DeliverySummaryStatusHeaderConfirmed
 	case DeliverySummaryStatusFailed:
 		*s = DeliverySummaryStatusFailed
+	case DeliverySummaryStatusSkippedByRules:
+		*s = DeliverySummaryStatusSkippedByRules
 	default:
 		*s = DeliverySummaryStatus(v)
 	}
@@ -85476,6 +85523,12 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 		e.Str(s.ToAddress)
 	}
 	{
+		if s.RecipientCount.Set {
+			e.FieldStart("recipient_count")
+			s.RecipientCount.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("subject")
 		e.Str(s.Subject)
 	}
@@ -85681,7 +85734,7 @@ func (s *SentEmailDetail) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSentEmailDetail = [45]string{
+var jsonFieldsNameOfSentEmailDetail = [46]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -85693,40 +85746,41 @@ var jsonFieldsNameOfSentEmailDetail = [45]string{
 	8:  "from_address",
 	9:  "to_header",
 	10: "to_address",
-	11: "subject",
-	12: "body_size_bytes",
-	13: "content_discarded_at",
-	14: "message_id",
-	15: "in_reply_to",
-	16: "email_references",
-	17: "in_reply_to_email_id",
-	18: "thread_id",
-	19: "queue_id",
-	20: "smtp_response_code",
-	21: "smtp_response_text",
-	22: "smtp_enhanced_status_code",
-	23: "dkim_selector",
-	24: "dkim_domain",
-	25: "error_code",
-	26: "error_message",
-	27: "gates",
-	28: "request_id",
-	29: "scheduled_at",
-	30: "canceled_at",
-	31: "presence_control",
-	32: "repeat",
-	33: "sender_member",
-	34: "body_text",
-	35: "body_html",
-	36: "attachments",
-	37: "attachments_size_bytes",
-	38: "attachments_complete",
-	39: "attachments_download_available",
-	40: "to_addresses",
-	41: "cc",
-	42: "bcc",
-	43: "reply_to",
-	44: "tags",
+	11: "recipient_count",
+	12: "subject",
+	13: "body_size_bytes",
+	14: "content_discarded_at",
+	15: "message_id",
+	16: "in_reply_to",
+	17: "email_references",
+	18: "in_reply_to_email_id",
+	19: "thread_id",
+	20: "queue_id",
+	21: "smtp_response_code",
+	22: "smtp_response_text",
+	23: "smtp_enhanced_status_code",
+	24: "dkim_selector",
+	25: "dkim_domain",
+	26: "error_code",
+	27: "error_message",
+	28: "gates",
+	29: "request_id",
+	30: "scheduled_at",
+	31: "canceled_at",
+	32: "presence_control",
+	33: "repeat",
+	34: "sender_member",
+	35: "body_text",
+	36: "body_html",
+	37: "attachments",
+	38: "attachments_size_bytes",
+	39: "attachments_complete",
+	40: "attachments_download_available",
+	41: "to_addresses",
+	42: "cc",
+	43: "bcc",
+	44: "reply_to",
+	45: "tags",
 }
 
 // Decode decodes SentEmailDetail from json.
@@ -85866,8 +85920,18 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"to_address\"")
 			}
+		case "recipient_count":
+			if err := func() error {
+				s.RecipientCount.Reset()
+				if err := s.RecipientCount.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"recipient_count\"")
+			}
 		case "subject":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				v, err := d.Str()
 				s.Subject = string(v)
@@ -85879,7 +85943,7 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"subject\"")
 			}
 		case "body_size_bytes":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				v, err := d.Int()
 				s.BodySizeBytes = int(v)
@@ -86228,7 +86292,7 @@ func (s *SentEmailDetail) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [6]uint8{
 		0b11011111,
-		0b00011111,
+		0b00110111,
 		0b00000000,
 		0b00000000,
 		0b00000000,
@@ -87251,6 +87315,12 @@ func (s *SentEmailSummary) encodeFields(e *jx.Encoder) {
 		e.Str(s.ToAddress)
 	}
 	{
+		if s.RecipientCount.Set {
+			e.FieldStart("recipient_count")
+			s.RecipientCount.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("subject")
 		e.Str(s.Subject)
 	}
@@ -87386,7 +87456,7 @@ func (s *SentEmailSummary) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSentEmailSummary = [34]string{
+var jsonFieldsNameOfSentEmailSummary = [35]string{
 	0:  "id",
 	1:  "status",
 	2:  "status_changed_at",
@@ -87398,29 +87468,30 @@ var jsonFieldsNameOfSentEmailSummary = [34]string{
 	8:  "from_address",
 	9:  "to_header",
 	10: "to_address",
-	11: "subject",
-	12: "body_size_bytes",
-	13: "content_discarded_at",
-	14: "message_id",
-	15: "in_reply_to",
-	16: "email_references",
-	17: "in_reply_to_email_id",
-	18: "thread_id",
-	19: "queue_id",
-	20: "smtp_response_code",
-	21: "smtp_response_text",
-	22: "smtp_enhanced_status_code",
-	23: "dkim_selector",
-	24: "dkim_domain",
-	25: "error_code",
-	26: "error_message",
-	27: "gates",
-	28: "request_id",
-	29: "scheduled_at",
-	30: "canceled_at",
-	31: "presence_control",
-	32: "repeat",
-	33: "sender_member",
+	11: "recipient_count",
+	12: "subject",
+	13: "body_size_bytes",
+	14: "content_discarded_at",
+	15: "message_id",
+	16: "in_reply_to",
+	17: "email_references",
+	18: "in_reply_to_email_id",
+	19: "thread_id",
+	20: "queue_id",
+	21: "smtp_response_code",
+	22: "smtp_response_text",
+	23: "smtp_enhanced_status_code",
+	24: "dkim_selector",
+	25: "dkim_domain",
+	26: "error_code",
+	27: "error_message",
+	28: "gates",
+	29: "request_id",
+	30: "scheduled_at",
+	31: "canceled_at",
+	32: "presence_control",
+	33: "repeat",
+	34: "sender_member",
 }
 
 // Decode decodes SentEmailSummary from json.
@@ -87560,8 +87631,18 @@ func (s *SentEmailSummary) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"to_address\"")
 			}
+		case "recipient_count":
+			if err := func() error {
+				s.RecipientCount.Reset()
+				if err := s.RecipientCount.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"recipient_count\"")
+			}
 		case "subject":
-			requiredBitSet[1] |= 1 << 3
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				v, err := d.Str()
 				s.Subject = string(v)
@@ -87573,7 +87654,7 @@ func (s *SentEmailSummary) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"subject\"")
 			}
 		case "body_size_bytes":
-			requiredBitSet[1] |= 1 << 4
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				v, err := d.Int()
 				s.BodySizeBytes = int(v)
@@ -87805,7 +87886,7 @@ func (s *SentEmailSummary) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [5]uint8{
 		0b11011111,
-		0b00011111,
+		0b00110111,
 		0b00000000,
 		0b00000000,
 		0b00000000,

@@ -21,15 +21,16 @@ T = TypeVar("T", bound="DeliverySummaryEmailType0")
 
 @_attrs_define
 class DeliverySummaryEmailType0:
-    """ 
+    """ Null for deliveries that are not about a received email.
+
         Attributes:
             sender (str):
-            recipient (str):
+            recipient (None | str):
             subject (None | str | Unset):
      """
 
     sender: str
-    recipient: str
+    recipient: None | str
     subject: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -40,6 +41,7 @@ class DeliverySummaryEmailType0:
     def to_dict(self) -> dict[str, Any]:
         sender = self.sender
 
+        recipient: None | str
         recipient = self.recipient
 
         subject: None | str | Unset
@@ -67,7 +69,13 @@ class DeliverySummaryEmailType0:
         d = dict(src_dict)
         sender = d.pop("sender")
 
-        recipient = d.pop("recipient")
+        def _parse_recipient(data: object) -> None | str:
+            if data is None:
+                return data
+            return cast(None | str, data)
+
+        recipient = _parse_recipient(d.pop("recipient"))
+
 
         def _parse_subject(data: object) -> None | str | Unset:
             if data is None:

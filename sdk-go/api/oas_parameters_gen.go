@@ -6290,6 +6290,11 @@ type ListDeliveriesParams struct {
 	Limit OptInt `json:",omitempty,omitzero"`
 	// Filter by email ID.
 	EmailID OptUUID `json:",omitempty,omitzero"`
+	// Only deliveries of this event type, for example `sent_email.failed`. Deliveries recorded before
+	// event types existed have none and never match.
+	EventType OptString `json:",omitempty,omitzero"`
+	// Only deliveries of `sent_email.*` events about this sent email.
+	SentEmailID OptUUID `json:",omitempty,omitzero"`
 	// Filter by delivery status.
 	Status OptListDeliveriesStatus `json:",omitempty,omitzero"`
 	// Filter deliveries created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric
@@ -6328,6 +6333,24 @@ func unpackListDeliveriesParams(packed middleware.Parameters) (params ListDelive
 		}
 		if v, ok := packed[key]; ok {
 			params.EmailID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "event_type",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.EventType = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "sent_email_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.SentEmailID = v.(OptUUID)
 		}
 	}
 	{
@@ -6511,6 +6534,115 @@ func decodeListDeliveriesParams(args [0]string, argsEscaped bool, r *http.Reques
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "email_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: event_type.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "event_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotEventTypeVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotEventTypeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.EventType.SetTo(paramsDotEventTypeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.EventType.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "event_type",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: sent_email_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "sent_email_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSentEmailIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSentEmailIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.SentEmailID.SetTo(paramsDotSentEmailIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "sent_email_id",
 			In:   "query",
 			Err:  err,
 		}

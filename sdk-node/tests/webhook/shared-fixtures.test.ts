@@ -51,6 +51,10 @@ describe("shared compatibility fixtures", () => {
           id?: string;
           error_code?: string;
           relay?: EmailRelay | null;
+          bounce?: {
+            sent_email_id: string | null;
+            failed_recipients: string[] | null;
+          };
         };
       }>;
     }>("webhook", "validation-cases.json");
@@ -63,6 +67,16 @@ describe("shared compatibility fixtures", () => {
           expect(event.email.relay ?? null, testCase.name).toEqual(
             testCase.expected.relay,
           );
+        }
+        if (testCase.expected.bounce !== undefined) {
+          const bounce = event.email.analysis.bounce;
+          expect(
+            {
+              sent_email_id: bounce?.sent_email_id ?? null,
+              failed_recipients: bounce?.failed_recipients ?? null,
+            },
+            testCase.name,
+          ).toEqual(testCase.expected.bounce);
         }
         const safeResult = safeValidateEmailReceivedEvent(testCase.payload);
         expect(safeResult.success, testCase.name).toBe(true);
