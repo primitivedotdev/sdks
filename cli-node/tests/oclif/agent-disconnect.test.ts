@@ -10,7 +10,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AgentDisconnectError,
+  clearRevokedAddresses,
   disconnectAgent,
+  savedSetupRevoked,
 } from "../../src/oclif/agent-disconnect.js";
 import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
 import {
@@ -212,25 +214,63 @@ describe("connected agent self-disconnect", () => {
     expect(loadConnectedAgentProfile(directory, "work")).toMatchObject(profile);
   });
 
-  it("preserves the credential after a network loss or 401", async () => {
-    for (const failure of ["network", "unauthorized"] as const) {
+  it("preserves the credential after a network loss", async () => {
+    const directory = configDir();
+    saved(directory);
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => {
+      throw new Error("private transport detail");
+    });
+    await expect(
+      disconnectAgent({ configDir: directory, profileName: "work", fetch }),
+    ).rejects.toBeInstanceOf(AgentDisconnectError);
+    expect(loadConnectedAgentProfile(directory, "work")).toMatchObject(profile);
+    expect(
+      readMailJson(
+        join(
+          agentProfileDirectory(directory, "work"),
+          `disconnected-${profile.invitation_hash}.json`,
+        ),
+      ),
+    ).toBeNull();
+  });
+
+  it("preserves the credential after a 401 that the same credential does not confirm", async () => {
+    const unauthorized = new Response(
+      JSON.stringify({
+        success: false,
+        error: { code: "unauthorized", message: "Private detail" },
+      }),
+      { status: 401 },
+    );
+    const lookups: Array<() => Response | Promise<Response>> = [
+      // The credential still authenticates and its connection is live.
+      () =>
+        Response.json({
+          success: true,
+          data: {
+            connection: { address: profile.agent_address, status: "connected" },
+          },
+        }),
+      () => new Response("unavailable", { status: 503 }),
+      () => new Response("server error", { status: 500 }),
+      () => new Response("forbidden", { status: 403 }),
+      () => {
+        throw new Error("network down");
+      },
+    ];
+    for (const lookup of lookups) {
       const directory = configDir();
       saved(directory);
-      const fetch =
-        failure === "network"
-          ? vi.fn<typeof globalThis.fetch>(async () => {
-              throw new Error("private transport detail");
-            })
-          : server(
-              {
-                success: false,
-                error: { code: "unauthorized", message: "Private detail" },
-              },
-              401,
-            ).fetch;
+      const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) =>
+        new Request(input, init).method === "DELETE"
+          ? unauthorized.clone()
+          : lookup(),
+      );
       await expect(
         disconnectAgent({ configDir: directory, profileName: "work", fetch }),
-      ).rejects.toBeInstanceOf(AgentDisconnectError);
+      ).rejects.toThrow(
+        "Revocation was not confirmed (HTTP 401, unauthorized)",
+      );
       expect(loadConnectedAgentProfile(directory, "work")).toMatchObject(
         profile,
       );
@@ -243,6 +283,66 @@ describe("connected agent self-disconnect", () => {
         ),
       ).toBeNull();
     }
+  });
+
+  it("confirms a credential revoked elsewhere and records it as server revoked", async () => {
+    const directory = configDir();
+    saved(directory, "work", true);
+    const { fetch, calls } = server(
+      { success: false, error: { code: "unauthorized", message: "x" } },
+      401,
+    );
+    const result = await disconnectAgent({
+      configDir: directory,
+      profileName: "work",
+      fetch,
+      stopReceiver: async () => stopped,
+      now: () => new Date("2026-01-04T00:00:00.000Z"),
+    });
+    expect(result.revocation).toBe("already_revoked");
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      "DELETE https://api.primitive-staging-1.com/v1/agent-connections/agent%40example.test",
+      "GET https://api.primitive-staging-1.com/v1/agent-connections/me",
+    ]);
+    expect(calls[1]?.headers.get("authorization")).toBe(
+      `Bearer ${profile.api_key}`,
+    );
+    expect(loadConnectedAgentProfile(directory, "work")).toBeNull();
+    expect(
+      readMailJson(
+        join(
+          agentProfileDirectory(directory, "work"),
+          `disconnected-${profile.invitation_hash}.json`,
+        ),
+      ),
+    ).toMatchObject({
+      version: 1,
+      address: profile.agent_address,
+      revoked_at: "2026-01-04T00:00:00.000Z",
+      reason: "server_revoked",
+    });
+  });
+
+  it("accepts the connection's own record saying it was revoked", async () => {
+    const directory = configDir();
+    saved(directory);
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) =>
+      new Request(input, init).method === "DELETE"
+        ? new Response("{}", { status: 401 })
+        : Response.json({
+            success: true,
+            data: {
+              connection: { address: profile.agent_address, status: "revoked" },
+            },
+          }),
+    );
+    const result = await disconnectAgent({
+      configDir: directory,
+      profileName: "work",
+      fetch,
+    });
+    expect(result.revocation).toBe("already_revoked");
+    expect(loadConnectedAgentProfile(directory, "work")).toBeNull();
   });
 
   it("reports a server failure as unconfirmed and says how to read a retry", async () => {
@@ -347,5 +447,94 @@ describe("connected agent self-disconnect", () => {
       }),
     ).rejects.toThrow("does not match");
     expect(api.calls).toHaveLength(0);
+  });
+});
+
+describe("addresses revoked elsewhere", () => {
+  const unauthorized = () => server({ success: false }, 401);
+
+  it("clears only bound addresses Primitive confirms revoked", async () => {
+    const directory = configDir();
+    saved(directory, "dead", true);
+    saved(directory, "live");
+    // The first probe (profile "dead") is refused; the second cannot be read.
+    let probes = 0;
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+      const request = new Request(input, init);
+      expect(request.url).toBe(
+        "https://api.primitive-staging-1.com/v1/agent-connections/me",
+      );
+      probes += 1;
+      return probes === 1
+        ? new Response("{}", { status: 401 })
+        : new Response("unavailable", { status: 503 });
+    });
+    const disconnect = vi.fn(async () => ({}) as never);
+    const result = await clearRevokedAddresses({
+      configDir: directory,
+      rows: [
+        { profile: "dead", address: profile.agent_address },
+        { profile: "live", address: profile.agent_address },
+      ],
+      fetch,
+      disconnect,
+    });
+    expect(result.cleared).toEqual([
+      { profile: "dead", address: profile.agent_address },
+    ]);
+    expect(result.remaining).toEqual([
+      { profile: "live", address: profile.agent_address },
+    ]);
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(disconnect).toHaveBeenCalledWith(
+      expect.objectContaining({ configDir: directory, profileName: "dead" }),
+    );
+  });
+
+  it("keeps an address whose disconnect fails after the probe", async () => {
+    const directory = configDir();
+    saved(directory, "work", true);
+    const result = await clearRevokedAddresses({
+      configDir: directory,
+      rows: [{ profile: "work", address: profile.agent_address }],
+      fetch: unauthorized().fetch,
+      disconnect: async () => {
+        throw new AgentDisconnectError("receiver did not stop");
+      },
+    });
+    expect(result.cleared).toEqual([]);
+    expect(result.remaining).toHaveLength(1);
+  });
+
+  it("treats a setup as revoked only with a marker for its own credential", async () => {
+    const directory = configDir();
+    saved(directory, "work", true);
+    expect(savedSetupRevoked(directory, "work", profile.invitation_hash)).toBe(
+      false,
+    );
+    // The disconnect wrote the marker but could not remove the credential.
+    await disconnectAgent({
+      configDir: directory,
+      profileName: "work",
+      fetch: unauthorized().fetch,
+      stopReceiver: async () => stopped,
+    });
+    expect(savedSetupRevoked(directory, "work", profile.invitation_hash)).toBe(
+      true,
+    );
+    saveConnectedAgentProfile(directory, "work", profile);
+    expect(savedSetupRevoked(directory, "work", profile.invitation_hash)).toBe(
+      true,
+    );
+    // A different credential in the same profile is not covered by it.
+    saveConnectedAgentProfile(directory, "work", {
+      ...profile,
+      api_key: ["pconn", "fixture", "other"].join("_"),
+    });
+    expect(savedSetupRevoked(directory, "work", profile.invitation_hash)).toBe(
+      false,
+    );
+    expect(savedSetupRevoked(directory, "work", "b".repeat(64))).toBe(false);
+    expect(savedSetupRevoked(directory, "work", "../x")).toBe(false);
   });
 });

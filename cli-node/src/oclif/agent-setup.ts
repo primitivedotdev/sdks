@@ -16,11 +16,13 @@ import {
 } from "@primitivedotdev/api-core";
 import {
   AgentInvitationRejectedError,
+  agentInvitationHash,
   connectAgent,
   parseAgentInvitation,
   removeEmptyDirectory,
   savedConnectionName,
 } from "./agent-connect.js";
+import { archiveRevokedSetup, savedSetupRevoked } from "./agent-disconnect.js";
 import { readSetupApi, type SetupReadBudget } from "./agent-setup-read.js";
 import type { ClaudeWakeHookResult } from "./claude-wake-install.js";
 import {
@@ -693,6 +695,15 @@ function refuseSetupConflicts(
     );
 }
 
+function invitationHashOrNull(invitation: string | undefined): string | null {
+  if (invitation === undefined) return null;
+  try {
+    return agentInvitationHash(invitation);
+  } catch {
+    return null;
+  }
+}
+
 /** One resumable operation owns setup plumbing; it never stores or replays the invitation. */
 export async function setupAgent(params: {
   configDir: string;
@@ -742,7 +753,16 @@ export async function setupAgent(params: {
   } catch {
     /* The locked read below reports an invalid saved setup. */
   }
-  if (saved) refuseSetupConflicts(saved, params);
+  // A new invitation replaces a setup whose credential is confirmed revoked,
+  // so that setup's choices are not held against it.
+  const newHash = params.resume
+    ? null
+    : invitationHashOrNull(params.invitation);
+  const replacesRevoked = (state: SetupState) =>
+    newHash !== null &&
+    state.invitationHash !== newHash &&
+    savedSetupRevoked(params.configDir, profileName, state.invitationHash);
+  if (saved && !replacesRevoked(saved)) refuseSetupConflicts(saved, params);
   const receiverMode =
     params.receiverMode ?? (params.resume ? saved?.receiverMode : undefined);
   if (params.session === undefined && (receiverMode ?? "native") !== "poll")
@@ -769,6 +789,18 @@ export async function setupAgent(params: {
     const path = join(directory, "setup.json");
     const value = readMailJson(path);
     let state = value === null ? null : parseState(value);
+    // The owner reconnected an agent whose credential was revoked (in the
+    // app, from another machine, or by a disconnect here). Its setup is moved
+    // aside, as a replacement would, and the new invitation is claimed into
+    // the same profile and session.
+    if (state && replacesRevoked(state)) {
+      archiveRevokedSetup(
+        params.configDir,
+        profileName,
+        new Date(dependencies.now()),
+      );
+      state = null;
+    }
     if (state) refuseSetupConflicts(state, params);
     if (!state && loadConnectedAgentProfile(params.configDir, profileName))
       throw fail(

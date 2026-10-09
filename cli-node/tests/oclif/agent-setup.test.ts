@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -12,6 +13,7 @@ import { join } from "node:path";
 import type { EmailDetail } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentInvitationRejectedError } from "../../src/oclif/agent-connect.js";
+import { disconnectAgent } from "../../src/oclif/agent-disconnect.js";
 import {
   type AgentSetupDependencies,
   parseVerificationCheck,
@@ -20,9 +22,12 @@ import {
   VERIFICATION_BACKOFF_MS,
   verificationReplySubmitted,
 } from "../../src/oclif/agent-setup.js";
+import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
 import {
   agentProfileDirectory,
   agentProfilesDirectory,
+  loadConnectedAgentProfile,
+  saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
@@ -1218,5 +1223,207 @@ describe("a definitely refused claim", () => {
       /may have been consumed/,
     );
     expect(f.state()).toMatchObject({ phase: "waiting" });
+  });
+});
+
+describe("reconnecting a profile whose agent was revoked elsewhere", () => {
+  const stopped = {
+    phase: "stopped" as const,
+    pid: null,
+    detached: true,
+    healthy: false,
+    failureCode: null,
+    reason: "stopped" as const,
+    updatedAt: Date.now(),
+  };
+  // Every request with the revoked credential is refused as unauthorized.
+  const revokedServer = () =>
+    vi.fn<typeof globalThis.fetch>(
+      async () => new Response("{}", { status: 401 }),
+    );
+  const reconnectInvitation = (f: ReturnType<typeof fixture>) =>
+    f.params.invitation.replace("#token=", "#token=reconnect_");
+  const files = (f: ReturnType<typeof fixture>) =>
+    readdirSync(agentProfileDirectory(f.configDir, f.params.profileName));
+
+  it("claims the owner's new invitation after a disconnect confirms the old credential is dead", async () => {
+    const f = fixture();
+    await setupAgent(f.params);
+    const before = f.state();
+    // --replace-existing disconnects first; the DELETE is refused with 401
+    // because the owner already revoked the agent in the app.
+    const disconnected = await disconnectAgent({
+      configDir: f.configDir,
+      profileName: f.params.profileName,
+      fetch: revokedServer(),
+      stopReceiver: async () => stopped,
+    });
+    expect(disconnected.revocation).toBe("already_revoked");
+    // Without the archive, the saved setup refused this as a profile
+    // "already set up with a different invitation".
+    const result = await setupAgent({
+      ...f.params,
+      invitation: reconnectInvitation(f),
+      // The saved setup's choices do not bind the replacement.
+      contactRequests: false,
+    });
+    expect(result).toMatchObject({
+      identity: f.identity,
+      sessionId: f.params.session,
+      verification: { state: "reply_submitted" },
+    });
+    expect(f.fetch).toHaveBeenCalledTimes(2);
+    expect(f.state()).toMatchObject({
+      session: f.params.session,
+      receiverMode: "native",
+      contactRequests: false,
+    });
+    expect(f.state().invitationHash).not.toBe(before.invitationHash);
+    const archived = files(f).filter((name) =>
+      /^replaced-\d+-setup\.json$/.test(name),
+    );
+    expect(archived).toHaveLength(1);
+    expect(
+      JSON.parse(
+        readFileSync(
+          join(
+            agentProfileDirectory(f.configDir, f.params.profileName),
+            archived[0] ?? "",
+          ),
+          "utf8",
+        ),
+      ).invitationHash,
+    ).toBe(before.invitationHash);
+    expect(f.dependencies.startListener).toHaveBeenLastCalledWith(
+      f.params.profileName,
+      f.params.session,
+      false,
+      f.configDir,
+    );
+  });
+
+  it("claims it when the confirmed-dead credential could not be removed locally", async () => {
+    const f = fixture();
+    await setupAgent(f.params);
+    const credential = loadConnectedAgentProfile(
+      f.configDir,
+      f.params.profileName,
+    );
+    await disconnectAgent({
+      configDir: f.configDir,
+      profileName: f.params.profileName,
+      fetch: revokedServer(),
+      stopReceiver: async () => stopped,
+    });
+    // As if local cleanup had failed after the marker was written.
+    if (credential)
+      saveConnectedAgentProfile(f.configDir, f.params.profileName, credential);
+    await setupAgent({ ...f.params, invitation: reconnectInvitation(f) });
+    expect(f.fetch).toHaveBeenCalledTimes(2);
+    expect(
+      files(f).filter((name) => /^replaced-\d+-connection\.json$/.test(name)),
+    ).toHaveLength(1);
+    expect(
+      loadConnectedAgentProfile(f.configDir, f.params.profileName)
+        ?.invitation_hash,
+    ).toBe(f.state().invitationHash);
+  });
+
+  it("still refuses while the old credential's revocation is unconfirmed", async () => {
+    const f = fixture();
+    await setupAgent(f.params);
+    // The DELETE is refused, but the same credential still authenticates.
+    await expect(
+      disconnectAgent({
+        configDir: f.configDir,
+        profileName: f.params.profileName,
+        fetch: vi.fn<typeof globalThis.fetch>(async (input, init) =>
+          new Request(input, init).method === "DELETE"
+            ? new Response("{}", { status: 401 })
+            : Response.json({
+                success: true,
+                data: {
+                  connection: {
+                    address: f.identity.agentAddress,
+                    status: "connected",
+                  },
+                },
+              }),
+        ),
+        stopReceiver: async () => stopped,
+      }),
+    ).rejects.toThrow("Revocation was not confirmed");
+    await expect(
+      setupAgent({ ...f.params, invitation: reconnectInvitation(f) }),
+    ).rejects.toThrow("with a different invitation");
+    expect(f.fetch).toHaveBeenCalledOnce();
+    expect(files(f).some((name) => name.startsWith("replaced-"))).toBe(false);
+  });
+
+  it("does not move a revoked setup aside for a malformed invitation", async () => {
+    const f = fixture();
+    await setupAgent(f.params);
+    await disconnectAgent({
+      configDir: f.configDir,
+      profileName: f.params.profileName,
+      fetch: revokedServer(),
+      stopReceiver: async () => stopped,
+    });
+    await expect(
+      setupAgent({ ...f.params, invitation: "not an invitation" }),
+    ).rejects.toThrow();
+    expect(files(f).some((name) => name.startsWith("replaced-"))).toBe(false);
+    expect(f.fetch).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the session's Claude hooks on the same profile across a same-address reconnect", async () => {
+    const f = fixture();
+    const claudeDir = join(f.configDir, "claude");
+    const bin = join(f.configDir, "bin");
+    mkdirSync(claudeDir);
+    mkdirSync(bin);
+    const cliPath = join(bin, "run.js");
+    writeFileSync(cliPath, "");
+    writeFileSync(join(bin, "claude-wake.mjs"), "");
+    writeFileSync(join(bin, "claude-pending-mail.mjs"), "");
+    const env = { CLAUDE_CONFIG_DIR: claudeDir };
+    const install = () =>
+      installClaudeWakeHook({
+        cliPath,
+        configDir: f.configDir,
+        profileName: f.params.profileName,
+        agentAddress: f.identity.agentAddress,
+        sessionId: f.params.session,
+        env,
+      });
+    const stopHooks = () =>
+      JSON.parse(readFileSync(join(claudeDir, "settings.json"), "utf8")).hooks
+        .Stop as Array<{ hooks: Array<{ args: string[] }> }>;
+    await setupAgent({ ...f.params, receiverMode: "external" });
+    expect(install()).toBe("installed_unverified");
+    await disconnectAgent({
+      configDir: f.configDir,
+      profileName: f.params.profileName,
+      fetch: revokedServer(),
+      env,
+    });
+    expect(stopHooks()).toHaveLength(0);
+    // The server re-invites the same address with a new credential.
+    await setupAgent({
+      ...f.params,
+      receiverMode: "external",
+      invitation: reconnectInvitation(f),
+    });
+    expect(
+      loadConnectedAgentProfile(f.configDir, f.params.profileName),
+    ).toMatchObject({ agent_address: f.identity.agentAddress });
+    expect(install()).toBe("installed_unverified");
+    const hooks = stopHooks();
+    expect(hooks).toHaveLength(1);
+    expect(hooks[0]?.hooks[0]?.args.slice(3, 6)).toEqual([
+      f.params.profileName,
+      f.identity.agentAddress,
+      f.params.session,
+    ]);
   });
 });
