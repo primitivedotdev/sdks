@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 import type { ParsedMail } from "mailparser";
 import { simpleParser } from "mailparser";
 import type { EmailAddress } from "../types.js";
-import { sanitizeHtml } from "./sanitize-html.js";
+import {
+  type SanitizeHtmlReport,
+  sanitizeHtmlWithReport,
+} from "./sanitize-html.js";
 
 // Signature/artifact MIME types to filter out - these are not "real" attachments
 const SIGNATURE_ARTIFACTS = new Set([
@@ -55,6 +58,13 @@ export interface ParsedEmailWithAttachments {
   // Body
   bodyText: string | null;
   bodyHtml: string | null; // Sanitized HTML (safe for rendering). Raw if skipHtmlSanitization was set.
+  /**
+   * What sanitizing bodyHtml cost. Absent when there was no HTML body or
+   * sanitization was skipped. A nonzero cascadeBudgetExceeded means elements
+   * were dropped because the message was built to make styling expensive;
+   * callers should count it.
+   */
+  htmlSanitizeReport?: SanitizeHtmlReport;
 
   // Attachments
   attachments: ParsedAttachment[];
@@ -152,16 +162,21 @@ export async function parseEmailWithAttachments(
 
   // Get body HTML (mailparser already converted CID refs to data: URLs)
   let bodyHtml: string | null = null;
+  let htmlSanitizeReport: SanitizeHtmlReport | undefined;
 
   if (parsed.html && typeof parsed.html === "string") {
-    bodyHtml = options?.skipHtmlSanitization
-      ? parsed.html
-      : sanitizeHtml(parsed.html);
+    if (options?.skipHtmlSanitization) bodyHtml = parsed.html;
+    else {
+      const sanitized = sanitizeHtmlWithReport(parsed.html);
+      bodyHtml = sanitized.html;
+      htmlSanitizeReport = sanitized.report;
+    }
   }
 
   return {
     bodyText: parsed.text ?? null,
     bodyHtml,
+    ...(htmlSanitizeReport ? { htmlSanitizeReport } : {}),
     attachments,
     subject: parsed.subject ?? null,
     messageId: parsed.messageId ?? null,

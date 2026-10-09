@@ -1,7 +1,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { internalScans, sanitizeHtml } from "../../src/parser/sanitize-html.js";
+import { parseEmailWithAttachments } from "../../src/parser/attachment-parser.js";
+import {
+  internalScans,
+  sanitizeHtml,
+  sanitizeHtmlWithReport,
+} from "../../src/parser/sanitize-html.js";
 import {
   sanitizeHtml as referenceSanitizeHtml,
   referenceScans,
@@ -233,7 +238,14 @@ function randomDocument(r: Rand): string {
 }
 
 describe("sanitizeHtml matches the original implementation", () => {
+  // Every input here must stay inside the cascade budget: the budget was
+  // chosen so real mail never meets it, and an input that did would be
+  // sanitized differently from the reference by design.
+  const budgetHits = (html: string): number =>
+    sanitizeHtmlWithReport(html).report.cascadeBudgetExceeded;
+
   test.each(fixtures)("real email HTML: $name", ({ html }) => {
+    expect(budgetHits(html)).toBe(0);
     expect(sanitizeHtml(html)).toBe(referenceSanitizeHtml(html));
   });
 
@@ -249,6 +261,7 @@ describe("sanitizeHtml matches the original implementation", () => {
   test("mutated real email HTML (seeded)", () => {
     let mismatches = 0;
     let checked = 0;
+    let hits = 0;
     for (const { name, html } of fixtures) {
       const r = mulberry32(name.length * 7919 + html.length);
       for (let i = 0; i < 40; i++) {
@@ -264,34 +277,42 @@ describe("sanitizeHtml matches the original implementation", () => {
                 ? html.slice(0, at)
                 : html.slice(0, at) + html.slice(at, at + len) + html.slice(at);
         checked++;
+        hits += budgetHits(mutated);
         if (sanitizeHtml(mutated) !== referenceSanitizeHtml(mutated))
           mismatches++;
       }
     }
     expect(checked).toBe(fixtures.length * 40);
     expect(mismatches).toBe(0);
+    expect(hits).toBe(0);
   });
 
   test("random documents with stylesheets and styled elements (seeded)", () => {
     const r = mulberry32(20261008);
     const failures: string[] = [];
+    let hits = 0;
     for (let i = 0; i < 4000; i++) {
       const html = randomDocument(r);
+      hits += budgetHits(html);
       if (sanitizeHtml(html) !== referenceSanitizeHtml(html))
         failures.push(html);
     }
     expect(failures.slice(0, 3)).toEqual([]);
+    expect(hits).toBe(0);
   });
 
   test("random CSS-heavy text (seeded)", () => {
     const r = mulberry32(7467);
     const failures: string[] = [];
+    let hits = 0;
     for (let i = 0; i < 4000; i++) {
       const html = `${randomCss(r, 60)}<p class="a b" id="i" style="${randomCss(r, 4)}">x</p><div class=c>y</div>`;
+      hits += budgetHits(html);
       if (sanitizeHtml(html) !== referenceSanitizeHtml(html))
         failures.push(html);
     }
     expect(failures.slice(0, 3)).toEqual([]);
+    expect(hits).toBe(0);
   });
 });
 
@@ -425,5 +446,63 @@ describe("sanitizeHtml stays linear on crafted input", () => {
       best = Math.min(best, performance.now() - start);
     }
     expect(best).toBeLessThan(50);
+  });
+});
+
+describe("the cascade budget fails closed", () => {
+  // Classes u0..u11, a rule showing every subset of them together with `a`,
+  // and elements each carrying a different subset: every element matches
+  // thousands of rules, and no two are alike, so each pays in full.
+  const U = Array.from({ length: 12 }, (_, i) => `u${i}`);
+  const subsets: string[][] = [[]];
+  for (const u of U) for (const s of [...subsets]) subsets.push([...s, u]);
+  const sheet = subsets
+    .map((s) => `.${["a", ...s].join(".")}{display:block}`)
+    .join("");
+  const crafted = (size: number) => {
+    let html = `<style>${sheet}</style><p>plain text stays</p>`;
+    for (let i = 0; html.length < size; i++)
+      html += `<b class="a ${U.filter((_, j) => ((i % 4096) >> j) & 1).join(" ")}">shown-${i}</b>`;
+    return html;
+  };
+
+  test("elements past the budget are dropped, counted, and cheap", () => {
+    const html = crafted(300_000);
+    const { html: out, report } = sanitizeHtmlWithReport(html);
+    expect(report.cascadeBudgetExceeded).toBeGreaterThan(0);
+    expect(report.cascadeBudget).toBe(50_000 + 3 * html.length);
+    const shown = (text: string) => (text.match(/shown-/g) ?? []).length;
+    expect(shown(out)).toBe(shown(html) - report.cascadeBudgetExceeded);
+    expect(out).toContain("plain text stays");
+    let best = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < 3; i++) {
+      const start = performance.now();
+      sanitizeHtmlWithReport(html);
+      best = Math.min(best, performance.now() - start);
+    }
+    expect(best).toBeLessThan(100);
+  });
+
+  test("parsed emails carry the report", async () => {
+    const mime = (type: string, body: string) =>
+      Buffer.from(
+        `From: a@b.example\r\nTo: c@d.example\r\nSubject: s\r\nMIME-Version: 1.0\r\nContent-Type: ${type}; charset=utf-8\r\n\r\n${body}`,
+      );
+    const heavy = await parseEmailWithAttachments(
+      mime("text/html", crafted(300_000)),
+    );
+    expect(heavy.htmlSanitizeReport?.cascadeBudgetExceeded).toBeGreaterThan(0);
+    const plain = await parseEmailWithAttachments(
+      mime("text/html", fixtures[0]?.html ?? ""),
+    );
+    expect(plain.htmlSanitizeReport?.cascadeBudgetExceeded).toBe(0);
+    const text = await parseEmailWithAttachments(mime("text/plain", "hi"));
+    expect(text.htmlSanitizeReport).toBeUndefined();
+  });
+
+  test("one element matching thousands of rules stays within budget", () => {
+    const html = `<style>${sheet}</style><b class="a u0 u1 u2 u3 u4 u5 u6 u7 u8 u9 u10 u11">x</b>`;
+    expect(sanitizeHtmlWithReport(html).report.cascadeBudgetExceeded).toBe(0);
+    expect(sanitizeHtml(html)).toBe(referenceSanitizeHtml(html));
   });
 });
