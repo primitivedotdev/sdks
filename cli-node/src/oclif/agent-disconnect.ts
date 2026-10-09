@@ -27,6 +27,9 @@ import {
 
 export class AgentDisconnectError extends Error {}
 
+/** The profile no longer holds the credential the caller expected to revoke. */
+export class AgentCredentialChangedError extends AgentDisconnectError {}
+
 type DisconnectResult = {
   status: "disconnected";
   identity: ReturnType<typeof connectedAgentIdentity>;
@@ -47,6 +50,12 @@ type DisconnectDependencies = {
   ) => Promise<BackgroundListenStatus>;
   now?: () => Date;
   env?: NodeJS.ProcessEnv;
+  /**
+   * Revoke only if the profile still holds this credential when checked
+   * under the setup locks, so a credential connected meanwhile is never
+   * revoked in its place.
+   */
+  expected?: { address: string; invitationHash: string };
 };
 
 function credentialDigest(profile: ConnectedAgentProfile): string {
@@ -298,6 +307,15 @@ export async function disconnectAgent(
       throw new AgentDisconnectError(
         "The selected profile changed before disconnect. Nothing was changed.",
       );
+    if (
+      params.expected &&
+      (profile.agent_address.toLowerCase() !==
+        params.expected.address.toLowerCase() ||
+        profile.invitation_hash !== params.expected.invitationHash)
+    )
+      throw new AgentCredentialChangedError(
+        "The profile holds a different credential than expected. Nothing was changed.",
+      );
     const session = boundSession(directory, profile);
     const receiver = session
       ? await (params.stopReceiver ?? stopBackgroundListen)({
@@ -447,16 +465,15 @@ export async function clearRevokedAddresses(
   const remaining: Array<{ profile: string; address: string }> = [];
   const cleared: Array<{ profile: string; address: string }> = [];
   for (const row of params.rows) {
-    let revoked = false;
+    let checked: ConnectedAgentProfile | null = null;
     try {
       const profile = loadConnectedAgentProfile(params.configDir, row.profile);
-      revoked =
-        profile !== null &&
-        (await credentialRevokedByServer(profile, params.fetch));
+      if (profile && (await credentialRevokedByServer(profile, params.fetch)))
+        checked = profile;
     } catch {
-      revoked = false;
+      checked = null;
     }
-    if (!revoked) {
+    if (!checked) {
       remaining.push(row);
       continue;
     }
@@ -468,6 +485,12 @@ export async function clearRevokedAddresses(
         stopReceiver: params.stopReceiver,
         now: params.now,
         env: params.env,
+        // A reconnect may land while the lookup is pending; only the
+        // credential that was checked may be disconnected.
+        expected: {
+          address: checked.agent_address,
+          invitationHash: checked.invitation_hash,
+        },
       });
       cleared.push(row);
     } catch {

@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  AgentCredentialChangedError,
   AgentDisconnectError,
   clearRevokedAddresses,
   disconnectAgent,
@@ -489,6 +490,59 @@ describe("addresses revoked elsewhere", () => {
     expect(disconnect).toHaveBeenCalledWith(
       expect.objectContaining({ configDir: directory, profileName: "dead" }),
     );
+  });
+
+  it("never disconnects a credential reconnected while the lookup was pending", async () => {
+    const directory = configDir();
+    saved(directory, "work", true);
+    const fresh = {
+      ...profile,
+      api_key: ["pconn", "fixture", "fresh"].join("_"),
+      invitation_hash: "c".repeat(64),
+    };
+    const requests: string[] = [];
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+      const request = new Request(input, init);
+      requests.push(`${request.method} ${request.url}`);
+      // Another process finishes reconnecting the profile meanwhile.
+      saveConnectedAgentProfile(directory, "work", fresh);
+      writeMailJson(
+        join(agentProfileDirectory(directory, "work"), "setup.json"),
+        { session, invitationHash: fresh.invitation_hash },
+      );
+      return new Response("{}", { status: 401 });
+    });
+    const result = await clearRevokedAddresses({
+      configDir: directory,
+      rows: [{ profile: "work", address: profile.agent_address }],
+      fetch,
+      stopReceiver: async () => stopped,
+    });
+    expect(result.cleared).toEqual([]);
+    expect(result.remaining).toHaveLength(1);
+    expect(requests).toEqual([
+      "GET https://api.primitive-staging-1.com/v1/agent-connections/me",
+    ]);
+    expect(loadConnectedAgentProfile(directory, "work")).toMatchObject(fresh);
+  });
+
+  it("refuses to disconnect a profile holding a different credential than expected", async () => {
+    const directory = configDir();
+    saved(directory);
+    const api = server();
+    await expect(
+      disconnectAgent({
+        configDir: directory,
+        profileName: "work",
+        fetch: api.fetch,
+        expected: {
+          address: profile.agent_address,
+          invitationHash: "c".repeat(64),
+        },
+      }),
+    ).rejects.toBeInstanceOf(AgentCredentialChangedError);
+    expect(api.calls).toHaveLength(0);
+    expect(loadConnectedAgentProfile(directory, "work")).toMatchObject(profile);
   });
 
   it("keeps an address whose disconnect fails after the probe", async () => {

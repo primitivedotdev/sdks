@@ -48,6 +48,18 @@ function invocation(entry: string | undefined): string {
     : "primitive";
 }
 
+/**
+ * Names the addresses this run cleared as already revoked, so a later
+ * refusal or failure that says nothing changed is not taken literally.
+ */
+function withClearedNote(message: string, cleared: BoundAddress[]): string {
+  if (!cleared.length) return message;
+  const list = cleared
+    .map((row) => `${row.address} (profile ${row.profile})`)
+    .join(", ");
+  return `${message} Before that, this run cleared ${list} on this machine because Primitive confirmed ${cleared.length === 1 ? "its credential was" : "their credentials were"} already revoked; ${cleared.length === 1 ? "it stays" : "they stay"} disconnected.`;
+}
+
 export default class AgentConnectCommand extends Command {
   static description =
     `Connect this coding session to Primitive in one call. With --session, the command checks this CLI's capabilities, installs or refreshes the matching primitive-connect skill for the detected runtime (Claude Code or Codex) from files bundled in this CLI, claims the owner's private setup invitation from piped stdin, answers one authenticated setup challenge, enables owner notifications, starts receiving, seeds a private AGENT_INFO note from --name and --info when absent, and prints one JSON result. The receiver defaults to external hooks in Claude Code and the native background listener elsewhere. When the native default cannot work because this machine has no local session socket (for example Codex older than 0.158.0), the command connects with poll receiving instead and reports receiving.fallbackReason and receiving.fallbackDetail. Without a session (no --session, or an empty one) the receiver is poll: for runtimes with no local session ID or hooks, such as a cloud-hosted conversation whose commands run in a separate sandbox, the invitation is claimed and verified the same way, nothing is installed, and the result's receiving.checkCommand is the command the agent runs to check for new mail at the start of each turn and after it sends. Native receiving starts or reuses a supervised background listener and waits briefly for its first successful mail check; external receiving installs the exact Claude session's fail-open Stop hook and resume SessionStart hook after the verification reply; a real idle mail event must still verify wake. The profile defaults to session-<session>, or to connection-<invitation hash prefix> without a session. --resume continues saved progress without reading stdin or replaying a claim or uncertain verification send. After the reply is submitted it waits up to a minute for the server to confirm the connection and reports verification.state verified, or reply_submitted while confirmation is still pending. Verification is separate from receiver health. Both official production (https://api.primitive.dev/v1) and staging (https://api.primitive-staging-1.com/v1) invitations pin their API origin. Never pass an invitation as a command argument. One address per session: an address whose credential Primitive confirms was already revoked (for example, revoked in the app before the owner reconnected it) no longer counts; it is disconnected locally, reported in clearedRevoked, and its saved setup is moved aside so the new invitation can be claimed into the same profile. Otherwise, if this session already has a connected Primitive address, including one saved in the profile being connected, the command claims nothing, leaves stdin unread, and exits ${ALREADY_CONNECTED_EXIT_CODE} with status already_connected. Its detail names how to continue that profile's own connection when that is the only one: --resume for a setup with saved progress, or --keep-existing to refresh a claim-only profile from the same invitation. Otherwise ask the user whether to keep the existing address or disconnect it first, then rerun with --keep-existing or --replace-existing. Never choose for the user. Select the saved identity with PRIMITIVE_AGENT_PROFILE. Use --status --json with --profile, with PRIMITIVE_AGENT_PROFILE set, or with --session (the address connected for that session) to inspect saved identity and local receiver health offline; it exits 1 when nothing is configured. A status check before connecting is optional: connect itself claims nothing and exits ${ALREADY_CONNECTED_EXIT_CODE} when the session already has an address. A completed connection's result carries nextSteps, in order: report to the owner in two short sentences, make one offer to rename a generated name and record where the agent runs, and load the primitive-connect skill before handling mail. When the claim reported one, the result also carries the connection's name and nameIsDefault.`;
@@ -325,15 +337,16 @@ export default class AgentConnectCommand extends Command {
           );
           // The refusal still says nothing was claimed; an address cleared
           // above as already revoked is reported alongside it.
+          const detail = withClearedNote(refusal.detail, cleared);
           if (flags.json)
             this.log(
               JSON.stringify(
                 cleared.length
-                  ? { ...refusal, clearedRevoked: cleared }
+                  ? { ...refusal, detail, clearedRevoked: cleared }
                   : refusal,
               ),
             );
-          else this.log(refusal.detail);
+          else this.log(detail);
           process.exitCode = ALREADY_CONNECTED_EXIT_CODE;
           return;
         }
@@ -502,13 +515,16 @@ export default class AgentConnectCommand extends Command {
     } catch (caught) {
       const error = refusalAfterReplacement(caught, replaced);
       throw new Errors.CLIError(
-        error instanceof AgentConnectionSetupError
-          ? error.message
-          : flags.session?.trim()
-            ? `Setup paused. Preserve the private profile and run ${invocation(process.argv[1])} agent connect --profile ${flags.profile ?? defaultAgentProfileName(flags.session.trim())} --session ${flags.session.trim()}${flags.receiver ? ` --receiver ${flags.receiver}` : ""} --resume --json. Do not manually resend verification or reclaim the invitation.`
-            : pollProfile
-              ? `Setup paused. Preserve the private profile and run ${invocation(process.argv[1])} agent connect --profile ${pollProfile} --receiver poll --resume --json. Do not manually resend verification or reclaim the invitation.`
-              : "Agent setup did not complete. Preserve the private profile and request a fresh owner invitation if a claim may have been submitted.",
+        withClearedNote(
+          error instanceof AgentConnectionSetupError
+            ? error.message
+            : flags.session?.trim()
+              ? `Setup paused. Preserve the private profile and run ${invocation(process.argv[1])} agent connect --profile ${flags.profile ?? defaultAgentProfileName(flags.session.trim())} --session ${flags.session.trim()}${flags.receiver ? ` --receiver ${flags.receiver}` : ""} --resume --json. Do not manually resend verification or reclaim the invitation.`
+              : pollProfile
+                ? `Setup paused. Preserve the private profile and run ${invocation(process.argv[1])} agent connect --profile ${pollProfile} --receiver poll --resume --json. Do not manually resend verification or reclaim the invitation.`
+                : "Agent setup did not complete. Preserve the private profile and request a fresh owner invitation if a claim may have been submitted.",
+          cleared,
+        ),
         { exit: 1 },
       );
     }

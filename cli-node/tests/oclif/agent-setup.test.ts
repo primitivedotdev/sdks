@@ -13,6 +13,7 @@ import { join } from "node:path";
 import type { EmailDetail } from "@primitivedotdev/api-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentInvitationRejectedError } from "../../src/oclif/agent-connect.js";
+import { runAgentConnect } from "../../src/oclif/agent-connect-flow.js";
 import { disconnectAgent } from "../../src/oclif/agent-disconnect.js";
 import {
   type AgentSetupDependencies,
@@ -22,7 +23,6 @@ import {
   VERIFICATION_BACKOFF_MS,
   verificationReplySubmitted,
 } from "../../src/oclif/agent-setup.js";
-import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
 import {
   agentProfileDirectory,
   agentProfilesDirectory,
@@ -30,6 +30,7 @@ import {
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 
+import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import { emptyContactPolicy } from "./contact-policy-fixture.js";
 
 const directories: string[] = [];
@@ -1376,7 +1377,7 @@ describe("reconnecting a profile whose agent was revoked elsewhere", () => {
     expect(f.fetch).toHaveBeenCalledOnce();
   });
 
-  it("keeps the session's Claude hooks on the same profile across a same-address reconnect", async () => {
+  it("reinstalls the session's Claude hooks when the same address reconnects", async () => {
     const f = fixture();
     const claudeDir = join(f.configDir, "claude");
     const bin = join(f.configDir, "bin");
@@ -1386,21 +1387,47 @@ describe("reconnecting a profile whose agent was revoked elsewhere", () => {
     writeFileSync(cliPath, "");
     writeFileSync(join(bin, "claude-wake.mjs"), "");
     writeFileSync(join(bin, "claude-pending-mail.mjs"), "");
-    const env = { CLAUDE_CONFIG_DIR: claudeDir };
-    const install = () =>
-      installClaudeWakeHook({
-        cliPath,
+    const env = {
+      CLAUDE_CONFIG_DIR: claudeDir,
+      CLAUDE_CODE_SESSION_ID: f.params.session,
+    };
+    // The real connect flow, with the real setup and hook installer; only
+    // the network and receiver probes are stubbed.
+    const connect = (invitation: string) =>
+      runAgentConnect({
         configDir: f.configDir,
+        packageRoot: f.configDir,
+        cliVersion: "1.0.0",
+        cliPath,
+        session: f.params.session,
         profileName: f.params.profileName,
-        agentAddress: f.identity.agentAddress,
-        sessionId: f.params.session,
+        skill: false,
         env,
+        readInvitation: async () => invitation,
+        dependencies: {
+          setupAgent: (options) =>
+            setupAgent({
+              ...options,
+              timeoutMs: 0,
+              verificationTimeoutMs: 0,
+              fetch: f.fetch,
+              dependencies: f.dependencies,
+            }),
+          seedAgentInfo: async () => "already_present",
+          awaitMailCheck: async () => ({
+            state: "pending",
+            lastSuccessfulMailCheckAt: null,
+          }),
+          refreshOwnerMemberAddress: async () => null,
+        },
       });
     const stopHooks = () =>
       JSON.parse(readFileSync(join(claudeDir, "settings.json"), "utf8")).hooks
         .Stop as Array<{ hooks: Array<{ args: string[] }> }>;
-    await setupAgent({ ...f.params, receiverMode: "external" });
-    expect(install()).toBe("installed_unverified");
+    expect(await connect(f.params.invitation)).toMatchObject({
+      externalHook: "installed_unverified",
+    });
+    expect(stopHooks()).toHaveLength(1);
     await disconnectAgent({
       configDir: f.configDir,
       profileName: f.params.profileName,
@@ -1408,16 +1435,16 @@ describe("reconnecting a profile whose agent was revoked elsewhere", () => {
       env,
     });
     expect(stopHooks()).toHaveLength(0);
-    // The server re-invites the same address with a new credential.
-    await setupAgent({
-      ...f.params,
-      receiverMode: "external",
-      invitation: reconnectInvitation(f),
+    // The server re-invites the same address with a new credential, pasted
+    // into the same session.
+    expect(await connect(reconnectInvitation(f))).toMatchObject({
+      status: "connected",
+      address: f.identity.agentAddress,
+      externalHook: "installed_unverified",
     });
     expect(
       loadConnectedAgentProfile(f.configDir, f.params.profileName),
     ).toMatchObject({ agent_address: f.identity.agentAddress });
-    expect(install()).toBe("installed_unverified");
     const hooks = stopHooks();
     expect(hooks).toHaveLength(1);
     expect(hooks[0]?.hooks[0]?.args.slice(3, 6)).toEqual([
@@ -1425,5 +1452,36 @@ describe("reconnecting a profile whose agent was revoked elsewhere", () => {
       f.identity.agentAddress,
       f.params.session,
     ]);
+  });
+
+  it("refuses and moves nothing while another claim on this machine is in flight", async () => {
+    const f = fixture();
+    await setupAgent(f.params);
+    await disconnectAgent({
+      configDir: f.configDir,
+      profileName: f.params.profileName,
+      fetch: revokedServer(),
+      stopReceiver: async () => stopped,
+    });
+    const before = f.state();
+    // A claim-only connect into this profile holds the claim lock with its
+    // request pending.
+    const releaseClaim = acquireListenLock(
+      agentProfilesDirectory(f.configDir),
+      "agent-connection-setup",
+    );
+    try {
+      await expect(
+        setupAgent({ ...f.params, invitation: reconnectInvitation(f) }),
+      ).rejects.toThrow("Another agent setup is running on this machine");
+    } finally {
+      releaseClaim();
+    }
+    expect(f.state()).toEqual(before);
+    expect(files(f).some((name) => name.startsWith("replaced-"))).toBe(false);
+    expect(f.fetch).toHaveBeenCalledOnce();
+    // Once it is free, the same reconnect goes through.
+    await setupAgent({ ...f.params, invitation: reconnectInvitation(f) });
+    expect(f.fetch).toHaveBeenCalledTimes(2);
   });
 });

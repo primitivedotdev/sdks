@@ -281,6 +281,32 @@ describe("one address per session", () => {
     });
   });
 
+  it("names a cleared revoked address when the connect then fails", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    const target = `session-${session}`;
+    for (const json of [true, false]) {
+      savedProfile(target, "agent@example.test", session);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response("{}", { status: 401 })),
+      );
+      mocks.setupAgent.mockRejectedValueOnce(
+        new AgentInvitationRejectedError(
+          "This invitation is no longer available. Nothing was changed on this machine.",
+          "invitation_unavailable",
+        ),
+      );
+      const failure = AgentConnectCommand.run(
+        ["--session", session, "--no-skill", ...(json ? ["--json"] : [])],
+        { root },
+      );
+      await expect(failure).rejects.toThrow(
+        "Before that, this run cleared agent@example.test (profile " +
+          `${target}) on this machine because Primitive confirmed its credential was already revoked; it stays disconnected.`,
+      );
+    }
+  });
+
   it("still refuses when a bound credential is live or its state is unknown", async () => {
     for (const answer of [
       () =>
