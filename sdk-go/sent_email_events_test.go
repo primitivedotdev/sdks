@@ -301,3 +301,28 @@ func TestSentEmailValidationReportsSelectedShape(t *testing.T) {
 		t.Fatalf("HandleWebhook should stay typed to email.received, got %v", err)
 	}
 }
+
+func TestSentEmailEventRoundTripsThroughValidation(t *testing.T) {
+	for _, name := range []string{
+		"accepted.json", "delivered-recipient.json", "failed-recipient.json", "failed-rollup.json",
+		"delivered-rollup.json", "legacy-message-result.json", "completed.json", "completed-not-relayed.json",
+	} {
+		event, err := ValidateSentEmailEvent(loadFixtureCases[map[string]any](t, "sent-email-events", name))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		// A parsed event, serialized again, must still be a valid body.
+		if _, err := ValidateSentEmailEvent(*event); err != nil {
+			t.Fatalf("%s: re-validating the parsed event failed: %v", name, err)
+		}
+		data := sentEmailAsMap(t, event)
+		value, present := data["recipient"]
+		messageScoped := event.Scope != nil && *event.Scope == SentEmailScopeMessage
+		if messageScoped && (!present || value != nil) {
+			t.Fatalf("%s: message-scoped result must carry recipient: null, got %v %v", name, present, value)
+		}
+		if (event.Event == SentEmailEventAccepted || event.Event == SentEmailEventCompleted) && present {
+			t.Fatalf("%s: recipient must be absent", name)
+		}
+	}
+}

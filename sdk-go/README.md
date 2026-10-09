@@ -658,7 +658,7 @@ A `time.Time` in any location is sent with its offset.
 
 Endpoints can also receive events about mail you send: `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed` and `sent_email.completed`. They are opt-in: an endpoint receives them only when its `rules.event_types` lists them (with the CLI, `primitive endpoints create --url <url> --event-types sent_email.*`). An endpoint that lists them and also handles inbound mail must keep `email.received` in the list.
 
-Each body carries `event`, and is validated against the `sent_email.*` JSON schema when parsed. Every recipient (To, Cc and Bcc) gets exactly one `sent_email.delivered` or `sent_email.failed` with `scope` `"recipient"`, and `sent_email.completed` carries the totals once every recipient is final. Deduplicate on the event `id` (equal to the `X-Webhook-Id` header), and check that `delivery.endpoint_id` is the endpoint that received the request.
+Each body carries `event`, and is validated against the `sent_email.*` JSON schema when parsed. Each recipient (To, Cc and Bcc) of a send gets exactly one `sent_email.delivered` or `sent_email.failed` with `scope` `"recipient"`, for up to 100 recipients. Mail relay sends with more recipients report the rest in roll-ups (`scope` `"message"`, `reason` `"rollup"`), sends recorded before per-recipient results can report one legacy message-level result (`reason` `"legacy_message_result"`), and relay recipients delivered inside the sender's own mail system get no event and are listed in `summary.not_relayed_recipients`. So do not wait for a per-recipient event per address: use `sent_email.completed`, which carries the totals once every recipient is final. Deduplicate on the event `id` (equal to the `X-Webhook-Id` header), and check that `delivery.endpoint_id` is the endpoint that received the request.
 
 ```go
 event, err := primitive.HandleWebhookEvent(primitive.HandleWebhookOptions{
@@ -673,7 +673,11 @@ if sent, ok := event.(primitive.SentEmailEvent); ok {
 	switch {
 	case sent.Event == primitive.SentEmailEventFailed && sent.IsRecipientResult():
 		// sent.Recipient.Type is "to", "cc" or "bcc"
-		log.Println(sent.Recipient.Address, *sent.Outcome.SMTPEnhancedStatusCode)
+		status := "(none)"
+		if code := sent.Outcome.SMTPEnhancedStatusCode; code != nil {
+			status = *code
+		}
+		log.Println(sent.Recipient.Address, status)
 	case sent.Event == primitive.SentEmailEventCompleted:
 		log.Println(sent.Summary.RecipientCount, sent.Summary.Delivered, sent.Summary.Failed)
 	}

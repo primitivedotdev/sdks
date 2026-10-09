@@ -89,6 +89,23 @@ type SentEmailEvent struct {
 // GetEvent returns the event name.
 func (e SentEmailEvent) GetEvent() string { return e.Event }
 
+// MarshalJSON writes the event as its wire shape. Message-scoped results
+// (roll-ups and legacy results) carry "recipient": null, which the schema
+// requires; on every other event a nil Recipient is left out.
+func (e SentEmailEvent) MarshalJSON() ([]byte, error) {
+	type wire SentEmailEvent
+	data, err := json.Marshal(wire(e))
+	if err != nil || e.Recipient != nil || e.Scope == nil || *e.Scope != SentEmailScopeMessage {
+		return data, err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return nil, err
+	}
+	fields["recipient"] = json.RawMessage("null")
+	return json.Marshal(fields)
+}
+
 // IsRecipientResult reports whether the event is a delivered or failed result
 // for one recipient (Scope "recipient").
 func (e SentEmailEvent) IsRecipientResult() bool {
