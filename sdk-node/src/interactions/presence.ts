@@ -77,8 +77,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const NONCE = /^(?:[0-9a-f]{32}|[0-9a-f]{64})$/;
 const LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
 const HOST = new RegExp(`^${LABEL}(?:\\.${LABEL})+$`);
+// The backtick is the regex escape \x60, not a string escape: a minifier that
+// turns the string escape into a raw backtick inside this template literal ends
+// the literal early and breaks the bundle (seen with Next.js/Turbopack).
 const MAILBOX = new RegExp(
-  `^[a-z0-9!#$%&'*+/=?^_\x60{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_\x60{|}~-]+)*@${LABEL}(?:\\.${LABEL})+$`,
+  `^[a-z0-9!#$%&'*+/=?^_\\x60{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_\\x60{|}~-]+)*@${LABEL}(?:\\.${LABEL})+$`,
 );
 const ENVELOPE_KEYS = [
   "interaction_version",
