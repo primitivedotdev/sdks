@@ -3,7 +3,7 @@ import { AgentDisconnectError, disconnectAgent } from "../agent-disconnect.js";
 
 export default class AgentDisconnectCommand extends Command {
   static description =
-    "Disconnect exactly one saved connected-agent profile. Stop its tracked bound receiver, revoke only that address's bound credential at its pinned Primitive origin, then remove only the local credential after confirmed revocation. Mail, notes, setup evidence and notification receipts remain. This does not permanently remove the connection record; an owner or admin can do that separately.";
+    "Disconnect exactly one saved connected-agent profile. Stop its tracked bound receiver, revoke only that address's bound credential at its pinned Primitive origin, then remove only the local credential after confirmed revocation. When Primitive refuses the credential as unauthorized because it was already revoked (in the app or from another machine), the same credential is checked once more and, only if that confirms it no longer authenticates, the disconnect completes and reports revocation already_revoked; a server error or network failure is never treated as confirmation. Mail, notes, setup evidence and notification receipts remain. This does not permanently remove the connection record; an owner or admin can do that separately.";
   static summary = "Disconnect one connected agent";
   static examples = [
     "<%= config.bin %> agent disconnect --profile work",

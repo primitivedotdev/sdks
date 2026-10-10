@@ -614,6 +614,8 @@ export async function connectAgent(params: {
   fetch?: typeof fetch;
   now?: () => number;
   presence?: boolean;
+  /** The caller already holds the agent-connection-setup lock. */
+  claimLockHeld?: boolean;
 }): Promise<AgentConnectResult> {
   const profileName = agentProfileName(params.profileName);
   const invitation = parseAgentInvitation(params.invitation);
@@ -622,7 +624,9 @@ export async function connectAgent(params: {
   let release: (() => void) | undefined;
   try {
     privateMailDirectory(directory, true);
-    release = acquireListenLock(directory, "agent-connection-setup");
+    release = params.claimLockHeld
+      ? () => {}
+      : acquireListenLock(directory, "agent-connection-setup");
   } catch {
     throw new AgentConnectionSetupError(
       "Agent setup is already running, or its private directory is unavailable. No invitation was submitted.",

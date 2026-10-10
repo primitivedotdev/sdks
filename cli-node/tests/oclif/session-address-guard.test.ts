@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -134,6 +140,14 @@ beforeEach(() => {
       outputs.push(String(line));
     });
   mocks.readAgentInvitation.mockResolvedValue(invitation);
+  // Offline by default: no saved credential can be confirmed revoked, so
+  // bound addresses keep counting unless a test says otherwise.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      throw new Error("offline");
+    }),
+  );
   mocks.connectNativeSession.mockResolvedValue({ close: () => {} });
   mocks.disconnectAgent.mockImplementation(
     async (params: { configDir: string; profileName: string }) => {
@@ -149,6 +163,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   vi.clearAllMocks();
   delete process.env.PRIMITIVE_CONFIG_DIR;
@@ -236,6 +251,144 @@ describe("one address per session", () => {
       replacedExisting: [{ profile: "work", address: "work@example.test" }],
     });
     expect(connectedProfilesForSession(configDir, session)).toEqual([]);
+  });
+
+  it("connects without --replace-existing when the session's agent was revoked elsewhere", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    const target = `session-${session}`;
+    savedProfile(target, "agent@example.test", session);
+    const probes: Request[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        probes.push(new Request(input, init));
+        return new Response("{}", { status: 401 });
+      }),
+    );
+    mocks.setupAgent.mockResolvedValue(setupResult(target));
+    await AgentConnectCommand.run(
+      ["--session", session, "--no-skill", "--json"],
+      {
+        root,
+      },
+    );
+    expect(process.exitCode).not.toBe(ALREADY_CONNECTED_EXIT_CODE);
+    expect(probes.map((probe) => `${probe.method} ${probe.url}`)).toEqual([
+      "GET https://api.primitive-staging-1.com/v1/agent-connections/me",
+    ]);
+    expect(mocks.disconnectAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ configDir, profileName: target }),
+    );
+    expect(mocks.setupAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ profileName: target, session, invitation }),
+    );
+    expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+      clearedRevoked: [{ profile: target, address: "agent@example.test" }],
+    });
+  });
+
+  it("moves a cleared profile's setup aside before a claim-only connect into it", async () => {
+    process.env.CLAUDE_CODE_SESSION_ID = session;
+    savedProfile("work", "agent@example.test", session);
+    const directory = agentProfileDirectory(configDir, "work");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 401 })),
+    );
+    // The real disconnect writes this marker once revocation is confirmed.
+    mocks.disconnectAgent.mockImplementationOnce(
+      async (params: { configDir: string; profileName: string }) => {
+        writeMailJson(join(directory, `disconnected-${"a".repeat(64)}.json`), {
+          version: 1,
+          revoked_at: "2026-01-01T00:00:00.000Z",
+        });
+        removeMailFile(join(directory, "connection.json"));
+        return { status: "disconnected", profile: params.profileName };
+      },
+    );
+    let setupAtClaim: unknown = "unset";
+    let lockAtClaim: unknown;
+    mocks.connectAgent.mockImplementationOnce(
+      async (params: { claimLockHeld?: boolean }) => {
+        setupAtClaim = existsSync(join(directory, "setup.json"));
+        lockAtClaim = params.claimLockHeld;
+        throw new AgentInvitationRejectedError(
+          "This invitation is no longer available. Nothing was changed on this machine.",
+          "invitation_unavailable",
+        );
+      },
+    );
+    await expect(
+      AgentConnectCommand.run(["--profile", "work", "--json"], { root }),
+    ).rejects.toThrow("this run cleared agent@example.test");
+    expect(mocks.connectAgent).toHaveBeenCalledOnce();
+    // The old invitation's setup was gone before the claim, under the lock.
+    expect(setupAtClaim).toBe(false);
+    expect(lockAtClaim).toBe(true);
+    expect(
+      readdirSync(directory).filter((name) =>
+        /^replaced-\d+-setup\.json$/.test(name),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("names a cleared revoked address when the connect then fails", async () => {
+    process.env.CODEX_THREAD_ID = session;
+    const target = `session-${session}`;
+    for (const json of [true, false]) {
+      savedProfile(target, "agent@example.test", session);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => new Response("{}", { status: 401 })),
+      );
+      mocks.setupAgent.mockRejectedValueOnce(
+        new AgentInvitationRejectedError(
+          "This invitation is no longer available. Nothing was changed on this machine.",
+          "invitation_unavailable",
+        ),
+      );
+      const failure = AgentConnectCommand.run(
+        ["--session", session, "--no-skill", ...(json ? ["--json"] : [])],
+        { root },
+      );
+      await expect(failure).rejects.toThrow(
+        "Before that, this run cleared agent@example.test (profile " +
+          `${target}) on this machine because Primitive confirmed its credential was already revoked; it stays disconnected.`,
+      );
+    }
+  });
+
+  it("still refuses when a bound credential is live or its state is unknown", async () => {
+    for (const answer of [
+      () =>
+        Response.json({
+          success: true,
+          data: {
+            connection: { address: "work@example.test", status: "connected" },
+          },
+        }),
+      () => new Response("unavailable", { status: 503 }),
+    ]) {
+      process.env.CODEX_THREAD_ID = session;
+      savedProfile("work", "work@example.test", session);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => answer()),
+      );
+      outputs = [];
+      process.exitCode = undefined;
+      await AgentConnectCommand.run(["--session", session, "--json"], {
+        root,
+      });
+      expect(process.exitCode).toBe(ALREADY_CONNECTED_EXIT_CODE);
+      expect(JSON.parse(outputs[0] ?? "")).toMatchObject({
+        status: "already_connected",
+        bound: [{ profile: "work", address: "work@example.test" }],
+      });
+    }
+    expect(mocks.disconnectAgent).not.toHaveBeenCalled();
+    expect(mocks.readAgentInvitation).not.toHaveBeenCalled();
+    expect(mocks.setupAgent).not.toHaveBeenCalled();
   });
 
   it("--replace-existing names the disconnected agent when the new invitation is refused", async () => {

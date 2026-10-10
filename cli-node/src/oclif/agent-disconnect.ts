@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
-import { join } from "node:path";
+import { existsSync, renameSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
 import { uninstallClaudeWakeHook } from "./claude-wake-install.js";
 import {
+  AgentConnectionSetupError,
   agentProfileDirectory,
   agentProfileName,
   agentProfilesDirectory,
@@ -33,7 +35,12 @@ type DisconnectResult = {
   status: "disconnected";
   identity: ReturnType<typeof connectedAgentIdentity>;
   receiver: BackgroundListenStatus | null;
-  revocation: "confirmed" | "previously_confirmed";
+  /**
+   * `already_revoked`: Primitive refused the credential as unauthorized and
+   * then confirmed, with the same credential, that it no longer authenticates
+   * (revoked in the app or from another machine).
+   */
+  revocation: "confirmed" | "previously_confirmed" | "already_revoked";
   externalHook: "removed" | "unavailable" | null;
 };
 
@@ -104,6 +111,23 @@ function confirmationPath(
   return join(directory, `disconnected-${profile.invitation_hash}.json`);
 }
 
+/** The saved setup's disconnect marker, when it is a well-formed record. */
+function markerRecord(
+  directory: string,
+  invitationHash: string,
+): Record<string, unknown> | null {
+  const raw = readMailJson(
+    join(directory, `disconnected-${invitationHash}.json`),
+  );
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  return row.version === 1 &&
+    typeof row.revoked_at === "string" &&
+    Number.isFinite(Date.parse(row.revoked_at))
+    ? row
+    : null;
+}
+
 function confirmedLocally(
   directory: string,
   profile: ConnectedAgentProfile,
@@ -142,10 +166,56 @@ function errorCode(error: unknown): string | undefined {
     : undefined;
 }
 
+/**
+ * Whether Primitive confirms, with this same credential, that it no longer
+ * authenticates: a definite 401 from the connection's own record, or that
+ * record reporting the connection revoked. A server error, a timeout, a
+ * network failure or any other answer is not a confirmation.
+ */
+export async function credentialRevokedByServer(
+  profile: ConnectedAgentProfile,
+  fetcher: typeof fetch = fetch,
+): Promise<boolean> {
+  try {
+    const response = await fetcher(
+      `${profile.api_base_url}/agent-connections/me`,
+      {
+        method: "GET",
+        redirect: "error",
+        signal: AbortSignal.timeout(10_000),
+        headers: {
+          authorization: `Bearer ${profile.api_key}`,
+          accept: "application/json",
+        },
+      },
+    );
+    if (response.status !== 200) {
+      await response.body?.cancel().catch(() => undefined);
+      return response.status === 401;
+    }
+    const text = await response.text();
+    if (text.length > 65_536) return false;
+    const body = JSON.parse(text) as {
+      success?: unknown;
+      data?: { connection?: { address?: unknown; status?: unknown } };
+    } | null;
+    const connection = body?.data?.connection;
+    return (
+      body?.success === true &&
+      typeof connection?.address === "string" &&
+      connection.address.toLowerCase() ===
+        profile.agent_address.toLowerCase() &&
+      connection.status === "revoked"
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function revoke(
   profile: ConnectedAgentProfile,
   fetcher?: typeof fetch,
-): Promise<void> {
+): Promise<"confirmed" | "already_revoked"> {
   const client = new PrimitiveApiClient({
     apiKey: profile.api_key,
     apiBaseUrl: profile.api_base_url,
@@ -172,6 +242,10 @@ async function revoke(
       throw new AgentDisconnectError(
         "Revocation outcome is unknown: no response was received from Primitive. The profile and credential were preserved. Check your connection, then retry or check the agent in the app.",
       );
+    // A 401 alone may be a transient auth failure; it counts only when the
+    // same credential is then confirmed dead.
+    if (status === 401 && (await credentialRevokedByServer(profile, fetcher)))
+      return "already_revoked";
     const code = errorCode(result.error);
     const label = `HTTP ${status}${code ? `, ${code}` : ""}`;
     throw new AgentDisconnectError(
@@ -206,6 +280,7 @@ async function revoke(
     throw new AgentDisconnectError(
       "Revocation response was incomplete. The credential was preserved. Check the agent in the app before retrying.",
     );
+  return "confirmed";
 }
 
 /** Revoke one selected connected credential; never alter OAuth login or mail evidence. */
@@ -255,7 +330,9 @@ export async function disconnectAgent(
         "The bound receiver has not confirmed stopping. The connection and credential were preserved. Check listener status before retrying.",
       );
     const previous = confirmedLocally(directory, profile);
-    if (!previous) await revoke(profile, params.fetch);
+    const revocation = previous
+      ? "previously_confirmed"
+      : await revoke(profile, params.fetch);
     if (!previous) {
       try {
         writeMailJson(confirmationPath(directory, profile), {
@@ -264,6 +341,9 @@ export async function disconnectAgent(
           api_base_url: profile.api_base_url,
           credential_digest: credentialDigest(profile),
           revoked_at: (params.now ?? (() => new Date()))().toISOString(),
+          ...(revocation === "already_revoked"
+            ? { reason: "server_revoked" }
+            : {}),
         });
       } catch {
         throw new AgentDisconnectError(
@@ -298,7 +378,7 @@ export async function disconnectAgent(
       status: "disconnected",
       identity: connectedAgentIdentity(profileName, profile),
       receiver,
-      revocation: previous ? "previously_confirmed" : "confirmed",
+      revocation,
       externalHook,
     };
   } catch (error) {
@@ -310,4 +390,175 @@ export async function disconnectAgent(
     releaseClaim?.();
     releaseSetup?.();
   }
+}
+
+/**
+ * Whether the saved setup bound to `invitationHash` belongs to a credential
+ * whose revocation is confirmed locally: its disconnect marker exists and,
+ * when the credential file is still present, matches that credential. Such
+ * a setup is evidence only; it no longer binds this profile to an address.
+ */
+export function savedSetupRevoked(
+  configDir: string,
+  profileName: string,
+  invitationHash: string,
+): boolean {
+  if (!/^[a-f0-9]{64}$/.test(invitationHash)) return false;
+  try {
+    const directory = agentProfileDirectory(configDir, profileName);
+    if (!markerRecord(directory, invitationHash)) return false;
+    const profile = loadConnectedAgentProfile(configDir, profileName);
+    if (!profile) return true;
+    return (
+      profile.invitation_hash === invitationHash &&
+      confirmedLocally(directory, profile)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Move a revoked setup aside, the same way a replacement does, so a new
+ * invitation can be claimed into the same profile. Files are renamed, never
+ * deleted, and kept for recovery.
+ */
+export function archiveRevokedSetup(
+  configDir: string,
+  profileName: string,
+  now: Date,
+): void {
+  const directory = agentProfileDirectory(configDir, profileName);
+  const stamp = now.toISOString().replace(/[^0-9]/g, "");
+  for (const path of [
+    join(directory, "setup.json"),
+    join(directory, "enrollment", "state.json"),
+    join(directory, "connection.json"),
+  ]) {
+    try {
+      renameSync(
+        path,
+        join(dirname(path), `replaced-${stamp}-${basename(path)}`),
+      );
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+  }
+}
+
+/**
+ * Run a claim into `profileName`, first moving aside a saved setup whose
+ * credential is confirmed revoked, so the new credential is never saved
+ * beside a setup naming the old invitation. The profile's setup lock and the
+ * machine-wide claim lock are taken (in the order setup and disconnect use)
+ * before anything is checked or moved, and held through the claim, which is
+ * told the claim lock is already held. A profile with no saved setup is
+ * claimed as before, without these locks.
+ */
+export async function claimOverRevokedSetup<T>(
+  params: {
+    configDir: string;
+    profileName: string;
+    invitationHash: string;
+    now?: () => Date;
+  },
+  claim: (claimLockHeld: boolean) => Promise<T>,
+): Promise<T> {
+  const directory = agentProfileDirectory(params.configDir, params.profileName);
+  const path = join(directory, "setup.json");
+  if (!existsSync(path)) return claim(false);
+  let releaseSetup: (() => void) | undefined;
+  let releaseClaim: (() => void) | undefined;
+  try {
+    try {
+      releaseSetup = acquireListenLock(directory, "setup");
+      releaseClaim = acquireListenLock(
+        agentProfilesDirectory(params.configDir),
+        "agent-connection-setup",
+      );
+    } catch {
+      throw new AgentConnectionSetupError(
+        "Another agent setup is running on this machine. No invitation was claimed and nothing was changed; retry when it finishes.",
+      );
+    }
+    let saved: unknown = null;
+    try {
+      saved = readMailJson(path);
+    } catch {
+      /* An unreadable setup is left for the claim to report. */
+    }
+    const savedHash =
+      saved && typeof saved === "object" && !Array.isArray(saved)
+        ? (saved as Record<string, unknown>).invitationHash
+        : undefined;
+    if (
+      typeof savedHash === "string" &&
+      savedHash !== params.invitationHash &&
+      savedSetupRevoked(params.configDir, params.profileName, savedHash)
+    )
+      archiveRevokedSetup(
+        params.configDir,
+        params.profileName,
+        (params.now ?? (() => new Date()))(),
+      );
+    return await claim(true);
+  } finally {
+    releaseClaim?.();
+    releaseSetup?.();
+  }
+}
+
+/**
+ * Of the addresses bound to a session, clear the ones Primitive confirms are
+ * already revoked: each is disconnected locally (receiver stopped, hooks
+ * removed, credential removed, marker written) so it no longer counts as the
+ * session's address. A live credential, or one whose state cannot be
+ * confirmed, is kept and still counts.
+ */
+export async function clearRevokedAddresses(
+  params: {
+    configDir: string;
+    rows: Array<{ profile: string; address: string }>;
+    disconnect?: typeof disconnectAgent;
+  } & DisconnectDependencies,
+): Promise<{
+  remaining: Array<{ profile: string; address: string }>;
+  cleared: Array<{ profile: string; address: string }>;
+}> {
+  const remaining: Array<{ profile: string; address: string }> = [];
+  const cleared: Array<{ profile: string; address: string }> = [];
+  for (const row of params.rows) {
+    let checked: ConnectedAgentProfile | null = null;
+    try {
+      const profile = loadConnectedAgentProfile(params.configDir, row.profile);
+      if (profile && (await credentialRevokedByServer(profile, params.fetch)))
+        checked = profile;
+    } catch {
+      checked = null;
+    }
+    if (!checked) {
+      remaining.push(row);
+      continue;
+    }
+    try {
+      await (params.disconnect ?? disconnectAgent)({
+        configDir: params.configDir,
+        profileName: row.profile,
+        fetch: params.fetch,
+        stopReceiver: params.stopReceiver,
+        now: params.now,
+        env: params.env,
+        // A reconnect may land while the lookup is pending; only the
+        // credential that was checked may be disconnected.
+        expected: {
+          address: checked.agent_address,
+          invitationHash: checked.invitation_hash,
+        },
+      });
+      cleared.push(row);
+    } catch {
+      remaining.push(row);
+    }
+  }
+  return { remaining, cleared };
 }
