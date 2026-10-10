@@ -25,9 +25,36 @@ export function threadCpuMs(): number {
   return (user + system) / 1000;
 }
 
+// Thread CPU time can be coarse. On the Linux CI runners it moves in whole
+// scheduler ticks of about 4 ms, while sanitizing an ordinary 100 kB body
+// takes less than one tick, so a single call often reads 0 ms and a
+// comparison against ten times that fails. Each sample therefore repeats its
+// subject until at least this much CPU time has passed and reports the mean
+// per call, which keeps the tick error to a small fraction of the sample.
+const MIN_SAMPLE_CPU_MS = 40;
+// A clock that never advances would otherwise loop forever. Fail instead.
+const MAX_CALLS_PER_SAMPLE = 100_000;
+
+function sampleCpuMs(subject: () => unknown): number {
+  const start = threadCpuMs();
+  let calls = 0;
+  let elapsed = 0;
+  do {
+    subject();
+    calls++;
+    elapsed = threadCpuMs() - start;
+    if (calls >= MAX_CALLS_PER_SAMPLE && elapsed < MIN_SAMPLE_CPU_MS)
+      throw new Error(
+        `thread CPU time advanced only ${elapsed} ms over ${calls} calls: the clock is not usable for these timing tests`,
+      );
+  } while (elapsed < MIN_SAMPLE_CPU_MS);
+  return elapsed / calls;
+}
+
 /**
  * Runs every subject `runs` times, one of each per round, and returns the
- * least CPU time (ms) each one took, in the order given.
+ * least CPU time (ms) one call of each took, in the order given. Each
+ * measurement is the mean over enough calls to fill MIN_SAMPLE_CPU_MS.
  */
 export function leastCpuMs(
   subjects: ReadonlyArray<() => unknown>,
@@ -36,11 +63,9 @@ export function leastCpuMs(
   const best = subjects.map(() => Number.POSITIVE_INFINITY);
   for (let round = 0; round < runs; round++) {
     for (const [i, subject] of subjects.entries()) {
-      const start = threadCpuMs();
-      subject();
       best[i] = Math.min(
         best[i] ?? Number.POSITIVE_INFINITY,
-        threadCpuMs() - start,
+        sampleCpuMs(subject),
       );
     }
   }
