@@ -565,7 +565,7 @@ func encodeCheckDomainDnsResponse(response CheckDomainDnsRes, w http.ResponseWri
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -582,6 +582,66 @@ func encodeCheckDomainDnsResponse(response CheckDomainDnsRes, w http.ResponseWri
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -953,7 +1013,7 @@ func encodeCompleteWebhookEventResponse(response CompleteWebhookEventRes, w http
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -970,6 +1030,66 @@ func encodeCompleteWebhookEventResponse(response CompleteWebhookEventRes, w http
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -1051,7 +1171,7 @@ func encodeCreateAgentAccountResponse(response CreateAgentAccountRes, w http.Res
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -1068,6 +1188,66 @@ func encodeCreateAgentAccountResponse(response CreateAgentAccountRes, w http.Res
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -1162,7 +1342,7 @@ func encodeCreateAgentClaimLinkResponse(response CreateAgentClaimLinkRes, w http
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -1179,6 +1359,66 @@ func encodeCreateAgentClaimLinkResponse(response CreateAgentClaimLinkRes, w http
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -1500,7 +1740,7 @@ func encodeCreateChallengeResponse(response CreateChallengeRes, w http.ResponseW
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -1517,6 +1757,66 @@ func encodeCreateChallengeResponse(response CreateChallengeRes, w http.ResponseW
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -1631,7 +1931,7 @@ func encodeCreateEmailChallengeResponse(response CreateEmailChallengeRes, w http
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -1648,6 +1948,66 @@ func encodeCreateEmailChallengeResponse(response CreateEmailChallengeRes, w http
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -3258,7 +3618,7 @@ func encodeDeleteMemoryResponse(response DeleteMemoryRes, w http.ResponseWriter,
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -3275,6 +3635,66 @@ func encodeDeleteMemoryResponse(response DeleteMemoryRes, w http.ResponseWriter,
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -3566,7 +3986,7 @@ func encodeDeleteSentEmailResponse(response DeleteSentEmailRes, w http.ResponseW
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -3583,6 +4003,66 @@ func encodeDeleteSentEmailResponse(response DeleteSentEmailRes, w http.ResponseW
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -3789,7 +4269,7 @@ func encodeDiscardEmailContentResponse(response DiscardEmailContentRes, w http.R
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -3806,6 +4286,66 @@ func encodeDiscardEmailContentResponse(response DiscardEmailContentRes, w http.R
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -4027,7 +4567,7 @@ func encodeDownloadDomainZoneFileResponse(response DownloadDomainZoneFileRes, w 
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -4044,6 +4584,66 @@ func encodeDownloadDomainZoneFileResponse(response DownloadDomainZoneFileRes, w 
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -4757,7 +5357,7 @@ func encodeGetAgentContactPolicyResponse(response GetAgentContactPolicyRes, w ht
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -4774,6 +5374,66 @@ func encodeGetAgentContactPolicyResponse(response GetAgentContactPolicyRes, w ht
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -4862,7 +5522,7 @@ func encodeGetChallengeResponse(response GetChallengeRes, w http.ResponseWriter,
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -4879,6 +5539,66 @@ func encodeGetChallengeResponse(response GetChallengeRes, w http.ResponseWriter,
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -5197,7 +5917,7 @@ func encodeGetContactPolicyResponse(response GetContactPolicyRes, w http.Respons
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -5214,6 +5934,66 @@ func encodeGetContactPolicyResponse(response GetContactPolicyRes, w http.Respons
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -5335,7 +6115,7 @@ func encodeGetCreditBalanceResponse(response GetCreditBalanceRes, w http.Respons
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -5352,6 +6132,66 @@ func encodeGetCreditBalanceResponse(response GetCreditBalanceRes, w http.Respons
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -5683,7 +6523,7 @@ func encodeGetInboxStatusResponse(response GetInboxStatusRes, w http.ResponseWri
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -5700,6 +6540,66 @@ func encodeGetInboxStatusResponse(response GetInboxStatusRes, w http.ResponseWri
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -5788,7 +6688,7 @@ func encodeGetMemoryResponse(response GetMemoryRes, w http.ResponseWriter, span 
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -5805,6 +6705,66 @@ func encodeGetMemoryResponse(response GetMemoryRes, w http.ResponseWriter, span 
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -6117,7 +7077,7 @@ func encodeGetSpendPolicyResponse(response GetSpendPolicyRes, w http.ResponseWri
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -6134,6 +7094,66 @@ func encodeGetSpendPolicyResponse(response GetSpendPolicyRes, w http.ResponseWri
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -6242,7 +7262,7 @@ func encodeGetTemplateResponse(response GetTemplateRes, w http.ResponseWriter, s
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -6259,6 +7279,66 @@ func encodeGetTemplateResponse(response GetTemplateRes, w http.ResponseWriter, s
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -6347,7 +7427,7 @@ func encodeGetTemplateInstallResponse(response GetTemplateInstallRes, w http.Res
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -6364,6 +7444,66 @@ func encodeGetTemplateInstallResponse(response GetTemplateInstallRes, w http.Res
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -6629,7 +7769,7 @@ func encodeInstallTemplateResponse(response InstallTemplateRes, w http.ResponseW
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -6646,6 +7786,66 @@ func encodeInstallTemplateResponse(response InstallTemplateRes, w http.ResponseW
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -7616,7 +8816,7 @@ func encodeListDeclinedPaymentsResponse(response ListDeclinedPaymentsRes, w http
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -7633,6 +8833,66 @@ func encodeListDeclinedPaymentsResponse(response ListDeclinedPaymentsRes, w http
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -8162,7 +9422,7 @@ func encodeListPayoutAddressesResponse(response ListPayoutAddressesRes, w http.R
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -8179,6 +9439,66 @@ func encodeListPayoutAddressesResponse(response ListPayoutAddressesRes, w http.R
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -8459,7 +9779,7 @@ func encodeListTemplatesResponse(response ListTemplatesRes, w http.ResponseWrite
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -8476,6 +9796,66 @@ func encodeListTemplatesResponse(response ListTemplatesRes, w http.ResponseWrite
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -8702,7 +10082,7 @@ func encodePayChallengeResponse(response PayChallengeRes, w http.ResponseWriter,
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -8719,6 +10099,66 @@ func encodePayChallengeResponse(response PayChallengeRes, w http.ResponseWriter,
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -9101,7 +10541,7 @@ func encodePullWebhookEventResponse(response PullWebhookEventRes, w http.Respons
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -9118,6 +10558,66 @@ func encodePullWebhookEventResponse(response PullWebhookEventRes, w http.Respons
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -9449,7 +10949,7 @@ func encodePutAgentContactPolicyResponse(response PutAgentContactPolicyRes, w ht
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -9466,6 +10966,66 @@ func encodePutAgentContactPolicyResponse(response PutAgentContactPolicyRes, w ht
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -9784,7 +11344,7 @@ func encodePutContactPolicyResponse(response PutContactPolicyRes, w http.Respons
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -9801,6 +11361,66 @@ func encodePutContactPolicyResponse(response PutContactPolicyRes, w http.Respons
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -10020,7 +11640,7 @@ func encodeRegisterPayoutAddressResponse(response RegisterPayoutAddressRes, w ht
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -10037,6 +11657,66 @@ func encodeRegisterPayoutAddressResponse(response RegisterPayoutAddressRes, w ht
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -10450,7 +12130,7 @@ func encodeReplayDeliveryResponse(response ReplayDeliveryRes, w http.ResponseWri
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -10467,6 +12147,66 @@ func encodeReplayDeliveryResponse(response ReplayDeliveryRes, w http.ResponseWri
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -10542,7 +12282,7 @@ func encodeReplayEmailWebhooksResponse(response ReplayEmailWebhooksRes, w http.R
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -10559,6 +12299,66 @@ func encodeReplayEmailWebhooksResponse(response ReplayEmailWebhooksRes, w http.R
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -10693,7 +12493,7 @@ func encodeReplyToEmailResponse(response ReplyToEmailRes, w http.ResponseWriter,
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -10710,6 +12510,66 @@ func encodeReplyToEmailResponse(response ReplyToEmailRes, w http.ResponseWriter,
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -11332,7 +13192,7 @@ func encodeRotateWebhookSecretResponse(response RotateWebhookSecretRes, w http.R
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -11349,6 +13209,66 @@ func encodeRotateWebhookSecretResponse(response RotateWebhookSecretRes, w http.R
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -11568,7 +13488,7 @@ func encodeSearchMemoriesResponse(response SearchMemoriesRes, w http.ResponseWri
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -11585,6 +13505,66 @@ func encodeSearchMemoriesResponse(response SearchMemoriesRes, w http.ResponseWri
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -11660,7 +13640,7 @@ func encodeSemanticSearchResponse(response SemanticSearchRes, w http.ResponseWri
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -11677,6 +13657,66 @@ func encodeSemanticSearchResponse(response SemanticSearchRes, w http.ResponseWri
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -11811,7 +13851,7 @@ func encodeSendEmailResponse(response SendEmailRes, w http.ResponseWriter, span 
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -11828,6 +13868,66 @@ func encodeSendEmailResponse(response SendEmailRes, w http.ResponseWriter, span 
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -12112,7 +14212,7 @@ func encodeSetMemoryResponse(response SetMemoryRes, w http.ResponseWriter, span 
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -12129,6 +14229,66 @@ func encodeSetMemoryResponse(response SetMemoryRes, w http.ResponseWriter, span 
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -12341,7 +14501,7 @@ func encodeStartAgentClaimResponse(response StartAgentClaimRes, w http.ResponseW
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -12358,6 +14518,66 @@ func encodeStartAgentClaimResponse(response StartAgentClaimRes, w http.ResponseW
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -12426,7 +14646,7 @@ func encodeStartAgentSignupResponse(response StartAgentSignupRes, w http.Respons
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -12443,6 +14663,66 @@ func encodeStartAgentSignupResponse(response StartAgentSignupRes, w http.Respons
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -12511,7 +14791,7 @@ func encodeStartCliLoginResponse(response StartCliLoginRes, w http.ResponseWrite
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -12528,6 +14808,66 @@ func encodeStartCliLoginResponse(response StartCliLoginRes, w http.ResponseWrite
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -12596,7 +14936,7 @@ func encodeStartCliSignupResponse(response StartCliSignupRes, w http.ResponseWri
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -12613,6 +14953,66 @@ func encodeStartCliSignupResponse(response StartCliSignupRes, w http.ResponseWri
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -12773,7 +15173,7 @@ func encodeTestEndpointResponse(response TestEndpointRes, w http.ResponseWriter,
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -12790,6 +15190,66 @@ func encodeTestEndpointResponse(response TestEndpointRes, w http.ResponseWriter,
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -13749,7 +16209,7 @@ func encodeUpdateSpendPolicyResponse(response UpdateSpendPolicyRes, w http.Respo
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -13766,6 +16226,66 @@ func encodeUpdateSpendPolicyResponse(response UpdateSpendPolicyRes, w http.Respo
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -14004,7 +16524,7 @@ func encodeVerifyAgentClaimResponse(response VerifyAgentClaimRes, w http.Respons
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -14021,6 +16541,66 @@ func encodeVerifyAgentClaimResponse(response VerifyAgentClaimRes, w http.Respons
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -14115,7 +16695,7 @@ func encodeVerifyAgentSignupResponse(response VerifyAgentSignupRes, w http.Respo
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -14132,6 +16712,66 @@ func encodeVerifyAgentSignupResponse(response VerifyAgentSignupRes, w http.Respo
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}
@@ -14200,7 +16840,7 @@ func encodeVerifyCliSignupResponse(response VerifyCliSignupRes, w http.ResponseW
 
 	case *RateLimitedHeaders:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
+		w.Header().Set("Access-Control-Expose-Headers", "Retry-After,Ratelimit-Limit,Ratelimit-Policy,Ratelimit-Remaining,Ratelimit-Reset")
 		// Encoding response headers.
 		{
 			h := uri.NewHeaderEncoder(w.Header())
@@ -14217,6 +16857,66 @@ func encodeVerifyCliSignupResponse(response VerifyCliSignupRes, w http.ResponseW
 					return nil
 				}); err != nil {
 					return errors.Wrap(err, "encode Retry-After header")
+				}
+			}
+			// Encode "ratelimit-limit" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-limit",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitLimit.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-limit header")
+				}
+			}
+			// Encode "ratelimit-policy" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-policy",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitPolicy.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-policy header")
+				}
+			}
+			// Encode "ratelimit-remaining" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-remaining",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitRemaining.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-remaining header")
+				}
+			}
+			// Encode "ratelimit-reset" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "ratelimit-reset",
+					Explode: false,
+				}
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.RatelimitReset.Get(); ok {
+						return e.EncodeValue(conv.IntToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode ratelimit-reset header")
 				}
 			}
 		}

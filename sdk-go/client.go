@@ -159,10 +159,54 @@ type APIError struct {
 	Code       string
 	Message    string
 	RetryAfter *int
-	Gates      []primitiveapi.GateDenial
-	RequestID  string
-	Details    *primitiveapi.ErrorResponseErrorDetails
-	Payload    any
+	// RateLimit holds the rejecting limiter's ratelimit-* headers on a
+	// 429. Nil on other statuses, and on a 429 that carried none of them.
+	RateLimit *RateLimit
+	Gates     []primitiveapi.GateDenial
+	RequestID string
+	Details   *primitiveapi.ErrorResponseErrorDetails
+	Payload   any
+}
+
+// RateLimit is the ratelimit-* headers on a 429. They describe the limiter
+// that rejected the request (the API limit, a send cap, or a per-resource
+// limit) with that limiter's own window, so Limit and Policy can differ from
+// the API budget that successful responses report. Each field is nil when its
+// header is absent: some limiters report only a wait, in Retry-After.
+type RateLimit struct {
+	// Limit is ratelimit-limit: the rejecting limiter's limit.
+	Limit *int
+	// Remaining is ratelimit-remaining: requests left in that limiter.
+	Remaining *int
+	// Reset is ratelimit-reset: Unix time in seconds when that limiter resets.
+	Reset *int
+	// Policy is ratelimit-policy: that limiter as "limit;w=seconds".
+	Policy *string
+}
+
+func optIntPtr(v primitiveapi.OptInt) *int {
+	if value, ok := v.Get(); ok {
+		return &value
+	}
+	return nil
+}
+
+// rateLimitedError maps a 429 with its Retry-After and ratelimit-* headers.
+func rateLimitedError(v *primitiveapi.RateLimitedHeaders) *APIError {
+	err := apiErrorFromErrorResponse(429, v.Response)
+	err.RetryAfter = optIntPtr(v.RetryAfter)
+	rateLimit := RateLimit{
+		Limit:     optIntPtr(v.RatelimitLimit),
+		Remaining: optIntPtr(v.RatelimitRemaining),
+		Reset:     optIntPtr(v.RatelimitReset),
+	}
+	if policy, ok := v.RatelimitPolicy.Get(); ok && policy != "" {
+		rateLimit.Policy = &policy
+	}
+	if rateLimit != (RateLimit{}) {
+		err.RateLimit = &rateLimit
+	}
+	return err
 }
 
 func (e *APIError) Error() string {
@@ -347,11 +391,7 @@ func mapReplyError(res primitiveapi.ReplyToEmailRes) error {
 	case *primitiveapi.ReplyToEmailUnprocessableEntity:
 		return apiErrorFromErrorResponse(422, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.RateLimitedHeaders:
-		err := apiErrorFromErrorResponse(429, v.Response)
-		if retryAfter, ok := v.RetryAfter.Get(); ok {
-			err.RetryAfter = &retryAfter
-		}
-		return err
+		return rateLimitedError(v)
 	default:
 		return &APIError{
 			Message: fmt.Sprintf("primitive API reply failed: %T", res),
@@ -377,11 +417,7 @@ func mapSendError(res primitiveapi.SendEmailRes) error {
 	case *primitiveapi.SendEmailUnauthorized:
 		return apiErrorFromErrorResponse(401, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.RateLimitedHeaders:
-		err := apiErrorFromErrorResponse(429, v.Response)
-		if retryAfter, ok := v.RetryAfter.Get(); ok {
-			err.RetryAfter = &retryAfter
-		}
-		return err
+		return rateLimitedError(v)
 	default:
 		return &APIError{
 			Message: fmt.Sprintf("primitive API send failed: %T", res),
@@ -447,11 +483,7 @@ func mapSemanticSearchError(res primitiveapi.SemanticSearchRes) error {
 	case *primitiveapi.SemanticSearchServiceUnavailable:
 		return apiErrorFromErrorResponse(503, primitiveapi.ErrorResponse(*v))
 	case *primitiveapi.RateLimitedHeaders:
-		err := apiErrorFromErrorResponse(429, v.Response)
-		if retryAfter, ok := v.RetryAfter.Get(); ok {
-			err.RetryAfter = &retryAfter
-		}
-		return err
+		return rateLimitedError(v)
 	default:
 		return &APIError{
 			Message: fmt.Sprintf("primitive API semantic-search failed: %T", res),

@@ -10,7 +10,7 @@ export const openapiDocument: Record<string, unknown> = {
   "info": {
     "title": "Primitive API",
     "version": "1.0.0",
-    "description": "The Primitive API lets you manage domains, emails, webhook endpoints,\nfilters, and account settings programmatically.\n\n## Authentication\n\nMost endpoints require a Bearer token in the `Authorization` header:\n\n```\nAuthorization: Bearer prim_<your_api_key>\n```\n\nAPI keys are org-scoped. Create and manage them in your dashboard\nunder Settings > API Keys. CLI login plus CLI/agent signup endpoints\nexplicitly declare `security: []`; they do not require an API key because\nthey are used to create OAuth CLI sessions.\n\n## Rate Limiting\n\nThe API enforces a sliding window rate limit of **120 requests per\n60 seconds** per organization. When exceeded, the API returns `429`\nwith a `Retry-After` header indicating how many seconds to wait.\n\n## Pagination\n\nList endpoints use cursor-based pagination. Responses include a\n`meta` object with `total`, `limit`, and `cursor` fields. Pass the\n`cursor` value as a query parameter to fetch the next page. When\n`cursor` is `null`, there are no more results.\n\n## Response Format\n\nAll responses use a consistent envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": { \"total\": 42, \"limit\": 50, \"cursor\": \"...\" }\n}\n```\n\nErrors follow the same pattern:\n\n```json\n{\n  \"success\": false,\n  \"error\": { \"code\": \"not_found\", \"message\": \"Email not found\" }\n}\n```\n\n## Webhook signing\n\nOutbound webhook deliveries (configured via the `endpoints` API)\nare signed so receivers can verify they came from Primitive and\nhave not been tampered with in transit. The signing scheme is\ndeliberately simple so it can be reimplemented in any language\nin a few lines. The Node SDK's `verifyWebhookSignature` helper\nis the reference implementation; the wire details below let you\nwrite a verifier in Python, Go, Ruby, etc. without reading our\nsource.\n\n**Header**: `Primitive-Signature: t=<unix-seconds>,v1=<hex>`\n\nA legacy `MyMX-Signature` header is also sent on every delivery\nwith the same value, retained for back-compatibility with\nintegrations written before the rename. New code should read\n`Primitive-Signature`.\n\n**Signed string**: `${timestamp}.${rawBody}` where `timestamp`\nis the Unix-seconds integer from the `t=` parameter and\n`rawBody` is the exact bytes of the HTTP request body BEFORE\nany JSON decoding. Verify against the raw body, not a\nre-serialized parse, or you will silently mismatch on\ninsignificant whitespace.\n\n**Signature**: HMAC-SHA256 of the signed string, hex-encoded\n(lowercase). Use the account's webhook secret as the HMAC key,\nas a UTF-8 byte sequence.\n\n**Secret**: returned by `GET /account/webhook-secret`. The\nstring looks base64-shaped (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`)\nbut is NOT base64; use it AS-IS as a UTF-8 string for the HMAC\nkey. Base64-decoding before HMAC will silently produce\nmismatched signatures.\n\n**Tolerance**: by convention, reject deliveries whose `t=`\ntimestamp is more than 5 minutes off your wall-clock to defend\nagainst replay attacks. The Node SDK's helper enforces this by\ndefault.\n\n**Verification recipe** (any language):\n\n```\n1. Read the raw HTTP body (do not parse).\n2. Read `Primitive-Signature: t=<ts>,v1=<sig>`.\n3. Reject if abs(now - ts) > 300 seconds.\n4. expected = HMAC_SHA256_hex(secret_utf8, f\"{ts}.{rawBody}\")\n5. Constant-time compare expected to sig. Reject if not equal.\n```\n\nFor Node, use `verifyWebhookSignature` from\n`@primitivedotdev/sdk/webhook` (or the higher-level\n`handleWebhook` helper if you want a one-liner). For other\nlanguages, the recipe above is everything you need.\n\nTest deliveries: `POST /endpoints/{id}/test` triggers a fake\ndelivery to your endpoint URL, signed with your real account\nsecret, so you can confirm verification end-to-end without\nneeding real inbound mail. The test response carries the exact\n`signature` header value sent on the wire so you can compare\nstrings directly.\n",
+    "description": "The Primitive API lets you manage domains, emails, webhook endpoints,\nfilters, and account settings programmatically.\n\n## Authentication\n\nMost endpoints require a Bearer token in the `Authorization` header:\n\n```\nAuthorization: Bearer prim_<your_api_key>\n```\n\nAPI keys are org-scoped. Create and manage them in your dashboard\nunder Settings > API Keys. CLI login plus CLI/agent signup endpoints\nexplicitly declare `security: []`; they do not require an API key because\nthey are used to create OAuth CLI sessions.\n\n## Rate Limiting\n\nThe v1 API allows **3000 requests per 60 seconds** per Developer,\nPower, or Platinum organization. API keys, OAuth access tokens, and\nconnected agent keys share their organization's budget. Agent-tier\norganizations allow **120 requests per 60 seconds**. Requests without\nvalid organization credentials use a separate **120 requests per 60\nseconds per IP** limit. Outbound sends and some resources have\nadditional limits, each with its own limit and window.\n\nA request that exceeds its limit receives HTTP `429` with a\n`Retry-After` header (seconds) and, where the limiter reports them,\n`ratelimit-limit`, `ratelimit-remaining`, `ratelimit-reset` and\n`ratelimit-policy` headers. On a `429` all four describe the limiter\nthat rejected the request, never a different budget that still has\nroom, and the `w=` value in `ratelimit-policy` is that limiter's own\nwindow in seconds: 60 for the API request limits, 3600 and 86400 for\nthe hourly and daily send caps (for example `1000;w=3600`). The hourly\nand daily send caps are rolling windows, so on those two `Retry-After`\nand `ratelimit-reset` report when the bucket will next admit a request.\nBranch on the `429` status rather than the error code: it is\n`rate_limited` (organization-wide limiter, `/send-mail`) or\n`rate_limit_exceeded` (per-resource limiters).\n\nA few `429` responses carry `Retry-After` and no `ratelimit-*`\nheaders, because what refused the request reports only how long to\nwait: the signup and OAuth `slow_down` responses, the public demo\nendpoints, the hosted MCP server, and an abuse backstop in front of\nthe API that answers before a request reaches the rate limiters (code\n`rate_limit_exceeded`, `Retry-After: 60`). A `429` whose code is not\n`rate_limited`, `rate_limit_exceeded` or `slow_down` is a different\nkind of cap, such as a concurrency or attempt limit, and may carry no\n`Retry-After` at all; read its message. When `Retry-After` is present\nit is the value to wait for.\n\nSuccessful responses carry the same four `ratelimit-*` headers\ndescribing the API request budget the request was charged to, so a\nclient can track its budget before it runs out. A `401` for a missing\nor invalid token reports the per-IP bucket. Organizations exempted\nfrom the API limit get no `ratelimit-*` headers, and while the limiter\nis briefly unavailable a response carries no live bucket state. Treat\na missing `ratelimit-remaining` as unknown, not as zero.\n\n## Timestamps\n\nDate filters (`date_from` / `date_to`) and schedule times\n(`scheduled_at`) accept an ISO 8601 timestamp with `Z` or a numeric\nUTC offset, such as `2026-10-02T00:00:00Z` or\n`2026-10-02T00:00:00-04:00`. An offset is read as the instant it names\nand converted to UTC. A time with no zone, or a bare date, is rejected\nwith a `validation_error`. Timestamps the API returns are UTC.\n\n## Pagination\n\nList endpoints use cursor-based pagination. Responses include a\n`meta` object with `total`, `limit`, and `cursor` fields. Pass the\n`cursor` value as a query parameter to fetch the next page. When\n`cursor` is `null`, there are no more results.\n\n## Response Format\n\nAll responses use a consistent envelope:\n\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"meta\": { \"total\": 42, \"limit\": 50, \"cursor\": \"...\" }\n}\n```\n\nErrors follow the same pattern:\n\n```json\n{\n  \"success\": false,\n  \"error\": { \"code\": \"not_found\", \"message\": \"Email not found\" }\n}\n```\n\n## Webhook signing\n\nOutbound webhook deliveries (configured via the `endpoints` API)\nare signed so receivers can verify they came from Primitive and\nhave not been tampered with in transit. The signing scheme is\ndeliberately simple so it can be reimplemented in any language\nin a few lines. The Node SDK's `verifyWebhookSignature` helper\nis the reference implementation; the wire details below let you\nwrite a verifier in Python, Go, Ruby, etc. without reading our\nsource.\n\n**Header**: `Primitive-Signature: t=<unix-seconds>,v1=<hex>`\n\nA legacy `MyMX-Signature` header is also sent on every delivery\nwith the same value, retained for back-compatibility with\nintegrations written before the rename. New code should read\n`Primitive-Signature`.\n\n**Signed string**: `${timestamp}.${rawBody}` where `timestamp`\nis the Unix-seconds integer from the `t=` parameter and\n`rawBody` is the exact bytes of the HTTP request body BEFORE\nany JSON decoding. Verify against the raw body, not a\nre-serialized parse, or you will silently mismatch on\ninsignificant whitespace.\n\n**Signature**: HMAC-SHA256 of the signed string, hex-encoded\n(lowercase). Use the account's webhook secret as the HMAC key,\nas a UTF-8 byte sequence.\n\n**Secret**: returned by `GET /account/webhook-secret`. The\nstring looks base64-shaped (e.g. `XNHBBW8VqoBjRfNs1tkZj11jTk...`)\nbut is NOT base64; use it AS-IS as a UTF-8 string for the HMAC\nkey. Base64-decoding before HMAC will silently produce\nmismatched signatures.\n\n**Tolerance**: by convention, reject deliveries whose `t=`\ntimestamp is more than 5 minutes off your wall-clock to defend\nagainst replay attacks. The Node SDK's helper enforces this by\ndefault.\n\n**Verification recipe** (any language):\n\n```\n1. Read the raw HTTP body (do not parse).\n2. Read `Primitive-Signature: t=<ts>,v1=<sig>`.\n3. Reject if abs(now - ts) > 300 seconds.\n4. expected = HMAC_SHA256_hex(secret_utf8, f\"{ts}.{rawBody}\")\n5. Constant-time compare expected to sig. Reject if not equal.\n```\n\nFor Node, use `verifyWebhookSignature` from\n`@primitivedotdev/sdk/webhook` (or the higher-level\n`handleWebhook` helper if you want a one-liner). For other\nlanguages, the recipe above is everything you need.\n\nTest deliveries: `POST /endpoints/{id}/test` triggers a fake\ndelivery to your endpoint URL, signed with your real account\nsecret, so you can confirm verification end-to-end without\nneeding real inbound mail. The test response carries the exact\n`signature` header value sent on the wire so you can compare\nstrings directly.\n",
     "contact": {
       "name": "Primitive",
       "url": "https://primitive.dev"
@@ -752,7 +752,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "createAgentAccount",
         "summary": "Create an emailless agent account",
-        "description": "Creates an emailless agent account without authentication and returns a\none-time API key (prefixed `prim_`) plus a provisioned managed inbox.\nThe account is on the `agent` plan: reply-only (it can send only to\naddresses that have already sent it authenticated mail) with tight send\nlimits. Use the returned `api_key` as a Bearer token on later calls. The\naccount can be upgraded to a full developer account by confirming an\nemail through the claim flow. This endpoint does not require an API key.\n",
+        "description": "Creates an emailless agent account without authentication and returns a\none-time API key (prefixed `prim_`) plus a provisioned managed inbox.\nThe account is on the `agent` plan: reply-only (it can send only to\naddresses that have already sent it authenticated mail) with tight send\nlimits. Use the returned `api_key` as a Bearer token on later calls. The\naccount can be upgraded to a full developer account by confirming an\nemail through the claim flow. Upgrading raises the send cap and grants\nthe developer plan's default features (such as Functions); it does not\nunlock sending to arbitrary recipients, because the recipient rules on\nthe account still apply. `GET /send-permissions` reports those rules\n(its list of individual addresses can be partial), and\n`POST /sendability` answers for one specific recipient. This endpoint\ndoes not require an API key.\n",
         "tags": [
           "Agent"
         ],
@@ -885,7 +885,7 @@ export const openapiDocument: Record<string, unknown> = {
       "post": {
         "operationId": "verifyAgentClaim",
         "summary": "Verify an agent account email claim",
-        "description": "Confirms the verification code emailed by `/agent/claim/start` and\nupgrades the account to the `developer` plan. The org id, API key, and\nmanaged inbox all carry over; the send cap lifts. Authenticated by the\nagent's own API key.\n",
+        "description": "Confirms the verification code emailed by `/agent/claim/start` and\nupgrades the account to the `developer` plan. The org id, API key, and\nmanaged inbox all carry over; the send cap lifts and the developer\nplan's default features (such as Functions) unlock. Upgrading does not\nunlock sending to arbitrary recipients: the recipient rules on the\naccount still apply. `GET /send-permissions` reports those rules (its\nlist of individual addresses can be partial), and `POST /sendability`\nanswers for one specific recipient. Authenticated by the agent's own\nAPI key.\n",
         "tags": [
           "Agent"
         ],
@@ -1977,7 +1977,7 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "format": "date-time"
             },
-            "description": "Filter emails created on or after this timestamp"
+            "description": "Filter emails created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           },
           {
             "name": "date_to",
@@ -1986,7 +1986,7 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "format": "date-time"
             },
-            "description": "Filter emails created on or before this timestamp"
+            "description": "Filter emails created on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           },
           {
             "name": "since",
@@ -2109,7 +2109,7 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "maxLength": 500
             },
-            "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field."
+            "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term must match. A term is a word, a `\"quoted phrase\"`, or a `field:value` filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`, `automated:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:` terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an unterminated quote, or only stop words is a `validation_error` that says what to change; it is never silently reinterpreted. Alternatives chain (`invoice OR receipt OR \"past due\"`), and each one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR` next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead); an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a search cannot exclude a term); and an alternative with no searchable word once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT` itself, write it in lower case or in double quotes (`\"OR\"`). With `prefix=true`, a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a URL, put it in double quotes."
           },
           {
             "name": "from",
@@ -2180,7 +2180,7 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "format": "date-time"
             },
-            "description": "Filter emails received on or after this timestamp."
+            "description": "Filter emails received on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           },
           {
             "name": "date_to",
@@ -2189,7 +2189,7 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "format": "date-time"
             },
-            "description": "Filter emails received on or before this timestamp."
+            "description": "Filter emails received on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           },
           {
             "name": "has_attachment",
@@ -2281,7 +2281,7 @@ export const openapiDocument: Record<string, unknown> = {
               ],
               "default": "true"
             },
-            "description": "Include subject/body highlight snippets when text search is active."
+            "description": "Include subject/body highlight snippets when text search is active. This switches only the `highlights` object on each result. The `snippet` field (the body preview) is on every result either way, and a search with no text (`q`, `subject` or `body`) has no highlights to leave out, so `false` changes nothing there."
           },
           {
             "name": "include_facets",
@@ -2294,7 +2294,7 @@ export const openapiDocument: Record<string, unknown> = {
               ],
               "default": "true"
             },
-            "description": "Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet aggregation is not run at all."
+            "description": "Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet aggregation is not run at all. Each of `by_sender`, `by_domain` and `by_status` lists its values by `count` descending, and values with the same count by `value` ascending in byte order of its UTF-8 encoding (upper case before lower case), a null `value` last. `by_sender` and `by_domain` keep the first 20 values in that order, so the same request over the same mail always lists the same values."
           },
           {
             "name": "thread_id",
@@ -4572,7 +4572,7 @@ export const openapiDocument: Record<string, unknown> = {
       "get": {
         "operationId": "listDeliveries",
         "summary": "List webhook deliveries",
-        "description": "Returns a paginated list of webhook delivery attempts. Each delivery\nincludes a nested `email` object with sender, recipient, and subject.\n",
+        "description": "Returns a paginated list of webhook delivery attempts, newest first.\nA delivery of an inbound email includes a nested `email` object with\nsender, recipient, and subject. A delivery of an opt-in\n`sent_email.*` event has `email_id` and `email` set to null and\n`sent_email_id` set to the send it is about. Filter by `event_type`\nand `sent_email_id` to find the deliveries of one send.\n",
         "tags": [
           "Webhook Deliveries"
         ],
@@ -4593,6 +4593,25 @@ export const openapiDocument: Record<string, unknown> = {
             "description": "Filter by email ID"
           },
           {
+            "name": "event_type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "description": "Only deliveries of this event type, for example `sent_email.failed`. Deliveries recorded before event types existed have none and never match."
+          },
+          {
+            "name": "sent_email_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Only deliveries of `sent_email.*` events about this sent email."
+          },
+          {
             "name": "status",
             "in": "query",
             "schema": {
@@ -4601,7 +4620,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "pending",
                 "delivered",
                 "header_confirmed",
-                "failed"
+                "failed",
+                "skipped_by_rules"
               ]
             },
             "description": "Filter by delivery status"
@@ -4613,7 +4633,7 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "format": "date-time"
             },
-            "description": "Filter deliveries created on or after this timestamp"
+            "description": "Filter deliveries created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           },
           {
             "name": "date_to",
@@ -4622,7 +4642,7 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "format": "date-time"
             },
-            "description": "Filter deliveries created on or before this timestamp"
+            "description": "Filter deliveries created on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           }
         ],
         "responses": {
@@ -4668,15 +4688,15 @@ export const openapiDocument: Record<string, unknown> = {
           "required": true,
           "schema": {
             "type": "string",
-            "pattern": "^\\d+$"
+            "pattern": "^(\\d+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
           },
-          "description": "Delivery ID (numeric)"
+          "description": "Delivery ID, as `id` in the deliveries list: a numeric string or a UUID."
         }
       ],
       "post": {
         "operationId": "replayDelivery",
         "summary": "Replay a webhook delivery",
-        "description": "Re-sends the stored webhook payload from a previous delivery attempt.\nIf the original endpoint is still active, it is targeted. If the\noriginal endpoint was deleted, the oldest active endpoint is used.\nDeactivated endpoints cannot be replayed to. Rate limited per-org,\nsharing an org-wide budget with email replays.\n",
+        "description": "Re-sends a previous delivery to its original endpoint. If that\nendpoint was deleted or deactivated, the replay is rejected.\nSupports inbound email deliveries and `sent_email.*` deliveries.\nAn inbound email delivery is replayed with its original stored\npayload and event id. A `sent_email.*` delivery is replayed with the\nsame event id but a payload rebuilt from the send as it is now; it\nis rejected if the send was deleted or the endpoint is no longer an\nactive http endpoint. Rate limited per-org, sharing an org-wide\nbudget with email replays.\n",
         "tags": [
           "Webhook Deliveries"
         ],
@@ -5204,7 +5224,7 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "format": "date-time"
             },
-            "description": "Inclusive lower bound on `created_at`."
+            "description": "Inclusive lower bound on `created_at`. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           },
           {
             "name": "date_to",
@@ -5213,7 +5233,7 @@ export const openapiDocument: Record<string, unknown> = {
               "type": "string",
               "format": "date-time"
             },
-            "description": "Inclusive upper bound on `created_at`."
+            "description": "Inclusive upper bound on `created_at`. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           },
           {
             "name": "q",
@@ -14212,13 +14232,43 @@ export const openapiDocument: Record<string, unknown> = {
         }
       },
       "RateLimited": {
-        "description": "Rate limit exceeded",
+        "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
         "headers": {
           "Retry-After": {
             "schema": {
               "type": "integer"
             },
             "description": "Seconds to wait before retrying"
+          },
+          "ratelimit-limit": {
+            "description": "Limit of the limiter that rejected this request: the API limit, a send cap, or a per-resource limit. Absent, with the other ratelimit headers, when that limiter reports only a wait.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 3000
+            }
+          },
+          "ratelimit-remaining": {
+            "description": "Requests left in the limiter that rejected this request.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "example": 0
+            }
+          },
+          "ratelimit-reset": {
+            "description": "Unix timestamp (seconds) when the limiter that rejected this request resets.",
+            "schema": {
+              "type": "integer",
+              "example": 1700000060
+            }
+          },
+          "ratelimit-policy": {
+            "description": "That limiter as `limit;w=seconds`, with its own window: 60 for API limits, 3600 or 86400 for send caps.",
+            "schema": {
+              "type": "string",
+              "example": "3000;w=60"
+            }
           }
         },
         "content": {
@@ -16897,7 +16947,8 @@ export const openapiDocument: Record<string, unknown> = {
             ]
           },
           "description": {
-            "type": "string"
+            "type": "string",
+            "description": "What upgrading grants, in words meant to be repeated to a user: a higher send cap and the developer plan's default features. It does not unlock sending to arbitrary recipients; the account's recipient rules still apply (see `GET /send-permissions` and `POST /sendability`)."
           },
           "claim_path": {
             "type": "string"
@@ -18368,6 +18419,27 @@ export const openapiDocument: Record<string, unknown> = {
           "interaction_candidate": {
             "type": "boolean",
             "description": "UNVERIFIED early signal for the `pending` window: true when the raw message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is anything other than `pending`.\n"
+          },
+          "relay": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.",
+            "properties": {
+              "hostname": {
+                "type": "string",
+                "description": "The relay hostname the domain's MX record points at."
+              },
+              "via": {
+                "type": "string",
+                "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+              }
+            },
+            "required": [
+              "hostname",
+              "via"
+            ]
           }
         },
         "required": [
@@ -18524,18 +18596,21 @@ export const openapiDocument: Record<string, unknown> = {
         "properties": {
           "by_sender": {
             "type": "array",
+            "description": "Sender values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8 encoding, with a null `value` last. Keeps the first 20 values in that order.",
             "items": {
               "$ref": "#/components/schemas/EmailSearchFacetBucket"
             }
           },
           "by_domain": {
             "type": "array",
+            "description": "Domain values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8 encoding, with a null `value` last. Keeps the first 20 values in that order.",
             "items": {
               "$ref": "#/components/schemas/EmailSearchFacetBucket"
             }
           },
           "by_status": {
             "type": "array",
+            "description": "Status values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8 encoding, with a null `value` last.",
             "items": {
               "$ref": "#/components/schemas/EmailSearchFacetBucket"
             }
@@ -18907,6 +18982,75 @@ export const openapiDocument: Record<string, unknown> = {
           "interaction_candidate": {
             "type": "boolean",
             "description": "UNVERIFIED early signal for the `pending` window: true when the raw message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is anything other than `pending`.\n"
+          },
+          "relay": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.",
+            "properties": {
+              "hostname": {
+                "type": "string",
+                "description": "The relay hostname the domain's MX record points at."
+              },
+              "via": {
+                "type": "string",
+                "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+              },
+              "delivery": {
+                "type": "array",
+                "description": "Per-recipient outcome of the relay forwarding the message to the recipient's mailbox provider. The field may be absent; treat a missing value as no delivery information being available.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "recipient": {
+                      "type": "string",
+                      "description": "The recipient address the relay forwarded to."
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Outcome of the forward. Currently one of `delivered`, `deferred` or `bounced`. Treat an unfamiliar value as one added after your client was built."
+                    },
+                    "smtp_code": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "description": "SMTP reply code from the mailbox provider, when one was received."
+                    },
+                    "enhanced_status_code": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Enhanced status code (for example `2.0.0`) from the mailbox provider, when one was received."
+                    },
+                    "smtp_response": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "SMTP reply text from the mailbox provider, when one was received."
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "When this outcome was recorded."
+                    }
+                  },
+                  "required": [
+                    "recipient",
+                    "status",
+                    "at"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "hostname",
+              "via"
+            ]
           }
         },
         "required": [
@@ -19771,7 +19915,7 @@ export const openapiDocument: Record<string, unknown> = {
           "scheduled_at": {
             "type": "string",
             "format": "date-time",
-            "description": "Optional future execution time (ISO 8601). When set, the\nsend is recorded with status `scheduled` and executed at\nthe requested time instead of immediately. Must be in the\nfuture and at most 30 days out. Incompatible with `wait`\n(a scheduled send resolves after this request completes)\nand with `attachments` / `payload_attachments` (not yet\nsupported on scheduled sends). Reschedule via PATCH\n/sent-emails/{id}; cancel via /sent-emails/{id}/cancel.\n"
+            "description": "Optional future execution time (ISO 8601). When set, the\nsend is recorded with status `scheduled` and executed at\nthe requested time instead of immediately. Must be in the\nfuture and at most 30 days out. Incompatible with `wait`\n(a scheduled send resolves after this request completes)\nand with `attachments` / `payload_attachments` (not yet\nsupported on scheduled sends). Reschedule via PATCH\n/sent-emails/{id}; cancel via /sent-emails/{id}/cancel.\nAccepts `Z` or a numeric UTC offset\n(`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an\noffset is converted to UTC, so the stored and echoed value\nis UTC. A time with no zone, or a bare date, is rejected.\n"
           }
         },
         "required": [
@@ -19882,6 +20026,14 @@ export const openapiDocument: Record<string, unknown> = {
           "to_address": {
             "type": "string",
             "description": "Bare email address parsed from `to_header`."
+          },
+          "recipient_count": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "Every recipient of the send, To, Cc and Bcc together, each address counted once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not the sender, because the count would reveal Bcc recipients. The `sent_email` object of the `sent_email.*` webhook events carries the same field."
           },
           "subject": {
             "type": "string"
@@ -20150,12 +20302,12 @@ export const openapiDocument: Record<string, unknown> = {
           "date_from": {
             "type": "string",
             "format": "date-time",
-            "description": "Only include mail at or after this timestamp."
+            "description": "Only include mail at or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           },
           "date_to": {
             "type": "string",
             "format": "date-time",
-            "description": "Only include mail at or before this timestamp."
+            "description": "Only include mail at or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names. A time with no zone, or a bare date, is rejected."
           },
           "include": {
             "type": "array",
@@ -20813,7 +20965,7 @@ export const openapiDocument: Record<string, unknown> = {
           "scheduled_at": {
             "type": "string",
             "format": "date-time",
-            "description": "New execution time (ISO 8601). Must be in the future and\nat most 30 days out, the same bounds as the create-time\nfield on /send-mail.\n"
+            "description": "New execution time (ISO 8601). Must be in the future and\nat most 30 days out, the same bounds as the create-time\nfield on /send-mail. Accepts `Z` or a numeric UTC offset\n(`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an\noffset is converted to UTC. A time with no zone, or a bare\ndate, is rejected.\n"
           }
         },
         "required": [
@@ -21973,7 +22125,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "items": {
                   "type": "string",
                   "minLength": 1
-                }
+                },
+                "description": "Event types this endpoint subscribes to, matched by exact string. Omitted means every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the field instead."
               }
             }
           },
@@ -22119,7 +22272,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "items": {
                   "type": "string",
                   "minLength": 1
-                }
+                },
+                "description": "Event types this endpoint subscribes to, matched by exact string. Omitted means every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the field instead."
               }
             }
           },
@@ -22164,7 +22318,8 @@ export const openapiDocument: Record<string, unknown> = {
                 "items": {
                   "type": "string",
                   "minLength": 1
-                }
+                },
+                "description": "Event types this endpoint subscribes to, matched by exact string. Omitted means every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the field instead."
               }
             }
           }
@@ -23045,11 +23200,30 @@ export const openapiDocument: Record<string, unknown> = {
         "properties": {
           "id": {
             "type": "string",
-            "description": "Delivery ID (numeric string)"
+            "description": "Delivery ID: a numeric string or a UUID. Pass it to the replay operation as is."
           },
           "email_id": {
-            "type": "string",
-            "format": "uuid"
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The inbound email this delivery is about. Null for deliveries that are not about a received email, such as `sent_email.*` events."
+          },
+          "event_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The delivered event type, for example `email.received` or `sent_email.delivered`. Null for deliveries recorded before event types existed."
+          },
+          "sent_email_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The sent email a `sent_email.*` delivery is about. Null for every other delivery."
           },
           "org_id": {
             "type": "string",
@@ -23060,7 +23234,11 @@ export const openapiDocument: Record<string, unknown> = {
             "format": "uuid"
           },
           "endpoint_url": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The endpoint's URL. For a function-backed endpoint, an opaque `function://<id>` identifier rather than a callable URL."
           },
           "status": {
             "type": "string",
@@ -23068,7 +23246,8 @@ export const openapiDocument: Record<string, unknown> = {
               "pending",
               "delivered",
               "header_confirmed",
-              "failed"
+              "failed",
+              "skipped_by_rules"
             ]
           },
           "attempt_count": {
@@ -23085,6 +23264,13 @@ export const openapiDocument: Record<string, unknown> = {
               "string",
               "null"
             ]
+          },
+          "last_error_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A stable code for the last failure, for example `http_500`."
           },
           "created_at": {
             "type": "string",
@@ -23104,7 +23290,10 @@ export const openapiDocument: Record<string, unknown> = {
                 "type": "string"
               },
               "recipient": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "subject": {
                 "type": [
@@ -23116,7 +23305,8 @@ export const openapiDocument: Record<string, unknown> = {
             "required": [
               "sender",
               "recipient"
-            ]
+            ],
+            "description": "Null for deliveries that are not about a received email."
           }
         },
         "required": [

@@ -49,6 +49,9 @@ from .models_generated import (
     EmailReceivedEvent as GeneratedEmailReceivedEvent,
 )
 from .models_generated import (
+    EmailRelay as GeneratedEmailRelay,
+)
+from .models_generated import (
     ForwardAnalysis as GeneratedForwardAnalysis,
 )
 from .models_generated import (
@@ -111,6 +114,13 @@ from .models_generated import (
 from .models_generated import (
     WebhookVersion as GeneratedWebhookVersion,
 )
+from .sent_email_models_generated import (
+    SentEmailAcceptedEvent,
+    SentEmailCompletedEvent,
+    SentEmailLegacyMessageResultEvent,
+    SentEmailRecipientResultEvent,
+    SentEmailRollupResultEvent,
+)
 
 
 def _add_enum_aliases(enum_cls, aliases: dict[str, object]):
@@ -146,6 +156,7 @@ ForwardResultAttachmentSkipped = GeneratedForwardResultAttachmentSkipped
 ForwardOriginalSender = GeneratedForwardOriginalSender
 ForwardVerification = GeneratedForwardVerification
 EmailAuth = GeneratedEmailAuth
+EmailRelay = GeneratedEmailRelay
 DkimSignature = GeneratedDkimSignature
 
 
@@ -246,6 +257,11 @@ class UnknownEvent(TypedDict):
 
 KnownWebhookEvent: TypeAlias = (
     GeneratedEmailReceivedEvent
+    | SentEmailAcceptedEvent
+    | SentEmailRecipientResultEvent
+    | SentEmailRollupResultEvent
+    | SentEmailLegacyMessageResultEvent
+    | SentEmailCompletedEvent
     | PaymentSettledEvent
     | PaymentFailedEvent
     | InteractionX402Event

@@ -204,6 +204,29 @@ await client.forward(email, {
 });
 ```
 
+### Errors and rate limits
+
+A failed call throws `PrimitiveApiError`. It carries `status`, `code`,
+`message`, `requestId`, `details`, and `retryAfter` (the `Retry-After` header in
+seconds, when the server sent one). On a 429 it also carries `rateLimit`, the
+`ratelimit-limit`, `ratelimit-remaining`, `ratelimit-reset` (Unix seconds) and
+`ratelimit-policy` headers. These describe the limiter that rejected the
+request, with its own window, which may be a send cap (`1000;w=3600`) rather
+than the API request budget. `rateLimit` is `undefined` when a 429 carried only
+`Retry-After`; wait for `retryAfter` either way.
+
+```ts
+import { PrimitiveApiError } from "@primitivedotdev/sdk";
+
+try {
+  await client.send({ from, to, subject, bodyText });
+} catch (err) {
+  if (err instanceof PrimitiveApiError && err.status === 429) {
+    console.log(err.retryAfter, err.rateLimit?.policy);
+  }
+}
+```
+
 ## The normalized email object
 
 `primitive.receive(...)` returns a normalized inbound email object that keeps the common case clean:
@@ -577,6 +600,20 @@ With `count` left at its default, `meta.total` is a number. `include_facets:
 "false"` skips the facet aggregation entirely. Search text containing a NUL
 character is rejected with a 400 validation error.
 
+`q` takes words, `"quoted phrases"` and `field:value` filters, and every
+term must match. An upper-case `OR` between two text terms (words, phrases,
+`subject:` and `body:` terms) accepts either and binds tighter than the
+implicit AND, so `acme invoice OR receipt` means `acme` and either `invoice` or
+`receipt`. `OR` cannot join filters such as `from:`, and there is no `NOT`;
+either is a 400 validation error, as is a leading or trailing `OR`. To search
+for the word `OR` or `NOT` itself, write it in lower case or in double quotes.
+Facet values are ordered by count descending, ties by value in byte order, and
+`by_sender` and `by_domain` keep the first 20.
+
+Date filters such as `date_from` and `date_to` take an ISO 8601 timestamp with
+`Z` or a numeric UTC offset (`2026-10-02T00:00:00-04:00`); a time with no zone,
+or a bare date, is rejected.
+
 #### Repeating sends
 
 Pass `repeat` to `client.send` or `client.reply` to send the message now and
@@ -644,6 +681,31 @@ For most app-code callers, `primitive.receive(...)` from the root import handles
 
 For the full reference (response codes, replay protection details), see the API-level "Webhook signing" section in the [OpenAPI spec](https://api.primitive.dev/v1/openapi).
 
+### Sent email webhook events
+
+Endpoints can also receive events about mail you send: `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed` and `sent_email.completed`. They are opt-in: an endpoint receives them only when its `rules.event_types` lists them (with the CLI, `primitive endpoints create --url <url> --event-types sent_email.*`). An endpoint that lists them and also handles inbound mail must keep `email.received` in the list.
+
+Each body carries `event`, and is validated against the `sent_email.*` JSON schema when parsed. Each recipient (To, Cc and Bcc) of a send gets exactly one `sent_email.delivered` or `sent_email.failed` with `scope` `"recipient"`, for up to 100 recipients. Mail relay sends with more recipients report the rest in roll-ups (`scope` `"message"`, `reason` `"rollup"`), sends recorded before per-recipient results can report one legacy message-level result (`reason` `"legacy_message_result"`), and relay recipients delivered inside the sender's own mail system get no event and are listed in `summary.not_relayed_recipients`. So do not wait for a per-recipient event per address: use `sent_email.completed`, which carries the totals once every recipient is final. Deduplicate on the event `id` (equal to the `X-Webhook-Id` header), and check that `delivery.endpoint_id` is the endpoint that received the request.
+
+```typescript
+import {
+  handleWebhookEvent,
+  isSentEmailCompletedEvent,
+  isSentEmailFailedEvent,
+} from "@primitivedotdev/sdk";
+
+const event = handleWebhookEvent({ body: rawBody, headers, secret });
+
+if (isSentEmailFailedEvent(event) && event.scope === "recipient") {
+  // event.recipient.type is "to", "cc" or "bcc"
+  console.log(event.recipient.address, event.outcome.smtp_enhanced_status_code);
+} else if (isSentEmailCompletedEvent(event)) {
+  const { recipient_count, delivered, failed } = event.summary;
+}
+```
+
+`validateSentEmailEvent` / `safeValidateSentEmailEvent` validate an already parsed body, and the schema is exported as `sentEmailEventJsonSchema`. An `email.bounced` event's `email.analysis.bounce` carries `sent_email_id` (the send the bounce belongs to, or null when it could not be linked) and `failed_recipients` (every failed address, up to 100).
+
 ### Payment and interaction webhook events
 
 Webhooks are not email-only. The same endpoint also receives `payment.*` settlement notifications and `interaction.x402.*` events from the x402-over-email flow. The event name is carried in the **`X-Webhook-Event` header** for every family. The body is sent verbatim with no envelope, so it is the header (not a body field) that names the event: an `email.*` body carries `event`, a `payment.*` body carries the name in `type`, and an `interaction.*` body is just `{ interaction: { ... } }` with no event/type field at all.
@@ -675,6 +737,7 @@ if (isPaymentSettledEvent(event)) {
 The full catalog of header values is the `WebhookEventType` union, also exported as the `WEBHOOK_EVENT_TYPES` array:
 
 - `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
+- `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed` (opt-in)
 - `payment.settled`, `payment.failed`
 - `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`

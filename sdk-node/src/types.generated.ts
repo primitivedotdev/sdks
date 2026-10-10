@@ -229,6 +229,10 @@ expires_at: string
 parsed: (ParsedDataComplete | ParsedDataFailed)
 analysis: EmailAnalysis
 auth: EmailAuth
+/**
+ * Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.
+ */
+relay?: (EmailRelay | null)
 }
 }
 /**
@@ -733,9 +737,19 @@ category: ("mailbox_does_not_exist" | "domain_does_not_exist" | "domain_not_acce
  */
 classified_by: ("status_code" | "smtp_code" | "pattern" | "provider" | "none")
 /**
- * The recipient address that failed, if the report identifies one.
+ * The first failed recipient, as the bounce wrote it, if the report identifies one. The status and diagnostic fields describe this recipient.
  */
 failed_recipient: (string | null)
+/**
+ * Every address the bounce reports as failed, lowercased and deduplicated, up to 100. Includes both the final and the original recipient when an alias or forward rewrote the address. Empty when the bounce names no usable address. Absent on payloads built before this field existed.
+ *
+ * @maxItems 100
+ */
+failed_recipients?: string[]
+/**
+ * The id of your send this bounce belongs to (the same id as `GET /v1/sent-emails/{id}`), or null when it could not be linked. Linking is best effort: a bounce links only when it quotes the original Message-ID of a send from your organization and one of its failed recipients was on that send. Absent on payloads built before this field existed.
+ */
+sent_email_id?: (string | null)
 /**
  * SMTP reply code (e.g. `550`), if reported.
  */
@@ -1003,6 +1017,22 @@ keyBits: (number | null)
 algo: (string | null)
 }
 /**
+ * How an inbound message reached Primitive when it arrived through a Primitive mail relay.
+ *
+ * This interface was referenced by `EmailReceivedEvent`'s JSON-Schema
+ * via the `definition` "EmailRelay".
+ */
+export interface EmailRelay {
+/**
+ * The relay hostname the domain's MX record points at.
+ */
+hostname: string
+/**
+ * How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built.
+ */
+via: string
+}
+/**
  * Webhook payload for the `email.received` event.
  *
  * This is delivered to your webhook endpoint when Primitive receives an email matching your domain configuration.
@@ -1141,6 +1171,10 @@ expires_at: string
 parsed: (ParsedDataComplete | ParsedDataFailed)
 analysis: EmailAnalysis
 auth: EmailAuth
+/**
+ * Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.
+ */
+relay?: (EmailRelay | null)
 }
 }
 /**
@@ -1254,9 +1288,19 @@ category: ("mailbox_does_not_exist" | "domain_does_not_exist" | "domain_not_acce
  */
 classified_by: ("status_code" | "smtp_code" | "pattern" | "provider" | "none")
 /**
- * The recipient address that failed, if the report identifies one.
+ * The first failed recipient, as the bounce wrote it, if the report identifies one. The status and diagnostic fields describe this recipient.
  */
 failed_recipient: (string | null)
+/**
+ * Every address the bounce reports as failed, lowercased and deduplicated, up to 100. Includes both the final and the original recipient when an alias or forward rewrote the address. Empty when the bounce names no usable address. Absent on payloads built before this field existed.
+ *
+ * @maxItems 100
+ */
+failed_recipients?: string[]
+/**
+ * The id of your send this bounce belongs to (the same id as `GET /v1/sent-emails/{id}`), or null when it could not be linked. Linking is best effort: a bounce links only when it quotes the original Message-ID of a send from your organization and one of its failed recipients was on that send. Absent on payloads built before this field existed.
+ */
+sent_email_id?: (string | null)
 /**
  * SMTP reply code (e.g. `550`), if reported.
  */

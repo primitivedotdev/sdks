@@ -101,6 +101,15 @@
       "signature_header": " t=1734567890 , v0=legacy , v1=da72bb671b4a86a7e9df5eabbe2bad6144211ce123f5251525aab7c4c0c636e8 ",
       "expected_v1": "da72bb671b4a86a7e9df5eabbe2bad6144211ce123f5251525aab7c4c0c636e8",
       "expected_valid": true
+    },
+    {
+      "name": "sent_email_docs_worked_example",
+      "raw_body": "{\"id\":\"9f1c3a52-7d4e-4b8a-9c21-5e6f7a8b9c0d\",\"event\":\"sent_email.completed\"}",
+      "secret": "whsec_example",
+      "timestamp": 1797588005,
+      "now_seconds": 1797588005,
+      "expected_v1": "4f93d0ceb7f6fdd4a71f4d6beb08a5624a753a376841fd4aa93c62ecaa42c9b2",
+      "expected_valid": true
     }
   ]
 }

@@ -143,6 +143,27 @@ client.forward(
 )
 ```
 
+### Errors and rate limits
+
+A failed call raises `primitive.PrimitiveAPIError`. It carries `status_code`,
+`code`, `request_id`, `details`, and `retry_after` (the `Retry-After` header in
+seconds, when the server sent one). On a 429 it also carries `rate_limit`, a
+`primitive.RateLimit` with `limit`, `remaining`, `reset` (Unix seconds) and
+`policy` from the `ratelimit-*` headers. These describe the limiter that
+rejected the request, with its own window, which may be a send cap
+(`1000;w=3600`) rather than the API request budget. `rate_limit` is `None` when
+a 429 carried only `Retry-After`; wait for `retry_after` either way.
+
+```python
+from primitive import PrimitiveAPIError
+
+try:
+    client.send(from_email=sender, to=to, subject="Hi", body_text="Hello")
+except PrimitiveAPIError as err:
+    if err.status_code == 429:
+        print(err.retry_after, err.rate_limit and err.rate_limit.policy)
+```
+
 ### Per-call request options
 
 `send`, `reply`, `forward` (and their `a*` async variants) accept the same
@@ -602,10 +623,48 @@ page = search_emails(
 Turning `include_facets` off skips the facet aggregation entirely. Search text
 containing a NUL character is rejected with a 400 validation error.
 
+`q` takes words, `"quoted phrases"` and `field:value` filters, and every
+term must match. An upper-case `OR` between two text terms (words, phrases,
+`subject:` and `body:` terms) accepts either and binds tighter than the
+implicit AND, so `acme invoice OR receipt` means `acme` and either `invoice` or
+`receipt`. `OR` cannot join filters such as `from:`, and there is no `NOT`;
+either is a 400 validation error, as is a leading or trailing `OR`. To search
+for the word `OR` or `NOT` itself, write it in lower case or in double quotes.
+Facet values are ordered by count descending, ties by value in byte order, and
+`by_sender` and `by_domain` keep the first 20.
+
+Date filters such as `date_from` and `date_to` take an ISO 8601 timestamp with
+`Z` or a numeric UTC offset (`2026-10-02T00:00:00-04:00`); a time with no zone,
+or a bare date, is rejected.
+
 Upgrading to 2.0: `EmailSearchMeta.total` is now typed `int | None`. It is
 `None` only when the request sets `count=SearchEmailsCount.FALSE`; type-checked
 code that treats it as an `int` needs a `None` check. Search results also gain
 the required `thread_id` and `direction` fields.
+
+### Sent email webhook events
+
+Endpoints can also receive events about mail you send: `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed` and `sent_email.completed`. They are opt-in: an endpoint receives them only when its `rules.event_types` lists them (with the CLI, `primitive endpoints create --url <url> --event-types sent_email.*`). An endpoint that lists them and also handles inbound mail must keep `email.received` in the list.
+
+Each body carries `event`, and is validated against the `sent_email.*` JSON schema when parsed. Each recipient (To, Cc and Bcc) of a send gets exactly one `sent_email.delivered` or `sent_email.failed` with `scope` `"recipient"`, for up to 100 recipients. Mail relay sends with more recipients report the rest in roll-ups (`scope` `"message"`, `reason` `"rollup"`), sends recorded before per-recipient results can report one legacy message-level result (`reason` `"legacy_message_result"`), and relay recipients delivered inside the sender's own mail system get no event and are listed in `summary.not_relayed_recipients`. So do not wait for a per-recipient event per address: use `sent_email.completed`, which carries the totals once every recipient is final. Deduplicate on the event `id` (equal to the `X-Webhook-Id` header), and check that `delivery.endpoint_id` is the endpoint that received the request.
+
+```python
+from primitive import (
+    handle_webhook_event,
+    is_sent_email_completed_event,
+    is_sent_email_recipient_result_event,
+)
+
+event = handle_webhook_event(body=raw_body, headers=request.headers, secret=secret)
+
+if is_sent_email_recipient_result_event(event) and event.event == "sent_email.failed":
+    # event.recipient.type is "to", "cc" or "bcc"
+    print(event.recipient.address, event.outcome.smtp_enhanced_status_code)
+elif is_sent_email_completed_event(event):
+    print(event.summary.recipient_count, event.summary.delivered, event.summary.failed)
+```
+
+Parsed events are Pydantic models (`SentEmailAcceptedEvent`, `SentEmailRecipientResultEvent`, `SentEmailRollupResultEvent`, `SentEmailLegacyMessageResultEvent`, `SentEmailCompletedEvent`). `validate_sent_email_event` / `safe_validate_sent_email_event` validate an already parsed body, and the schema is exported as `sent_email_event_json_schema`. An `email.bounced` event's `email.analysis.bounce` carries `sent_email_id` (the send the bounce belongs to, or None when it could not be linked) and `failed_recipients` (every failed address, up to 100).
 
 ### Payment and interaction webhook events
 
@@ -637,6 +696,7 @@ elif is_interaction_x402_event(event):
 The full catalog of header values is exported as the `WEBHOOK_EVENT_TYPES` tuple:
 
 - `email.received`, `email.bounced`, `email.tls_report`, `email.dmarc_report`, `email.dmarc_failure`
+- `sent_email.accepted`, `sent_email.delivered`, `sent_email.failed`, `sent_email.completed` (opt-in)
 - `payment.settled`, `payment.failed`
 - `interaction.x402.challenge`, `interaction.x402.payment`, `interaction.x402.settled`, `interaction.x402.rejected`, `interaction.x402.declined`, `interaction.x402.expired`, `interaction.x402.verify_timeout`
 - `interaction.ack.received`, `interaction.ack.requested`, `interaction.ack.acked`, `interaction.ack.canceled`, `interaction.ack.expired`

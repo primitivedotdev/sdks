@@ -7,6 +7,7 @@ import {
   confirmedHeaders,
   decodeRawEmail,
   type EmailReceivedEvent,
+  type EmailRelay,
   getDownloadTimeRemaining,
   handleWebhook,
   isDownloadExpired,
@@ -157,6 +158,35 @@ describe("handleWebhook", () => {
       );
       expect(event.event).toBe("email.received");
       expect(event.email.headers.subject).toBe("Test Email");
+    });
+
+    it("exposes email.relay as an object, null, or absent", () => {
+      const relay: EmailRelay = {
+        hostname: "relay.example.com",
+        via: "mail_relay",
+      };
+      const withoutRelay = structuredClone(validPayload);
+      delete withoutRelay.email.relay;
+      const cases: Array<[EmailReceivedEvent, EmailRelay | null | undefined]> =
+        [
+          [{ ...validPayload, email: { ...validPayload.email, relay } }, relay],
+          [
+            { ...validPayload, email: { ...validPayload.email, relay: null } },
+            null,
+          ],
+          [withoutRelay, undefined],
+        ];
+
+      for (const [payload, expected] of cases) {
+        const body = JSON.stringify(payload);
+        const { header } = signWebhookPayload(body, secret);
+        const event = handleWebhook({
+          body,
+          headers: { "primitive-signature": header },
+          secret,
+        });
+        expect(event.email.relay).toEqual(expected);
+      }
     });
 
     it("works with Buffer body", () => {

@@ -1053,7 +1053,13 @@ It gives the session an address once, named `<runtime>-<repository>`, using the
 saved member login, and only re-verifies on resume; a session whose agent was
 disconnected or removed never gets a second address. The SessionEnd hook runs
 `primitive agent session-end`, which disconnects only agents that
-`session-register` created. The end is recorded first, so a registration still
+`session-register` created, and only while the session's profile still holds
+that exact credential: an agent later connected into the same profile (for
+example with `primitive agent connect`) is left connected, and only the
+registered agent's own receive hooks are removed. Claude reports the same
+SessionEnd for a restart, a switch to another session and a real exit, so the
+hook waits five minutes before disconnecting, and a start of the same session
+within that time cancels the end. The end is recorded first, so a registration still
 running disconnects the agent it creates; when the local credential is gone it
 revokes by address with the member login, and an unconfirmed disconnect is
 reported as `disconnect_pending` and retried by `machine doctor --fix`. Both always exit 0 and finish slow work in the
@@ -1151,15 +1157,22 @@ and `body_text`, fenced and labelled untrusted. With `--json` it prints one
 object with `envelope`, `subject` and `body_text`.
 
 `primitive emails get --id <id> --compact` is the smallest read, for keeping
-an email cheap in a model's context. It prints one JSON object with `id`,
-`thread_id`, `received_at`, `from`, `to`, `subject`, `body_text` and
-`attachments` (filename, content type, size and part index). Quoted history
-below a reply is removed and counted in `quoted_chars_removed`, and an email
-with no text part has its HTML reduced to text (`body_source` is then `html`).
-The HTML body, authentication results, routing and webhook delivery state are
-left out. It makes one request and sends no signal. Use `--context` instead when
-a connected agent needs to know who the sender is to it and how to answer; the
-two flags cannot be combined.
+an email cheap in a model's context. It prints the server's readable read as
+one JSON object: `id`, `thread_id`, `received_at`, `from`, `to`, `subject`,
+`preheader`, `body_text`, `attachments` (filename, content type, size and part
+index) and the counts below. Hidden content, layout and quoted reply history
+are removed by the server (`quoted_chars_removed` counts the history), and
+every link in `body_text` is a `[n]` marker. `link_count` says how many links
+there are; `--links all` or `--links 1,2,3` adds their targets as `links`
+(`[{ "n": 1, "url": "..." }]`). A long body arrives in pages of `--max-chars`
+characters (500 to 100000, default 16000): when `body_next_offset` is not null,
+run the same command with `--offset <body_next_offset>` for the next page.
+`body_incomplete` is true when the stored body was itself cut short, so the
+text ends before the message did. The three flags need `--compact`. It makes
+one request and sends no signal. Against a server that does not offer the
+readable read yet, the CLI prints its own local compact view instead and says
+so on stderr. Use `--context` instead when a connected agent needs to know who
+the sender is to it and how to answer; the two flags cannot be combined.
 
 The envelope also carries `interaction` (the server's `interaction_hint`,
 `interaction_kind` and `fyi`, plus a `category` and whether a plain reply

@@ -2,6 +2,7 @@ package primitive
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -171,5 +172,101 @@ func TestEmailDetailUnmarshalsAutomatedVerdict(t *testing.T) {
 	}
 	if len(detail.AutomatedReasons) != 2 || detail.AutomatedReasons[0] != "list_unsubscribe" || detail.AutomatedReasons[1] != "list_id" {
 		t.Errorf("automated_reasons: got %v", detail.AutomatedReasons)
+	}
+}
+
+func TestEmailDetailUnmarshalsOptionalRelay(t *testing.T) {
+	const anchor = `"automated": true,`
+	if !strings.Contains(emailDetailSampleJSON, anchor) {
+		t.Fatalf("sample JSON no longer contains %q", anchor)
+	}
+	withRelay := func(value string) string {
+		return strings.Replace(emailDetailSampleJSON, anchor, `"relay": `+value+`, `+anchor, 1)
+	}
+
+	var absent primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(emailDetailSampleJSON), &absent); err != nil {
+		t.Fatalf("unmarshal without relay: %v", err)
+	}
+	if _, ok := absent.Relay.Get(); ok {
+		t.Errorf("relay without the field: got %+v, want unset", absent.Relay)
+	}
+
+	var null primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(withRelay("null")), &null); err != nil {
+		t.Fatalf("unmarshal with null relay: %v", err)
+	}
+	if _, ok := null.Relay.Get(); ok || !null.Relay.Null {
+		t.Errorf("relay null: got %+v, want null", null.Relay)
+	}
+
+	var relayed primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(withRelay(`{"hostname": "relay.example.com", "via": "mail_relay"}`)), &relayed); err != nil {
+		t.Fatalf("unmarshal with relay: %v", err)
+	}
+	relay, ok := relayed.Relay.Get()
+	if !ok || relay.Hostname != "relay.example.com" || relay.Via != "mail_relay" {
+		t.Errorf("relay: got (%+v, %v), want relay.example.com via mail_relay", relay, ok)
+	}
+}
+
+func TestEmailDetailUnmarshalsOptionalRelayDelivery(t *testing.T) {
+	const anchor = `"automated": true,`
+	withRelay := func(value string) string {
+		return strings.Replace(emailDetailSampleJSON, anchor, `"relay": `+value+`, `+anchor, 1)
+	}
+
+	var without primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(withRelay(`{"hostname": "relay.example.com", "via": "mail_relay"}`)), &without); err != nil {
+		t.Fatalf("unmarshal relay without delivery: %v", err)
+	}
+	relay, ok := without.Relay.Get()
+	if !ok || relay.Delivery != nil {
+		t.Errorf("relay without delivery: got (%+v, %v), want relay with nil delivery", relay, ok)
+	}
+
+	var null primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(withRelay("null")), &null); err != nil {
+		t.Fatalf("unmarshal with null relay: %v", err)
+	}
+	if _, ok := null.Relay.Get(); ok || !null.Relay.Null {
+		t.Errorf("relay null: got %+v, want null", null.Relay)
+	}
+
+	// The second entry carries a status this SDK does not know about; it must
+	// still decode because status is an open string.
+	const delivered = `{"hostname": "relay.example.com", "via": "mail_relay", "delivery": [
+		{"recipient": "alice@example.org", "status": "delivered", "smtp_code": 250, "enhanced_status_code": "2.0.0", "smtp_response": "250 2.0.0 OK", "at": "2026-05-03T00:00:01Z"},
+		{"recipient": "bob@example.org", "status": "quarantined", "smtp_code": null, "enhanced_status_code": null, "smtp_response": null, "at": "2026-05-03T00:00:02Z"}
+	]}`
+	var withDelivery primitiveapi.EmailDetail
+	if err := json.Unmarshal([]byte(withRelay(delivered)), &withDelivery); err != nil {
+		t.Fatalf("unmarshal relay with delivery: %v", err)
+	}
+	relay, ok = withDelivery.Relay.Get()
+	if !ok || len(relay.Delivery) != 2 {
+		t.Fatalf("relay delivery: got (%+v, %v), want two entries", relay, ok)
+	}
+	first, second := relay.Delivery[0], relay.Delivery[1]
+	if first.Recipient != "alice@example.org" || first.Status != "delivered" {
+		t.Errorf("first entry: got %+v", first)
+	}
+	if code, ok := first.SMTPCode.Get(); !ok || code != 250 {
+		t.Errorf("first smtp_code: got %+v", first.SMTPCode)
+	}
+	if v, ok := first.EnhancedStatusCode.Get(); !ok || v != "2.0.0" {
+		t.Errorf("first enhanced_status_code: got %+v", first.EnhancedStatusCode)
+	}
+	if v, ok := first.SMTPResponse.Get(); !ok || v != "250 2.0.0 OK" {
+		t.Errorf("first smtp_response: got %+v", first.SMTPResponse)
+	}
+	if !first.At.Equal(time.Date(2026, 5, 3, 0, 0, 1, 0, time.UTC)) {
+		t.Errorf("first at: got %v", first.At)
+	}
+	if second.Status != "quarantined" {
+		t.Errorf("second status: got %q, want quarantined", second.Status)
+	}
+	if !second.SMTPCode.Null || !second.EnhancedStatusCode.Null || !second.SMTPResponse.Null {
+		t.Errorf("second entry nullable fields: got %+v", second)
 	}
 }

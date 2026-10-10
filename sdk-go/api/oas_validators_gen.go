@@ -6948,6 +6948,8 @@ func (s DeliverySummaryStatus) Validate() error {
 		return nil
 	case "failed":
 		return nil
+	case "skipped_by_rules":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
@@ -13181,6 +13183,8 @@ func (s ListDeliveriesStatus) Validate() error {
 		return nil
 	case "failed":
 		return nil
+	case "skipped_by_rules":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}
@@ -16759,6 +16763,62 @@ func (s *RateLimitedHeaders) Validate() error {
 	}
 
 	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.RatelimitLimit.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           1,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "RatelimitLimit",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.RatelimitRemaining.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "RatelimitRemaining",
+			Error: err,
+		})
+	}
 	if err := func() error {
 		if err := s.Response.Validate(); err != nil {
 			return err
@@ -20553,6 +20613,34 @@ func (s *SentEmailDetail) Validate() error {
 		})
 	}
 	if err := func() error {
+		if value, ok := s.RecipientCount.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "recipient_count",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if value, ok := s.Gates.Get(); ok {
 			if err := func() error {
 				if value == nil {
@@ -21012,6 +21100,34 @@ func (s *SentEmailSummary) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "status",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.RecipientCount.Get(); ok {
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(value)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "recipient_count",
 			Error: err,
 		})
 	}

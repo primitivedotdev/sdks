@@ -2,6 +2,7 @@ import type { UnknownEvent, WebhookEvent } from "../types.js";
 import { validateEmailReceivedEvent } from "../validation.js";
 import { WebhookPayloadError } from "./errors.js";
 import { isKnownWebhookEventType } from "./events.js";
+import { validateSentEmailEvent } from "./sent-email-events.js";
 
 export function parseWebhookEvent(
   input: unknown,
@@ -68,6 +69,15 @@ export function parseWebhookEvent(
   switch (resolvedEvent) {
     case "email.received":
       return validateEmailReceivedEvent(input);
+
+    case "sent_email.accepted":
+    case "sent_email.delivered":
+    case "sent_email.failed":
+    case "sent_email.completed":
+      // sent_email.* bodies carry their own `event` and are validated against
+      // the sent_email schema. The returned event is the validated body: its
+      // `event` field is covered by the signature, the header is not.
+      return validateSentEmailEvent(input);
 
     case "payment.settled":
     case "payment.failed":

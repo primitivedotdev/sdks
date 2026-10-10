@@ -56,12 +56,35 @@ export type PrimitiveApiErrorDetails = NonNullable<
   GeneratedErrorResponse["error"]["details"]
 >;
 
+/**
+ * The `ratelimit-*` headers on a 429. They describe the limiter that rejected
+ * the request (the API limit, a send cap, or a per-resource limit), with that
+ * limiter's own window, so `limit` and `policy` can differ from the API budget
+ * that successful responses report. Each field is undefined when its header is
+ * absent: some limiters report only a wait, in `Retry-After`.
+ */
+export interface PrimitiveRateLimit {
+  /** `ratelimit-limit`: the rejecting limiter's limit. */
+  readonly limit: number | undefined;
+  /** `ratelimit-remaining`: requests left in that limiter. */
+  readonly remaining: number | undefined;
+  /** `ratelimit-reset`: Unix time in seconds when that limiter resets. */
+  readonly reset: number | undefined;
+  /** `ratelimit-policy`: that limiter as `limit;w=seconds`, e.g. `1000;w=3600`. */
+  readonly policy: string | undefined;
+}
+
 export class PrimitiveApiError extends Error {
   readonly status: number | undefined;
   readonly code: string | undefined;
   readonly gates: GateDenial[] | undefined;
   readonly requestId: string | undefined;
   readonly retryAfter: number | undefined;
+  /**
+   * The rejecting limiter's `ratelimit-*` headers on a 429. Undefined on
+   * other statuses, and on a 429 that carried none of those headers.
+   */
+  readonly rateLimit: PrimitiveRateLimit | undefined;
   readonly details: PrimitiveApiErrorDetails | undefined;
   readonly payload: unknown;
 
@@ -74,6 +97,7 @@ export class PrimitiveApiError extends Error {
       gates?: GateDenial[];
       requestId?: string;
       retryAfter?: number;
+      rateLimit?: PrimitiveRateLimit;
       details?: PrimitiveApiErrorDetails;
       /**
        * The underlying error this wraps, when there is one (e.g. a
@@ -93,6 +117,7 @@ export class PrimitiveApiError extends Error {
     this.gates = options.gates;
     this.requestId = options.requestId;
     this.retryAfter = options.retryAfter;
+    this.rateLimit = options.rateLimit;
     this.details = options.details;
   }
 }

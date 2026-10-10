@@ -23,7 +23,12 @@ T = TypeVar("T", bound="UpdateEndpointInputRules")
 class UpdateEndpointInputRules:
     """ 
         Attributes:
-            event_types (list[str] | Unset):
+            event_types (list[str] | Unset): Event types this endpoint subscribes to, matched by exact string. Omitted means
+                every event type except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`,
+                `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them, and only for
+                sends made after it first listed one. An endpoint that lists `sent_email.*` events and also handles inbound mail
+                must keep its inbound event types (such as `email.received`) in the list. An empty array is rejected; omit the
+                field instead.
      """
 
     event_types: list[str] | Unset = UNSET

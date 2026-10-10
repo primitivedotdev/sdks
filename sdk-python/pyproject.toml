@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "primitivedotdev"
-version = "2.0.0"
+version = "2.3.0"
 description = "Official Primitive Python SDK for webhook handling and API access"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -57,6 +57,7 @@ packages = ["src/primitive"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/primitive/schemas/email_received_event.schema.json" = "primitive/schemas/email_received_event.schema.json"
+"src/primitive/schemas/sent_email_event.schema.json" = "primitive/schemas/sent_email_event.schema.json"
 "src/primitive/py.typed" = "primitive/py.typed"
 
 [tool.hatch.build.targets.sdist]
@@ -85,6 +86,7 @@ omit = [
   "src/primitive/api/models/*",
   "src/primitive/api/types.py",
   "src/primitive/models_generated.py",
+  "src/primitive/sent_email_models_generated.py",
   "src/primitive/schemas/*",
 ]
 
@@ -96,6 +98,7 @@ omit = [
   "src/primitive/api/models/*",
   "src/primitive/api/types.py",
   "src/primitive/models_generated.py",
+  "src/primitive/sent_email_models_generated.py",
   "src/primitive/schemas/*",
 ]
 
@@ -125,5 +128,6 @@ exclude = [
   "src/primitive/api/models",
   "src/primitive/api/types.py",
   "src/primitive/models_generated.py",
+  "src/primitive/sent_email_models_generated.py",
   "src/primitive/schemas",
 ]

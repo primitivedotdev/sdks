@@ -264,6 +264,27 @@ class SendResult:
     dedup_reason: str | None = None
 
 
+@dataclass(frozen=True)
+class RateLimit:
+    """The ``ratelimit-*`` headers on a 429.
+
+    They describe the limiter that rejected the request (the API limit, a send
+    cap, or a per-resource limit) with that limiter's own window, so ``limit``
+    and ``policy`` can differ from the API budget that successful responses
+    report. Each field is ``None`` when its header is absent: some limiters
+    report only a wait, in ``Retry-After``.
+    """
+
+    # ``ratelimit-limit``: the rejecting limiter's limit.
+    limit: int | None = None
+    # ``ratelimit-remaining``: requests left in that limiter.
+    remaining: int | None = None
+    # ``ratelimit-reset``: Unix time in seconds when that limiter resets.
+    reset: int | None = None
+    # ``ratelimit-policy``: that limiter as ``limit;w=seconds``.
+    policy: str | None = None
+
+
 class PrimitiveAPIError(Exception):
     def __init__(
         self,
@@ -276,6 +297,7 @@ class PrimitiveAPIError(Exception):
         retry_after: int | None = None,
         details: dict[str, Any] | None = None,
         payload: Any = None,
+        rate_limit: RateLimit | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -285,6 +307,9 @@ class PrimitiveAPIError(Exception):
         self.retry_after = retry_after
         self.details = details
         self.payload = payload
+        # The rejecting limiter's ``ratelimit-*`` headers on a 429. None on
+        # other statuses, and on a 429 that carried none of those headers.
+        self.rate_limit = rate_limit
 
 
 def _validate_address_header(field_name: str, value: str) -> None:
@@ -449,10 +474,52 @@ def _retry_after_from_headers(headers: Any) -> int | None:
         return None
 
 
+def _header_value(headers: Any, name: str) -> str | None:
+    if headers is None:
+        return None
+    try:
+        value = headers.get(name)
+        if value is None:
+            # Plain dicts are case-sensitive; httpx headers are not.
+            value = next(
+                (v for k, v in headers.items() if str(k).lower() == name),
+                None,
+            )
+    except AttributeError:
+        return None
+    return None if value is None else str(value).strip()
+
+
+def _int_header(headers: Any, name: str) -> int | None:
+    raw = _header_value(headers, name)
+    if raw is None or not raw.isdigit():
+        return None
+    return int(raw)
+
+
+def _rate_limit_from_headers(status_code: int, headers: Any) -> RateLimit | None:
+    # On a 429 the ``ratelimit-*`` headers describe the limiter that rejected
+    # the request. On other statuses they describe the API budget instead, so
+    # they are not attached to those errors.
+    if status_code != 429:
+        return None
+    rate_limit = RateLimit(
+        limit=_int_header(headers, "ratelimit-limit"),
+        remaining=_int_header(headers, "ratelimit-remaining"),
+        reset=_int_header(headers, "ratelimit-reset"),
+        policy=_header_value(headers, "ratelimit-policy") or None,
+    )
+    if rate_limit == RateLimit():
+        return None
+    return rate_limit
+
+
 def _raise_api_error(response: Any) -> None:
     status_code = int(response.status_code)
     parsed = response.parsed
-    retry_after = _retry_after_from_headers(getattr(response, "headers", None))
+    headers = getattr(response, "headers", None)
+    retry_after = _retry_after_from_headers(headers)
+    rate_limit = _rate_limit_from_headers(status_code, headers)
 
     if isinstance(parsed, ErrorResponse):
         gates = (
@@ -477,6 +544,7 @@ def _raise_api_error(response: Any) -> None:
             gates=gates,
             request_id=request_id,
             retry_after=retry_after,
+            rate_limit=rate_limit,
             details=details,
             payload=parsed.to_dict(),
         )
@@ -491,6 +559,7 @@ def _raise_api_error(response: Any) -> None:
             gates=err.get("gates"),
             request_id=err.get("request_id"),
             retry_after=retry_after,
+            rate_limit=rate_limit,
             details=err.get("details"),
             payload=fallback,
         )
@@ -499,6 +568,7 @@ def _raise_api_error(response: Any) -> None:
         "Primitive API request failed",
         status_code=status_code,
         retry_after=retry_after,
+        rate_limit=rate_limit,
         payload=fallback if fallback is not None else parsed,
     )
 

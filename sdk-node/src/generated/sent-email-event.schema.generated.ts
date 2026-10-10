@@ -1,0 +1,865 @@
+/**
+ * JSON Schema for SentEmailEvent.
+ *
+ * AUTO-GENERATED - DO NOT EDIT
+ * Run `pnpm generate:schema` to regenerate.
+ */
+
+import type { JSONSchema7 } from "json-schema";
+
+export const sentEmailEventJsonSchema = {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/SentEmailEvent",
+  "definitions": {
+    "SentEmailEvent": {
+      "title": "SentEmailEvent",
+      "description": "The body of a sent_email.* webhook delivery: events about mail you send through Primitive. A separate payload family from the inbound email.* events, with its own version. Keys that do not apply to an event are absent, not null. Fields marked open take values beyond the ones listed; treat unknown values as newer additions.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/SentEmailAcceptedEvent"
+        },
+        {
+          "$ref": "#/definitions/SentEmailRecipientResultEvent"
+        },
+        {
+          "$ref": "#/definitions/SentEmailRollupResultEvent"
+        },
+        {
+          "$ref": "#/definitions/SentEmailLegacyMessageResultEvent"
+        },
+        {
+          "$ref": "#/definitions/SentEmailCompletedEvent"
+        }
+      ]
+    },
+    "SentEmailEventDelivery": {
+      "type": "object",
+      "description": "This webhook attempt. Not the email's delivery.",
+      "required": [
+        "endpoint_id",
+        "attempt",
+        "attempted_at"
+      ],
+      "properties": {
+        "endpoint_id": {
+          "type": "string",
+          "description": "The endpoint this attempt was sent to. Every endpoint is signed with the organization's secret, so check this is the endpoint that received the request."
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1 for the first attempt, higher on retries."
+        },
+        "attempted_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When this attempt was sent."
+        }
+      }
+    },
+    "SentEmailTag": {
+      "type": "object",
+      "required": [
+        "name",
+        "value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "SentEmailRelay": {
+      "type": "object",
+      "description": "The mail relay that took a relay send.",
+      "required": [
+        "hostname",
+        "via"
+      ],
+      "properties": {
+        "hostname": {
+          "type": "string",
+          "description": "The Primitive relay that took the message."
+        },
+        "via": {
+          "type": "string",
+          "const": "mail_relay"
+        }
+      }
+    },
+    "SentEmailRecord": {
+      "type": "object",
+      "description": "The send's current state when this attempt was made, with the same fields as GET /v1/sent-emails/{id}. Not a snapshot of when the event was created, and not this event's result.",
+      "required": [
+        "id",
+        "status",
+        "status_changed_at",
+        "created_at",
+        "source",
+        "from_address",
+        "to_addresses",
+        "cc",
+        "bcc",
+        "recipient_count",
+        "subject",
+        "message_id",
+        "thread_id",
+        "tags",
+        "relay"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The sent email id. For mail relay sends there is no API call, and the id first appears in these events."
+        },
+        "status": {
+          "type": "string",
+          "description": "The send's overall status (open): queued, scheduled, submitted_to_agent, deferred, delivered, bounced, wait_timeout, unknown, agent_failed, gate_denied, canceled. Never a recipient's result."
+        },
+        "status_changed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "type": "string",
+          "description": "How the mail entered Primitive (open): api or mail_relay."
+        },
+        "from_address": {
+          "type": "string"
+        },
+        "to_addresses": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "cc": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Null when the send had no Cc recipients."
+        },
+        "bcc": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Null when the send had no Bcc recipients. On a mail relay send, every recipient no To or Cc header names."
+        },
+        "recipient_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Every recipient of the send, To, Cc and Bcc together, each address counted once. On a relay send, recipients the relay never received (mail kept inside the sender's own mail system) get no result events."
+        },
+        "subject": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "thread_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "description": "The tags given on the send request. Null or empty when there are none; relay sends carry none.",
+          "items": {
+            "$ref": "#/definitions/SentEmailTag"
+          }
+        },
+        "relay": {
+          "description": "The mail relay that took a relay send, or null for API sends.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/SentEmailRelay"
+            }
+          ]
+        }
+      }
+    },
+    "SentEmailRecipientType": {
+      "type": "string",
+      "enum": [
+        "to",
+        "cc",
+        "bcc"
+      ],
+      "description": "The list that names the recipient. On a mail relay send every hidden recipient is bcc."
+    },
+    "SentEmailFailureKind": {
+      "type": "string",
+      "enum": [
+        "rejected",
+        "expired"
+      ],
+      "description": "rejected: the receiving server refused the message permanently. expired: it kept asking to retry until the retry period ran out. Closed for this version."
+    },
+    "SentEmailRecipient": {
+      "type": "object",
+      "required": [
+        "address",
+        "type"
+      ],
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/SentEmailRecipientType"
+        }
+      }
+    },
+    "SentEmailOutcome": {
+      "type": "object",
+      "description": "This event's result.",
+      "required": [
+        "result",
+        "failure_kind",
+        "smtp_response_code",
+        "smtp_enhanced_status_code",
+        "smtp_response_text",
+        "at"
+      ],
+      "properties": {
+        "result": {
+          "type": "string",
+          "enum": [
+            "delivered",
+            "failed"
+          ]
+        },
+        "failure_kind": {
+          "description": "Null when delivered.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/SentEmailFailureKind"
+            }
+          ]
+        },
+        "smtp_response_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "smtp_enhanced_status_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "smtp_response_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Text from a third-party server: untrusted, never render it as HTML."
+        },
+        "at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When the result was recorded."
+        }
+      }
+    },
+    "SentEmailRollupOutcome": {
+      "type": "object",
+      "description": "A roll-up's result. Roll-ups carry no SMTP answer.",
+      "required": [
+        "result",
+        "failure_kind",
+        "smtp_response_code",
+        "smtp_enhanced_status_code",
+        "smtp_response_text",
+        "at"
+      ],
+      "properties": {
+        "result": {
+          "type": "string",
+          "enum": [
+            "delivered",
+            "failed"
+          ]
+        },
+        "failure_kind": {
+          "description": "Null when delivered.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/SentEmailFailureKind"
+            }
+          ]
+        },
+        "smtp_response_code": {
+          "type": "null"
+        },
+        "smtp_enhanced_status_code": {
+          "type": "null"
+        },
+        "smtp_response_text": {
+          "type": "null"
+        },
+        "at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When the result was recorded."
+        }
+      }
+    },
+    "SentEmailRolledUpFailure": {
+      "type": "object",
+      "required": [
+        "address",
+        "type",
+        "smtp_response_code",
+        "smtp_enhanced_status_code",
+        "smtp_response_text",
+        "at"
+      ],
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/SentEmailRecipientType"
+        },
+        "smtp_response_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "smtp_enhanced_status_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "smtp_response_text": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Text from a third-party server: untrusted, never render it as HTML."
+        },
+        "at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "SentEmailFailedByKind": {
+      "type": "object",
+      "required": [
+        "rejected",
+        "expired"
+      ],
+      "properties": {
+        "rejected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expired": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "SentEmailCompletedSummary": {
+      "type": "object",
+      "description": "Totals over every recipient of the send: delivered + failed + not_relayed == recipient_count (when not_relayed is not null).",
+      "required": [
+        "recipient_count",
+        "delivered",
+        "failed",
+        "failed_by_kind",
+        "not_relayed",
+        "not_relayed_recipients"
+      ],
+      "properties": {
+        "recipient_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "delivered": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_by_kind": {
+          "$ref": "#/definitions/SentEmailFailedByKind"
+        },
+        "not_relayed": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Mail relay sends: To or Cc recipients that never reached the relay because the mailbox provider delivered them internally. Primitive has no result for them. 0 for every other send. Null for a relay send recorded before Primitive kept the relay's envelope, when this cannot be known."
+        },
+        "not_relayed_recipients": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "description": "The not_relayed recipients. [] when there are none; null when not_relayed is null.",
+          "items": {
+            "$ref": "#/definitions/SentEmailRecipient"
+          }
+        }
+      }
+    },
+    "SentEmailAcceptedEvent": {
+      "type": "object",
+      "description": "Exactly once for every send Primitive accepted, whatever state the send has reached when the event is created.",
+      "required": [
+        "id",
+        "event",
+        "version",
+        "created_at",
+        "delivery",
+        "sent_email"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The event id. The same on every retry and at every endpoint, and equal to the X-Webhook-Id header. Deduplicate on it."
+        },
+        "event": {
+          "type": "string",
+          "const": "sent_email.accepted"
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the sent_email.* payload family. Not an event date."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the event happened, as far as Primitive knows it: a result's time for result events, the last result's time for sent_email.completed."
+        },
+        "delivery": {
+          "$ref": "#/definitions/SentEmailEventDelivery"
+        },
+        "sent_email": {
+          "$ref": "#/definitions/SentEmailRecord"
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "scope"
+            ]
+          },
+          {
+            "required": [
+              "recipient"
+            ]
+          },
+          {
+            "required": [
+              "recipient_count"
+            ]
+          },
+          {
+            "required": [
+              "reason"
+            ]
+          },
+          {
+            "required": [
+              "outcome"
+            ]
+          },
+          {
+            "required": [
+              "recipients"
+            ]
+          },
+          {
+            "required": [
+              "summary"
+            ]
+          }
+        ]
+      }
+    },
+    "SentEmailRecipientResultEvent": {
+      "type": "object",
+      "description": "One recipient's final result: exactly one delivered or failed event per recipient, for the first 100 recipients.",
+      "required": [
+        "id",
+        "event",
+        "version",
+        "created_at",
+        "delivery",
+        "sent_email",
+        "scope",
+        "recipient",
+        "outcome"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The event id. The same on every retry and at every endpoint, and equal to the X-Webhook-Id header. Deduplicate on it."
+        },
+        "event": {
+          "type": "string",
+          "enum": [
+            "sent_email.delivered",
+            "sent_email.failed"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the sent_email.* payload family. Not an event date."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the event happened, as far as Primitive knows it: a result's time for result events, the last result's time for sent_email.completed."
+        },
+        "delivery": {
+          "$ref": "#/definitions/SentEmailEventDelivery"
+        },
+        "sent_email": {
+          "$ref": "#/definitions/SentEmailRecord"
+        },
+        "scope": {
+          "type": "string",
+          "const": "recipient"
+        },
+        "recipient": {
+          "$ref": "#/definitions/SentEmailRecipient"
+        },
+        "outcome": {
+          "$ref": "#/definitions/SentEmailOutcome"
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "recipient_count"
+            ]
+          },
+          {
+            "required": [
+              "reason"
+            ]
+          },
+          {
+            "required": [
+              "recipients"
+            ]
+          },
+          {
+            "required": [
+              "summary"
+            ]
+          }
+        ]
+      }
+    },
+    "SentEmailRollupResultEvent": {
+      "type": "object",
+      "description": "Recipients past the first 100 (mail relay sends only). A failed roll-up lists the recipients it covers in recipients, each listed on exactly one failed roll-up; a delivered roll-up is a count, sent once every rolled-up recipient is final, and carries no recipients.",
+      "required": [
+        "id",
+        "event",
+        "version",
+        "created_at",
+        "delivery",
+        "sent_email",
+        "scope",
+        "recipient",
+        "recipient_count",
+        "reason",
+        "outcome"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The event id. The same on every retry and at every endpoint, and equal to the X-Webhook-Id header. Deduplicate on it."
+        },
+        "event": {
+          "type": "string",
+          "enum": [
+            "sent_email.delivered",
+            "sent_email.failed"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the sent_email.* payload family. Not an event date."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the event happened, as far as Primitive knows it: a result's time for result events, the last result's time for sent_email.completed."
+        },
+        "delivery": {
+          "$ref": "#/definitions/SentEmailEventDelivery"
+        },
+        "sent_email": {
+          "$ref": "#/definitions/SentEmailRecord"
+        },
+        "scope": {
+          "type": "string",
+          "const": "message"
+        },
+        "recipient": {
+          "type": "null"
+        },
+        "recipient_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reason": {
+          "type": "string",
+          "const": "rollup"
+        },
+        "outcome": {
+          "$ref": "#/definitions/SentEmailRollupOutcome"
+        },
+        "recipients": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Present on failed roll-ups only: the recipients this roll-up covers.",
+          "items": {
+            "$ref": "#/definitions/SentEmailRolledUpFailure"
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "event": {
+            "const": "sent_email.failed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "recipients"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "recipients"
+          ]
+        }
+      },
+      "not": {
+        "required": [
+          "summary"
+        ]
+      }
+    },
+    "SentEmailLegacyMessageResultEvent": {
+      "type": "object",
+      "description": "Only for sends recorded before Primitive kept each recipient's result: one result for the recipient_count recipients it covers.",
+      "required": [
+        "id",
+        "event",
+        "version",
+        "created_at",
+        "delivery",
+        "sent_email",
+        "scope",
+        "recipient",
+        "recipient_count",
+        "reason",
+        "outcome"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The event id. The same on every retry and at every endpoint, and equal to the X-Webhook-Id header. Deduplicate on it."
+        },
+        "event": {
+          "type": "string",
+          "enum": [
+            "sent_email.delivered",
+            "sent_email.failed"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the sent_email.* payload family. Not an event date."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the event happened, as far as Primitive knows it: a result's time for result events, the last result's time for sent_email.completed."
+        },
+        "delivery": {
+          "$ref": "#/definitions/SentEmailEventDelivery"
+        },
+        "sent_email": {
+          "$ref": "#/definitions/SentEmailRecord"
+        },
+        "scope": {
+          "type": "string",
+          "const": "message"
+        },
+        "recipient": {
+          "type": "null"
+        },
+        "recipient_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reason": {
+          "type": "string",
+          "const": "legacy_message_result"
+        },
+        "outcome": {
+          "$ref": "#/definitions/SentEmailOutcome"
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "recipients"
+            ]
+          },
+          {
+            "required": [
+              "summary"
+            ]
+          }
+        ]
+      }
+    },
+    "SentEmailCompletedEvent": {
+      "type": "object",
+      "description": "Once per send, after its last result event, when every recipient has a final result.",
+      "required": [
+        "id",
+        "event",
+        "version",
+        "created_at",
+        "delivery",
+        "sent_email",
+        "summary"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The event id. The same on every retry and at every endpoint, and equal to the X-Webhook-Id header. Deduplicate on it."
+        },
+        "event": {
+          "type": "string",
+          "const": "sent_email.completed"
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the sent_email.* payload family. Not an event date."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the event happened, as far as Primitive knows it: a result's time for result events, the last result's time for sent_email.completed."
+        },
+        "delivery": {
+          "$ref": "#/definitions/SentEmailEventDelivery"
+        },
+        "sent_email": {
+          "$ref": "#/definitions/SentEmailRecord"
+        },
+        "summary": {
+          "$ref": "#/definitions/SentEmailCompletedSummary"
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "scope"
+            ]
+          },
+          {
+            "required": [
+              "recipient"
+            ]
+          },
+          {
+            "required": [
+              "recipient_count"
+            ]
+          },
+          {
+            "required": [
+              "reason"
+            ]
+          },
+          {
+            "required": [
+              "outcome"
+            ]
+          },
+          {
+            "required": [
+              "recipients"
+            ]
+          }
+        ]
+      }
+    }
+  }
+} as const satisfies JSONSchema7;

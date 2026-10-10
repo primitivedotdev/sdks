@@ -26,9 +26,14 @@ T = TypeVar("T", bound="EmailSearchFacets")
 class EmailSearchFacets:
     """ 
         Attributes:
-            by_sender (list[EmailSearchFacetBucket]):
-            by_domain (list[EmailSearchFacetBucket]):
-            by_status (list[EmailSearchFacetBucket]):
+            by_sender (list[EmailSearchFacetBucket]): Sender values, ordered by `count` descending, then by `value`
+                ascending in byte order of its UTF-8 encoding, with a null `value` last. Keeps the first 20 values in that
+                order.
+            by_domain (list[EmailSearchFacetBucket]): Domain values, ordered by `count` descending, then by `value`
+                ascending in byte order of its UTF-8 encoding, with a null `value` last. Keeps the first 20 values in that
+                order.
+            by_status (list[EmailSearchFacetBucket]): Status values, ordered by `count` descending, then by `value`
+                ascending in byte order of its UTF-8 encoding, with a null `value` last.
             has_attachment (EmailSearchFacetsHasAttachment):
      """
 

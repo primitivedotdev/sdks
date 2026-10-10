@@ -4,16 +4,18 @@
  *
  * Primitive posts every webhook with the event name in the `X-Webhook-Event`
  * HEADER, not in the body. The stored payload is sent verbatim with no
- * envelope: an `email.*` body carries `event`, a `payment.*` body carries the
- * name in `type`, and an `interaction.*` body is just `{ interaction: { ... } }`
- * with no event/type field at all. The HEADER is therefore the only reliable
- * discriminator across all three families, which is why the parser keys on it.
+ * envelope: an `email.*` or `sent_email.*` body carries `event`, a `payment.*`
+ * body carries the name in `type`, and an `interaction.*` body is just
+ * `{ interaction: { ... } }` with no event/type field at all. The HEADER is
+ * therefore the only reliable discriminator across all the families, which is
+ * why the parser keys on it.
  *
  * @packageDocumentation
  */
 
 import type { EmailReceivedEvent } from "../types.js";
 import { validateEmailReceivedEvent } from "../validation.js";
+import { SENT_EMAIL_EVENT_TYPES } from "./sent-email-events.js";
 
 /**
  * The five first-party email events (subject = an email).
@@ -59,16 +61,18 @@ export const INTERACTION_EVENT_TYPES = [
 
 /**
  * The full enumerated catalog of every current webhook event type: the five
- * email.*, the two payment.*, and every interaction.<protocol>.<suffix>.
+ * email.*, the four opt-in sent_email.*, the two payment.*, and every
+ * interaction.<protocol>.<suffix>.
  */
 export const WEBHOOK_EVENT_TYPES = [
   ...EMAIL_EVENT_TYPES,
+  ...SENT_EMAIL_EVENT_TYPES,
   ...PAYMENT_EVENT_TYPES,
   ...INTERACTION_EVENT_TYPES,
 ] as const;
 
 /**
- * Any current catalog value: every `email.*`, `payment.*`, and
+ * Any current catalog value: every `email.*`, `sent_email.*`, `payment.*`, and
  * `interaction.x402.*` / `interaction.ack.*` event the platform emits, surfaced
  * in the `X-Webhook-Event` header. Use this to type a switch over the header.
  */

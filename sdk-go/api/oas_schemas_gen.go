@@ -475,9 +475,12 @@ func (s *AgentAccountResultPlan) UnmarshalText(data []byte) error {
 // In-band pointer to the upgrade path for an agent account.
 // Ref: #/components/schemas/AgentAccountUpgradeHint
 type AgentAccountUpgradeHint struct {
-	Plan        AgentAccountUpgradeHintPlan `json:"plan"`
-	Description string                      `json:"description"`
-	ClaimPath   string                      `json:"claim_path"`
+	Plan AgentAccountUpgradeHintPlan `json:"plan"`
+	// What upgrading grants, in words meant to be repeated to a user: a higher send cap and the
+	// developer plan's default features. It does not unlock sending to arbitrary recipients; the
+	// account's recipient rules still apply (see `GET /send-permissions` and `POST /sendability`).
+	Description string `json:"description"`
+	ClaimPath   string `json:"claim_path"`
 }
 
 // GetPlan returns the value of Plan.
@@ -6943,6 +6946,12 @@ func (s *CreateEndpointInputKind) UnmarshalText(data []byte) error {
 
 // Endpoint-specific filtering rules.
 type CreateEndpointInputRules struct {
+	// Event types this endpoint subscribes to, matched by exact string. Omitted means every event type
+	// except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`,
+	// `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them,
+	// and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events
+	// and also handles inbound mail must keep its inbound event types (such as `email.received`) in the
+	// list. An empty array is rejected; omit the field instead.
 	EventTypes      []string `json:"event_types"`
 	AdditionalProps CreateEndpointInputRulesAdditional
 }
@@ -9286,19 +9295,31 @@ func (s *DeliveryStatus) UnmarshalText(data []byte) error {
 
 // Ref: #/components/schemas/DeliverySummary
 type DeliverySummary struct {
-	// Delivery ID (numeric string).
-	ID           string                     `json:"id"`
-	EmailID      uuid.UUID                  `json:"email_id"`
-	OrgID        uuid.UUID                  `json:"org_id"`
-	EndpointID   uuid.UUID                  `json:"endpoint_id"`
-	EndpointURL  string                     `json:"endpoint_url"`
-	Status       DeliverySummaryStatus      `json:"status"`
-	AttemptCount int                        `json:"attempt_count"`
-	DurationMs   OptNilInt                  `json:"duration_ms"`
-	LastError    OptNilString               `json:"last_error"`
-	CreatedAt    time.Time                  `json:"created_at"`
-	UpdatedAt    time.Time                  `json:"updated_at"`
-	Email        OptNilDeliverySummaryEmail `json:"email"`
+	// Delivery ID: a numeric string or a UUID. Pass it to the replay operation as is.
+	ID string `json:"id"`
+	// The inbound email this delivery is about. Null for deliveries that are not about a received email,
+	// such as `sent_email.*` events.
+	EmailID NilUUID `json:"email_id"`
+	// The delivered event type, for example `email.received` or `sent_email.delivered`. Null for
+	// deliveries recorded before event types existed.
+	EventType OptNilString `json:"event_type"`
+	// The sent email a `sent_email.*` delivery is about. Null for every other delivery.
+	SentEmailID OptNilUUID `json:"sent_email_id"`
+	OrgID       uuid.UUID  `json:"org_id"`
+	EndpointID  uuid.UUID  `json:"endpoint_id"`
+	// The endpoint's URL. For a function-backed endpoint, an opaque `function://<id>` identifier rather
+	// than a callable URL.
+	EndpointURL  NilString             `json:"endpoint_url"`
+	Status       DeliverySummaryStatus `json:"status"`
+	AttemptCount int                   `json:"attempt_count"`
+	DurationMs   OptNilInt             `json:"duration_ms"`
+	LastError    OptNilString          `json:"last_error"`
+	// A stable code for the last failure, for example `http_500`.
+	LastErrorCode OptNilString `json:"last_error_code"`
+	CreatedAt     time.Time    `json:"created_at"`
+	UpdatedAt     time.Time    `json:"updated_at"`
+	// Null for deliveries that are not about a received email.
+	Email OptNilDeliverySummaryEmail `json:"email"`
 }
 
 // GetID returns the value of ID.
@@ -9307,8 +9328,18 @@ func (s *DeliverySummary) GetID() string {
 }
 
 // GetEmailID returns the value of EmailID.
-func (s *DeliverySummary) GetEmailID() uuid.UUID {
+func (s *DeliverySummary) GetEmailID() NilUUID {
 	return s.EmailID
+}
+
+// GetEventType returns the value of EventType.
+func (s *DeliverySummary) GetEventType() OptNilString {
+	return s.EventType
+}
+
+// GetSentEmailID returns the value of SentEmailID.
+func (s *DeliverySummary) GetSentEmailID() OptNilUUID {
+	return s.SentEmailID
 }
 
 // GetOrgID returns the value of OrgID.
@@ -9322,7 +9353,7 @@ func (s *DeliverySummary) GetEndpointID() uuid.UUID {
 }
 
 // GetEndpointURL returns the value of EndpointURL.
-func (s *DeliverySummary) GetEndpointURL() string {
+func (s *DeliverySummary) GetEndpointURL() NilString {
 	return s.EndpointURL
 }
 
@@ -9346,6 +9377,11 @@ func (s *DeliverySummary) GetLastError() OptNilString {
 	return s.LastError
 }
 
+// GetLastErrorCode returns the value of LastErrorCode.
+func (s *DeliverySummary) GetLastErrorCode() OptNilString {
+	return s.LastErrorCode
+}
+
 // GetCreatedAt returns the value of CreatedAt.
 func (s *DeliverySummary) GetCreatedAt() time.Time {
 	return s.CreatedAt
@@ -9367,8 +9403,18 @@ func (s *DeliverySummary) SetID(val string) {
 }
 
 // SetEmailID sets the value of EmailID.
-func (s *DeliverySummary) SetEmailID(val uuid.UUID) {
+func (s *DeliverySummary) SetEmailID(val NilUUID) {
 	s.EmailID = val
+}
+
+// SetEventType sets the value of EventType.
+func (s *DeliverySummary) SetEventType(val OptNilString) {
+	s.EventType = val
+}
+
+// SetSentEmailID sets the value of SentEmailID.
+func (s *DeliverySummary) SetSentEmailID(val OptNilUUID) {
+	s.SentEmailID = val
 }
 
 // SetOrgID sets the value of OrgID.
@@ -9382,7 +9428,7 @@ func (s *DeliverySummary) SetEndpointID(val uuid.UUID) {
 }
 
 // SetEndpointURL sets the value of EndpointURL.
-func (s *DeliverySummary) SetEndpointURL(val string) {
+func (s *DeliverySummary) SetEndpointURL(val NilString) {
 	s.EndpointURL = val
 }
 
@@ -9406,6 +9452,11 @@ func (s *DeliverySummary) SetLastError(val OptNilString) {
 	s.LastError = val
 }
 
+// SetLastErrorCode sets the value of LastErrorCode.
+func (s *DeliverySummary) SetLastErrorCode(val OptNilString) {
+	s.LastErrorCode = val
+}
+
 // SetCreatedAt sets the value of CreatedAt.
 func (s *DeliverySummary) SetCreatedAt(val time.Time) {
 	s.CreatedAt = val
@@ -9421,9 +9472,10 @@ func (s *DeliverySummary) SetEmail(val OptNilDeliverySummaryEmail) {
 	s.Email = val
 }
 
+// Null for deliveries that are not about a received email.
 type DeliverySummaryEmail struct {
 	Sender    string       `json:"sender"`
-	Recipient string       `json:"recipient"`
+	Recipient NilString    `json:"recipient"`
 	Subject   OptNilString `json:"subject"`
 }
 
@@ -9433,7 +9485,7 @@ func (s *DeliverySummaryEmail) GetSender() string {
 }
 
 // GetRecipient returns the value of Recipient.
-func (s *DeliverySummaryEmail) GetRecipient() string {
+func (s *DeliverySummaryEmail) GetRecipient() NilString {
 	return s.Recipient
 }
 
@@ -9448,7 +9500,7 @@ func (s *DeliverySummaryEmail) SetSender(val string) {
 }
 
 // SetRecipient sets the value of Recipient.
-func (s *DeliverySummaryEmail) SetRecipient(val string) {
+func (s *DeliverySummaryEmail) SetRecipient(val NilString) {
 	s.Recipient = val
 }
 
@@ -9464,6 +9516,7 @@ const (
 	DeliverySummaryStatusDelivered       DeliverySummaryStatus = "delivered"
 	DeliverySummaryStatusHeaderConfirmed DeliverySummaryStatus = "header_confirmed"
 	DeliverySummaryStatusFailed          DeliverySummaryStatus = "failed"
+	DeliverySummaryStatusSkippedByRules  DeliverySummaryStatus = "skipped_by_rules"
 )
 
 // AllValues returns all DeliverySummaryStatus values.
@@ -9473,6 +9526,7 @@ func (DeliverySummaryStatus) AllValues() []DeliverySummaryStatus {
 		DeliverySummaryStatusDelivered,
 		DeliverySummaryStatusHeaderConfirmed,
 		DeliverySummaryStatusFailed,
+		DeliverySummaryStatusSkippedByRules,
 	}
 }
 
@@ -9486,6 +9540,8 @@ func (s DeliverySummaryStatus) MarshalText() ([]byte, error) {
 	case DeliverySummaryStatusHeaderConfirmed:
 		return []byte(s), nil
 	case DeliverySummaryStatusFailed:
+		return []byte(s), nil
+	case DeliverySummaryStatusSkippedByRules:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -9506,6 +9562,9 @@ func (s *DeliverySummaryStatus) UnmarshalText(data []byte) error {
 		return nil
 	case DeliverySummaryStatusFailed:
 		*s = DeliverySummaryStatusFailed
+		return nil
+	case DeliverySummaryStatusSkippedByRules:
+		*s = DeliverySummaryStatusSkippedByRules
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -11322,6 +11381,9 @@ type EmailDetail struct {
 	// that header or name a part that way, so it must not grant trust or select an interaction kind.
 	// Ignore it once `interaction_hint` is anything other than `pending`.
 	InteractionCandidate OptBool `json:"interaction_candidate"`
+	// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
+	// field may be absent; treat a missing value the same as null.
+	Relay OptNilEmailDetailRelay `json:"relay"`
 }
 
 // GetID returns the value of ID.
@@ -11579,6 +11641,11 @@ func (s *EmailDetail) GetInteractionCandidate() OptBool {
 	return s.InteractionCandidate
 }
 
+// GetRelay returns the value of Relay.
+func (s *EmailDetail) GetRelay() OptNilEmailDetailRelay {
+	return s.Relay
+}
+
 // SetID sets the value of ID.
 func (s *EmailDetail) SetID(val uuid.UUID) {
 	s.ID = val
@@ -11834,6 +11901,11 @@ func (s *EmailDetail) SetInteractionCandidate(val OptBool) {
 	s.InteractionCandidate = val
 }
 
+// SetRelay sets the value of Relay.
+func (s *EmailDetail) SetRelay(val OptNilEmailDetailRelay) {
+	s.Relay = val
+}
+
 // What the message declared about being automated, verbatim:
 // `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
 // `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
@@ -12038,6 +12110,125 @@ func (s *EmailDetailPresenceControlStatus) UnmarshalText(data []byte) error {
 	}
 }
 
+// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
+// field may be absent; treat a missing value the same as null.
+type EmailDetailRelay struct {
+	// The relay hostname the domain's MX record points at.
+	Hostname string `json:"hostname"`
+	// How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added
+	// after your client was built.
+	Via string `json:"via"`
+	// Per-recipient outcome of the relay forwarding the message to the recipient's mailbox provider. The
+	// field may be absent; treat a missing value as no delivery information being available.
+	Delivery []EmailDetailRelayDeliveryItem `json:"delivery"`
+}
+
+// GetHostname returns the value of Hostname.
+func (s *EmailDetailRelay) GetHostname() string {
+	return s.Hostname
+}
+
+// GetVia returns the value of Via.
+func (s *EmailDetailRelay) GetVia() string {
+	return s.Via
+}
+
+// GetDelivery returns the value of Delivery.
+func (s *EmailDetailRelay) GetDelivery() []EmailDetailRelayDeliveryItem {
+	return s.Delivery
+}
+
+// SetHostname sets the value of Hostname.
+func (s *EmailDetailRelay) SetHostname(val string) {
+	s.Hostname = val
+}
+
+// SetVia sets the value of Via.
+func (s *EmailDetailRelay) SetVia(val string) {
+	s.Via = val
+}
+
+// SetDelivery sets the value of Delivery.
+func (s *EmailDetailRelay) SetDelivery(val []EmailDetailRelayDeliveryItem) {
+	s.Delivery = val
+}
+
+type EmailDetailRelayDeliveryItem struct {
+	// The recipient address the relay forwarded to.
+	Recipient string `json:"recipient"`
+	// Outcome of the forward. Currently one of `delivered`, `deferred` or `bounced`. Treat an unfamiliar
+	// value as one added after your client was built.
+	Status string `json:"status"`
+	// SMTP reply code from the mailbox provider, when one was received.
+	SMTPCode OptNilInt `json:"smtp_code"`
+	// Enhanced status code (for example `2.0.0`) from the mailbox provider, when one was received.
+	EnhancedStatusCode OptNilString `json:"enhanced_status_code"`
+	// SMTP reply text from the mailbox provider, when one was received.
+	SMTPResponse OptNilString `json:"smtp_response"`
+	// When this outcome was recorded.
+	At time.Time `json:"at"`
+}
+
+// GetRecipient returns the value of Recipient.
+func (s *EmailDetailRelayDeliveryItem) GetRecipient() string {
+	return s.Recipient
+}
+
+// GetStatus returns the value of Status.
+func (s *EmailDetailRelayDeliveryItem) GetStatus() string {
+	return s.Status
+}
+
+// GetSMTPCode returns the value of SMTPCode.
+func (s *EmailDetailRelayDeliveryItem) GetSMTPCode() OptNilInt {
+	return s.SMTPCode
+}
+
+// GetEnhancedStatusCode returns the value of EnhancedStatusCode.
+func (s *EmailDetailRelayDeliveryItem) GetEnhancedStatusCode() OptNilString {
+	return s.EnhancedStatusCode
+}
+
+// GetSMTPResponse returns the value of SMTPResponse.
+func (s *EmailDetailRelayDeliveryItem) GetSMTPResponse() OptNilString {
+	return s.SMTPResponse
+}
+
+// GetAt returns the value of At.
+func (s *EmailDetailRelayDeliveryItem) GetAt() time.Time {
+	return s.At
+}
+
+// SetRecipient sets the value of Recipient.
+func (s *EmailDetailRelayDeliveryItem) SetRecipient(val string) {
+	s.Recipient = val
+}
+
+// SetStatus sets the value of Status.
+func (s *EmailDetailRelayDeliveryItem) SetStatus(val string) {
+	s.Status = val
+}
+
+// SetSMTPCode sets the value of SMTPCode.
+func (s *EmailDetailRelayDeliveryItem) SetSMTPCode(val OptNilInt) {
+	s.SMTPCode = val
+}
+
+// SetEnhancedStatusCode sets the value of EnhancedStatusCode.
+func (s *EmailDetailRelayDeliveryItem) SetEnhancedStatusCode(val OptNilString) {
+	s.EnhancedStatusCode = val
+}
+
+// SetSMTPResponse sets the value of SMTPResponse.
+func (s *EmailDetailRelayDeliveryItem) SetSMTPResponse(val OptNilString) {
+	s.SMTPResponse = val
+}
+
+// SetAt sets the value of At.
+func (s *EmailDetailRelayDeliveryItem) SetAt(val time.Time) {
+	s.At = val
+}
+
 // Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
 // records, never from the message content. Null on every other message and on servers that predate
 // repeating sends.
@@ -12205,8 +12396,14 @@ func (s *EmailSearchFacetBucket) SetCount(val int) {
 
 // Ref: #/components/schemas/EmailSearchFacets
 type EmailSearchFacets struct {
-	BySender      []EmailSearchFacetBucket       `json:"by_sender"`
-	ByDomain      []EmailSearchFacetBucket       `json:"by_domain"`
+	// Sender values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8
+	// encoding, with a null `value` last. Keeps the first 20 values in that order.
+	BySender []EmailSearchFacetBucket `json:"by_sender"`
+	// Domain values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8
+	// encoding, with a null `value` last. Keeps the first 20 values in that order.
+	ByDomain []EmailSearchFacetBucket `json:"by_domain"`
+	// Status values, ordered by `count` descending, then by `value` ascending in byte order of its UTF-8
+	// encoding, with a null `value` last.
 	ByStatus      []EmailSearchFacetBucket       `json:"by_status"`
 	HasAttachment EmailSearchFacetsHasAttachment `json:"has_attachment"`
 }
@@ -12544,6 +12741,9 @@ type EmailSearchResult struct {
 	// that header or name a part that way, so it must not grant trust or select an interaction kind.
 	// Ignore it once `interaction_hint` is anything other than `pending`.
 	InteractionCandidate OptBool `json:"interaction_candidate"`
+	// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
+	// field may be absent; treat a missing value the same as null.
+	Relay OptNilEmailSearchResultRelay `json:"relay"`
 	// Number of parsed attachments on the email.
 	AttachmentCount int `json:"attachment_count"`
 	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
@@ -12700,6 +12900,11 @@ func (s *EmailSearchResult) GetInteractionKind() OptNilString {
 // GetInteractionCandidate returns the value of InteractionCandidate.
 func (s *EmailSearchResult) GetInteractionCandidate() OptBool {
 	return s.InteractionCandidate
+}
+
+// GetRelay returns the value of Relay.
+func (s *EmailSearchResult) GetRelay() OptNilEmailSearchResultRelay {
+	return s.Relay
 }
 
 // GetAttachmentCount returns the value of AttachmentCount.
@@ -12870,6 +13075,11 @@ func (s *EmailSearchResult) SetInteractionKind(val OptNilString) {
 // SetInteractionCandidate sets the value of InteractionCandidate.
 func (s *EmailSearchResult) SetInteractionCandidate(val OptBool) {
 	s.InteractionCandidate = val
+}
+
+// SetRelay sets the value of Relay.
+func (s *EmailSearchResult) SetRelay(val OptNilEmailSearchResultRelay) {
+	s.Relay = val
 }
 
 // SetAttachmentCount sets the value of AttachmentCount.
@@ -13143,6 +13353,36 @@ func (s *EmailSearchResultPresenceControlStatus) UnmarshalText(data []byte) erro
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
+// field may be absent; treat a missing value the same as null.
+type EmailSearchResultRelay struct {
+	// The relay hostname the domain's MX record points at.
+	Hostname string `json:"hostname"`
+	// How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added
+	// after your client was built.
+	Via string `json:"via"`
+}
+
+// GetHostname returns the value of Hostname.
+func (s *EmailSearchResultRelay) GetHostname() string {
+	return s.Hostname
+}
+
+// GetVia returns the value of Via.
+func (s *EmailSearchResultRelay) GetVia() string {
+	return s.Via
+}
+
+// SetHostname sets the value of Hostname.
+func (s *EmailSearchResultRelay) SetHostname(val string) {
+	s.Hostname = val
+}
+
+// SetVia sets the value of Via.
+func (s *EmailSearchResultRelay) SetVia(val string) {
+	s.Via = val
 }
 
 // Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
@@ -13419,6 +13659,9 @@ type EmailSummary struct {
 	// that header or name a part that way, so it must not grant trust or select an interaction kind.
 	// Ignore it once `interaction_hint` is anything other than `pending`.
 	InteractionCandidate OptBool `json:"interaction_candidate"`
+	// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
+	// field may be absent; treat a missing value the same as null.
+	Relay OptNilEmailSummaryRelay `json:"relay"`
 }
 
 // GetID returns the value of ID.
@@ -13566,6 +13809,11 @@ func (s *EmailSummary) GetInteractionCandidate() OptBool {
 	return s.InteractionCandidate
 }
 
+// GetRelay returns the value of Relay.
+func (s *EmailSummary) GetRelay() OptNilEmailSummaryRelay {
+	return s.Relay
+}
+
 // SetID sets the value of ID.
 func (s *EmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -13709,6 +13957,11 @@ func (s *EmailSummary) SetInteractionKind(val OptNilString) {
 // SetInteractionCandidate sets the value of InteractionCandidate.
 func (s *EmailSummary) SetInteractionCandidate(val OptBool) {
 	s.InteractionCandidate = val
+}
+
+// SetRelay sets the value of Relay.
+func (s *EmailSummary) SetRelay(val OptNilEmailSummaryRelay) {
+	s.Relay = val
 }
 
 // What the message declared about being automated, verbatim:
@@ -13913,6 +14166,36 @@ func (s *EmailSummaryPresenceControlStatus) UnmarshalText(data []byte) error {
 	default:
 		return errors.Errorf("invalid value: %q", data)
 	}
+}
+
+// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
+// field may be absent; treat a missing value the same as null.
+type EmailSummaryRelay struct {
+	// The relay hostname the domain's MX record points at.
+	Hostname string `json:"hostname"`
+	// How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added
+	// after your client was built.
+	Via string `json:"via"`
+}
+
+// GetHostname returns the value of Hostname.
+func (s *EmailSummaryRelay) GetHostname() string {
+	return s.Hostname
+}
+
+// GetVia returns the value of Via.
+func (s *EmailSummaryRelay) GetVia() string {
+	return s.Via
+}
+
+// SetHostname sets the value of Hostname.
+func (s *EmailSummaryRelay) SetHostname(val string) {
+	s.Hostname = val
+}
+
+// SetVia sets the value of Via.
+func (s *EmailSummaryRelay) SetVia(val string) {
+	s.Via = val
 }
 
 // Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own
@@ -14488,6 +14771,12 @@ func (s *EndpointReceiverCapabilitiesStreamProtocolsItem) UnmarshalText(data []b
 
 // Endpoint-specific filtering rules.
 type EndpointRules struct {
+	// Event types this endpoint subscribes to, matched by exact string. Omitted means every event type
+	// except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`,
+	// `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them,
+	// and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events
+	// and also handles inbound mail must keep its inbound event types (such as `email.received`) in the
+	// list. An empty array is rejected; omit the field instead.
 	EventTypes      []string `json:"event_types"`
 	AdditionalProps EndpointRulesAdditional
 }
@@ -21408,6 +21697,7 @@ const (
 	ListDeliveriesStatusDelivered       ListDeliveriesStatus = "delivered"
 	ListDeliveriesStatusHeaderConfirmed ListDeliveriesStatus = "header_confirmed"
 	ListDeliveriesStatusFailed          ListDeliveriesStatus = "failed"
+	ListDeliveriesStatusSkippedByRules  ListDeliveriesStatus = "skipped_by_rules"
 )
 
 // AllValues returns all ListDeliveriesStatus values.
@@ -21417,6 +21707,7 @@ func (ListDeliveriesStatus) AllValues() []ListDeliveriesStatus {
 		ListDeliveriesStatusDelivered,
 		ListDeliveriesStatusHeaderConfirmed,
 		ListDeliveriesStatusFailed,
+		ListDeliveriesStatusSkippedByRules,
 	}
 }
 
@@ -21430,6 +21721,8 @@ func (s ListDeliveriesStatus) MarshalText() ([]byte, error) {
 	case ListDeliveriesStatusHeaderConfirmed:
 		return []byte(s), nil
 	case ListDeliveriesStatusFailed:
+		return []byte(s), nil
+	case ListDeliveriesStatusSkippedByRules:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -21450,6 +21743,9 @@ func (s *ListDeliveriesStatus) UnmarshalText(data []byte) error {
 		return nil
 	case ListDeliveriesStatusFailed:
 		*s = ListDeliveriesStatusFailed
+		return nil
+	case ListDeliveriesStatusSkippedByRules:
+		*s = ListDeliveriesStatusSkippedByRules
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -26809,6 +27105,69 @@ func (o OptNilEmailDetailPresenceControl) Or(d EmailDetailPresenceControl) Email
 	return d
 }
 
+// NewOptNilEmailDetailRelay returns new OptNilEmailDetailRelay with value set to v.
+func NewOptNilEmailDetailRelay(v EmailDetailRelay) OptNilEmailDetailRelay {
+	return OptNilEmailDetailRelay{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailDetailRelay is optional nullable EmailDetailRelay.
+type OptNilEmailDetailRelay struct {
+	Value EmailDetailRelay
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailDetailRelay was set.
+func (o OptNilEmailDetailRelay) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailDetailRelay) Reset() {
+	var v EmailDetailRelay
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailDetailRelay) SetTo(v EmailDetailRelay) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailDetailRelay) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailDetailRelay) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailDetailRelay
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailDetailRelay) Get() (v EmailDetailRelay, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailDetailRelay) Or(d EmailDetailRelay) EmailDetailRelay {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilEmailDetailRepeat returns new OptNilEmailDetailRepeat with value set to v.
 func NewOptNilEmailDetailRepeat(v EmailDetailRepeat) OptNilEmailDetailRepeat {
 	return OptNilEmailDetailRepeat{
@@ -27061,6 +27420,69 @@ func (o OptNilEmailSearchResultPresenceControl) Or(d EmailSearchResultPresenceCo
 	return d
 }
 
+// NewOptNilEmailSearchResultRelay returns new OptNilEmailSearchResultRelay with value set to v.
+func NewOptNilEmailSearchResultRelay(v EmailSearchResultRelay) OptNilEmailSearchResultRelay {
+	return OptNilEmailSearchResultRelay{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSearchResultRelay is optional nullable EmailSearchResultRelay.
+type OptNilEmailSearchResultRelay struct {
+	Value EmailSearchResultRelay
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSearchResultRelay was set.
+func (o OptNilEmailSearchResultRelay) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSearchResultRelay) Reset() {
+	var v EmailSearchResultRelay
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSearchResultRelay) SetTo(v EmailSearchResultRelay) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSearchResultRelay) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSearchResultRelay) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSearchResultRelay
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSearchResultRelay) Get() (v EmailSearchResultRelay, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSearchResultRelay) Or(d EmailSearchResultRelay) EmailSearchResultRelay {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptNilEmailSearchResultRepeat returns new OptNilEmailSearchResultRepeat with value set to v.
 func NewOptNilEmailSearchResultRepeat(v EmailSearchResultRepeat) OptNilEmailSearchResultRepeat {
 	return OptNilEmailSearchResultRepeat{
@@ -27307,6 +27729,69 @@ func (o OptNilEmailSummaryPresenceControl) Get() (v EmailSummaryPresenceControl,
 
 // Or returns value if set, or given parameter if does not.
 func (o OptNilEmailSummaryPresenceControl) Or(d EmailSummaryPresenceControl) EmailSummaryPresenceControl {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptNilEmailSummaryRelay returns new OptNilEmailSummaryRelay with value set to v.
+func NewOptNilEmailSummaryRelay(v EmailSummaryRelay) OptNilEmailSummaryRelay {
+	return OptNilEmailSummaryRelay{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptNilEmailSummaryRelay is optional nullable EmailSummaryRelay.
+type OptNilEmailSummaryRelay struct {
+	Value EmailSummaryRelay
+	Set   bool
+	Null  bool
+}
+
+// IsSet returns true if OptNilEmailSummaryRelay was set.
+func (o OptNilEmailSummaryRelay) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptNilEmailSummaryRelay) Reset() {
+	var v EmailSummaryRelay
+	o.Value = v
+	o.Set = false
+	o.Null = false
+}
+
+// SetTo sets value to v.
+func (o *OptNilEmailSummaryRelay) SetTo(v EmailSummaryRelay) {
+	o.Set = true
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o OptNilEmailSummaryRelay) IsNull() bool { return o.Null }
+
+// SetToNull sets value to null.
+func (o *OptNilEmailSummaryRelay) SetToNull() {
+	o.Set = true
+	o.Null = true
+	var v EmailSummaryRelay
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptNilEmailSummaryRelay) Get() (v EmailSummaryRelay, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptNilEmailSummaryRelay) Or(d EmailSummaryRelay) EmailSummaryRelay {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -33415,13 +33900,37 @@ func (*PutContactUnauthorized) putContactRes() {}
 
 // RateLimitedHeaders wraps ErrorResponse with response headers.
 type RateLimitedHeaders struct {
-	RetryAfter OptInt
-	Response   ErrorResponse
+	RetryAfter         OptInt
+	RatelimitLimit     OptInt
+	RatelimitPolicy    OptString
+	RatelimitRemaining OptInt
+	RatelimitReset     OptInt
+	Response           ErrorResponse
 }
 
 // GetRetryAfter returns the value of RetryAfter.
 func (s *RateLimitedHeaders) GetRetryAfter() OptInt {
 	return s.RetryAfter
+}
+
+// GetRatelimitLimit returns the value of RatelimitLimit.
+func (s *RateLimitedHeaders) GetRatelimitLimit() OptInt {
+	return s.RatelimitLimit
+}
+
+// GetRatelimitPolicy returns the value of RatelimitPolicy.
+func (s *RateLimitedHeaders) GetRatelimitPolicy() OptString {
+	return s.RatelimitPolicy
+}
+
+// GetRatelimitRemaining returns the value of RatelimitRemaining.
+func (s *RateLimitedHeaders) GetRatelimitRemaining() OptInt {
+	return s.RatelimitRemaining
+}
+
+// GetRatelimitReset returns the value of RatelimitReset.
+func (s *RateLimitedHeaders) GetRatelimitReset() OptInt {
+	return s.RatelimitReset
 }
 
 // GetResponse returns the value of Response.
@@ -33432,6 +33941,26 @@ func (s *RateLimitedHeaders) GetResponse() ErrorResponse {
 // SetRetryAfter sets the value of RetryAfter.
 func (s *RateLimitedHeaders) SetRetryAfter(val OptInt) {
 	s.RetryAfter = val
+}
+
+// SetRatelimitLimit sets the value of RatelimitLimit.
+func (s *RateLimitedHeaders) SetRatelimitLimit(val OptInt) {
+	s.RatelimitLimit = val
+}
+
+// SetRatelimitPolicy sets the value of RatelimitPolicy.
+func (s *RateLimitedHeaders) SetRatelimitPolicy(val OptString) {
+	s.RatelimitPolicy = val
+}
+
+// SetRatelimitRemaining sets the value of RatelimitRemaining.
+func (s *RateLimitedHeaders) SetRatelimitRemaining(val OptInt) {
+	s.RatelimitRemaining = val
+}
+
+// SetRatelimitReset sets the value of RatelimitReset.
+func (s *RateLimitedHeaders) SetRatelimitReset(val OptInt) {
+	s.RatelimitReset = val
 }
 
 // SetResponse sets the value of Response.
@@ -37012,9 +37541,13 @@ type SemanticSearchInput struct {
 	SearchIn []SemanticSearchField `json:"search_in"`
 	// Exclude these fields from matching.
 	Exclude []SemanticSearchField `json:"exclude"`
-	// Only include mail at or after this timestamp.
+	// Only include mail at or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC
+	// offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it
+	// names. A time with no zone, or a bare date, is rejected.
 	DateFrom OptDateTime `json:"date_from"`
-	// Only include mail at or before this timestamp.
+	// Only include mail at or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC
+	// offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it
+	// names. A time with no zone, or a bare date, is rejected.
 	DateTo OptDateTime `json:"date_to"`
 	// Opt-in extras. `coverage` adds an index-coverage snapshot to
 	// `meta`. Matched fields, snippets, and the score breakdown are
@@ -37999,6 +38532,10 @@ type SendMailInput struct {
 	// and with `attachments` / `payload_attachments` (not yet
 	// supported on scheduled sends). Reschedule via PATCH
 	// /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
+	// Accepts `Z` or a numeric UTC offset
+	// (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+	// offset is converted to UTC, so the stored and echoed value
+	// is UTC. A time with no zone, or a bare date, is rejected.
 	ScheduledAt OptDateTime `json:"scheduled_at"`
 }
 
@@ -39106,7 +39643,13 @@ type SentEmailDetail struct {
 	ToHeader string `json:"to_header"`
 	// Bare email address parsed from `to_header`.
 	ToAddress string `json:"to_address"`
-	Subject   string `json:"subject"`
+	// Every recipient of the send, To, Cc and Bcc together, each address counted once: the size of
+	// `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists every
+	// hidden recipient. Null when the request uses an address-bound agent connection key whose address
+	// is not the sender, because the count would reveal Bcc recipients. The `sent_email` object of the
+	// `sent_email.*` webhook events carries the same field.
+	RecipientCount OptNilInt `json:"recipient_count"`
+	Subject        string    `json:"subject"`
 	// Total UTF-8 byte length of `body_text` + `body_html`.
 	// Surfaced on the list endpoint so callers can see "this
 	// row has a 4MB body" without fetching it.
@@ -39300,6 +39843,11 @@ func (s *SentEmailDetail) GetToHeader() string {
 // GetToAddress returns the value of ToAddress.
 func (s *SentEmailDetail) GetToAddress() string {
 	return s.ToAddress
+}
+
+// GetRecipientCount returns the value of RecipientCount.
+func (s *SentEmailDetail) GetRecipientCount() OptNilInt {
+	return s.RecipientCount
 }
 
 // GetSubject returns the value of Subject.
@@ -39525,6 +40073,11 @@ func (s *SentEmailDetail) SetToHeader(val string) {
 // SetToAddress sets the value of ToAddress.
 func (s *SentEmailDetail) SetToAddress(val string) {
 	s.ToAddress = val
+}
+
+// SetRecipientCount sets the value of RecipientCount.
+func (s *SentEmailDetail) SetRecipientCount(val OptNilInt) {
+	s.RecipientCount = val
 }
 
 // SetSubject sets the value of Subject.
@@ -39957,7 +40510,10 @@ func (s *SentEmailDetailTagsItem) SetValue(val string) {
 type SentEmailRescheduleInput struct {
 	// New execution time (ISO 8601). Must be in the future and
 	// at most 30 days out, the same bounds as the create-time
-	// field on /send-mail.
+	// field on /send-mail. Accepts `Z` or a numeric UTC offset
+	// (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+	// offset is converted to UTC. A time with no zone, or a bare
+	// date, is rejected.
 	ScheduledAt time.Time `json:"scheduled_at"`
 }
 
@@ -40134,7 +40690,13 @@ type SentEmailSummary struct {
 	ToHeader string `json:"to_header"`
 	// Bare email address parsed from `to_header`.
 	ToAddress string `json:"to_address"`
-	Subject   string `json:"subject"`
+	// Every recipient of the send, To, Cc and Bcc together, each address counted once: the size of
+	// `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists every
+	// hidden recipient. Null when the request uses an address-bound agent connection key whose address
+	// is not the sender, because the count would reveal Bcc recipients. The `sent_email` object of the
+	// `sent_email.*` webhook events carries the same field.
+	RecipientCount OptNilInt `json:"recipient_count"`
+	Subject        string    `json:"subject"`
 	// Total UTF-8 byte length of `body_text` + `body_html`.
 	// Surfaced on the list endpoint so callers can see "this
 	// row has a 4MB body" without fetching it.
@@ -40280,6 +40842,11 @@ func (s *SentEmailSummary) GetToHeader() string {
 // GetToAddress returns the value of ToAddress.
 func (s *SentEmailSummary) GetToAddress() string {
 	return s.ToAddress
+}
+
+// GetRecipientCount returns the value of RecipientCount.
+func (s *SentEmailSummary) GetRecipientCount() OptNilInt {
+	return s.RecipientCount
 }
 
 // GetSubject returns the value of Subject.
@@ -40450,6 +41017,11 @@ func (s *SentEmailSummary) SetToHeader(val string) {
 // SetToAddress sets the value of ToAddress.
 func (s *SentEmailSummary) SetToAddress(val string) {
 	s.ToAddress = val
+}
+
+// SetRecipientCount sets the value of RecipientCount.
+func (s *SentEmailSummary) SetRecipientCount(val OptNilInt) {
+	s.RecipientCount = val
 }
 
 // SetSubject sets the value of Subject.
@@ -44518,6 +45090,12 @@ func (s *UpdateEndpointInput) SetRules(val OptUpdateEndpointInputRules) {
 }
 
 type UpdateEndpointInputRules struct {
+	// Event types this endpoint subscribes to, matched by exact string. Omitted means every event type
+	// except the opt-in `sent_email.*` events (`sent_email.accepted`, `sent_email.delivered`,
+	// `sent_email.failed`, `sent_email.completed`), which an endpoint receives only when it lists them,
+	// and only for sends made after it first listed one. An endpoint that lists `sent_email.*` events
+	// and also handles inbound mail must keep its inbound event types (such as `email.received`) in the
+	// list. An empty array is rejected; omit the field instead.
 	EventTypes      []string `json:"event_types"`
 	AdditionalProps UpdateEndpointInputRulesAdditional
 }

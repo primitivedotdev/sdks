@@ -1,8 +1,8 @@
 # Receiving mail and presence
 
 Read this for how mail reaches a session (wake lines, the Claude Code hook,
-native receivers), what to report after setup, and how peers' receiving state
-is shown. Polling sessions follow [Checking for
+native receivers), what to report after setup, staying reachable during long
+work, and how peers' receiving state is shown. Polling sessions follow [Checking for
 mail](../SKILL.md#checking-for-mail); the short version of presence is in
 [SKILL.md](../SKILL.md#receiving-presence).
 
@@ -40,6 +40,69 @@ mail arrival. Do not keep the model turn active with sleep tools, foreground
 listeners, or `emails wait` unless the owner explicitly requested a synchronous
 reply wait. Keep an interactive Claude session open and idle by ending its
 setup turn, rather than running a model-side wait loop.
+
+## Staying reachable during long work
+
+A session handles mail only between steps of its own work. In Claude Code,
+the Stop hook delivers mail when a turn ends, and the PostToolUse hook that
+current CLI versions install checks for mail at most every 20 seconds after a
+tool call finishes and adds a mail notice to that tool's result. Nothing
+reaches the session while one tool call runs or while it waits on a question
+to its local user, and hooks installed by older CLI versions deliver only when
+the turn ends. A turn that runs for many minutes can leave your owner's mail
+unread the whole time, and the owner sees only silence.
+
+During long work:
+
+- Check for mail between steps, at least every few minutes, and before
+  starting any step expected to take more than a few minutes:
+
+  ```sh
+  PRIMITIVE_AGENT_PROFILE=<profile> primitive agent check-mail --json
+  ```
+
+- Treat a mail notice in a tool result as mail that has arrived. Handle it
+  before the next step, not at the end of the turn.
+- Handle mail from your owner or a member of your organization before you
+  continue: read it, answer it in its thread, then continue or change course
+  as it asks. Other mail can wait for a natural pause, but not for the end of
+  a long turn.
+- Run a long command in the background and check mail while it runs, rather
+  than making one tool call that blocks for many minutes.
+
+What `agent check-mail` does: it lists the mail that reached the selected
+profile since that profile's previous check-mail, oldest first, once, without
+waiting. Each entry has the email `id`, `received_at`, `sender`, `thread_id`,
+`to` and a `read_command` that reads it under this profile with `primitive
+emails get --id <id> --context`; it never prints subjects or bodies. It leaves
+out acknowledgements marked `fyi` and mail in muted threads, and counts
+presence probes and this profile's setup challenge in `control_skipped`.
+`outcome` is `mail` or `empty`; `more: true` means more mail remains, so check
+again after handling these. It also returns `owner_member_address`. Listing
+sends no signal; reading with `--context` does, as in [When mail
+arrives](../SKILL.md#when-mail-arrives).
+
+check-mail keeps its own position, saved privately with the profile and moved
+forward only after a result is printed, so an interrupted check repeats mail
+rather than losing it: deduplicate by email ID. That position is separate from
+the hooks and listeners, and a profile's first check starts at the address's
+first email. In a session that also receives through hooks or a listener, the
+first result can therefore list mail you have already handled or that arrived
+before this work began; skip those and read only the new ones.
+
+## Waiting without going silent
+
+Do not block on an interactive prompt or a question to a local user while you
+have a connected owner who mails you. While blocked, the session reads no
+mail, and the owner cannot tell a wait from a failure. Ask the owner in their
+thread instead (see [Who you report to](../SKILL.md#who-you-report-to)), or
+keep checking mail while you wait for a local answer.
+
+If you must wait on something, such as a local user's answer, a running job
+or another agent, say so in the thread first: what you are waiting on and
+what happens next, as in [Pausing on a
+request](conversations.md#pausing-on-a-request). Then keep checking mail
+while you wait, and answer new mail as it arrives.
 
 ## Claude Code external receiver
 

@@ -267,6 +267,971 @@
         "valid": false,
         "error_code": "SCHEMA_VALIDATION_FAILED"
       }
+    },
+    {
+      "name": "valid_payload_with_relay",
+      "payload": {
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "event": "email.received",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "ep_xyz789",
+          "attempt": 1,
+          "attempted_at": "2025-12-14T12:00:00Z"
+        },
+        "email": {
+          "id": "em_def456",
+          "received_at": "2025-12-14T11:59:50Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": [
+              "recipient@domain.com"
+            ]
+          },
+          "headers": {
+            "message_id": "<abc123@example.com>",
+            "subject": "Test Email",
+            "from": "sender@example.com",
+            "to": "recipient@domain.com",
+            "date": "Sat, 14 Dec 2025 11:59:50 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hello World",
+            "body_html": "<p>Hello World</p>",
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": null,
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {},
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "reject",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          },
+          "relay": {
+            "hostname": "relay.example.com",
+            "via": "mail_relay"
+          }
+        }
+      },
+      "expected": {
+        "valid": true,
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "relay": {
+          "hostname": "relay.example.com",
+          "via": "mail_relay"
+        }
+      }
+    },
+    {
+      "name": "valid_payload_with_null_relay",
+      "payload": {
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "event": "email.received",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "ep_xyz789",
+          "attempt": 1,
+          "attempted_at": "2025-12-14T12:00:00Z"
+        },
+        "email": {
+          "id": "em_def456",
+          "received_at": "2025-12-14T11:59:50Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": [
+              "recipient@domain.com"
+            ]
+          },
+          "headers": {
+            "message_id": "<abc123@example.com>",
+            "subject": "Test Email",
+            "from": "sender@example.com",
+            "to": "recipient@domain.com",
+            "date": "Sat, 14 Dec 2025 11:59:50 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hello World",
+            "body_html": "<p>Hello World</p>",
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": null,
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {},
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "reject",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          },
+          "relay": null
+        }
+      },
+      "expected": {
+        "valid": true,
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "relay": null
+      }
+    },
+    {
+      "name": "valid_payload_without_relay",
+      "payload": {
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "event": "email.received",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "ep_xyz789",
+          "attempt": 1,
+          "attempted_at": "2025-12-14T12:00:00Z"
+        },
+        "email": {
+          "id": "em_def456",
+          "received_at": "2025-12-14T11:59:50Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": [
+              "recipient@domain.com"
+            ]
+          },
+          "headers": {
+            "message_id": "<abc123@example.com>",
+            "subject": "Test Email",
+            "from": "sender@example.com",
+            "to": "recipient@domain.com",
+            "date": "Sat, 14 Dec 2025 11:59:50 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hello World",
+            "body_html": "<p>Hello World</p>",
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": null,
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {},
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "reject",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "valid": true,
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "relay": null
+      }
+    },
+    {
+      "name": "invalid_relay_missing_hostname",
+      "payload": {
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "event": "email.received",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "ep_xyz789",
+          "attempt": 1,
+          "attempted_at": "2025-12-14T12:00:00Z"
+        },
+        "email": {
+          "id": "em_def456",
+          "received_at": "2025-12-14T11:59:50Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": [
+              "recipient@domain.com"
+            ]
+          },
+          "headers": {
+            "message_id": "<abc123@example.com>",
+            "subject": "Test Email",
+            "from": "sender@example.com",
+            "to": "recipient@domain.com",
+            "date": "Sat, 14 Dec 2025 11:59:50 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hello World",
+            "body_html": "<p>Hello World</p>",
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": null,
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {},
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "reject",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          },
+          "relay": {
+            "via": "mail_relay"
+          }
+        }
+      },
+      "expected": {
+        "valid": false,
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "invalid_relay_not_object",
+      "payload": {
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "event": "email.received",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "ep_xyz789",
+          "attempt": 1,
+          "attempted_at": "2025-12-14T12:00:00Z"
+        },
+        "email": {
+          "id": "em_def456",
+          "received_at": "2025-12-14T11:59:50Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": [
+              "recipient@domain.com"
+            ]
+          },
+          "headers": {
+            "message_id": "<abc123@example.com>",
+            "subject": "Test Email",
+            "from": "sender@example.com",
+            "to": "recipient@domain.com",
+            "date": "Sat, 14 Dec 2025 11:59:50 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hello World",
+            "body_html": "<p>Hello World</p>",
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": null,
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {},
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "reject",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          },
+          "relay": "relay.example.com"
+        }
+      },
+      "expected": {
+        "valid": false,
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
+    },
+    {
+      "name": "valid_bounce_linked_to_send",
+      "payload": {
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "event": "email.bounced",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "ep_xyz789",
+          "attempt": 1,
+          "attempted_at": "2025-12-14T12:00:00Z"
+        },
+        "email": {
+          "id": "em_def456",
+          "received_at": "2025-12-14T11:59:50Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": [
+              "recipient@domain.com"
+            ]
+          },
+          "headers": {
+            "message_id": "<abc123@example.com>",
+            "subject": "Test Email",
+            "from": "sender@example.com",
+            "to": "recipient@domain.com",
+            "date": "Sat, 14 Dec 2025 11:59:50 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hello World",
+            "body_html": "<p>Hello World</p>",
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": null,
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {
+            "bounce": {
+              "is_bounce": true,
+              "kind": "dsn",
+              "type": "permanent",
+              "category": "mailbox_does_not_exist",
+              "classified_by": "status_code",
+              "failed_recipient": "Bob@Example.net",
+              "smtp_code": 550,
+              "status_code": "5.1.1",
+              "diagnostic_code": "smtp; 550 5.1.1 user unknown",
+              "reported_by_mta": "mx.example.net",
+              "original_message_id": "<abc123@example.com>",
+              "reasons": [
+                "Recipient address rejected: user unknown"
+              ],
+              "failed_recipients": [
+                "bob@example.net",
+                "bob@old.example.net"
+              ],
+              "sent_email_id": "0b1c2d3e-4f50-4172-8394-a5b6c7d8e9f0"
+            }
+          },
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "reject",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "valid": true,
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "bounce": {
+          "sent_email_id": "0b1c2d3e-4f50-4172-8394-a5b6c7d8e9f0",
+          "failed_recipients": [
+            "bob@example.net",
+            "bob@old.example.net"
+          ]
+        }
+      }
+    },
+    {
+      "name": "valid_bounce_not_linked",
+      "payload": {
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "event": "email.bounced",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "ep_xyz789",
+          "attempt": 1,
+          "attempted_at": "2025-12-14T12:00:00Z"
+        },
+        "email": {
+          "id": "em_def456",
+          "received_at": "2025-12-14T11:59:50Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": [
+              "recipient@domain.com"
+            ]
+          },
+          "headers": {
+            "message_id": "<abc123@example.com>",
+            "subject": "Test Email",
+            "from": "sender@example.com",
+            "to": "recipient@domain.com",
+            "date": "Sat, 14 Dec 2025 11:59:50 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hello World",
+            "body_html": "<p>Hello World</p>",
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": null,
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {
+            "bounce": {
+              "is_bounce": true,
+              "kind": "dsn",
+              "type": "permanent",
+              "category": "mailbox_does_not_exist",
+              "classified_by": "status_code",
+              "failed_recipient": "Bob@Example.net",
+              "smtp_code": 550,
+              "status_code": "5.1.1",
+              "diagnostic_code": "smtp; 550 5.1.1 user unknown",
+              "reported_by_mta": "mx.example.net",
+              "original_message_id": "<abc123@example.com>",
+              "reasons": [
+                "Recipient address rejected: user unknown"
+              ],
+              "failed_recipients": [],
+              "sent_email_id": null
+            }
+          },
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "reject",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "valid": true,
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "bounce": {
+          "sent_email_id": null,
+          "failed_recipients": []
+        }
+      }
+    },
+    {
+      "name": "valid_bounce_without_link_fields",
+      "payload": {
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "event": "email.bounced",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "ep_xyz789",
+          "attempt": 1,
+          "attempted_at": "2025-12-14T12:00:00Z"
+        },
+        "email": {
+          "id": "em_def456",
+          "received_at": "2025-12-14T11:59:50Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": [
+              "recipient@domain.com"
+            ]
+          },
+          "headers": {
+            "message_id": "<abc123@example.com>",
+            "subject": "Test Email",
+            "from": "sender@example.com",
+            "to": "recipient@domain.com",
+            "date": "Sat, 14 Dec 2025 11:59:50 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hello World",
+            "body_html": "<p>Hello World</p>",
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": null,
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {
+            "bounce": {
+              "is_bounce": true,
+              "kind": "dsn",
+              "type": "permanent",
+              "category": "mailbox_does_not_exist",
+              "classified_by": "status_code",
+              "failed_recipient": "Bob@Example.net",
+              "smtp_code": 550,
+              "status_code": "5.1.1",
+              "diagnostic_code": "smtp; 550 5.1.1 user unknown",
+              "reported_by_mta": "mx.example.net",
+              "original_message_id": "<abc123@example.com>",
+              "reasons": [
+                "Recipient address rejected: user unknown"
+              ]
+            }
+          },
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "reject",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "valid": true,
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "bounce": {
+          "sent_email_id": null,
+          "failed_recipients": null
+        }
+      }
+    },
+    {
+      "name": "invalid_bounce_too_many_failed_recipients",
+      "payload": {
+        "id": "evt_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "event": "email.bounced",
+        "version": "2025-12-14",
+        "delivery": {
+          "endpoint_id": "ep_xyz789",
+          "attempt": 1,
+          "attempted_at": "2025-12-14T12:00:00Z"
+        },
+        "email": {
+          "id": "em_def456",
+          "received_at": "2025-12-14T11:59:50Z",
+          "smtp": {
+            "helo": "mail.example.com",
+            "mail_from": "sender@example.com",
+            "rcpt_to": [
+              "recipient@domain.com"
+            ]
+          },
+          "headers": {
+            "message_id": "<abc123@example.com>",
+            "subject": "Test Email",
+            "from": "sender@example.com",
+            "to": "recipient@domain.com",
+            "date": "Sat, 14 Dec 2025 11:59:50 +0000"
+          },
+          "content": {
+            "raw": {
+              "included": true,
+              "encoding": "base64",
+              "max_inline_bytes": 262144,
+              "size_bytes": 11,
+              "sha256": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+              "data": "SGVsbG8gV29ybGQ="
+            },
+            "download": {
+              "url": "https://api.primitive.dev/v1/downloads/raw/token123",
+              "expires_at": "2025-12-15T12:00:00Z"
+            }
+          },
+          "parsed": {
+            "status": "complete",
+            "error": null,
+            "body_text": "Hello World",
+            "body_html": "<p>Hello World</p>",
+            "reply_to": null,
+            "cc": null,
+            "bcc": null,
+            "to_addresses": null,
+            "in_reply_to": null,
+            "references": null,
+            "attachments": [],
+            "attachments_download_url": null
+          },
+          "analysis": {
+            "bounce": {
+              "is_bounce": true,
+              "kind": "dsn",
+              "type": "permanent",
+              "category": "mailbox_does_not_exist",
+              "classified_by": "status_code",
+              "failed_recipient": "Bob@Example.net",
+              "smtp_code": 550,
+              "status_code": "5.1.1",
+              "diagnostic_code": "smtp; 550 5.1.1 user unknown",
+              "reported_by_mta": "mx.example.net",
+              "original_message_id": "<abc123@example.com>",
+              "reasons": [
+                "Recipient address rejected: user unknown"
+              ],
+              "failed_recipients": [
+                "r0@example.org",
+                "r1@example.org",
+                "r2@example.org",
+                "r3@example.org",
+                "r4@example.org",
+                "r5@example.org",
+                "r6@example.org",
+                "r7@example.org",
+                "r8@example.org",
+                "r9@example.org",
+                "r10@example.org",
+                "r11@example.org",
+                "r12@example.org",
+                "r13@example.org",
+                "r14@example.org",
+                "r15@example.org",
+                "r16@example.org",
+                "r17@example.org",
+                "r18@example.org",
+                "r19@example.org",
+                "r20@example.org",
+                "r21@example.org",
+                "r22@example.org",
+                "r23@example.org",
+                "r24@example.org",
+                "r25@example.org",
+                "r26@example.org",
+                "r27@example.org",
+                "r28@example.org",
+                "r29@example.org",
+                "r30@example.org",
+                "r31@example.org",
+                "r32@example.org",
+                "r33@example.org",
+                "r34@example.org",
+                "r35@example.org",
+                "r36@example.org",
+                "r37@example.org",
+                "r38@example.org",
+                "r39@example.org",
+                "r40@example.org",
+                "r41@example.org",
+                "r42@example.org",
+                "r43@example.org",
+                "r44@example.org",
+                "r45@example.org",
+                "r46@example.org",
+                "r47@example.org",
+                "r48@example.org",
+                "r49@example.org",
+                "r50@example.org",
+                "r51@example.org",
+                "r52@example.org",
+                "r53@example.org",
+                "r54@example.org",
+                "r55@example.org",
+                "r56@example.org",
+                "r57@example.org",
+                "r58@example.org",
+                "r59@example.org",
+                "r60@example.org",
+                "r61@example.org",
+                "r62@example.org",
+                "r63@example.org",
+                "r64@example.org",
+                "r65@example.org",
+                "r66@example.org",
+                "r67@example.org",
+                "r68@example.org",
+                "r69@example.org",
+                "r70@example.org",
+                "r71@example.org",
+                "r72@example.org",
+                "r73@example.org",
+                "r74@example.org",
+                "r75@example.org",
+                "r76@example.org",
+                "r77@example.org",
+                "r78@example.org",
+                "r79@example.org",
+                "r80@example.org",
+                "r81@example.org",
+                "r82@example.org",
+                "r83@example.org",
+                "r84@example.org",
+                "r85@example.org",
+                "r86@example.org",
+                "r87@example.org",
+                "r88@example.org",
+                "r89@example.org",
+                "r90@example.org",
+                "r91@example.org",
+                "r92@example.org",
+                "r93@example.org",
+                "r94@example.org",
+                "r95@example.org",
+                "r96@example.org",
+                "r97@example.org",
+                "r98@example.org",
+                "r99@example.org",
+                "r100@example.org"
+              ],
+              "sent_email_id": null
+            }
+          },
+          "auth": {
+            "spf": "pass",
+            "dmarc": "pass",
+            "dmarcPolicy": "reject",
+            "dmarcFromDomain": "example.com",
+            "dmarcSpfAligned": true,
+            "dmarcDkimAligned": true,
+            "dmarcSpfStrict": false,
+            "dmarcDkimStrict": false,
+            "dkimSignatures": [
+              {
+                "domain": "example.com",
+                "selector": "default",
+                "result": "pass",
+                "aligned": true,
+                "keyBits": 2048,
+                "algo": "rsa-sha256"
+              }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "valid": false,
+        "error_code": "SCHEMA_VALIDATION_FAILED"
+      }
     }
   ]
 }

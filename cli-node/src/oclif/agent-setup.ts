@@ -16,11 +16,13 @@ import {
 } from "@primitivedotdev/api-core";
 import {
   AgentInvitationRejectedError,
+  agentInvitationHash,
   connectAgent,
   parseAgentInvitation,
   removeEmptyDirectory,
   savedConnectionName,
 } from "./agent-connect.js";
+import { archiveRevokedSetup, savedSetupRevoked } from "./agent-disconnect.js";
 import { readSetupApi, type SetupReadBudget } from "./agent-setup-read.js";
 import type { ClaudeWakeHookResult } from "./claude-wake-install.js";
 import {
@@ -28,6 +30,7 @@ import {
   AgentConnectionSetupError,
   agentProfileDirectory,
   agentProfileName,
+  agentProfilesDirectory,
   type ConnectedAgentIdentity,
   type ConnectedAgentProfile,
   connectedAgentIdentity,
@@ -693,6 +696,15 @@ function refuseSetupConflicts(
     );
 }
 
+function invitationHashOrNull(invitation: string | undefined): string | null {
+  if (invitation === undefined) return null;
+  try {
+    return agentInvitationHash(invitation);
+  } catch {
+    return null;
+  }
+}
+
 /** One resumable operation owns setup plumbing; it never stores or replays the invitation. */
 export async function setupAgent(params: {
   configDir: string;
@@ -742,7 +754,16 @@ export async function setupAgent(params: {
   } catch {
     /* The locked read below reports an invalid saved setup. */
   }
-  if (saved) refuseSetupConflicts(saved, params);
+  // A new invitation replaces a setup whose credential is confirmed revoked,
+  // so that setup's choices are not held against it.
+  const newHash = params.resume
+    ? null
+    : invitationHashOrNull(params.invitation);
+  const replacesRevoked = (state: SetupState) =>
+    newHash !== null &&
+    state.invitationHash !== newHash &&
+    savedSetupRevoked(params.configDir, profileName, state.invitationHash);
+  if (saved && !replacesRevoked(saved)) refuseSetupConflicts(saved, params);
   const receiverMode =
     params.receiverMode ?? (params.resume ? saved?.receiverMode : undefined);
   if (params.session === undefined && (receiverMode ?? "native") !== "poll")
@@ -760,6 +781,8 @@ export async function setupAgent(params: {
   }
   privateMailDirectory(directory, true);
   const release = acquireListenLock(directory, "setup");
+  // Held only while replacing a revoked setup, until its claim settles.
+  let releaseClaim: (() => void) | undefined;
   // Set when the server definitely refused the claim: this run's setup
   // record is removed and, once the lock is released, an empty directory.
   let discardStub = false;
@@ -769,6 +792,36 @@ export async function setupAgent(params: {
     const path = join(directory, "setup.json");
     const value = readMailJson(path);
     let state = value === null ? null : parseState(value);
+    // The owner reconnected an agent whose credential was revoked (in the
+    // app, from another machine, or by a disconnect here). Its setup is moved
+    // aside, as a replacement would, and the new invitation is claimed into
+    // the same profile and session.
+    // Claims take the machine-wide claim lock, so it is taken before any
+    // profile state is moved or written and held through this run's claim.
+    // An in-flight claim into this profile then refuses this run instead of
+    // finishing against a setup this run replaced.
+    if (state && replacesRevoked(state)) {
+      try {
+        releaseClaim = acquireListenLock(
+          agentProfilesDirectory(params.configDir),
+          "agent-connection-setup",
+        );
+      } catch {
+        throw fail(
+          "Another agent setup is running on this machine. No invitation was claimed and nothing was changed; retry when it finishes.",
+        );
+      }
+      const current = readMailJson(path);
+      state = current === null ? null : parseState(current);
+      if (state && replacesRevoked(state)) {
+        archiveRevokedSetup(
+          params.configDir,
+          profileName,
+          new Date(dependencies.now()),
+        );
+        state = null;
+      }
+    }
     if (state) refuseSetupConflicts(state, params);
     if (!state && loadConnectedAgentProfile(params.configDir, profileName))
       throw fail(
@@ -818,6 +871,7 @@ export async function setupAgent(params: {
             invitation: params.invitation ?? "",
             fetch: params.fetch,
             presence: true,
+            claimLockHeld: releaseClaim !== undefined,
           })
         ).name;
       } catch (error) {
@@ -830,6 +884,10 @@ export async function setupAgent(params: {
           }
         }
         throw error;
+      } finally {
+        // Only the claim needs it; verification can take minutes.
+        releaseClaim?.();
+        releaseClaim = undefined;
       }
     }
     const profile = loadConnectedAgentProfile(params.configDir, profileName);
@@ -971,6 +1029,7 @@ export async function setupAgent(params: {
       ownerNotifications,
     );
   } finally {
+    releaseClaim?.();
     release();
     if (discardStub) removeEmptyDirectory(directory);
   }

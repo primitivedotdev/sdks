@@ -239,6 +239,17 @@ export const emailReceivedEventJsonSchema = {
             "auth": {
               "$ref": "#/definitions/EmailAuth",
               "description": "Email authentication results (SPF, DKIM, DMARC)."
+            },
+            "relay": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/EmailRelay"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null."
             }
           },
           "required": [
@@ -262,6 +273,24 @@ export const emailReceivedEventJsonSchema = {
         "email"
       ],
       "description": "Webhook payload for the `email.received` event.\n\nThis is delivered to your webhook endpoint when Primitive receives an email matching your domain configuration."
+    },
+    "EmailRelay": {
+      "type": "object",
+      "properties": {
+        "hostname": {
+          "type": "string",
+          "description": "The relay hostname the domain's MX record points at."
+        },
+        "via": {
+          "type": "string",
+          "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+        }
+      },
+      "required": [
+        "hostname",
+        "via"
+      ],
+      "description": "How an inbound message reached Primitive when it arrived through a Primitive mail relay."
     },
     "RoutingDecision": {
       "type": "object",
@@ -844,7 +873,22 @@ export const emailReceivedEventJsonSchema = {
             "string",
             "null"
           ],
-          "description": "The recipient address that failed, if the report identifies one."
+          "description": "The first failed recipient, as the bounce wrote it, if the report identifies one. The status and diagnostic fields describe this recipient."
+        },
+        "failed_recipients": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string"
+          },
+          "description": "Every address the bounce reports as failed, lowercased and deduplicated, up to 100. Includes both the final and the original recipient when an alias or forward rewrote the address. Empty when the bounce names no usable address. Absent on payloads built before this field existed."
+        },
+        "sent_email_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The id of your send this bounce belongs to (the same id as `GET /v1/sent-emails/{id}`), or null when it could not be linked. Linking is best effort: a bounce links only when it quotes the original Message-ID of a send from your organization and one of its failed recipients was on that send. Absent on payloads built before this field existed."
         },
         "smtp_code": {
           "type": [

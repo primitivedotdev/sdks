@@ -105,10 +105,12 @@ class SemanticSearchCommand extends Command {
       multiple: true,
     }),
     "date-from": Flags.string({
-      description: "Only include mail at or after this ISO-8601 timestamp.",
+      description:
+        "Only include mail at or after this ISO 8601 timestamp, with Z or a UTC offset (2026-10-02T00:00:00-04:00). A time with no zone is rejected.",
     }),
     "date-to": Flags.string({
-      description: "Only include mail at or before this ISO-8601 timestamp.",
+      description:
+        "Only include mail at or before this ISO 8601 timestamp, with Z or a UTC offset (2026-10-02T00:00:00-04:00). A time with no zone is rejected.",
     }),
     limit: Flags.integer({
       description: `Maximum results to return (1-${MAX_LIMIT}, default ${DEFAULT_LIMIT}).`,

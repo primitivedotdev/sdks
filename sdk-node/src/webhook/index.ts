@@ -91,6 +91,40 @@ export {
   type ReceivedEmailAddress,
   type ReceivedEmailThread,
 } from "./received-email.js";
+export {
+  isSentEmailAcceptedEvent,
+  isSentEmailCompletedEvent,
+  isSentEmailDeliveredEvent,
+  isSentEmailEvent,
+  isSentEmailEventType,
+  isSentEmailFailedEvent,
+  isSentEmailRecipientResultEvent,
+  SENT_EMAIL_EVENT_TYPES,
+  type SentEmailAcceptedEvent,
+  type SentEmailCompletedEvent,
+  type SentEmailCompletedSummary,
+  type SentEmailDeliveredEvent,
+  type SentEmailEvent,
+  type SentEmailEventDelivery,
+  type SentEmailEventType,
+  type SentEmailFailedByKind,
+  type SentEmailFailedEvent,
+  type SentEmailFailureKind,
+  type SentEmailLegacyMessageResultEvent,
+  type SentEmailOutcome,
+  type SentEmailRecipient,
+  type SentEmailRecipientResultEvent,
+  type SentEmailRecipientType,
+  type SentEmailRecord,
+  type SentEmailRelay,
+  type SentEmailResultEvent,
+  type SentEmailRolledUpFailure,
+  type SentEmailRollupOutcome,
+  type SentEmailRollupResultEvent,
+  type SentEmailTag,
+  safeValidateSentEmailEvent,
+  validateSentEmailEvent,
+} from "./sent-email-events.js";
 // Signing & Verification
 export {
   LEGACY_CONFIRMED_HEADER,
@@ -124,6 +158,7 @@ import { verifyStandardWebhooksSignature } from "./standard-webhooks.js";
 const BASE64_PATTERN =
   /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
+export { sentEmailEventJsonSchema } from "../generated/sent-email-event.schema.generated.js";
 // JSON Schema
 export { emailReceivedEventJsonSchema } from "../schema.generated.js";
 // Types
@@ -137,6 +172,7 @@ export type {
   // Auth types
   EmailAuth,
   EmailReceivedEvent,
+  EmailRelay,
   // Forward analysis types
   ForwardAnalysis,
   ForwardOriginalSender,
@@ -287,8 +323,9 @@ export interface HandleWebhookOptions {
 
 /**
  * The header that names the webhook event for ALL event families
- * (`email.*`, `payment.*`, `interaction.*`). It is the primary discriminator
- * the parser keys on, because the stored body is sent verbatim with no envelope.
+ * (`email.*`, `sent_email.*`, `payment.*`, `interaction.*`). It is the
+ * primary discriminator the parser keys on, because the stored body is sent
+ * verbatim with no envelope.
  */
 export const WEBHOOK_EVENT_HEADER = "X-Webhook-Event";
 
@@ -480,8 +517,8 @@ function verifyWebhookRequest(options: HandleWebhookOptions): void {
  * Verify, then parse any webhook event into a typed value.
  *
  * Unlike {@link handleWebhook}, this returns the full {@link WebhookEvent}
- * union, so it handles `payment.*` and `interaction.x402.*` events in addition
- * to `email.*`. The flow is:
+ * union, so it handles `sent_email.*`, `payment.*` and `interaction.x402.*`
+ * events in addition to `email.*`. The flow is:
  *
  * 1. Verify the signature over the RAW body (works for every event family).
  * 2. Parse the JSON body.
@@ -491,7 +528,10 @@ function verifyWebhookRequest(options: HandleWebhookOptions): void {
  * @example
  * ```typescript
  * const event = handleWebhookEvent({ body, headers, secret });
- * if (isPaymentSettledEvent(event)) {
+ * if (isSentEmailFailedEvent(event) && event.scope === "recipient") {
+ *   // typed sent_email.failed about one recipient
+ *   console.log(event.recipient.address, event.outcome.smtp_enhanced_status_code);
+ * } else if (isPaymentSettledEvent(event)) {
  *   // typed PaymentSettledEvent
  * } else if (isInteractionX402Event(event)) {
  *   // typed interaction.x402.* event

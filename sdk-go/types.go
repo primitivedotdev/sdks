@@ -178,6 +178,20 @@ type Email struct {
 	Parsed     ParsedData    `json:"parsed"`
 	Analysis   EmailAnalysis `json:"analysis"`
 	Auth       EmailAuth     `json:"auth"`
+	// Relay is set when the email reached Primitive through a Primitive mail
+	// relay. It is nil for other mail, whether the payload carries null or
+	// omits the field.
+	Relay *EmailRelay `json:"relay,omitempty"`
+}
+
+// EmailRelay describes how an inbound email reached Primitive when it arrived
+// through a Primitive mail relay.
+type EmailRelay struct {
+	// Hostname is the relay hostname the domain's MX record points at.
+	Hostname string `json:"hostname"`
+	// Via is how the email arrived. Currently always "mail_relay"; treat an
+	// unfamiliar value as one added after this SDK was built.
+	Via string `json:"via"`
 }
 
 type SMTPEnvelope struct {
@@ -315,18 +329,28 @@ type EmailAnalysis struct {
 // BounceAnalysis is the parsed delivery status notification carried on
 // email.bounced events.
 type BounceAnalysis struct {
-	IsBounce          bool     `json:"is_bounce"`
-	Kind              string   `json:"kind"`
-	Type              string   `json:"type"`
-	Category          string   `json:"category"`
-	ClassifiedBy      string   `json:"classified_by"`
-	FailedRecipient   *string  `json:"failed_recipient"`
+	IsBounce     bool   `json:"is_bounce"`
+	Kind         string `json:"kind"`
+	Type         string `json:"type"`
+	Category     string `json:"category"`
+	ClassifiedBy string `json:"classified_by"`
+	// FailedRecipient is the first failed recipient, as the bounce wrote it.
+	// The status and diagnostic fields describe this recipient.
+	FailedRecipient *string `json:"failed_recipient"`
+	// FailedRecipients is every address the bounce reports as failed,
+	// lowercased and deduplicated, up to 100. Nil on payloads built before
+	// the field existed.
+	FailedRecipients  []string `json:"failed_recipients,omitempty"`
 	SMTPCode          *int64   `json:"smtp_code"`
 	StatusCode        *string  `json:"status_code"`
 	DiagnosticCode    *string  `json:"diagnostic_code"`
 	ReportedByMTA     *string  `json:"reported_by_mta"`
 	OriginalMessageID *string  `json:"original_message_id"`
 	Reasons           []string `json:"reasons"`
+	// SentEmailID is the id of the send this bounce belongs to (the same id
+	// as GET /v1/sent-emails/{id}). Nil when the bounce could not be linked,
+	// whether the payload carries null or omits the field.
+	SentEmailID *string `json:"sent_email_id,omitempty"`
 }
 
 // TLSReportAnalysis is the parsed SMTP TLS report carried on email.tls_report

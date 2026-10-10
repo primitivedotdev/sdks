@@ -10,7 +10,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
-import type { disconnectAgent } from "../../src/oclif/agent-disconnect.js";
+import { connectAgent } from "../../src/oclif/agent-connect.js";
+import {
+  AgentCredentialChangedError,
+  disconnectAgent,
+} from "../../src/oclif/agent-disconnect.js";
 import type { enrollAgent } from "../../src/oclif/agent-enroll.js";
 import { saveCliCredentials } from "../../src/oclif/auth.js";
 import { installClaudeWakeHook } from "../../src/oclif/claude-wake-install.js";
@@ -18,6 +22,7 @@ import {
   AgentConnectionSetupError,
   agentProfileDirectory,
   type ConnectedAgentProfile,
+  loadConnectedAgentProfile,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
 import {
@@ -30,6 +35,11 @@ import {
   retryPendingDisconnects,
   type SessionRegisterDependencies,
 } from "../../src/oclif/machine-session.js";
+import { replaceSessionAddresses } from "../../src/oclif/session-address-guard.js";
+import {
+  readSessionRecord,
+  releaseRegistrationsForClaim,
+} from "../../src/oclif/session-records.js";
 import {
   removeMailFile,
   writeMailJson,
@@ -954,6 +964,498 @@ describe("agent session-end", () => {
   });
 });
 
+describe("agent session-end after the profile was reconnected", () => {
+  const invited = "invited@example.test";
+  const invitationToken = ["invitation", "c".repeat(48)].join("_");
+  const invitationUrl = `https://api.primitive.dev/v1/agent-connections/setup#token=${invitationToken}`;
+  const claimFetch = (async () =>
+    new Response(
+      JSON.stringify({
+        success: true,
+        data: {
+          org_id: "22222222-2222-4222-8222-222222222222",
+          api_base_url: "https://api.primitive.dev/v1",
+          api_key: ["pconn", "d".repeat(48)].join("_"),
+          owner_address: "owner@example.test",
+          connection: {
+            address: invited,
+            owner_address: "owner@example.test",
+            status: "claimed",
+          },
+        },
+      }),
+      { status: 200 },
+    )) as typeof fetch;
+
+  /** Disconnects the way `agent disconnect` does, leaving its confirmation. */
+  function recordingDisconnect(configDir: string, disconnected: string[]) {
+    return (async (params: { profileName: string }) => {
+      const directory = agentProfileDirectory(configDir, params.profileName);
+      const current = loadConnectedAgentProfile(configDir, params.profileName);
+      disconnected.push(current?.agent_address ?? "");
+      if (current)
+        writeMailJson(
+          join(directory, `disconnected-${current.invitation_hash}.json`),
+          { version: 1, address: current.agent_address },
+        );
+      removeMailFile(join(directory, "connection.json"));
+      return {};
+    }) as unknown as typeof disconnectAgent;
+  }
+
+  it("leaves an agent connected with an invitation into the registered profile connected", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const disconnected: string[] = [];
+    const disconnect = recordingDisconnect(configDir, disconnected);
+    const ownProfile = `session-${session}`;
+    // 1. SessionStart registers the session's own agent.
+    const registered = await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    expect(registered.address).toBe("agent@example.test");
+    // 2. `agent connect --replace-existing` replaces it with an invited agent
+    // in the same profile.
+    await replaceSessionAddresses({
+      configDir,
+      rows: [{ profile: ownProfile, address: "agent@example.test" }],
+      targetProfile: ownProfile,
+      disconnect,
+    });
+    await connectAgent({
+      configDir,
+      profileName: ownProfile,
+      invitation: invitationUrl,
+      fetch: claimFetch,
+    });
+    expect(
+      loadConnectedAgentProfile(configDir, ownProfile)?.agent_address,
+    ).toBe(invited);
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      createdBy: "existing",
+      address: invited,
+      release: {
+        reason: "replaced_by_connect",
+        registeredAddress: "agent@example.test",
+      },
+    });
+    // 3. The session ends (for example on a restart).
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: { disconnect, revokeByAddress: async () => false },
+    });
+    expect(ended.status).toBe("not_managed");
+    expect(disconnected).toEqual(["agent@example.test"]);
+    expect(
+      loadConnectedAgentProfile(configDir, ownProfile)?.agent_address,
+    ).toBe(invited);
+    const resumed = await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: { ...dependencies, disconnect },
+    });
+    expect(resumed).toMatchObject({
+      status: "already_registered",
+      address: invited,
+    });
+  });
+
+  it("checks the profile's current credential even when the record was never updated", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const disconnected: string[] = [];
+    const disconnect = recordingDisconnect(configDir, disconnected);
+    const revoked: string[] = [];
+    const unhooked: string[] = [];
+    const ownProfile = `session-${session}`;
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      createdBy: "session-register",
+      address: "agent@example.test",
+      invitationHash: "a".repeat(64),
+    });
+    // A different credential lands in the same profile without the session
+    // record being touched, as an older CLI version left it.
+    removeMailFile(
+      join(agentProfileDirectory(configDir, ownProfile), "connection.json"),
+    );
+    saveConnectedAgentProfile(configDir, ownProfile, {
+      ...profile(invited),
+      api_key: ["pconn", "other", "x"].join("_"),
+      invitation_hash: "b".repeat(64),
+    });
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: {
+        disconnect,
+        revokeByAddress: async (_dir, address) => {
+          revoked.push(address);
+          return true;
+        },
+        uninstallHook: (options) => {
+          unhooked.push(options.agentAddress);
+          return true;
+        },
+      },
+    });
+    expect(ended.status).toBe("left_connected");
+    expect(disconnected).toEqual([]);
+    // Only the registered agent is revoked, by its own address, and only its
+    // own exact-session hooks are removed.
+    expect(revoked).toEqual(["agent@example.test"]);
+    expect(unhooked).toEqual(["agent@example.test"]);
+    expect(
+      loadConnectedAgentProfile(configDir, ownProfile)?.agent_address,
+    ).toBe(invited);
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      createdBy: "existing",
+      endedAt: null,
+      release: { reason: "credential_changed" },
+    });
+    expect(pendingSessionDisconnects(configDir)).toEqual([]);
+  });
+
+  it("never revokes by address when the same address was reconnected with a new credential", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const disconnected: string[] = [];
+    const disconnect = recordingDisconnect(configDir, disconnected);
+    const revoked: string[] = [];
+    const unhooked: string[] = [];
+    const ownProfile = `session-${session}`;
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    // The same address, connected again from a new invitation.
+    removeMailFile(
+      join(agentProfileDirectory(configDir, ownProfile), "connection.json"),
+    );
+    saveConnectedAgentProfile(configDir, ownProfile, {
+      ...profile("agent@example.test"),
+      api_key: ["pconn", "renewed", "x"].join("_"),
+      invitation_hash: "b".repeat(64),
+    });
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: {
+        disconnect,
+        revokeByAddress: async (_dir, address) => {
+          revoked.push(address);
+          return true;
+        },
+        uninstallHook: (options) => {
+          unhooked.push(options.agentAddress);
+          return true;
+        },
+      },
+    });
+    expect(ended.status).toBe("left_connected");
+    expect(disconnected).toEqual([]);
+    expect(revoked).toEqual([]);
+    expect(unhooked).toEqual([]);
+    expect(
+      loadConnectedAgentProfile(configDir, ownProfile)?.invitation_hash,
+    ).toBe("b".repeat(64));
+  });
+
+  it("does not revoke a credential connected between the check and the disconnect", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const ownProfile = `session-${session}`;
+    const calls: string[] = [];
+    let refused: unknown = null;
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: {
+        revokeByAddress: async () => true,
+        uninstallHook: () => true,
+        disconnect: (async (params: Parameters<typeof disconnectAgent>[0]) => {
+          // `agent connect` replaces the credential just before the
+          // disconnect takes its locks.
+          removeMailFile(
+            join(
+              agentProfileDirectory(configDir, ownProfile),
+              "connection.json",
+            ),
+          );
+          saveConnectedAgentProfile(configDir, ownProfile, {
+            ...profile(invited),
+            api_key: ["pconn", "other", "x"].join("_"),
+            invitation_hash: "b".repeat(64),
+          });
+          try {
+            return await disconnectAgent({
+              ...params,
+              fetch: (async (input: RequestInfo | URL) => {
+                calls.push(String(input));
+                return new Response("{}", { status: 500 });
+              }) as typeof fetch,
+            });
+          } catch (error) {
+            refused = error;
+            throw error;
+          }
+        }) as typeof disconnectAgent,
+      },
+    });
+    expect(refused).toBeInstanceOf(AgentCredentialChangedError);
+    expect(calls).toEqual([]);
+    expect(ended.status).toBe("left_connected");
+    expect(
+      loadConnectedAgentProfile(configDir, ownProfile)?.agent_address,
+    ).toBe(invited);
+  });
+
+  it("applies the same check when a pending disconnect is retried", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const disconnected: string[] = [];
+    const disconnect = recordingDisconnect(configDir, disconnected);
+    const ownProfile = `session-${session}`;
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    removeMailFile(
+      join(agentProfileDirectory(configDir, ownProfile), "connection.json"),
+    );
+    const pending = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: { revokeByAddress: async () => false },
+    });
+    expect(pending.status).toBe("disconnect_pending");
+    saveConnectedAgentProfile(configDir, ownProfile, {
+      ...profile(invited),
+      invitation_hash: "b".repeat(64),
+    });
+    expect(
+      await retryPendingDisconnects(configDir, {
+        dependencies: {
+          disconnect,
+          revokeByAddress: async () => true,
+          uninstallHook: () => true,
+        },
+      }),
+    ).toBe(1);
+    expect(disconnected).toEqual([]);
+    expect(
+      loadConnectedAgentProfile(configDir, ownProfile)?.agent_address,
+    ).toBe(invited);
+  });
+
+  it("keeps a registration's own enrollment claim and releases any other claim", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const ownProfile = `session-${session}`;
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    writeMailJson(
+      join(
+        agentProfileDirectory(configDir, ownProfile),
+        "enrollment",
+        "state.json",
+      ),
+      { address: "agent@example.test", invitationHash: "a".repeat(64) },
+    );
+    await releaseRegistrationsForClaim({
+      configDir,
+      profileName: ownProfile,
+      address: "agent@example.test",
+      invitationHash: "a".repeat(64),
+    });
+    expect(readSessionRecord(configDir, session)?.createdBy).toBe(
+      "session-register",
+    );
+    await releaseRegistrationsForClaim({
+      configDir,
+      profileName: ownProfile,
+      address: invited,
+      invitationHash: "b".repeat(64),
+    });
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      createdBy: "existing",
+      address: invited,
+      invitationHash: "b".repeat(64),
+    });
+  });
+});
+
+describe("agent session-end from a runtime hook", () => {
+  const removing = (configDir: string, disconnected: string[]) =>
+    (async (params: { profileName: string }) => {
+      disconnected.push(params.profileName);
+      removeMailFile(
+        join(
+          agentProfileDirectory(configDir, params.profileName),
+          "connection.json",
+        ),
+      );
+      return {};
+    }) as unknown as typeof disconnectAgent;
+
+  it("keeps the agent when the same session starts again within the grace period", async () => {
+    const { configDir } = setup();
+    const { calls, dependencies } = fakeDependencies(configDir);
+    const disconnected: string[] = [];
+    const disconnect = removing(configDir, disconnected);
+    const start = () =>
+      registerSession({
+        configDir,
+        runtime: "claude",
+        session,
+        env: {},
+        cliPath: "/cli/bin/run.js",
+        dependencies: { ...dependencies, disconnect },
+      });
+    await start();
+    let restarted: Awaited<ReturnType<typeof start>> | null = null;
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      graceMs: 60_000,
+      reason: "other",
+      dependencies: {
+        disconnect,
+        // The runtime restarts and resumes this session while the end waits.
+        sleep: async () => {
+          expect(readSessionRecord(configDir, session)).toMatchObject({
+            disconnect: "deferred",
+            endReason: "other",
+          });
+          restarted = await start();
+        },
+      },
+    });
+    expect(restarted).toMatchObject({ status: "already_registered" });
+    expect(ended.status).toBe("resumed");
+    expect(disconnected).toEqual([]);
+    expect(calls.enroll).toHaveLength(1);
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      endedAt: null,
+      disconnect: null,
+    });
+  });
+
+  it("disconnects after the grace period when the session does not start again", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const disconnected: string[] = [];
+    const disconnect = removing(configDir, disconnected);
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      session,
+      env: {},
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    const waited: number[] = [];
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      graceMs: 60_000,
+      reason: "resume",
+      dependencies: {
+        disconnect,
+        sleep: async (milliseconds) => {
+          waited.push(milliseconds);
+        },
+      },
+    });
+    expect(waited).toEqual([60_000]);
+    expect(ended.status).toBe("disconnected");
+    expect(disconnected).toEqual([`session-${session}`]);
+  });
+
+  it("lets machine doctor finish an end whose waiting process never did", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const disconnected: string[] = [];
+    const disconnect = removing(configDir, disconnected);
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      session,
+      env: {},
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    const at = new Date("2026-10-02T12:00:00.000Z");
+    // The waiting process is gone before its grace period ends.
+    void endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      graceMs: 60_000,
+      dependencies: {
+        now: () => at,
+        sleep: () => new Promise(() => undefined),
+      },
+    });
+    for (
+      let attempt = 0;
+      attempt < 100 &&
+      readSessionRecord(configDir, session)?.disconnect !== "deferred";
+      attempt++
+    )
+      await new Promise((done) => setTimeout(done, 10));
+    expect(pendingSessionDisconnects(configDir, at)).toEqual([]);
+    const later = new Date(at.getTime() + 61_000);
+    expect(
+      pendingSessionDisconnects(configDir, later).map((row) => row.session),
+    ).toEqual([session]);
+    expect(
+      await retryPendingDisconnects(configDir, {
+        dependencies: { disconnect, now: () => later },
+      }),
+    ).toBe(1);
+    expect(disconnected).toEqual([`session-${session}`]);
+  });
+});
+
 describe("session identity helpers", () => {
   it("gives one stable ID per running omp process", () => {
     const { configDir } = setup();
@@ -1040,7 +1542,17 @@ describe("session identity helpers", () => {
         }),
       ]),
     );
-    expect(valid).toEqual({ sessionId: session, cwd: "/work" });
+    expect(valid).toEqual({ sessionId: session, cwd: "/work", reason: null });
+    const ending = await readClaudeHookInput(
+      Readable.from([
+        JSON.stringify({
+          session_id: session,
+          hook_event_name: "SessionEnd",
+          reason: "prompt_input_exit",
+        }),
+      ]),
+    );
+    expect(ending?.reason).toBe("prompt_input_exit");
     expect(await readClaudeHookInput(Readable.from(["not json"]))).toBeNull();
     expect(
       await readClaudeHookInput(

@@ -84,6 +84,11 @@ class SentEmailDetail:
                 caller passed the `Idempotency-Key` header, this is
                 that value; otherwise it's a server-derived hash of
                 the canonical request payload.
+            recipient_count (int | None | Unset): Every recipient of the send, To, Cc and Bcc together, each address counted
+                once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists
+                every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not
+                the sender, because the count would reveal Bcc recipients. The `sent_email` object of the `sent_email.*` webhook
+                events carries the same field.
             content_discarded_at (datetime.datetime | None | Unset): Timestamp at which the bodies were discarded by an
                 entitlement-driven retention policy. Null when bodies
                 are still present. The detail endpoint returns
@@ -203,6 +208,7 @@ class SentEmailDetail:
     subject: str
     body_size_bytes: int
     client_idempotency_key: None | str | Unset = UNSET
+    recipient_count: int | None | Unset = UNSET
     content_discarded_at: datetime.datetime | None | Unset = UNSET
     message_id: None | str | Unset = UNSET
     in_reply_to: None | str | Unset = UNSET
@@ -277,6 +283,12 @@ class SentEmailDetail:
             client_idempotency_key = UNSET
         else:
             client_idempotency_key = self.client_idempotency_key
+
+        recipient_count: int | None | Unset
+        if isinstance(self.recipient_count, Unset):
+            recipient_count = UNSET
+        else:
+            recipient_count = self.recipient_count
 
         content_discarded_at: None | str | Unset
         if isinstance(self.content_discarded_at, Unset):
@@ -526,6 +538,8 @@ class SentEmailDetail:
         })
         if client_idempotency_key is not UNSET:
             field_dict["client_idempotency_key"] = client_idempotency_key
+        if recipient_count is not UNSET:
+            field_dict["recipient_count"] = recipient_count
         if content_discarded_at is not UNSET:
             field_dict["content_discarded_at"] = content_discarded_at
         if message_id is not UNSET:
@@ -651,6 +665,16 @@ class SentEmailDetail:
             return cast(None | str | Unset, data)
 
         client_idempotency_key = _parse_client_idempotency_key(d.pop("client_idempotency_key", UNSET))
+
+
+        def _parse_recipient_count(data: object) -> int | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(int | None | Unset, data)
+
+        recipient_count = _parse_recipient_count(d.pop("recipient_count", UNSET))
 
 
         def _parse_content_discarded_at(data: object) -> datetime.datetime | None | Unset:
@@ -1107,6 +1131,7 @@ class SentEmailDetail:
             subject=subject,
             body_size_bytes=body_size_bytes,
             client_idempotency_key=client_idempotency_key,
+            recipient_count=recipient_count,
             content_discarded_at=content_discarded_at,
             message_id=message_id,
             in_reply_to=in_reply_to,

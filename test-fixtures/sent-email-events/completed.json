@@ -1,0 +1,50 @@
+{
+  "id": "1a2b3c4d-0007-4000-8000-000000000007",
+  "event": "sent_email.completed",
+  "version": "2026-12-18",
+  "created_at": "2026-12-18T10:00:09.000Z",
+  "delivery": {
+    "endpoint_id": "8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
+    "attempt": 1,
+    "attempted_at": "2026-12-18T10:01:02.000Z"
+  },
+  "sent_email": {
+    "id": "0b1c2d3e-4f50-4172-8394-a5b6c7d8e9f0",
+    "status": "delivered",
+    "status_changed_at": "2026-12-18T10:00:09.000Z",
+    "created_at": "2026-12-18T10:00:00.000Z",
+    "source": "api",
+    "from_address": "agent@example.com",
+    "to_addresses": [
+      "alice@example.org"
+    ],
+    "cc": [
+      "bob@example.net"
+    ],
+    "bcc": [
+      "audit@example.com"
+    ],
+    "recipient_count": 3,
+    "subject": "Your quote",
+    "message_id": "<abc123@example.com>",
+    "thread_id": "5d1f7a3c-2b9e-4c6d-8a0f-1e2d3c4b5a69",
+    "tags": [
+      {
+        "name": "campaign",
+        "value": "q4-renewals"
+      }
+    ],
+    "relay": null
+  },
+  "summary": {
+    "recipient_count": 3,
+    "delivered": 2,
+    "failed": 1,
+    "failed_by_kind": {
+      "rejected": 1,
+      "expired": 0
+    },
+    "not_relayed": 0,
+    "not_relayed_recipients": []
+  }
+}

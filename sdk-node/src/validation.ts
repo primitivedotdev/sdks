@@ -270,15 +270,22 @@ function formatValidationIssue(
   }
 }
 
-function createValidationError(
+/**
+ * Build the WebhookValidationError for a failed schema validation, from the
+ * first error. Shared by every webhook payload family the SDK validates.
+ *
+ * @internal
+ */
+export function createValidationError(
   errors: readonly ErrorObject[],
   input: unknown,
+  schemaExportName = "emailReceivedEventJsonSchema",
 ): WebhookValidationError {
   if (errors.length === 0) {
     return new WebhookValidationError(
       "payload",
       "Webhook payload failed schema validation",
-      'Check the structure of the webhook payload against "emailReceivedEventJsonSchema".',
+      `Check the structure of the webhook payload against "${schemaExportName}".`,
       [],
     );
   }

@@ -57,6 +57,7 @@ import {
   type PrimitiveApiClientOptions,
   PrimitiveApiError,
   type PrimitiveApiErrorDetails,
+  type PrimitiveRateLimit,
   type StartAgentClaimInput,
   type VerifyAgentClaimInput,
 } from "@primitivedotdev/api-core";
@@ -563,6 +564,34 @@ function parseRetryAfterHeader(
   return Number.isFinite(seconds) ? seconds : undefined;
 }
 
+function parseIntegerHeader(
+  response: Response,
+  name: string,
+): number | undefined {
+  const raw = response.headers.get(name)?.trim();
+  if (!raw || !/^\d+$/.test(raw)) return undefined;
+  const value = Number.parseInt(raw, 10);
+  return Number.isSafeInteger(value) ? value : undefined;
+}
+
+// On a 429 the `ratelimit-*` headers describe the limiter that rejected the
+// request. On other statuses they describe the API budget instead, so they
+// are not attached to those errors.
+function parseRateLimitHeaders(
+  response: Response | undefined,
+): PrimitiveRateLimit | undefined {
+  if (response?.status !== 429) return undefined;
+  const rateLimit: PrimitiveRateLimit = {
+    limit: parseIntegerHeader(response, "ratelimit-limit"),
+    remaining: parseIntegerHeader(response, "ratelimit-remaining"),
+    reset: parseIntegerHeader(response, "ratelimit-reset"),
+    policy: response.headers.get("ratelimit-policy")?.trim() || undefined,
+  };
+  return Object.values(rateLimit).some((value) => value !== undefined)
+    ? rateLimit
+    : undefined;
+}
+
 interface ParsedApiError {
   message: string;
   code: string | undefined;
@@ -779,6 +808,7 @@ function unwrapData<T>(
       gates: parsed.gates,
       requestId: parsed.requestId,
       retryAfter: parseRetryAfterHeader(response),
+      rateLimit: parseRateLimitHeaders(response),
       details: parsed.details,
       cause: result.error instanceof Error ? result.error : undefined,
     });
@@ -1032,6 +1062,7 @@ function unwrapInboxPage(result: {
       gates: parsed.gates,
       requestId: parsed.requestId,
       retryAfter: parseRetryAfterHeader(response),
+      rateLimit: parseRateLimitHeaders(response),
       details: parsed.details,
       cause: result.error instanceof Error ? result.error : undefined,
     });
@@ -1736,6 +1767,7 @@ function unwrapSendResult(result: {
       gates: parsed.gates,
       requestId: parsed.requestId,
       retryAfter: parseRetryAfterHeader(response),
+      rateLimit: parseRateLimitHeaders(response),
       details: parsed.details,
       // When the generated client surfaces a transport failure (a
       // rejected `fetch`), `result.error` is the thrown Error whose own
@@ -1828,6 +1860,7 @@ function unwrapSemanticSearchResult(result: {
       gates: parsed.gates,
       requestId: parsed.requestId,
       retryAfter: parseRetryAfterHeader(response),
+      rateLimit: parseRateLimitHeaders(response),
       details: parsed.details,
       // When the generated client surfaces a transport failure (a
       // rejected `fetch`), `result.error` is the thrown Error whose own
@@ -1876,6 +1909,7 @@ function unwrapMemorySearchResult(result: {
       gates: parsed.gates,
       requestId: parsed.requestId,
       retryAfter: parseRetryAfterHeader(response),
+      rateLimit: parseRateLimitHeaders(response),
       details: parsed.details,
       cause: result.error instanceof Error ? result.error : undefined,
     });

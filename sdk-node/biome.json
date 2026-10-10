@@ -5,7 +5,8 @@
       "**",
       "!**/src/schema.generated.ts",
       "!**/src/types.generated.ts",
-      "!**/src/generated/**/*.generated.ts"
+      "!**/src/generated/**/*.generated.ts",
+      "!**/tests/parser/fixtures/html"
     ]
   },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },

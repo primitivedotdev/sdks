@@ -6290,11 +6290,20 @@ type ListDeliveriesParams struct {
 	Limit OptInt `json:",omitempty,omitzero"`
 	// Filter by email ID.
 	EmailID OptUUID `json:",omitempty,omitzero"`
+	// Only deliveries of this event type, for example `sent_email.failed`. Deliveries recorded before
+	// event types existed have none and never match.
+	EventType OptString `json:",omitempty,omitzero"`
+	// Only deliveries of `sent_email.*` events about this sent email.
+	SentEmailID OptUUID `json:",omitempty,omitzero"`
 	// Filter by delivery status.
 	Status OptListDeliveriesStatus `json:",omitempty,omitzero"`
-	// Filter deliveries created on or after this timestamp.
+	// Filter deliveries created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric
+	// UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant
+	// it names. A time with no zone, or a bare date, is rejected.
 	DateFrom OptDateTime `json:",omitempty,omitzero"`
-	// Filter deliveries created on or before this timestamp.
+	// Filter deliveries created on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric
+	// UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant
+	// it names. A time with no zone, or a bare date, is rejected.
 	DateTo OptDateTime `json:",omitempty,omitzero"`
 }
 
@@ -6324,6 +6333,24 @@ func unpackListDeliveriesParams(packed middleware.Parameters) (params ListDelive
 		}
 		if v, ok := packed[key]; ok {
 			params.EmailID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "event_type",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.EventType = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "sent_email_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.SentEmailID = v.(OptUUID)
 		}
 	}
 	{
@@ -6511,6 +6538,115 @@ func decodeListDeliveriesParams(args [0]string, argsEscaped bool, r *http.Reques
 			Err:  err,
 		}
 	}
+	// Decode query: event_type.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "event_type",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotEventTypeVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotEventTypeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.EventType.SetTo(paramsDotEventTypeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.EventType.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "event_type",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: sent_email_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "sent_email_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSentEmailIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToUUID(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSentEmailIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.SentEmailID.SetTo(paramsDotSentEmailIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "sent_email_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
 	// Decode query: status.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -6669,9 +6805,13 @@ type ListEmailsParams struct {
 	Status OptEmailStatus `json:",omitempty,omitzero"`
 	// Search subject, sender, and recipient (case-insensitive).
 	Search OptString `json:",omitempty,omitzero"`
-	// Filter emails created on or after this timestamp.
+	// Filter emails created on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC
+	// offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it
+	// names. A time with no zone, or a bare date, is rejected.
 	DateFrom OptDateTime `json:",omitempty,omitzero"`
-	// Filter emails created on or before this timestamp.
+	// Filter emails created on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC
+	// offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it
+	// names. A time with no zone, or a bare date, is rejected.
 	DateTo OptDateTime `json:",omitempty,omitzero"`
 	// Forward-tail cursor. Returns rows that became visible AFTER this
 	// cursor, oldest-first, so a caller can stream new inbound mail by
@@ -8367,9 +8507,13 @@ type ListSentEmailsParams struct {
 	// same key is rejected by /send-mail before the row is
 	// written, so duplicates are bounded).
 	IdempotencyKey OptString `json:",omitempty,omitzero"`
-	// Inclusive lower bound on `created_at`.
+	// Inclusive lower bound on `created_at`. An ISO 8601 timestamp with `Z` or a numeric UTC offset
+	// (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+	// A time with no zone, or a bare date, is rejected.
 	DateFrom OptDateTime `json:",omitempty,omitzero"`
-	// Inclusive upper bound on `created_at`.
+	// Inclusive upper bound on `created_at`. An ISO 8601 timestamp with `Z` or a numeric UTC offset
+	// (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it names.
+	// A time with no zone, or a bare date, is rejected.
 	DateTo OptDateTime `json:",omitempty,omitzero"`
 	// Literal case-insensitive substring filter over the
 	// subject, the retained plain-text body, the sender, and
@@ -10302,7 +10446,7 @@ func decodeRemoveDefaultNetworkMemberParams(args [1]string, argsEscaped bool, r 
 
 // ReplayDeliveryParams is parameters of replayDelivery operation.
 type ReplayDeliveryParams struct {
-	// Delivery ID (numeric).
+	// Delivery ID, as `id` in the deliveries list: a numeric string or a UUID.
 	ID string
 }
 
@@ -10360,7 +10504,7 @@ func decodeReplayDeliveryParams(args [1]string, argsEscaped bool, r *http.Reques
 					MaxLengthSet:  false,
 					Email:         false,
 					Hostname:      false,
-					Regex:         regexMap["^\\d+$"],
+					Regex:         regexMap["^(\\d+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"],
 					MinNumeric:    0,
 					MinNumericSet: false,
 					MaxNumeric:    0,
@@ -10860,7 +11004,23 @@ func decodeRunWakeScheduleParams(args [1]string, argsEscaped bool, r *http.Reque
 type SearchEmailsParams struct {
 	// Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state
 	// (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and
-	// `automated:false` to filter on the `automated` field.
+	// `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term
+	// must match. A term is a word, a `"quoted phrase"`, or a `field:value` filter (`from:`, `to:`,
+	// `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`,
+	// `automated:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:`
+	// terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is
+	// `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no
+	// `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an
+	// unterminated quote, or only stop words is a `validation_error` that says what to change; it is
+	// never silently reinterpreted. Alternatives chain (`invoice OR receipt OR "past due"`), and each
+	// one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR`
+	// next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead);
+	// an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a
+	// search cannot exclude a term); and an alternative with no searchable word once stop words are
+	// removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT`
+	// itself, write it in lower case or in double quotes (`"OR"`). With `prefix=true`, a trailing `OR`
+	// or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a
+	// URL, put it in double quotes.
 	Q OptString `json:",omitempty,omitzero"`
 	// Filter by sender address or sender domain.
 	From OptString `json:",omitempty,omitzero"`
@@ -10886,9 +11046,13 @@ type SearchEmailsParams struct {
 	ReplyToSentEmailID OptUUID `json:",omitempty,omitzero"`
 	// Filter by inbound email lifecycle status.
 	Status OptEmailStatus `json:",omitempty,omitzero"`
-	// Filter emails received on or after this timestamp.
+	// Filter emails received on or after this timestamp. An ISO 8601 timestamp with `Z` or a numeric UTC
+	// offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant it
+	// names. A time with no zone, or a bare date, is rejected.
 	DateFrom OptDateTime `json:",omitempty,omitzero"`
-	// Filter emails received on or before this timestamp.
+	// Filter emails received on or before this timestamp. An ISO 8601 timestamp with `Z` or a numeric
+	// UTC offset (`2026-10-02T00:00:00Z`, `2026-10-02T00:00:00-04:00`). An offset is read as the instant
+	// it names. A time with no zone, or a bare date, is rejected.
 	DateTo OptDateTime `json:",omitempty,omitzero"`
 	// Filter by whether the email has one or more attachments.
 	HasAttachment OptSearchEmailsHasAttachment `json:",omitempty,omitzero"`
@@ -10951,10 +11115,17 @@ type SearchEmailsParams struct {
 	Cursor OptString `json:",omitempty,omitzero"`
 	// Number of results per page.
 	Limit OptInt `json:",omitempty,omitzero"`
-	// Include subject/body highlight snippets when text search is active.
+	// Include subject/body highlight snippets when text search is active. This switches only the
+	// `highlights` object on each result. The `snippet` field (the body preview) is on every result
+	// either way, and a search with no text (`q`, `subject` or `body`) has no highlights to leave out,
+	// so `false` changes nothing there.
 	Snippet OptSearchEmailsSnippet `json:",omitempty,omitzero"`
 	// Include facet counts for sender, domain, status, and attachment presence. When `false`, the facet
-	// aggregation is not run at all.
+	// aggregation is not run at all. Each of `by_sender`, `by_domain` and `by_status` lists its values
+	// by `count` descending, and values with the same count by `value` ascending in byte order of its
+	// UTF-8 encoding (upper case before lower case), a null `value` last. `by_sender` and `by_domain`
+	// keep the first 20 values in that order, so the same request over the same mail always lists the
+	// same values.
 	IncludeFacets OptSearchEmailsIncludeFacets `json:",omitempty,omitzero"`
 	// Only return emails in this thread (the `thread_id` each result carries). Combines with `q` and
 	// every other filter, and with pagination. Visibility is unchanged; an agent connection still sees

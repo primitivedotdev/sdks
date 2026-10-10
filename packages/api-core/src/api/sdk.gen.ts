@@ -166,7 +166,13 @@ export const verifyAgentSignup = <ThrowOnError extends boolean = false>(options:
  * addresses that have already sent it authenticated mail) with tight send
  * limits. Use the returned `api_key` as a Bearer token on later calls. The
  * account can be upgraded to a full developer account by confirming an
- * email through the claim flow. This endpoint does not require an API key.
+ * email through the claim flow. Upgrading raises the send cap and grants
+ * the developer plan's default features (such as Functions); it does not
+ * unlock sending to arbitrary recipients, because the recipient rules on
+ * the account still apply. `GET /send-permissions` reports those rules
+ * (its list of individual addresses can be partial), and
+ * `POST /sendability` answers for one specific recipient. This endpoint
+ * does not require an API key.
  *
  */
 export const createAgentAccount = <ThrowOnError extends boolean = false>(options: Options<CreateAgentAccountData, ThrowOnError>): RequestResult<CreateAgentAccountResponses, CreateAgentAccountErrors, ThrowOnError> => (options.client ?? client).post<CreateAgentAccountResponses, CreateAgentAccountErrors, ThrowOnError>({
@@ -205,8 +211,13 @@ export const startAgentClaim = <ThrowOnError extends boolean = false>(options: O
  *
  * Confirms the verification code emailed by `/agent/claim/start` and
  * upgrades the account to the `developer` plan. The org id, API key, and
- * managed inbox all carry over; the send cap lifts. Authenticated by the
- * agent's own API key.
+ * managed inbox all carry over; the send cap lifts and the developer
+ * plan's default features (such as Functions) unlock. Upgrading does not
+ * unlock sending to arbitrary recipients: the recipient rules on the
+ * account still apply. `GET /send-permissions` reports those rules (its
+ * list of individual addresses can be partial), and `POST /sendability`
+ * answers for one specific recipient. Authenticated by the agent's own
+ * API key.
  *
  */
 export const verifyAgentClaim = <ThrowOnError extends boolean = false>(options: Options<VerifyAgentClaimData, ThrowOnError>): RequestResult<VerifyAgentClaimResponses, VerifyAgentClaimErrors, ThrowOnError> => (options.client ?? client).post<VerifyAgentClaimResponses, VerifyAgentClaimErrors, ThrowOnError>({
@@ -1267,8 +1278,12 @@ export const updateRoute = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * List webhook deliveries
  *
- * Returns a paginated list of webhook delivery attempts. Each delivery
- * includes a nested `email` object with sender, recipient, and subject.
+ * Returns a paginated list of webhook delivery attempts, newest first.
+ * A delivery of an inbound email includes a nested `email` object with
+ * sender, recipient, and subject. A delivery of an opt-in
+ * `sent_email.*` event has `email_id` and `email` set to null and
+ * `sent_email_id` set to the send it is about. Filter by `event_type`
+ * and `sent_email_id` to find the deliveries of one send.
  *
  */
 export const listDeliveries = <ThrowOnError extends boolean = false>(options?: Options<ListDeliveriesData, ThrowOnError>): RequestResult<ListDeliveriesResponses, ListDeliveriesErrors, ThrowOnError> => (options?.client ?? client).get<ListDeliveriesResponses, ListDeliveriesErrors, ThrowOnError>({
@@ -1280,11 +1295,15 @@ export const listDeliveries = <ThrowOnError extends boolean = false>(options?: O
 /**
  * Replay a webhook delivery
  *
- * Re-sends the stored webhook payload from a previous delivery attempt.
- * If the original endpoint is still active, it is targeted. If the
- * original endpoint was deleted, the oldest active endpoint is used.
- * Deactivated endpoints cannot be replayed to. Rate limited per-org,
- * sharing an org-wide budget with email replays.
+ * Re-sends a previous delivery to its original endpoint. If that
+ * endpoint was deleted or deactivated, the replay is rejected.
+ * Supports inbound email deliveries and `sent_email.*` deliveries.
+ * An inbound email delivery is replayed with its original stored
+ * payload and event id. A `sent_email.*` delivery is replayed with the
+ * same event id but a payload rebuilt from the send as it is now; it
+ * is rejected if the send was deleted or the endpoint is no longer an
+ * active http endpoint. Rate limited per-org, sharing an org-wide
+ * budget with email replays.
  *
  */
 export const replayDelivery = <ThrowOnError extends boolean = false>(options: Options<ReplayDeliveryData, ThrowOnError>): RequestResult<ReplayDeliveryResponses, ReplayDeliveryErrors, ThrowOnError> => (options.client ?? client).post<ReplayDeliveryResponses, ReplayDeliveryErrors, ThrowOnError>({

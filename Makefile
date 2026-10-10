@@ -18,7 +18,7 @@ node-generate:
 	pnpm --filter @primitivedotdev/sdk generate
 
 node-check-generated:
-	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated/email-received-event.validator.generated.ts packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts
+	pnpm --filter @primitivedotdev/sdk generate && git diff --exit-code -- openapi/primitive-api.codegen.json sdk-node/src/schema.generated.ts sdk-node/src/types.generated.ts sdk-node/src/generated packages/api-core/src/api packages/api-core/src/openapi/openapi.generated.ts packages/api-core/src/openapi/operations.generated.ts
 
 node-test:
 	pnpm --dir sdk-node test
@@ -300,7 +300,7 @@ python-generate:
 	cd sdk-python && uv run python scripts/generate_schema_module.py && uv run python scripts/generate_models.py && uv run python scripts/generate_api_client.py
 
 python-check-generated:
-	cd sdk-python && uv run python scripts/generate_schema_module.py && uv run python scripts/generate_models.py && uv run python scripts/generate_api_client.py && git diff --exit-code -- src/primitive/schemas/email_received_event.schema.json src/primitive/models_generated.py src/primitive/api
+	cd sdk-python && uv run python scripts/generate_schema_module.py && uv run python scripts/generate_models.py && uv run python scripts/generate_api_client.py && git diff --exit-code -- src/primitive/schemas src/primitive/models_generated.py src/primitive/sent_email_models_generated.py src/primitive/api
 
 python-test:
 	cd sdk-python && uv run pytest tests -k "not shared_fixtures"
@@ -339,9 +339,9 @@ go-coverage:
 	cd sdk-go && raw_coverage_file=$$(mktemp) && filtered_coverage_file=$$(mktemp) && go test ./... -coverprofile="$$raw_coverage_file" && { IFS= read -r header && printf '%s\n' "$$header" > "$$filtered_coverage_file" && while IFS= read -r line; do case "$$line" in *"/schema_generated.go:"*|*"/doc.go:"*) ;; *) printf '%s\n' "$$line" >> "$$filtered_coverage_file" ;; esac; done; } < "$$raw_coverage_file" && go tool cover -func="$$filtered_coverage_file" && rm -f "$$raw_coverage_file" "$$filtered_coverage_file"
 
 shared-check:
-	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/api/sent-email-recipients.test.ts tests/api/events.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts tests/interactions/classify.test.ts tests/interactions/presence.test.ts tests/interactions/repeats.test.ts
-	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_sent_email_recipients.py tests/test_event_receiver.py tests/test_interactions.py tests/test_signals.py tests/test_signal_content.py tests/test_presence.py tests/test_repeats.py
-	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSentEmailRecipientLists|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails|TestSharedSignalContent|TestSharedPresenceEmails|TestPresenceSourceCopy|TestSharedRepeatInteractions|TestEvents' ./...
+	cd sdk-node && pnpm exec vitest run tests/webhook/shared-fixtures.test.ts tests/webhook/sent-email-events.test.ts tests/api/send-payloads.test.ts tests/api/attachment-parts.test.ts tests/api/sent-email-recipients.test.ts tests/api/events.test.ts tests/interactions/envelopes.test.ts tests/interactions/signals.test.ts tests/interactions/classify.test.ts tests/interactions/presence.test.ts tests/interactions/repeats.test.ts
+	cd sdk-python && uv run pytest tests/test_shared_fixtures.py tests/test_sent_email_events.py tests/test_send_payloads.py tests/test_attachment_parts.py tests/test_sent_email_recipients.py tests/test_event_receiver.py tests/test_interactions.py tests/test_signals.py tests/test_signal_content.py tests/test_presence.py tests/test_repeats.py
+	cd sdk-go && go test -run 'TestSharedCompatibilityFixtures|TestSharedSentEmailEvents|TestSharedSendPayloadFixtures|TestAttachmentPart|TestSentEmailRecipientLists|TestSharedInteractionEnvelopes|TestSharedDecodedInteractions|TestSharedSignalEmails|TestSharedSignalContent|TestSharedPresenceEmails|TestPresenceSourceCopy|TestSharedRepeatInteractions|TestEvents' ./...
 
 check: node-check cli-check python-check go-check shared-check
 

@@ -18,6 +18,7 @@ from .errors import (
     WebhookVerificationError,
 )
 from .events import is_known_webhook_event_type
+from .sent_email_events import is_sent_email_event_type, validate_sent_email_event
 from .types import (
     AuthVerdict,
     EmailAuth,
@@ -550,6 +551,12 @@ def parse_webhook_event(
     if resolved_event == "email.received":
         return validate_email_received_event(input)
 
+    if is_sent_email_event_type(resolved_event):
+        # sent_email.* bodies carry their own `event` and are validated against
+        # the sent_email schema. The returned event is the validated body: its
+        # `event` field is covered by the signature, the header is not.
+        return validate_sent_email_event(input)
+
     if resolved_event in ("payment.settled", "payment.failed") or (
         is_known_webhook_event_type(resolved_event)
     ):
@@ -644,8 +651,8 @@ def handle_webhook_event(
     """Verify, then parse any webhook event into a typed value.
 
     Unlike :func:`handle_webhook`, this returns the full ``WebhookEvent`` union,
-    so it handles ``payment.*`` and ``interaction.x402.*`` events in addition to
-    ``email.*``. It verifies the signature over the raw body, parses the JSON,
+    so it handles ``sent_email.*``, ``payment.*`` and ``interaction.x402.*``
+    events in addition to ``email.*``. It verifies the signature over the raw body, parses the JSON,
     then classifies on the ``X-Webhook-Event`` header (the primary
     discriminator), returning a typed event for known types and an
     ``UnknownEvent`` for the rest.
