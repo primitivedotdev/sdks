@@ -193,6 +193,34 @@ client.send(
 )
 ```
 
+A send with no idempotency key gets an automatic one: a hash of the request
+content (recipients included) and a fixed 5-minute window. An identical send
+inside one window is not sent again. The result says so: `idempotent_replay`
+is true and `idempotency` names why.
+
+```python
+result = client.send(
+    from_email="support@example.com",
+    to="alice@example.com",
+    subject="Hello",
+    body_text="Hi there",
+)
+if result.idempotency is not None:
+    # Nothing was sent for this call.
+    result.idempotency.key_source  # "auto_content", "explicit" or "function_trigger"
+    result.idempotency.original_sent_email_id  # the send that answered it
+    result.idempotency.original_created_at  # ISO 8601, or None
+    result.idempotency.window_seconds  # 300 for an automatic content key, else None
+```
+
+`key_source` is `explicit` when you passed a key, `auto_content` when the key
+was derived from content, and `function_trigger` for a keyless send made by a
+Function. A keyless reply to an email that already has a reply is also
+answered with that reply; it reports `dedup_reason == "parent_already_replied"`
+and no window. To send the same message again on purpose, pass an
+`idempotency_key` of your own. `idempotency` is `None` on a send that went
+out.
+
 Use `client.with_options(...)` to clone the client with new defaults applied
 to every subsequent call. Per-call kwargs still win over these defaults.
 

@@ -136,6 +136,21 @@ await client.send(
 );
 ```
 
+A send with no idempotency key gets an automatic one: a hash of the request content (recipients included) and a fixed 5-minute window. An identical send inside one window is not sent again. The result says so: `idempotentReplay` is true and `idempotency` names why.
+
+```ts
+const result = await client.send({ from, to, subject, bodyText });
+if (result.idempotency) {
+  // Nothing was sent for this call.
+  result.idempotency.keySource; // "auto_content" | "explicit" | "function_trigger"
+  result.idempotency.originalSentEmailId; // the send that answered it
+  result.idempotency.originalCreatedAt; // ISO 8601, or null
+  result.idempotency.windowSeconds; // 300 for an automatic content key, else null
+}
+```
+
+`keySource` is `explicit` when you passed a key, `auto_content` when the key was derived from content, and `function_trigger` for a keyless send made by a Function. A keyless reply to an email that already has a reply is also answered with that reply; it reports `dedupReason: "parent_already_replied"` and no window. To send the same message again on purpose, pass an `idempotencyKey` of your own. `idempotency` is absent on a send that went out.
+
 Client-level config (default fetch, base URL, default headers passed to `primitive.client({...})`) still applies to every call. Per-call `RequestOptions` overrides or merges on top: headers merge (per-call wins on conflict), `signal` and `timeout` compose so the first to fire wins.
 
 ### About `wait` mode

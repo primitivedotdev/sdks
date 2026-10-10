@@ -724,6 +724,70 @@ describe("send outcomes", () => {
     expect(result.stdout).not.toMatch(/vary|fresh copy/i);
   });
 
+  // The command always sends a key. When the caller passed none it is the
+  // CLI's own content-and-window key, which the API reports as `explicit`.
+  const replaySignal: Partial<SendMailResult> = {
+    idempotent_replay: true,
+    status: "delivered",
+    delivery_status: "delivered",
+    dedup_reason: "content_hash_match",
+    client_idempotency_key: "the-key-on-record",
+    idempotency: {
+      replayed: true,
+      key_source: "explicit",
+      original_sent_email_id: "sent-1",
+      original_created_at: null,
+      window_seconds: null,
+    },
+  };
+
+  it("words a replay of the CLI's own derived key as an identical send", async () => {
+    const replayed = sendResult(replaySignal);
+    mocks.sendEmail.mockResolvedValue({ data: { data: replayed } });
+
+    const result = await run("send", sendArgs());
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stdout).toBe(`${JSON.stringify(replayed, null, 2)}\n`);
+    expect(result.stderr).toBe(
+      "Not sent: identical to sent-1 (status delivered). Pass --idempotency-key with a new key to send again.\n",
+    );
+  });
+
+  it("words a replay of a key the caller passed as that key being used", async () => {
+    mocks.sendEmail.mockResolvedValue({
+      data: { data: sendResult(replaySignal) },
+    });
+
+    const result = await run(
+      "send",
+      sendArgs("--idempotency-key", "the-key-on-record"),
+    );
+
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toBe(
+      "Not sent: idempotency key the-key-on-record was already used for sent-1 (status delivered). A key you pass never expires. Use a different key only for a different message.\n",
+    );
+  });
+
+  it("keeps the replay notice out of stderr and inside the envelope with --json", async () => {
+    mocks.sendEmail.mockResolvedValue({
+      data: { data: sendResult(replaySignal) },
+    });
+
+    const result = await run("send", sendArgs("--json"));
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.stderr).toBe("");
+    expect(envelope).toMatchObject({
+      outcome: "already_sent",
+      exit_code: 0,
+      outcome_message:
+        "Not sent: identical to sent-1 (status delivered). Pass --idempotency-key with a new key to send again.",
+      sent: { idempotency: { key_source: "explicit", replayed: true } },
+    });
+  });
+
   it.each([
     [429, "not_sent", 1],
     [401, "not_sent", 1],

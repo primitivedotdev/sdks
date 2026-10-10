@@ -342,6 +342,129 @@ def test_send_accepts_display_name_from(monkeypatch: pytest.MonkeyPatch) -> None
     )
 
 
+REPLAYED_SENT_ID = "3f1c0a9e-2b7d-4e5a-9c6f-8d2e1a4b5c6d"
+
+
+def test_send_surfaces_idempotency_when_answered_by_an_earlier_send() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
+    _install_capturing_transport(
+        client,
+        captured,
+        body=_send_response_body(
+            {
+                "idempotent_replay": True,
+                "dedup_reason": "content_hash_match",
+                "idempotency": {
+                    "replayed": True,
+                    "key_source": "auto_content",
+                    "original_sent_email_id": REPLAYED_SENT_ID,
+                    "original_created_at": "2026-10-06T12:00:07.412Z",
+                    "window_seconds": 300,
+                },
+            }
+        ),
+    )
+
+    result = client.send(
+        from_email="support@example.com",
+        to="alice@example.com",
+        subject="Hello",
+        body_text="Hi there",
+    )
+
+    assert result.idempotent_replay is True
+    assert result.dedup_reason == "content_hash_match"
+    assert result.idempotency == primitive.SendIdempotency(
+        key_source="auto_content",
+        original_sent_email_id=REPLAYED_SENT_ID,
+        original_created_at="2026-10-06T12:00:07.412000+00:00",
+        window_seconds=300,
+    )
+    assert result.idempotency is not None and result.idempotency.replayed is True
+
+
+def test_send_reports_no_window_for_parent_dedup_and_explicit_keys() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
+    _install_capturing_transport(
+        client,
+        captured,
+        body=_send_response_body(
+            {
+                "idempotent_replay": True,
+                "dedup_reason": "parent_already_replied",
+                "idempotency": {
+                    "replayed": True,
+                    "key_source": "explicit",
+                    "original_sent_email_id": REPLAYED_SENT_ID,
+                    "original_created_at": None,
+                    "window_seconds": None,
+                },
+            }
+        ),
+    )
+
+    result = client.send(
+        from_email="support@example.com",
+        to="alice@example.com",
+        subject="Hello",
+        body_text="Hi there",
+    )
+
+    assert result.dedup_reason == "parent_already_replied"
+    assert result.idempotency == primitive.SendIdempotency(
+        key_source="explicit",
+        original_sent_email_id=REPLAYED_SENT_ID,
+        original_created_at=None,
+        window_seconds=None,
+    )
+
+
+def test_send_leaves_idempotency_none_on_a_send_that_went_out() -> None:
+    captured: list[httpx.Request] = []
+    client = PrimitiveClient("prim_test", api_base_url_1=BASE_URL, api_base_url_2=BASE_URL)
+    _install_capturing_transport(
+        client, captured, body=_send_response_body({"dedup_reason": None})
+    )
+
+    result = client.send(
+        from_email="support@example.com",
+        to="alice@example.com",
+        subject="Hello",
+        body_text="Hi there",
+    )
+
+    assert result.idempotent_replay is False
+    assert result.idempotency is None
+    assert result.dedup_reason is None
+
+
+def test_send_result_keeps_its_positional_field_order() -> None:
+    """The replay fields are appended, so positional construction is unchanged."""
+    result = primitive.SendResult(
+        "sent-123",
+        "delivered",
+        ["alice@example.com"],
+        [],
+        "idem-123",
+        "req-123",
+        "hash-123",
+        "qid-123",
+        False,
+        "delivered",
+        250,
+        "250 OK",
+        None,
+    )
+
+    assert result.delivery_status == "delivered"
+    assert result.smtp_response_code == 250
+    assert result.smtp_response_text == "250 OK"
+    assert result.idempotency is None
+    assert result.dedup_reason is None
+
+
 def test_send_passes_wait_options_and_idempotency_key() -> None:
     """Per-call options now ride on the httpx.Request headers, set by hook.
 

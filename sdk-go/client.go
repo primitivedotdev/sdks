@@ -80,6 +80,51 @@ type ForwardParams struct {
 	ScheduledAt time.Time
 }
 
+// SendIdempotencyKeySource says how the idempotency key of a replayed
+// send was derived.
+type SendIdempotencyKeySource = primitiveapi.SendMailIdempotencyReplayKeySource
+
+const (
+	// SendIdempotencyKeySourceExplicit: the request carried an idempotency key.
+	SendIdempotencyKeySourceExplicit = primitiveapi.SendMailIdempotencyReplayKeySourceExplicit
+	// SendIdempotencyKeySourceAutoContent: the request carried no key, so the
+	// API derived one from the request content (recipients included) and a
+	// fixed 5-minute window.
+	SendIdempotencyKeySourceAutoContent = primitiveapi.SendMailIdempotencyReplayKeySourceAutoContent
+	// SendIdempotencyKeySourceFunctionTrigger: a keyless send made by a
+	// Function; the key came from the content, the Function and the email
+	// or event that invoked it.
+	SendIdempotencyKeySourceFunctionTrigger = primitiveapi.SendMailIdempotencyReplayKeySourceFunctionTrigger
+)
+
+// DedupReasonParentAlreadyReplied is the SendResult.DedupReason of a
+// keyless reply answered with the reply its parent email already has.
+const DedupReasonParentAlreadyReplied = "parent_already_replied"
+
+// DedupReasonContentHashMatch is the SendResult.DedupReason of a send
+// whose idempotency key matched an earlier send.
+const DedupReasonContentHashMatch = "content_hash_match"
+
+// SendIdempotency says why a send was answered with an existing send
+// instead of being made. It is set on SendResult only when
+// IdempotentReplay is true: nothing was sent for that request.
+type SendIdempotency struct {
+	// Replayed is always true.
+	Replayed  bool
+	KeySource SendIdempotencyKeySource
+	// OriginalSentEmailID is the send this request collapsed onto. Same
+	// value as SendResult.ID.
+	OriginalSentEmailID string
+	// OriginalCreatedAt is when that send was created. Nil when the API
+	// did not report it.
+	OriginalCreatedAt *time.Time
+	// WindowSeconds is the length of the content window (300) when an
+	// auto_content key matched on content. Nil for explicit and
+	// function_trigger keys, which have no window, and for a keyless
+	// reply matched because its parent already has a reply.
+	WindowSeconds *int
+}
+
 type SendResult struct {
 	ID                   string
 	Status               primitiveapi.SentEmailStatus
@@ -94,6 +139,13 @@ type SendResult struct {
 	// canonical payload). False on a fresh send and on gate-denied
 	// responses.
 	IdempotentReplay bool
+	// Idempotency is set only when IdempotentReplay is true. It says how
+	// the key that matched was derived and which earlier send answered
+	// this request.
+	Idempotency *SendIdempotency
+	// DedupReason says why the response was a replay: "content_hash_match"
+	// or "parent_already_replied". Empty on a fresh send.
+	DedupReason      string
 	DeliveryStatus   primitiveapi.OptDeliveryStatus
 	SMTPResponseCode primitiveapi.OptNilInt
 	SMTPResponseText primitiveapi.OptString
@@ -496,8 +548,8 @@ func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error
 	}
 
 	switch v := res.(type) {
-	case *primitiveapi.SendEmailOK:
-		return mapSendMailResult(v.Data), nil
+	case *primitiveapi.SendEmailOKHeaders:
+		return mapSendMailResult(v.Response.Data), nil
 	default:
 		return zero, mapSendError(res)
 	}
@@ -510,6 +562,20 @@ func (c *Client) Send(ctx context.Context, params SendParams) (SendResult, error
 // IdempotentReplay was added on the server but missed in the Go copy
 // sites.
 func mapSendMailResult(data primitiveapi.SendMailResult) SendResult {
+	var idempotency *SendIdempotency
+	if replay, ok := data.Idempotency.Get(); ok {
+		idempotency = &SendIdempotency{
+			Replayed:            replay.Replayed,
+			KeySource:           replay.KeySource,
+			OriginalSentEmailID: replay.OriginalSentEmailID.String(),
+		}
+		if createdAt, ok := replay.OriginalCreatedAt.Get(); ok {
+			idempotency.OriginalCreatedAt = &createdAt
+		}
+		if window, ok := replay.WindowSeconds.Get(); ok {
+			idempotency.WindowSeconds = &window
+		}
+	}
 	return SendResult{
 		ID:                   data.ID,
 		Status:               data.Status,
@@ -520,6 +586,8 @@ func mapSendMailResult(data primitiveapi.SendMailResult) SendResult {
 		RequestID:            data.RequestID,
 		ContentHash:          data.ContentHash,
 		IdempotentReplay:     data.IdempotentReplay,
+		Idempotency:          idempotency,
+		DedupReason:          data.DedupReason.Or(""),
 		DeliveryStatus:       data.DeliveryStatus,
 		SMTPResponseCode:     data.SMTPResponseCode,
 		SMTPResponseText:     data.SMTPResponseText,
@@ -572,8 +640,8 @@ func (c *Client) Reply(ctx context.Context, email *ReceivedEmail, input ReplyPar
 		return zero, err
 	}
 	switch v := res.(type) {
-	case *primitiveapi.ReplyToEmailOK:
-		return mapSendMailResult(v.Data), nil
+	case *primitiveapi.ReplyToEmailOKHeaders:
+		return mapSendMailResult(v.Response.Data), nil
 	default:
 		return zero, mapReplyError(res)
 	}

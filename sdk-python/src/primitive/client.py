@@ -54,6 +54,9 @@ from .api.models.semantic_search_result import (
     SemanticSearchResult as ApiSemanticSearchResult,
 )
 from .api.models.send_email_response_200 import SendEmailResponse200
+from .api.models.send_mail_idempotency_replay import (
+    SendMailIdempotencyReplay as ApiSendMailIdempotencyReplay,
+)
 from .api.models.send_mail_input import SendMailInput as ApiSendMailInput
 from .api.models.send_mail_result import SendMailResult as ApiSendMailResult
 from .api.types import UNSET
@@ -202,6 +205,36 @@ class SendAttachment(_OptionalSendAttachment):
     content_base64: str
 
 
+SendIdempotencyKeySource = Literal["explicit", "auto_content", "function_trigger"]
+
+
+@dataclass(frozen=True)
+class SendIdempotency:
+    """Why a send was answered with an existing send instead of being made.
+
+    Present on ``SendResult`` only when ``idempotent_replay`` is true:
+    nothing was sent for that request.
+    """
+
+    # ``explicit``: the request carried an idempotency key.
+    # ``auto_content``: it carried none, so the API derived one from the
+    # request content (recipients included) and a fixed 5-minute window.
+    # ``function_trigger``: a keyless send made by a Function; the key came
+    # from the content, the Function and the email or event that invoked it.
+    key_source: SendIdempotencyKeySource
+    # The send this request collapsed onto. Same value as ``SendResult.id``.
+    original_sent_email_id: str
+    # When that send was created (ISO 8601).
+    original_created_at: str | None
+    # Length of the content window (300) when an ``auto_content`` key matched
+    # on content. None for ``explicit`` and ``function_trigger`` keys, which
+    # have no window, and for a keyless reply matched because its parent
+    # already has a reply (``dedup_reason == "parent_already_replied"``).
+    window_seconds: int | None
+    # Always True. The object is absent on a request that sent.
+    replayed: bool = True
+
+
 @dataclass(frozen=True)
 class SendResult:
     id: str
@@ -222,6 +255,13 @@ class SendResult:
     # Echoed requested execution time on a ``scheduled`` response
     # (ISO 8601). None on immediate sends.
     scheduled_at: str | None = None
+    # Present only when ``idempotent_replay`` is true. Says how the key that
+    # matched was derived and which earlier send answered this request.
+    idempotency: SendIdempotency | None = None
+    # Why the response was a replay: ``content_hash_match`` (the idempotency
+    # key matched an earlier send) or ``parent_already_replied`` (a keyless
+    # reply to an email that already has a reply). None on a fresh send.
+    dedup_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -557,6 +597,22 @@ def _map_send_result(result: ApiSendMailResult) -> SendResult:
         if result.scheduled_at is UNSET
         else cast(Any, result.scheduled_at).isoformat()
     )
+    replay = result.idempotency
+    idempotency: SendIdempotency | None = None
+    if isinstance(replay, ApiSendMailIdempotencyReplay):
+        idempotency = SendIdempotency(
+            key_source=replay.key_source.value,
+            original_sent_email_id=str(replay.original_sent_email_id),
+            original_created_at=(
+                None
+                if replay.original_created_at is None
+                else replay.original_created_at.isoformat()
+            ),
+            window_seconds=replay.window_seconds,
+        )
+    dedup_reason: str | None = (
+        result.dedup_reason if isinstance(result.dedup_reason, str) else None
+    )
     return SendResult(
         id=result.id,
         status=result.status.value,
@@ -567,6 +623,8 @@ def _map_send_result(result: ApiSendMailResult) -> SendResult:
         content_hash=result.content_hash,
         queue_id=queue_id,
         idempotent_replay=result.idempotent_replay,
+        idempotency=idempotency,
+        dedup_reason=dedup_reason,
         delivery_status=delivery_status,
         smtp_response_code=smtp_response_code,
         smtp_response_text=smtp_response_text,
@@ -1251,6 +1309,8 @@ __all__ = [
     "PrimitiveAPIError",
     "PrimitiveClient",
     "SendAttachment",
+    "SendIdempotency",
+    "SendIdempotencyKeySource",
     "SendResult",
     "SendThread",
     "client",

@@ -106,7 +106,7 @@ type capturingSendAPI struct {
 func (s *capturingSendAPI) SendEmail(_ context.Context, request *primitiveapi.SendMailInput, params primitiveapi.SendEmailParams) (primitiveapi.SendEmailRes, error) {
 	s.request = request
 	s.params = params
-	return &primitiveapi.SendEmailOK{
+	return &primitiveapi.SendEmailOKHeaders{Response: primitiveapi.SendEmailOK{
 		Success: true,
 		Data: primitiveapi.SendMailResult{
 			ID:                   "sent-x",
@@ -118,13 +118,13 @@ func (s *capturingSendAPI) SendEmail(_ context.Context, request *primitiveapi.Se
 			RequestID:            "req",
 			ContentHash:          "h",
 		},
-	}, nil
+	}}, nil
 }
 
 func (s *capturingSendAPI) ReplyToEmail(_ context.Context, request *primitiveapi.ReplyInput, params primitiveapi.ReplyToEmailParams) (primitiveapi.ReplyToEmailRes, error) {
 	s.replyRequest = request
 	s.replyParams = params
-	return &primitiveapi.ReplyToEmailOK{
+	return &primitiveapi.ReplyToEmailOKHeaders{Response: primitiveapi.ReplyToEmailOK{
 		Success: true,
 		Data: primitiveapi.SendMailResult{
 			ID:                   "sent-x",
@@ -136,7 +136,7 @@ func (s *capturingSendAPI) ReplyToEmail(_ context.Context, request *primitiveapi
 			RequestID:            "req",
 			ContentHash:          "h",
 		},
-	}, nil
+	}}, nil
 }
 
 func (s *capturingSendAPI) SemanticSearch(_ context.Context, _ *primitiveapi.SemanticSearchInput) (primitiveapi.SemanticSearchRes, error) {

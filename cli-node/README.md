@@ -324,6 +324,23 @@ still goes out, and different replies to the same email are separate sends. To
 retry an uncertain send after the window, pass the key it reported with
 `--idempotency-key`.
 
+When a send is answered with an earlier one, nothing goes out and the stderr
+notice says which send answered it and why:
+
+| Why | Notice |
+|---|---|
+| The same content inside the five-minute window, with no key of your own | `Not sent: identical to <id> sent 42s ago (status delivered). Pass --idempotency-key with a new key to send again.` |
+| A key you passed that was already used | `Not sent: idempotency key <key> was already used for <id> sent 3h ago (status delivered). A key you pass never expires. Use a different key only for a different message.` |
+| A Function sending again for the email or event that invoked it | `Not sent: this Function already sent this message as <id> sent 2m ago (status delivered), for the same email or event that invoked it. A Function that runs again for one trigger sends once.` |
+| A reply with no key to an email that already has a reply | `Not sent: the email already has a reply, <id> sent 5m ago (status delivered). Pass an idempotency key to send another reply.` |
+
+The notice goes to stderr only, so stdout stays parseable. With `--json` it is
+the envelope's `outcome_message`, and `sent.idempotency` carries the same facts
+as fields (`key_source`, `original_sent_email_id`, `original_created_at`,
+`window_seconds`). The outcome is `already_sent` and the exit code is 0 in every
+case. An API response without the `idempotency` object gets the general notice,
+`Already sent: this exact message went out earlier (...). Nothing new was sent.`
+
 Without `--json`, `send` and `reply` keep printing the send record on stdout exactly
 as before and add a one-line stderr summary such as `Reply sent (queued for
 delivery, id X). Do not resend.` Before sending, `primitive reply` (and

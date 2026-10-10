@@ -19885,6 +19885,59 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "type": "boolean",
           "description": "True when the response replays a previously-recorded send\nkeyed by `client_idempotency_key` (same key, same canonical\npayload). False on a fresh send and on gate-denied\nresponses. Lets callers branch on cache state without\ndiffing fields.\n"
         },
+        "dedup_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the response was a replay; null or absent on a fresh\nsend. `content_hash_match`: the idempotency key matched an\nearlier send. `parent_already_replied`: a reply sent without\nan `Idempotency-Key` header was matched to the reply its\nparent email already has. Pass an `Idempotency-Key` to send\nanother reply to the same email.\n"
+        },
+        "idempotency": {
+          "type": "object",
+          "description": "Present only when the request was answered with an existing send\ninstead of making a new one (`idempotent_replay: true`). Nothing\nwas sent for this request. Says how the idempotency key was\nderived and which send the request collapsed onto. On the replay\nof a stored failure the same object is under `error.details`.\n",
+          "properties": {
+            "replayed": {
+              "type": "boolean",
+              "description": "Always `true`. The object is absent on a request that made a send of its own."
+            },
+            "key_source": {
+              "type": "string",
+              "enum": [
+                "explicit",
+                "auto_content",
+                "function_trigger"
+              ],
+              "description": "`explicit`: the request carried an `Idempotency-Key` header.\n`auto_content`: no header was sent, so the key was derived\nfrom the canonical request content (recipients included) and\na fixed 5-minute window; an identical send inside the same\nwindow was not sent again. `function_trigger`: no header on a\nsend made by a Function, so the key was derived from the\ncontent, the Function and the inbound email (or event) that\ninvoked it.\n"
+            },
+            "original_sent_email_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The send this request collapsed onto. Same value as `id`."
+            },
+            "original_created_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "When that send was created."
+            },
+            "window_seconds": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Length of the content window (300) when an `auto_content`\nkey matched on content. Null for `explicit` and\n`function_trigger` keys, which have no window, and for a\nkeyless reply matched because its parent already has a reply\n(`dedup_reason: parent_already_replied`).\n"
+            }
+          },
+          "required": [
+            "replayed",
+            "key_source",
+            "original_sent_email_id",
+            "original_created_at",
+            "window_seconds"
+          ]
+        },
         "scheduled_at": {
           "type": "string",
           "format": "date-time",
@@ -20854,6 +20907,59 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "idempotent_replay": {
           "type": "boolean",
           "description": "True when the response replays a previously-recorded send\nkeyed by `client_idempotency_key` (same key, same canonical\npayload). False on a fresh send and on gate-denied\nresponses. Lets callers branch on cache state without\ndiffing fields.\n"
+        },
+        "dedup_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Why the response was a replay; null or absent on a fresh\nsend. `content_hash_match`: the idempotency key matched an\nearlier send. `parent_already_replied`: a reply sent without\nan `Idempotency-Key` header was matched to the reply its\nparent email already has. Pass an `Idempotency-Key` to send\nanother reply to the same email.\n"
+        },
+        "idempotency": {
+          "type": "object",
+          "description": "Present only when the request was answered with an existing send\ninstead of making a new one (`idempotent_replay: true`). Nothing\nwas sent for this request. Says how the idempotency key was\nderived and which send the request collapsed onto. On the replay\nof a stored failure the same object is under `error.details`.\n",
+          "properties": {
+            "replayed": {
+              "type": "boolean",
+              "description": "Always `true`. The object is absent on a request that made a send of its own."
+            },
+            "key_source": {
+              "type": "string",
+              "enum": [
+                "explicit",
+                "auto_content",
+                "function_trigger"
+              ],
+              "description": "`explicit`: the request carried an `Idempotency-Key` header.\n`auto_content`: no header was sent, so the key was derived\nfrom the canonical request content (recipients included) and\na fixed 5-minute window; an identical send inside the same\nwindow was not sent again. `function_trigger`: no header on a\nsend made by a Function, so the key was derived from the\ncontent, the Function and the inbound email (or event) that\ninvoked it.\n"
+            },
+            "original_sent_email_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The send this request collapsed onto. Same value as `id`."
+            },
+            "original_created_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "When that send was created."
+            },
+            "window_seconds": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Length of the content window (300) when an `auto_content`\nkey matched on content. Null for `explicit` and\n`function_trigger` keys, which have no window, and for a\nkeyless reply matched because its parent already has a reply\n(`dedup_reason: parent_already_replied`).\n"
+            }
+          },
+          "required": [
+            "replayed",
+            "key_source",
+            "original_sent_email_id",
+            "original_created_at",
+            "window_seconds"
+          ]
         },
         "scheduled_at": {
           "type": "string",

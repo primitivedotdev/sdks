@@ -63832,6 +63832,39 @@ func (s *OptSemanticSearchInputMode) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes SendMailIdempotencyReplay as json.
+func (o OptSendMailIdempotencyReplay) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes SendMailIdempotencyReplay from json.
+func (o *OptSendMailIdempotencyReplay) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptSendMailIdempotencyReplay to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptSendMailIdempotencyReplay) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptSendMailIdempotencyReplay) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes SendMailInputBcc as json.
 func (o OptSendMailInputBcc) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -83522,6 +83555,206 @@ func (s *SendMailAttachment) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *SendMailIdempotencyReplay) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *SendMailIdempotencyReplay) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("replayed")
+		e.Bool(s.Replayed)
+	}
+	{
+		e.FieldStart("key_source")
+		s.KeySource.Encode(e)
+	}
+	{
+		e.FieldStart("original_sent_email_id")
+		json.EncodeUUID(e, s.OriginalSentEmailID)
+	}
+	{
+		e.FieldStart("original_created_at")
+		s.OriginalCreatedAt.Encode(e, json.EncodeDateTime)
+	}
+	{
+		e.FieldStart("window_seconds")
+		s.WindowSeconds.Encode(e)
+	}
+}
+
+var jsonFieldsNameOfSendMailIdempotencyReplay = [5]string{
+	0: "replayed",
+	1: "key_source",
+	2: "original_sent_email_id",
+	3: "original_created_at",
+	4: "window_seconds",
+}
+
+// Decode decodes SendMailIdempotencyReplay from json.
+func (s *SendMailIdempotencyReplay) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SendMailIdempotencyReplay to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "replayed":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Bool()
+				s.Replayed = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"replayed\"")
+			}
+		case "key_source":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.KeySource.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"key_source\"")
+			}
+		case "original_sent_email_id":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := json.DecodeUUID(d)
+				s.OriginalSentEmailID = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"original_sent_email_id\"")
+			}
+		case "original_created_at":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.OriginalCreatedAt.Decode(d, json.DecodeDateTime); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"original_created_at\"")
+			}
+		case "window_seconds":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				if err := s.WindowSeconds.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"window_seconds\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode SendMailIdempotencyReplay")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00011111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfSendMailIdempotencyReplay) {
+					name = jsonFieldsNameOfSendMailIdempotencyReplay[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *SendMailIdempotencyReplay) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SendMailIdempotencyReplay) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes SendMailIdempotencyReplayKeySource as json.
+func (s SendMailIdempotencyReplayKeySource) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes SendMailIdempotencyReplayKeySource from json.
+func (s *SendMailIdempotencyReplayKeySource) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode SendMailIdempotencyReplayKeySource to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch SendMailIdempotencyReplayKeySource(v) {
+	case SendMailIdempotencyReplayKeySourceExplicit:
+		*s = SendMailIdempotencyReplayKeySourceExplicit
+	case SendMailIdempotencyReplayKeySourceAutoContent:
+		*s = SendMailIdempotencyReplayKeySourceAutoContent
+	case SendMailIdempotencyReplayKeySourceFunctionTrigger:
+		*s = SendMailIdempotencyReplayKeySourceFunctionTrigger
+	default:
+		*s = SendMailIdempotencyReplayKeySource(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s SendMailIdempotencyReplayKeySource) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *SendMailIdempotencyReplayKeySource) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *SendMailInput) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -84244,6 +84477,18 @@ func (s *SendMailResult) encodeFields(e *jx.Encoder) {
 		e.Bool(s.IdempotentReplay)
 	}
 	{
+		if s.DedupReason.Set {
+			e.FieldStart("dedup_reason")
+			s.DedupReason.Encode(e)
+		}
+	}
+	{
+		if s.Idempotency.Set {
+			e.FieldStart("idempotency")
+			s.Idempotency.Encode(e)
+		}
+	}
+	{
 		if s.ScheduledAt.Set {
 			e.FieldStart("scheduled_at")
 			s.ScheduledAt.Encode(e, json.EncodeDateTime)
@@ -84251,7 +84496,7 @@ func (s *SendMailResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfSendMailResult = [15]string{
+var jsonFieldsNameOfSendMailResult = [17]string{
 	0:  "repeat_id",
 	1:  "id",
 	2:  "status",
@@ -84266,7 +84511,9 @@ var jsonFieldsNameOfSendMailResult = [15]string{
 	11: "smtp_response_code",
 	12: "smtp_response_text",
 	13: "idempotent_replay",
-	14: "scheduled_at",
+	14: "dedup_reason",
+	15: "idempotency",
+	16: "scheduled_at",
 }
 
 // Decode decodes SendMailResult from json.
@@ -84274,7 +84521,7 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 	if s == nil {
 		return errors.New("invalid: unable to decode SendMailResult to nil")
 	}
-	var requiredBitSet [2]uint8
+	var requiredBitSet [3]uint8
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -84450,6 +84697,26 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"idempotent_replay\"")
 			}
+		case "dedup_reason":
+			if err := func() error {
+				s.DedupReason.Reset()
+				if err := s.DedupReason.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"dedup_reason\"")
+			}
+		case "idempotency":
+			if err := func() error {
+				s.Idempotency.Reset()
+				if err := s.Idempotency.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"idempotency\"")
+			}
 		case "scheduled_at":
 			if err := func() error {
 				s.ScheduledAt.Reset()
@@ -84469,9 +84736,10 @@ func (s *SendMailResult) Decode(d *jx.Decoder) error {
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
-	for i, mask := range [2]uint8{
+	for i, mask := range [3]uint8{
 		0b11111110,
 		0b00100011,
+		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

@@ -153,6 +153,39 @@ For idempotent retries, set `IdempotencyKey` on `SendParams` or
 `ForwardParams` (see the `Send` example above). The same key replays the
 original response.
 
+A send with no idempotency key gets an automatic one: a hash of the request
+content (recipients included) and a fixed 5-minute window. An identical send
+inside one window is not sent again. The result says so: `IdempotentReplay`
+is true and `Idempotency` names why.
+
+```go
+result, err := client.Send(ctx, params)
+if err != nil {
+	return err
+}
+if result.Idempotency != nil {
+	// Nothing was sent for this call.
+	_ = result.Idempotency.KeySource           // explicit, auto_content or function_trigger
+	_ = result.Idempotency.OriginalSentEmailID // the send that answered it
+	_ = result.Idempotency.OriginalCreatedAt   // *time.Time, nil when not reported
+	_ = result.Idempotency.WindowSeconds       // *int: 300 for an automatic content key, else nil
+}
+```
+
+`KeySource` is `primitive.SendIdempotencyKeySourceExplicit` when you passed a
+key, `SendIdempotencyKeySourceAutoContent` when the key was derived from
+content, and `SendIdempotencyKeySourceFunctionTrigger` for a keyless send made
+by a Function. A keyless reply to an email that already has a reply is also
+answered with that reply; it reports
+`DedupReason == primitive.DedupReasonParentAlreadyReplied` and no window. To
+send the same message again on purpose, set an `IdempotencyKey` of your own.
+`Idempotency` is nil on a send that went out.
+
+Code that calls the generated `api` package directly: `SendEmail` and
+`ReplyToEmail` now return `*api.SendEmailOKHeaders` and
+`*api.ReplyToEmailOKHeaders` on a 200. The body is under `.Response`, beside
+the `Idempotent-Replayed` response header.
+
 ### About `Wait` mode
 
 When `Wait` is true, the call returns the first downstream SMTP outcome (or

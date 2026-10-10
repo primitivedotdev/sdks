@@ -14,6 +14,8 @@ from typing import cast
 from uuid import UUID
 import datetime
 
+if TYPE_CHECKING:
+  from ..models.send_mail_idempotency_replay import SendMailIdempotencyReplay
 
 
 
@@ -108,6 +110,18 @@ class SendMailResult:
                 is true.
             smtp_response_text (str | Unset): SMTP response text from the first downstream delivery outcome when wait is
                 true.
+            dedup_reason (None | str | Unset): Why the response was a replay; null or absent on a fresh
+                send. `content_hash_match`: the idempotency key matched an
+                earlier send. `parent_already_replied`: a reply sent without
+                an `Idempotency-Key` header was matched to the reply its
+                parent email already has. Pass an `Idempotency-Key` to send
+                another reply to the same email.
+            idempotency (SendMailIdempotencyReplay | Unset): Present only when the request was answered with an existing
+                send
+                instead of making a new one (`idempotent_replay: true`). Nothing
+                was sent for this request. Says how the idempotency key was
+                derived and which send the request collapsed onto. On the replay
+                of a stored failure the same object is under `error.details`.
             scheduled_at (datetime.datetime | Unset): Echoed requested execution time on a `scheduled`
                 response. On scheduled creates, nothing is dispatched
                 yet: `queue_id` is null and `accepted` / `rejected` are
@@ -128,6 +142,8 @@ class SendMailResult:
     delivery_status: DeliveryStatus | Unset = UNSET
     smtp_response_code: int | None | Unset = UNSET
     smtp_response_text: str | Unset = UNSET
+    dedup_reason: None | str | Unset = UNSET
+    idempotency: SendMailIdempotencyReplay | Unset = UNSET
     scheduled_at: datetime.datetime | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
@@ -136,6 +152,7 @@ class SendMailResult:
 
 
     def to_dict(self) -> dict[str, Any]:
+        from ..models.send_mail_idempotency_replay import SendMailIdempotencyReplay # noqa: PLC0415
         id = self.id
 
         status = self.status.value
@@ -178,6 +195,16 @@ class SendMailResult:
 
         smtp_response_text = self.smtp_response_text
 
+        dedup_reason: None | str | Unset
+        if isinstance(self.dedup_reason, Unset):
+            dedup_reason = UNSET
+        else:
+            dedup_reason = self.dedup_reason
+
+        idempotency: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.idempotency, Unset):
+            idempotency = self.idempotency.to_dict()
+
         scheduled_at: str | Unset = UNSET
         if not isinstance(self.scheduled_at, Unset):
             scheduled_at = self.scheduled_at.isoformat()
@@ -205,6 +232,10 @@ class SendMailResult:
             field_dict["smtp_response_code"] = smtp_response_code
         if smtp_response_text is not UNSET:
             field_dict["smtp_response_text"] = smtp_response_text
+        if dedup_reason is not UNSET:
+            field_dict["dedup_reason"] = dedup_reason
+        if idempotency is not UNSET:
+            field_dict["idempotency"] = idempotency
         if scheduled_at is not UNSET:
             field_dict["scheduled_at"] = scheduled_at
 
@@ -214,6 +245,7 @@ class SendMailResult:
 
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.send_mail_idempotency_replay import SendMailIdempotencyReplay # noqa: PLC0415
         d = dict(src_dict)
         id = d.pop("id")
 
@@ -278,6 +310,26 @@ class SendMailResult:
 
         smtp_response_text = d.pop("smtp_response_text", UNSET)
 
+        def _parse_dedup_reason(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        dedup_reason = _parse_dedup_reason(d.pop("dedup_reason", UNSET))
+
+
+        _idempotency = d.pop("idempotency", UNSET)
+        idempotency: SendMailIdempotencyReplay | Unset
+        if isinstance(_idempotency,  Unset):
+            idempotency = UNSET
+        else:
+            idempotency = SendMailIdempotencyReplay.from_dict(_idempotency)
+
+
+
+
         _scheduled_at = d.pop("scheduled_at", UNSET)
         scheduled_at: datetime.datetime | Unset
         if isinstance(_scheduled_at,  Unset):
@@ -303,6 +355,8 @@ class SendMailResult:
             delivery_status=delivery_status,
             smtp_response_code=smtp_response_code,
             smtp_response_text=smtp_response_text,
+            dedup_reason=dedup_reason,
+            idempotency=idempotency,
             scheduled_at=scheduled_at,
         )
 

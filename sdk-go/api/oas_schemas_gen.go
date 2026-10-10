@@ -30201,6 +30201,52 @@ func (o OptSemanticSearchInputMode) Or(d SemanticSearchInputMode) SemanticSearch
 	return d
 }
 
+// NewOptSendMailIdempotencyReplay returns new OptSendMailIdempotencyReplay with value set to v.
+func NewOptSendMailIdempotencyReplay(v SendMailIdempotencyReplay) OptSendMailIdempotencyReplay {
+	return OptSendMailIdempotencyReplay{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSendMailIdempotencyReplay is optional SendMailIdempotencyReplay.
+type OptSendMailIdempotencyReplay struct {
+	Value SendMailIdempotencyReplay
+	Set   bool
+}
+
+// IsSet returns true if OptSendMailIdempotencyReplay was set.
+func (o OptSendMailIdempotencyReplay) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSendMailIdempotencyReplay) Reset() {
+	var v SendMailIdempotencyReplay
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSendMailIdempotencyReplay) SetTo(v SendMailIdempotencyReplay) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSendMailIdempotencyReplay) Get() (v SendMailIdempotencyReplay, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSendMailIdempotencyReplay) Or(d SendMailIdempotencyReplay) SendMailIdempotencyReplay {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSendMailInputBcc returns new OptSendMailInputBcc with value set to v.
 func NewOptSendMailInputBcc(v SendMailInputBcc) OptSendMailInputBcc {
 	return OptSendMailInputBcc{
@@ -35751,7 +35797,33 @@ func (s *ReplyToEmailOK) SetData(val SendMailResult) {
 	s.Data = val
 }
 
-func (*ReplyToEmailOK) replyToEmailRes() {}
+// ReplyToEmailOKHeaders wraps ReplyToEmailOK with response headers.
+type ReplyToEmailOKHeaders struct {
+	IdempotentReplayed OptString
+	Response           ReplyToEmailOK
+}
+
+// GetIdempotentReplayed returns the value of IdempotentReplayed.
+func (s *ReplyToEmailOKHeaders) GetIdempotentReplayed() OptString {
+	return s.IdempotentReplayed
+}
+
+// GetResponse returns the value of Response.
+func (s *ReplyToEmailOKHeaders) GetResponse() ReplyToEmailOK {
+	return s.Response
+}
+
+// SetIdempotentReplayed sets the value of IdempotentReplayed.
+func (s *ReplyToEmailOKHeaders) SetIdempotentReplayed(val OptString) {
+	s.IdempotentReplayed = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ReplyToEmailOKHeaders) SetResponse(val ReplyToEmailOK) {
+	s.Response = val
+}
+
+func (*ReplyToEmailOKHeaders) replyToEmailRes() {}
 
 type ReplyToEmailServiceUnavailable ErrorResponse
 
@@ -38201,7 +38273,33 @@ func (s *SendEmailOK) SetData(val SendMailResult) {
 	s.Data = val
 }
 
-func (*SendEmailOK) sendEmailRes() {}
+// SendEmailOKHeaders wraps SendEmailOK with response headers.
+type SendEmailOKHeaders struct {
+	IdempotentReplayed OptString
+	Response           SendEmailOK
+}
+
+// GetIdempotentReplayed returns the value of IdempotentReplayed.
+func (s *SendEmailOKHeaders) GetIdempotentReplayed() OptString {
+	return s.IdempotentReplayed
+}
+
+// GetResponse returns the value of Response.
+func (s *SendEmailOKHeaders) GetResponse() SendEmailOK {
+	return s.Response
+}
+
+// SetIdempotentReplayed sets the value of IdempotentReplayed.
+func (s *SendEmailOKHeaders) SetIdempotentReplayed(val OptString) {
+	s.IdempotentReplayed = val
+}
+
+// SetResponse sets the value of Response.
+func (s *SendEmailOKHeaders) SetResponse(val SendEmailOK) {
+	s.Response = val
+}
+
+func (*SendEmailOKHeaders) sendEmailRes() {}
 
 type SendEmailServiceUnavailable ErrorResponse
 
@@ -38249,6 +38347,142 @@ func (s *SendMailAttachment) SetContentType(val OptString) {
 // SetContentBase64 sets the value of ContentBase64.
 func (s *SendMailAttachment) SetContentBase64(val string) {
 	s.ContentBase64 = val
+}
+
+// Present only when the request was answered with an existing send
+// instead of making a new one (`idempotent_replay: true`). Nothing
+// was sent for this request. Says how the idempotency key was
+// derived and which send the request collapsed onto. On the replay
+// of a stored failure the same object is under `error.details`.
+// Ref: #/components/schemas/SendMailIdempotencyReplay
+type SendMailIdempotencyReplay struct {
+	// Always `true`. The object is absent on a request that made a send of its own.
+	Replayed bool `json:"replayed"`
+	// `explicit`: the request carried an `Idempotency-Key` header.
+	// `auto_content`: no header was sent, so the key was derived
+	// from the canonical request content (recipients included) and
+	// a fixed 5-minute window; an identical send inside the same
+	// window was not sent again. `function_trigger`: no header on a
+	// send made by a Function, so the key was derived from the
+	// content, the Function and the inbound email (or event) that
+	// invoked it.
+	KeySource SendMailIdempotencyReplayKeySource `json:"key_source"`
+	// The send this request collapsed onto. Same value as `id`.
+	OriginalSentEmailID uuid.UUID `json:"original_sent_email_id"`
+	// When that send was created.
+	OriginalCreatedAt NilDateTime `json:"original_created_at"`
+	// Length of the content window (300) when an `auto_content`
+	// key matched on content. Null for `explicit` and
+	// `function_trigger` keys, which have no window, and for a
+	// keyless reply matched because its parent already has a reply
+	// (`dedup_reason: parent_already_replied`).
+	WindowSeconds NilInt `json:"window_seconds"`
+}
+
+// GetReplayed returns the value of Replayed.
+func (s *SendMailIdempotencyReplay) GetReplayed() bool {
+	return s.Replayed
+}
+
+// GetKeySource returns the value of KeySource.
+func (s *SendMailIdempotencyReplay) GetKeySource() SendMailIdempotencyReplayKeySource {
+	return s.KeySource
+}
+
+// GetOriginalSentEmailID returns the value of OriginalSentEmailID.
+func (s *SendMailIdempotencyReplay) GetOriginalSentEmailID() uuid.UUID {
+	return s.OriginalSentEmailID
+}
+
+// GetOriginalCreatedAt returns the value of OriginalCreatedAt.
+func (s *SendMailIdempotencyReplay) GetOriginalCreatedAt() NilDateTime {
+	return s.OriginalCreatedAt
+}
+
+// GetWindowSeconds returns the value of WindowSeconds.
+func (s *SendMailIdempotencyReplay) GetWindowSeconds() NilInt {
+	return s.WindowSeconds
+}
+
+// SetReplayed sets the value of Replayed.
+func (s *SendMailIdempotencyReplay) SetReplayed(val bool) {
+	s.Replayed = val
+}
+
+// SetKeySource sets the value of KeySource.
+func (s *SendMailIdempotencyReplay) SetKeySource(val SendMailIdempotencyReplayKeySource) {
+	s.KeySource = val
+}
+
+// SetOriginalSentEmailID sets the value of OriginalSentEmailID.
+func (s *SendMailIdempotencyReplay) SetOriginalSentEmailID(val uuid.UUID) {
+	s.OriginalSentEmailID = val
+}
+
+// SetOriginalCreatedAt sets the value of OriginalCreatedAt.
+func (s *SendMailIdempotencyReplay) SetOriginalCreatedAt(val NilDateTime) {
+	s.OriginalCreatedAt = val
+}
+
+// SetWindowSeconds sets the value of WindowSeconds.
+func (s *SendMailIdempotencyReplay) SetWindowSeconds(val NilInt) {
+	s.WindowSeconds = val
+}
+
+// `explicit`: the request carried an `Idempotency-Key` header.
+// `auto_content`: no header was sent, so the key was derived
+// from the canonical request content (recipients included) and
+// a fixed 5-minute window; an identical send inside the same
+// window was not sent again. `function_trigger`: no header on a
+// send made by a Function, so the key was derived from the
+// content, the Function and the inbound email (or event) that
+// invoked it.
+type SendMailIdempotencyReplayKeySource string
+
+const (
+	SendMailIdempotencyReplayKeySourceExplicit        SendMailIdempotencyReplayKeySource = "explicit"
+	SendMailIdempotencyReplayKeySourceAutoContent     SendMailIdempotencyReplayKeySource = "auto_content"
+	SendMailIdempotencyReplayKeySourceFunctionTrigger SendMailIdempotencyReplayKeySource = "function_trigger"
+)
+
+// AllValues returns all SendMailIdempotencyReplayKeySource values.
+func (SendMailIdempotencyReplayKeySource) AllValues() []SendMailIdempotencyReplayKeySource {
+	return []SendMailIdempotencyReplayKeySource{
+		SendMailIdempotencyReplayKeySourceExplicit,
+		SendMailIdempotencyReplayKeySourceAutoContent,
+		SendMailIdempotencyReplayKeySourceFunctionTrigger,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SendMailIdempotencyReplayKeySource) MarshalText() ([]byte, error) {
+	switch s {
+	case SendMailIdempotencyReplayKeySourceExplicit:
+		return []byte(s), nil
+	case SendMailIdempotencyReplayKeySourceAutoContent:
+		return []byte(s), nil
+	case SendMailIdempotencyReplayKeySourceFunctionTrigger:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SendMailIdempotencyReplayKeySource) UnmarshalText(data []byte) error {
+	switch SendMailIdempotencyReplayKeySource(data) {
+	case SendMailIdempotencyReplayKeySourceExplicit:
+		*s = SendMailIdempotencyReplayKeySourceExplicit
+		return nil
+	case SendMailIdempotencyReplayKeySourceAutoContent:
+		*s = SendMailIdempotencyReplayKeySourceAutoContent
+		return nil
+	case SendMailIdempotencyReplayKeySourceFunctionTrigger:
+		*s = SendMailIdempotencyReplayKeySourceFunctionTrigger
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/SendMailInput
@@ -38697,6 +38931,14 @@ type SendMailResult struct {
 	// responses. Lets callers branch on cache state without
 	// diffing fields.
 	IdempotentReplay bool `json:"idempotent_replay"`
+	// Why the response was a replay; null or absent on a fresh
+	// send. `content_hash_match`: the idempotency key matched an
+	// earlier send. `parent_already_replied`: a reply sent without
+	// an `Idempotency-Key` header was matched to the reply its
+	// parent email already has. Pass an `Idempotency-Key` to send
+	// another reply to the same email.
+	DedupReason OptNilString                 `json:"dedup_reason"`
+	Idempotency OptSendMailIdempotencyReplay `json:"idempotency"`
 	// Echoed requested execution time on a `scheduled`
 	// response. On scheduled creates, nothing is dispatched
 	// yet: `queue_id` is null and `accepted` / `rejected` are
@@ -38774,6 +39016,16 @@ func (s *SendMailResult) GetIdempotentReplay() bool {
 	return s.IdempotentReplay
 }
 
+// GetDedupReason returns the value of DedupReason.
+func (s *SendMailResult) GetDedupReason() OptNilString {
+	return s.DedupReason
+}
+
+// GetIdempotency returns the value of Idempotency.
+func (s *SendMailResult) GetIdempotency() OptSendMailIdempotencyReplay {
+	return s.Idempotency
+}
+
 // GetScheduledAt returns the value of ScheduledAt.
 func (s *SendMailResult) GetScheduledAt() OptDateTime {
 	return s.ScheduledAt
@@ -38847,6 +39099,16 @@ func (s *SendMailResult) SetSMTPResponseText(val OptString) {
 // SetIdempotentReplay sets the value of IdempotentReplay.
 func (s *SendMailResult) SetIdempotentReplay(val bool) {
 	s.IdempotentReplay = val
+}
+
+// SetDedupReason sets the value of DedupReason.
+func (s *SendMailResult) SetDedupReason(val OptNilString) {
+	s.DedupReason = val
+}
+
+// SetIdempotency sets the value of Idempotency.
+func (s *SendMailResult) SetIdempotency(val OptSendMailIdempotencyReplay) {
+	s.Idempotency = val
 }
 
 // SetScheduledAt sets the value of ScheduledAt.

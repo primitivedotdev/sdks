@@ -476,6 +476,8 @@ class ReplyCommand extends Command {
       const outcome = reportSendCommandResult({
         attemptStartedAtIso,
         idempotencyKey,
+        idempotencyKeyOrigin:
+          flags["idempotency-key"] === undefined ? "cli_derived" : "caller",
         extraEnvelopeFields: {
           ...priorRepliesEnvelopeFields(priorRepliesCheck),
           ...replyTargetEnvelopeFields(flags, this.replyTarget),

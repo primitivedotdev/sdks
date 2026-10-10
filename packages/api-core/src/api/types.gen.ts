@@ -3616,6 +3616,50 @@ export type RepeatStopResult = {
     reply_sent_email_id: string | null;
 };
 
+/**
+ * Present only when the request was answered with an existing send
+ * instead of making a new one (`idempotent_replay: true`). Nothing
+ * was sent for this request. Says how the idempotency key was
+ * derived and which send the request collapsed onto. On the replay
+ * of a stored failure the same object is under `error.details`.
+ *
+ */
+export type SendMailIdempotencyReplay = {
+    /**
+     * Always `true`. The object is absent on a request that made a send of its own.
+     */
+    replayed: boolean;
+    /**
+     * `explicit`: the request carried an `Idempotency-Key` header.
+     * `auto_content`: no header was sent, so the key was derived
+     * from the canonical request content (recipients included) and
+     * a fixed 5-minute window; an identical send inside the same
+     * window was not sent again. `function_trigger`: no header on a
+     * send made by a Function, so the key was derived from the
+     * content, the Function and the inbound email (or event) that
+     * invoked it.
+     *
+     */
+    key_source: 'explicit' | 'auto_content' | 'function_trigger';
+    /**
+     * The send this request collapsed onto. Same value as `id`.
+     */
+    original_sent_email_id: string;
+    /**
+     * When that send was created.
+     */
+    original_created_at: string | null;
+    /**
+     * Length of the content window (300) when an `auto_content`
+     * key matched on content. Null for `explicit` and
+     * `function_trigger` keys, which have no window, and for a
+     * keyless reply matched because its parent already has a reply
+     * (`dedup_reason: parent_already_replied`).
+     *
+     */
+    window_seconds: number | null;
+};
+
 export type SendMailResult = {
     /**
      * Present when the request carried `repeat`. Manage it under `/repeating-sends/{id}`.
@@ -3696,6 +3740,17 @@ export type SendMailResult = {
      *
      */
     idempotent_replay: boolean;
+    /**
+     * Why the response was a replay; null or absent on a fresh
+     * send. `content_hash_match`: the idempotency key matched an
+     * earlier send. `parent_already_replied`: a reply sent without
+     * an `Idempotency-Key` header was matched to the reply its
+     * parent email already has. Pass an `Idempotency-Key` to send
+     * another reply to the same email.
+     *
+     */
+    dedup_reason?: string | null;
+    idempotency?: SendMailIdempotencyReplay;
     /**
      * Echoed requested execution time on a `scheduled`
      * response. On scheduled creates, nothing is dispatched
@@ -7329,7 +7384,11 @@ export type ReplyToEmailError = ReplyToEmailErrors[keyof ReplyToEmailErrors];
 
 export type ReplyToEmailResponses = {
     /**
-     * Outbound relay result
+     * Outbound relay result. When the request was answered with an
+     * existing send instead of making a new one, the response carries
+     * `Idempotent-Replayed: true` and `data.idempotency`, and nothing
+     * was sent for this request.
+     *
      */
     200: SuccessEnvelope & {
         data?: SendMailResult;
@@ -8818,7 +8877,11 @@ export type SendEmailError = SendEmailErrors[keyof SendEmailErrors];
 
 export type SendEmailResponses = {
     /**
-     * Outbound relay result
+     * Outbound relay result. When the request was answered with an
+     * existing send instead of making a new one, the response carries
+     * `Idempotent-Replayed: true` and `data.idempotency`, and nothing
+     * was sent for this request.
+     *
      */
     200: SuccessEnvelope & {
         data?: SendMailResult;
