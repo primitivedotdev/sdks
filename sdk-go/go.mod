@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/coder/websocket v1.8.15
-	github.com/ethereum/go-ethereum v1.17.7
+	github.com/ethereum/go-ethereum v1.17.8
 	github.com/go-faster/errors v0.8.0
 	github.com/go-faster/jx v1.2.0
 	github.com/google/uuid v1.6.0
