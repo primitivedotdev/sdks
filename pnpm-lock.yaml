@@ -115,8 +115,8 @@ importers:
         specifier: ^3.9.36
         version: 3.9.36
       nodemailer:
-        specifier: ^10.0.15
-        version: 10.0.15
+        specifier: ^10.1.0
+        version: 10.1.0
       sanitize-html:
         specifier: ^2.18.0
         version: 2.18.0
@@ -2164,6 +2164,10 @@ packages:
 
   nodemailer@10.0.15:
     resolution: {integrity: sha512-EUqp5PhtcsYXs9Fq/lS7s/8zlTrnBqmzZWzFFROrNikMiz+om/YRKMwqN907t+0A1KKyT8jd39CBUbFZmaZmcA==}
+    engines: {node: '>=20.0.0'}
+
+  nodemailer@10.1.0:
+    resolution: {integrity: sha512-fXW8AulB25aOTuwfRYV6lqHyfz2VM4rr4SGXH03mE7x5znEUpzL5mu6anARUpZN7744Ziwkmr4AxSLPJsBQspg==}
     engines: {node: '>=20.0.0'}
 
   normalize-package-data@6.0.2:
@@ -4618,6 +4622,8 @@ snapshots:
       tslib: 2.8.1
 
   nodemailer@10.0.15: {}
+
+  nodemailer@10.1.0: {}
 
   normalize-package-data@6.0.2:
     dependencies:
