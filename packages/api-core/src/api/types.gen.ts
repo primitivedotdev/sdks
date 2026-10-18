@@ -1862,6 +1862,19 @@ export type EmailSummary = {
          */
         via: string;
     } | null;
+    /**
+     * Display name from the `From:` header, decoded for display:
+     * RFC 2047 encoded words are decoded in their declared charset
+     * and folded lines are joined (e.g. `Dana Rúiz` for
+     * `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
+     * the header carries no display name, and may be absent; treat
+     * a missing value the same as null.
+     *
+     * For display only: the sender chooses this name freely, so
+     * identify the sender by `from_email`, never by this name.
+     *
+     */
+    from_name?: string | null;
 };
 
 export type EmailSearchHighlights = {
@@ -2006,13 +2019,27 @@ export type EmailDetail = {
     /**
      * Raw `From:` header from the message body, including any
      * display name (e.g. `"Alice Example" <alice@example.com>`).
-     * Use this when you need the display name for rendering.
+     * The display name in this raw value may be RFC 2047 encoded
+     * (`=?UTF-8?Q?...?=`); use `from_name` for the decoded name.
      *
      * For the bare email address (display name stripped), use
      * `from_email`.
      *
      */
     from_header?: string | null;
+    /**
+     * Display name from the `From:` header, decoded for display:
+     * RFC 2047 encoded words are decoded in their declared charset
+     * and folded lines are joined (e.g. `Dana Rúiz` for
+     * `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
+     * the header carries no display name, and may be absent; treat
+     * a missing value the same as null.
+     *
+     * For display only: the sender chooses this name freely, so
+     * identify the sender by `from_email`, never by this name.
+     *
+     */
+    from_name?: string | null;
     content_discarded_at?: string | null;
     content_discarded_by_delivery_id?: string | null;
     /**
@@ -2024,9 +2051,9 @@ export type EmailDetail = {
      * **This is the canonical "who sent this email" field for
      * most use cases**, including comparing against allowlists,
      * routing replies, or displaying the sender to a user. Use
-     * `from_header` when you specifically need the display name,
-     * or `sender`/`smtp_mail_from` when you need the SMTP
-     * envelope value (e.g. to follow a bounce).
+     * `from_name` when you need the display name, `from_header`
+     * for the raw header, or `sender`/`smtp_mail_from` when you
+     * need the SMTP envelope value (e.g. to follow a bounce).
      *
      */
     from_email: string;

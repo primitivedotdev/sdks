@@ -30118,6 +30118,12 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.FromName.Set {
+			e.FieldStart("from_name")
+			s.FromName.Encode(e)
+		}
+	}
+	{
 		if s.ContentDiscardedAt.Set {
 			e.FieldStart("content_discarded_at")
 			s.ContentDiscardedAt.Encode(e, json.EncodeDateTime)
@@ -30255,7 +30261,7 @@ func (s *EmailDetail) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailDetail = [52]string{
+var jsonFieldsNameOfEmailDetail = [53]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -30283,31 +30289,32 @@ var jsonFieldsNameOfEmailDetail = [52]string{
 	24: "smtp_mail_from",
 	25: "smtp_rcpt_to",
 	26: "from_header",
-	27: "content_discarded_at",
-	28: "content_discarded_by_delivery_id",
-	29: "from_email",
-	30: "to_email",
-	31: "from_known_address",
-	32: "sender_connected_agent_verified",
-	33: "replies",
-	34: "reply_to_sent_email_id",
-	35: "thread_id",
-	36: "parsed",
-	37: "auth",
-	38: "presence_control",
-	39: "automation_headers",
-	40: "reply_count",
-	41: "last_replied_at",
-	42: "awaiting",
-	43: "automated",
-	44: "automated_reasons",
-	45: "repeat",
-	46: "sender_member",
-	47: "fyi",
-	48: "interaction_hint",
-	49: "interaction_kind",
-	50: "interaction_candidate",
-	51: "relay",
+	27: "from_name",
+	28: "content_discarded_at",
+	29: "content_discarded_by_delivery_id",
+	30: "from_email",
+	31: "to_email",
+	32: "from_known_address",
+	33: "sender_connected_agent_verified",
+	34: "replies",
+	35: "reply_to_sent_email_id",
+	36: "thread_id",
+	37: "parsed",
+	38: "auth",
+	39: "presence_control",
+	40: "automation_headers",
+	41: "reply_count",
+	42: "last_replied_at",
+	43: "awaiting",
+	44: "automated",
+	45: "automated_reasons",
+	46: "repeat",
+	47: "sender_member",
+	48: "fyi",
+	49: "interaction_hint",
+	50: "interaction_kind",
+	51: "interaction_candidate",
+	52: "relay",
 }
 
 // Decode decodes EmailDetail from json.
@@ -30603,6 +30610,16 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"from_header\"")
 			}
+		case "from_name":
+			if err := func() error {
+				s.FromName.Reset()
+				if err := s.FromName.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from_name\"")
+			}
 		case "content_discarded_at":
 			if err := func() error {
 				s.ContentDiscardedAt.Reset()
@@ -30624,7 +30641,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"content_discarded_by_delivery_id\"")
 			}
 		case "from_email":
-			requiredBitSet[3] |= 1 << 5
+			requiredBitSet[3] |= 1 << 6
 			if err := func() error {
 				v, err := d.Str()
 				s.FromEmail = string(v)
@@ -30636,7 +30653,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"from_email\"")
 			}
 		case "to_email":
-			requiredBitSet[3] |= 1 << 6
+			requiredBitSet[3] |= 1 << 7
 			if err := func() error {
 				v, err := d.Str()
 				s.ToEmail = string(v)
@@ -30658,7 +30675,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"from_known_address\"")
 			}
 		case "sender_connected_agent_verified":
-			requiredBitSet[4] |= 1 << 0
+			requiredBitSet[4] |= 1 << 1
 			if err := func() error {
 				v, err := d.Bool()
 				s.SenderConnectedAgentVerified = bool(v)
@@ -30670,7 +30687,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"sender_connected_agent_verified\"")
 			}
 		case "replies":
-			requiredBitSet[4] |= 1 << 1
+			requiredBitSet[4] |= 1 << 2
 			if err := func() error {
 				s.Replies = make([]EmailDetailReply, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -30708,7 +30725,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"thread_id\"")
 			}
 		case "parsed":
-			requiredBitSet[4] |= 1 << 4
+			requiredBitSet[4] |= 1 << 5
 			if err := func() error {
 				if err := s.Parsed.Decode(d); err != nil {
 					return err
@@ -30718,7 +30735,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"parsed\"")
 			}
 		case "auth":
-			requiredBitSet[4] |= 1 << 5
+			requiredBitSet[4] |= 1 << 6
 			if err := func() error {
 				if err := s.Auth.Decode(d); err != nil {
 					return err
@@ -30748,7 +30765,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"automation_headers\"")
 			}
 		case "reply_count":
-			requiredBitSet[5] |= 1 << 0
+			requiredBitSet[5] |= 1 << 1
 			if err := func() error {
 				v, err := d.Int()
 				s.ReplyCount = int(v)
@@ -30760,7 +30777,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"reply_count\"")
 			}
 		case "last_replied_at":
-			requiredBitSet[5] |= 1 << 1
+			requiredBitSet[5] |= 1 << 2
 			if err := func() error {
 				if err := s.LastRepliedAt.Decode(d, json.DecodeDateTime); err != nil {
 					return err
@@ -30770,7 +30787,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"last_replied_at\"")
 			}
 		case "awaiting":
-			requiredBitSet[5] |= 1 << 2
+			requiredBitSet[5] |= 1 << 3
 			if err := func() error {
 				if err := s.Awaiting.Decode(d); err != nil {
 					return err
@@ -30780,7 +30797,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"awaiting\"")
 			}
 		case "automated":
-			requiredBitSet[5] |= 1 << 3
+			requiredBitSet[5] |= 1 << 4
 			if err := func() error {
 				v, err := d.Bool()
 				s.Automated = bool(v)
@@ -30792,7 +30809,7 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"automated\"")
 			}
 		case "automated_reasons":
-			requiredBitSet[5] |= 1 << 4
+			requiredBitSet[5] |= 1 << 5
 			if err := func() error {
 				s.AutomatedReasons = make([]string, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -30894,9 +30911,9 @@ func (s *EmailDetail) Decode(d *jx.Decoder) error {
 		0b00110001,
 		0b11000110,
 		0b00000100,
-		0b01100000,
-		0b00110011,
-		0b00011111,
+		0b11000000,
+		0b01100110,
+		0b00111110,
 		0b00000000,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
@@ -32971,6 +32988,12 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.FromName.Set {
+			e.FieldStart("from_name")
+			s.FromName.Encode(e)
+		}
+	}
+	{
 		e.FieldStart("attachment_count")
 		e.Int(s.AttachmentCount)
 	}
@@ -32996,7 +33019,7 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfEmailSearchResult = [35]string{
+var jsonFieldsNameOfEmailSearchResult = [36]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -33027,11 +33050,12 @@ var jsonFieldsNameOfEmailSearchResult = [35]string{
 	27: "interaction_kind",
 	28: "interaction_candidate",
 	29: "relay",
-	30: "attachment_count",
-	31: "from_known_address",
-	32: "score",
-	33: "highlights",
-	34: "direction",
+	30: "from_name",
+	31: "attachment_count",
+	32: "from_known_address",
+	33: "score",
+	34: "highlights",
+	35: "direction",
 }
 
 // Decode decodes EmailSearchResult from json.
@@ -33371,8 +33395,18 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"relay\"")
 			}
+		case "from_name":
+			if err := func() error {
+				s.FromName.Reset()
+				if err := s.FromName.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from_name\"")
+			}
 		case "attachment_count":
-			requiredBitSet[3] |= 1 << 6
+			requiredBitSet[3] |= 1 << 7
 			if err := func() error {
 				v, err := d.Int()
 				s.AttachmentCount = int(v)
@@ -33384,7 +33418,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"attachment_count\"")
 			}
 		case "from_known_address":
-			requiredBitSet[3] |= 1 << 7
+			requiredBitSet[4] |= 1 << 0
 			if err := func() error {
 				v, err := d.Bool()
 				s.FromKnownAddress = bool(v)
@@ -33416,7 +33450,7 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"highlights\"")
 			}
 		case "direction":
-			requiredBitSet[4] |= 1 << 2
+			requiredBitSet[4] |= 1 << 3
 			if err := func() error {
 				if err := s.Direction.Decode(d); err != nil {
 					return err
@@ -33438,8 +33472,8 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 		0b01110001,
 		0b11001101,
 		0b01111100,
-		0b11000000,
-		0b00000100,
+		0b10000000,
+		0b00001001,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -34474,9 +34508,15 @@ func (s *EmailSummary) encodeFields(e *jx.Encoder) {
 			s.Relay.Encode(e)
 		}
 	}
+	{
+		if s.FromName.Set {
+			e.FieldStart("from_name")
+			s.FromName.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailSummary = [30]string{
+var jsonFieldsNameOfEmailSummary = [31]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -34507,6 +34547,7 @@ var jsonFieldsNameOfEmailSummary = [30]string{
 	27: "interaction_kind",
 	28: "interaction_candidate",
 	29: "relay",
+	30: "from_name",
 }
 
 // Decode decodes EmailSummary from json.
@@ -34845,6 +34886,16 @@ func (s *EmailSummary) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"relay\"")
+			}
+		case "from_name":
+			if err := func() error {
+				s.FromName.Reset()
+				if err := s.FromName.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"from_name\"")
 			}
 		default:
 			return d.Skip()

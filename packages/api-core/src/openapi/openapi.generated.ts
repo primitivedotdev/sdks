@@ -18440,6 +18440,13 @@ export const openapiDocument: Record<string, unknown> = {
               "hostname",
               "via"
             ]
+          },
+          "from_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name from the `From:` header, decoded for display:\nRFC 2047 encoded words are decoded in their declared charset\nand folded lines are joined (e.g. `Dana Rúiz` for\n`=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when\nthe header carries no display name, and may be absent; treat\na missing value the same as null.\n\nFor display only: the sender chooses this name freely, so\nidentify the sender by `from_email`, never by this name.\n"
           }
         },
         "required": [
@@ -18789,7 +18796,14 @@ export const openapiDocument: Record<string, unknown> = {
               "string",
               "null"
             ],
-            "description": "Raw `From:` header from the message body, including any\ndisplay name (e.g. `\"Alice Example\" <alice@example.com>`).\nUse this when you need the display name for rendering.\n\nFor the bare email address (display name stripped), use\n`from_email`.\n"
+            "description": "Raw `From:` header from the message body, including any\ndisplay name (e.g. `\"Alice Example\" <alice@example.com>`).\nThe display name in this raw value may be RFC 2047 encoded\n(`=?UTF-8?Q?...?=`); use `from_name` for the decoded name.\n\nFor the bare email address (display name stripped), use\n`from_email`.\n"
+          },
+          "from_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name from the `From:` header, decoded for display:\nRFC 2047 encoded words are decoded in their declared charset\nand folded lines are joined (e.g. `Dana Rúiz` for\n`=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when\nthe header carries no display name, and may be absent; treat\na missing value the same as null.\n\nFor display only: the sender chooses this name freely, so\nidentify the sender by `from_email`, never by this name.\n"
           },
           "content_discarded_at": {
             "type": [
@@ -18806,7 +18820,7 @@ export const openapiDocument: Record<string, unknown> = {
           },
           "from_email": {
             "type": "string",
-            "description": "Bare email address parsed from the `From:` header, with\ndisplay name stripped (e.g. `alice@example.com`). Falls\nback to `sender` (the SMTP envelope MAIL FROM) when the\n`From:` header cannot be parsed.\n\n**This is the canonical \"who sent this email\" field for\nmost use cases**, including comparing against allowlists,\nrouting replies, or displaying the sender to a user. Use\n`from_header` when you specifically need the display name,\nor `sender`/`smtp_mail_from` when you need the SMTP\nenvelope value (e.g. to follow a bounce).\n"
+            "description": "Bare email address parsed from the `From:` header, with\ndisplay name stripped (e.g. `alice@example.com`). Falls\nback to `sender` (the SMTP envelope MAIL FROM) when the\n`From:` header cannot be parsed.\n\n**This is the canonical \"who sent this email\" field for\nmost use cases**, including comparing against allowlists,\nrouting replies, or displaying the sender to a user. Use\n`from_name` when you need the display name, `from_header`\nfor the raw header, or `sender`/`smtp_mail_from` when you\nneed the SMTP envelope value (e.g. to follow a bounce).\n"
           },
           "to_email": {
             "type": "string",

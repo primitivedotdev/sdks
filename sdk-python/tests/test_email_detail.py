@@ -234,3 +234,23 @@ def test_email_detail_relay_delivery_is_optional() -> None:
     assert serialized[0]["status"] == "delivered"
     assert serialized[1]["status"] == "quarantined"
     assert serialized[1]["smtp_code"] is None
+
+
+def test_email_detail_from_name_is_optional_and_nullable() -> None:
+    absent = EmailDetail.from_dict(SAMPLE)
+    assert absent.from_name is UNSET
+    assert "from_name" not in absent.to_dict()
+
+    null = EmailDetail.from_dict({**SAMPLE, "from_name": None})
+    assert null.from_name is None
+    assert null.to_dict()["from_name"] is None
+
+    named = EmailDetail.from_dict(
+        {
+            **SAMPLE,
+            "from_header": "=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>",
+            "from_name": "Dana R\u00faiz",
+        }
+    )
+    assert named.from_name == "Dana R\u00faiz"
+    assert named.to_dict()["from_name"] == "Dana R\u00faiz"

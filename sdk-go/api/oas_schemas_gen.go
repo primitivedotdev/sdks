@@ -11213,10 +11213,20 @@ type EmailDetail struct {
 	SMTPRcptTo   OptNilStringArray `json:"smtp_rcpt_to"`
 	// Raw `From:` header from the message body, including any
 	// display name (e.g. `"Alice Example" <alice@example.com>`).
-	// Use this when you need the display name for rendering.
+	// The display name in this raw value may be RFC 2047 encoded
+	// (`=?UTF-8?Q?...?=`); use `from_name` for the decoded name.
 	// For the bare email address (display name stripped), use
 	// `from_email`.
-	FromHeader                   OptNilString   `json:"from_header"`
+	FromHeader OptNilString `json:"from_header"`
+	// Display name from the `From:` header, decoded for display:
+	// RFC 2047 encoded words are decoded in their declared charset
+	// and folded lines are joined (e.g. `Dana Rúiz` for
+	// `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
+	// the header carries no display name, and may be absent; treat
+	// a missing value the same as null.
+	// For display only: the sender chooses this name freely, so
+	// identify the sender by `from_email`, never by this name.
+	FromName                     OptNilString   `json:"from_name"`
 	ContentDiscardedAt           OptNilDateTime `json:"content_discarded_at"`
 	ContentDiscardedByDeliveryID OptNilString   `json:"content_discarded_by_delivery_id"`
 	// Bare email address parsed from the `From:` header, with
@@ -11226,9 +11236,9 @@ type EmailDetail struct {
 	// **This is the canonical "who sent this email" field for
 	// most use cases**, including comparing against allowlists,
 	// routing replies, or displaying the sender to a user. Use
-	// `from_header` when you specifically need the display name,
-	// or `sender`/`smtp_mail_from` when you need the SMTP
-	// envelope value (e.g. to follow a bounce).
+	// `from_name` when you need the display name, `from_header`
+	// for the raw header, or `sender`/`smtp_mail_from` when you
+	// need the SMTP envelope value (e.g. to follow a bounce).
 	FromEmail string `json:"from_email"`
 	// Parsed to address (same as recipient).
 	ToEmail string `json:"to_email"`
@@ -11521,6 +11531,11 @@ func (s *EmailDetail) GetFromHeader() OptNilString {
 	return s.FromHeader
 }
 
+// GetFromName returns the value of FromName.
+func (s *EmailDetail) GetFromName() OptNilString {
+	return s.FromName
+}
+
 // GetContentDiscardedAt returns the value of ContentDiscardedAt.
 func (s *EmailDetail) GetContentDiscardedAt() OptNilDateTime {
 	return s.ContentDiscardedAt
@@ -11779,6 +11794,11 @@ func (s *EmailDetail) SetSMTPRcptTo(val OptNilStringArray) {
 // SetFromHeader sets the value of FromHeader.
 func (s *EmailDetail) SetFromHeader(val OptNilString) {
 	s.FromHeader = val
+}
+
+// SetFromName sets the value of FromName.
+func (s *EmailDetail) SetFromName(val OptNilString) {
+	s.FromName = val
 }
 
 // SetContentDiscardedAt sets the value of ContentDiscardedAt.
@@ -12744,6 +12764,15 @@ type EmailSearchResult struct {
 	// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
 	// field may be absent; treat a missing value the same as null.
 	Relay OptNilEmailSearchResultRelay `json:"relay"`
+	// Display name from the `From:` header, decoded for display:
+	// RFC 2047 encoded words are decoded in their declared charset
+	// and folded lines are joined (e.g. `Dana Rúiz` for
+	// `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
+	// the header carries no display name, and may be absent; treat
+	// a missing value the same as null.
+	// For display only: the sender chooses this name freely, so
+	// identify the sender by `from_email`, never by this name.
+	FromName OptNilString `json:"from_name"`
 	// Number of parsed attachments on the email.
 	AttachmentCount int `json:"attachment_count"`
 	// Whether the parsed From address is known to this org from prior authenticated inbound mail.
@@ -12905,6 +12934,11 @@ func (s *EmailSearchResult) GetInteractionCandidate() OptBool {
 // GetRelay returns the value of Relay.
 func (s *EmailSearchResult) GetRelay() OptNilEmailSearchResultRelay {
 	return s.Relay
+}
+
+// GetFromName returns the value of FromName.
+func (s *EmailSearchResult) GetFromName() OptNilString {
+	return s.FromName
 }
 
 // GetAttachmentCount returns the value of AttachmentCount.
@@ -13080,6 +13114,11 @@ func (s *EmailSearchResult) SetInteractionCandidate(val OptBool) {
 // SetRelay sets the value of Relay.
 func (s *EmailSearchResult) SetRelay(val OptNilEmailSearchResultRelay) {
 	s.Relay = val
+}
+
+// SetFromName sets the value of FromName.
+func (s *EmailSearchResult) SetFromName(val OptNilString) {
+	s.FromName = val
 }
 
 // SetAttachmentCount sets the value of AttachmentCount.
@@ -13662,6 +13701,15 @@ type EmailSummary struct {
 	// Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The
 	// field may be absent; treat a missing value the same as null.
 	Relay OptNilEmailSummaryRelay `json:"relay"`
+	// Display name from the `From:` header, decoded for display:
+	// RFC 2047 encoded words are decoded in their declared charset
+	// and folded lines are joined (e.g. `Dana Rúiz` for
+	// `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
+	// the header carries no display name, and may be absent; treat
+	// a missing value the same as null.
+	// For display only: the sender chooses this name freely, so
+	// identify the sender by `from_email`, never by this name.
+	FromName OptNilString `json:"from_name"`
 }
 
 // GetID returns the value of ID.
@@ -13814,6 +13862,11 @@ func (s *EmailSummary) GetRelay() OptNilEmailSummaryRelay {
 	return s.Relay
 }
 
+// GetFromName returns the value of FromName.
+func (s *EmailSummary) GetFromName() OptNilString {
+	return s.FromName
+}
+
 // SetID sets the value of ID.
 func (s *EmailSummary) SetID(val uuid.UUID) {
 	s.ID = val
@@ -13962,6 +14015,11 @@ func (s *EmailSummary) SetInteractionCandidate(val OptBool) {
 // SetRelay sets the value of Relay.
 func (s *EmailSummary) SetRelay(val OptNilEmailSummaryRelay) {
 	s.Relay = val
+}
+
+// SetFromName sets the value of FromName.
+func (s *EmailSummary) SetFromName(val OptNilString) {
+	s.FromName = val
 }
 
 // What the message declared about being automated, verbatim:

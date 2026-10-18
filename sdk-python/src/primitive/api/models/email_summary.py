@@ -198,6 +198,15 @@ class EmailSummary:
                 anything other than `pending`.
             relay (EmailSummaryRelayType0 | None | Unset): Set when the message reached Primitive through a Primitive mail
                 relay. Null for other mail. The field may be absent; treat a missing value the same as null.
+            from_name (None | str | Unset): Display name from the `From:` header, decoded for display:
+                RFC 2047 encoded words are decoded in their declared charset
+                and folded lines are joined (e.g. `Dana Rúiz` for
+                `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
+                the header carries no display name, and may be absent; treat
+                a missing value the same as null.
+
+                For display only: the sender chooses this name freely, so
+                identify the sender by `from_email`, never by this name.
      """
 
     id: UUID
@@ -230,6 +239,7 @@ class EmailSummary:
     interaction_kind: None | str | Unset = UNSET
     interaction_candidate: bool | Unset = UNSET
     relay: EmailSummaryRelayType0 | None | Unset = UNSET
+    from_name: None | str | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -386,6 +396,12 @@ class EmailSummary:
         else:
             relay = self.relay
 
+        from_name: None | str | Unset
+        if isinstance(self.from_name, Unset):
+            from_name = UNSET
+        else:
+            from_name = self.from_name
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -438,6 +454,8 @@ class EmailSummary:
             field_dict["interaction_candidate"] = interaction_candidate
         if relay is not UNSET:
             field_dict["relay"] = relay
+        if from_name is not UNSET:
+            field_dict["from_name"] = from_name
 
         return field_dict
 
@@ -765,6 +783,16 @@ class EmailSummary:
         relay = _parse_relay(d.pop("relay", UNSET))
 
 
+        def _parse_from_name(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        from_name = _parse_from_name(d.pop("from_name", UNSET))
+
+
         email_summary = cls(
             id=id,
             status=status,
@@ -796,6 +824,7 @@ class EmailSummary:
             interaction_kind=interaction_kind,
             interaction_candidate=interaction_candidate,
             relay=relay,
+            from_name=from_name,
         )
 
 

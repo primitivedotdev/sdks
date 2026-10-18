@@ -91,9 +91,9 @@ class EmailDetail:
                 **This is the canonical "who sent this email" field for
                 most use cases**, including comparing against allowlists,
                 routing replies, or displaying the sender to a user. Use
-                `from_header` when you specifically need the display name,
-                or `sender`/`smtp_mail_from` when you need the SMTP
-                envelope value (e.g. to follow a bounce).
+                `from_name` when you need the display name, `from_header`
+                for the raw header, or `sender`/`smtp_mail_from` when you
+                need the SMTP envelope value (e.g. to follow a bounce).
             to_email (str): Parsed to address (same as recipient)
             sender_connected_agent_verified (bool): True only when this inbound message matches a send made with the
                 current key bound to its sender address as a connected agent.
@@ -219,10 +219,20 @@ class EmailDetail:
             smtp_rcpt_to (list[str] | None | Unset):
             from_header (None | str | Unset): Raw `From:` header from the message body, including any
                 display name (e.g. `"Alice Example" <alice@example.com>`).
-                Use this when you need the display name for rendering.
+                The display name in this raw value may be RFC 2047 encoded
+                (`=?UTF-8?Q?...?=`); use `from_name` for the decoded name.
 
                 For the bare email address (display name stripped), use
                 `from_email`.
+            from_name (None | str | Unset): Display name from the `From:` header, decoded for display:
+                RFC 2047 encoded words are decoded in their declared charset
+                and folded lines are joined (e.g. `Dana Rúiz` for
+                `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
+                the header carries no display name, and may be absent; treat
+                a missing value the same as null.
+
+                For display only: the sender chooses this name freely, so
+                identify the sender by `from_email`, never by this name.
             content_discarded_at (datetime.datetime | None | Unset):
             content_discarded_by_delivery_id (None | str | Unset):
             from_known_address (bool | Unset): True when the inbound's sender address has a matching grant
@@ -321,6 +331,7 @@ class EmailDetail:
     smtp_mail_from: None | str | Unset = UNSET
     smtp_rcpt_to: list[str] | None | Unset = UNSET
     from_header: None | str | Unset = UNSET
+    from_name: None | str | Unset = UNSET
     content_discarded_at: datetime.datetime | None | Unset = UNSET
     content_discarded_by_delivery_id: None | str | Unset = UNSET
     from_known_address: bool | Unset = UNSET
@@ -531,6 +542,12 @@ class EmailDetail:
         else:
             from_header = self.from_header
 
+        from_name: None | str | Unset
+        if isinstance(self.from_name, Unset):
+            from_name = UNSET
+        else:
+            from_name = self.from_name
+
         content_discarded_at: None | str | Unset
         if isinstance(self.content_discarded_at, Unset):
             content_discarded_at = UNSET
@@ -677,6 +694,8 @@ class EmailDetail:
             field_dict["smtp_rcpt_to"] = smtp_rcpt_to
         if from_header is not UNSET:
             field_dict["from_header"] = from_header
+        if from_name is not UNSET:
+            field_dict["from_name"] = from_name
         if content_discarded_at is not UNSET:
             field_dict["content_discarded_at"] = content_discarded_at
         if content_discarded_by_delivery_id is not UNSET:
@@ -1073,6 +1092,16 @@ class EmailDetail:
         from_header = _parse_from_header(d.pop("from_header", UNSET))
 
 
+        def _parse_from_name(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        from_name = _parse_from_name(d.pop("from_name", UNSET))
+
+
         def _parse_content_discarded_at(data: object) -> datetime.datetime | None | Unset:
             if data is None:
                 return data
@@ -1300,6 +1329,7 @@ class EmailDetail:
             smtp_mail_from=smtp_mail_from,
             smtp_rcpt_to=smtp_rcpt_to,
             from_header=from_header,
+            from_name=from_name,
             content_discarded_at=content_discarded_at,
             content_discarded_by_delivery_id=content_discarded_by_delivery_id,
             from_known_address=from_known_address,

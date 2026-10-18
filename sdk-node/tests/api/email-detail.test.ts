@@ -136,6 +136,20 @@ describe("EmailDetail type contract", () => {
     expect(SAMPLE.automated_reasons).toEqual(["list_unsubscribe", "list_id"]);
   });
 
+  it("types from_name as an optional, nullable string", () => {
+    // SAMPLE omits from_name, as responses from servers without the field do.
+    expect(SAMPLE.from_name).toBeUndefined();
+    const withNull: EmailDetail = { ...SAMPLE, from_name: null };
+    expect(withNull.from_name).toBeNull();
+    const named: EmailDetail = {
+      ...SAMPLE,
+      from_header: "=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>",
+      from_name: "Dana R\u00faiz",
+    };
+    const name: string | null | undefined = named.from_name;
+    expect(name).toBe("Dana R\u00faiz");
+  });
+
   it("types relay as an optional, nullable object", () => {
     // SAMPLE omits relay, as responses from servers without the field do.
     expect(SAMPLE.relay).toBeUndefined();
