@@ -59,14 +59,16 @@ describe("renderHandler", () => {
     // from the package root pulls in node:crypto-dependent webhook
     // helpers and breaks Workers-style bundles. The scaffolder must
     // teach the /api subpath specifically. The import block must
-    // include createPrimitiveClient (for outbound), normalizeReceivedEmail
-    // (so client.reply gets threading metadata so --show-sends works),
+    // include createPrimitiveClient (for outbound), replyToEmail (the
+    // reply endpoint, so --show-sends works and the reply can carry
+    // automation headers), getThread (for the per-thread reply cap),
     // the Workers-safe signature verification helpers, and the
     // EmailReceivedEvent type.
     const handler = renderHandler();
     expect(handler).toMatch(/from\s+"@primitivedotdev\/sdk\/api"/);
     expect(handler).toContain("createPrimitiveClient");
-    expect(handler).toContain("normalizeReceivedEmail");
+    expect(handler).toContain("replyToEmail,");
+    expect(handler).toContain("getThread,");
     expect(handler).toContain("PRIMITIVE_SIGNATURE_HEADER");
     expect(handler).toContain("verifyWebhookSignature");
     expect(handler).toContain("WebhookVerificationError");
@@ -99,16 +101,17 @@ describe("renderHandler", () => {
     expect(handler).not.toMatch(/gateway has already HMAC-verified/i);
   });
 
-  it("calls client.reply (not client.send) so the inbound's replies array gets populated", () => {
+  it("replies through the reply endpoint (not send) so the inbound's replies array gets populated", () => {
     // The whole point of this scaffolder is to ship a handler that
     // uses the SDK rather than raw fetch against /v1/send-mail.
-    // client.reply specifically (not client.send) so the server-side
+    // The reply endpoint specifically (not send) so the server-side
     // in_reply_to_email_id FK gets set, which is what makes the
     // inbound's `replies` array populate and `functions:test-function
-    // --show-sends` surface this handler's outbound.
+    // --show-sends` surface this handler's outbound. The generated
+    // replyToEmail operation is used because it forwards `headers`.
     const handler = renderHandler();
-    expect(handler).toContain("client.reply(");
-    expect(handler).toContain("normalizeReceivedEmail(event)");
+    expect(handler).toContain("await replyToEmail({");
+    expect(handler).toContain("path: { id: event.email.id }");
     expect(handler).not.toContain("client.send(");
     expect(handler).not.toContain("/api/v1/send-mail");
   });
@@ -222,18 +225,19 @@ describe("renderHandler loop protection", () => {
   });
 
   it("documents that isLoop is suffix-agnostic and where to extend", () => {
-    // Auto-Submitted detection and Message-ID chain tracking are
-    // deliberately left to the user. The comment block above isLoop
-    // must list these as extension points so the next person knows
-    // where to add the sophistication.
+    // Automation-header detection and ping-pong protection live in
+    // automatedReasons and replyCapReached; the comment block above
+    // isLoop must point there and still name an extension point.
     const handler = renderHandler();
     const beforeHelper = handler.slice(
       0,
       handler.indexOf("export function isLoop"),
     );
     expect(beforeHelper).toContain("staging, production, and custom domains");
-    expect(beforeHelper).toContain("auto-submitted");
-    expect(beforeHelper).toContain("Message-ID");
+    expect(beforeHelper).toContain("Auto-Submitted");
+    expect(beforeHelper).toContain("automatedReasons");
+    expect(beforeHelper).toContain("replyCapReached");
+    expect(beforeHelper).toContain("Extend this helper");
   });
 
   it("includes a recipient-routing comment block pointing at event.email.headers.to", () => {
@@ -498,7 +502,7 @@ describe("writeScaffold", () => {
     const handler = readFileSync(resolve(outDir, "handler.ts"), "utf8");
     expect(handler).toMatch(/from\s+"@primitivedotdev\/sdk\/api"/);
     expect(handler).toContain("createPrimitiveClient");
-    expect(handler).toContain("normalizeReceivedEmail");
+    expect(handler).toContain("replyToEmail");
 
     const pkg = JSON.parse(
       readFileSync(resolve(outDir, "package.json"), "utf8"),

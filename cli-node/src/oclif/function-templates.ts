@@ -92,8 +92,9 @@ export function renderHandler(): string {
 // including Web Crypto signature verification.
 import {
   createPrimitiveClient,
-  normalizeReceivedEmail,
+  getThread,
   PRIMITIVE_SIGNATURE_HEADER,
+  replyToEmail,
   type EmailReceivedEvent,
   verifyWebhookSignature,
   WebhookVerificationError,
@@ -105,7 +106,7 @@ interface Env {
   PRIMITIVE_WEBHOOK_SECRET: string;
 }
 
-// Optional loop-protection knob. client.reply() server-defaults the
+// Optional loop-protection knob. The reply endpoint server-defaults the
 // outbound from-address from the inbound recipient, so most handlers
 // do not need to fill this in. Add any extra addresses your handler
 // sends from if you later switch to client.send or a custom domain.
@@ -170,17 +171,11 @@ function inboundRecipientDomains(event: EmailReceivedEvent): Set<string> {
 // empty) is treated as a loop terminator: better to drop one ambiguous
 // message than to reply blindly and loop on a bounce.
 //
-// Extend this helper if you need stricter detection. Common additions
-// not implemented here today:
-//   - Honor RFC 3834 auto-response headers: skip when an
-//     auto-submitted header is anything other than "no", or when a
-//     list-unsubscribe / precedence: bulk header is present. The
-//     EmailReceivedEvent.email.headers shape does not currently surface
-//     these, so detection requires either a parsed-headers field on
-//     the event or a parse of the raw RFC 822 body.
-//   - Track Message-ID / In-Reply-To chains to break ping-pong loops
-//     between two cooperating handlers on different domains.
-//   - Rate-limit replies per sender per hour as a safety net.
+// Mail that declares itself automated (RFC 3834 Auto-Submitted,
+// Precedence, List-* and similar headers) and ping-pong between two
+// automated responders are handled separately, by automatedReasons and
+// replyCapReached below. Extend this helper if you need stricter
+// detection, for example a per-sender hourly reply limit.
 //
 // Loop protection is NOT sender authentication. The address matching
 // here is deliberately loose (it exists to avoid replying to our own
@@ -231,6 +226,105 @@ export function isLoop(event: EmailReceivedEvent): boolean {
   return false;
 }
 
+// Agent-to-agent loop protection. isLoop above stops bounces and
+// self-mail. These stop two automated responders (two copies of this
+// handler, or this handler and another agent) from answering each
+// other forever:
+//   - every reply is sent with Auto-Submitted: auto-replied (RFC 3834)
+//     and X-Auto-Response-Suppress: All, so a responder that honours
+//     them, including another copy of this handler, does not answer;
+//   - mail the platform marks automated is skipped (automatedReasons);
+//   - at most MAX_REPLIES_PER_THREAD replies from this handler's
+//     address per thread, and none once the thread is MAX_THREAD_DEPTH
+//     messages deep (replyCapReached), which holds even against a peer
+//     that strips the headers above;
+//   - one reply per inbound Message-ID (replyIdempotencyKey).
+// Raise the caps only if you are sure a peer can never answer you back.
+const MAX_REPLIES_PER_THREAD = 5;
+const MAX_THREAD_DEPTH = 20;
+const AUTO_REPLY_HEADERS = {
+  "Auto-Submitted": "auto-replied",
+  "X-Auto-Response-Suppress": "All",
+};
+
+// The platform's verdict on whether a machine sent this email, decided
+// when it arrived: the same value GET /v1/emails/{id} returns as
+// \`automated\`. It covers bounces, auto-replies, and mailing list or
+// newsletter mail; a handler that answers the sender should not answer
+// a list. Returns the reasons, or null when a person sent it. Read
+// loosely so this compiles against SDK releases that predate the typed
+// field; events without it fall through to isLoop alone.
+export function automatedReasons(event: EmailReceivedEvent): string[] | null {
+  const email = event.email as {
+    automated?: unknown;
+    automated_reasons?: unknown;
+  };
+  if (email.automated !== true) return null;
+  const reasons = Array.isArray(email.automated_reasons)
+    ? email.automated_reasons.filter(
+        (reason): reason is string => typeof reason === "string",
+      )
+    : [];
+  return reasons.length > 0 ? reasons : ["automated"];
+}
+
+function ownAddresses(event: EmailReceivedEvent): Set<string> {
+  return new Set([
+    ...event.email.smtp.rcpt_to.flatMap(extractEmailAddresses),
+    ...EXTRA_SELF_ADDRESSES.map((address) => address.toLowerCase()),
+  ]);
+}
+
+// Returns why this handler must not reply again in this thread, or
+// null. The thread lookup counts this handler's own earlier replies; if
+// it fails, the References depth check still bounds the thread.
+export async function replyCapReached(
+  client: ReturnType<typeof createPrimitiveClient>,
+  event: EmailReceivedEvent,
+): Promise<string | null> {
+  const parsed = event.email.parsed as { references?: unknown };
+  const depth = Array.isArray(parsed.references) ? parsed.references.length : 0;
+  if (depth >= MAX_THREAD_DEPTH) return "thread_depth_cap";
+
+  const threadId = event.email.thread_id;
+  if (!threadId) return null;
+  try {
+    const result = await getThread({
+      client: client.client,
+      path: { id: threadId },
+    });
+    const messages = result.data?.data?.messages ?? [];
+    const own = ownAddresses(event);
+    const replies = messages.filter(
+      (message) =>
+        message.direction === "outbound" &&
+        extractEmailAddresses(message.from).some((address) => own.has(address)),
+    ).length;
+    return replies >= MAX_REPLIES_PER_THREAD ? "thread_reply_cap" : null;
+  } catch (threadError) {
+    console.error("thread lookup failed:", threadError);
+    return null;
+  }
+}
+
+// One reply per inbound message per replying address, however many
+// times it is delivered.
+export async function replyIdempotencyKey(
+  event: EmailReceivedEvent,
+): Promise<string> {
+  const source = \`\${event.email.smtp.rcpt_to[0]}\\n\${
+    event.email.headers.message_id ?? event.email.id
+  }\`;
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(source),
+  );
+  const hex = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return \`reply:\${hex}\`;
+}
+
 export default {
   async fetch(
     req: Request,
@@ -269,11 +363,19 @@ export default {
       if (isLoop(event)) {
         return Response.json({ ok: true, skipped: "loop" });
       }
+      const automated = automatedReasons(event);
+      if (automated) {
+        return Response.json({ ok: true, skipped: "automated", reasons: automated });
+      }
 
       const client = createPrimitiveClient({
         apiKey: env.PRIMITIVE_API_KEY,
         apiBaseUrl: env.PRIMITIVE_API_BASE_URL,
       });
+      const capped = await replyCapReached(client, event);
+      if (capped) {
+        return Response.json({ ok: true, skipped: capped });
+      }
 
       // To add an LLM or another API, store its key as a Function secret.
       // Example:
@@ -282,7 +384,7 @@ export default {
 
       // Recipient gate
       // https://www.primitive.dev/docs/sending#who-you-can-send-to
-      // Even via client.reply, sends to the original sender are
+      // Even via the reply endpoint, sends to the original sender are
       // subject to the recipient gate. New accounts can send to
       // Primitive-managed domains, verified domains, addresses that
       // have authenticated to you, and other org-member signup emails.
@@ -294,23 +396,42 @@ export default {
       // Recipient routing: a single function can handle multiple inbound
       // addresses by branching on event.email.headers.to. For example,
       // route "support@" to a ticketing flow and "sales@" to a lead
-      // capture flow before calling client.reply.
+      // capture flow before replying.
 
-      // client.reply routes through POST /v1/emails/{id}/reply
-      // (NOT /send-mail) so the server derives recipients, the
-      // \`Re: <parent>\` subject, threading headers, and the
-      // in_reply_to_email_id foreign key automatically. The FK is
-      // what populates the inbound's \`replies\` array on
-      // GET /emails/{id}; without it, \`primitive functions:test-function
-      // --show-sends\` would report no outbound emails for this handler
-      // because the join would miss. Use client.send only when you
-      // need to send to a different address than the inbound sender,
-      // and pass \`in_reply_to\` explicitly to preserve correlation.
-      const reply = await client.reply(normalizeReceivedEmail(event), {
-        text: "Got your message.",
+      // replyToEmail calls POST /v1/emails/{id}/reply (NOT /send-mail)
+      // so the server derives recipients, the \`Re: <parent>\` subject,
+      // threading headers, and the in_reply_to_email_id foreign key
+      // automatically. The FK is what populates the inbound's
+      // \`replies\` array on GET /emails/{id}; without it,
+      // \`primitive functions:test-function --show-sends\` would report
+      // no outbound emails for this handler because the join would
+      // miss. It is used instead of client.reply because the reply
+      // carries AUTO_REPLY_HEADERS (the endpoint accepts Auto-Submitted,
+      // X-Auto-Response-Suppress and Precedence). Use client.send only
+      // when you need to send to a different address than the inbound
+      // sender, and pass \`in_reply_to\` explicitly to preserve
+      // correlation.
+      const replyBody = {
+        body_text: "Got your message.",
+        headers: AUTO_REPLY_HEADERS,
+      };
+      const result = await replyToEmail({
+        client: client.client,
+        path: { id: event.email.id },
+        body: replyBody,
+        headers: { "Idempotency-Key": await replyIdempotencyKey(event) },
       });
+      if (result.error) {
+        // A refused send (a rate limit included) is final: answer 2xx
+        // so the delivery queue does not re-invoke this handler.
+        return Response.json({
+          ok: false,
+          status: result.response?.status ?? null,
+          error: result.error,
+        });
+      }
 
-      return Response.json({ ok: true, reply });
+      return Response.json({ ok: true, reply: result.data?.data ?? null });
     } catch (err) {
       // Return 2xx so the webhook delivery loop does not retry a bug
       // it cannot fix. The function-invocation row still records the
