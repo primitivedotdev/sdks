@@ -51,6 +51,8 @@ describe("shared compatibility fixtures", () => {
           id?: string;
           error_code?: string;
           relay?: EmailRelay | null;
+          automated?: boolean | null;
+          automated_reasons?: string[] | null;
           bounce?: {
             sent_email_id: string | null;
             failed_recipients: string[] | null;
@@ -66,6 +68,16 @@ describe("shared compatibility fixtures", () => {
         if (testCase.expected.relay !== undefined) {
           expect(event.email.relay ?? null, testCase.name).toEqual(
             testCase.expected.relay,
+          );
+        }
+        if (testCase.expected.automated !== undefined) {
+          expect(event.email.automated ?? null, testCase.name).toBe(
+            testCase.expected.automated,
+          );
+        }
+        if (testCase.expected.automated_reasons !== undefined) {
+          expect(event.email.automated_reasons ?? null, testCase.name).toEqual(
+            testCase.expected.automated_reasons,
           );
         }
         if (testCase.expected.bounce !== undefined) {

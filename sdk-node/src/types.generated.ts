@@ -233,6 +233,14 @@ auth: EmailAuth
  * Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.
  */
 relay?: (EmailRelay | null)
+/**
+ * Whether the message was sent by a machine rather than a person (bounce, auto-reply, list or bulk mail, report, or mail from the address it was delivered to). Same value GET /v1/emails/{id} returns. The field may be absent; treat a missing value as unknown.
+ */
+automated?: boolean
+/**
+ * Why automated is true, in rule order; empty when it is false. Current values: null_envelope_sender, no_identifiable_sender, own_address, mailer_daemon, auto_submitted, precedence, list_unsubscribe, list_id, auto_response_suppress, failed_recipients, report. Treat an unfamiliar value as one added after your client was built.
+ */
+automated_reasons?: string[]
 }
 }
 /**
@@ -1175,6 +1183,14 @@ auth: EmailAuth
  * Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.
  */
 relay?: (EmailRelay | null)
+/**
+ * Whether the message was sent by a machine rather than a person (bounce, auto-reply, list or bulk mail, report, or mail from the address it was delivered to). Same value GET /v1/emails/{id} returns. The field may be absent; treat a missing value as unknown.
+ */
+automated?: boolean
+/**
+ * Why automated is true, in rule order; empty when it is false. Current values: null_envelope_sender, no_identifiable_sender, own_address, mailer_daemon, auto_submitted, precedence, list_unsubscribe, list_id, auto_response_suppress, failed_recipients, report. Treat an unfamiliar value as one added after your client was built.
+ */
+automated_reasons?: string[]
 }
 }
 /**

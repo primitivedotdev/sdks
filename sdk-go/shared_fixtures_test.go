@@ -72,6 +72,10 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 					// Relay stays raw so a case can tell "not asserted"
 					// (absent) apart from "expect no relay" (JSON null).
 					Relay json.RawMessage `json:"relay"`
+					// Automated and AutomatedReasons stay raw for the same
+					// reason; JSON null means "expect the field absent".
+					Automated        json.RawMessage `json:"automated"`
+					AutomatedReasons json.RawMessage `json:"automated_reasons"`
 					// Bounce, when set, asserts the bounce link fields;
 					// null values mean nil.
 					Bounce *struct {
@@ -98,6 +102,24 @@ func TestSharedCompatibilityFixtures(t *testing.T) {
 					}
 					if !reflect.DeepEqual(event.Email.Relay, wantRelay) {
 						t.Fatalf("%s: unexpected relay %+v, want %+v", testCase.Name, event.Email.Relay, wantRelay)
+					}
+				}
+				if len(testCase.Expected.Automated) > 0 {
+					var wantAutomated *bool
+					if err := json.Unmarshal(testCase.Expected.Automated, &wantAutomated); err != nil {
+						t.Fatalf("%s: decode expected automated: %v", testCase.Name, err)
+					}
+					if !reflect.DeepEqual(event.Email.Automated, wantAutomated) {
+						t.Fatalf("%s: unexpected automated %v, want %v", testCase.Name, event.Email.Automated, wantAutomated)
+					}
+				}
+				if len(testCase.Expected.AutomatedReasons) > 0 {
+					var wantReasons []string
+					if err := json.Unmarshal(testCase.Expected.AutomatedReasons, &wantReasons); err != nil {
+						t.Fatalf("%s: decode expected automated_reasons: %v", testCase.Name, err)
+					}
+					if !reflect.DeepEqual(event.Email.AutomatedReasons, wantReasons) {
+						t.Fatalf("%s: unexpected automated_reasons %#v, want %#v", testCase.Name, event.Email.AutomatedReasons, wantReasons)
 					}
 				}
 				if want := testCase.Expected.Bounce; want != nil {

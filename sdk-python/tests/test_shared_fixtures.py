@@ -66,6 +66,15 @@ def test_shared_webhook_validation_cases() -> None:
                 relay = event.email.relay
                 actual_relay = None if relay is None else relay.model_dump(mode="json")
                 assert actual_relay == case["expected"]["relay"], case["name"]
+            if "automated" in case["expected"]:
+                assert event.email.automated == case["expected"]["automated"], case[
+                    "name"
+                ]
+            if "automated_reasons" in case["expected"]:
+                assert (
+                    event.email.automated_reasons
+                    == case["expected"]["automated_reasons"]
+                ), case["name"]
             if "bounce" in case["expected"]:
                 bounce = event.email.analysis.bounce
                 actual_bounce = {

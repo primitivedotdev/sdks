@@ -182,6 +182,15 @@ type Email struct {
 	// relay. It is nil for other mail, whether the payload carries null or
 	// omits the field.
 	Relay *EmailRelay `json:"relay,omitempty"`
+	// Automated reports whether the message was sent by a machine rather
+	// than a person (bounce, auto-reply, list or bulk mail, report, or mail
+	// from the address it was delivered to). It is nil when the payload omits
+	// the field; treat nil as unknown.
+	Automated *bool `json:"automated,omitempty"`
+	// AutomatedReasons lists why Automated is true, in rule order. It is
+	// empty when Automated is false and nil when the payload omits it. Treat
+	// an unfamiliar value as one added after this SDK was built.
+	AutomatedReasons []string `json:"automated_reasons,omitempty"`
 }
 
 // EmailRelay describes how an inbound email reached Primitive when it arrived
