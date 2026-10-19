@@ -120,6 +120,21 @@ function createNetwork(options: Options = {}) {
           response: new Response(null, { status: options.replyStatus }),
         };
       }
+      // The reply endpoint accepts only these extra headers and rejects
+      // the request otherwise; mirror that so the test fails if the
+      // handler sends anything else.
+      const allowed = new Set([
+        "auto-submitted",
+        "x-auto-response-suppress",
+        "precedence",
+      ]);
+      const extra = Object.keys((body.headers as object | undefined) ?? {});
+      if (extra.some((name) => !allowed.has(name.toLowerCase()))) {
+        return {
+          error: { message: "header not allowed" },
+          response: new Response(null, { status: 400 }),
+        };
+      }
       const key = headers["Idempotency-Key"] as string;
       if (keys.has(key)) return { data: { data: { replayed: true } } };
       keys.add(key);
