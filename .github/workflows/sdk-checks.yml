@@ -49,6 +49,10 @@ jobs:
               - 'pnpm-workspace.yaml'
             cli:
               - 'cli-node/**'
+              - 'scripts/run-cli-smoke-scripts.mjs'
+              - 'scripts/smoke-*.mjs'
+              - 'scripts/scoped-mail-smoke-fixture.mjs'
+              - 'scripts/assert-tarball-isolation.mjs'
               - 'packages/api-core/**'
               - 'openapi/**'
               - 'pnpm-lock.yaml'

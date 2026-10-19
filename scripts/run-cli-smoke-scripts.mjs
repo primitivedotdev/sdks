@@ -27,8 +27,14 @@
  * smoke script cannot be skipped by accident.
  */
 
-import { spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -115,9 +121,54 @@ function killTree(child) {
   }
 }
 
+// Some smoke scripts start background listeners whose supervisors detach
+// into their own process groups, so killing the script's group can miss
+// them when the script dies before its own cleanup runs. Every process a
+// script starts inherits its private HOME, so find and kill those too.
+function pidsWithHome(home) {
+  const needle = `HOME=${home}`;
+  const pids = [];
+  if (process.platform === "linux") {
+    for (const entry of readdirSync("/proc")) {
+      if (!/^\d+$/.test(entry)) continue;
+      try {
+        const environ = readFileSync(`/proc/${entry}/environ`, "utf8");
+        if (environ.split("\0").includes(needle)) pids.push(Number(entry));
+      } catch {
+        // The process exited or is not readable.
+      }
+    }
+  } else if (process.platform !== "win32") {
+    const listing = spawnSync("ps", ["eww", "-ax", "-o", "pid=,command="], {
+      encoding: "utf8",
+    });
+    for (const line of (listing.stdout ?? "").split("\n")) {
+      if (line.includes(` ${needle} `) || line.endsWith(` ${needle}`)) {
+        pids.push(Number.parseInt(line, 10));
+      }
+    }
+  }
+  return pids.filter((pid) => Number.isInteger(pid) && pid !== process.pid);
+}
+
+function killLeftovers(home) {
+  const pids = pidsWithHome(home);
+  for (const pid of pids) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // Already gone.
+    }
+  }
+  return pids.length;
+}
+
+const homes = new Set();
+
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.once(signal, () => {
     for (const child of running) killTree(child);
+    for (const home of homes) killLeftovers(home);
     process.exit(signal === "SIGINT" ? 130 : 143);
   });
 }
@@ -125,6 +176,7 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 function runOne([script, ...args]) {
   const label = [script.replace(/\.mjs$/, ""), ...args].join(" ");
   const home = mkdtempSync(join(tmpdir(), "primitive-cli-smoke-home-"));
+  homes.add(home);
   const scratch = join(home, "tmp");
   const env = {
     ...baseEnv(),
@@ -224,6 +276,13 @@ async function main() {
         console.log(header);
         if (body) console.log(body.replace(/^/gm, `  ${result.label} | `));
       }
+      const leftovers = killLeftovers(result.home);
+      if (leftovers > 0) {
+        console.log(
+          `[cli-smoke] stopped ${leftovers} leftover process(es) from ${result.label}`,
+        );
+      }
+      homes.delete(result.home);
       rmSync(result.home, { recursive: true, force: true });
     }
   }

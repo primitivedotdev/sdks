@@ -58,9 +58,7 @@ cli-check: node-build
 	pnpm --dir cli-node typecheck
 	pnpm --dir cli-node $(if $(CLI_COVERAGE),test:coverage,test)
 
-# The cli-node build script builds the SDK itself before bundling it, so this
-# target does not also depend on node-build.
-cli-build:
+cli-build: node-build
 	pnpm --dir cli-node build
 
 cli-tarball-isolation:
