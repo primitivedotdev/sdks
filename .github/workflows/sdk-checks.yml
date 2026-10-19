@@ -137,8 +137,39 @@ jobs:
       - name: Install dependencies
         run: make cli-install
 
-      - name: Run cli checks
+      # The suite runs once per Node version. Node 24 runs it with coverage,
+      # so the coverage report comes from the same run instead of a second one.
+      - name: Run cli checks${{ matrix.node-version == 24 && ' with coverage' || '' }}
         run: make cli-check
+        env:
+          CLI_COVERAGE: ${{ matrix.node-version == 24 && '1' || '' }}
+
+  cli-smoke:
+    # Separate from the CLI job so packaging and the packed-package smoke
+    # scripts run alongside the unit tests instead of after them.
+    name: CLI smoke (${{ matrix.node-version }})
+    needs: changes
+    if: ${{ needs.changes.outputs.cli == 'true' || needs.changes.outputs.shared == 'true' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        with:
+          version: 10
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: make cli-install
 
       - name: Build cli package
         run: make cli-build
@@ -146,11 +177,10 @@ jobs:
       - name: Assert CLI tarball does not leak api-core or sdk into dependencies
         run: make cli-tarball-isolation
 
+      # cli-smoke-only packs the package built above instead of rebuilding it,
+      # and runs the smoke scripts concurrently with per-script results.
       - name: Smoke test packed cli package
-        run: make cli-smoke
-
-      - name: Collect cli coverage
-        run: make cli-coverage
+        run: make cli-smoke-only
 
   bundled-skill:
     # Separate from the cached CLI job: this checks out a second repository at
@@ -292,13 +322,13 @@ jobs:
 
   ci:
     name: CI
-    needs: [changes, node, cli, bundled-skill, python, go, shared]
+    needs: [changes, node, cli, cli-smoke, bundled-skill, python, go, shared]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check results
         run: |
-          results=("${{ needs.changes.result }}" "${{ needs.node.result }}" "${{ needs.cli.result }}" "${{ needs.bundled-skill.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
+          results=("${{ needs.changes.result }}" "${{ needs.node.result }}" "${{ needs.cli.result }}" "${{ needs.cli-smoke.result }}" "${{ needs.bundled-skill.result }}" "${{ needs.python.result }}" "${{ needs.go.result }}" "${{ needs.shared.result }}")
           for r in "${results[@]}"; do
             if [[ "$r" != "success" && "$r" != "skipped" ]]; then
               echo "Job failed with result: $r"
