@@ -242,6 +242,7 @@ export function isLoop(event: EmailReceivedEvent): boolean {
 // Raise the caps only if you are sure a peer can never answer you back.
 const MAX_REPLIES_PER_THREAD = 5;
 const MAX_THREAD_DEPTH = 20;
+const THREAD_LOOKUP_TIMEOUT_MS = 5000;
 const AUTO_REPLY_HEADERS = {
   "Auto-Submitted": "auto-replied",
   "X-Auto-Response-Suppress": "All",
@@ -277,7 +278,9 @@ function ownAddresses(event: EmailReceivedEvent): Set<string> {
 
 // Returns why this handler must not reply again in this thread, or
 // null. The thread lookup counts this handler's own earlier replies; if
-// it fails, the References depth check still bounds the thread.
+// it fails or times out, the References depth check still bounds the
+// thread. The thread view lists only the most recent messages, so a
+// thread longer than what came back counts as capped.
 export async function replyCapReached(
   client: ReturnType<typeof createPrimitiveClient>,
   event: EmailReceivedEvent,
@@ -292,8 +295,13 @@ export async function replyCapReached(
     const result = await getThread({
       client: client.client,
       path: { id: threadId },
+      signal: AbortSignal.timeout(THREAD_LOOKUP_TIMEOUT_MS),
     });
-    const messages = result.data?.data?.messages ?? [];
+    const thread = result.data?.data;
+    const messages = thread?.messages ?? [];
+    if ((thread?.message_count ?? 0) > messages.length) {
+      return "thread_reply_cap";
+    }
     const own = ownAddresses(event);
     const replies = messages.filter(
       (message) =>
@@ -307,14 +315,16 @@ export async function replyCapReached(
   }
 }
 
-// One reply per inbound message per replying address, however many
-// times it is delivered.
+// One reply per inbound message, per replying address and sender,
+// however many times it is delivered.
 export async function replyIdempotencyKey(
   event: EmailReceivedEvent,
 ): Promise<string> {
-  const source = \`\${event.email.smtp.rcpt_to[0]}\\n\${
-    event.email.headers.message_id ?? event.email.id
-  }\`;
+  const source = [
+    event.email.smtp.rcpt_to[0],
+    event.email.smtp.mail_from.toLowerCase(),
+    event.email.headers.message_id ?? event.email.id,
+  ].join("\\n");
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(source),

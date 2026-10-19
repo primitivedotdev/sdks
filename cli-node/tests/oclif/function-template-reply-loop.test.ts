@@ -70,6 +70,7 @@ type Options = {
   /** A relay that drops automation headers in transit. */
   stripHeaders?: boolean;
   threadLookupFails?: boolean;
+  threadTruncated?: boolean;
   replyStatus?: number;
 };
 
@@ -101,7 +102,11 @@ function createNetwork(options: Options = {}) {
           response: new Response(null, { status: 503 }),
         };
       }
-      return { data: { data: { messages: thread.map((m) => ({ ...m })) } } };
+      const messages = thread.map((m) => ({ ...m }));
+      const extra = options.threadTruncated ? 300 : 0;
+      return {
+        data: { data: { message_count: messages.length + extra, messages } },
+      };
     },
     async replyToEmail(raw: unknown) {
       const { path, body, headers } = raw as {
@@ -236,6 +241,22 @@ describe("scaffolded handler agent-to-agent loop protection", () => {
     await net.runLoop();
     expect(net.sends).toHaveLength(20);
     expect(net.responses.at(-1)).toMatchObject({ skipped: "thread_depth_cap" });
+  });
+
+  it("treats a thread longer than the returned window as capped", async () => {
+    const net = createNetwork({ threadTruncated: true });
+    const result = await net.invoke(
+      net.deliver({
+        messageId: "<long@people.example>",
+        from: "person@people.example",
+        to: AGENT_B,
+        references: [],
+        threadId: "thread-4",
+        autoSubmitted: false,
+      }),
+    );
+    expect(result.json).toMatchObject({ skipped: "thread_reply_cap" });
+    expect(net.sends).toHaveLength(0);
   });
 
   it("replies to one inbound Message-ID once, however often it is delivered", async () => {
