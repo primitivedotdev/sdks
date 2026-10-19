@@ -315,14 +315,13 @@ export async function replyCapReached(
   }
 }
 
-// One reply per inbound message, per replying address and sender,
-// however many times it is delivered.
+// One reply per inbound message per replying address, however many
+// times or through whichever relay it is delivered.
 export async function replyIdempotencyKey(
   event: EmailReceivedEvent,
 ): Promise<string> {
   const source = [
     event.email.smtp.rcpt_to[0],
-    event.email.smtp.mail_from.toLowerCase(),
     event.email.headers.message_id ?? event.email.id,
   ].join("\\n");
   const digest = await crypto.subtle.digest(
