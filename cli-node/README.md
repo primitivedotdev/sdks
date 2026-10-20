@@ -1052,17 +1052,30 @@ The SessionStart hook runs `primitive agent session-register --runtime claude --
 It gives the session an address once, named `<runtime>-<repository>`, using the
 saved member login, and only re-verifies on resume; a session whose agent was
 disconnected or removed never gets a second address. The SessionEnd hook runs
-`primitive agent session-end`, which disconnects only agents that
-`session-register` created, and only while the session's profile still holds
-that exact credential: an agent later connected into the same profile (for
-example with `primitive agent connect`) is left connected, and only the
-registered agent's own receive hooks are removed. Claude reports the same
-SessionEnd for a restart, a switch to another session and a real exit, so the
-hook waits five minutes before disconnecting, and a start of the same session
-within that time cancels the end. The end is recorded first, so a registration still
-running disconnects the agent it creates; when the local credential is gone it
+`primitive agent session-end`, which marks the session ended and removes its
+exact-session receive hooks, but keeps the agent's credential and profile, so
+closing a terminal does not cost the session its agent: resuming the session
+(for example `claude --resume <session>`) re-verifies the agent and reinstalls
+the hooks at the same address. Presence lapses on its own once the session
+stops running. Claude reports the same SessionEnd for a restart, a switch to
+another session and a real exit, so the hook waits five minutes first, and a
+start of the same session within that time cancels the end.
+
+An agent that `session-register` created is disconnected only when its session
+has not started again for 30 days, by `machine doctor --fix` or the next
+`session-register` on the machine, and only while the session's profile still
+holds that exact credential: an agent later connected into the same profile
+(for example with `primitive agent connect`) is never disconnected, and neither
+is one connected any other way. `primitive agent session-end --revoke`
+disconnects the agent at once instead; when its local credential is gone it
 revokes by address with the member login, and an unconfirmed disconnect is
-reported as `disconnect_pending` and retried by `machine doctor --fix`. Both always exit 0 and finish slow work in the
+reported as `disconnect_pending` and retried by `machine doctor --fix`. If a
+session's agent was already disconnected in Primitive, its next start reports
+it (status `revoked` or `ended`) instead of creating a new address; the owner
+can use Reconnect on the agent in the Primitive app, which invites the same
+address again, and paste that instruction into the session.
+
+Both commands always exit 0 and finish slow work in the
 background. Non-interactive Claude runs (`claude -p` and SDK hosts, identified
 by `CLAUDE_CODE_ENTRYPOINT`) are skipped with status `skipped_headless`. Codex
 sessions register from their SessionStart hook, with the instructions block as a

@@ -72,7 +72,9 @@ import {
   type MachineRuntime,
   pendingSessionDisconnects,
   retryPendingDisconnects,
+  revokeStaleSessionAgents,
   type SessionDisconnectDependencies,
+  staleSessionAgents,
 } from "./machine-session.js";
 import { notificationScope } from "./notify-session.js";
 import { SESSION_UUID } from "./notify-session-native.js";
@@ -1309,21 +1311,41 @@ export async function runMachineDoctor(
     "profiles.orphaned": {
       inspect: async () => {
         const result = await inspectProfiles();
-        const pending = pendingSessionDisconnects(options.configDir);
-        if (!pending.length) return result;
-        const addresses = pending.flatMap((record) =>
-          record.address ? [record.address] : [],
-        );
+        const at = options.sessionDisconnect?.now?.() ?? now();
+        const pending = pendingSessionDisconnects(options.configDir, at);
+        const stale = staleSessionAgents(options.configDir, at);
+        if (!pending.length && !stale.length) return result;
+        const addresses = (records: typeof pending) => {
+          const list = records.flatMap((record) =>
+            record.address ? [record.address] : [],
+          );
+          return list.length ? ` (${list.join(", ")})` : "";
+        };
+        const parts = [
+          ...(pending.length
+            ? [
+                `${pending.length} ended sessions still need their agent disconnected${addresses(pending)}; a repair retries it.`,
+              ]
+            : []),
+          ...(stale.length
+            ? [
+                `${stale.length} sessions ended more than 30 days ago without starting again and still hold the agent session-register created for them${addresses(stale)}; a repair disconnects it.`,
+              ]
+            : []),
+        ];
         return check(
           "profiles.orphaned",
           "fail",
-          `${pending.length} ended sessions still need their agent disconnected${
-            addresses.length ? ` (${addresses.join(", ")})` : ""
-          }; a repair retries it.${result.status === "ok" ? "" : ` ${result.detail}`}`,
+          `${parts.join(" ")}${result.status === "ok" ? "" : ` ${result.detail}`}`,
           { fixable: true },
         );
       },
       repair: async () => {
+        const stale = await revokeStaleSessionAgents(options.configDir, {
+          env,
+          fetch: options.fetch,
+          dependencies: { now, ...options.sessionDisconnect },
+        });
         const retried = await retryPendingDisconnects(options.configDir, {
           env,
           fetch: options.fetch,
@@ -1332,7 +1354,7 @@ export async function runMachineDoctor(
             : {}),
         });
         const moved = await moveOrphans();
-        return moved || retried > 0;
+        return moved || retried > 0 || stale > 0;
       },
     },
   };

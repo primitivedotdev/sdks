@@ -9,6 +9,7 @@ import {
   type MachineRuntime,
   readClaudeHookInput,
   registerSession,
+  revokeStaleSessionAgents,
   runDetached,
 } from "../machine-session.js";
 
@@ -18,7 +19,7 @@ const HOOK_BUDGET_MS = 3_000;
 export default class AgentSessionRegisterCommand extends Command {
   static summary = "Register this coding session with Primitive, once";
   static description =
-    "Gives the current Claude Code, Codex or omp session an address in your organization using the saved member login, without a browser. Safe to run on every start and resume: a session that already has a profile is only re-verified, and a session whose agent was disconnected or removed never gets a second address. The session ID comes from CLAUDE_CODE_SESSION_ID (Claude), CODEX_THREAD_ID or CODEX_SESSION_ID (Codex), or --session. omp does not expose a session ID to commands, so omp sessions use one generated ID per running omp process, and receiving mail is not supported for them. The agent is named <runtime>-<repository> and gets a private AGENT_INFO note naming the runtime and repository when it has none. Claude sessions receive mail through exact-session hooks; Codex through the native receiver. Non-interactive Claude runs (claude -p and SDK hosts, by CLAUDE_CODE_ENTRYPOINT) are skipped with status skipped_headless. Never blocks a session: every outcome, including no login or no network, exits 0 with a status. --hook reads Claude's or Codex's SessionStart hook input from stdin, returns within a few seconds and finishes slower work in the background.";
+    "Gives the current Claude Code, Codex or omp session an address in your organization using the saved member login, without a browser. Safe to run on every start and resume: a session that already has a profile is only re-verified, and a session that ended and starts again (for example `claude --resume`) keeps its agent and address, and a session whose agent was disconnected or removed never gets a second address. Each run also disconnects the agents of sessions on this machine that ended more than 30 days ago without starting again, only while their profile still holds the credential this command created. The session ID comes from CLAUDE_CODE_SESSION_ID (Claude), CODEX_THREAD_ID or CODEX_SESSION_ID (Codex), or --session. omp does not expose a session ID to commands, so omp sessions use one generated ID per running omp process, and receiving mail is not supported for them. The agent is named <runtime>-<repository> and gets a private AGENT_INFO note naming the runtime and repository when it has none. Claude sessions receive mail through exact-session hooks; Codex through the native receiver. Non-interactive Claude runs (claude -p and SDK hosts, by CLAUDE_CODE_ENTRYPOINT) are skipped with status skipped_headless. Never blocks a session: every outcome, including no login or no network, exits 0 with a status. --hook reads Claude's or Codex's SessionStart hook input from stdin, returns within a few seconds and finishes slower work in the background.";
   static examples = [
     "<%= config.bin %> agent session-register --runtime codex --quiet",
     "<%= config.bin %> agent session-register --runtime claude --json",
@@ -103,5 +104,13 @@ export default class AgentSessionRegisterCommand extends Command {
         : {};
     if (flags.json) this.log(JSON.stringify({ status, ...rest, ...identity }));
     else if (!flags.quiet) this.log(`${result.status}: ${result.detail}`);
+    // Hygiene after the result, so it never delays this session's own.
+    try {
+      await revokeStaleSessionAgents(this.config.configDir, {
+        exclude: result.session,
+      });
+    } catch {
+      /* Best effort; `machine doctor --fix` reports and retries it. */
+    }
   }
 }

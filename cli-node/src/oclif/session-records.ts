@@ -39,12 +39,28 @@ export type SessionRecord = {
   registeredAt: string;
   endedAt: string | null;
   /**
-   * Whether disconnecting an ended session's agent is confirmed. "deferred"
-   * means the end came from a runtime hook and waits until `deferredUntil`,
-   * so a restart or resume of the same session keeps its agent.
+   * What happens to an ended session's agent. "kept" means the end left the
+   * agent connected so a resume of the same session keeps its address; it is
+   * revoked only once the session has not started again for
+   * STALE_SESSION_MS. "deferred" means the end came from a runtime hook and
+   * waits until `deferredUntil`, so a restart of the same session cancels it.
+   * "pending" and "pending_enrollment" mean a disconnect was asked for and is
+   * not confirmed yet; "done" means it is confirmed.
    */
-  disconnect: "done" | "pending" | "pending_enrollment" | "deferred" | null;
+  disconnect:
+    | "done"
+    | "pending"
+    | "pending_enrollment"
+    | "deferred"
+    | "kept"
+    | null;
   deferredUntil: string | null;
+  /**
+   * The end asked for the agent to be disconnected (`agent session-end
+   * --revoke`). Without it an end keeps the agent. Records written before it
+   * existed read as false.
+   */
+  revokeOnEnd: boolean;
   /** The runtime's reason for the end, when its hook gave one. */
   endReason: string | null;
   release: SessionRecordRelease | null;
@@ -121,7 +137,8 @@ export function readSessionRecord(
         row.disconnect === "done" ||
         row.disconnect === "pending" ||
         row.disconnect === "pending_enrollment" ||
-        row.disconnect === "deferred"
+        row.disconnect === "deferred" ||
+        row.disconnect === "kept"
           ? row.disconnect
           : // Records written before this field existed ended with a disconnect.
             typeof row.endedAt === "string"
@@ -129,6 +146,7 @@ export function readSessionRecord(
             : null,
       deferredUntil:
         typeof row.deferredUntil === "string" ? row.deferredUntil : null,
+      revokeOnEnd: row.revokeOnEnd === true,
       endReason:
         typeof row.endReason === "string" && REASON.test(row.endReason)
           ? row.endReason
@@ -218,6 +236,7 @@ export function releasedRecord(
     endedAt: null,
     disconnect: null,
     deferredUntil: null,
+    revokeOnEnd: false,
     endReason: null,
     release: {
       at: at.toISOString(),

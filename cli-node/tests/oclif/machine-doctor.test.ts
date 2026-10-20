@@ -1741,6 +1741,78 @@ describe("primitive machine doctor", () => {
     });
   });
 
+  it("disconnects only the registered credential of sessions ended over 30 days ago", async () => {
+    const { configDir, options } = machine();
+    const record = (id: string, endedAt: string, hash: string) =>
+      writeMailJson(join(configDir, "machine", "sessions", `${id}.json`), {
+        version: 1,
+        runtime: "claude",
+        session: id,
+        profile: `session-${id}`,
+        name: "claude-repo",
+        createdBy: "session-register",
+        address: `${id.slice(0, 8)}@example.test`,
+        invitationHash: hash,
+        agentInfo: null,
+        registeredAt: "2026-08-01T00:00:00.000Z",
+        endedAt,
+        disconnect: "kept",
+      });
+    // Ended 32 days before the doctor's clock, holding its own credential.
+    record(sessionA, "2026-08-31T12:00:00.000Z", "a".repeat(64));
+    saveConnectedAgentProfile(configDir, `session-${sessionA}`, {
+      ...profile(`${sessionA.slice(0, 8)}@example.test`),
+    });
+    // Ended as long ago, but its profile now holds another credential.
+    record(sessionB, "2026-08-31T12:00:00.000Z", "a".repeat(64));
+    saveConnectedAgentProfile(configDir, `session-${sessionB}`, {
+      ...profile(`${sessionB.slice(0, 8)}@example.test`),
+      invitation_hash: "b".repeat(64),
+    });
+    const before = byId(await runMachineDoctor(options));
+    expect(before["profiles.orphaned"]).toMatchObject({
+      status: "fail",
+      fixable: true,
+    });
+    expect(before["profiles.orphaned"].detail).toContain("30 days");
+    expect(before["profiles.orphaned"].detail).toContain(
+      `${sessionA.slice(0, 8)}@example.test`,
+    );
+    expect(before["profiles.orphaned"].detail).not.toContain(
+      `${sessionB.slice(0, 8)}@example.test`,
+    );
+    const disconnected: string[] = [];
+    const revokedByAddress: string[] = [];
+    await runMachineDoctor({
+      ...options,
+      fix: true,
+      sessionDisconnect: {
+        revokeByAddress: async (_configDir, address) => {
+          revokedByAddress.push(address);
+          return true;
+        },
+        disconnect: (async (params: { profileName: string }) => {
+          disconnected.push(params.profileName);
+          rmSync(
+            join(
+              agentProfileDirectory(configDir, params.profileName),
+              "connection.json",
+            ),
+          );
+          return {};
+        }) as never,
+      },
+    });
+    expect(disconnected).toEqual([`session-${sessionA}`]);
+    expect(revokedByAddress).toEqual([]);
+    expect(
+      readFileSync(
+        join(configDir, "machine", "sessions", `${sessionB}.json`),
+        "utf8",
+      ),
+    ).toContain('"kept"');
+  });
+
   it("backs up the whole replaced skill, installed helper packages included", async () => {
     const { home, configDir, options } = machine();
     const skill = join(home, ".claude", "skills", "primitive-connect");

@@ -82,6 +82,7 @@ export type SessionRegisterResult = {
 
 export type SessionEndResult = {
   status:
+    | "kept"
     | "disconnected"
     | "disconnect_pending"
     | "already_ended"
@@ -809,10 +810,18 @@ function withDefined<T extends object>(
   } as T;
 }
 
+/**
+ * What to do about an agent that was disconnected in Primitive. The owner's
+ * Reconnect re-invites the same address, and pasting that instruction into
+ * the session claims it into the session's profile again.
+ */
+export const RECONNECT_HINT =
+  "To get the same address back, the owner can use Reconnect on this agent in the Primitive app and paste the instruction it gives into this session.";
 const HELD_DETAIL =
   "This session already receives as another connected profile, so this profile's receive hooks were not added. Run `primitive machine doctor --fix --profile <profile>` to bind it deliberately.";
-const ENDED_DETAIL =
-  "This session ended, so its agent was disconnected. A new address is never created for the same session.";
+const ENDED_DETAIL = `This session ended and its agent was disconnected. A new address is never created for the same session. ${RECONNECT_HINT}`;
+const ENDED_KEPT_DETAIL =
+  "This session ended while it was registering. Its agent is kept, and resuming the session reconnects it at the same address.";
 const ENDED_DEFERRED_DETAIL =
   "This session ended moments ago. Its agent is disconnected after a short wait unless the session starts again first.";
 const RELEASED_DETAIL =
@@ -934,6 +943,15 @@ export async function registerSession(
         status: "ended",
         detail: ENDED_DEFERRED_DETAIL,
       };
+    // An end that keeps the agent (the default) leaves whatever this run
+    // created connected, for the next start of the session to pick up.
+    if (current.disconnect === "kept")
+      return {
+        ...known,
+        address: current.address,
+        status: "ended",
+        detail: ENDED_KEPT_DETAIL,
+      };
     // After this run's own enrollment returned or failed, whatever it
     // created is disconnected, even if the end found nothing earlier.
     const outcome =
@@ -978,22 +996,28 @@ export async function registerSession(
     endedAt: null,
     disconnect: null,
     deferredUntil: null,
+    revokeOnEnd: false,
     endReason: null,
     release: null,
   });
   try {
-    // A start (or resume) while a hook's end is still waiting means the
-    // session did not end after all, for example a restart: cancel it.
+    // A start (or resume) of a session whose end is still waiting, or whose
+    // end kept its agent, means the session is live again: clear the end.
+    // The agent is then re-verified and its receive hooks reinstalled below,
+    // at the same address. An end that already asked for a disconnect is
+    // never cleared here.
     let record = await updateSessionRecord(
       options.configDir,
       sessionId,
       (current) =>
-        current?.endedAt && current.disconnect === "deferred"
+        current?.endedAt &&
+        (current.disconnect === "deferred" || current.disconnect === "kept")
           ? {
               ...current,
               endedAt: null,
               disconnect: null,
               deferredUntil: null,
+              revokeOnEnd: false,
               endReason: null,
             }
           : current,
@@ -1062,8 +1086,7 @@ export async function registerSession(
         return {
           ...withAddress,
           status: "revoked",
-          detail:
-            "This session's agent was disconnected in Primitive. No new address was created. `primitive machine doctor --fix` removes the stale local profile.",
+          detail: `This session's agent was disconnected in Primitive, so it cannot receive mail. No new address was created. ${RECONNECT_HINT}`,
         };
       if (state === "unavailable")
         return {
@@ -1106,8 +1129,7 @@ export async function registerSession(
         ...known,
         address: record.address,
         status: "removed",
-        detail:
-          "This session's local profile was removed. No new address was created for the same session.",
+        detail: `This session's local profile was removed. No new address was created for the same session. ${RECONNECT_HINT}`,
       };
 
     let credentials: ReturnType<typeof loadCliCredentials>;
@@ -1261,26 +1283,82 @@ export type SessionEndDependencies = SessionDisconnectDependencies & {
 };
 
 /**
- * How long an end from a runtime hook waits before disconnecting. A runtime
+ * How long an end from a runtime hook waits before it takes effect. A runtime
  * reports the same end for a restart, a switch to another session and a real
  * exit, so the hook cannot tell them apart; a start of the same session
- * within this window cancels the end and keeps its agent.
+ * within this window cancels the end.
  */
 export const HOOK_END_GRACE_MS = 5 * 60_000;
+
+/**
+ * How long an ended session keeps the agent `session-register` created for
+ * it. A session that has not started again for this long has its agent
+ * disconnected by `machine doctor --fix` or the next registration on this
+ * machine, so closed sessions do not keep live credentials forever.
+ */
+export const STALE_SESSION_MS = 30 * 24 * 60 * 60_000;
 
 /** The end of this record is a hook's, still waiting. */
 function deferredEnd(record: SessionRecord | null): boolean {
   return Boolean(record?.endedAt) && record?.disconnect === "deferred";
 }
 
+/** Removes an ended session's own exact-session receive hooks. Best effort. */
+function removeSessionHooks(
+  configDir: string,
+  record: SessionRecord,
+  deps: SessionDisconnectDependencies,
+  env: Env,
+): void {
+  if (record.runtime !== "claude" || !record.address) return;
+  try {
+    deps.uninstallHook({
+      configDir,
+      profileName: record.profile,
+      agentAddress: record.address,
+      sessionId: record.session,
+      env: env as NodeJS.ProcessEnv,
+    });
+  } catch {
+    /* Hook cleanup never blocks the end; machine doctor removes stale hooks. */
+  }
+}
+
 /**
- * Disconnect the agent a session got from `session-register`. Agents
- * connected any other way are left alone, including a credential connected
- * later into the same profile. The end is recorded first, under the record's
- * lock, so a registration still enrolling sees it and disconnects the agent
- * it creates. With `graceMs` (an end reported by a runtime hook) the
- * disconnect waits that long, and a start of the same session meanwhile
- * cancels it. Never throws.
+ * The record of an end that keeps the agent. Its exact-session receive hooks
+ * are removed in the same step, under the record's lock, so a start of the
+ * same session that clears the end afterwards reinstalls them.
+ */
+function keptEnd(
+  configDir: string,
+  current: SessionRecord,
+  deps: SessionDisconnectDependencies,
+  env: Env,
+  at: Date,
+): SessionRecord {
+  removeSessionHooks(configDir, current, deps, env);
+  return {
+    ...current,
+    endedAt: current.endedAt ?? at.toISOString(),
+    disconnect: "kept",
+    deferredUntil: null,
+    revokeOnEnd: false,
+  };
+}
+
+const KEPT_DETAIL =
+  "This session is marked ended. Its agent stays connected, so resuming the session keeps the same address; it is disconnected only if the session does not start again for 30 days. Pass --revoke to disconnect it now.";
+
+/**
+ * Record that a session ended. By default the agent `session-register`
+ * created for it stays connected, with its credential and profile, so a
+ * resume of the same session keeps its address; only its exact-session
+ * receive hooks are removed. With `revoke` the agent is disconnected instead.
+ * Agents connected any other way are left alone either way, including a
+ * credential connected later into the same profile. The end is recorded
+ * first, under the record's lock, so a registration still enrolling sees it.
+ * With `graceMs` (an end reported by a runtime hook) the end waits that
+ * long, and a start of the same session meanwhile cancels it. Never throws.
  */
 export async function endSession(options: {
   configDir: string;
@@ -1290,6 +1368,8 @@ export async function endSession(options: {
   fetch?: typeof fetch;
   graceMs?: number;
   reason?: string | null;
+  /** Disconnect the agent instead of keeping it for a resume. */
+  revoke?: boolean;
   dependencies?: Partial<SessionEndDependencies>;
 }): Promise<SessionEndResult> {
   const env = options.env ?? process.env;
@@ -1317,6 +1397,7 @@ export async function endSession(options: {
     };
   const sessionId = session.toLowerCase();
   const graceMs = Math.max(0, options.graceMs ?? 0);
+  const revoke = options.revoke === true;
   const reason =
     options.reason && /^[a-z_]{1,40}$/.test(options.reason)
       ? options.reason
@@ -1336,17 +1417,37 @@ export async function endSession(options: {
           return current;
         }
         const now = deps.now();
-        // A committed end is never turned back into a waiting one.
-        if (graceMs > 0 && (!current.endedAt || deferredEnd(current))) {
+        // A disconnect already asked for stays asked for.
+        const revoking =
+          revoke ||
+          (Boolean(current.endedAt) &&
+            (current.disconnect === "pending" ||
+              current.disconnect === "pending_enrollment" ||
+              (current.disconnect === "deferred" && current.revokeOnEnd)));
+        if (!revoking && current.endedAt && current.disconnect === "kept")
+          return current;
+        // A committed disconnect is never turned back into a waiting one.
+        if (
+          graceMs > 0 &&
+          (!current.endedAt ||
+            deferredEnd(current) ||
+            current.disconnect === "kept")
+        ) {
           deferred = true;
           return {
             ...current,
             endedAt: now.toISOString(),
             disconnect: "deferred",
             deferredUntil: new Date(now.getTime() + graceMs).toISOString(),
+            revokeOnEnd: revoking,
             endReason: reason,
           };
         }
+        if (!revoking)
+          return {
+            ...keptEnd(options.configDir, current, deps, env, now),
+            endReason: current.endReason ?? reason,
+          };
         return {
           ...current,
           endedAt: current.endedAt ?? now.toISOString(),
@@ -1355,6 +1456,7 @@ export async function endSession(options: {
               ? "pending_enrollment"
               : "pending",
           deferredUntil: null,
+          revokeOnEnd: true,
           endReason: current.endReason ?? reason,
         };
       },
@@ -1393,7 +1495,9 @@ export async function endSession(options: {
             resumed = true;
             return current;
           }
-          return { ...current, disconnect: "pending", deferredUntil: null };
+          return current.revokeOnEnd
+            ? { ...current, disconnect: "pending", deferredUntil: null }
+            : keptEnd(options.configDir, current, deps, env, deps.now());
         },
       );
       if (resumed || !record)
@@ -1401,9 +1505,11 @@ export async function endSession(options: {
           ...known,
           status: "resumed",
           detail:
-            "The session started again (or was ended again) before its end took effect, so this end left its agent connected.",
+            "The session started again (or was ended again) before its end took effect, so this end changed nothing.",
         };
     }
+    if (record.disconnect === "kept")
+      return { ...known, status: "kept", detail: KEPT_DETAIL };
     const outcome = await finishSessionDisconnect(
       options.configDir,
       record,
@@ -1438,15 +1544,16 @@ export async function endSession(options: {
       detail:
         error instanceof AgentDisconnectError
           ? error.message
-          : "Disconnect did not finish. The agent was left as it was.",
+          : "The end did not finish. The agent was left as it was.",
     };
   }
 }
 
 /**
- * Ended sessions whose agent disconnect still needs confirming, including a
- * hook's end whose grace period is over but whose own process never finished
- * it (for example because the machine shut down).
+ * Ended sessions whose agent disconnect was asked for and still needs
+ * confirming, including a `--revoke` end from a hook whose grace period is
+ * over but whose own process never finished it (for example because the
+ * machine shut down). Ends that keep their agent are never listed here.
  */
 export function pendingSessionDisconnects(
   configDir: string,
@@ -1459,8 +1566,130 @@ export function pendingSessionDisconnects(
       (record.disconnect === "pending" ||
         record.disconnect === "pending_enrollment" ||
         (record.disconnect === "deferred" &&
+          record.revokeOnEnd &&
           !(Date.parse(record.deferredUntil ?? "") > now.getTime()))),
   );
+}
+
+/**
+ * Ended sessions that kept their agent and have not started again for
+ * STALE_SESSION_MS, whose profile still holds exactly the credential
+ * `session-register` created. Only these are disconnected for being stale.
+ */
+export function staleSessionAgents(
+  configDir: string,
+  now: Date = new Date(),
+): SessionRecord[] {
+  return listSessionRecords(configDir).filter((record) => {
+    if (
+      record.createdBy !== "session-register" ||
+      !record.endedAt ||
+      !(
+        record.disconnect === "kept" ||
+        (record.disconnect === "deferred" && !record.revokeOnEnd)
+      ) ||
+      !(now.getTime() - Date.parse(record.endedAt) >= STALE_SESSION_MS)
+    )
+      return false;
+    try {
+      const current = loadConnectedAgentProfile(configDir, record.profile);
+      return Boolean(
+        current && holdsRegisteredCredential(configDir, record, current),
+      );
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * Disconnect the agent of every stale ended session (see
+ * staleSessionAgents). Each disconnect names the exact credential it
+ * checked, under the locks `agent connect` also takes, so a credential
+ * connected into the profile meanwhile is never revoked, and nothing is
+ * ever revoked by address here. A start of the session meanwhile turns it
+ * into an ordinary pending disconnect, which that start finishes. Returns
+ * how many agents were disconnected.
+ */
+export async function revokeStaleSessionAgents(
+  configDir: string,
+  options: {
+    env?: Env;
+    fetch?: typeof fetch;
+    /** A session to leave alone, such as the one registering right now. */
+    exclude?: string | null;
+    dependencies?: Partial<SessionDisconnectDependencies>;
+  } = {},
+): Promise<number> {
+  const deps = withDefined<SessionDisconnectDependencies>(
+    DISCONNECT_DEFAULTS,
+    options.dependencies,
+  );
+  const env = options.env ?? process.env;
+  let revoked = 0;
+  for (const listed of staleSessionAgents(configDir, deps.now())) {
+    if (listed.session === options.exclude?.toLowerCase()) continue;
+    try {
+      const current = loadConnectedAgentProfile(configDir, listed.profile);
+      if (!current || !holdsRegisteredCredential(configDir, listed, current))
+        continue;
+      let claimed = false;
+      await updateSessionRecord(configDir, listed.session, (row) => {
+        if (
+          row?.createdBy !== "session-register" ||
+          row.endedAt !== listed.endedAt ||
+          row.disconnect !== listed.disconnect
+        )
+          return row;
+        claimed = true;
+        return {
+          ...row,
+          disconnect: "pending",
+          deferredUntil: null,
+          revokeOnEnd: true,
+        };
+      });
+      if (!claimed) continue;
+      let outcome: "done" | "released" | "failed";
+      try {
+        await deps.disconnect({
+          configDir,
+          profileName: listed.profile,
+          fetch: options.fetch,
+          env: env as NodeJS.ProcessEnv,
+          expected: {
+            address: current.agent_address,
+            invitationHash: current.invitation_hash,
+          },
+        });
+        outcome = "done";
+      } catch (error) {
+        outcome =
+          error instanceof AgentCredentialChangedError ? "released" : "failed";
+      }
+      await updateSessionRecord(configDir, listed.session, (row) => {
+        if (
+          row?.createdBy !== "session-register" ||
+          row.disconnect !== "pending"
+        )
+          return row;
+        if (outcome === "done") return { ...row, disconnect: "done" };
+        if (outcome === "released")
+          return releasedRecord(row, "credential_changed", deps.now());
+        // Not confirmed: keep it as it was, so the next run checks it again.
+        return {
+          ...row,
+          disconnect: listed.disconnect,
+          deferredUntil: listed.deferredUntil,
+          revokeOnEnd: false,
+        };
+      });
+      if (outcome === "done") revoked++;
+    } catch {
+      /* One stale session never stops the others. */
+    }
+  }
+  return revoked;
 }
 
 /**

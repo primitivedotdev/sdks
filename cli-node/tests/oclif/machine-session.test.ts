@@ -33,7 +33,9 @@ import {
   readClaudeHookInput,
   registerSession,
   retryPendingDisconnects,
+  revokeStaleSessionAgents,
   type SessionRegisterDependencies,
+  staleSessionAgents,
 } from "../../src/oclif/machine-session.js";
 import { replaceSessionAddresses } from "../../src/oclif/session-address-guard.js";
 import {
@@ -241,6 +243,7 @@ describe("agent session-register", () => {
     // Ending the session leaves a profile it did not create connected.
     const ended = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: {
@@ -548,6 +551,7 @@ describe("agent session-register", () => {
     expect(calls.enroll).toHaveLength(0);
     const ended = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       env: {
         CLAUDE_CODE_SESSION_ID: session,
@@ -661,6 +665,7 @@ describe("agent session-end", () => {
     });
     const ended = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       env: { CLAUDE_CODE_SESSION_ID: session },
       dependencies: { disconnect },
@@ -669,6 +674,7 @@ describe("agent session-end", () => {
     expect(disconnected).toEqual([`session-${session}`]);
     const again = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: { disconnect },
@@ -712,6 +718,7 @@ describe("agent session-end", () => {
           // SessionEnd arrives before the profile exists.
           const end = await endSession({
             configDir,
+            revoke: true,
             runtime: "claude",
             session,
             dependencies: { disconnect, revokeByAddress: async () => false },
@@ -756,6 +763,7 @@ describe("agent session-end", () => {
     const revoked: string[] = [];
     const pending = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: { revokeByAddress: async () => false },
@@ -858,6 +866,7 @@ describe("agent session-end", () => {
             endStatus = (
               await endSession({
                 configDir,
+                revoke: true,
                 runtime: "claude",
                 session,
                 dependencies: { disconnect, revokeByAddress },
@@ -894,6 +903,7 @@ describe("agent session-end", () => {
     );
     await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: { revokeByAddress: async () => false },
@@ -912,7 +922,12 @@ describe("agent session-end", () => {
     expect(await fast).toBe(1);
     await slow;
     expect(pendingSessionDisconnects(configDir)).toEqual([]);
-    const again = await endSession({ configDir, runtime: "claude", session });
+    const again = await endSession({
+      configDir,
+      revoke: true,
+      runtime: "claude",
+      session,
+    });
     expect(again.status).toBe("already_ended");
   });
 
@@ -926,6 +941,7 @@ describe("agent session-end", () => {
     let called = false;
     const result = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: {
@@ -951,6 +967,7 @@ describe("agent session-end", () => {
     });
     const result = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: {
@@ -1046,6 +1063,7 @@ describe("agent session-end after the profile was reconnected", () => {
     // 3. The session ends (for example on a restart).
     const ended = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: { disconnect, revokeByAddress: async () => false },
@@ -1100,6 +1118,7 @@ describe("agent session-end after the profile was reconnected", () => {
     });
     const ended = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: {
@@ -1157,6 +1176,7 @@ describe("agent session-end after the profile was reconnected", () => {
     });
     const ended = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: {
@@ -1195,6 +1215,7 @@ describe("agent session-end after the profile was reconnected", () => {
     });
     const ended = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: {
@@ -1255,6 +1276,7 @@ describe("agent session-end after the profile was reconnected", () => {
     );
     const pending = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       dependencies: { revokeByAddress: async () => false },
@@ -1352,6 +1374,7 @@ describe("agent session-end from a runtime hook", () => {
     let restarted: Awaited<ReturnType<typeof start>> | null = null;
     const ended = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       graceMs: 60_000,
@@ -1394,6 +1417,7 @@ describe("agent session-end from a runtime hook", () => {
     const waited: number[] = [];
     const ended = await endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       graceMs: 60_000,
@@ -1427,6 +1451,7 @@ describe("agent session-end from a runtime hook", () => {
     // The waiting process is gone before its grace period ends.
     void endSession({
       configDir,
+      revoke: true,
       runtime: "claude",
       session,
       graceMs: 60_000,
@@ -1453,6 +1478,394 @@ describe("agent session-end from a runtime hook", () => {
       }),
     ).toBe(1);
     expect(disconnected).toEqual([`session-${session}`]);
+  });
+});
+
+describe("agent session-end keeps the agent for a resume", () => {
+  const day = 24 * 60 * 60_000;
+  const never = (async () => {
+    throw new Error("must not disconnect");
+  }) as unknown as typeof disconnectAgent;
+
+  function harness() {
+    const { configDir } = setup();
+    const { calls, dependencies } = fakeDependencies(configDir);
+    const unhooked: string[] = [];
+    const revokedByAddress: string[] = [];
+    const deps = {
+      ...dependencies,
+      disconnect: never,
+      revokeByAddress: async (_dir: string, address: string) => {
+        revokedByAddress.push(address);
+        return true;
+      },
+      uninstallHook: (options: { agentAddress: string; sessionId: string }) => {
+        unhooked.push(`${options.agentAddress} ${options.sessionId}`);
+        return true;
+      },
+    };
+    const start = (overrides: Partial<SessionRegisterDependencies> = {}) =>
+      registerSession({
+        configDir,
+        runtime: "claude",
+        session,
+        env: {},
+        cliPath: "/cli/bin/run.js",
+        dependencies: { ...deps, ...overrides },
+      });
+    return { configDir, calls, deps, unhooked, revokedByAddress, start };
+  }
+
+  it("keeps the credential and profile, and a resume reuses the same address", async () => {
+    const { configDir, calls, deps, unhooked, revokedByAddress, start } =
+      harness();
+    expect(await start()).toMatchObject({
+      status: "registered",
+      address: "agent@example.test",
+    });
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: deps,
+    });
+    expect(ended).toMatchObject({
+      status: "kept",
+      address: "agent@example.test",
+    });
+    // Only the session's own receive hooks go; the credential stays.
+    expect(unhooked).toEqual([`agent@example.test ${session}`]);
+    expect(revokedByAddress).toEqual([]);
+    expect(
+      loadConnectedAgentProfile(configDir, `session-${session}`)?.agent_address,
+    ).toBe("agent@example.test");
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      disconnect: "kept",
+      revokeOnEnd: false,
+    });
+    expect(readSessionRecord(configDir, session)?.endedAt).toBeTruthy();
+    expect(pendingSessionDisconnects(configDir)).toEqual([]);
+    // Ending again changes nothing.
+    expect(
+      (
+        await endSession({
+          configDir,
+          runtime: "claude",
+          session,
+          dependencies: deps,
+        })
+      ).status,
+    ).toBe("kept");
+
+    const resumed = await start();
+    expect(resumed).toMatchObject({
+      status: "already_registered",
+      address: "agent@example.test",
+      profile: `session-${session}`,
+    });
+    expect(calls.enroll).toHaveLength(1);
+    // The resume re-verified the agent and put its receive hooks back.
+    expect(calls.hooks).toEqual([session, session]);
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      endedAt: null,
+      disconnect: null,
+    });
+  });
+
+  it("keeps the same address when the session resumes after a hook's grace period", async () => {
+    const { configDir, calls, deps, unhooked, start } = harness();
+    await start();
+    const waited: number[] = [];
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      graceMs: 60_000,
+      reason: "other",
+      dependencies: {
+        ...deps,
+        sleep: async (milliseconds) => {
+          waited.push(milliseconds);
+        },
+      },
+    });
+    expect(waited).toEqual([60_000]);
+    expect(ended.status).toBe("kept");
+    expect(unhooked).toHaveLength(1);
+    const resumed = await start();
+    expect(resumed).toMatchObject({
+      status: "already_registered",
+      address: "agent@example.test",
+    });
+    expect(calls.enroll).toHaveLength(1);
+  });
+
+  it("keeps the same address when the session resumes within a hook's grace period", async () => {
+    const { configDir, calls, deps, unhooked, start } = harness();
+    await start();
+    let restarted: Awaited<ReturnType<typeof start>> | null = null;
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      graceMs: 60_000,
+      dependencies: {
+        ...deps,
+        sleep: async () => {
+          restarted = await start();
+        },
+      },
+    });
+    expect(restarted).toMatchObject({
+      status: "already_registered",
+      address: "agent@example.test",
+    });
+    expect(ended.status).toBe("resumed");
+    expect(unhooked).toEqual([]);
+    expect(calls.enroll).toHaveLength(1);
+  });
+
+  it("leaves a kept end of an older waiting process out of pending disconnects", async () => {
+    const { configDir, deps, start } = harness();
+    await start();
+    const at = new Date("2026-10-02T12:00:00.000Z");
+    void endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      graceMs: 60_000,
+      dependencies: {
+        ...deps,
+        now: () => at,
+        sleep: () => new Promise(() => undefined),
+      },
+    });
+    for (
+      let attempt = 0;
+      attempt < 100 &&
+      readSessionRecord(configDir, session)?.disconnect !== "deferred";
+      attempt++
+    )
+      await new Promise((done) => setTimeout(done, 10));
+    // The waiting process died; nothing is due to be disconnected.
+    expect(
+      pendingSessionDisconnects(configDir, new Date(at.getTime() + 61_000)),
+    ).toEqual([]);
+    expect((await start()).status).toBe("already_registered");
+  });
+
+  it("disconnects at once with --revoke", async () => {
+    const { configDir, deps, start } = harness();
+    await start();
+    const disconnected: string[] = [];
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      revoke: true,
+      dependencies: {
+        ...deps,
+        disconnect: (async (params: { profileName: string }) => {
+          disconnected.push(params.profileName);
+          removeMailFile(
+            join(
+              agentProfileDirectory(configDir, params.profileName),
+              "connection.json",
+            ),
+          );
+          return {};
+        }) as unknown as typeof disconnectAgent,
+      },
+    });
+    expect(ended.status).toBe("disconnected");
+    expect(disconnected).toEqual([`session-${session}`]);
+    const resumed = await start();
+    expect(resumed.status).toBe("ended");
+    expect(resumed.detail).toContain("Reconnect");
+  });
+
+  it("says how to get the address back when the agent was revoked in Primitive", async () => {
+    const { configDir, calls, deps, start } = harness();
+    await start();
+    await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: deps,
+    });
+    const resumed = await start({ connectionState: async () => "revoked" });
+    expect(resumed).toMatchObject({
+      status: "revoked",
+      address: "agent@example.test",
+    });
+    expect(resumed.detail).toContain("Reconnect");
+    expect(calls.enroll).toHaveLength(1);
+    // The revoked profile stays, so the reconnect can be claimed into it.
+    expect(
+      loadConnectedAgentProfile(configDir, `session-${session}`),
+    ).not.toBeNull();
+  });
+
+  it("disconnects only the registered credential of sessions ended over 30 days ago", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const sessions = {
+      stale: "21111111-1111-4111-8111-111111111111",
+      replaced: "31111111-1111-4111-8111-111111111111",
+      recent: "41111111-1111-4111-8111-111111111111",
+      manual: "51111111-1111-4111-8111-111111111111",
+    };
+    const registeredAt = new Date("2026-08-01T12:00:00.000Z");
+    for (const id of [sessions.stale, sessions.replaced, sessions.recent])
+      await registerSession({
+        configDir,
+        runtime: "claude",
+        session: id,
+        env: {},
+        cliPath: "/cli/bin/run.js",
+        dependencies: { ...dependencies, now: () => registeredAt },
+      });
+    // An agent connected some other way, for a session that also ended.
+    saveConnectedAgentProfile(
+      configDir,
+      `session-${sessions.manual}`,
+      profile("manual@example.test"),
+    );
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      session: sessions.manual,
+      env: {},
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    const endedAt = new Date("2026-09-01T12:00:00.000Z");
+    for (const id of [sessions.stale, sessions.replaced, sessions.manual])
+      await endSession({
+        configDir,
+        runtime: "claude",
+        session: id,
+        dependencies: { now: () => endedAt, uninstallHook: () => true },
+      });
+    await endSession({
+      configDir,
+      runtime: "claude",
+      session: sessions.recent,
+      dependencies: {
+        now: () => new Date(endedAt.getTime() + 20 * day),
+        uninstallHook: () => true,
+      },
+    });
+    // A different credential lands in one stale session's profile without
+    // its record being updated.
+    const replacedProfile = `session-${sessions.replaced}`;
+    removeMailFile(
+      join(
+        agentProfileDirectory(configDir, replacedProfile),
+        "connection.json",
+      ),
+    );
+    saveConnectedAgentProfile(configDir, replacedProfile, {
+      ...profile("agent@example.test"),
+      api_key: ["pconn", "other", "x"].join("_"),
+      invitation_hash: "b".repeat(64),
+    });
+    const later = new Date(endedAt.getTime() + 31 * day);
+    expect(
+      staleSessionAgents(configDir, later).map((row) => row.session),
+    ).toEqual([sessions.stale]);
+    expect(
+      staleSessionAgents(configDir, new Date(endedAt.getTime() + 29 * day)),
+    ).toEqual([]);
+    const disconnected: Array<{
+      profileName: string;
+      expected: unknown;
+    }> = [];
+    const revokedByAddress: string[] = [];
+    const revoked = await revokeStaleSessionAgents(configDir, {
+      dependencies: {
+        now: () => later,
+        revokeByAddress: async (_dir, address) => {
+          revokedByAddress.push(address);
+          return true;
+        },
+        disconnect: (async (params: {
+          profileName: string;
+          expected?: unknown;
+        }) => {
+          disconnected.push({
+            profileName: params.profileName,
+            expected: params.expected,
+          });
+          removeMailFile(
+            join(
+              agentProfileDirectory(configDir, params.profileName),
+              "connection.json",
+            ),
+          );
+          return {};
+        }) as unknown as typeof disconnectAgent,
+      },
+    });
+    expect(revoked).toBe(1);
+    expect(disconnected).toEqual([
+      {
+        profileName: `session-${sessions.stale}`,
+        expected: {
+          address: "agent@example.test",
+          invitationHash: "a".repeat(64),
+        },
+      },
+    ]);
+    expect(revokedByAddress).toEqual([]);
+    expect(readSessionRecord(configDir, sessions.stale)?.disconnect).toBe(
+      "done",
+    );
+    for (const id of [sessions.replaced, sessions.recent])
+      expect(readSessionRecord(configDir, id)?.disconnect).toBe("kept");
+    expect(
+      loadConnectedAgentProfile(configDir, replacedProfile)?.invitation_hash,
+    ).toBe("b".repeat(64));
+    expect(
+      loadConnectedAgentProfile(configDir, `session-${sessions.manual}`),
+    ).not.toBeNull();
+    // A second run finds nothing more to do.
+    expect(
+      await revokeStaleSessionAgents(configDir, {
+        dependencies: { now: () => later, disconnect: never },
+      }),
+    ).toBe(0);
+  });
+
+  it("keeps a stale agent whose disconnect was not confirmed for the next run", async () => {
+    const { configDir, deps, start } = harness();
+    await start();
+    const endedAt = new Date("2026-09-01T12:00:00.000Z");
+    await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: { ...deps, now: () => endedAt },
+    });
+    const later = new Date(endedAt.getTime() + 31 * day);
+    expect(
+      await revokeStaleSessionAgents(configDir, {
+        dependencies: {
+          now: () => later,
+          disconnect: (async () => {
+            throw new TypeError("network");
+          }) as unknown as typeof disconnectAgent,
+        },
+      }),
+    ).toBe(0);
+    expect(readSessionRecord(configDir, session)).toMatchObject({
+      disconnect: "kept",
+      revokeOnEnd: false,
+    });
+    expect(pendingSessionDisconnects(configDir, later)).toEqual([]);
+    expect(
+      staleSessionAgents(configDir, later).map((row) => row.session),
+    ).toEqual([session]);
   });
 });
 
