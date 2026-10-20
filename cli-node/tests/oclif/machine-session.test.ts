@@ -2135,3 +2135,56 @@ describe("AGENT_RESUME on session registration", () => {
     expect(calls.resumes).toEqual([]);
   });
 });
+
+describe("AGENT_RESUME on session end", () => {
+  for (const resumeNote of ["cleared", "failed"] as const)
+    it(`reports a ${resumeNote} note deletion from a --revoke end`, async () => {
+      const { configDir } = setup();
+      const { dependencies } = fakeDependencies(configDir);
+      const disconnect = (async (params: { profileName: string }) => {
+        removeMailFile(
+          join(
+            agentProfileDirectory(configDir, params.profileName),
+            "connection.json",
+          ),
+        );
+        return { resumeNote };
+      }) as unknown as typeof disconnectAgent;
+      await registerSession({
+        configDir,
+        runtime: "claude",
+        env: { CLAUDE_CODE_SESSION_ID: session },
+        cliPath: "/cli/bin/run.js",
+        dependencies,
+      });
+      const ended = await endSession({
+        configDir,
+        revoke: true,
+        runtime: "claude",
+        session,
+        dependencies: { disconnect },
+      });
+      // A failed deletion never stops the disconnect itself.
+      expect(ended).toMatchObject({ status: "disconnected", resumeNote });
+    });
+
+  it("reports no note for an end that keeps the agent", async () => {
+    const { configDir } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    await registerSession({
+      configDir,
+      runtime: "claude",
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    const ended = await endSession({
+      configDir,
+      runtime: "claude",
+      session,
+      dependencies: { uninstallHook: () => true },
+    });
+    expect(ended.status).toBe("kept");
+    expect(ended.resumeNote).toBeUndefined();
+  });
+});

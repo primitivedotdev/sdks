@@ -14,6 +14,13 @@ import {
  */
 export const RESUME_NOTE_NAME = "AGENT_RESUME";
 
+/**
+ * Each note request gets this long. The note is best effort and runs inside
+ * registration, connect, disconnect and their hooks, so a stalled request
+ * must never hold them up.
+ */
+export const NOTE_REQUEST_TIMEOUT_MS = 10_000;
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
@@ -55,13 +62,14 @@ function client(profile: ConnectedAgentProfile, fetchImpl?: typeof fetch) {
 async function currentNote(
   api: ReturnType<typeof client>,
   address: string,
+  timeoutMs: number,
 ): Promise<Note | null> {
   try {
     return (await runAddressNotesRequest(api, {
       action: "get",
       address,
       name: RESUME_NOTE_NAME,
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })) as Note;
   } catch (error) {
     if (error instanceof AddressNotesApiError && error.status === 404)
@@ -84,7 +92,10 @@ export async function publishResumeNote(options: {
   sessionId: string | null | undefined;
   rewrite?: boolean;
   fetch?: typeof fetch;
+  /** Deadline for each request; defaults to NOTE_REQUEST_TIMEOUT_MS. */
+  timeoutMs?: number;
 }): Promise<ResumeNoteWrite> {
+  const timeoutMs = options.timeoutMs ?? NOTE_REQUEST_TIMEOUT_MS;
   const value = resumeNoteValue(options.runtime, options.sessionId);
   if (value === null) return "skipped";
   try {
@@ -95,7 +106,7 @@ export async function publishResumeNote(options: {
     if (!profile) return "skipped";
     const api = client(profile, options.fetch);
     const address = profile.agent_address;
-    const current = await currentNote(api, address);
+    const current = await currentNote(api, address, timeoutMs);
     if (current?.value === value && !options.rewrite) return "unchanged";
     await runAddressNotesRequest(api, {
       action: "set",
@@ -103,6 +114,7 @@ export async function publishResumeNote(options: {
       name: RESUME_NOTE_NAME,
       value,
       visibility: "private",
+      signal: AbortSignal.timeout(timeoutMs),
       ...(current?.version
         ? { ifVersion: current.version }
         : { ifAbsent: true }),
@@ -120,15 +132,17 @@ export async function publishResumeNote(options: {
 export async function clearResumeNote(
   profile: ConnectedAgentProfile,
   fetchImpl?: typeof fetch,
+  timeoutMs: number = NOTE_REQUEST_TIMEOUT_MS,
 ): Promise<ResumeNoteClear> {
   try {
     const api = client(profile, fetchImpl);
-    const current = await currentNote(api, profile.agent_address);
+    const current = await currentNote(api, profile.agent_address, timeoutMs);
     if (!current) return "absent";
     await runAddressNotesRequest(api, {
       action: "delete",
       address: profile.agent_address,
       name: RESUME_NOTE_NAME,
+      signal: AbortSignal.timeout(timeoutMs),
       ...(current.version ? { ifVersion: current.version } : {}),
     });
     return "cleared";

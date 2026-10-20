@@ -12,7 +12,7 @@ import {
 export default class AgentSessionEndCommand extends Command {
   static summary = "Record that a registered session ended";
   static description =
-    "Marks this session ended and removes its exact-session receive hooks. The agent that `primitive agent session-register` created for the session stays connected, with its credential and profile, so resuming the session (for example `claude --resume`) re-verifies it and reinstalls the hooks at the same address. Its presence lapses on its own once the session stops running. An agent whose session has not started again for 30 days is disconnected by `primitive machine doctor --fix` or the next `agent session-register` on this machine. --revoke disconnects the agent now instead. Agents connected any other way are never disconnected, including an agent later connected into the same profile with `primitive agent connect`. Never blocks or fails a session: every outcome exits 0 with a status. --hook reads Claude's SessionEnd hook input from stdin and finishes in the background after a grace period: Claude reports the same end for a restart, a switch to another session and a real exit, so a start of the same session within the grace period cancels the end.";
+    "Marks this session ended and removes its exact-session receive hooks. The agent that `primitive agent session-register` created for the session stays connected, with its credential and profile, so resuming the session (for example `claude --resume`) re-verifies it and reinstalls the hooks at the same address. Its presence lapses on its own once the session stops running. An agent whose session has not started again for 30 days is disconnected by `primitive machine doctor --fix` or the next `agent session-register` on this machine. --revoke disconnects the agent now instead, first deleting its AGENT_RESUME note (reported as resumeNote; a failed deletion is a warning and never stops the disconnect). Agents connected any other way are never disconnected, including an agent later connected into the same profile with `primitive agent connect`. Never blocks or fails a session: every outcome exits 0 with a status. --hook reads Claude's SessionEnd hook input from stdin and finishes in the background after a grace period: Claude reports the same end for a restart, a switch to another session and a real exit, so a start of the same session within the grace period cancels the end.";
   static examples = [
     "<%= config.bin %> agent session-end --runtime claude --json",
     "<%= config.bin %> agent session-end --runtime codex --session 11111111-1111-4111-8111-111111111111",
@@ -88,6 +88,12 @@ export default class AgentSessionEndCommand extends Command {
     // Status first, so a person reading the JSON sees the outcome at once.
     const { status, ...rest } = result;
     if (flags.json) this.log(JSON.stringify({ status, ...rest }));
-    else if (!flags.quiet) this.log(`${result.status}: ${result.detail}`);
+    else if (!flags.quiet) {
+      this.log(`${result.status}: ${result.detail}`);
+      if (result.resumeNote === "failed")
+        this.warn(
+          "The AGENT_RESUME note could not be deleted before the agent was disconnected.",
+        );
+    }
   }
 }

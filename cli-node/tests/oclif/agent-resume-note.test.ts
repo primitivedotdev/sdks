@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearProfileResumeNote,
   clearResumeNote,
+  NOTE_REQUEST_TIMEOUT_MS,
   publishResumeNote,
   RESUME_NOTE_NAME,
   resumeNoteValue,
@@ -274,5 +275,61 @@ describe("clearProfileResumeNote", () => {
       }),
     ).resolves.toBe("skipped");
     expect(api.calls).toHaveLength(1);
+  });
+});
+
+describe("AGENT_RESUME request deadlines", () => {
+  /** Answers the read, then never answers the write until it is aborted. */
+  function stalling(existing: boolean) {
+    const methods: string[] = [];
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+      const request = new Request(input, init);
+      methods.push(request.method);
+      if (request.method === "GET")
+        return existing
+          ? Response.json({
+              success: true,
+              data: note(`claude --resume ${session}`, "2"),
+            })
+          : Response.json(missing.body, { status: 404 });
+      return new Promise<Response>((_resolve, reject) => {
+        request.signal.addEventListener("abort", () =>
+          reject(request.signal.reason),
+        );
+      });
+    });
+    return { fetch, methods };
+  }
+
+  it("gives up on a stalled write", async () => {
+    const directory = configDir();
+    const api = stalling(false);
+    const started = Date.now();
+    await expect(
+      publishResumeNote({
+        configDir: directory,
+        profileName: "work",
+        runtime: "claude",
+        sessionId: session,
+        fetch: api.fetch,
+        timeoutMs: 50,
+      }),
+    ).resolves.toBe("failed");
+    expect(api.methods).toEqual(["GET", "PUT"]);
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
+  it("gives up on a stalled delete", async () => {
+    const api = stalling(true);
+    const started = Date.now();
+    await expect(clearResumeNote(profile, api.fetch, 50)).resolves.toBe(
+      "failed",
+    );
+    expect(api.methods).toEqual(["GET", "DELETE"]);
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+
+  it("defaults every request to a ten second deadline", () => {
+    expect(NOTE_REQUEST_TIMEOUT_MS).toBe(10_000);
   });
 });

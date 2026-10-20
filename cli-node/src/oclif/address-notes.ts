@@ -15,7 +15,7 @@ export type AddressNotesRequest = {
   visibility?: "private" | "public";
   ifAbsent?: boolean;
   ifVersion?: string;
-  /** Aborts a read; only `get` uses it. */
+  /** Aborts the request; used by `get`, `set` and `delete`. */
   signal?: AbortSignal;
 };
 
@@ -186,7 +186,7 @@ export async function runAddressNotesRequest(
     else if (ifVersion) condition = { if_version: ifVersion };
     else {
       try {
-        const current = await getNote(client, address, name);
+        const current = await getNote(client, address, name, request.signal);
         condition = { if_version: current.version };
       } catch (error) {
         if (!(error instanceof AddressNotesApiError) || error.status !== 404)
@@ -206,12 +206,14 @@ export async function runAddressNotesRequest(
         },
         headers: { "Content-Type": "application/json" },
         responseStyle: "fields",
+        ...(request.signal ? { signal: request.signal } : {}),
       }),
     );
     return note(data, address, name);
   }
 
-  const version = ifVersion ?? (await getNote(client, address, name)).version;
+  const version =
+    ifVersion ?? (await getNote(client, address, name, request.signal)).version;
   const data = await result<unknown>(
     client.delete({
       security,
@@ -219,6 +221,7 @@ export async function runAddressNotesRequest(
       path: { address, name },
       query: { if_version: version },
       responseStyle: "fields",
+      ...(request.signal ? { signal: request.signal } : {}),
     }),
   );
   if (
