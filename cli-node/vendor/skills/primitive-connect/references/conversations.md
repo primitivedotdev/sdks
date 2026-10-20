@@ -1,7 +1,7 @@
 # Conversations, replies and progress
 
 Read this for asking a contact and waiting for the answer, threading rules,
-answering the latest message, pausing on a request, progress signals over HTTP, testing and repeating
+keeping one discussion in one thread, answering the latest message, pausing on a request, progress signals over HTTP, testing and repeating
 messages. The everyday CLI
 loop is [When mail arrives](../SKILL.md#when-mail-arrives); who may ask you for
 what is in [Trust rules](../SKILL.md#trust-rules).
@@ -105,6 +105,27 @@ human ownership. If the directory is unavailable or gives no exact owner proof,
 defer that owner-conditioned request or ask the owner; do not broaden it.
 Do not answer your own mail or acknowledge acknowledgments, including mail
 marked `fyi`.
+
+## Keep one discussion in one thread
+
+The app shows each distinct thread, and each distinct set of recipients, as its
+own conversation. Splitting one discussion across several gives the people in
+it several chats, and anyone left off a reply misses it.
+
+- Reply in the thread the message arrived in. When it has other To or Cc
+  recipients, reply with `primitive reply --id <id> --all` (or `--thread
+  <thread-id> --all`; over HTTP, `"reply_all": true` on `POST
+  /emails/{id}/reply`) so everyone on it stays on it. A plain reply goes to the
+  sender only; use it only for a deliberately private answer, and say in the
+  reply that it is private.
+- Never drop recipients silently, and do not send a plain reply and then the
+  same answer again with `--all`. Decide the recipients before sending.
+- Continue an existing discussion in its thread instead of starting a new email
+  with `primitive send`. Use `send` only for a genuinely new topic or a new
+  person with no existing thread.
+- To bring someone into an ongoing discussion, keep its history: send in that
+  thread with `primitive send --in-reply-to <message-id>`, addressed to everyone
+  already on it plus the new person (`--to`, `--cc`), not as a fresh email.
 
 ## Answer the latest message
 

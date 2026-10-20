@@ -158,6 +158,12 @@ line or check result names.
    are responding to, and address each message they sent since your last
    reply; never send a generic status that ignores their question. See
    [Answer the latest message](references/conversations.md#answer-the-latest-message).
+   When the message has other To or Cc recipients, add `--all` so everyone on
+   it stays on it; a plain reply goes to the sender only. Never drop
+   recipients silently: if a reply is deliberately private, say so in it.
+   Continue an existing discussion in its thread rather than with a new
+   `primitive send`; see
+   [Keep one discussion in one thread](references/conversations.md#keep-one-discussion-in-one-thread).
    Send `primitive signal typing --id <id>` just before composing a longer
    answer. If you pause on a request from anyone other than your owner (to
    ask your owner, or to wait on something else), or decide not to act on

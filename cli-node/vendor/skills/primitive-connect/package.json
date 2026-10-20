@@ -4,5 +4,5 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": { "test": "node --test scripts/*.test.mjs" },
-  "dependencies": { "@primitivedotdev/sdk": "1.26.0" }
+  "dependencies": { "@primitivedotdev/sdk": "1.35.3" }
 }
