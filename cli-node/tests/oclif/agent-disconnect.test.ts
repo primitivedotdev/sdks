@@ -68,16 +68,26 @@ function revoked(): { success: true; data: { connection: object } } {
   };
 }
 
+/** Address note requests are kept apart from the connection calls. */
 function server(body: unknown = revoked(), status = 200) {
   const calls: Request[] = [];
+  const notes: Request[] = [];
   const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
-    calls.push(new Request(input, init));
+    const request = new Request(input, init);
+    if (new URL(request.url).pathname.includes("/address-notes/")) {
+      notes.push(request);
+      return Response.json(
+        { success: false, error: { code: "not_found", message: "none" } },
+        { status: 404 },
+      );
+    }
+    calls.push(request);
     return new Response(JSON.stringify(body), {
       status,
       headers: { "content-type": "application/json" },
     });
   });
-  return { fetch, calls };
+  return { fetch, calls, notes };
 }
 
 const stopped = {
@@ -613,5 +623,90 @@ describe("addresses revoked elsewhere", () => {
     );
     expect(savedSetupRevoked(directory, "work", "b".repeat(64))).toBe(false);
     expect(savedSetupRevoked(directory, "work", "../x")).toBe(false);
+  });
+});
+
+describe("AGENT_RESUME on disconnect", () => {
+  it("deletes the note with the credential before revoking it", async () => {
+    const directory = configDir();
+    saved(directory, "work", true);
+    const requests: string[] = [];
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
+      requests.push(`${request.method} ${url.pathname}${url.search}`);
+      if (url.pathname.includes("/address-notes/"))
+        return request.method === "GET"
+          ? Response.json({
+              success: true,
+              data: {
+                address: profile.agent_address,
+                name: "AGENT_RESUME",
+                value: `claude --resume ${session}`,
+                visibility: "private",
+                version: "5",
+                created_at: "2026-10-01T00:00:00Z",
+                updated_at: "2026-10-01T00:00:00Z",
+              },
+            })
+          : Response.json({ success: true, data: { deleted: true } });
+      return Response.json(revoked());
+    });
+    const result = await disconnectAgent({
+      configDir: directory,
+      profileName: "work",
+      fetch,
+      stopReceiver: async () => stopped,
+    });
+    expect(result.resumeNote).toBe("cleared");
+    expect(requests).toEqual([
+      "GET /v1/address-notes/agent%40example.test/AGENT_RESUME",
+      "DELETE /v1/address-notes/agent%40example.test/AGENT_RESUME?if_version=5",
+      "DELETE /v1/agent-connections/agent%40example.test",
+    ]);
+  });
+
+  it("still disconnects when the note cannot be deleted", async () => {
+    const directory = configDir();
+    saved(directory, "work", true);
+    const api = server();
+    const result = await disconnectAgent({
+      configDir: directory,
+      profileName: "work",
+      fetch: api.fetch,
+      stopReceiver: async () => stopped,
+      clearResumeNote: async () => {
+        throw new Error("network down");
+      },
+    });
+    expect(result.status).toBe("disconnected");
+    expect(result.revocation).toBe("confirmed");
+    expect(result.resumeNote).toBe("failed");
+    expect(loadConnectedAgentProfile(directory, "work")).toBeNull();
+  });
+
+  it("reports an absent note and skips it for a credential already confirmed revoked", async () => {
+    const directory = configDir();
+    saved(directory, "work", true);
+    const api = server();
+    const first = await disconnectAgent({
+      configDir: directory,
+      profileName: "work",
+      fetch: api.fetch,
+      stopReceiver: async () => stopped,
+    });
+    expect(first.resumeNote).toBe("absent");
+    expect(api.notes).toHaveLength(1);
+    // The confirmation is kept; a retry with the same credential sends nothing.
+    saveConnectedAgentProfile(directory, "work", profile);
+    const again = await disconnectAgent({
+      configDir: directory,
+      profileName: "work",
+      fetch: api.fetch,
+      stopReceiver: async () => stopped,
+    });
+    expect(again.revocation).toBe("previously_confirmed");
+    expect(again.resumeNote).toBe("skipped");
+    expect(api.notes).toHaveLength(1);
   });
 });

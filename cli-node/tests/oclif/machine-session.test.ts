@@ -99,6 +99,7 @@ function fakeDependencies(configDir: string) {
     enroll: [] as Array<Parameters<typeof enrollAgent>[0]>,
     hooks: [] as string[],
     seeds: [] as string[],
+    resumes: [] as string[],
   };
   const dependencies: Partial<SessionRegisterDependencies> = {
     enroll: (async (params: Parameters<typeof enrollAgent>[0]) => {
@@ -126,6 +127,10 @@ function fakeDependencies(configDir: string) {
       return "created";
     },
     connectionState: async () => "connected",
+    publishResumeNote: async (_configDir, profileName, runtime, sessionId) => {
+      calls.resumes.push(`${profileName} ${runtime} ${sessionId}`);
+      return "written";
+    },
     now: () => new Date("2026-10-02T12:00:00.000Z"),
   };
   return { calls, dependencies };
@@ -1972,5 +1977,161 @@ describe("session identity helpers", () => {
         Readable.from([JSON.stringify({ session_id: "x" })]),
       ),
     ).toBeNull();
+  });
+});
+
+describe("AGENT_RESUME on session registration", () => {
+  it("publishes the Claude resume command with the session ID lowercased", async () => {
+    const { configDir, repo } = setup();
+    const { calls, dependencies } = fakeDependencies(configDir);
+    const result = await registerSession({
+      configDir,
+      runtime: "claude",
+      session: session.toUpperCase(),
+      cwd: repo,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    expect(result).toMatchObject({
+      status: "registered",
+      resumeNote: "written",
+    });
+    expect(calls.resumes).toEqual([`session-${session} claude ${session}`]);
+    // A resume publishes again; the note itself skips an unchanged value.
+    const resumed = await registerSession({
+      configDir,
+      runtime: "claude",
+      cwd: repo,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    expect(resumed.status).toBe("already_registered");
+    expect(resumed.resumeNote).toBe("written");
+    expect(calls.resumes).toHaveLength(2);
+  });
+
+  it("publishes the Codex resume command", async () => {
+    const { configDir, repo } = setup();
+    const { calls, dependencies } = fakeDependencies(configDir);
+    const thread = "44444444-4444-4444-8444-444444444444";
+    const result = await registerSession({
+      configDir,
+      runtime: "codex",
+      cwd: repo,
+      env: { CODEX_THREAD_ID: thread },
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    expect(result.status).toBe("registered");
+    expect(calls.resumes).toEqual([`session-${thread} codex ${thread}`]);
+  });
+
+  it("writes the note once and skips an unchanged value on resume", async () => {
+    const { configDir, repo } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    delete dependencies.publishResumeNote;
+    let stored: { value: string; version: string } | null = null;
+    const requests: string[] = [];
+    const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
+      requests.push(`${request.method} ${url.pathname}`);
+      const row = (value: string, version: string) => ({
+        address: "agent@example.test",
+        name: "AGENT_RESUME",
+        value,
+        visibility: "private",
+        version,
+        created_at: "2026-10-01T00:00:00Z",
+        updated_at: "2026-10-01T00:00:00Z",
+      });
+      if (request.method === "GET")
+        return stored
+          ? Response.json({
+              success: true,
+              data: row(stored.value, stored.version),
+            })
+          : Response.json(
+              { success: false, error: { code: "not_found", message: "x" } },
+              { status: 404 },
+            );
+      const body = (await request.json()) as { value: string };
+      stored = { value: body.value, version: "1" };
+      return Response.json({ success: true, data: row(body.value, "1") });
+    };
+    const options = {
+      configDir,
+      runtime: "claude" as const,
+      cwd: repo,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      fetch: fetch as typeof globalThis.fetch,
+      dependencies,
+    };
+    expect((await registerSession(options)).resumeNote).toBe("written");
+    expect(stored).toEqual({
+      value: `claude --resume ${session}`,
+      version: "1",
+    });
+    expect((await registerSession(options)).resumeNote).toBe("unchanged");
+    const path = "/v1/address-notes/agent%40example.test/AGENT_RESUME";
+    expect(requests).toEqual([`GET ${path}`, `PUT ${path}`, `GET ${path}`]);
+  });
+
+  it("never fails registration when the note cannot be written", async () => {
+    const { configDir, repo } = setup();
+    const { dependencies } = fakeDependencies(configDir);
+    const failing = await registerSession({
+      configDir,
+      runtime: "claude",
+      cwd: repo,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: {
+        ...dependencies,
+        publishResumeNote: async () => {
+          throw new Error("network down");
+        },
+      },
+    });
+    expect(failing).toMatchObject({
+      status: "registered",
+      address: "agent@example.test",
+      resumeNote: "failed",
+    });
+    const reported = await registerSession({
+      configDir,
+      runtime: "claude",
+      cwd: repo,
+      env: { CLAUDE_CODE_SESSION_ID: session },
+      cliPath: "/cli/bin/run.js",
+      dependencies: {
+        ...dependencies,
+        publishResumeNote: async () => "failed",
+      },
+    });
+    expect(reported).toMatchObject({
+      status: "already_registered",
+      resumeNote: "failed",
+    });
+  });
+
+  it("writes no note for an omp session", async () => {
+    const { configDir, repo } = setup();
+    const { calls, dependencies } = fakeDependencies(configDir);
+    const result = await registerSession({
+      configDir,
+      runtime: "omp",
+      session,
+      cwd: repo,
+      env: {},
+      cliPath: "/cli/bin/run.js",
+      dependencies,
+    });
+    expect(result.status).toBe("registered");
+    expect(result.resumeNote).toBeUndefined();
+    expect(calls.resumes).toEqual([]);
   });
 });

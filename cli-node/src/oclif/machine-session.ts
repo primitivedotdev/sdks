@@ -17,6 +17,10 @@ import {
   disconnectAgent,
 } from "./agent-disconnect.js";
 import { enrollAgent } from "./agent-enroll.js";
+import {
+  publishResumeNote,
+  type ResumeNoteWrite,
+} from "./agent-resume-note.js";
 import { verificationReplySubmitted } from "./agent-setup.js";
 import { refreshStoredCliCredentials } from "./api-client.js";
 import { loadCliCredentials } from "./auth.js";
@@ -77,6 +81,8 @@ export type SessionRegisterResult = {
   name?: string;
   /** Whether that name is still the one this command generated. */
   nameIsDefault?: boolean;
+  /** The AGENT_RESUME note, on a run that found the session connected. */
+  resumeNote?: ResumeNoteWrite;
   detail: string;
 };
 
@@ -769,6 +775,13 @@ export type SessionRegisterDependencies = SessionDisconnectDependencies & {
     value: string,
   ) => Promise<"created" | "already_present" | "failed" | string>;
   connectionState: (profile: ConnectedAgentProfile) => Promise<ConnectionState>;
+  /** Writes the AGENT_RESUME note; best effort. */
+  publishResumeNote: (
+    configDir: string,
+    profileName: string,
+    runtime: MachineRuntime,
+    sessionId: string,
+  ) => Promise<ResumeNoteWrite>;
   ompSession: (configDir: string) => string | null;
   now: () => Date;
 };
@@ -847,6 +860,14 @@ export async function registerSession(
         seedAgentInfoNote(configDir, profileName, value, options.fetch),
       connectionState: (profile) =>
         agentConnectionState(profile, options.fetch),
+      publishResumeNote: (configDir, profileName, runtime, sessionId) =>
+        publishResumeNote({
+          configDir,
+          profileName,
+          runtime,
+          sessionId,
+          fetch: options.fetch,
+        }),
       ompSession: ompProcessSession,
       ...DISCONNECT_DEFAULTS,
     },
@@ -1038,6 +1059,26 @@ export async function registerSession(
         (current) => (current ? { ...current, agentInfo: seeded } : current),
       );
     };
+    // The command that resumes this exact session, for whoever reads the
+    // agent's notes. Written on every start and resume, but sent only when
+    // it changed. A failure never fails the registration.
+    const finishResumeNote = async (): Promise<
+      { resumeNote: ResumeNoteWrite } | Record<string, never>
+    > => {
+      if (runtime === "omp") return {};
+      try {
+        return {
+          resumeNote: await deps.publishResumeNote(
+            options.configDir,
+            profileName,
+            runtime,
+            sessionId,
+          ),
+        };
+      } catch {
+        return { resumeNote: "failed" };
+      }
+    };
     // Runs on every start and resume without anyone naming the profile, so
     // it never binds this profile beside another one the session already
     // receives as (the owner may have removed these hooks on purpose).
@@ -1106,10 +1147,12 @@ export async function registerSession(
       if (state === "connected") {
         const hooked = installHook(existing);
         await finishAgentInfo();
+        const resumeNote = await finishResumeNote();
         return {
           ...withAddress,
           receiving: RECEIVING[runtime],
           status: "already_registered",
+          ...resumeNote,
           detail:
             hooked === "installed"
               ? "This session is already connected."
@@ -1226,7 +1269,11 @@ export async function registerSession(
     let hooked: HookOutcome = "installed";
     if (runtime === "claude" && submitted && status !== "owner_inactive")
       hooked = claudeHook(address);
-    if (status === "connected") await finishAgentInfo();
+    let resumeNote: Awaited<ReturnType<typeof finishResumeNote>> = {};
+    if (status === "connected") {
+      await finishAgentInfo();
+      resumeNote = await finishResumeNote();
+    }
     const withAddress = { ...known, address, receiving: RECEIVING[runtime] };
     // Every name this command records is generated, so the connection still
     // has a default name unless it was renamed while setup was pending.
@@ -1237,6 +1284,7 @@ export async function registerSession(
         status: "registered",
         name,
         nameIsDefault: name === record.name,
+        ...resumeNote,
         detail:
           hooked === "installed"
             ? `Connected as ${address}.`

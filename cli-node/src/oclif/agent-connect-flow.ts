@@ -16,6 +16,12 @@ import {
 } from "./agent-connect.js";
 import { defaultConnectionName } from "./agent-identity-suggestions.js";
 import {
+  clearProfileResumeNote,
+  publishResumeNote,
+  type ResumeNoteClear,
+  type ResumeNoteWrite,
+} from "./agent-resume-note.js";
+import {
   externalReceivingState,
   nativeSessionPreflight,
   type ReceiverMode,
@@ -255,6 +261,14 @@ export type AgentConnectFlowDependencies = {
   installClaudeWakeHook: typeof installClaudeWakeHook;
   installSkill(runtime: AgentRuntime): ConnectSkillInstall;
   seedAgentInfo(profileName: string, value: string): Promise<AgentInfoSeed>;
+  /** Writes the AGENT_RESUME note for the bound session; best effort. */
+  publishResumeNote(
+    profileName: string,
+    runtime: AgentRuntime,
+    session: string,
+  ): Promise<ResumeNoteWrite>;
+  /** Deletes the AGENT_RESUME note when no session is bound; best effort. */
+  clearResumeNote(profileName: string): Promise<ResumeNoteClear | "skipped">;
   /** A check counts only when recorded at or after `since` (epoch ms). */
   awaitMailCheck(profileName: string, since: number): Promise<MailCheck>;
   /** The owner's personal mailbox from the connection's own record. */
@@ -368,6 +382,15 @@ function defaults(
     },
     seedAgentInfo: (profileName, value) =>
       seedAgentInfoNote(options.configDir, profileName, value),
+    publishResumeNote: (profileName, runtime, session) =>
+      publishResumeNote({
+        configDir: options.configDir,
+        profileName,
+        runtime,
+        sessionId: session,
+      }),
+    clearResumeNote: (profileName) =>
+      clearProfileResumeNote({ configDir: options.configDir, profileName }),
     refreshOwnerMemberAddress: (profileName) =>
       refreshOwnerMemberAddress({ configDir: options.configDir, profileName }),
     async awaitMailCheck(profileName, since) {
@@ -654,6 +677,24 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       skipped.push({ step: "agent_info", reason: "already_present" });
   }
 
+  // The command that resumes the bound session, once the connection is
+  // verified. A connection with no resumable session deletes any note an
+  // older session left. Best effort: a failure is reported, never fatal.
+  let resumeNote: ResumeNoteWrite | ResumeNoteClear = "skipped";
+  if (verified)
+    try {
+      resumeNote =
+        session && runtime
+          ? await dependencies.publishResumeNote(
+              result.identity.profileName,
+              runtime,
+              session,
+            )
+          : await dependencies.clearResumeNote(result.identity.profileName);
+    } catch {
+      resumeNote = "failed";
+    }
+
   const receiving =
     receiver === "external"
       ? {
@@ -741,6 +782,7 @@ export async function runAgentConnect(options: AgentConnectFlowOptions) {
       ? { ownerNotifications: result.ownerNotifications }
       : {}),
     agentInfo: agentInfoState,
+    resumeNote,
     skipped,
     warnings,
     selectProfile: `PRIMITIVE_AGENT_PROFILE=${result.identity.profileName}`,

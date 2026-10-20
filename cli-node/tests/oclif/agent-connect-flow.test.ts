@@ -96,6 +96,12 @@ function fixture(
     seedAgentInfo: vi.fn<AgentConnectFlowDependencies["seedAgentInfo"]>(
       async () => "created",
     ),
+    publishResumeNote: vi.fn<AgentConnectFlowDependencies["publishResumeNote"]>(
+      async () => "written",
+    ),
+    clearResumeNote: vi.fn<AgentConnectFlowDependencies["clearResumeNote"]>(
+      async () => "cleared",
+    ),
     awaitMailCheck: vi.fn<AgentConnectFlowDependencies["awaitMailCheck"]>(
       async () => ({
         state: "confirmed",
@@ -1033,5 +1039,125 @@ describe("connect warnings", () => {
     expect(connectWarnings(configDir, identity.profileName)).toEqual([]);
     profile(configDir, "ada_123456789@example.test");
     expect(connectWarnings(configDir, identity.profileName)).toEqual([]);
+  });
+});
+
+describe("AGENT_RESUME on agent connect", () => {
+  it("publishes the Codex resume command for the bound session", async () => {
+    const { options, dependencies } = fixture({
+      session: session.toUpperCase(),
+      env: { CODEX_THREAD_ID: session },
+    });
+    const output = await runAgentConnect(options);
+    expect(dependencies.publishResumeNote).toHaveBeenCalledWith(
+      identity.profileName,
+      "codex",
+      session.toUpperCase(),
+    );
+    expect(output.resumeNote).toBe("written");
+  });
+
+  it("publishes the Claude resume command for an external receiver", async () => {
+    const { options, dependencies } = fixture({
+      env: { CLAUDE_CODE_SESSION_ID: session },
+    });
+    const output = await runAgentConnect(options);
+    expect(output.runtime).toBe("claude");
+    expect(dependencies.publishResumeNote).toHaveBeenCalledWith(
+      identity.profileName,
+      "claude",
+      session,
+    );
+  });
+
+  it("deletes an older note when no resumable session is bound", async () => {
+    const unbound = fixture(
+      { session: undefined, env: {} },
+      setupResult({ receiving: "poll" }),
+    );
+    const output = await runAgentConnect(unbound.options);
+    expect(output.resumeNote).toBe("cleared");
+    expect(unbound.dependencies.publishResumeNote).not.toHaveBeenCalled();
+    expect(unbound.dependencies.clearResumeNote).toHaveBeenCalledWith(
+      identity.profileName,
+    );
+    // A session no runtime variable names has no resume command either.
+    const unnamed = fixture({ receiver: "poll", env: {} });
+    expect((await runAgentConnect(unnamed.options)).resumeNote).toBe("cleared");
+    expect(unnamed.dependencies.publishResumeNote).not.toHaveBeenCalled();
+    expect(unnamed.dependencies.clearResumeNote).toHaveBeenCalledWith(
+      identity.profileName,
+    );
+  });
+
+  it("deletes the note through the profile's own credential", async () => {
+    const { options, configDir } = fixture(
+      { session: undefined, env: {} },
+      setupResult({ receiving: "poll" }),
+    );
+    saveConnectedAgentProfile(configDir, identity.profileName, {
+      version: 1,
+      auth_method: "agent_connection",
+      api_key: credential,
+      api_base_url: apiBaseUrl,
+      org_id: identity.orgId,
+      agent_address: identity.agentAddress,
+      owner_address: identity.ownerAddress,
+      invitation_hash: "c".repeat(64),
+      created_at: "2026-10-01T00:00:00.000Z",
+    });
+    const requests: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        requests.push(`${request.method} ${url.pathname}${url.search}`);
+        return request.method === "GET"
+          ? Response.json({
+              success: true,
+              data: {
+                address: identity.agentAddress,
+                name: "AGENT_RESUME",
+                value: `claude --resume ${session}`,
+                visibility: "private",
+                version: "3",
+                created_at: "2026-10-01T00:00:00Z",
+                updated_at: "2026-10-01T00:00:00Z",
+              },
+            })
+          : Response.json({ success: true, data: { deleted: true } });
+      }),
+    );
+    const output = await runAgentConnect({
+      ...options,
+      dependencies: { ...options.dependencies, clearResumeNote: undefined },
+    });
+    expect(output.resumeNote).toBe("cleared");
+    const path = `/v1/address-notes/${encodeURIComponent(identity.agentAddress)}/AGENT_RESUME`;
+    expect(requests).toEqual([`GET ${path}`, `DELETE ${path}?if_version=3`]);
+  });
+
+  it("changes no note before verification", async () => {
+    const pending = fixture(
+      {},
+      setupResult({ verification: { state: "challenge_pending" } }),
+    );
+    expect((await runAgentConnect(pending.options)).resumeNote).toBe("skipped");
+    expect(pending.dependencies.publishResumeNote).not.toHaveBeenCalled();
+    expect(pending.dependencies.clearResumeNote).not.toHaveBeenCalled();
+  });
+
+  it("never fails the connection when the note cannot be written", async () => {
+    const { options } = fixture({
+      dependencies: {
+        publishResumeNote: async () => {
+          throw new Error("network down");
+        },
+      },
+    });
+    const output = await runAgentConnect(options);
+    expect(output.status).toBe("connected");
+    expect(output.resumeNote).toBe("failed");
   });
 });

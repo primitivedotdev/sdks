@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, renameSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { PrimitiveApiClient } from "@primitivedotdev/api-core";
+import { clearResumeNote, type ResumeNoteClear } from "./agent-resume-note.js";
 import { uninstallClaudeWakeHook } from "./claude-wake-install.js";
 import {
   AgentConnectionSetupError,
@@ -42,6 +43,11 @@ type DisconnectResult = {
    */
   revocation: "confirmed" | "previously_confirmed" | "already_revoked";
   externalHook: "removed" | "unavailable" | null;
+  /**
+   * The AGENT_RESUME note, deleted with the credential before it is revoked.
+   * `skipped` when the credential was already confirmed revoked.
+   */
+  resumeNote: ResumeNoteClear | "skipped";
 };
 
 type DisconnectDependencies = {
@@ -57,6 +63,11 @@ type DisconnectDependencies = {
    * revoked in its place.
    */
   expected?: { address: string; invitationHash: string };
+  /** Deletes the AGENT_RESUME note; best effort, never throws. */
+  clearResumeNote?: (
+    profile: ConnectedAgentProfile,
+    fetcher?: typeof fetch,
+  ) => Promise<ResumeNoteClear | "skipped">;
 };
 
 function credentialDigest(profile: ConnectedAgentProfile): string {
@@ -330,6 +341,18 @@ export async function disconnectAgent(
         "The bound receiver has not confirmed stopping. The connection and credential were preserved. Check listener status before retrying.",
       );
     const previous = confirmedLocally(directory, profile);
+    // Only this credential can delete the note, so it goes before the
+    // revocation. A failure never stops the disconnect.
+    let resumeNote: ResumeNoteClear | "skipped" = "skipped";
+    if (!previous)
+      try {
+        resumeNote = await (params.clearResumeNote ?? clearResumeNote)(
+          profile,
+          params.fetch,
+        );
+      } catch {
+        resumeNote = "failed";
+      }
     const revocation = previous
       ? "previously_confirmed"
       : await revoke(profile, params.fetch);
@@ -380,6 +403,7 @@ export async function disconnectAgent(
       receiver,
       revocation,
       externalHook,
+      resumeNote,
     };
   } catch (error) {
     if (error instanceof AgentDisconnectError) throw error;
@@ -548,6 +572,8 @@ export async function clearRevokedAddresses(
         stopReceiver: params.stopReceiver,
         now: params.now,
         env: params.env,
+        // This credential no longer authenticates, so it cannot delete notes.
+        clearResumeNote: async () => "skipped",
         // A reconnect may land while the lookup is pending; only the
         // credential that was checked may be disconnected.
         expected: {
