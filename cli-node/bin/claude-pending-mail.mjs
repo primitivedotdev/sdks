@@ -102,6 +102,7 @@ export function readPendingMail(configDir, profile, sessionId) {
         threadId: notice.thread_id?.toLowerCase() ?? null,
         inThread: notice.in_thread,
         newer: notice.newer,
+        receivedAt: Date.parse(notice.received_at),
         // Server-derived; an unreadable label is dropped, not the notice.
         interaction:
           notice.kind !== "status" &&
@@ -123,6 +124,56 @@ export function readPendingMail(configDir, profile, sessionId) {
       },
     ];
   });
+}
+
+const REPEAT_TICK = "repeat.tick/1";
+
+/**
+ * One notice per thread: the newest mail notice in each thread stands for
+ * every older one, which it covers (reading or answering it clears them).
+ * A repeating message's tick that knows of newer mail in its thread is
+ * superseded even when that newer tick has no notice yet, since the newer
+ * one will arrive. Status notices and mail outside a thread are never
+ * collapsed. A kept notice carries `covered`, how many it stands for.
+ * Order is kept, so the oldest remaining notice still comes first.
+ */
+export function collapsePendingMail(notices) {
+  const newest = new Map();
+  notices.forEach((notice, index) => {
+    if (notice.kind === "status" || !notice.threadId) return;
+    const current = newest.get(notice.threadId);
+    if (
+      current === undefined ||
+      notice.receivedAt > notices[current].receivedAt ||
+      (notice.receivedAt === notices[current].receivedAt && index > current)
+    )
+      newest.set(notice.threadId, index);
+  });
+  const covered = new Map();
+  const kept = notices.filter((notice, index) => {
+    if (notice.kind === "status" || !notice.threadId) return true;
+    if (newest.get(notice.threadId) !== index) {
+      covered.set(notice.threadId, (covered.get(notice.threadId) ?? 0) + 1);
+      return false;
+    }
+    return !(
+      notice.interaction === REPEAT_TICK &&
+      Number.isSafeInteger(notice.newer) &&
+      notice.newer > 0
+    );
+  });
+  return kept.map((notice) =>
+    notice.kind !== "status" && notice.threadId && covered.get(notice.threadId)
+      ? { ...notice, covered: covered.get(notice.threadId) }
+      : notice,
+  );
+}
+
+/** The line after a notice that stands for older pending mail in its thread. */
+export function coveredLine(notice) {
+  const count = notice.covered;
+  if (!Number.isSafeInteger(count) || count < 1) return "";
+  return `${count === 1 ? "1 older pending message" : `${count} older pending messages`} in thread ${notice.threadId} ${count === 1 ? "is" : "are"} covered by ${notice.emailId}; reading or answering it clears ${count === 1 ? "that one" : "them"} too.\n`;
 }
 
 // Copies of WAKE_SENTENCES and the category mapping in
@@ -234,6 +285,10 @@ const wakeSenderPattern = /^[a-z0-9._%+-]{1,64}@[a-z0-9.-]{1,253}$/;
  * line, including its load-the-skill line (naming `receiver.skillFile`).
  */
 export function formatPendingMail(notice, receiver = {}) {
+  return `${formatPendingLine(notice, receiver)}${coveredLine(notice)}`;
+}
+
+function formatPendingLine(notice, receiver) {
   if (notice.kind === "status")
     return `Primitive status arrived: ${notice.emailId}${recipientField(receiver.address)} from=${notice.sender} on_sent=${notice.refSentEmailId}. This is activity on a conversation this session started, not a new task.\n`;
   if (
@@ -475,7 +530,9 @@ async function main() {
         },
       );
     }
-    const notices = readPendingMail(configDir, profile, sessionId);
+    const notices = collapsePendingMail(
+      readPendingMail(configDir, profile, sessionId),
+    );
     if (notices.length) {
       const due = duePendingMail(configDir, profile, sessionId, notices);
       context(due, { profile, address, skillFile: claudeSkillFile(), cli });

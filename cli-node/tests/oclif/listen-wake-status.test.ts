@@ -755,3 +755,138 @@ it.each([
     }
   },
 );
+
+it("wakes once for a thread's newest message instead of each superseded one", async () => {
+  const previousExit = process.exitCode;
+  const stderr: string[] = [];
+  vi.spyOn(process, "stdin", "get").mockReturnValue(
+    Readable.from([JSON.stringify(stopInput)]) as typeof process.stdin,
+  );
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    stderr.push(String(chunk));
+    return true;
+  });
+  mocks.readMailJson.mockReturnValue({
+    session,
+    receiverMode: "external",
+    phase: "sent",
+    receipt: { status: "delivered" },
+  });
+  const thread = "77777777-7777-4777-8777-777777777777";
+  const ids = Array.from(
+    { length: 24 },
+    (_, index) => `88888888-8888-4888-8888-${String(index).padStart(12, "0")}`,
+  );
+  let woke: string | undefined;
+  let held: string | undefined;
+  let delivered = 0;
+  const context = (index: number) => ({
+    sender: "owner@example.com",
+    relationship: "owner" as const,
+    threadId: thread,
+    inThread: true,
+    attachments: false,
+    newer: ids.length - 1 - index,
+  });
+  mocks.createWakeMail.mockResolvedValue({
+    handler: vi.fn(),
+    close: vi.fn(),
+    receiving: vi.fn(),
+    completed: vi.fn(),
+    wakeId: () => woke,
+    senderRelation: () => "owner",
+    context: () => context(ids.indexOf(woke ?? "")),
+    status: () => undefined,
+    held: () => held,
+    wakeHeld: () => {
+      woke = held;
+    },
+  });
+  // Each run delivers the next queued message: every one but the newest
+  // knows of newer mail in its thread, so it is held, not surfaced.
+  mocks.runListen.mockImplementation(async () => {
+    const index = delivered++;
+    if (ids.length - 1 - index > 0) held = ids[index];
+    else woke = ids[index];
+  });
+  try {
+    await ListenCommand.run(
+      ["--once", "--wake", "--hook-session", "--events", "email.received"],
+      { root },
+    );
+    expect(mocks.runListen).toHaveBeenCalledTimes(24);
+    const output = stderr.join("");
+    expect(output.match(/Primitive mail arrived: /g)).toHaveLength(1);
+    expect(output).toContain(`Primitive mail arrived: ${ids[23]} `);
+    expect(process.exitCode).toBe(2);
+  } finally {
+    process.exitCode = previousExit;
+  }
+});
+
+it("wakes for a held message when nothing newer arrives", async () => {
+  const previousExit = process.exitCode;
+  const stderr: string[] = [];
+  vi.spyOn(process, "stdin", "get").mockReturnValue(
+    Readable.from([JSON.stringify(stopInput)]) as typeof process.stdin,
+  );
+  vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+    stderr.push(String(chunk));
+    return true;
+  });
+  mocks.readMailJson.mockReturnValue({
+    session,
+    receiverMode: "external",
+    phase: "sent",
+    receipt: { status: "delivered" },
+  });
+  const emailId = "99999999-9999-4999-8999-999999999999";
+  let woke: string | undefined;
+  let held: string | undefined;
+  mocks.createWakeMail.mockResolvedValue({
+    handler: vi.fn(),
+    close: vi.fn(),
+    receiving: vi.fn(),
+    completed: vi.fn(),
+    wakeId: () => woke,
+    senderRelation: () => undefined,
+    context: () => ({
+      sender: "peer@example.com",
+      relationship: "agent" as const,
+      threadId: "77777777-7777-4777-8777-777777777777",
+      inThread: true,
+      attachments: false,
+      newer: 1,
+    }),
+    status: () => undefined,
+    held: () => held,
+    wakeHeld: () => {
+      woke = held;
+    },
+  });
+  let calls = 0;
+  mocks.runListen.mockImplementation(
+    async (options: { signal: AbortSignal }) => {
+      calls++;
+      if (calls === 1) {
+        held = emailId;
+        return;
+      }
+      // The newer message never arrives: wait until the short settle ends.
+      await new Promise<void>((done) =>
+        options.signal.addEventListener("abort", () => done(), { once: true }),
+      );
+    },
+  );
+  try {
+    await ListenCommand.run(
+      ["--once", "--wake", "--hook-session", "--events", "email.received"],
+      { root },
+    );
+    expect(calls).toBe(2);
+    expect(stderr.join("")).toContain(`Primitive mail arrived: ${emailId} `);
+    expect(process.exitCode).toBe(2);
+  } finally {
+    process.exitCode = previousExit;
+  }
+}, 15_000);

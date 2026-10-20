@@ -50,6 +50,7 @@ const LINKS_DESCRIPTION =
 export async function clearPendingAfterRead(
   configDir: string,
   emailId: string,
+  known?: { thread_id?: string | null; received_at?: string } | null,
 ): Promise<void> {
   try {
     const profileName = resolveCliAuth({ configDir }).connectedAgent
@@ -61,6 +62,12 @@ export async function clearPendingAfterRead(
       profileName,
       runtime ? runtime.slice(runtime.indexOf(":") + 1) : null,
       emailId,
+      typeof known?.received_at === "string"
+        ? {
+            thread_id: known.thread_id ?? null,
+            received_at: known.received_at,
+          }
+        : null,
     );
   } catch {
     // Clearing a notice is best effort; the read itself succeeded.
@@ -188,7 +195,7 @@ async function runBrief(command: Command, flags: BriefFlags): Promise<void> {
           )
         : `${renderEmailBrief(brief)}${stop ? `\n${workingStopLine(stop)}` : ""}`,
     );
-    await clearPendingAfterRead(command.config.configDir, detail.id);
+    await clearPendingAfterRead(command.config.configDir, detail.id, detail);
   });
 }
 
@@ -234,7 +241,11 @@ async function runCompact(
     });
     if (readable.kind === "ok") {
       command.log(JSON.stringify(readable.data, null, 2));
-      await clearPendingAfterRead(command.config.configDir, readable.data.id);
+      await clearPendingAfterRead(
+        command.config.configDir,
+        readable.data.id,
+        readable.data,
+      );
       return;
     }
     if (readable.kind === "error") {
@@ -254,7 +265,7 @@ async function runCompact(
     }
     process.stderr.write(ROUTE_MISSING_NOTICE);
     command.log(JSON.stringify(buildEmailCompact(detail), null, 2));
-    await clearPendingAfterRead(command.config.configDir, detail.id);
+    await clearPendingAfterRead(command.config.configDir, detail.id, detail);
   });
 }
 

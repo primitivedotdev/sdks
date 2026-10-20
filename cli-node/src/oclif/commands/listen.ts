@@ -53,6 +53,11 @@ import { formatMailWakeLine, wakeRecipientField } from "../wake-context.js";
 import { createWakeMail } from "../wake-mail.js";
 
 const RESUME_LOCK_RETRY_MS = 4_000;
+/**
+ * How long a wake listener holding a superseded wake (one whose thread has
+ * newer mail) waits for that newer mail before waking for the held one.
+ */
+const HELD_WAKE_SETTLE_MS = 5_000;
 const MAIL_CHECK_RECORD_MS = 5_000;
 const RESUME_LOCK_RETRY_STEP_MS = 250;
 
@@ -720,9 +725,21 @@ export default class ListenCommand extends Command {
       if (!target || !options.notifySession || !requestConfig) {
         let resumeLockDeadline: number | undefined;
         do {
+          // While a superseded wake is held, wait only briefly for the newer
+          // mail that supersedes it; if none arrives, wake for the held one.
+          const settle = wake?.held?.()
+            ? AbortSignal.timeout(HELD_WAKE_SETTLE_MS)
+            : undefined;
           for (;;) {
             try {
-              await runListen(options);
+              await runListen(
+                settle
+                  ? {
+                      ...options,
+                      signal: AbortSignal.any([controller.signal, settle]),
+                    }
+                  : options,
+              );
               break;
             } catch (error) {
               if (
@@ -743,6 +760,7 @@ export default class ListenCommand extends Command {
             }
           }
           wake?.completed();
+          if (settle?.aborted && !controller.signal.aborted) wake?.wakeHeld?.();
         } while (
           wake &&
           !wake.wakeId() &&

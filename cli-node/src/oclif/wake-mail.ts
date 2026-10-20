@@ -108,6 +108,25 @@ export async function createWakeMail(options: {
         replyToSentEmailId: string | null;
       }
     | undefined;
+  /**
+   * A wake this run accepted but did not surface, because the API reported
+   * newer mail in its thread: the newer message wakes the session instead
+   * and its notice covers this one. Kept so the run can still wake for it
+   * (`wakeHeld`) when nothing newer arrives.
+   */
+  type Wake = {
+    wakeId: string;
+    senderRelation: "owner" | "member" | undefined;
+    context: WakeContext;
+    autoSignal: typeof autoSignal;
+  };
+  let held: Wake | undefined;
+  function surface(wake: Wake) {
+    wakeId = wake.wakeId;
+    senderRelation = wake.senderRelation;
+    wakeContext = wake.context;
+    autoSignal = wake.autoSignal;
+  }
   let pendingRequest:
     | {
         sender: string;
@@ -567,26 +586,33 @@ export async function createWakeMail(options: {
           context,
         };
       else {
-        wakeId = detail.id;
-        senderRelation = admission.senderRelation;
-        wakeContext = context;
-        // Verified owner and same-organization mail is acknowledged
-        // automatically once the wake surfaces it to the session.
-        autoSignal =
-          profileName &&
-          autoSignalEligible(
-            detail,
-            { agentAddress: recipient, ownerAddress: identity?.ownerAddress },
-            admission,
-          )
-            ? {
-                emailId: detail.id,
-                profileName,
-                sender,
-                threadId: detail.thread_id ?? null,
-                replyToSentEmailId: detail.reply_to_sent_email_id ?? null,
-              }
-            : undefined;
+        const wake: Wake = {
+          wakeId: detail.id,
+          senderRelation: admission.senderRelation,
+          context,
+          // Verified owner and same-organization mail is acknowledged
+          // automatically once the wake surfaces it to the session.
+          autoSignal:
+            profileName &&
+            autoSignalEligible(
+              detail,
+              { agentAddress: recipient, ownerAddress: identity?.ownerAddress },
+              admission,
+            )
+              ? {
+                  emailId: detail.id,
+                  profileName,
+                  sender,
+                  threadId: detail.thread_id ?? null,
+                  replyToSentEmailId: detail.reply_to_sent_email_id ?? null,
+                }
+              : undefined,
+        };
+        // Superseded: newer mail in the thread wakes the session instead, so
+        // a backlog in one thread is announced once, by its newest message,
+        // rather than one message per turn.
+        if (context.newer !== undefined && context.newer > 0) held = wake;
+        else surface(wake);
       }
       return outcome(true);
     } catch (error) {
@@ -606,6 +632,14 @@ export async function createWakeMail(options: {
     status: () => statusEvent,
     autoSignal: () => (wakeId === autoSignal?.emailId ? autoSignal : undefined),
     completed: completePending,
+    /** A superseded wake this run accepted and has not surfaced. */
+    held: () => held?.wakeId,
+    /** Surface the held wake, when nothing newer arrived for it. */
+    wakeHeld: () => {
+      if (wakeId || statusEvent || !held) return;
+      surface(held);
+      held = undefined;
+    },
     receiving: (ready: boolean) => {
       receiving = ready;
     },

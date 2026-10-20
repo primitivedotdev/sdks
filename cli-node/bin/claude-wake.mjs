@@ -2,6 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import {
   claudeSkillFile,
   clearDeliveredStatus,
+  collapsePendingMail,
   duePendingMail,
   formatPendingMail,
   readPendingMail,
@@ -180,7 +181,11 @@ try {
             configDir,
             profileName,
             session,
-            readPendingMail(configDir, profileName, session),
+            // Superseded notices never block Stop: only the newest notice
+            // in each thread is announced, standing for the older ones.
+            collapsePendingMail(
+              readPendingMail(configDir, profileName, session),
+            ),
           )
         : [];
     if (pending.length) {

@@ -27,6 +27,7 @@ import {
 } from "../interaction-actions.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
+import { clearReadPendingMail } from "../pending-mail.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
   formatRepeatStarted,
@@ -505,6 +506,31 @@ class ReplyCommand extends Command {
       if (repeatLine) process.stderr.write(`${repeatLine}\n`);
       // A refused answer reached nobody, so the sender still sees working.
       if (outcome === "not_sent") restoreAutoWorking(halted);
+      // An answer in a thread covers the pending notices for the email it
+      // answers and every older one there, in this session only.
+      const answered =
+        priorRepliesCheck.status === "checked" &&
+        priorRepliesCheck.detail?.id === emailId
+          ? priorRepliesCheck.detail
+          : null;
+      if (
+        outcome !== "not_sent" &&
+        outcome !== "uncertain" &&
+        sessionKey &&
+        auth.connectedAgent
+      )
+        await clearReadPendingMail(
+          this.config.configDir,
+          auth.connectedAgent.profileName,
+          sessionKey.slice(sessionKey.indexOf(":") + 1),
+          emailId,
+          answered
+            ? {
+                thread_id: answered.thread_id ?? null,
+                received_at: answered.received_at,
+              }
+            : null,
+        ).catch(() => undefined);
       const exitCode = sendOutcomeExitCode(outcome);
       if (exitCode !== 0) process.exitCode = exitCode;
     });

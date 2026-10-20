@@ -1233,6 +1233,17 @@ hooks print the same line as the live wake, including the load-the-skill line
 for verified mail (notices recorded by older CLI versions keep a shorter form
 with the same `to=` field and profile-selecting read command).
 
+Mail in one thread is announced once, by its newest message. A message whose
+thread already has newer mail (`newer=` above zero) does not wake the session
+on its own: the listener moves on to the newer one, and wakes for the held
+message only if nothing newer arrives within a few seconds. The hooks replay
+only the newest pending notice of each thread, followed by a line saying how
+many older pending messages in the thread it covers, and an older tick of a
+repeating message is dropped once a newer message in its thread is recorded.
+Reading a message, or replying to it from the session, also clears the pending
+notices for older messages in its thread, so a backlog left by a long gap never
+replays one message per turn.
+
 An exact reply that `primitive chat` or `primitive emails wait` returns inside
 a session is already handled: its pending notice for that session is removed,
 and a listener that receives the reply again (after a restart, or a redelivered

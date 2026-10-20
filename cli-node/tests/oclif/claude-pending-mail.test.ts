@@ -297,3 +297,127 @@ test("the hook reads the interaction label the listener journals", async () => {
     / interaction=primitive\.contact\/1\. Read with /,
   );
 });
+
+function stopRun(fixtureData: ReturnType<typeof fixture>) {
+  return spawnSync(
+    process.execPath,
+    [
+      stopWrapper,
+      fixtureData.cli,
+      fixtureData.configDir,
+      "agent",
+      "agent@example.com",
+      session,
+      "primitive-agent-wake-v1",
+    ],
+    {
+      encoding: "utf8",
+      input: JSON.stringify({ hook_event_name: "Stop", session_id: session }),
+    },
+  );
+}
+
+const backlogThread = "66666666-6666-4666-8666-666666666666";
+const backlogId = (n: number) =>
+  `77777777-7777-4777-8777-${String(n).padStart(12, "0")}`;
+
+/** 24 unanswered messages in one thread, oldest first, as a long gap leaves them. */
+function backlog(interaction?: string) {
+  const start = Date.parse("2026-10-01T00:00:00.000Z");
+  return Array.from({ length: 24 }, (_, n) => ({
+    email_id: backlogId(n),
+    received_at: new Date(start + n * 60 * 60_000).toISOString(),
+    sender: "owner@example.com",
+    thread_id: backlogThread,
+    in_thread: true,
+    newer: 23 - n,
+    ...(interaction ? { interaction } : {}),
+  }));
+}
+
+function writeNotices(
+  fixtureData: ReturnType<typeof fixture>,
+  notices: unknown[],
+) {
+  writeFileSync(
+    join(fixtureData.profileDir, `pending-mail-${session}.json`),
+    JSON.stringify({ version: 1, session_id: session, notices }),
+  );
+}
+
+test("Stop announces 24 unanswered messages in one thread as one notice", () => {
+  for (const interaction of ["repeat.tick/1", undefined]) {
+    const fixtureData = fixture();
+    writeFileSync(
+      fixtureData.cli,
+      'if (process.argv.includes("--help")) process.stdout.write("--once --wake --hook-session --events primitive-hook-profile-bound-v2"); else process.exit(9);',
+    );
+    writeNotices(fixtureData, backlog(interaction));
+    const result = stopRun(fixtureData);
+    assert.equal(result.status, 2, result.stderr);
+    assert.equal(result.stderr.match(/Primitive mail arrived: /g)?.length, 1);
+    assert.match(
+      result.stderr,
+      new RegExp(`Primitive mail arrived: ${backlogId(23)} `),
+    );
+    assert.doesNotMatch(result.stderr, new RegExp(backlogId(0)));
+    assert.match(
+      result.stderr,
+      new RegExp(
+        `23 older pending messages in thread ${backlogThread} are covered by ${backlogId(23)}`,
+      ),
+    );
+    // The next Stop within the announce interval does not repeat it.
+    const again = stopRun(fixtureData);
+    assert.doesNotMatch(again.stderr, /Primitive mail arrived: /);
+  }
+});
+
+test("PostToolUse announces only the newest message of each thread", () => {
+  const fixtureData = fixture();
+  writeFileSync(fixtureData.cli, "process.exit(0);");
+  const lone = "44444444-4444-4444-8444-444444444444";
+  writeNotices(fixtureData, [
+    ...backlog().slice(0, 3),
+    {
+      email_id: lone,
+      received_at: "2026-10-01T00:30:00.000Z",
+      sender: "peer@example.com",
+      thread_id: null,
+      in_thread: false,
+      newer: null,
+    },
+  ]);
+  const result = fixtureData.run();
+  assert.equal(result.status, 0, result.stderr);
+  const context = JSON.parse(result.stdout).hookSpecificOutput
+    .additionalContext as string;
+  assert.equal(context.match(/Primitive mail arrived: /g)?.length, 2);
+  // Only the newest of the three in the thread, which knows of newer mail.
+  assert.match(context, new RegExp(`${backlogId(2)} to=agent@example.com`));
+  assert.doesNotMatch(context, new RegExp(`${backlogId(0)} to=`));
+  assert.match(context, new RegExp(`${lone} to=agent@example.com`));
+  assert.match(
+    context,
+    new RegExp(`2 older pending messages in thread ${backlogThread}`),
+  );
+});
+
+test("a repeating message's tick that knows of a newer tick is never announced", async () => {
+  const { collapsePendingMail } = (await import(wrapper)) as {
+    collapsePendingMail: (
+      notices: Array<Record<string, unknown>>,
+    ) => Array<Record<string, unknown>>;
+  };
+  const tick = {
+    kind: "mail",
+    emailId: backlogId(1),
+    threadId: backlogThread,
+    receivedAt: 1,
+    newer: 1,
+    interaction: "repeat.tick/1",
+  };
+  assert.deepEqual(collapsePendingMail([tick]), []);
+  // Ordinary mail that knows of newer mail still shows until that arrives.
+  assert.equal(collapsePendingMail([{ ...tick, interaction: null }]).length, 1);
+});

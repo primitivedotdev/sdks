@@ -803,7 +803,13 @@ describe("Claude wake metadata, mutes and pending notices", () => {
       path: { id: thread },
       query: { after: f.emailId },
     });
+    // Newer mail in the thread supersedes this one: it is journaled and
+    // held, and wakes the session only if nothing newer arrives.
+    expect(wake.wakeId()).toBeUndefined();
+    expect(wake.held()).toBe(f.emailId);
+    wake.wakeHeld();
     expect(wake.wakeId()).toBe(f.emailId);
+    expect(wake.held()).toBeUndefined();
     expect(wake.context()).toEqual({
       sender: "peer@example.test",
       relationship: "agent",

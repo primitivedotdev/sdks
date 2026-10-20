@@ -236,6 +236,30 @@ function write(
   });
 }
 
+const REPEAT_TICK = "repeat.tick/1";
+
+function receivedAt(row: PendingMailNotice): number {
+  return Date.parse(row.received_at);
+}
+
+/**
+ * Whether `older` is a mail notice that `newer` covers: a mail notice in the
+ * same thread, received before it. Reading or answering the newest message
+ * in a thread covers every older pending one there; one received at the same
+ * moment is not known to be older, so it stays.
+ */
+function coveredBy(
+  older: PendingMailNotice,
+  newer: { thread_id: string | null; received_at: string },
+): boolean {
+  return (
+    older.kind === "mail" &&
+    older.thread_id !== null &&
+    older.thread_id === newer.thread_id &&
+    receivedAt(older) < Date.parse(newer.received_at)
+  );
+}
+
 /**
  * The notice list is full of unread mail. Nothing is dropped: the caller
  * leaves the event unacknowledged, so the mail stays queued and is
@@ -272,7 +296,15 @@ export async function recordPendingMail(
   return withMailLock(lockDirectory(configDir, profileName), () => {
     const next = [
       ...readPendingMail(configDir, profileName, session, true).filter(
-        (existing) => existing.email_id !== row.email_id,
+        (existing) =>
+          existing.email_id !== row.email_id &&
+          // A newer message in the thread supersedes an older tick of a
+          // repeating message outright; only the newest one is announced.
+          !(
+            row.kind === "mail" &&
+            existing.interaction === REPEAT_TICK &&
+            coveredBy(existing, row)
+          ),
       ),
       row,
     ];
@@ -330,30 +362,70 @@ export function pendingMailSessions(
 }
 
 /**
- * Clear one email after a session read it, from that session's file only.
- * A read with no known runtime session (a terminal or script) clears
- * nothing: it is not evidence that any session has seen the email, and each
- * session keeps its notice until it reads the email itself.
+ * Remove one email's notice and every older mail notice in its thread that
+ * it covers. The thread and time come from the email's own notice, or from
+ * `known` (the email as the API returned it) when it has none.
+ */
+export async function removeCoveredPendingMail(
+  configDir: string,
+  profileName: string,
+  session: string,
+  emailId: string,
+  known?: { thread_id: string | null; received_at: string } | null,
+): Promise<PendingMailNotice[]> {
+  const id = emailId.toLowerCase();
+  return withMailLock(lockDirectory(configDir, profileName), () => {
+    const current = readPendingMail(configDir, profileName, session, true);
+    const own = current.find((row) => row.email_id === id);
+    const anchor =
+      own?.kind === "mail"
+        ? own
+        : known &&
+            typeof known.thread_id === "string" &&
+            UUID.test(known.thread_id.toLowerCase()) &&
+            Number.isFinite(Date.parse(known.received_at))
+          ? {
+              thread_id: known.thread_id.toLowerCase(),
+              received_at: known.received_at,
+            }
+          : null;
+    const next = current.filter(
+      (row) =>
+        row.email_id !== id && !(anchor !== null && coveredBy(row, anchor)),
+    );
+    if (next.length !== current.length)
+      write(configDir, profileName, session, next);
+    return next;
+  });
+}
+
+/**
+ * Clear one email after a session read it, from that session's file only,
+ * with every older pending mail in its thread: reading the newest message
+ * covers them. A read with no known runtime session (a terminal or script)
+ * clears nothing: it is not evidence that any session has seen the email,
+ * and each session keeps its notice until it reads the email itself.
  */
 export async function clearReadPendingMail(
   configDir: string,
   profileName: string,
   session: string | null,
   emailId: string,
+  known?: { thread_id: string | null; received_at: string } | null,
 ): Promise<void> {
   if (!session) return;
   const sessions = pendingMailSessions(configDir, profileName).filter(
     (id) => id === sessionId(session),
   );
   for (const id of sessions)
-    await removePendingMail(configDir, profileName, id, [emailId]);
+    await removeCoveredPendingMail(configDir, profileName, id, emailId, known);
 }
 
 /**
  * Clear one email's notices for a session after the session consumed it
  * without reading it by id: an exact reply that `primitive chat` or
  * `primitive emails wait` returned. Every profile of the session holding a
- * notice for the email is cleared, so a restarted wake does not announce a
+ * notice for the email is cleared, with the older mail in its thread, so a restarted wake does not announce a
  * reply the session already has. A key with no runtime session clears
  * nothing.
  */
@@ -365,7 +437,7 @@ export async function clearConsumedPendingMail(
   const session = sessionKey?.slice(sessionKey.indexOf(":") + 1).toLowerCase();
   if (!session || !UUID.test(session)) return;
   for (const profile of pendingMailProfiles(configDir, session, emailId))
-    await removePendingMail(configDir, profile, session, [emailId]);
+    await removeCoveredPendingMail(configDir, profile, session, emailId);
 }
 
 /**
