@@ -73,13 +73,16 @@ async function currentNote(
 /**
  * Write the AGENT_RESUME note for a connected profile's address. Skips the
  * write when the note already holds the same value, so a resume hook that
- * runs on every start does not rewrite it. Never throws.
+ * runs on every start does not rewrite it. `rewrite` writes it anyway, so a
+ * new claim leaves the note no older than the connection it belongs to.
+ * Never throws.
  */
 export async function publishResumeNote(options: {
   configDir: string;
   profileName: string;
   runtime: string;
   sessionId: string | null | undefined;
+  rewrite?: boolean;
   fetch?: typeof fetch;
 }): Promise<ResumeNoteWrite> {
   const value = resumeNoteValue(options.runtime, options.sessionId);
@@ -93,7 +96,7 @@ export async function publishResumeNote(options: {
     const api = client(profile, options.fetch);
     const address = profile.agent_address;
     const current = await currentNote(api, address);
-    if (current?.value === value) return "unchanged";
+    if (current?.value === value && !options.rewrite) return "unchanged";
     await runAddressNotesRequest(api, {
       action: "set",
       address,

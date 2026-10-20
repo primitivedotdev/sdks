@@ -161,6 +161,28 @@ describe("publishResumeNote", () => {
     expect(api.calls.map((call) => call.method)).toEqual(["GET"]);
   });
 
+  it("rewrites an unchanged note when asked, so a new claim refreshes it", async () => {
+    const directory = configDir();
+    const api = fixture(
+      ok(note(`claude --resume ${session}`, "4")),
+      ok(note(`claude --resume ${session}`, "5")),
+    );
+    const outcome = await publishResumeNote({
+      configDir: directory,
+      profileName: "work",
+      runtime: "claude",
+      sessionId: session,
+      rewrite: true,
+      fetch: api.fetch,
+    });
+    expect(outcome).toBe("written");
+    expect(api.calls[1]?.body).toEqual({
+      value: `claude --resume ${session}`,
+      if_version: "4",
+      visibility: "private",
+    });
+  });
+
   it("writes nothing for an invalid session ID", async () => {
     const directory = configDir();
     const api = fixture();

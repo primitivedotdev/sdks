@@ -388,6 +388,7 @@ function defaults(
         profileName,
         runtime,
         sessionId: session,
+        rewrite: true,
       }),
     clearResumeNote: (profileName) =>
       clearProfileResumeNote({ configDir: options.configDir, profileName }),
