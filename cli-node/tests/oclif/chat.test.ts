@@ -632,7 +632,10 @@ describe("chat command", () => {
     expect(mocks.sendEmail.mock.calls[0][0].headers["Idempotency-Key"]).toMatch(
       /^primitive-chat-/,
     );
-    expect(mocks.observed).toHaveBeenCalledWith("email-1");
+    expect(mocks.observed).toHaveBeenCalledWith(
+      "email-1",
+      expect.objectContaining({ id: "email-1" }),
+    );
     expect(mocks.finish).toHaveBeenCalledOnce();
     expect(mocks.listEmails).not.toHaveBeenCalled();
     expect(mocks.fetchEmailSearchPage).not.toHaveBeenCalled();

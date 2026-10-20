@@ -298,7 +298,14 @@ export async function openConnectedReplyWait(options: {
       });
       return cleanup.cancelRejectedSend(requestId);
     },
-    async observed(emailId: string) {
+    /**
+     * The session consumed this reply. Pass the reply itself when it is at
+     * hand, so the older pending notices in its thread are cleared too.
+     */
+    async observed(
+      emailId: string,
+      email?: { thread_id?: string | null; received_at?: string } | null,
+    ) {
       if (
         options.contactRequest &&
         (await store.observeNotifiedContactReply(
@@ -316,6 +323,13 @@ export async function openConnectedReplyWait(options: {
           options.configDir,
           options.sessionKey,
           emailId,
+          email
+            ? {
+                thread_id: email.thread_id ?? null,
+                received_at: email.received_at,
+                recipient: options.from,
+              }
+            : null,
         );
       } catch {
         // Best effort: the reply was consumed either way.

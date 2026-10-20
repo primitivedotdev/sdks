@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { saveConnectedAgentProfile } from "../../src/oclif/connected-agent-profile.js";
 import { acquireListenLock } from "../../src/oclif/listen-state.js";
 import {
   clearConsumedPendingMail,
@@ -471,6 +472,40 @@ describe("pending mail in one thread", () => {
       received_at: at(7),
     });
     expect(readPendingMail(configDir, profile, session)).toEqual([]);
+  });
+
+  it("covers older mail when a wait consumes a newer reply that has no notice", async () => {
+    const connect = (name: string, address: string) =>
+      saveConnectedAgentProfile(configDir, name, {
+        version: 1,
+        auth_method: "agent_connection",
+        api_key: ["pconn", "fixture", name].join("_"),
+        api_base_url: "https://api.primitive.dev/v1",
+        org_id: "22222222-2222-4222-8222-222222222222",
+        agent_address: address,
+        owner_address: "owner@example.test",
+        invitation_hash: "a".repeat(64),
+        created_at: "2026-01-01T00:00:00.000Z",
+      });
+    connect(profile, "work@example.test");
+    mkdirSync(join(configDir, "agent-connections", "profiles", "other"), {
+      recursive: true,
+      mode: 0o700,
+    });
+    connect("other", "other@example.test");
+    for (let n = 0; n < 2; n++) {
+      await recordPendingMail(configDir, profile, session, inThread(n));
+      await recordPendingMail(configDir, "other", session, inThread(n));
+    }
+    // The wait consumed a newer reply the listener left to it unjournaled.
+    await clearConsumedPendingMail(configDir, `claude:${session}`, id(5), {
+      thread_id: thread,
+      received_at: at(5),
+      recipient: "work@example.test",
+    });
+    expect(readPendingMail(configDir, profile, session)).toEqual([]);
+    // Another address bound to the session did not receive that reply.
+    expect(readPendingMail(configDir, "other", session)).toHaveLength(2);
   });
 
   it("covers older mail when an exact reply is consumed by a wait", async () => {

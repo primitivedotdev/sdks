@@ -221,7 +221,7 @@ class EmailsWaitCommand extends Command {
           const email = await waiter.next();
           if (!email) break;
           printEmail(email);
-          await waiter.observed(email.id);
+          await waiter.observed(email.id, email);
         }
         if (matched >= flags.number) {
           await waiter.finish();

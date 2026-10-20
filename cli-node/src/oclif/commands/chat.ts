@@ -2346,7 +2346,7 @@ class ChatCommand extends Command {
             requestId: connectedWait.requestId,
           };
           saveChatReceipt(receipt);
-          await connectedWait.observed(replyResult.reply.id);
+          await connectedWait.observed(replyResult.reply.id, replyResult.reply);
           await connectedWait.finish();
         }
 

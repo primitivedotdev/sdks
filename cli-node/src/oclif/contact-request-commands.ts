@@ -333,7 +333,7 @@ export async function requestContact(
         exitCode: 3,
         data: { ...pending, outcome: "sent_awaiting_reply" },
       };
-    await wait.observed(accepted.id);
+    await wait.observed(accepted.id, accepted);
     await wait.finish();
     return {
       exitCode: 0,
@@ -508,7 +508,7 @@ export async function waitForContact(
             "Still awaiting acceptance. An active session listener can notify you later. Continue independent work instead of immediately chaining another wait; resume this same request when needed, without resending.",
         },
       };
-    await wait.observed(accepted.id);
+    await wait.observed(accepted.id, accepted);
     await wait.finish();
     return {
       exitCode: 0,

@@ -803,7 +803,10 @@ it("resumes an expired request to recover an acceptance without resending", asyn
     contactRequest: reference,
   });
   expect(hooks.open.mock.calls[0][0].deadline).toBeGreaterThan(Date.now());
-  expect(f.wait.observed).toHaveBeenCalledWith(f.emailId);
+  expect(f.wait.observed).toHaveBeenCalledWith(
+    f.emailId,
+    expect.objectContaining({ id: f.emailId }),
+  );
   expect(f.wait.finish).toHaveBeenCalledOnce();
   expect(f.writes).toEqual([]);
 });

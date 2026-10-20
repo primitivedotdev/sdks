@@ -9,6 +9,7 @@ import { join } from "node:path";
 import {
   agentProfileDirectory,
   agentProfilesDirectory,
+  loadConnectedAgentProfile,
 } from "./connected-agent-profile.js";
 import { isWakeInteractionLabel } from "./interaction-actions.js";
 import {
@@ -425,19 +426,77 @@ export async function clearReadPendingMail(
  * Clear one email's notices for a session after the session consumed it
  * without reading it by id: an exact reply that `primitive chat` or
  * `primitive emails wait` returned. Every profile of the session holding a
- * notice for the email is cleared, with the older mail in its thread, so a restarted wake does not announce a
- * reply the session already has. A key with no runtime session clears
- * nothing.
+ * notice for the email is cleared, with the older mail in its thread, so a
+ * restarted wake does not announce a reply the session already has. A
+ * listener leaves such a reply to the wait without writing a notice, so with
+ * `known` (the reply's thread and time) the older notices in its thread are
+ * also cleared for every profile of the session that receives at
+ * `recipient`. A key with no runtime session clears nothing.
  */
 export async function clearConsumedPendingMail(
   configDir: string,
   sessionKey: string | null | undefined,
   emailId: string,
+  known?: {
+    thread_id?: string | null;
+    received_at?: string;
+    recipient?: string;
+  } | null,
 ): Promise<void> {
   const session = sessionKey?.slice(sessionKey.indexOf(":") + 1).toLowerCase();
   if (!session || !UUID.test(session)) return;
-  for (const profile of pendingMailProfiles(configDir, session, emailId))
-    await removeCoveredPendingMail(configDir, profile, session, emailId);
+  const profiles = new Set(pendingMailProfiles(configDir, session, emailId));
+  const anchor =
+    typeof known?.thread_id === "string" &&
+    typeof known.received_at === "string"
+      ? { thread_id: known.thread_id, received_at: known.received_at }
+      : null;
+  if (anchor && known?.recipient)
+    for (const profile of receivingProfiles(
+      configDir,
+      session,
+      known.recipient,
+    ))
+      profiles.add(profile);
+  for (const profile of [...profiles].sort())
+    await removeCoveredPendingMail(
+      configDir,
+      profile,
+      session,
+      emailId,
+      anchor,
+    );
+}
+
+/**
+ * Profiles with a pending-mail file for the session whose connected address
+ * is `recipient`.
+ */
+function receivingProfiles(
+  configDir: string,
+  session: string,
+  recipient: string,
+): string[] {
+  let names: string[];
+  try {
+    names = readdirSync(join(agentProfilesDirectory(configDir), "profiles"));
+  } catch {
+    return [];
+  }
+  const address = recipient.trim().toLowerCase();
+  return names.filter((name) => {
+    try {
+      return (
+        pendingMailSessions(configDir, name).includes(session) &&
+        loadConnectedAgentProfile(
+          configDir,
+          name,
+        )?.agent_address.toLowerCase() === address
+      );
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**
