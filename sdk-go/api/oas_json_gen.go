@@ -77168,12 +77168,6 @@ func (s *ReplyInput) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 	{
-		if s.Headers.Set {
-			e.FieldStart("headers")
-			s.Headers.Encode(e)
-		}
-	}
-	{
 		if s.BodyText.Set {
 			e.FieldStart("body_text")
 			s.BodyText.Encode(e)
@@ -77219,17 +77213,23 @@ func (s *ReplyInput) encodeFields(e *jx.Encoder) {
 			s.Repeat.Encode(e)
 		}
 	}
+	{
+		if s.Headers.Set {
+			e.FieldStart("headers")
+			s.Headers.Encode(e)
+		}
+	}
 }
 
 var jsonFieldsNameOfReplyInput = [8]string{
-	0: "headers",
-	1: "body_text",
-	2: "body_html",
-	3: "from",
-	4: "wait",
-	5: "reply_all",
-	6: "attachments",
-	7: "repeat",
+	0: "body_text",
+	1: "body_html",
+	2: "from",
+	3: "wait",
+	4: "reply_all",
+	5: "attachments",
+	6: "repeat",
+	7: "headers",
 }
 
 // Decode decodes ReplyInput from json.
@@ -77240,16 +77240,6 @@ func (s *ReplyInput) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "headers":
-			if err := func() error {
-				s.Headers.Reset()
-				if err := s.Headers.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"headers\"")
-			}
 		case "body_text":
 			if err := func() error {
 				s.BodyText.Reset()
@@ -77326,6 +77316,16 @@ func (s *ReplyInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"repeat\"")
+			}
+		case "headers":
+			if err := func() error {
+				s.Headers.Reset()
+				if err := s.Headers.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"headers\"")
 			}
 		default:
 			return errors.Errorf("unexpected field %q", k)
@@ -84057,15 +84057,15 @@ func (s *SendMailInput) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.Headers.Set {
-			e.FieldStart("headers")
-			s.Headers.Encode(e)
-		}
-	}
-	{
 		if s.ScheduledAt.Set {
 			e.FieldStart("scheduled_at")
 			s.ScheduledAt.Encode(e, json.EncodeDateTime)
+		}
+	}
+	{
+		if s.Headers.Set {
+			e.FieldStart("headers")
+			s.Headers.Encode(e)
 		}
 	}
 }
@@ -84085,8 +84085,8 @@ var jsonFieldsNameOfSendMailInput = [16]string{
 	11: "payload_attachments",
 	12: "wait",
 	13: "wait_timeout_ms",
-	14: "headers",
-	15: "scheduled_at",
+	14: "scheduled_at",
+	15: "headers",
 }
 
 // Decode decodes SendMailInput from json.
@@ -84267,16 +84267,6 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"wait_timeout_ms\"")
 			}
-		case "headers":
-			if err := func() error {
-				s.Headers.Reset()
-				if err := s.Headers.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"headers\"")
-			}
 		case "scheduled_at":
 			if err := func() error {
 				s.ScheduledAt.Reset()
@@ -84286,6 +84276,16 @@ func (s *SendMailInput) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"scheduled_at\"")
+			}
+		case "headers":
+			if err := func() error {
+				s.Headers.Reset()
+				if err := s.Headers.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"headers\"")
 			}
 		default:
 			return errors.Errorf("unexpected field %q", k)

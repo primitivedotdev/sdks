@@ -2746,12 +2746,6 @@ export type SendMailInput = {
      */
     wait_timeout_ms?: number;
     /**
-     * Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`, `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-` name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be searched with the `header` parameter of `GET /sent-emails`.
-     */
-    headers?: {
-        [key: string]: string;
-    };
-    /**
      * Optional future execution time (ISO 8601). When set, the
      * send is recorded with status `scheduled` and executed at
      * the requested time instead of immediately. Must be in the
@@ -2767,6 +2761,12 @@ export type SendMailInput = {
      *
      */
     scheduled_at?: string;
+    /**
+     * Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`, `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-` name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be searched with the `header` parameter of `GET /sent-emails`.
+     */
+    headers?: {
+        [key: string]: string;
+    };
 };
 
 /**
@@ -3519,12 +3519,6 @@ export type SentEmailRescheduleInput = {
  */
 export type ReplyInput = {
     /**
-     * Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`, `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-` name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be searched with the `header` parameter of `GET /sent-emails`.
-     */
-    headers?: {
-        [key: string]: string;
-    };
-    /**
      * Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail).
      */
     body_text?: string;
@@ -3561,6 +3555,12 @@ export type ReplyInput = {
      */
     attachments?: Array<SendMailAttachment>;
     repeat?: RepeatInput;
+    /**
+     * Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`, `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-` name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be searched with the `header` parameter of `GET /sent-emails`.
+     */
+    headers?: {
+        [key: string]: string;
+    };
 };
 
 /**

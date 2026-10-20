@@ -15991,6 +15991,22 @@ components:
           maximum: 30000
           description: Maximum time to wait for a delivery outcome when wait is true.
             Defaults to 30000.
+        scheduled_at:
+          type: string
+          format: date-time
+          description: |
+            Optional future execution time (ISO 8601). When set, the
+            send is recorded with status `scheduled` and executed at
+            the requested time instead of immediately. Must be in the
+            future and at most 30 days out. Incompatible with `wait`
+            (a scheduled send resolves after this request completes)
+            and with `attachments` / `payload_attachments` (not yet
+            supported on scheduled sends). Reschedule via PATCH
+            /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
+            Accepts `Z` or a numeric UTC offset
+            (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
+            offset is converted to UTC, so the stored and echoed value
+            is UTC. A time with no zone, or a bare date, is rejected.
         headers:
           type: object
           maxProperties: 25
@@ -16021,22 +16037,6 @@ components:
           example:
             X-Campaign-Id: spring-sale
             Auto-Submitted: auto-generated
-        scheduled_at:
-          type: string
-          format: date-time
-          description: |
-            Optional future execution time (ISO 8601). When set, the
-            send is recorded with status `scheduled` and executed at
-            the requested time instead of immediately. Must be in the
-            future and at most 30 days out. Incompatible with `wait`
-            (a scheduled send resolves after this request completes)
-            and with `attachments` / `payload_attachments` (not yet
-            supported on scheduled sends). Reschedule via PATCH
-            /sent-emails/{id}; cancel via /sent-emails/{id}/cancel.
-            Accepts `Z` or a numeric UTC offset
-            (`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an
-            offset is converted to UTC, so the stored and echoed value
-            is UTC. A time with no zone, or a bare date, is rejected.
       required:
         - from
         - to
@@ -17108,36 +17108,6 @@ components:
         validates the from-domain regardless, so the override carries
         no extra privilege.
       properties:
-        headers:
-          type: object
-          maxProperties: 25
-          propertyNames:
-            type: string
-            minLength: 1
-            maxLength: 64
-            pattern: "^[!-9;-~]+$"
-          additionalProperties:
-            type: string
-            minLength: 1
-            maxLength: 200
-            pattern: "^[\\x20-\\x7E]+$"
-          description: >-
-            Extra headers to set on the message, as `{ "Name": "value" }`. Accepted
-            names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`,
-            `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom
-            `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`,
-            `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`,
-            `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an
-            allowlisted name is sent in its canonical capitalization and a custom `X-`
-            name with the spelling given. The same name twice (in any case) is a
-            `validation_error`, as is any other name. At most 25 headers; names up to
-            64 characters with no spaces or colon; values 1 to 200 printable ASCII
-            characters. Custom headers are not added to the DKIM signature. The
-            headers are stored with the send and can be searched with the `header`
-            parameter of `GET /sent-emails`.
-          example:
-            X-Campaign-Id: spring-sale
-            Auto-Submitted: auto-generated
         body_text:
           type: string
           description: Plain-text reply body. At least one of body_text or body_html is
@@ -17180,6 +17150,36 @@ components:
             $ref: "#/components/schemas/SendMailAttachment"
         repeat:
           $ref: "#/components/schemas/RepeatInput"
+        headers:
+          type: object
+          maxProperties: 25
+          propertyNames:
+            type: string
+            minLength: 1
+            maxLength: 64
+            pattern: "^[!-9;-~]+$"
+          additionalProperties:
+            type: string
+            minLength: 1
+            maxLength: 200
+            pattern: "^[\\x20-\\x7E]+$"
+          description: >-
+            Extra headers to set on the message, as `{ "Name": "value" }`. Accepted
+            names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`,
+            `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom
+            `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`,
+            `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`,
+            `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an
+            allowlisted name is sent in its canonical capitalization and a custom `X-`
+            name with the spelling given. The same name twice (in any case) is a
+            `validation_error`, as is any other name. At most 25 headers; names up to
+            64 characters with no spaces or colon; values 1 to 200 printable ASCII
+            characters. Custom headers are not added to the DKIM signature. The
+            headers are stored with the send and can be searched with the `header`
+            parameter of `GET /sent-emails`.
+          example:
+            X-Campaign-Id: spring-sale
+            Auto-Submitted: auto-generated
     RepeatInput:
       type: object
       additionalProperties: false

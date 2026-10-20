@@ -19728,27 +19728,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       "additionalProperties": false,
       "description": "Body shape for `/emails/{id}/reply`. Intentionally narrow:\nrecipients (`to`), subject, and threading headers\n(`in_reply_to`, `references`) are derived server-side from\nthe inbound row referenced by the path id and are rejected by\n`additionalProperties` if passed (returns 400).\n\n`from` IS allowed because of legitimate use cases (display-name\naddition, replying from a different verified outbound address,\nmulti-team triage). Send-mail's per-send `canSendFrom` gate\nvalidates the from-domain regardless, so the override carries\nno extra privilege.\n",
       "properties": {
-        "headers": {
-          "type": "object",
-          "maxProperties": 25,
-          "propertyNames": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[!-9;-~]+$"
-          },
-          "additionalProperties": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200,
-            "pattern": "^[\\x20-\\x7E]+$"
-          },
-          "description": "Extra headers to set on the message, as `{ \"Name\": \"value\" }`. Accepted names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`, `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-` name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be searched with the `header` parameter of `GET /sent-emails`.",
-          "example": {
-            "X-Campaign-Id": "spring-sale",
-            "Auto-Submitted": "auto-generated"
-          }
-        },
         "body_text": {
           "type": "string",
           "description": "Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail)."
@@ -19840,6 +19819,27 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "required": [
             "every_minutes"
           ]
+        },
+        "headers": {
+          "type": "object",
+          "maxProperties": 25,
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[!-9;-~]+$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "pattern": "^[\\x20-\\x7E]+$"
+          },
+          "description": "Extra headers to set on the message, as `{ \"Name\": \"value\" }`. Accepted names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`, `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-` name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be searched with the `header` parameter of `GET /sent-emails`.",
+          "example": {
+            "X-Campaign-Id": "spring-sale",
+            "Auto-Submitted": "auto-generated"
+          }
         }
       }
     },
@@ -20854,6 +20854,11 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "maximum": 30000,
           "description": "Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000."
         },
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Optional future execution time (ISO 8601). When set, the\nsend is recorded with status `scheduled` and executed at\nthe requested time instead of immediately. Must be in the\nfuture and at most 30 days out. Incompatible with `wait`\n(a scheduled send resolves after this request completes)\nand with `attachments` / `payload_attachments` (not yet\nsupported on scheduled sends). Reschedule via PATCH\n/sent-emails/{id}; cancel via /sent-emails/{id}/cancel.\nAccepts `Z` or a numeric UTC offset\n(`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an\noffset is converted to UTC, so the stored and echoed value\nis UTC. A time with no zone, or a bare date, is rejected.\n"
+        },
         "headers": {
           "type": "object",
           "maxProperties": 25,
@@ -20874,11 +20879,6 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             "X-Campaign-Id": "spring-sale",
             "Auto-Submitted": "auto-generated"
           }
-        },
-        "scheduled_at": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Optional future execution time (ISO 8601). When set, the\nsend is recorded with status `scheduled` and executed at\nthe requested time instead of immediately. Must be in the\nfuture and at most 30 days out. Incompatible with `wait`\n(a scheduled send resolves after this request completes)\nand with `attachments` / `payload_attachments` (not yet\nsupported on scheduled sends). Reschedule via PATCH\n/sent-emails/{id}; cancel via /sent-emails/{id}/cancel.\nAccepts `Z` or a numeric UTC offset\n(`2026-10-09T17:00:00Z`, `2026-10-09T13:00:00-04:00`); an\noffset is converted to UTC, so the stored and echoed value\nis UTC. A time with no zone, or a bare date, is rejected.\n"
         }
       },
       "required": [

@@ -38,16 +38,6 @@ class ReplyInput:
     no extra privilege.
 
         Attributes:
-            headers (ReplyInputHeaders | Unset): Extra headers to set on the message, as `{ "Name": "value" }`. Accepted
-                names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-
-                Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`,
-                `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`.
-                Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-`
-                name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name.
-                At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII
-                characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be
-                searched with the `header` parameter of `GET /sent-emails`. Example: {'X-Campaign-Id': 'spring-sale', 'Auto-
-                Submitted': 'auto-generated'}.
             body_text (str | Unset): Plain-text reply body. At least one of body_text or body_html is required. The combined
                 UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail).
             body_html (str | Unset): HTML reply body. At least one of body_text or body_html is required.
@@ -78,9 +68,18 @@ class ReplyInput:
                 `repeat_recipient_external`). `only_if_recipient_idle_minutes` needs
                 a recipient in your organization (422
                 `repeat_idle_requires_internal_recipient`).
+            headers (ReplyInputHeaders | Unset): Extra headers to set on the message, as `{ "Name": "value" }`. Accepted
+                names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-
+                Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`,
+                `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`.
+                Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-`
+                name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name.
+                At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII
+                characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be
+                searched with the `header` parameter of `GET /sent-emails`. Example: {'X-Campaign-Id': 'spring-sale', 'Auto-
+                Submitted': 'auto-generated'}.
      """
 
-    headers: ReplyInputHeaders | Unset = UNSET
     body_text: str | Unset = UNSET
     body_html: str | Unset = UNSET
     from_: str | Unset = UNSET
@@ -88,6 +87,7 @@ class ReplyInput:
     reply_all: bool | Unset = UNSET
     attachments: list[SendMailAttachment] | Unset = UNSET
     repeat: RepeatInput | Unset = UNSET
+    headers: ReplyInputHeaders | Unset = UNSET
 
 
 
@@ -97,10 +97,6 @@ class ReplyInput:
         from ..models.repeat_input import RepeatInput # noqa: PLC0415
         from ..models.reply_input_headers import ReplyInputHeaders # noqa: PLC0415
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
-        headers: dict[str, Any] | Unset = UNSET
-        if not isinstance(self.headers, Unset):
-            headers = self.headers.to_dict()
-
         body_text = self.body_text
 
         body_html = self.body_html
@@ -124,13 +120,15 @@ class ReplyInput:
         if not isinstance(self.repeat, Unset):
             repeat = self.repeat.to_dict()
 
+        headers: dict[str, Any] | Unset = UNSET
+        if not isinstance(self.headers, Unset):
+            headers = self.headers.to_dict()
+
 
         field_dict: dict[str, Any] = {}
 
         field_dict.update({
         })
-        if headers is not UNSET:
-            field_dict["headers"] = headers
         if body_text is not UNSET:
             field_dict["body_text"] = body_text
         if body_html is not UNSET:
@@ -145,6 +143,8 @@ class ReplyInput:
             field_dict["attachments"] = attachments
         if repeat is not UNSET:
             field_dict["repeat"] = repeat
+        if headers is not UNSET:
+            field_dict["headers"] = headers
 
         return field_dict
 
@@ -156,16 +156,6 @@ class ReplyInput:
         from ..models.reply_input_headers import ReplyInputHeaders # noqa: PLC0415
         from ..models.send_mail_attachment import SendMailAttachment # noqa: PLC0415
         d = dict(src_dict)
-        _headers = d.pop("headers", UNSET)
-        headers: ReplyInputHeaders | Unset
-        if isinstance(_headers,  Unset):
-            headers = UNSET
-        else:
-            headers = ReplyInputHeaders.from_dict(_headers)
-
-
-
-
         body_text = d.pop("body_text", UNSET)
 
         body_html = d.pop("body_html", UNSET)
@@ -198,8 +188,17 @@ class ReplyInput:
 
 
 
+        _headers = d.pop("headers", UNSET)
+        headers: ReplyInputHeaders | Unset
+        if isinstance(_headers,  Unset):
+            headers = UNSET
+        else:
+            headers = ReplyInputHeaders.from_dict(_headers)
+
+
+
+
         reply_input = cls(
-            headers=headers,
             body_text=body_text,
             body_html=body_html,
             from_=from_,
@@ -207,6 +206,7 @@ class ReplyInput:
             reply_all=reply_all,
             attachments=attachments,
             repeat=repeat,
+            headers=headers,
         )
 
         return reply_input
