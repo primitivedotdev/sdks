@@ -1571,3 +1571,38 @@ describe("PrimitiveClient send-by-reference + sendAttachment", () => {
     expect(ref?.cek).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 });
+
+describe("extra headers", () => {
+  function captureClient(seen: Array<{ url: string; body: Record<string, unknown> }>) {
+    return new PrimitiveClient({
+      apiKey: "prim_test",
+      apiBaseUrl: "https://api.example.test/v1",
+      fetch: vi.fn<typeof fetch>(async (input) => {
+        const request = input as Request;
+        seen.push({ url: request.url, body: await request.json() });
+        return new Response(JSON.stringify({ success: true, data: SEND_RESULT }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }) as typeof fetch,
+    });
+  }
+
+  it("send passes headers through and omits an empty map", async () => {
+    const seen: Array<{ url: string; body: Record<string, unknown> }> = [];
+    const client = captureClient(seen);
+    const base = { from: "support@example.com", to: "alice@example.com", subject: "Hello", bodyText: "Hi" };
+    await client.send({ ...base, headers: { "X-Campaign-Id": "spring", "Auto-Submitted": "auto-generated" } });
+    await client.send({ ...base, headers: {} });
+    expect(seen[0]?.body.headers).toEqual({ "X-Campaign-Id": "spring", "Auto-Submitted": "auto-generated" });
+    expect(seen[1]?.body).not.toHaveProperty("headers");
+  });
+
+  it("reply passes headers through", async () => {
+    const seen: Array<{ url: string; body: Record<string, unknown> }> = [];
+    const client = captureClient(seen);
+    await client.reply(RECEIVED_EMAIL, { text: "Thanks", headers: { "X-Ticket": "T-1" } });
+    expect(seen[0]?.url).toContain("/reply");
+    expect(seen[0]?.body.headers).toEqual({ "X-Ticket": "T-1" });
+  });
+});

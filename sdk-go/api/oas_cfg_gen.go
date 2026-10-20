@@ -36,6 +36,7 @@ var regexMap = map[string]ogenregex.Regexp{
 	"^[A-Za-z0-9_-]{1,128}$":                                ogenregex.MustCompile("^[A-Za-z0-9_-]{1,128}$"),
 	"^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$": ogenregex.MustCompile("^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$"),
 	"^[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*$": ogenregex.MustCompile("^[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*[\\x00-\\x7f]*[\\x09-\\x0d\\x20\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]*$"),
+	"^[\\x20-\\x7E]+$":                       ogenregex.MustCompile("^[\\x20-\\x7E]+$"),
 	"^[\\x21-\\x7E]+$":                       ogenregex.MustCompile("^[\\x21-\\x7E]+$"),
 	"^[\\x21-\\x7E]{1,200}$":                 ogenregex.MustCompile("^[\\x21-\\x7E]{1,200}$"),
 	"^[^\\x00-\\x1F\\x7F]+$":                 ogenregex.MustCompile("^[^\\x00-\\x1F\\x7F]+$"),

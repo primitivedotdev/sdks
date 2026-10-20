@@ -187,6 +187,15 @@ export interface SendInput {
   wait?: boolean;
   waitTimeoutMs?: number;
   /**
+   * Extra headers to set on the message, as `{ Name: value }`: the named
+   * allowlist (`Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, ...)
+   * or any custom `X-` header outside the reserved families (`X-Primitive-*`,
+   * `X-Spam*`, `X-Google-*` and similar; see the API reference). The server
+   * validates the names and refuses others with a `validation_error`. Headers
+   * a send sets can be searched with `header` on the sent-mail list.
+   */
+  headers?: Record<string, string>;
+  /**
    * Optional future execution time (ISO 8601). When set, the send is recorded
    * with status `scheduled` and executed at the requested time instead of
    * immediately. Server-enforced bounds: strictly in the future, at most 30
@@ -297,6 +306,8 @@ export interface RequestOptions {
  *   content. The SDK routes replies to the attachment-capable host.
  * - `wait`: when true, wait for the first downstream SMTP delivery
  *   outcome before resolving. Mirrors send-mail's `wait` semantics.
+ * - `headers`: optional extra headers, under the same rules as
+ *   {@link SendInput.headers}.
  *
  * `subject` is intentionally not accepted: a custom subject silently
  * breaks Gmail's threading because Gmail's Conversation View requires
@@ -311,6 +322,8 @@ export type ReplyInput =
       from?: string;
       attachments?: SendAttachment[];
       wait?: boolean;
+      /** Extra headers. Same rules as {@link SendInput.headers}. */
+      headers?: Record<string, string>;
       /** Repeat this reply in the same thread. See {@link RepeatOptions}. */
       repeat?: RepeatOptions;
     };
@@ -999,6 +1012,10 @@ function buildReplyBody(input: ReplyInput): GeneratedReplyInput {
       ? { attachments: resolved.attachments }
       : {}),
     ...(resolved.wait !== undefined ? { wait: resolved.wait } : {}),
+    ...(resolved.headers !== undefined &&
+    Object.keys(resolved.headers).length > 0
+      ? { headers: resolved.headers }
+      : {}),
     ...(resolved.repeat !== undefined
       ? { repeat: buildRepeatInput(resolved.repeat) }
       : {}),
@@ -1518,6 +1535,9 @@ export class PrimitiveClient extends PrimitiveApiClient {
         : {}),
       ...(input.scheduledAt !== undefined
         ? { scheduled_at: input.scheduledAt }
+        : {}),
+      ...(input.headers !== undefined && Object.keys(input.headers).length > 0
+        ? { headers: input.headers }
         : {}),
       ...(input.repeat !== undefined
         ? { repeat: buildRepeatInput(input.repeat) }

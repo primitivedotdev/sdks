@@ -19295,6 +19295,10 @@ func (s *Server) handleListSentEmailsRequest(args [0]string, argsEscaped bool, w
 					Name: "from",
 					In:   "query",
 				}: params.From,
+				{
+					Name: "header",
+					In:   "query",
+				}: params.Header,
 			},
 			Raw: r,
 		}

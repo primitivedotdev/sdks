@@ -2746,6 +2746,12 @@ export type SendMailInput = {
      */
     wait_timeout_ms?: number;
     /**
+     * Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`, `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-` name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be searched with the `header` parameter of `GET /sent-emails`.
+     */
+    headers?: {
+        [key: string]: string;
+    };
+    /**
      * Optional future execution time (ISO 8601). When set, the
      * send is recorded with status `scheduled` and executed at
      * the requested time instead of immediately. Must be in the
@@ -3512,6 +3518,12 @@ export type SentEmailRescheduleInput = {
  *
  */
 export type ReplyInput = {
+    /**
+     * Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`, and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`, `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical capitalization and a custom `X-` name with the spelling given. The same name twice (in any case) is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to the DKIM signature. The headers are stored with the send and can be searched with the `header` parameter of `GET /sent-emails`.
+     */
+    headers?: {
+        [key: string]: string;
+    };
     /**
      * Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte length of body_text and body_html must be at most 262144 bytes (same cap as send-mail).
      */
@@ -6794,7 +6806,7 @@ export type SearchEmailsData = {
     path?: never;
     query?: {
         /**
-         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term must match. A term is a word, a `"quoted phrase"`, or a `field:value` filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`, `automated:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:` terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an unterminated quote, or only stop words is a `validation_error` that says what to change; it is never silently reinterpreted. Alternatives chain (`invoice OR receipt OR "past due"`), and each one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR` next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead); an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a search cannot exclude a term); and an alternative with no searchable word once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT` itself, write it in lower case or in double quotes (`"OR"`). With `prefix=true`, a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a URL, put it in double quotes.
+         * Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term must match. A term is a word, a `"quoted phrase"`, or a `field:value` filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`, `automated:`, `header:`, `has-header:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:` terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an unterminated quote, or only stop words is a `validation_error` that says what to change; it is never silently reinterpreted. Alternatives chain (`invoice OR receipt OR "past due"`), and each one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR` next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead); an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a search cannot exclude a term); and an alternative with no searchable word once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT` itself, write it in lower case or in double quotes (`"OR"`). With `prefix=true`, a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a URL, put it in double quotes. `header:Name=Value` matches mail whose header `Name` has exactly `Value` (name and value case-insensitive, the whole value; quote the term for a value with spaces: `header:"List-Id=Team news <news.example.com>"`), and `has-header:Name` matches mail that carries header `Name` with any value. Neither can be an `OR` alternative. Header filters read a stored copy of each message's headers: every header except trace and signature headers (`Received`, `DKIM-Signature`, `ARC-*`, `Authentication-Results` and similar) and credential-like names (containing a word such as `auth`, `token`, `cookie`, `secret` or `api-key`), at most 100 per message, each value cut to 1024 bytes. Mail stored before header search was available has no stored headers and is not matched.
          */
         q?: string;
         /**
@@ -9249,6 +9261,10 @@ export type ListSentEmailsData = {
          *
          */
         from?: string;
+        /**
+         * Return only sends that set this header. `Name=Value` matches sends whose header `Name` has exactly `Value`; `Name` alone matches any value. Names match case-insensitively; the value matches the whole stored value case-insensitively after trimming (it is not a substring match). Only the first `=` separates name from value. The name is at most 128 printable characters with no spaces or colon, and a value at most 1024. Only the `headers` the send request set are matched, not headers the server adds. Sends made before header search was available have no stored headers and are not matched. Combines with every other filter.
+         */
+        header?: string;
     };
     url: '/sent-emails';
 };

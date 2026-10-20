@@ -451,6 +451,7 @@ from .replay_email_webhooks_response_200 import ReplayEmailWebhooksResponse200
 from .replay_result import ReplayResult
 from .reply_email import ReplyEmail
 from .reply_input import ReplyInput
+from .reply_input_headers import ReplyInputHeaders
 from .reply_to_email_response_200 import ReplyToEmailResponse200
 from .reschedule_sent_email_response_200 import RescheduleSentEmailResponse200
 from .resend_agent_signup_verification_input import ResendAgentSignupVerificationInput
@@ -504,6 +505,7 @@ from .send_mail_attachment import SendMailAttachment
 from .send_mail_idempotency_replay import SendMailIdempotencyReplay
 from .send_mail_idempotency_replay_key_source import SendMailIdempotencyReplayKeySource
 from .send_mail_input import SendMailInput
+from .send_mail_input_headers import SendMailInputHeaders
 from .send_mail_payload_ref import SendMailPayloadRef
 from .send_mail_result import SendMailResult
 from .send_permission_address import SendPermissionAddress
@@ -1113,6 +1115,7 @@ __all__ = (
     "ReplayResult",
     "ReplyEmail",
     "ReplyInput",
+    "ReplyInputHeaders",
     "ReplyToEmailResponse200",
     "RescheduleSentEmailResponse200",
     "ResendAgentSignupVerificationInput",
@@ -1166,6 +1169,7 @@ __all__ = (
     "SendMailIdempotencyReplay",
     "SendMailIdempotencyReplayKeySource",
     "SendMailInput",
+    "SendMailInputHeaders",
     "SendMailPayloadRef",
     "SendMailResult",
     "SendPermissionAddress",

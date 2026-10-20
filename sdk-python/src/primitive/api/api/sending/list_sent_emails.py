@@ -29,6 +29,7 @@ def _get_kwargs(
     date_to: datetime.datetime | Unset = UNSET,
     q: str | Unset = UNSET,
     from_: str | Unset = UNSET,
+    header: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -67,6 +68,8 @@ def _get_kwargs(
     params["q"] = q
 
     params["from"] = from_
+
+    params["header"] = header
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -139,6 +142,7 @@ def sync_detailed(
     date_to: datetime.datetime | Unset = UNSET,
     q: str | Unset = UNSET,
     from_: str | Unset = UNSET,
+    header: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListSentEmailsResponse200]:
     """ List outbound sent emails
@@ -202,6 +206,7 @@ def sync_detailed(
         date_to (datetime.datetime | Unset):
         q (str | Unset):
         from_ (str | Unset):
+        header (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -222,6 +227,7 @@ date_from=date_from,
 date_to=date_to,
 q=q,
 from_=from_,
+header=header,
 
     )
 
@@ -243,6 +249,7 @@ def sync(
     date_to: datetime.datetime | Unset = UNSET,
     q: str | Unset = UNSET,
     from_: str | Unset = UNSET,
+    header: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListSentEmailsResponse200 | None:
     """ List outbound sent emails
@@ -306,6 +313,7 @@ def sync(
         date_to (datetime.datetime | Unset):
         q (str | Unset):
         from_ (str | Unset):
+        header (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -327,6 +335,7 @@ date_from=date_from,
 date_to=date_to,
 q=q,
 from_=from_,
+header=header,
 
     ).parsed
 
@@ -342,6 +351,7 @@ async def asyncio_detailed(
     date_to: datetime.datetime | Unset = UNSET,
     q: str | Unset = UNSET,
     from_: str | Unset = UNSET,
+    header: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListSentEmailsResponse200]:
     """ List outbound sent emails
@@ -405,6 +415,7 @@ async def asyncio_detailed(
         date_to (datetime.datetime | Unset):
         q (str | Unset):
         from_ (str | Unset):
+        header (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -425,6 +436,7 @@ date_from=date_from,
 date_to=date_to,
 q=q,
 from_=from_,
+header=header,
 
     )
 
@@ -446,6 +458,7 @@ async def asyncio(
     date_to: datetime.datetime | Unset = UNSET,
     q: str | Unset = UNSET,
     from_: str | Unset = UNSET,
+    header: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListSentEmailsResponse200 | None:
     """ List outbound sent emails
@@ -509,6 +522,7 @@ async def asyncio(
         date_to (datetime.datetime | Unset):
         q (str | Unset):
         from_ (str | Unset):
+        header (str | Unset):
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -530,5 +544,6 @@ date_from=date_from,
 date_to=date_to,
 q=q,
 from_=from_,
+header=header,
 
     )).parsed

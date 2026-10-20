@@ -29799,6 +29799,52 @@ func (o OptRepeatingSendStatus) Or(d RepeatingSendStatus) RepeatingSendStatus {
 	return d
 }
 
+// NewOptReplyInputHeaders returns new OptReplyInputHeaders with value set to v.
+func NewOptReplyInputHeaders(v ReplyInputHeaders) OptReplyInputHeaders {
+	return OptReplyInputHeaders{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptReplyInputHeaders is optional ReplyInputHeaders.
+type OptReplyInputHeaders struct {
+	Value ReplyInputHeaders
+	Set   bool
+}
+
+// IsSet returns true if OptReplyInputHeaders was set.
+func (o OptReplyInputHeaders) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptReplyInputHeaders) Reset() {
+	var v ReplyInputHeaders
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptReplyInputHeaders) SetTo(v ReplyInputHeaders) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptReplyInputHeaders) Get() (v ReplyInputHeaders, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptReplyInputHeaders) Or(d ReplyInputHeaders) ReplyInputHeaders {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSearchEmailsAutomated returns new OptSearchEmailsAutomated with value set to v.
 func NewOptSearchEmailsAutomated(v SearchEmailsAutomated) OptSearchEmailsAutomated {
 	return OptSearchEmailsAutomated{
@@ -30391,6 +30437,52 @@ func (o OptSendMailInputCc) Get() (v SendMailInputCc, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptSendMailInputCc) Or(d SendMailInputCc) SendMailInputCc {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSendMailInputHeaders returns new OptSendMailInputHeaders with value set to v.
+func NewOptSendMailInputHeaders(v SendMailInputHeaders) OptSendMailInputHeaders {
+	return OptSendMailInputHeaders{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSendMailInputHeaders is optional SendMailInputHeaders.
+type OptSendMailInputHeaders struct {
+	Value SendMailInputHeaders
+	Set   bool
+}
+
+// IsSet returns true if OptSendMailInputHeaders was set.
+func (o OptSendMailInputHeaders) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSendMailInputHeaders) Reset() {
+	var v SendMailInputHeaders
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSendMailInputHeaders) SetTo(v SendMailInputHeaders) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSendMailInputHeaders) Get() (v SendMailInputHeaders, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSendMailInputHeaders) Or(d SendMailInputHeaders) SendMailInputHeaders {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -35707,6 +35799,17 @@ func (s *ReplyEmail) SetStatus(val string) {
 // no extra privilege.
 // Ref: #/components/schemas/ReplyInput
 type ReplyInput struct {
+	// Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`,
+	// `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`,
+	//  and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`,
+	// `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and
+	// `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical
+	// capitalization and a custom `X-` name with the spelling given. The same name twice (in any case)
+	// is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with
+	// no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to
+	// the DKIM signature. The headers are stored with the send and can be searched with the `header`
+	// parameter of `GET /sent-emails`.
+	Headers OptReplyInputHeaders `json:"headers"`
 	// Plain-text reply body. At least one of body_text or body_html is required. The combined UTF-8 byte
 	// length of body_text and body_html must be at most 262144 bytes (same cap as send-mail).
 	BodyText OptString `json:"body_text"`
@@ -35733,6 +35836,11 @@ type ReplyInput struct {
 	// Combined raw decoded attachment bytes must be at most 31457280.
 	Attachments []SendMailAttachment `json:"attachments"`
 	Repeat      OptRepeatInput       `json:"repeat"`
+}
+
+// GetHeaders returns the value of Headers.
+func (s *ReplyInput) GetHeaders() OptReplyInputHeaders {
+	return s.Headers
 }
 
 // GetBodyText returns the value of BodyText.
@@ -35770,6 +35878,11 @@ func (s *ReplyInput) GetRepeat() OptRepeatInput {
 	return s.Repeat
 }
 
+// SetHeaders sets the value of Headers.
+func (s *ReplyInput) SetHeaders(val OptReplyInputHeaders) {
+	s.Headers = val
+}
+
 // SetBodyText sets the value of BodyText.
 func (s *ReplyInput) SetBodyText(val OptString) {
 	s.BodyText = val
@@ -35803,6 +35916,29 @@ func (s *ReplyInput) SetAttachments(val []SendMailAttachment) {
 // SetRepeat sets the value of Repeat.
 func (s *ReplyInput) SetRepeat(val OptRepeatInput) {
 	s.Repeat = val
+}
+
+// Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`,
+// `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`,
+//
+//	and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`,
+//
+// `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and
+// `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical
+// capitalization and a custom `X-` name with the spelling given. The same name twice (in any case)
+// is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with
+// no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to
+// the DKIM signature. The headers are stored with the send and can be searched with the `header`
+// parameter of `GET /sent-emails`.
+type ReplyInputHeaders map[string]string
+
+func (s *ReplyInputHeaders) init() ReplyInputHeaders {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
 }
 
 type ReplyToEmailBadGateway ErrorResponse
@@ -38582,6 +38718,17 @@ type SendMailInput struct {
 	Wait OptBool `json:"wait"`
 	// Maximum time to wait for a delivery outcome when wait is true. Defaults to 30000.
 	WaitTimeoutMs OptInt `json:"wait_timeout_ms"`
+	// Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`,
+	// `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`,
+	//  and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`,
+	// `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and
+	// `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical
+	// capitalization and a custom `X-` name with the spelling given. The same name twice (in any case)
+	// is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with
+	// no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to
+	// the DKIM signature. The headers are stored with the send and can be searched with the `header`
+	// parameter of `GET /sent-emails`.
+	Headers OptSendMailInputHeaders `json:"headers"`
 	// Optional future execution time (ISO 8601). When set, the
 	// send is recorded with status `scheduled` and executed at
 	// the requested time instead of immediately. Must be in the
@@ -38667,6 +38814,11 @@ func (s *SendMailInput) GetWaitTimeoutMs() OptInt {
 	return s.WaitTimeoutMs
 }
 
+// GetHeaders returns the value of Headers.
+func (s *SendMailInput) GetHeaders() OptSendMailInputHeaders {
+	return s.Headers
+}
+
 // GetScheduledAt returns the value of ScheduledAt.
 func (s *SendMailInput) GetScheduledAt() OptDateTime {
 	return s.ScheduledAt
@@ -38740,6 +38892,11 @@ func (s *SendMailInput) SetWait(val OptBool) {
 // SetWaitTimeoutMs sets the value of WaitTimeoutMs.
 func (s *SendMailInput) SetWaitTimeoutMs(val OptInt) {
 	s.WaitTimeoutMs = val
+}
+
+// SetHeaders sets the value of Headers.
+func (s *SendMailInput) SetHeaders(val OptSendMailInputHeaders) {
+	s.Headers = val
 }
 
 // SetScheduledAt sets the value of ScheduledAt.
@@ -38880,6 +39037,29 @@ func NewStringArraySendMailInputCc(v []string) SendMailInputCc {
 	var s SendMailInputCc
 	s.SetStringArray(v)
 	return s
+}
+
+// Extra headers to set on the message, as `{ "Name": "value" }`. Accepted names: `Auto-Submitted`,
+// `Precedence`, `X-Auto-Response-Suppress`, `X-Primitive-Interaction`, `X-Primitive-Interaction-Ref`,
+//
+//	and any custom `X-` header except the reserved families `X-Primitive-*`, `X-Original-*`,
+//
+// `X-Forwarded-*`, `X-Received`, `X-Spam*`, `X-MS-*`, `X-Microsoft-*`, `X-Google-*`, `X-GM-*` and
+// `X-Apple-*`. Names match case-insensitively; an allowlisted name is sent in its canonical
+// capitalization and a custom `X-` name with the spelling given. The same name twice (in any case)
+// is a `validation_error`, as is any other name. At most 25 headers; names up to 64 characters with
+// no spaces or colon; values 1 to 200 printable ASCII characters. Custom headers are not added to
+// the DKIM signature. The headers are stored with the send and can be searched with the `header`
+// parameter of `GET /sent-emails`.
+type SendMailInputHeaders map[string]string
+
+func (s *SendMailInputHeaders) init() SendMailInputHeaders {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
 }
 
 // A reference to an already-uploaded Primitive Payloads object, delivered as an attachment without
