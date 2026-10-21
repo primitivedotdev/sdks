@@ -11,6 +11,18 @@ import {
 } from "./shared-mail-files.js";
 
 export const AGENT_PROFILE_ENV = "PRIMITIVE_AGENT_PROFILE";
+/**
+ * The selected agent's email address, exported next to AGENT_PROFILE_ENV for
+ * a registered session so other tools can read it without running the CLI.
+ */
+export const AGENT_ADDRESS_ENV = "PRIMITIVE_AGENT_ADDRESS";
+/**
+ * One sentence telling a session whose agent is selected how to run a command
+ * as the member login instead. An empty PRIMITIVE_AGENT_PROFILE selects no
+ * profile everywhere in the CLI.
+ */
+export const MEMBER_LOGIN_OPT_OUT =
+  "rerun the same command with `PRIMITIVE_AGENT_PROFILE=` in front of it (or under `env -u PRIMITIVE_AGENT_PROFILE`) to run it as the member login";
 export type ConnectedAgentIdentity = {
   profileName: string;
   orgId: string;
@@ -91,7 +103,7 @@ export class AgentConnectionSetupError extends Error {}
 export function requireDefaultLoginProfile(): void {
   if (process.env[AGENT_PROFILE_ENV]?.trim()) {
     throw new AgentConnectionSetupError(
-      "This command manages the default OAuth login. Unset PRIMITIVE_AGENT_PROFILE before using it; the connected-agent profile is unchanged.",
+      `This command manages the member login, so it does not run as the agent selected by PRIMITIVE_AGENT_PROFILE; ${MEMBER_LOGIN_OPT_OUT}, and the agent profile is unchanged.`,
     );
   }
 }

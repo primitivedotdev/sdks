@@ -1086,6 +1086,49 @@ stops running. Claude reports the same SessionEnd for a restart, a switch to
 another session and a real exit, so the hook waits five minutes first, and a
 start of the same session within that time cancels the end.
 
+#### Session agent identity in Claude Code
+
+Claude Code gives SessionStart hooks a file named by `CLAUDE_ENV_FILE` and
+runs it before every later Bash command in the session. Once the session's
+profile is saved and connected (on the first start, on resume, or for a
+session whose agent already exists), the SessionStart hook appends two lines
+to it:
+
+```sh
+export PRIMITIVE_AGENT_PROFILE=session-<session id>
+export PRIMITIVE_AGENT_ADDRESS=<the agent's email address>
+```
+
+So every `primitive` command in the session, and any tool that runs
+`primitive`, acts as the session's agent without a prefix, and `send` and
+`reply` send from the agent's address without `--from`. Registration that
+finishes after the hook returns still writes the lines, and later commands
+pick them up. Nothing is written for a session that already sets
+`PRIMITIVE_AGENT_PROFILE` (including to an empty value), when the file already
+assigns either variable, while setup is still pending, or for a profile that
+is not saved, so a session is never pointed at a profile that does not exist.
+
+`PRIMITIVE_AGENT_ADDRESS` is for other tools in the session that need the
+agent's email address without running the CLI. It is set only together with
+`PRIMITIVE_AGENT_PROFILE` and always names that profile's address.
+`primitive whoami` prints the address alone on its first line, offline, and
+`primitive whoami --json` adds `address`, `profile` and `source`
+(`session_hook` for the session's own exported agent, `env` for any other
+`PRIMITIVE_AGENT_PROFILE`).
+
+Commands that manage the member login (`login`, `logout`, `signup`,
+`agent enroll`, and the other commands that refuse a selected profile) still
+refuse. To run any command as the member login from inside such a session,
+put an empty `PRIMITIVE_AGENT_PROFILE=` in front of it, or run it under
+`env -u PRIMITIVE_AGENT_PROFILE`:
+
+```sh
+PRIMITIVE_AGENT_PROFILE= primitive whoami
+```
+
+Codex hooks have no equivalent of `CLAUDE_ENV_FILE`, so Codex sessions still
+select their profile with `PRIMITIVE_AGENT_PROFILE` on each command.
+
 An agent that `session-register` created is disconnected only when its session
 has not started again for 30 days, by `machine doctor --fix` or the next
 `session-register` on the machine, and only while the session's profile still

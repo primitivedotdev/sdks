@@ -662,7 +662,7 @@ export async function enrollAgent(params: AgentEnrollOptions) {
     env.PRIMITIVE_KEY?.trim()
   )
     throw refuse(
-      "Enrollment requires the saved member OAuth login. Unset agent-profile and API-key environment overrides.",
+      "Enrollment uses only the saved member login; rerun it under `env -u PRIMITIVE_AGENT_PROFILE -u PRIMITIVE_API_KEY -u PRIMITIVE_KEY` so no agent profile or API key override applies.",
     );
   const saved = loadCliCredentials(params.configDir);
   if (!saved)

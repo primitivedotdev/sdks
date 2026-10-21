@@ -18,6 +18,7 @@ import {
   type ConnectedAgentIdentity,
   connectedAgentIdentity,
   loadConnectedAgentProfile,
+  MEMBER_LOGIN_OPT_OUT,
   requireDefaultLoginProfile,
 } from "./connected-agent-profile.js";
 
@@ -537,14 +538,14 @@ export function resolveCliAuth(params: {
     const profile = loadConnectedAgentProfile(params.configDir, profileName);
     if (!profile)
       throw new AgentConnectionSetupError(
-        "Selected agent profile is not configured. No fallback login will be used.",
+        `Agent profile ${profileName} selected by PRIMITIVE_AGENT_PROFILE is not saved on this machine, so no login is used; run \`primitive agent status --profile ${profileName}\` to see what happened to it, or ${MEMBER_LOGIN_OPT_OUT}.`,
       );
     if (
       (apiKey && apiKey !== profile.api_key) ||
       (params.apiBaseUrl !== undefined && apiBaseUrl !== profile.api_base_url)
     ) {
       throw new AgentConnectionSetupError(
-        "Explicit credentials or API origin conflict with the selected agent profile.",
+        `An explicit API key or API origin conflicts with agent profile ${profileName} selected by PRIMITIVE_AGENT_PROFILE; drop the override to act as that agent, or rerun the same command with \`PRIMITIVE_AGENT_PROFILE=\` in front of it to use the override.`,
       );
     }
     return {

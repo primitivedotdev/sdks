@@ -102,7 +102,7 @@ describe("connected-agent profile state isolation", () => {
       >;
       Object.assign(command, { parse: async () => ({ flags: {} }) });
       await expect(command.run()).rejects.toThrow(
-        "Unset PRIMITIVE_AGENT_PROFILE",
+        "`PRIMITIVE_AGENT_PROFILE=` in front of it",
       );
     },
   );
@@ -111,7 +111,7 @@ describe("connected-agent profile state isolation", () => {
     const path = join(configDir, "credentials.json");
     writeFileSync(path, "preserve existing login");
     vi.stubEnv("PRIMITIVE_AGENT_PROFILE", "work");
-    const hint = "Unset PRIMITIVE_AGENT_PROFILE";
+    const hint = "`PRIMITIVE_AGENT_PROFILE=` in front of it";
     expect(() => acquireCliCredentialsLock(configDir)).toThrow(hint);
     expect(() => runForceLogout({ configDir })).toThrow(hint);
     await expect(

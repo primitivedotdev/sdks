@@ -12,6 +12,7 @@ import type {
   VerifiedDomain,
 } from "@primitivedotdev/api-core";
 import { listDomains } from "@primitivedotdev/api-core";
+import { parseFromHeader } from "@primitivedotdev/sdk/parser/address";
 import {
   API_ERROR_CODES,
   extractErrorCode,
@@ -21,6 +22,7 @@ import {
   writeErrorWithHints,
 } from "./api-command.js";
 import type { ResolvedCliAuth } from "./auth.js";
+import type { ConnectedAgentIdentity } from "./connected-agent-profile.js";
 import { isConnectedChatCredential } from "./scoped-chat.js";
 
 // 200 chars is a generous cap that almost never trips on natural
@@ -109,6 +111,29 @@ export function deriveChatSubject(body: string): string {
 
 function isVerifiedDomain(domain: Domain): domain is VerifiedDomain {
   return (domain as VerifiedDomain).is_active === true;
+}
+
+/**
+ * A selected agent always sends as its own address. An explicit --from that
+ * names any other address fails before anything is sent; the same address,
+ * with or without a display name, is accepted.
+ */
+export function assertAgentFromAddress(
+  from: string | undefined,
+  connectedAgent: ConnectedAgentIdentity | undefined,
+): void {
+  if (from === undefined || !connectedAgent) return;
+  const parsed = parseFromHeader(from);
+  if (
+    parsed.ok &&
+    parsed.value.address.toLowerCase() ===
+      connectedAgent.agentAddress.toLowerCase()
+  )
+    return;
+  throw new Errors.CLIError(
+    `--from ${from} is not this agent's address; omit --from to send as ${connectedAgent.agentAddress}.`,
+    { exit: 1 },
+  );
 }
 
 export type AuthFailureContext = {

@@ -1135,7 +1135,7 @@ test("wrong session, ambient API key, and invitation origin fail before claim", 
       ...base,
       env: { CLAUDE_CODE_SESSION_ID: session, PRIMITIVE_API_KEY: "ambient" },
     }),
-    /saved member OAuth/,
+    /saved member login/,
   );
   assert.equal(creates.length, 0);
   await assert.rejects(

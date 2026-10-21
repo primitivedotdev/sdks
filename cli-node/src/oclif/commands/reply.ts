@@ -27,6 +27,7 @@ import {
 } from "../interaction-actions.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
+import { assertAgentFromAddress } from "../outbound-defaults.js";
 import { clearReadPendingMail } from "../pending-mail.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
@@ -299,6 +300,9 @@ class ReplyCommand extends Command {
         configDir: this.config.configDir,
         connectedAgent: auth.connectedAgent,
       });
+      // Without --from the API sends from the address the email was
+      // delivered to, which for a selected agent is its own address.
+      assertAgentFromAddress(flags.from, auth.connectedAgent);
       const attachments = readAttachmentFiles(flags.attachment);
       const repeat = repeatFromFlags(flags);
       const receivingSince = new Date().toISOString();

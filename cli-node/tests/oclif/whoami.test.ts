@@ -174,6 +174,57 @@ describe("whoami command", () => {
     },
   );
 
+  it.each([
+    [{}, "env"],
+    [
+      {
+        CLAUDE_CODE_SESSION_ID: session,
+        PRIMITIVE_AGENT_ADDRESS: "agent@example.test",
+      },
+      "session_hook",
+    ],
+  ] as const)(
+    "prints the agent address first and names where the identity came from (%j)",
+    async (env, source) => {
+      for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
+      try {
+        mocks.auth.mockResolvedValue({
+          apiClient: { client: {} },
+          auth: {
+            apiKey: ["pconn", "test"].join("_"),
+            connectedAgent: {
+              profileName: `session-${session}`,
+              agentAddress: "agent@example.test",
+              ownerAddress: "owner@example.test",
+              ownerMemberAddress: null,
+              apiBaseUrl: "https://api.primitive.dev/v1",
+              orgId: "org-1",
+            },
+          },
+        });
+        const output: string[] = [];
+        vi.spyOn(console, "log").mockImplementation((value: unknown) => {
+          output.push(String(value));
+        });
+        await WhoamiCommand.run([], {
+          root: resolve(import.meta.dirname, "../.."),
+        });
+        await WhoamiCommand.run(["--json"], {
+          root: resolve(import.meta.dirname, "../.."),
+        });
+        expect(output[0].split("\n")[0]).toBe("agent@example.test");
+        expect(JSON.parse(output[1])).toMatchObject({
+          address: "agent@example.test",
+          profile: `session-${session}`,
+          source,
+        });
+        expect(mocks.account).not.toHaveBeenCalled();
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  );
+
   it("does not call account or imply sign-in is needed for a raw connection credential", async () => {
     mocks.auth.mockResolvedValue({
       apiClient: { client: {} },

@@ -678,7 +678,7 @@ describe("connected-agent setup", () => {
         env: { PRIMITIVE_AGENT_PROFILE: "missing" },
         apiKey: "different",
       }),
-    ).toThrow(/No fallback/);
+    ).toThrow(/is not saved on this machine, so no login is used/);
     expect(
       resolveCliAuth({ ...selected, apiKey: credential, apiBaseUrl }),
     ).toMatchObject({ source: "connected-profile" });

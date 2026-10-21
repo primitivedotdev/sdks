@@ -13,6 +13,7 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { isConnectedChatCredential } from "../scoped-chat.js";
+import { agentIdentitySource } from "../session-agent-env.js";
 
 // `primitive whoami` is the credentials smoke test. Default output stays
 // intentionally sparse so routine auth checks do not expose account internals;
@@ -43,7 +44,7 @@ class WhoamiCommand extends Command {
   static description =
     `Print the account currently authenticated by saved OAuth credentials or an explicit API key. For account credentials this is a live credentials smoke test. Use account whoami for the authenticated caller, their assigned member address and an address suggestion; account provision-member-address --address <email> saves your chosen personal address.
 
-  With PRIMITIVE_AGENT_PROFILE selected, print the saved connected-agent identity offline. This does not verify live authentication, app pairing, or listener readiness. Inspect the receiver separately: the output names the command for the profile's receiver mode (agent connect --status for Claude hook and poll receivers, listen --status --notify-session for a native listener).
+  With PRIMITIVE_AGENT_PROFILE selected, print the saved connected-agent identity offline, with no API call. The first line is the agent's email address alone; --json adds address, profile and source (session_hook when the selected profile is this Claude Code session's own agent exported by the session start hook, env otherwise). This does not verify live authentication, app pairing, or listener readiness. Inspect the receiver separately: the output names the command for the profile's receiver mode (agent connect --status for Claude hook and poll receivers, listen --status --notify-session for a native listener).
 
   The default output is a concise human summary. Pass --json for the full /account response or the explicit offline connected-agent identity envelope.`;
 
@@ -101,10 +102,18 @@ class WhoamiCommand extends Command {
               ? "poll receiver"
               : "receiver"
         } with \`${receiver.command}\`.`;
+        const source = agentIdentitySource(identity);
+        const selectedBy =
+          source === "session_hook"
+            ? `this Claude Code session's start hook (PRIMITIVE_AGENT_PROFILE=${identity.profileName})`
+            : `PRIMITIVE_AGENT_PROFILE=${identity.profileName}`;
         this.log(
           flags.json
             ? JSON.stringify(
                 {
+                  address: identity.agentAddress,
+                  profile: identity.profileName,
+                  source,
                   auth_method: "agent_connection",
                   verification: "offline",
                   identity,
@@ -114,7 +123,7 @@ class WhoamiCommand extends Command {
                 null,
                 2,
               )
-            : `Saved connected-agent profile: ${identity.profileName}\nAgent address: ${identity.agentAddress}\nOwner personal address (send reports here): ${identity.ownerMemberAddress ?? "unknown; reply to the member who wrote to you"}\nControl address (setup and presence only): ${identity.ownerAddress}\nAPI origin: ${identity.apiBaseUrl}\n${guidance}\nSaved profile status: ${statusCommand}`,
+            : `${identity.agentAddress}\nSelected by: ${selectedBy}. Prefix a command with \`PRIMITIVE_AGENT_PROFILE=\` to run it as the member login instead.\nSaved connected-agent profile: ${identity.profileName}\nAgent address: ${identity.agentAddress}\nOwner personal address (send reports here): ${identity.ownerMemberAddress ?? "unknown; reply to the member who wrote to you"}\nControl address (setup and presence only): ${identity.ownerAddress}\nAPI origin: ${identity.apiBaseUrl}\n${guidance}\nSaved profile status: ${statusCommand}`,
         );
         return;
       }

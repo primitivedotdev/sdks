@@ -20,7 +20,11 @@ import {
   uuidsFromSeed,
 } from "../fyi-message.js";
 import { resolveMessageBodies } from "../message-body-sources.js";
-import { deriveSubject, pickDefaultFromAddress } from "../outbound-defaults.js";
+import {
+  assertAgentFromAddress,
+  deriveSubject,
+  pickDefaultFromAddress,
+} from "../outbound-defaults.js";
 import { warnIfSharedProfile } from "../profile-session-check.js";
 import {
   formatRepeatStarted,
@@ -334,6 +338,7 @@ class SendCommand extends Command {
         baseUrlOverridden,
         configDir: this.config.configDir,
       };
+      assertAgentFromAddress(flags.from, auth.connectedAgent);
       const from =
         flags.from ??
         (await pickDefaultFromAddress(apiClient, authFailureContext));
