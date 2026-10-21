@@ -189,10 +189,12 @@ export interface SendInput {
   /**
    * Extra headers to set on the message, as `{ Name: value }`: the named
    * allowlist (`Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, ...)
-   * or any custom `X-` header outside the reserved families (`X-Primitive-*`,
-   * `X-Spam*`, `X-Google-*` and similar; see the API reference). The server
-   * validates the names and refuses others with a `validation_error`. Headers
-   * a send sets can be searched with `header` on the sent-mail list.
+   * or a custom `X-` name of letters, digits and hyphens that is neither
+   * credential-like (`X-Auth-Token`, `X-ApiKey`, ...) nor in a reserved family
+   * (`X-Primitive*`, `X-Spam*`, `X-Google-*` and similar; see the API
+   * reference). The server validates the names and refuses others with a
+   * `validation_error`. Headers a send sets can be searched with `header` on
+   * the sent-mail list.
    */
   headers?: Record<string, string>;
   /**

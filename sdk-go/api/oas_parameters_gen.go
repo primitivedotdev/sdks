@@ -8559,13 +8559,11 @@ type ListSentEmailsParams struct {
 	// Combines with every other filter, and unlike `q` it is
 	// served by every deployment.
 	From OptString `json:",omitempty,omitzero"`
-	// Return only sends that set this header. `Name=Value` matches sends whose header `Name` has exactly
-	// `Value`; `Name` alone matches any value. Names match case-insensitively; the value matches the
-	// whole stored value case-insensitively after trimming (it is not a substring match). Only the first
-	// `=` separates name from value. The name is at most 128 printable characters with no spaces or
-	// colon, and a value at most 1024. Only the `headers` the send request set are matched, not headers
-	// the server adds. Sends made before header search was available have no stored headers and are not
-	// matched. Combines with every other filter.
+	// Return only sends that set this header: `Name=Value` matches that exact value, `Name` alone any
+	// value. Name and value compare case-insensitively; the value is trimmed and matched whole, not as a
+	// substring, and only the first `=` separates the two. Matches only the `headers` the send request
+	// set. A name that is never stored (trace, signature or credential-like) is a `validation_error`;
+	// sends made before header search was available are not matched.
 	Header OptString `json:",omitempty,omitzero"`
 }
 
@@ -11111,9 +11109,11 @@ type SearchEmailsParams struct {
 	// mail that carries header `Name` with any value. Neither can be an `OR` alternative. Header filters
 	// read a stored copy of each message's headers: every header except trace and signature headers
 	// (`Received`, `DKIM-Signature`, `ARC-*`, `Authentication-Results` and similar) and credential-like
-	// names (containing a word such as `auth`, `token`, `cookie`, `secret` or `api-key`), at most 100
-	// per message, each value cut to 1024 bytes. Mail stored before header search was available has no
-	// stored headers and is not matched.
+	// names (a word such as `auth`, `token`, `key`, `secret`, `cookie`, `session`, `bearer`, `jwt` or
+	// `hmac`, including joined forms such as `AuthToken` or `SessionId`), at most 100 headers and 16 KiB
+	// per message, each value cut to 1024 bytes. A filter on a header that is never stored is a
+	// `validation_error`. Mail stored before header search was available has no stored headers and is
+	// not matched.
 	Q OptString `json:",omitempty,omitzero"`
 	// Filter by sender address or sender domain.
 	From OptString `json:",omitempty,omitzero"`
