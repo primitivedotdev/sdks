@@ -202,6 +202,22 @@ export function formatSentSummary(
   return `${noun} sent (${describeSentStatus(sent.status)}, id ${sent.id}). Do not resend.`;
 }
 
+/**
+ * Summary for a send the API accepted with status `scheduled`: nothing
+ * has gone out yet, and it can still be canceled.
+ */
+export function formatScheduledSummary(
+  noun: "Message" | "Reply",
+  sent: Pick<SendMailResult, "id" | "scheduled_at">,
+  idempotencyKey?: string | null,
+): string {
+  const when = sent.scheduled_at ? ` for ${sent.scheduled_at}` : "";
+  const byKey = idempotencyKey
+    ? ` or \`primitive sent cancel --idempotency-key ${shellQuote(idempotencyKey)}\``
+    : "";
+  return `${noun} scheduled${when} (id ${sent.id}). Nothing has gone out yet. Do not resend. To cancel it before then, run \`primitive sent cancel --id ${sent.id}\`${byKey}.`;
+}
+
 export function formatSendFailureSummary(
   noun: "Message" | "Reply",
   outcome: FailedSendOutcome,
@@ -506,6 +522,7 @@ export function sentHistoryWindowStart(attemptStartedAtIso: string): string {
 }
 
 export type SendCommandFollowUpKind =
+  | "cancel_scheduled_send"
   | "find_sent_email_by_idempotency_key"
   | "inspect_sent_email"
   | "list_recent_sent_emails";
@@ -614,13 +631,16 @@ export function sendIdentityFields(params: {
 }
 
 /**
- * Commands that inspect an existing send. None of them send again:
- * a caller that follows them after a failure cannot double-send.
+ * Commands that inspect an existing send, or cancel one still
+ * scheduled. None of them send again: a caller that follows them after
+ * a failure cannot double-send.
  */
 export function buildSendCommandFollowUps(params: {
   attemptStartedAtIso: string;
   idempotencyKey?: string | null;
   outcome: SendOutcome;
+  /** True when the send record has status `scheduled`. */
+  scheduled?: boolean;
   sentId: string | null;
 }): FollowUpCommand<SendCommandFollowUpKind>[] {
   const commands: FollowUpCommand<SendCommandFollowUpKind>[] = [];
@@ -651,6 +671,15 @@ export function buildSendCommandFollowUps(params: {
         ["primitive", "sent", "get", "--id", params.sentId],
       ),
     );
+    if (params.scheduled === true) {
+      commands.push(
+        buildFollowUpCommand(
+          "cancel_scheduled_send",
+          "Cancel this scheduled send before it goes out",
+          ["primitive", "sent", "cancel", "--id", params.sentId],
+        ),
+      );
+    }
   }
   if (params.outcome === "uncertain") {
     commands.push(
@@ -740,7 +769,13 @@ export function reportSendCommandResult(params: {
                 keyOrigin: params.idempotencyKeyOrigin ?? "caller",
                 keyHint: "--idempotency-key with a new key",
               })
-            : formatSentSummary(params.noun, sent);
+            : sent.status === "scheduled"
+              ? formatScheduledSummary(
+                  params.noun,
+                  sent,
+                  params.idempotencyKey ?? sent.client_idempotency_key,
+                )
+              : formatSentSummary(params.noun, sent);
     }
     if (!params.json) params.writeStderr(`${outcomeMessage}\n`);
   }
@@ -758,6 +793,7 @@ export function reportSendCommandResult(params: {
         attemptStartedAtIso: params.attemptStartedAtIso,
         idempotencyKey: params.idempotencyKey,
         outcome,
+        scheduled: sent?.status === "scheduled",
         sentId: sent?.id ?? null,
       }),
       ...params.extraEnvelopeFields,

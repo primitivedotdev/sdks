@@ -3,6 +3,7 @@ import {
   operationManifest,
   type PrimitiveOperationManifest,
 } from "@primitivedotdev/api-core";
+import { headerFlagName } from "./api-command.js";
 
 type OpenApiTag = {
   description?: string;
@@ -102,6 +103,11 @@ export function renderFishCompletion(binName: string): string {
       ]) {
         lines.push(
           `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l '${fishEscape(parameter.name.replace(/_/g, "-"))}' -r -d '${fishEscape(parameter.description ?? parameter.name)}'`,
+        );
+      }
+      for (const parameter of operation.headerParams) {
+        lines.push(
+          `complete -c ${binName} -n '${operationCondition(operation).replace(BIN_PLACEHOLDER, binName)}' -l '${fishEscape(headerFlagName(parameter.name))}' -r -d '${fishEscape(parameter.description ?? parameter.name)}'`,
         );
       }
 

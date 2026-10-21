@@ -28,6 +28,11 @@ export type PrimitiveOperationManifest = {
   pathParams: PrimitiveParameterManifest[];
   queryParams: PrimitiveParameterManifest[];
   /**
+   * Request headers the operation declares (for example
+   * `Idempotency-Key`). `name` is the header name as the spec spells it.
+   */
+  headerParams: PrimitiveParameterManifest[];
+  /**
    * Resolved JSON Schema for the request body when `hasJsonBody` is
    * true. `$ref`s into the OpenAPI components are inlined.
    */
@@ -56,6 +61,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -205,6 +211,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account/storage",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -278,6 +285,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account/webhook-secret",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -307,6 +315,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account/member-address",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -361,6 +370,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account/webhook-secret/rotate",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -390,6 +400,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/account",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -458,6 +469,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/whoami",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -543,6 +555,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent/accounts",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -682,6 +695,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent/claim/link",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -727,6 +741,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent/signup/resend",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -783,6 +798,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent/claim/start",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -833,6 +849,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent/signup/start",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -912,6 +929,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent/claim/verify",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1011,6 +1029,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent/signup/verify",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -1148,6 +1167,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent-connections/setup",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "agentConnectionSetup",
@@ -1166,6 +1186,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent-connections/claim",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional compatibility header. This operation does not guarantee response replay or safe retries through this header. Use the operation's documented recovery flow after an uncertain response.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -1409,6 +1438,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent-connections",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional compatibility header. This operation does not guarantee response replay or safe retries through this header. Use the operation's documented recovery flow after an uncertain response.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -1801,6 +1839,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional compatibility header. This operation does not guarantee response replay or safe retries through this header. Use the operation's documented recovery flow after an uncertain response.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
@@ -2030,6 +2077,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2218,6 +2266,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional client-supplied idempotency key. Retrying a request with the same key returns the original result instead of performing the action a second time; if omitted the server derives one from the canonical payload hash. Safe to retry network failures without duplicating side effects.",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2270,6 +2327,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2450,6 +2508,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2590,6 +2649,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent-networks/default/contact-admission",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "description": "Check only a received email already stored for the bound recipient. The server verifies its sender against delivery evidence.",
@@ -2672,6 +2732,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -2780,6 +2841,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agent-networks",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -2857,6 +2919,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -2993,6 +3056,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -3144,6 +3208,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -3181,6 +3246,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "description": "Set one or both independent discovery permissions.",
@@ -3378,6 +3444,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -4543,6 +4610,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/cli/logout",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4592,6 +4660,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/cli/login/poll",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4694,6 +4763,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/cli/signup/resend",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4750,6 +4820,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/cli/login/start",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4821,6 +4892,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/cli/signup/start",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -4900,6 +4972,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/cli/signup/verify",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -5036,6 +5109,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5081,6 +5155,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5118,6 +5193,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5368,6 +5444,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5424,6 +5501,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/contact-policy",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -5555,6 +5633,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -5659,6 +5738,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -5733,6 +5813,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "oneOf": [
         {
@@ -5874,6 +5955,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "oneOf": [
         {
@@ -6223,6 +6305,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "oneOf": [
         {
@@ -6323,6 +6406,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/contact-policy",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "oneOf": [
         {
@@ -6521,6 +6605,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/credits/balance",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -6636,6 +6721,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/credits/redeem",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Required client-supplied key: 1 to 200 printable ASCII\ncharacters, without spaces. Use a new key for each code you\nredeem and reuse it only to retry the same request.\n",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": true,
+        "type": "string"
+      }
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -6723,6 +6817,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/domains",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -6882,6 +6977,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -7470,6 +7566,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteDomain",
@@ -7504,6 +7601,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "boolean"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadDomainZoneFile",
@@ -7522,6 +7620,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/domains",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -7715,6 +7814,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -7808,6 +7908,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "oneOf": [
@@ -8042,6 +8143,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteEmail",
@@ -8068,6 +8170,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -8118,6 +8221,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadAttachments",
@@ -8158,6 +8262,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadEmailAttachmentArchiveMember",
@@ -8192,6 +8297,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadEmailAttachmentByFilename",
@@ -8227,6 +8333,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadEmailAttachmentPart",
@@ -8261,6 +8368,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadRawEmail",
@@ -8295,6 +8403,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -8541,6 +8650,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -9433,6 +9543,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -9632,6 +9743,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -10100,6 +10212,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -10357,6 +10470,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -10908,6 +11022,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "oneOf": [
         {
@@ -11209,6 +11324,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/endpoints",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -11473,6 +11589,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteEndpoint",
@@ -11491,6 +11608,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/endpoints",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -11695,6 +11813,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -11869,6 +11988,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -11915,6 +12035,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12041,6 +12162,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12271,6 +12393,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/filters",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12373,6 +12496,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteFilter",
@@ -12391,6 +12515,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/filters",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -12466,6 +12591,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12541,6 +12667,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/functions",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12625,6 +12752,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12690,6 +12818,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/org/secrets",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -12763,6 +12892,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteFunction",
@@ -12796,6 +12926,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteFunctionSecret",
@@ -12822,6 +12953,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteOrgSecret",
@@ -12848,6 +12980,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -12929,6 +13062,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "oneOf": [
@@ -13045,6 +13179,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13605,6 +13740,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/functions/routing-topology",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13750,6 +13886,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13845,6 +13982,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -13913,6 +14051,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/functions",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -13980,6 +14119,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/org/secrets",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14038,6 +14178,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "description": "Target for a route binding. Either a specific verified domain\n(scoped) or the org-wide fallback. Pass `takeover: true` to\ndeactivate any conflicting binding before installing this one.\n",
@@ -14243,6 +14384,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14309,6 +14451,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14375,6 +14518,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -14468,6 +14612,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14507,6 +14652,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -14604,6 +14750,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/inbox/status",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14879,6 +15026,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [
+      {
+        "description": "Optional function id UUID used as the default scope when query\nscope parameters are omitted.\n",
+        "enum": null,
+        "name": "x-primitive-function-id",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -14957,6 +15113,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "description": "Function id UUID when `scope_type=function`. Not valid with\n`scope_type=org`.\n",
         "enum": null,
         "name": "scope_id",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "headerParams": [
+      {
+        "description": "Optional function id UUID used as the default scope when query\nscope parameters are omitted.\n",
+        "enum": null,
+        "name": "x-primitive-function-id",
         "required": false,
         "type": "string"
       }
@@ -15183,6 +15348,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [
+      {
+        "description": "Optional function id UUID used as the default scope when query\nscope parameters are omitted.\n",
+        "enum": null,
+        "name": "x-primitive-function-id",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -15339,6 +15513,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/memories",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional function id UUID used as the default scope when the body\ndoes not include `scope`. Ignored when `scope` is provided.\n",
+        "enum": null,
+        "name": "x-primitive-function-id",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -15602,6 +15785,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/x402/challenges",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -15849,6 +16033,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/x402/email-challenges",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional idempotency key. Retrying a request with the same key returns\nthe original result instead of repeating the side effect (for\n`createEmailChallenge`, re-sending the email).\n",
+        "enum": null,
+        "name": "idempotency-key",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16048,6 +16241,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -16252,6 +16446,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/x402/spend-policy",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -16310,6 +16505,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/x402/declined-payments",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -16382,6 +16578,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/x402/payout-addresses",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -16457,6 +16654,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16582,6 +16780,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/x402/payout-addresses",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16685,6 +16884,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/x402/spend-policy",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -16777,6 +16977,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/registries",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -16862,6 +17063,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -16908,6 +17110,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/agents",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -16993,6 +17196,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteRegistry",
@@ -17019,6 +17223,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17098,6 +17303,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17156,6 +17362,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/registries",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -17242,6 +17449,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -17334,6 +17542,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -17395,6 +17604,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "description": "Publish an agent into a registry. When display_name is present the agent identity is defined (create-or-get by address) in the same call before publishing; omit the define fields to publish an already-defined agent.",
@@ -17515,6 +17725,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17601,6 +17812,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "unpublishAgent",
@@ -17627,6 +17839,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "minProperties": 1,
@@ -17693,6 +17906,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteRepeatingSend",
@@ -17719,6 +17933,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -17898,6 +18113,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -18073,6 +18289,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -18150,6 +18367,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -18367,6 +18585,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/routes",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -18512,6 +18731,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteRoute",
@@ -18530,6 +18750,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/routes",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -18621,6 +18842,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/routes/reorder",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -18744,6 +18966,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/routes/simulate",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -18900,6 +19123,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -19025,6 +19249,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/semantic-search",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "properties": {
@@ -19311,6 +19536,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -19445,6 +19671,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
@@ -20220,6 +20447,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/sent-emails/cancel",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -21023,6 +21251,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -21087,6 +21316,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachmentArchiveMember",
@@ -21121,6 +21351,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachmentByFilename",
@@ -21156,6 +21387,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "downloadSentAttachmentPart",
@@ -21174,6 +21406,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/outbound/status",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -21280,6 +21513,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/send-permissions",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -21428,6 +21662,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
@@ -22218,6 +22453,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -22375,6 +22611,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -22937,6 +23174,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -23249,6 +23487,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -24037,6 +24276,15 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/send-mail",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [
+      {
+        "description": "Optional customer-supplied idempotency key. If omitted, Primitive\nderives one from the canonical request payload and echoes the\neffective value in the `Idempotency-Key` response header.\n",
+        "enum": null,
+        "name": "Idempotency-Key",
+        "required": false,
+        "type": "string"
+      }
+    ],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -24465,6 +24713,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -24886,6 +25135,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -24974,6 +25224,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -25115,6 +25366,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25240,6 +25492,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25429,6 +25682,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/wake/authorizations",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -25541,6 +25795,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/wake/schedules",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -25685,6 +25940,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteWakeAuthorization",
@@ -25711,6 +25967,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": null,
     "sdkName": "deleteWakeSchedule",
@@ -25737,6 +25994,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -25837,6 +26095,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -25920,6 +26179,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "integer"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -26000,6 +26260,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "path": "/wake/schedules",
     "pathParams": [],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -26103,6 +26364,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",
@@ -26132,6 +26394,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -26220,6 +26483,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": {
       "type": "object",
       "additionalProperties": false,
@@ -26418,6 +26682,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       }
     ],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "array",
@@ -26572,6 +26837,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
       }
     ],
     "queryParams": [],
+    "headerParams": [],
     "requestSchema": null,
     "responseSchema": {
       "type": "object",

@@ -17,4 +17,12 @@ describe("renderFishCompletion", () => {
       "complete -c primitive -n '__fish_primitive_using_operation emails download-raw-email' -l 'envelope'",
     );
   });
+
+  it("completes declared request headers such as --idempotency-key", () => {
+    const completion = renderFishCompletion("primitive");
+
+    expect(completion).toContain(
+      "complete -c primitive -n '__fish_primitive_using_operation sending send-email' -l 'idempotency-key' -r",
+    );
+  });
 });

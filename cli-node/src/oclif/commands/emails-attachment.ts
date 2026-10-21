@@ -176,6 +176,12 @@ export class EmailsAttachmentMembersCommand extends Command {
   the path the listing reports. stdout then carries only its bytes,
   unless --output names a file.
 
+  The listing is JSON with or without --json; --json is accepted like on
+  every other command, and with it a failure prints one JSON document on
+  stdout (the error with exit_code) and nothing on stderr. --envelope
+  prints the full response envelope instead of only the listing. Neither
+  applies to a --member download, whose output is the file's bytes.
+
   The server refuses archives that are not zip or tar, that hold an
   unsafe path (absolute, "..", backslashes and similar), or that exceed
   its size, entry-count or compression-ratio limits. Each refusal exits 1
@@ -186,6 +192,7 @@ export class EmailsAttachmentMembersCommand extends Command {
     "<%= config.bin %> emails attachment-members <email-id> logs.zip",
     "<%= config.bin %> emails attachment-members <email-id> 0 --member logs/run.txt --output run.txt",
     "<%= config.bin %> emails attachment-members <sent-email-id> bundle.tar.gz --sent",
+    "<%= config.bin %> emails attachment-members <email-id> logs.zip --json",
   ];
 
   static args = {
@@ -202,6 +209,16 @@ export class EmailsAttachmentMembersCommand extends Command {
     member: Flags.string({
       description:
         "Download the file at this path inside the archive, as the listing reports it.",
+    }),
+    json: Flags.boolean({
+      description:
+        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. On success it is the listing, as without --json (or the full envelope with --envelope); a failure prints the error with exit_code. Not for --member downloads.",
+      exclusive: ["member"],
+    }),
+    envelope: Flags.boolean({
+      description:
+        "Print the full response envelope instead of only the listing. Not for --member downloads.",
+      exclusive: ["member"],
     }),
   };
 
@@ -250,7 +267,8 @@ export class EmailsAttachmentMembersCommand extends Command {
         reportFailure(this, context, result.error);
         return;
       }
-      const listing = (result.data as { data?: unknown } | undefined)?.data;
+      const envelope = result.data as { data?: unknown } | undefined;
+      const listing = flags.envelope ? (envelope ?? null) : envelope?.data;
       const text = `${JSON.stringify(listing, null, 2)}\n`;
       if (flags.output) writeFileSync(flags.output, text);
       else process.stdout.write(text);

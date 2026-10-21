@@ -538,6 +538,31 @@ The sender sees the stop in the thread. `primitive emails get --id <email-id>
 --context` marks a repeating message with its cadence and, when the recipient may
 stop it, the exact stop command.
 
+## Custom headers and scheduled sends
+
+`send` and `reply` take `--header "Name: value"` (or `Name=value`), repeatable
+once per name. The CLI checks only the shape and refuses a duplicate name; the
+server decides which names are allowed and says why in a `validation_error`.
+
+```bash
+primitive send --to alice@example.com --body "Spring sale" --header "X-Campaign-Id: spring-sale" --header "Auto-Submitted=auto-generated"
+primitive reply --id <email-id> --body "Ticket updated." --header "X-Ticket-Id: 4821"
+```
+
+`send --scheduled-at <time>` records the send with status `scheduled` and sends it
+at that time. The time needs `Z` or a numeric UTC offset. It cannot be combined
+with `--wait`, `--attachment`, `--fyi` or `--if-latest-message-id`. The summary
+says the message is scheduled and how to cancel it, and the `--json` envelope
+adds a `cancel_scheduled_send` follow-up command.
+
+```bash
+primitive send --to alice@example.com --body "Reminder: standup" --scheduled-at 2026-10-09T17:00:00Z --idempotency-key standup-2026-10-09
+primitive sent cancel --idempotency-key standup-2026-10-09
+```
+
+Generated operation commands also expose the request headers the spec declares,
+for example `primitive sending send-email --idempotency-key <key>`.
+
 ## Recipient routing
 
 Bind a recipient address to a destination so inbound mail resolves to a single

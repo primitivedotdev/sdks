@@ -42,6 +42,7 @@ import {
   EmailsAttachmentMembersCommand,
 } from "../../src/oclif/commands/emails-attachment.js";
 import ReplyCommand from "../../src/oclif/commands/reply.js";
+import { COMMANDS } from "../../src/oclif/index.js";
 
 const CLI_ROOT = resolve(import.meta.dirname, "../..");
 const EMAIL_ID = "11111111-1111-4111-8111-111111111111";
@@ -213,6 +214,77 @@ describe("emails attachment-members", () => {
         parseAs: "blob",
       }),
     );
+  });
+
+  const LISTING = {
+    part_index: 0,
+    filename: "logs.zip",
+    format: "zip",
+    members: [{ path: "a/b.txt", size_bytes: 3, sha256: "0".repeat(64) }],
+  };
+  // Through the registry, so the --json output guard applies as installed.
+  const Installed = COMMANDS[
+    "emails:attachment-members"
+  ] as unknown as Runnable;
+
+  it("accepts --json and prints the same listing", async () => {
+    mocks.listEmailAttachmentArchiveMembers.mockResolvedValue({
+      data: { success: true, data: LISTING },
+    });
+    const plain = await run(Installed, [EMAIL_ID, "logs.zip"]);
+    const json = await run(Installed, [EMAIL_ID, "logs.zip", "--json"]);
+    expect(json.exitCode).toBeUndefined();
+    expect(JSON.parse(json.stdout)).toEqual(LISTING);
+    expect(json.stdout).toBe(plain.stdout);
+    expect(json.stderr).toBe("");
+  });
+
+  it("prints the full envelope with --envelope", async () => {
+    const envelope = { success: true, data: LISTING };
+    mocks.listEmailAttachmentArchiveMembers.mockResolvedValue({
+      data: envelope,
+    });
+    const result = await run(Installed, [
+      EMAIL_ID,
+      "logs.zip",
+      "--json",
+      "--envelope",
+    ]);
+    expect(result.exitCode).toBeUndefined();
+    expect(JSON.parse(result.stdout)).toEqual(envelope);
+  });
+
+  it("puts a failure in one JSON document on stdout with --json", async () => {
+    mocks.listEmailAttachmentArchiveMembers.mockResolvedValue({
+      error: {
+        success: false,
+        error: {
+          code: "archive_unsafe_path",
+          message: "Archive contains an unsafe member path.",
+        },
+      },
+    });
+    const result = await run(Installed, [EMAIL_ID, "bad.zip", "--json"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      error: { code: "archive_unsafe_path" },
+      exit_code: 1,
+    });
+  });
+
+  it("refuses --json and --envelope with a --member download", async () => {
+    for (const flag of ["--json", "--envelope"]) {
+      await expect(
+        EmailsAttachmentMembersCommand.run(
+          [EMAIL_ID, "0", "--member", "a/b.txt", flag],
+          { root: CLI_ROOT },
+        ),
+      ).rejects.toThrow(
+        /--member=a\/b.txt cannot also be provided when using --/,
+      );
+    }
+    expect(mocks.downloadEmailAttachmentArchiveMember).not.toHaveBeenCalled();
   });
 
   it("reports an unsafe archive as an error", async () => {

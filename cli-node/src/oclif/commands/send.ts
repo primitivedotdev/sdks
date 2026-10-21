@@ -25,6 +25,13 @@ import {
   writeRepeatErrorHint,
 } from "../repeat-flags.js";
 import {
+  assertScheduledAt,
+  HEADER_FLAG_DESCRIPTION,
+  parseHeaderFlags,
+  SCHEDULED_AT_FLAG_DESCRIPTION,
+  sendOptionsValidationHint,
+} from "../send-options.js";
+import {
   assertValidIdempotencyKey,
   buildThrownSendFailureEnvelope,
   deriveSendIdempotencyKey,
@@ -77,6 +84,11 @@ class SendCommand extends Command {
   --from defaults to agent@<your-first-verified-outbound-domain> when omitted.
   --subject defaults to the first line of the body when omitted.
   --attachment attaches a file; repeat it to attach multiple files.
+  --header adds a custom header such as "X-Campaign-Id: spring-sale";
+  repeat it for more. The server decides which names are allowed.
+  --scheduled-at sends at a later time instead of now. The summary
+  then says the message is scheduled and how to cancel it with
+  \`primitive sent cancel\`.
   --fyi (with --in-reply-to) sends an informational acknowledgement of
   that message that receivers do not wake for. To answer an inbound
   email you received, prefer \`primitive reply --id <id> --fyi\`.
@@ -106,6 +118,8 @@ class SendCommand extends Command {
     "<%= config.bin %> send --to alice@example.com --html '<p>Hello!</p>'",
     "<%= config.bin %> send --to alice@example.com --cc bob@example.com --bcc audit@example.com --body 'Loop bob in; audit copy stays hidden.'",
     "<%= config.bin %> send --to alice@example.com --body 'Confirmed' --wait",
+    "<%= config.bin %> send --to alice@example.com --body 'Spring sale' --header 'X-Campaign-Id: spring-sale' --header 'Auto-Submitted: auto-generated'",
+    "<%= config.bin %> send --to alice@example.com --body 'Reminder: standup' --scheduled-at 2026-10-09T17:00:00Z --idempotency-key standup-2026-10-09",
     "<%= config.bin %> send --to alice@example.com --in-reply-to '<parent@example.com>' --fyi --body 'Deployed. No action needed.'",
     "<%= config.bin %> send --to inbox@your-managed-domain.primitive.email --body 'self-loop smoke test' --wait  # any *.primitive.email address routes back to the sending account; useful for proving outbound + inbound work end-to-end",
   ];
@@ -198,6 +212,20 @@ class SendCommand extends Command {
     "idempotency-key": Flags.string({
       description: IDEMPOTENCY_KEY_FLAG_DESCRIPTION,
     }),
+    header: Flags.string({
+      description: HEADER_FLAG_DESCRIPTION,
+      multiple: true,
+    }),
+    "scheduled-at": Flags.string({
+      description: SCHEDULED_AT_FLAG_DESCRIPTION,
+      exclusive: [
+        "wait",
+        "wait-timeout-ms",
+        "attachment",
+        "fyi",
+        "if-latest-message-id",
+      ],
+    }),
     json: Flags.boolean({
       description:
         "Emit one outcome envelope { outcome, exit_code, outcome_message, sent_email_id, idempotency_key, sent, http_status, error, follow_up_commands } on stdout for every outcome, including failures, with nothing on stderr. Without --json, stdout is the send record as before.",
@@ -277,6 +305,11 @@ class SendCommand extends Command {
     if (flags["idempotency-key"] !== undefined) {
       this.idempotencyKey = assertValidIdempotencyKey(flags["idempotency-key"]);
     }
+    const customHeaders = parseHeaderFlags(flags.header);
+    const scheduledAt =
+      flags["scheduled-at"] === undefined
+        ? undefined
+        : assertScheduledAt(flags["scheduled-at"]);
     const attachments = readAttachmentFiles(flags.attachment);
     const repeat = repeatFromFlags(flags);
 
@@ -322,6 +355,7 @@ class SendCommand extends Command {
         ...(flags.cc !== undefined ? { cc: flags.cc } : {}),
         ...(flags.bcc !== undefined ? { bcc: flags.bcc } : {}),
         subject,
+        ...(customHeaders !== undefined ? { headers: customHeaders } : {}),
       };
       // The server rejects a longer delivery wait outright, which would
       // cost a turn before anything is sent. Shorten it and say so.
@@ -351,6 +385,7 @@ class SendCommand extends Command {
           ? { wait_timeout_ms: waitTimeoutMs }
           : {}),
         ...(repeat !== undefined ? { repeat } : {}),
+        ...(scheduledAt !== undefined ? { scheduled_at: scheduledAt } : {}),
       };
       // An --fyi key is derived from what the caller asked for, and the
       // signal's ids are then derived from the key, so a retry sends the
@@ -432,6 +467,11 @@ class SendCommand extends Command {
         onApiError: (errorPayload) => {
           writeErrorWithHints(errorPayload);
           writeRepeatErrorHint(errorPayload);
+          const optionsHint = sendOptionsValidationHint(errorPayload, {
+            headers: customHeaders,
+            scheduledAt,
+          });
+          if (optionsHint) process.stderr.write(`${optionsHint}\n`);
           surfaceUnauthorizedHint({
             ...authFailureContext,
             payload: errorPayload,

@@ -200,6 +200,14 @@ Send an outbound email.
 .B primitive send --to ADDRESS --body TEXT --attachment PATH
 Send an outbound email with a file attachment.
 .TP
+.B primitive send --to ADDRESS --body TEXT --header "NAME: VALUE"
+Send an outbound email with a custom header. Repeatable; also on reply. The
+server decides which header names are allowed.
+.TP
+.B primitive send --to ADDRESS --body TEXT --scheduled-at TIME
+Schedule the send for TIME (ISO 8601 with Z or a UTC offset). Cancel it before
+then with primitive sent cancel --id ID or --idempotency-key KEY.
+.TP
 .B primitive domains add DOMAIN
 Start a custom-domain claim.
 .TP

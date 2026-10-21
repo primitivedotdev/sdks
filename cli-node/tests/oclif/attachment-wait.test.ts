@@ -145,6 +145,7 @@ describe("download command --wait flag", () => {
       path: "/download",
       pathParams: [],
       queryParams: [],
+      headerParams: [],
       requestSchema: null,
       responseSchema: null,
       sdkName,

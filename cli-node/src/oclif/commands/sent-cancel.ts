@@ -14,6 +14,7 @@ import {
   TIME_FLAG_DESCRIPTION,
   writeErrorWithHints,
 } from "../api-command.js";
+import { isIsoInstantWithZone } from "../send-options.js";
 
 // `sent cancel`: cancel a scheduled send by its id or by the
 // Idempotency-Key it was created with. The generated
@@ -37,12 +38,6 @@ export function formatCanceledSend(send: SentEmailDetail): string {
     );
   return parts.join(" ");
 }
-
-// An ISO 8601 date and time with an explicit zone (Z or a numeric offset).
-// A zone-less time would be read as local time here but fail the API's
-// date-time format, so it is refused before any request.
-const ISO_INSTANT_WITH_ZONE =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/i;
 
 export default class SentCancelCommand extends Command {
   static summary = "Cancel a scheduled send";
@@ -92,11 +87,7 @@ export default class SentCancelCommand extends Command {
     if (key !== undefined && key.length === 0)
       this.error("--idempotency-key must not be empty.", { exit: 2 });
     const createdBefore = flags["created-before"];
-    if (
-      createdBefore !== undefined &&
-      (!ISO_INSTANT_WITH_ZONE.test(createdBefore) ||
-        Number.isNaN(Date.parse(createdBefore)))
-    )
+    if (createdBefore !== undefined && !isIsoInstantWithZone(createdBefore))
       this.error(
         "--created-before must be an ISO 8601 time with a time zone, such as 2026-10-20T14:00:00Z.",
         { exit: 2 },

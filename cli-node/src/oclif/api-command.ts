@@ -85,6 +85,53 @@ function flagName(parameterName: string): string {
   return parameterName.replace(/_/g, "-");
 }
 
+/**
+ * Flag name for a request header an operation declares, such as
+ * `--idempotency-key` for `Idempotency-Key`.
+ */
+export function headerFlagName(headerName: string): string {
+  return headerName.toLowerCase().replace(/_/g, "-");
+}
+
+/**
+ * True when `text` holds an ASCII control character. Header values
+ * travel on the wire as given, so one (a line break above all) could
+ * never be sent and is refused before the request.
+ */
+export function hasControlCharacter(text: string): boolean {
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f) return true;
+  }
+  return false;
+}
+
+/**
+ * Read the declared-header flags the caller passed into a header map
+ * keyed by the header name the spec declares. Only flags `buildFlags`
+ * registered for a header are read.
+ */
+export function collectHeaderFlags(
+  parsedFlags: Record<string, unknown>,
+  headerFlagToName: Map<string, string>,
+): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const [flag, header] of headerFlagToName) {
+    const value = parsedFlags[flag];
+    if (value === undefined) continue;
+    const text = String(value);
+    if (text.trim() === "")
+      throw new Errors.CLIError(`--${flag} must not be empty.`, { exit: 2 });
+    if (hasControlCharacter(text))
+      throw new Errors.CLIError(
+        `--${flag} must not contain control characters such as line breaks.`,
+        { exit: 2 },
+      );
+    headers[header] = text;
+  }
+  return headers;
+}
+
 function flagDescription(parameter: PrimitiveParameterManifest): string {
   return parameter.description ?? parameter.name;
 }
@@ -753,6 +800,9 @@ function buildFlags(operation: PrimitiveOperationManifest): {
   // overrides without misreading values from a colliding path or
   // query param flag with the same kebab-cased name.
   bodyFieldFlagToProperty: Map<string, string>;
+  // Map of flag-name -> header name for the request headers the
+  // operation declares, such as `idempotency-key` -> `Idempotency-Key`.
+  headerFlagToName: Map<string, string>;
 } {
   const flags: Record<string, unknown> = {
     "api-key": Flags.string({
@@ -835,6 +885,19 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     }
   }
 
+  // Declared request headers become flags too, so a generated command
+  // can send what the spec lets a caller send, such as an
+  // Idempotency-Key on send-email. A name already taken by another flag
+  // keeps its existing meaning.
+  const headerFlagToName = new Map<string, string>();
+  for (const parameter of operation.headerParams) {
+    const name = headerFlagName(parameter.name);
+    if (RESERVED_FLAG_NAMES.has(name)) continue;
+    if (flags[name] !== undefined) continue;
+    flags[name] = flagForParameter(parameter);
+    headerFlagToName.set(name, parameter.name);
+  }
+
   if (EVENT_TYPES_FLAG_OPERATIONS.has(operation.sdkName)) {
     flags["event-types"] = Flags.string({
       description: EVENT_TYPES_FLAG_DESCRIPTION,
@@ -856,7 +919,7 @@ function buildFlags(operation: PrimitiveOperationManifest): {
     });
   }
 
-  return { flags, bodyFieldFlagToProperty };
+  return { flags, bodyFieldFlagToProperty, headerFlagToName };
 }
 
 // Pull body field values out of the parsed CLI flags. Returns
@@ -1131,7 +1194,8 @@ export const OPERATION_SUCCESS_HOOKS: Record<
 export function createOperationCommand(
   operation: PrimitiveOperationManifest,
 ): typeof Command {
-  const { flags, bodyFieldFlagToProperty } = buildFlags(operation);
+  const { flags, bodyFieldFlagToProperty, headerFlagToName } =
+    buildFlags(operation);
 
   // Append a "Body fields" summary to the description so agents
   // running `<command> --help` learn the JSON shape immediately.
@@ -1169,6 +1233,7 @@ export function createOperationCommand(
         },
       );
       const parsedFlags = flags as Record<string, unknown>;
+      const headers = collectHeaderFlags(parsedFlags, headerFlagToName);
       if (
         [
           "startAgentSignup",
@@ -1289,6 +1354,7 @@ export function createOperationCommand(
           operationFn({
             body,
             client: apiClient.client,
+            ...(Object.keys(headers).length > 0 ? { headers } : {}),
             parseAs: operation.binaryResponse ? "blob" : "auto",
             path: collectValues(operation.pathParams, parsedFlags),
             query,

@@ -36,6 +36,11 @@ import {
   writeRepeatErrorHint,
 } from "../repeat-flags.js";
 import {
+  HEADER_FLAG_DESCRIPTION,
+  parseHeaderFlags,
+  sendOptionsValidationHint,
+} from "../send-options.js";
+import {
   assertValidIdempotencyKey,
   buildThrownSendFailureEnvelope,
   checkPriorReplies,
@@ -116,6 +121,7 @@ class ReplyCommand extends Command {
     "<%= config.bin %> reply --thread <thread-id> --body 'Answering the latest message.'",
     "<%= config.bin %> reply --id <inbound-email-id> --fyi --body 'Done, merged. No action needed.'",
     "<%= config.bin %> reply --id <inbound-email-id> --all --body 'Answering everyone on this email.'",
+    "<%= config.bin %> reply --id <inbound-email-id> --body 'Ticket updated.' --header 'X-Ticket-Id: 4821'",
   ];
 
   static flags = {
@@ -193,6 +199,10 @@ class ReplyCommand extends Command {
     }),
     "idempotency-key": Flags.string({
       description: IDEMPOTENCY_KEY_FLAG_DESCRIPTION,
+    }),
+    header: Flags.string({
+      description: HEADER_FLAG_DESCRIPTION,
+      multiple: true,
     }),
     json: Flags.boolean({
       description:
@@ -276,6 +286,7 @@ class ReplyCommand extends Command {
     if (flags["idempotency-key"] !== undefined) {
       this.idempotencyKey = assertValidIdempotencyKey(flags["idempotency-key"]);
     }
+    const customHeaders = parseHeaderFlags(flags.header);
 
     await runWithTiming(flags.time, async () => {
       const { apiClient, auth, baseUrlOverridden } =
@@ -394,6 +405,9 @@ class ReplyCommand extends Command {
                   ? { body_text: bodies.body.trimEnd() }
                   : {}),
                 ...(flags.from !== undefined ? { from: flags.from } : {}),
+                ...(customHeaders !== undefined
+                  ? { headers: customHeaders }
+                  : {}),
                 in_reply_to_email_id: emailId,
                 ...(flags["if-latest-message-id"] !== undefined
                   ? { if_latest_message_id: flags["if-latest-message-id"] }
@@ -404,6 +418,9 @@ class ReplyCommand extends Command {
                 ...(flags.from !== undefined ? { from: flags.from } : {}),
                 ...(flags.all ? { reply_all: true } : {}),
                 ...(repeat !== undefined ? { repeat } : {}),
+                ...(customHeaders !== undefined
+                  ? { headers: customHeaders }
+                  : {}),
                 ...(flags["if-latest-message-id"] !== undefined
                   ? { if_latest_message_id: flags["if-latest-message-id"] }
                   : {}),
@@ -448,6 +465,7 @@ class ReplyCommand extends Command {
         ...(flags.wait !== undefined ? { wait: flags.wait } : {}),
         ...(flags.all ? { reply_all: true } : {}),
         ...(repeat !== undefined ? { repeat } : {}),
+        ...(customHeaders !== undefined ? { headers: customHeaders } : {}),
         ...(flags["if-latest-message-id"] !== undefined
           ? { if_latest_message_id: flags["if-latest-message-id"] }
           : {}),
@@ -503,6 +521,10 @@ class ReplyCommand extends Command {
         onApiError: (errorPayload) => {
           writeErrorWithHints(errorPayload);
           writeRepeatErrorHint(errorPayload);
+          const optionsHint = sendOptionsValidationHint(errorPayload, {
+            headers: customHeaders,
+          });
+          if (optionsHint) process.stderr.write(`${optionsHint}\n`);
           surfaceUnauthorizedHint({
             auth,
             baseUrlOverridden,

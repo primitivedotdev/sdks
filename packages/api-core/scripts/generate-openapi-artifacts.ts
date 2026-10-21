@@ -81,6 +81,11 @@ type PrimitiveOperationManifest = {
   pathParams: PrimitiveParameterManifest[];
   queryParams: PrimitiveParameterManifest[];
   /**
+   * Request headers the operation declares (for example
+   * `Idempotency-Key`). `name` is the header name as the spec spells it.
+   */
+  headerParams: PrimitiveParameterManifest[];
+  /**
    * Resolved JSON Schema for the request body when `hasJsonBody` is
    * true. All `$ref` references into `components/schemas` and
    * `components/parameters` are inlined so the schema can be
@@ -258,7 +263,7 @@ function mergeParameters(
 
 function manifestParameters(
   parameters: OpenApiParameter[],
-  location: "path" | "query",
+  location: "header" | "path" | "query",
 ): PrimitiveParameterManifest[] {
   return parameters
     .filter((parameter) => parameter.in === location && parameter.name)
@@ -449,6 +454,7 @@ function buildManifest(doc: Record<string, unknown>): PrimitiveOperationManifest
         path,
         pathParams: manifestParameters(parameters, "path"),
         queryParams: manifestParameters(parameters, "query"),
+        headerParams: manifestParameters(parameters, "header"),
         requestSchema: getRequestSchema(doc, operation),
         responseSchema: getResponseSchema(doc, operation),
         sdkName: operation.operationId,
@@ -522,6 +528,11 @@ export type PrimitiveOperationManifest = {
   path: string;
   pathParams: PrimitiveParameterManifest[];
   queryParams: PrimitiveParameterManifest[];
+  /**
+   * Request headers the operation declares (for example
+   * \`Idempotency-Key\`). \`name\` is the header name as the spec spells it.
+   */
+  headerParams: PrimitiveParameterManifest[];
   /**
    * Resolved JSON Schema for the request body when \`hasJsonBody\` is
    * true. \`$ref\`s into the OpenAPI components are inlined.
