@@ -10864,6 +10864,8 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "agent_changed":
 		return nil
+	case "agent_limit":
+		return nil
 	case "agent_misconfigured":
 		return nil
 	case "agent_not_defined":
@@ -10952,6 +10954,10 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "hash_mismatch":
 		return nil
+	case "hipaa_mode_check_unavailable":
+		return nil
+	case "hipaa_mode_external_send_blocked":
+		return nil
 	case "idempotency_conflict":
 		return nil
 	case "invalid_code":
@@ -10974,7 +10980,11 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "invitation_accepted":
 		return nil
+	case "invitation_changed":
+		return nil
 	case "invitation_pending":
+		return nil
+	case "invitation_sending":
 		return nil
 	case "invitation_unconfirmed":
 		return nil

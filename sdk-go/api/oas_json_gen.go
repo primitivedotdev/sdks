@@ -43973,6 +43973,8 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeAgentAccountManagedDomainOnly
 	case ErrorResponseErrorCodeAgentChanged:
 		*s = ErrorResponseErrorCodeAgentChanged
+	case ErrorResponseErrorCodeAgentLimit:
+		*s = ErrorResponseErrorCodeAgentLimit
 	case ErrorResponseErrorCodeAgentMisconfigured:
 		*s = ErrorResponseErrorCodeAgentMisconfigured
 	case ErrorResponseErrorCodeAgentNotDefined:
@@ -44061,6 +44063,10 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeHandleTaken
 	case ErrorResponseErrorCodeHashMismatch:
 		*s = ErrorResponseErrorCodeHashMismatch
+	case ErrorResponseErrorCodeHipaaModeCheckUnavailable:
+		*s = ErrorResponseErrorCodeHipaaModeCheckUnavailable
+	case ErrorResponseErrorCodeHipaaModeExternalSendBlocked:
+		*s = ErrorResponseErrorCodeHipaaModeExternalSendBlocked
 	case ErrorResponseErrorCodeIdempotencyConflict:
 		*s = ErrorResponseErrorCodeIdempotencyConflict
 	case ErrorResponseErrorCodeInvalidCode:
@@ -44083,8 +44089,12 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeInvalidTopicSources
 	case ErrorResponseErrorCodeInvitationAccepted:
 		*s = ErrorResponseErrorCodeInvitationAccepted
+	case ErrorResponseErrorCodeInvitationChanged:
+		*s = ErrorResponseErrorCodeInvitationChanged
 	case ErrorResponseErrorCodeInvitationPending:
 		*s = ErrorResponseErrorCodeInvitationPending
+	case ErrorResponseErrorCodeInvitationSending:
+		*s = ErrorResponseErrorCodeInvitationSending
 	case ErrorResponseErrorCodeInvitationUnconfirmed:
 		*s = ErrorResponseErrorCodeInvitationUnconfirmed
 	case ErrorResponseErrorCodeInvitationsPending:

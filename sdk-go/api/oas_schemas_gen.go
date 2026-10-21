@@ -18101,6 +18101,7 @@ const (
 	ErrorResponseErrorCodeAddressOwnedByAnotherOrg                 ErrorResponseErrorCode = "address_owned_by_another_org"
 	ErrorResponseErrorCodeAgentAccountManagedDomainOnly            ErrorResponseErrorCode = "agent_account_managed_domain_only"
 	ErrorResponseErrorCodeAgentChanged                             ErrorResponseErrorCode = "agent_changed"
+	ErrorResponseErrorCodeAgentLimit                               ErrorResponseErrorCode = "agent_limit"
 	ErrorResponseErrorCodeAgentMisconfigured                       ErrorResponseErrorCode = "agent_misconfigured"
 	ErrorResponseErrorCodeAgentNotDefined                          ErrorResponseErrorCode = "agent_not_defined"
 	ErrorResponseErrorCodeAgentNotFound                            ErrorResponseErrorCode = "agent_not_found"
@@ -18145,6 +18146,8 @@ const (
 	ErrorResponseErrorCodeHandleReserved                           ErrorResponseErrorCode = "handle_reserved"
 	ErrorResponseErrorCodeHandleTaken                              ErrorResponseErrorCode = "handle_taken"
 	ErrorResponseErrorCodeHashMismatch                             ErrorResponseErrorCode = "hash_mismatch"
+	ErrorResponseErrorCodeHipaaModeCheckUnavailable                ErrorResponseErrorCode = "hipaa_mode_check_unavailable"
+	ErrorResponseErrorCodeHipaaModeExternalSendBlocked             ErrorResponseErrorCode = "hipaa_mode_external_send_blocked"
 	ErrorResponseErrorCodeIdempotencyConflict                      ErrorResponseErrorCode = "idempotency_conflict"
 	ErrorResponseErrorCodeInvalidCode                              ErrorResponseErrorCode = "invalid_code"
 	ErrorResponseErrorCodeInvalidCursor                            ErrorResponseErrorCode = "invalid_cursor"
@@ -18156,7 +18159,9 @@ const (
 	ErrorResponseErrorCodeInvalidToken                             ErrorResponseErrorCode = "invalid_token"
 	ErrorResponseErrorCodeInvalidTopicSources                      ErrorResponseErrorCode = "invalid_topic_sources"
 	ErrorResponseErrorCodeInvitationAccepted                       ErrorResponseErrorCode = "invitation_accepted"
+	ErrorResponseErrorCodeInvitationChanged                        ErrorResponseErrorCode = "invitation_changed"
 	ErrorResponseErrorCodeInvitationPending                        ErrorResponseErrorCode = "invitation_pending"
+	ErrorResponseErrorCodeInvitationSending                        ErrorResponseErrorCode = "invitation_sending"
 	ErrorResponseErrorCodeInvitationUnconfirmed                    ErrorResponseErrorCode = "invitation_unconfirmed"
 	ErrorResponseErrorCodeInvitationsPending                       ErrorResponseErrorCode = "invitations_pending"
 	ErrorResponseErrorCodeMailRelayUnavailable                     ErrorResponseErrorCode = "mail_relay_unavailable"
@@ -18369,6 +18374,7 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeAddressOwnedByAnotherOrg,
 		ErrorResponseErrorCodeAgentAccountManagedDomainOnly,
 		ErrorResponseErrorCodeAgentChanged,
+		ErrorResponseErrorCodeAgentLimit,
 		ErrorResponseErrorCodeAgentMisconfigured,
 		ErrorResponseErrorCodeAgentNotDefined,
 		ErrorResponseErrorCodeAgentNotFound,
@@ -18413,6 +18419,8 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeHandleReserved,
 		ErrorResponseErrorCodeHandleTaken,
 		ErrorResponseErrorCodeHashMismatch,
+		ErrorResponseErrorCodeHipaaModeCheckUnavailable,
+		ErrorResponseErrorCodeHipaaModeExternalSendBlocked,
 		ErrorResponseErrorCodeIdempotencyConflict,
 		ErrorResponseErrorCodeInvalidCode,
 		ErrorResponseErrorCodeInvalidCursor,
@@ -18424,7 +18432,9 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeInvalidToken,
 		ErrorResponseErrorCodeInvalidTopicSources,
 		ErrorResponseErrorCodeInvitationAccepted,
+		ErrorResponseErrorCodeInvitationChanged,
 		ErrorResponseErrorCodeInvitationPending,
+		ErrorResponseErrorCodeInvitationSending,
 		ErrorResponseErrorCodeInvitationUnconfirmed,
 		ErrorResponseErrorCodeInvitationsPending,
 		ErrorResponseErrorCodeMailRelayUnavailable,
@@ -18757,6 +18767,8 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorResponseErrorCodeAgentChanged:
 		return []byte(s), nil
+	case ErrorResponseErrorCodeAgentLimit:
+		return []byte(s), nil
 	case ErrorResponseErrorCodeAgentMisconfigured:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeAgentNotDefined:
@@ -18845,6 +18857,10 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorResponseErrorCodeHashMismatch:
 		return []byte(s), nil
+	case ErrorResponseErrorCodeHipaaModeCheckUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeHipaaModeExternalSendBlocked:
+		return []byte(s), nil
 	case ErrorResponseErrorCodeIdempotencyConflict:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInvalidCode:
@@ -18867,7 +18883,11 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInvitationAccepted:
 		return []byte(s), nil
+	case ErrorResponseErrorCodeInvitationChanged:
+		return []byte(s), nil
 	case ErrorResponseErrorCodeInvitationPending:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvitationSending:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeInvitationUnconfirmed:
 		return []byte(s), nil
@@ -19410,6 +19430,9 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeAgentChanged:
 		*s = ErrorResponseErrorCodeAgentChanged
 		return nil
+	case ErrorResponseErrorCodeAgentLimit:
+		*s = ErrorResponseErrorCodeAgentLimit
+		return nil
 	case ErrorResponseErrorCodeAgentMisconfigured:
 		*s = ErrorResponseErrorCodeAgentMisconfigured
 		return nil
@@ -19542,6 +19565,12 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeHashMismatch:
 		*s = ErrorResponseErrorCodeHashMismatch
 		return nil
+	case ErrorResponseErrorCodeHipaaModeCheckUnavailable:
+		*s = ErrorResponseErrorCodeHipaaModeCheckUnavailable
+		return nil
+	case ErrorResponseErrorCodeHipaaModeExternalSendBlocked:
+		*s = ErrorResponseErrorCodeHipaaModeExternalSendBlocked
+		return nil
 	case ErrorResponseErrorCodeIdempotencyConflict:
 		*s = ErrorResponseErrorCodeIdempotencyConflict
 		return nil
@@ -19575,8 +19604,14 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeInvitationAccepted:
 		*s = ErrorResponseErrorCodeInvitationAccepted
 		return nil
+	case ErrorResponseErrorCodeInvitationChanged:
+		*s = ErrorResponseErrorCodeInvitationChanged
+		return nil
 	case ErrorResponseErrorCodeInvitationPending:
 		*s = ErrorResponseErrorCodeInvitationPending
+		return nil
+	case ErrorResponseErrorCodeInvitationSending:
+		*s = ErrorResponseErrorCodeInvitationSending
 		return nil
 	case ErrorResponseErrorCodeInvitationUnconfirmed:
 		*s = ErrorResponseErrorCodeInvitationUnconfirmed
