@@ -11105,16 +11105,16 @@ type SearchEmailsParams struct {
 	// word `OR` or `NOT` itself, write it in lower case or in double quotes (`"OR"`). With `prefix=true`,
 	//  a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a
 	// colon, such as a URL, put it in double quotes. `header:Name=Value` matches mail whose header
-	// `Name` has exactly `Value` (name and value case-insensitive, the whole value; quote the term for a
-	// value with spaces: `header:"List-Id=Team news <news.example.com>"`), and `has-header:Name` matches
+	// `Name` has exactly `Value` (name and value case-insensitive, the whole value, quote the term for a
+	// value with spaces: `header:"List-Id=Team news <news.example.com>"`); `has-header:Name` matches
 	// mail that carries header `Name` with any value. Neither can be an `OR` alternative. Header filters
-	// read a stored copy of each message's headers: every header except trace and signature headers
-	// (`Received`, `DKIM-Signature`, `ARC-*`, `Authentication-Results` and similar) and credential-like
-	// names (a word such as `auth`, `token`, `key`, `secret`, `cookie`, `session`, `bearer`, `jwt` or
-	// `hmac`, including joined forms such as `AuthToken` or `SessionId`), at most 100 headers and 16 KiB
-	// per message, each value cut to 1024 bytes. A filter on a header that is never stored is a
-	// `validation_error`. Mail stored before header search was available has no stored headers and is
-	// not matched.
+	// read a stored copy of each message's headers: for received mail every header except trace and
+	// signature headers (`Received`, `DKIM-Signature`, `ARC-*`, `Authentication-Results` and similar)
+	// and credential-like names (a word such as `auth`, `token`, `key`, `secret`, `cookie`, `session`,
+	// `bearer`, `jwt` or `hmac`, including joined forms such as `AuthToken` or `SessionId`), at most 100
+	// headers and 16 KiB per message, each value cut to 1024 bytes; for sent mail the `headers` the
+	// request set. A filter on a header that is never stored is a `validation_error`. Mail stored before
+	// header search was available has no stored headers and is not matched.
 	Q OptString `json:",omitempty,omitzero"`
 	// Filter by sender address or sender domain.
 	From OptString `json:",omitempty,omitzero"`
