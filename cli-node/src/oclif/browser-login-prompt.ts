@@ -97,18 +97,15 @@ export function runClipboardCommand(
   text: string,
 ): Promise<boolean> {
   return new Promise((resolve) => {
-    let settled = false;
-    const settle = (ok: boolean) => {
-      if (settled) return;
-      settled = true;
-      resolve(ok);
-    };
+    let inputFailed = false;
     const child = spawn(command, args, {
       stdio: ["pipe", "ignore", "ignore"],
     });
-    child.on("error", () => settle(false));
-    child.stdin.on("error", () => settle(false));
-    child.on("close", (code) => settle(code === 0));
+    child.on("error", () => resolve(false));
+    child.stdin.on("error", () => {
+      inputFailed = true;
+    });
+    child.on("close", (code) => resolve(code === 0 && !inputFailed));
     child.stdin.end(text);
   });
 }

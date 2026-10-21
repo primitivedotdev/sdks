@@ -241,12 +241,12 @@ describe("listenForCopyHotkey", () => {
 });
 
 describe("runClipboardCommand", () => {
-  it("returns false instead of throwing when the tool exits before reading", async () => {
+  it("returns false when the tool exits successfully without reading its input", async () => {
     await expect(
       runClipboardCommand(
-        "sh",
-        ["-c", "exec 0<&-; exit 1"],
-        "x".repeat(1 << 20),
+        process.execPath,
+        ["-e", "process.exit(0)"],
+        "x".repeat(1 << 22),
       ),
     ).resolves.toBe(false);
   });
@@ -259,7 +259,11 @@ describe("runClipboardCommand", () => {
 
   it("returns true when the tool reads the text and succeeds", async () => {
     await expect(
-      runClipboardCommand("sh", ["-c", "cat >/dev/null"], "x"),
+      runClipboardCommand(
+        process.execPath,
+        ["-e", "process.stdin.resume().on('end', () => process.exit(0))"],
+        "x",
+      ),
     ).resolves.toBe(true);
   });
 });
