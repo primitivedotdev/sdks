@@ -16190,7 +16190,8 @@ export const openapiDocument: Record<string, unknown> = {
                   "agent_connection_scope_forbidden",
                   "address_note_conflict",
                   "address_not_controlled",
-                  "contact_conflict"
+                  "contact_conflict",
+                  "sent_mail_search_unavailable"
                 ]
               },
               "message": {

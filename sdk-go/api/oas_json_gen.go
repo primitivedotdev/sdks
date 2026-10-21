@@ -37138,6 +37138,8 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeAddressNotControlled
 	case ErrorResponseErrorCodeContactConflict:
 		*s = ErrorResponseErrorCodeContactConflict
+	case ErrorResponseErrorCodeSentMailSearchUnavailable:
+		*s = ErrorResponseErrorCodeSentMailSearchUnavailable
 	default:
 		*s = ErrorResponseErrorCode(v)
 	}

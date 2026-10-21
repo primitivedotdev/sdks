@@ -9333,6 +9333,8 @@ func (s ErrorResponseErrorCode) Validate() error {
 		return nil
 	case "contact_conflict":
 		return nil
+	case "sent_mail_search_unavailable":
+		return nil
 	default:
 		return errors.Errorf("invalid value: %v", s)
 	}

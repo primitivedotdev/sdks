@@ -81,6 +81,7 @@ class ErrorResponseErrorCode(StrEnum):
     SENT_EMAIL_CLEANUP_FAILED = "sent_email_cleanup_failed"
     SENT_EMAIL_DELETED = "sent_email_deleted"
     SENT_EMAIL_NOT_SETTLED = "sent_email_not_settled"
+    SENT_MAIL_SEARCH_UNAVAILABLE = "sent_mail_search_unavailable"
     SERVICE_UNAVAILABLE = "service_unavailable"
     SETTLEMENT_FAILED = "settlement_failed"
     SLOW_DOWN = "slow_down"
