@@ -8,7 +8,11 @@ import {
   writeErrorWithHints,
 } from "../api-command.js";
 import { readAttachmentFiles } from "../attachments.js";
-import { haltAutoWorking, restoreAutoWorking } from "../auto-signals.js";
+import {
+  type HaltedAutoWorking,
+  haltAutoWorking,
+  restoreAutoWorking,
+} from "../auto-signals.js";
 import {
   buildFyiMessageContent,
   FYI_FLAG_DESCRIPTION,
@@ -431,14 +435,19 @@ class SendCommand extends Command {
       const body = { ...envelope, ...content, ...threading };
 
       // A message to the sender of mail being worked on answers it.
-      const halted = await haltAutoWorking(
-        this.config.configDir,
-        {
-          peers: [flags.to],
-          profileName: auth.connectedAgent?.profileName,
-        },
-        flags.fyi ? "fyi" : "reply",
-      );
+      // A scheduled message has not reached the recipient yet, so it
+      // leaves automatic working as it is.
+      const halted: HaltedAutoWorking =
+        scheduledAt === undefined
+          ? await haltAutoWorking(
+              this.config.configDir,
+              {
+                peers: [flags.to],
+                profileName: auth.connectedAgent?.profileName,
+              },
+              flags.fyi ? "fyi" : "reply",
+            )
+          : { configDir: this.config.configDir, stops: [] };
       const attemptStartedAtIso = new Date().toISOString();
       this.attemptStartedAtIso = attemptStartedAtIso;
       this.sendRequestStarted = true;

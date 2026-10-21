@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   sendEmail: vi.fn(),
   setMemory: vi.fn(),
   followEmailConversation: vi.fn(),
+  haltAutoWorking: vi.fn(),
 }));
 
 vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
@@ -30,6 +31,12 @@ vi.mock("@primitivedotdev/api-core", async (importOriginal) => {
 vi.mock("../../src/oclif/api-client.js", () => ({
   createAuthenticatedCliApiClient: mocks.createAuthenticatedCliApiClient,
 }));
+vi.mock("../../src/oclif/auto-signals.js", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/oclif/auto-signals.js")>();
+  mocks.haltAutoWorking.mockImplementation(actual.haltAutoWorking);
+  return { ...actual, haltAutoWorking: mocks.haltAutoWorking };
+});
 vi.mock("../../src/oclif/conversation-follow.js", () => ({
   followEmailConversation: mocks.followEmailConversation,
 }));
@@ -190,6 +197,9 @@ describe("parseHeaderFlags", () => {
     ["X--Campaign: a", /is not a header name/],
     ["X-Campaign-Id:   ", /has no value/],
     ["X-Campaign-Id: a\nBcc: b", /control character/],
+    ["X-Campaign-Id: sale\n", /control character/],
+    ["\nX-Campaign-Id: sale", /control character/],
+    ["X-Campaign-Id: sale\r\n", /control character/],
   ])("refuses %j", (entry, message) => {
     expect(() => parseHeaderFlags([entry])).toThrow(message);
   });
@@ -400,6 +410,38 @@ describe("send --scheduled-at", () => {
         argv: ["primitive", "sent", "cancel", "--id", SENT_ID],
       }),
     );
+  });
+
+  it("says a retried scheduled send is still pending, never to send again", async () => {
+    mocks.sendEmail.mockResolvedValue({
+      data: {
+        data: sendResult({
+          status: "scheduled",
+          scheduled_at: "2026-10-09T17:00:00.000Z",
+          idempotent_replay: true,
+        }),
+      },
+    });
+    const result = await run("send", sendArgs("--scheduled-at", SCHEDULED_AT));
+    expect(result.exitCode).toBeUndefined();
+    expect(result.stderr).toContain(
+      `Message already scheduled for 2026-10-09T17:00:00.000Z (id ${SENT_ID}). Nothing has gone out yet.`,
+    );
+    expect(result.stderr).not.toContain("new key");
+    expect(result.stderr).not.toContain("went out");
+    const json = await run(
+      "send",
+      sendArgs("--scheduled-at", SCHEDULED_AT, "--json"),
+    );
+    expect(JSON.parse(json.stdout).outcome).toBe("already_sent");
+  });
+
+  it("leaves automatic working alone until the message actually goes out", async () => {
+    await run("send", sendArgs("--scheduled-at", SCHEDULED_AT));
+    expect(mocks.haltAutoWorking).not.toHaveBeenCalled();
+    mocks.sendEmail.mockResolvedValue({ data: { data: sendResult() } });
+    await run("send", sendArgs());
+    expect(mocks.haltAutoWorking).toHaveBeenCalledTimes(1);
   });
 
   it("accepts a numeric UTC offset as given", async () => {

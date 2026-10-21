@@ -212,8 +212,8 @@ export class EmailsAttachmentMembersCommand extends Command {
     }),
     json: Flags.boolean({
       description:
-        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. On success it is the listing, as without --json (or the full envelope with --envelope); a failure prints the error with exit_code. Not for --member downloads.",
-      exclusive: ["member"],
+        "Print exactly one JSON document on stdout, on success and on failure, and nothing on stderr. On success it is the listing, as without --json (or the full envelope with --envelope); a failure prints the error with exit_code. Not for --member downloads or --output.",
+      exclusive: ["member", "output"],
     }),
     envelope: Flags.boolean({
       description:

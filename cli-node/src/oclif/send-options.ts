@@ -39,6 +39,12 @@ export function parseHeaderFlags(
       throw headerError(
         `--header expects "Name: value" or "Name=value" (got ${JSON.stringify(entry)}). Example: ${HEADER_EXAMPLE}`,
       );
+    // Checked on the raw text: trimming first would quietly drop a
+    // trailing line break instead of refusing it.
+    if (hasControlCharacter(entry))
+      throw headerError(
+        `--header ${JSON.stringify(entry)} has a control character (such as a line break). Names and values are printable ASCII.`,
+      );
     const name = entry.slice(0, separator).trim();
     const value = entry.slice(separator + 1).trim();
     if (!HEADER_NAME.test(name))
@@ -48,10 +54,6 @@ export function parseHeaderFlags(
     if (value === "")
       throw headerError(
         `--header ${name} has no value. Example: ${HEADER_EXAMPLE}`,
-      );
-    if (hasControlCharacter(value))
-      throw headerError(
-        `--header ${name} has a control character (such as a line break) in its value. Values are printable ASCII.`,
       );
     const key = name.toLowerCase();
     const earlier = seen.get(key);

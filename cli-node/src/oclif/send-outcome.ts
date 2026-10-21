@@ -208,14 +208,18 @@ export function formatSentSummary(
  */
 export function formatScheduledSummary(
   noun: "Message" | "Reply",
-  sent: Pick<SendMailResult, "id" | "scheduled_at">,
+  sent: Pick<SendMailResult, "id" | "idempotent_replay" | "scheduled_at">,
   idempotencyKey?: string | null,
 ): string {
   const when = sent.scheduled_at ? ` for ${sent.scheduled_at}` : "";
+  // A retry of a send that is still scheduled matched the earlier
+  // request: nothing new was scheduled, and nothing has gone out.
+  const verb =
+    sent.idempotent_replay === true ? "already scheduled" : "scheduled";
   const byKey = idempotencyKey
     ? ` or \`primitive sent cancel --idempotency-key ${shellQuote(idempotencyKey)}\``
     : "";
-  return `${noun} scheduled${when} (id ${sent.id}). Nothing has gone out yet. Do not resend. To cancel it before then, run \`primitive sent cancel --id ${sent.id}\`${byKey}.`;
+  return `${noun} ${verb}${when} (id ${sent.id}). Nothing has gone out yet. Do not resend. To cancel it before then, run \`primitive sent cancel --id ${sent.id}\`${byKey}.`;
 }
 
 export function formatSendFailureSummary(
@@ -764,17 +768,20 @@ export function reportSendCommandResult(params: {
       outcomeMessage =
         outcome === "not_sent" || outcome === "uncertain"
           ? formatSendRecordFailureSummary(params.noun, outcome, sent)
-          : outcome === "already_sent"
-            ? formatAlreadySentNotice(sent, {
-                keyOrigin: params.idempotencyKeyOrigin ?? "caller",
-                keyHint: "--idempotency-key with a new key",
-              })
-            : sent.status === "scheduled"
-              ? formatScheduledSummary(
-                  params.noun,
-                  sent,
-                  params.idempotencyKey ?? sent.client_idempotency_key,
-                )
+          : sent.status === "scheduled"
+            ? // Checked before the replay notice: a still-scheduled send has
+              // not gone out, so "send again with a new key" would schedule
+              // a second message.
+              formatScheduledSummary(
+                params.noun,
+                sent,
+                params.idempotencyKey ?? sent.client_idempotency_key,
+              )
+            : outcome === "already_sent"
+              ? formatAlreadySentNotice(sent, {
+                  keyOrigin: params.idempotencyKeyOrigin ?? "caller",
+                  keyHint: "--idempotency-key with a new key",
+                })
               : formatSentSummary(params.noun, sent);
     }
     if (!params.json) params.writeStderr(`${outcomeMessage}\n`);

@@ -273,6 +273,16 @@ describe("emails attachment-members", () => {
     });
   });
 
+  it("refuses --json with --output, which would leave stdout empty", async () => {
+    await expect(
+      EmailsAttachmentMembersCommand.run(
+        [EMAIL_ID, "logs.zip", "--json", "--output", join(tempDir, "x.json")],
+        { root: CLI_ROOT },
+      ),
+    ).rejects.toThrow(/cannot also be provided when using --/);
+    expect(mocks.listEmailAttachmentArchiveMembers).not.toHaveBeenCalled();
+  });
+
   it("refuses --json and --envelope with a --member download", async () => {
     for (const flag of ["--json", "--envelope"]) {
       await expect(
