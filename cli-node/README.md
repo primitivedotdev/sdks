@@ -1105,8 +1105,9 @@ So every `primitive` command in the session, and any tool that runs
 finishes after the hook returns still writes the lines, and later commands
 pick them up. Nothing is written for a session that already sets
 `PRIMITIVE_AGENT_PROFILE` (including to an empty value), when the file already
-assigns either variable, while setup is still pending, or for a profile that
-is not saved, so a session is never pointed at a profile that does not exist.
+assigns either variable, while setup is still pending, while another connected
+profile is bound to or receives for the session, or for a profile that is not
+saved, so a session is never pointed at a profile that does not exist.
 
 `PRIMITIVE_AGENT_ADDRESS` is for other tools in the session that need the
 agent's email address without running the CLI. It is set only together with

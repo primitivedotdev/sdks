@@ -84,6 +84,8 @@ export type SessionRegisterResult = {
   nameIsDefault?: boolean;
   /** The AGENT_RESUME note, on a run that found the session connected. */
   resumeNote?: ResumeNoteWrite;
+  /** True when another connected profile receives this session's mail. */
+  receiverHeld?: boolean;
   detail: string;
 };
 
@@ -1164,6 +1166,7 @@ export async function registerSession(
           receiving: RECEIVING[runtime],
           status: "already_registered",
           ...resumeNote,
+          ...(hooked === "held" ? { receiverHeld: true } : {}),
           detail:
             hooked === "installed"
               ? "This session is already connected."
@@ -1296,6 +1299,7 @@ export async function registerSession(
         name,
         nameIsDefault: name === record.name,
         ...resumeNote,
+        ...(hooked === "held" ? { receiverHeld: true } : {}),
         detail:
           hooked === "installed"
             ? `Connected as ${address}.`

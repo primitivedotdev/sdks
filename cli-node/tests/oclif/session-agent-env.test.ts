@@ -25,6 +25,7 @@ vi.mock("../../src/oclif/machine-session.js", async (original) => ({
 import { resolveCliAuth } from "../../src/oclif/auth.js";
 import AgentSessionRegisterCommand from "../../src/oclif/commands/agent-session-register.js";
 import {
+  agentProfileDirectory,
   requireDefaultLoginProfile,
   saveConnectedAgentProfile,
 } from "../../src/oclif/connected-agent-profile.js";
@@ -33,6 +34,7 @@ import {
   agentIdentitySource,
   exportSessionAgentEnv,
 } from "../../src/oclif/session-agent-env.js";
+import { writeMailJson } from "../../src/oclif/shared-mail-files.js";
 
 const session = "11111111-1111-4111-8111-111111111111";
 const profileName = `session-${session}`;
@@ -202,6 +204,38 @@ describe("agent session-register env export", () => {
       expect(existsSync(envFile)).toBe(false);
     },
   );
+
+  it("exports nothing while another connected profile holds the session", async () => {
+    saveProfile();
+    vi.stubEnv("PRIMITIVE_CONFIG_DIR", configDir);
+    vi.stubEnv("CLAUDE_ENV_FILE", envFile);
+    const args = [
+      "--runtime",
+      "claude",
+      "--session",
+      session,
+      "--quiet",
+      "--export-env",
+    ];
+    mocks.registerSession.mockResolvedValue({
+      ...registered,
+      status: "already_registered",
+      receiverHeld: true,
+    });
+    await AgentSessionRegisterCommand.run(args, root);
+    expect(existsSync(envFile)).toBe(false);
+
+    saveProfile("work");
+    writeMailJson(
+      join(agentProfileDirectory(configDir, "work"), "setup.json"),
+      {
+        session,
+      },
+    );
+    mocks.registerSession.mockResolvedValue(registered);
+    await AgentSessionRegisterCommand.run(args, root);
+    expect(existsSync(envFile)).toBe(false);
+  });
 
   it("does not export from a manual run without --export-env", async () => {
     saveProfile();

@@ -4,6 +4,7 @@ import {
   identitySuggestions,
 } from "../agent-identity-suggestions.js";
 import {
+  connectedProfilesForSession,
   headlessClaudeRun,
   MACHINE_RUNTIMES,
   type MachineRuntime,
@@ -114,9 +115,18 @@ export default class AgentSessionRegisterCommand extends Command {
     if (
       flags["export-env"] &&
       runtime === "claude" &&
+      result.session &&
       result.profile &&
       result.address &&
-      EXPORTABLE_STATUSES.has(result.status)
+      EXPORTABLE_STATUSES.has(result.status) &&
+      // The session's identity is ambiguous while another connected profile
+      // receives or is bound to it, so nothing is exported then.
+      !result.receiverHeld &&
+      connectedProfilesForSession(
+        this.config.configDir,
+        result.session,
+        result.profile,
+      ).length === 0
     )
       exportSessionAgentEnv({
         configDir: this.config.configDir,
