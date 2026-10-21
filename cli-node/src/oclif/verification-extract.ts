@@ -119,6 +119,18 @@ function previousContent(lines: string[], index: number, count: number) {
   return out;
 }
 
+// A label on the line below a code that ends its line: "482913" then
+// "is your verification code". The next line has to name a code itself;
+// "For verification, contact support." does not.
+const NEXT_LINE_LABEL =
+  /^\s*(?:is|was|[-:=(])?\s*(?:your|the|this)?\b.{0,30}?\b(?:code|passcode|otp|pin)\b/i;
+
+function nextContent(lines: string[], index: number): string | null {
+  for (let i = index + 1; i < lines.length; i++)
+    if (lines[i].trim() !== "") return lines[i];
+  return null;
+}
+
 function scoreCode(
   candidate: Omit<CodeCandidate, "score">,
   lines: string[],
@@ -138,6 +150,11 @@ function scoreCode(
   else if (CODE_KEYWORD.test(after.slice(0, 40))) score += 10;
   else if (
     previousContent(lines, candidate.line, 2).some((l) => CODE_KEYWORD.test(l))
+  )
+    score += 7;
+  else if (
+    after.trim() === "" &&
+    NEXT_LINE_LABEL.test(nextContent(lines, candidate.line) ?? "")
   )
     score += 7;
   else return null;

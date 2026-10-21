@@ -183,6 +183,15 @@ describe("extractVerificationCode", () => {
     ).toBeNull();
   });
 
+  it("takes a code labelled on the line below it", () => {
+    expect(
+      extractVerificationCode({
+        subject: "Your request",
+        text: "482913\nis your verification code",
+      }),
+    ).toBe("482913");
+  });
+
   it("reads the HTML part when the text part has no code", () => {
     expect(
       extractVerificationCode({

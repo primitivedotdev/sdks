@@ -266,10 +266,6 @@ async function firstMatch(
   return null;
 }
 
-// Server timestamps against the client's start time: allow a little clock
-// difference so mail sent right as the command starts is not lost.
-const CLOCK_SKEW_MS = 5000;
-
 function arrivedSince(row: Row, threshold: number): boolean {
   const at = Date.parse(str(row.created_at) ?? str(row.received_at) ?? "");
   return Number.isFinite(at) && at >= threshold;
@@ -295,10 +291,12 @@ export async function waitForEmail(params: {
   let since = await baselineCursor({ apiClient });
   // Mail that arrived between the command starting and the baseline (during
   // authentication, say) sits at or before the baseline. Check it from the
-  // newest page, oldest first, before tailing past it.
+  // newest page, oldest first, before tailing past it. The boundary is the
+  // start time itself, with no allowance before it, so a retried login does
+  // not pick up the previous attempt's email.
   const recent = await listRows(apiClient, { limit: EXISTING_PAGE_SIZE });
   const sinceStart = recent.rows
-    .filter((row) => arrivedSince(row, params.startedAt - CLOCK_SKEW_MS))
+    .filter((row) => arrivedSince(row, params.startedAt))
     .reverse();
   const early = await firstMatch(apiClient, sinceStart, filters, seen);
   if (early) return early;

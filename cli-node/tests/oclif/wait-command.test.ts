@@ -256,10 +256,10 @@ describe("primitive wait command", () => {
   it("matches mail that arrived while the command was starting", async () => {
     // Already at or before the baseline, but received after the command
     // started: the tail alone would skip it.
-    fakeInbox(
-      [oldCode, { ...githubCode, created_at: new Date().toISOString() }],
-      [],
-    );
+    // Stamped a moment after the command starts, as if it landed during
+    // authentication.
+    const duringStartup = new Date(Date.now() + 500).toISOString();
+    fakeInbox([oldCode, { ...githubCode, created_at: duringStartup }], []);
     const result = await runWait([
       "--from",
       "github.com",
@@ -268,6 +268,19 @@ describe("primitive wait command", () => {
       "1",
     ]);
     expect(result.stdout).toBe("482913\n");
+  });
+
+  it("does not take mail from just before the start without --include-existing", async () => {
+    const justBefore = new Date(Date.now() - 1000).toISOString();
+    fakeInbox([{ ...githubCode, created_at: justBefore }], []);
+    const result = await runWait([
+      "--from",
+      "github.com",
+      "--code",
+      "--timeout",
+      "1",
+    ]);
+    expect(result.exitCode).toBe(WAIT_EXIT_CODES.timeout);
   });
 
   it("matches existing mail with --include-existing", async () => {
