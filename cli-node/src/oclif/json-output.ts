@@ -18,7 +18,10 @@ import type { Command } from "@oclif/core";
  * - A command whose `--json` output is a bare JSON array keeps that
  *   documented shape on success; its stderr notices are dropped.
  *
- * Commands that stream several documents (`listen`) are not guarded.
+ * Commands that stream several documents (`listen`, `emails wait`) are
+ * not guarded. `emails wait` uses `runStreamingJson` instead: one JSON
+ * line per result on stdout, and on failure one more JSON line carrying
+ * `error` and `exit_code`.
  */
 
 const GUARDED = Symbol.for("primitive.cli.jsonOutputGuard");
@@ -331,8 +334,89 @@ export function guardJsonOutput(cls: CommandClass): void {
 
 /** Command ids whose `--json` streams several documents over time. */
 export const STREAMING_JSON_COMMAND_IDS: ReadonlySet<string> = new Set([
+  "emails:wait",
   "listen",
 ]);
+
+/**
+ * Run the body of a command whose `--json` output is newline-delimited
+ * JSON, one line per result, written to stdout as each result is found.
+ *
+ * stdout stays live. Everything the body writes to stderr is held back,
+ * so a caller reading `2>&1` still gets only JSON lines. On success the
+ * held lines are dropped. On failure one more line is printed on stdout:
+ * an object with `error`, `exit_code` and, when there were any, the held
+ * lines as `warnings`, built the same way as a guarded command's error
+ * document. `failure` may supply a more specific `error` body and extra
+ * top-level fields. The exit code is unchanged.
+ */
+export async function runStreamingJson(
+  body: () => Promise<void>,
+  failure?: () =>
+    | { error: Record<string, unknown>; fields?: Record<string, unknown> }
+    | undefined,
+): Promise<void> {
+  const stderr: string[] = [];
+  const originalStderrWrite = process.stderr.write;
+  const originalConsole = {
+    debug: console.debug,
+    error: console.error,
+    warn: console.warn,
+  };
+  const toStderr = (...args: unknown[]) => {
+    stderr.push(`${format(...args)}\n`);
+  };
+  process.stderr.write = capturingWrite(stderr) as typeof process.stderr.write;
+  console.debug = toStderr;
+  console.error = toStderr;
+  console.warn = toStderr;
+  let thrown: { error: unknown } | undefined;
+  try {
+    await body();
+  } catch (error) {
+    thrown = { error };
+  } finally {
+    process.stderr.write = originalStderrWrite;
+    console.debug = originalConsole.debug;
+    console.error = originalConsole.error;
+    console.warn = originalConsole.warn;
+  }
+  const exitCode = thrown
+    ? isExitSignal(thrown.error)
+      ? (errorExitCode(thrown.error) ?? 0)
+      : (errorExitCode(thrown.error) ?? 1)
+    : typeof process.exitCode === "number"
+      ? process.exitCode
+      : 0;
+  if (exitCode !== 0) {
+    const document = composeJsonDocument({
+      exitCode,
+      stderr,
+      stdout: "",
+      thrown,
+    }) as Record<string, unknown>;
+    const specific = failure?.();
+    const line: Record<string, unknown> = specific
+      ? { ...document, ...specific.fields, error: specific.error }
+      : document;
+    // The failure message is not repeated as a warning.
+    const message = (line.error as { message?: unknown } | undefined)?.message;
+    if (Array.isArray(line.warnings)) {
+      const warnings = line.warnings.filter((warning) => warning !== message);
+      if (warnings.length > 0) line.warnings = warnings;
+      else delete line.warnings;
+    }
+    process.stdout.write(`${JSON.stringify(line)}\n`);
+  }
+  if (thrown) {
+    if (thrown.error !== null && typeof thrown.error === "object") {
+      (
+        thrown.error as { skipOclifErrorHandling?: boolean }
+      ).skipOclifErrorHandling = true;
+    }
+    throw thrown.error;
+  }
+}
 
 /**
  * Guard every command in `commands` that accepts `--json`, except the

@@ -272,9 +272,10 @@ waits on an existing send without resending it. The receiving address comes
 from the sent record; an optional --to must match. Existing replies are included
 by default, and --since narrows the window. Only authenticated, exactly threaded
 plain replies are returned; interaction attachments remain pending for inspection.
-JSONL contains matching email details; --table prints compact rows. Timeout exits
-1. Connected waits share one local address event receiver and use exact-parent
-search for recovery; they never scan inbox history. Organization credentials
+JSONL contains matching email details; --table prints compact rows. --json
+prints the same JSONL and reports a timeout or error as one final JSON line.
+Timeout exits 1. Connected waits share one local address event receiver and use
+exact-parent search for recovery; they never scan inbox history. Organization credentials
 retain the existing search-based wait behavior.
 .PP
 Connected chat authenticates the reply receiver before sending and records a

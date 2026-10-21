@@ -12,6 +12,7 @@ import {
   AutomatedFilterUnsupportedError,
 } from "../automated-filter.js";
 import { openConnectedReplyWait } from "../connected-reply-wait.js";
+import { jsonOutputRequested, runStreamingJson } from "../json-output.js";
 import { currentMailSessionKey } from "../mail-session.js";
 import {
   AWAITING_FLAG_DESCRIPTION,
@@ -49,7 +50,9 @@ class EmailsWaitCommand extends Command {
   the window. Matching requires the exact sent ID, receiving address, and an
   authenticated peer. Interaction attachments and incomplete replies remain
   pending for inspection. JSONL contains each matching email detail; --table
-  prints compact rows. A plain reply does not prove task completion.
+  prints compact rows. --json prints the same JSONL and also reports a
+  timeout or error as one final JSON line instead of text on stderr. A plain
+  reply does not prove task completion.
 
   Connected waits share an address event subscription and recover replies with
   exact-parent search. They never scan inbox history. Additional content
@@ -63,6 +66,7 @@ class EmailsWaitCommand extends Command {
     "<%= config.bin %> emails wait --to test@example.com",
     "<%= config.bin %> emails wait --subject verify --number 5 --timeout 120",
     "<%= config.bin %> emails wait --q 'domain:example.com' --table",
+    "<%= config.bin %> emails wait --from peer@example.com --number 3 --json",
     "<%= config.bin %> emails wait --awaiting you --include-existing",
     "<%= config.bin %> emails wait --awaiting you --automated false",
   ];
@@ -118,6 +122,11 @@ class EmailsWaitCommand extends Command {
       description: "Exit successfully after this many matching emails",
       min: 1,
     }),
+    json: Flags.boolean({
+      description:
+        'Print newline-delimited JSON: one object per matching email as it arrives (the same email summary as the default output, with id, sender, recipient, subject, received_at and thread_id among its fields). On a timeout or error, one last line is an object with error {code, message}, exit_code and, when there were any, warnings; a timeout adds matched, the number of emails printed, and uses code "wait_timeout". Nothing is written to stderr. Exit codes are unchanged.',
+      exclusive: ["table"],
+    }),
     "page-size": Flags.integer({
       default: DEFAULT_EMAIL_POLL_PAGE_SIZE,
       description: `Emails to fetch per poll (1-${MAX_EMAIL_POLL_PAGE_SIZE})`,
@@ -146,6 +155,7 @@ class EmailsWaitCommand extends Command {
     }),
     table: Flags.boolean({
       description: "Print a human-readable table instead of JSONL",
+      exclusive: ["json"],
     }),
     timeout: Flags.integer({
       default: DEFAULT_WAIT_TIMEOUT_SECONDS,
@@ -158,7 +168,21 @@ class EmailsWaitCommand extends Command {
     }),
   };
 
+  private timedOut: { matched: number; message: string } | undefined;
+
   async run(): Promise<void> {
+    if (!jsonOutputRequested(this.argv)) return this.wait();
+    await runStreamingJson(
+      () => this.wait(),
+      () =>
+        this.timedOut && {
+          error: { code: "wait_timeout", message: this.timedOut.message },
+          fields: { matched: this.timedOut.matched },
+        },
+    );
+  }
+
+  private async wait(): Promise<void> {
     const { flags } = await this.parse(EmailsWaitCommand);
     const { apiClient, auth, baseUrlOverridden } =
       await createAuthenticatedCliApiClient({
@@ -281,9 +305,9 @@ class EmailsWaitCommand extends Command {
       await sleep(flags.interval * 1000);
     }
 
-    process.stderr.write(
-      `Timed out waiting for ${flags.number} matching email${flags.number === 1 ? "" : "s"}; received ${matched}.\n`,
-    );
+    const message = `Timed out waiting for ${flags.number} matching email${flags.number === 1 ? "" : "s"}; received ${matched}.`;
+    this.timedOut = { matched, message };
+    process.stderr.write(`${message}\n`);
     process.exitCode = 1;
   }
 }

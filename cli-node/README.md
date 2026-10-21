@@ -157,8 +157,9 @@ default, so fast replies are not missed; use `--since <timestamp>` to narrow the
 window. They require an authenticated peer and the exact outbound parent.
 Interaction attachments remain pending with inspection guidance. JSONL includes
 matching email details, or use `--table` for compact output and `--number N` for
-multiple replies. Timeout exits 1; repeat the same wait to recover without
-resending. Connected waits share one local address event receiver and recover
+multiple replies. `--json` prints the same JSONL and reports a timeout or error
+as one final JSON line with `error` and `exit_code`. Timeout exits 1; repeat
+the same wait to recover without resending. Connected waits share one local address event receiver and recover
 through exact-parent search, without scanning inbox history. Additional content
 filters on this command require organization credentials.
 
