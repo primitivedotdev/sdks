@@ -262,6 +262,10 @@ class EmailDetail:
                 declared none, and on messages received before these headers
                 were captured, so a null value is not evidence that a person
                 sent the message.
+            from_verified (bool | Unset): Whether the From header domain was authenticated when the message arrived. See
+                EmailSummary.from_verified.
+            from_header_email (None | str | Unset): The From header address, lowercased, that `from_verified` is about; null
+                when the message had none. Unlike `sender` it is never the envelope address.
             repeat (EmailDetailRepeatType0 | None | Unset): Set when Primitive sent this message as part of a repeating
                 send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
                 servers that predate repeating sends.
@@ -339,6 +343,8 @@ class EmailDetail:
     thread_id: None | Unset | UUID = UNSET
     presence_control: None | PresenceControlType0 | Unset = UNSET
     automation_headers: EmailDetailAutomationHeadersType0 | None | Unset = UNSET
+    from_verified: bool | Unset = UNSET
+    from_header_email: None | str | Unset = UNSET
     repeat: EmailDetailRepeatType0 | None | Unset = UNSET
     sender_member: EmailDetailSenderMemberType0 | None | Unset = UNSET
     fyi: bool | Unset = UNSET
@@ -596,6 +602,14 @@ class EmailDetail:
         else:
             automation_headers = self.automation_headers
 
+        from_verified = self.from_verified
+
+        from_header_email: None | str | Unset
+        if isinstance(self.from_header_email, Unset):
+            from_header_email = UNSET
+        else:
+            from_header_email = self.from_header_email
+
         repeat: dict[str, Any] | None | Unset
         if isinstance(self.repeat, Unset):
             repeat = UNSET
@@ -710,6 +724,10 @@ class EmailDetail:
             field_dict["presence_control"] = presence_control
         if automation_headers is not UNSET:
             field_dict["automation_headers"] = automation_headers
+        if from_verified is not UNSET:
+            field_dict["from_verified"] = from_verified
+        if from_header_email is not UNSET:
+            field_dict["from_header_email"] = from_header_email
         if repeat is not UNSET:
             field_dict["repeat"] = repeat
         if sender_member is not UNSET:
@@ -1214,6 +1232,18 @@ class EmailDetail:
         automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
 
 
+        from_verified = d.pop("from_verified", UNSET)
+
+        def _parse_from_header_email(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        from_header_email = _parse_from_header_email(d.pop("from_header_email", UNSET))
+
+
         def _parse_repeat(data: object) -> EmailDetailRepeatType0 | None | Unset:
             if data is None:
                 return data
@@ -1337,6 +1367,8 @@ class EmailDetail:
             thread_id=thread_id,
             presence_control=presence_control,
             automation_headers=automation_headers,
+            from_verified=from_verified,
+            from_header_email=from_header_email,
             repeat=repeat,
             sender_member=sender_member,
             fyi=fyi,

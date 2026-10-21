@@ -1,0 +1,1056 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+
+from attrs import define as _attrs_define
+from attrs import field as _attrs_field
+
+from ..types import UNSET, Unset
+
+from ..models.change_inbound_message_direction import ChangeInboundMessageDirection
+from ..models.email_status import EmailStatus
+from ..models.email_summary_awaiting import EmailSummaryAwaiting
+from ..models.email_summary_truncated_fields_item import EmailSummaryTruncatedFieldsItem
+from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
+from ..models.email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
+from ..models.email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
+from typing import cast
+from uuid import UUID
+import datetime
+
+if TYPE_CHECKING:
+  from ..models.email_summary_attachments_item import EmailSummaryAttachmentsItem
+  from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0
+  from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0
+  from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0
+  from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0
+  from ..models.included_message_headers import IncludedMessageHeaders
+  from ..models.presence_control_type_0 import PresenceControlType0
+
+
+
+
+
+T = TypeVar("T", bound="ChangeInboundMessage")
+
+
+
+@_attrs_define
+class ChangeInboundMessage:
+    """ An inbound message inlined by `expand=message`, as GET /emails returns it.
+
+        Attributes:
+            id (UUID):
+            status (EmailStatus): Lifecycle status of an INBOUND email (a row in the `emails`
+                table). Distinct from `SentEmailStatus`, which describes
+                the OUTBOUND lifecycle (the `sent_emails` table) and uses
+                a different vocabulary because the lifecycles differ.
+                Possible values:
+
+                  - `pending`: the row was inserted at ingestion (mx_main)
+                    and has not yet completed the spam / filter / auth
+                    pipeline. Body and parsed fields are present; webhook
+                    delivery is not yet scheduled. Most rows transition out
+                    of `pending` within seconds.
+                  - `accepted`: the inbound passed the policy gates and is
+                    queued for webhook delivery. The `webhook_status` field
+                    tracks the separate webhook-delivery lifecycle from
+                    this point.
+                  - `completed`: terminal success. Webhook delivery
+                    attempted and acknowledged by every active endpoint, OR
+                    no endpoints are configured, so the row is durably
+                    archived.
+                  - `rejected`: terminal failure at ingestion (spam, blocked
+                    sender, filter rule, malformed). The body and metadata
+                    are stored for auditing but no webhook fires and the
+                    row is not repliable.
+
+                See also `webhook_status` (separate enum tracking the
+                webhook-delivery state machine) and `SentEmailStatus` (the
+                outbound vocabulary).
+            sender (str): SMTP envelope sender (return-path) the inbound mail server
+                accepted. For most legitimate mail this equals the bare
+                address in the From header; for mailing lists, bounce
+                handlers, and forwarders it is typically the bounce address
+                rather than the human-visible sender.
+
+                For the parsed From-header value (with display name handling
+                and a sender-fallback when the header is unparseable), GET
+                the email by id and use `from_email`.
+            recipient (str):
+            domain (str):
+            created_at (datetime.datetime):
+            received_at (datetime.datetime):
+            webhook_attempt_count (int):
+            reply_count (int): Number of replies recorded against this email: sends whose
+                `in_reply_to_email_id` is this email, the same linkage that populates
+                `EmailDetail.replies`, excluding sends that never went out (status
+                `gate_denied`, `agent_failed`, `canceled`). Queued and scheduled
+                replies count. Under an agent connection, only the replies that agent
+                can see in `EmailDetail.replies`. Unlike `awaiting`, this counts
+                replies to this one email, not to the thread.
+            last_replied_at (datetime.datetime | None): `created_at` of the latest reply counted in `reply_count`, or
+                null when `reply_count` is 0.
+            awaiting (EmailSummaryAwaiting): Whose turn it is in this email's conversation. A send counts as a
+                reply unless its status is `gate_denied`, `agent_failed`, `canceled`
+                (queued and scheduled replies count: they are committed to go). For
+                an email with a `thread_id`: `them` when the thread's latest counted
+                outbound send (by send `created_at`, including any counted reply to
+                this email itself) is at or after the thread's latest inbound message
+                (by `received_at`); otherwise `you`. For an email with no
+                `thread_id`: `them` when it has at least one counted reply
+                (`reply_count > 0` for an API key), otherwise `you`. It is a
+                thread-level fact: every email in a thread carries the same value, and
+                it reflects sends made by any credential in the organization,
+                including other agent connections. It changes without a new inbound
+                message, for example when a reply is sent, a queued reply fails, a
+                scheduled reply is canceled, or a message is deleted, and is always
+                current when read.
+            automated (bool): Whether the message was sent by a machine rather than a person.
+                An inbound email is `automated` when any of these holds, decided once
+                when it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);
+                `no_identifiable_sender` (no address in the envelope or From);
+                `own_address` (a sender address is exactly one of the addresses the
+                mail was delivered to; sharing a domain with the recipient is not
+                enough, so a colleague or another agent in the organization is not
+                automated);
+                `mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);
+                `auto_submitted` (Auto-Submitted with any keyword but `no`, an
+                empty one included);
+                `precedence` (Precedence bulk, list, junk or auto_reply);
+                `list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id
+                present); `auto_response_suppress` (X-Auto-Response-Suppress asks
+                for no automatic reply: All, OOF or AutoReply);
+                `failed_recipients` (X-Failed-Recipients present, a bounce);
+                `report` (a delivery, feedback or disposition report). Mail
+                Primitive's own automatic responders decline to answer is always
+                `automated`. The header rules only see headers captured at ingest, so
+                older mail may lack them. This is loop and noise protection, not
+                sender authentication.
+            automated_reasons (list[str]): Why `automated` is true, in rule order; empty when it is false.
+                Current values: `null_envelope_sender`, `no_identifiable_sender`,
+                `own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,
+                `list_unsubscribe`, `list_id`, `auto_response_suppress`,
+                `failed_recipients`, `report`. Treat an unfamiliar value as a
+                reason added after your client was built.
+            direction (ChangeInboundMessageDirection):
+            message_id (None | str | Unset):
+            domain_id (None | Unset | UUID):
+            org_id (None | Unset | UUID):
+            subject (None | str | Unset):
+            spam_score (float | None | Unset):
+            raw_size_bytes (int | None | Unset):
+            webhook_status (EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None |
+                Unset): Webhook-delivery state for an inbound email. Tracks a
+                SEPARATE lifecycle from the email's `status` field; the
+                same row carries both. Possible values:
+
+                  - `pending`: ingestion is past `pending` (the email itself
+                    is `accepted`) but the webhook fan-out has not yet
+                    started for this row.
+                  - `in_flight`: at least one delivery attempt is in flight.
+                  - `fired`: terminal success. Every active endpoint
+                    acknowledged the delivery (or accepted it after retries).
+                  - `failed`: terminal partial-failure. At least one endpoint
+                    exhausted its retry budget; some endpoints may still
+                    have succeeded.
+                  - `exhausted`: terminal failure. Every endpoint exhausted
+                    its retry budget without success.
+                  - `null`: no endpoints configured, so no webhook lifecycle
+                    applies.
+
+                Note that the value `pending` here does NOT mean the email
+                is `pending`; it means the email is past ingestion but
+                webhook delivery has not yet begun. Two overlapping uses
+                of the word `pending` for distinct lifecycle phases.
+            thread_id (None | Unset | UUID): Conversation thread this message belongs to. Fetch
+                `/threads/{thread_id}` for the full ordered thread. NULL on
+                messages received before threading was enabled.
+            presence_control (None | PresenceControlType0 | Unset):
+            automation_headers (EmailSummaryAutomationHeadersType0 | None | Unset): What the message declared about being
+                automated, verbatim:
+                `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
+                `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
+                declared none, and on messages received before these headers
+                were captured, so a null value is not evidence that a person
+                sent the message.
+            from_verified (bool | None | Unset): True when the From header address, `from_header_email`, passed DMARC for
+                its domain on arrival (aligned SPF or DKIM); decided once, at receipt. It is about the From header, never the
+                envelope: `sender`, the `from` parameter and `from:` term, and the change feed's `address` match the envelope
+                sender, which can differ. It proves the domain, not the mailbox. False with no From header address, when
+                authentication failed or was not attempted (a delivery between Primitive mailboxes counts only when it passed
+                DMARC too), and for mail stored before the verdict was recorded. Null on sent rows in search results. Not a spam
+                or safety judgement.
+            from_header_email (None | str | Unset): The From header address, lowercased, that `from_verified` is about; null
+                when the message had none. Unlike `sender` it is never the envelope address.
+            repeat (EmailSummaryRepeatType0 | None | Unset): Set when Primitive sent this message as part of a repeating
+                send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
+                servers that predate repeating sends.
+            sender_member (EmailSummarySenderMemberType0 | None | Unset): Verified human authorship, projected only within
+                the member organization. Historical attribution is not current sending or owner authority.
+            fyi (bool | Unset): True when the email is an informational signal (an acknowledgement, read, working or typing
+                signal) and nothing else, so it needs no answer, not even another informational reply. Never true for mail from
+                the reader's owner. Older servers omit it.
+            interaction_hint (str | Unset): How to place this email in a timeline without downloading it: `status`, `card`,
+                `none` or `pending`. Not declared as a closed enum so that a value added later does not fail decoding. Decided
+                once by the server from the message's authoritative `interaction.json` part, and only when a passing DKIM
+                signature covering From and Content-Type authenticates the From that wrote it; the `X-Primitive-Interaction`
+                header is never used, so an unsigned or forged message is always `none`. `status`: a pure status signal (`read`,
+                `working`, `typing`, or an `ack` in the strict signal shape), shown as a property of the message it is about
+                rather than as a row. `card`: an interaction that renders as its own timeline item (for example `ack-request`,
+                `x402.payment`, `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail,
+                including any interaction kind not listed. `pending`: the email has not finished processing; read it again
+                later. Email processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers
+                omit it.
+            interaction_kind (None | str | Unset): The `<protocol>/<version>` that `interaction_hint` was decided from (for
+                example `repeat.tick/1` or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.
+            interaction_candidate (bool | Unset): UNVERIFIED early signal for the `pending` window: true when the raw
+                message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any
+                signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a
+                placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name
+                a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is
+                anything other than `pending`.
+            relay (EmailSummaryRelayType0 | None | Unset): Set when the message reached Primitive through a Primitive mail
+                relay. Null for other mail. The field may be absent; treat a missing value the same as null.
+            from_name (None | str | Unset): Display name from the `From:` header, decoded for display:
+                RFC 2047 encoded words are decoded in their declared charset
+                and folded lines are joined (e.g. `Dana Rúiz` for
+                `=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when
+                the header carries no display name, and may be absent; treat
+                a missing value the same as null.
+
+                For display only: the sender chooses this name freely, so
+                identify the sender by `from_email`, never by this name.
+            body_text (None | str | Unset): With `include=body_text`: the plain-text body, cut as `truncated_fields` says.
+            body_html (None | str | Unset): With `include=body_html`: the HTML body, cut as `truncated_fields` says.
+            headers (IncludedMessageHeaders | None | Unset): With `include=headers`: stored addressing and threading
+                headers.
+            attachments (list[EmailSummaryAttachmentsItem] | Unset): With `include=attachments`: attachment metadata as the
+                detail read reports it. Never the bytes.
+            truncated (bool | Unset): With `include`: true when a body on this row was cut or left out.
+            truncated_fields (list[EmailSummaryTruncatedFieldsItem] | Unset): With `include`: the body fields on this row
+                that were cut or left out.
+     """
+
+    id: UUID
+    status: EmailStatus
+    sender: str
+    recipient: str
+    domain: str
+    created_at: datetime.datetime
+    received_at: datetime.datetime
+    webhook_attempt_count: int
+    reply_count: int
+    last_replied_at: datetime.datetime | None
+    awaiting: EmailSummaryAwaiting
+    automated: bool
+    automated_reasons: list[str]
+    direction: ChangeInboundMessageDirection
+    message_id: None | str | Unset = UNSET
+    domain_id: None | Unset | UUID = UNSET
+    org_id: None | Unset | UUID = UNSET
+    subject: None | str | Unset = UNSET
+    spam_score: float | None | Unset = UNSET
+    raw_size_bytes: int | None | Unset = UNSET
+    webhook_status: EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset = UNSET
+    thread_id: None | Unset | UUID = UNSET
+    presence_control: None | PresenceControlType0 | Unset = UNSET
+    automation_headers: EmailSummaryAutomationHeadersType0 | None | Unset = UNSET
+    from_verified: bool | None | Unset = UNSET
+    from_header_email: None | str | Unset = UNSET
+    repeat: EmailSummaryRepeatType0 | None | Unset = UNSET
+    sender_member: EmailSummarySenderMemberType0 | None | Unset = UNSET
+    fyi: bool | Unset = UNSET
+    interaction_hint: str | Unset = UNSET
+    interaction_kind: None | str | Unset = UNSET
+    interaction_candidate: bool | Unset = UNSET
+    relay: EmailSummaryRelayType0 | None | Unset = UNSET
+    from_name: None | str | Unset = UNSET
+    body_text: None | str | Unset = UNSET
+    body_html: None | str | Unset = UNSET
+    headers: IncludedMessageHeaders | None | Unset = UNSET
+    attachments: list[EmailSummaryAttachmentsItem] | Unset = UNSET
+    truncated: bool | Unset = UNSET
+    truncated_fields: list[EmailSummaryTruncatedFieldsItem] | Unset = UNSET
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
+
+
+
+
+
+    def to_dict(self) -> dict[str, Any]:
+        from ..models.email_summary_attachments_item import EmailSummaryAttachmentsItem # noqa: PLC0415
+        from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0 # noqa: PLC0415
+        from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0 # noqa: PLC0415
+        from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0 # noqa: PLC0415
+        from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        id = str(self.id)
+
+        status = self.status.value
+
+        sender = self.sender
+
+        recipient = self.recipient
+
+        domain = self.domain
+
+        created_at = self.created_at.isoformat()
+
+        received_at = self.received_at.isoformat()
+
+        webhook_attempt_count = self.webhook_attempt_count
+
+        reply_count = self.reply_count
+
+        last_replied_at: None | str
+        if isinstance(self.last_replied_at, datetime.datetime):
+            last_replied_at = self.last_replied_at.isoformat()
+        else:
+            last_replied_at = self.last_replied_at
+
+        awaiting = self.awaiting.value
+
+        automated = self.automated
+
+        automated_reasons = self.automated_reasons
+
+
+
+        direction = self.direction.value
+
+        message_id: None | str | Unset
+        if isinstance(self.message_id, Unset):
+            message_id = UNSET
+        else:
+            message_id = self.message_id
+
+        domain_id: None | str | Unset
+        if isinstance(self.domain_id, Unset):
+            domain_id = UNSET
+        elif isinstance(self.domain_id, UUID):
+            domain_id = str(self.domain_id)
+        else:
+            domain_id = self.domain_id
+
+        org_id: None | str | Unset
+        if isinstance(self.org_id, Unset):
+            org_id = UNSET
+        elif isinstance(self.org_id, UUID):
+            org_id = str(self.org_id)
+        else:
+            org_id = self.org_id
+
+        subject: None | str | Unset
+        if isinstance(self.subject, Unset):
+            subject = UNSET
+        else:
+            subject = self.subject
+
+        spam_score: float | None | Unset
+        if isinstance(self.spam_score, Unset):
+            spam_score = UNSET
+        else:
+            spam_score = self.spam_score
+
+        raw_size_bytes: int | None | Unset
+        if isinstance(self.raw_size_bytes, Unset):
+            raw_size_bytes = UNSET
+        else:
+            raw_size_bytes = self.raw_size_bytes
+
+        webhook_status: None | str | Unset
+        if isinstance(self.webhook_status, Unset):
+            webhook_status = UNSET
+        elif isinstance(self.webhook_status, EmailWebhookStatusType1):
+            webhook_status = self.webhook_status.value
+        elif isinstance(self.webhook_status, EmailWebhookStatusType2Type1):
+            webhook_status = self.webhook_status.value
+        elif isinstance(self.webhook_status, EmailWebhookStatusType3Type1):
+            webhook_status = self.webhook_status.value
+        else:
+            webhook_status = self.webhook_status
+
+        thread_id: None | str | Unset
+        if isinstance(self.thread_id, Unset):
+            thread_id = UNSET
+        elif isinstance(self.thread_id, UUID):
+            thread_id = str(self.thread_id)
+        else:
+            thread_id = self.thread_id
+
+        presence_control: dict[str, Any] | None | Unset
+        if isinstance(self.presence_control, Unset):
+            presence_control = UNSET
+        elif isinstance(self.presence_control, PresenceControlType0):
+            presence_control = self.presence_control.to_dict()
+        else:
+            presence_control = self.presence_control
+
+        automation_headers: dict[str, Any] | None | Unset
+        if isinstance(self.automation_headers, Unset):
+            automation_headers = UNSET
+        elif isinstance(self.automation_headers, EmailSummaryAutomationHeadersType0):
+            automation_headers = self.automation_headers.to_dict()
+        else:
+            automation_headers = self.automation_headers
+
+        from_verified: bool | None | Unset
+        if isinstance(self.from_verified, Unset):
+            from_verified = UNSET
+        else:
+            from_verified = self.from_verified
+
+        from_header_email: None | str | Unset
+        if isinstance(self.from_header_email, Unset):
+            from_header_email = UNSET
+        else:
+            from_header_email = self.from_header_email
+
+        repeat: dict[str, Any] | None | Unset
+        if isinstance(self.repeat, Unset):
+            repeat = UNSET
+        elif isinstance(self.repeat, EmailSummaryRepeatType0):
+            repeat = self.repeat.to_dict()
+        else:
+            repeat = self.repeat
+
+        sender_member: dict[str, Any] | None | Unset
+        if isinstance(self.sender_member, Unset):
+            sender_member = UNSET
+        elif isinstance(self.sender_member, EmailSummarySenderMemberType0):
+            sender_member = self.sender_member.to_dict()
+        else:
+            sender_member = self.sender_member
+
+        fyi = self.fyi
+
+        interaction_hint = self.interaction_hint
+
+        interaction_kind: None | str | Unset
+        if isinstance(self.interaction_kind, Unset):
+            interaction_kind = UNSET
+        else:
+            interaction_kind = self.interaction_kind
+
+        interaction_candidate = self.interaction_candidate
+
+        relay: dict[str, Any] | None | Unset
+        if isinstance(self.relay, Unset):
+            relay = UNSET
+        elif isinstance(self.relay, EmailSummaryRelayType0):
+            relay = self.relay.to_dict()
+        else:
+            relay = self.relay
+
+        from_name: None | str | Unset
+        if isinstance(self.from_name, Unset):
+            from_name = UNSET
+        else:
+            from_name = self.from_name
+
+        body_text: None | str | Unset
+        if isinstance(self.body_text, Unset):
+            body_text = UNSET
+        else:
+            body_text = self.body_text
+
+        body_html: None | str | Unset
+        if isinstance(self.body_html, Unset):
+            body_html = UNSET
+        else:
+            body_html = self.body_html
+
+        headers: dict[str, Any] | None | Unset
+        if isinstance(self.headers, Unset):
+            headers = UNSET
+        elif isinstance(self.headers, IncludedMessageHeaders):
+            headers = self.headers.to_dict()
+        else:
+            headers = self.headers
+
+        attachments: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.attachments, Unset):
+            attachments = []
+            for attachments_item_data in self.attachments:
+                attachments_item = attachments_item_data.to_dict()
+                attachments.append(attachments_item)
+
+
+
+        truncated = self.truncated
+
+        truncated_fields: list[str] | Unset = UNSET
+        if not isinstance(self.truncated_fields, Unset):
+            truncated_fields = []
+            for truncated_fields_item_data in self.truncated_fields:
+                truncated_fields_item = truncated_fields_item_data.value
+                truncated_fields.append(truncated_fields_item)
+
+
+
+
+        field_dict: dict[str, Any] = {}
+        field_dict.update(self.additional_properties)
+        field_dict.update({
+            "id": id,
+            "status": status,
+            "sender": sender,
+            "recipient": recipient,
+            "domain": domain,
+            "created_at": created_at,
+            "received_at": received_at,
+            "webhook_attempt_count": webhook_attempt_count,
+            "reply_count": reply_count,
+            "last_replied_at": last_replied_at,
+            "awaiting": awaiting,
+            "automated": automated,
+            "automated_reasons": automated_reasons,
+            "direction": direction,
+        })
+        if message_id is not UNSET:
+            field_dict["message_id"] = message_id
+        if domain_id is not UNSET:
+            field_dict["domain_id"] = domain_id
+        if org_id is not UNSET:
+            field_dict["org_id"] = org_id
+        if subject is not UNSET:
+            field_dict["subject"] = subject
+        if spam_score is not UNSET:
+            field_dict["spam_score"] = spam_score
+        if raw_size_bytes is not UNSET:
+            field_dict["raw_size_bytes"] = raw_size_bytes
+        if webhook_status is not UNSET:
+            field_dict["webhook_status"] = webhook_status
+        if thread_id is not UNSET:
+            field_dict["thread_id"] = thread_id
+        if presence_control is not UNSET:
+            field_dict["presence_control"] = presence_control
+        if automation_headers is not UNSET:
+            field_dict["automation_headers"] = automation_headers
+        if from_verified is not UNSET:
+            field_dict["from_verified"] = from_verified
+        if from_header_email is not UNSET:
+            field_dict["from_header_email"] = from_header_email
+        if repeat is not UNSET:
+            field_dict["repeat"] = repeat
+        if sender_member is not UNSET:
+            field_dict["sender_member"] = sender_member
+        if fyi is not UNSET:
+            field_dict["fyi"] = fyi
+        if interaction_hint is not UNSET:
+            field_dict["interaction_hint"] = interaction_hint
+        if interaction_kind is not UNSET:
+            field_dict["interaction_kind"] = interaction_kind
+        if interaction_candidate is not UNSET:
+            field_dict["interaction_candidate"] = interaction_candidate
+        if relay is not UNSET:
+            field_dict["relay"] = relay
+        if from_name is not UNSET:
+            field_dict["from_name"] = from_name
+        if body_text is not UNSET:
+            field_dict["body_text"] = body_text
+        if body_html is not UNSET:
+            field_dict["body_html"] = body_html
+        if headers is not UNSET:
+            field_dict["headers"] = headers
+        if attachments is not UNSET:
+            field_dict["attachments"] = attachments
+        if truncated is not UNSET:
+            field_dict["truncated"] = truncated
+        if truncated_fields is not UNSET:
+            field_dict["truncated_fields"] = truncated_fields
+
+        return field_dict
+
+
+
+    @classmethod
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.email_summary_attachments_item import EmailSummaryAttachmentsItem # noqa: PLC0415
+        from ..models.email_summary_automation_headers_type_0 import EmailSummaryAutomationHeadersType0 # noqa: PLC0415
+        from ..models.email_summary_relay_type_0 import EmailSummaryRelayType0 # noqa: PLC0415
+        from ..models.email_summary_repeat_type_0 import EmailSummaryRepeatType0 # noqa: PLC0415
+        from ..models.email_summary_sender_member_type_0 import EmailSummarySenderMemberType0 # noqa: PLC0415
+        from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        d = dict(src_dict)
+        id = UUID(d.pop("id"))
+
+
+
+
+        status = EmailStatus(d.pop("status"))
+
+
+
+
+        sender = d.pop("sender")
+
+        recipient = d.pop("recipient")
+
+        domain = d.pop("domain")
+
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
+
+
+
+
+        received_at = datetime.datetime.fromisoformat(d.pop("received_at"))
+
+
+
+
+        webhook_attempt_count = d.pop("webhook_attempt_count")
+
+        reply_count = d.pop("reply_count")
+
+        def _parse_last_replied_at(data: object) -> datetime.datetime | None:
+            if data is None:
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                last_replied_at_type_0 = datetime.datetime.fromisoformat(data)
+
+
+
+                return last_replied_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None, data)
+
+        last_replied_at = _parse_last_replied_at(d.pop("last_replied_at"))
+
+
+        awaiting = EmailSummaryAwaiting(d.pop("awaiting"))
+
+
+
+
+        automated = d.pop("automated")
+
+        automated_reasons = cast(list[str], d.pop("automated_reasons"))
+
+
+        direction = ChangeInboundMessageDirection(d.pop("direction"))
+
+
+
+
+        def _parse_message_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        message_id = _parse_message_id(d.pop("message_id", UNSET))
+
+
+        def _parse_domain_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                domain_id_type_0 = UUID(data)
+
+
+
+                return domain_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        domain_id = _parse_domain_id(d.pop("domain_id", UNSET))
+
+
+        def _parse_org_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                org_id_type_0 = UUID(data)
+
+
+
+                return org_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        org_id = _parse_org_id(d.pop("org_id", UNSET))
+
+
+        def _parse_subject(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        subject = _parse_subject(d.pop("subject", UNSET))
+
+
+        def _parse_spam_score(data: object) -> float | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(float | None | Unset, data)
+
+        spam_score = _parse_spam_score(d.pop("spam_score", UNSET))
+
+
+        def _parse_raw_size_bytes(data: object) -> int | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(int | None | Unset, data)
+
+        raw_size_bytes = _parse_raw_size_bytes(d.pop("raw_size_bytes", UNSET))
+
+
+        def _parse_webhook_status(data: object) -> EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                componentsschemas_email_webhook_status_type_1 = EmailWebhookStatusType1(data)
+
+
+
+                return componentsschemas_email_webhook_status_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                componentsschemas_email_webhook_status_type_2_type_1 = EmailWebhookStatusType2Type1(data)
+
+
+
+                return componentsschemas_email_webhook_status_type_2_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                componentsschemas_email_webhook_status_type_3_type_1 = EmailWebhookStatusType3Type1(data)
+
+
+
+                return componentsschemas_email_webhook_status_type_3_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailWebhookStatusType1 | EmailWebhookStatusType2Type1 | EmailWebhookStatusType3Type1 | None | Unset, data)
+
+        webhook_status = _parse_webhook_status(d.pop("webhook_status", UNSET))
+
+
+        def _parse_thread_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                thread_id_type_0 = UUID(data)
+
+
+
+                return thread_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
+
+
+        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+
+
+
+                return componentsschemas_presence_control_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | PresenceControlType0 | Unset, data)
+
+        presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
+
+
+        def _parse_automation_headers(data: object) -> EmailSummaryAutomationHeadersType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                automation_headers_type_0 = EmailSummaryAutomationHeadersType0.from_dict(data)
+
+
+
+                return automation_headers_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummaryAutomationHeadersType0 | None | Unset, data)
+
+        automation_headers = _parse_automation_headers(d.pop("automation_headers", UNSET))
+
+
+        def _parse_from_verified(data: object) -> bool | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(bool | None | Unset, data)
+
+        from_verified = _parse_from_verified(d.pop("from_verified", UNSET))
+
+
+        def _parse_from_header_email(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        from_header_email = _parse_from_header_email(d.pop("from_header_email", UNSET))
+
+
+        def _parse_repeat(data: object) -> EmailSummaryRepeatType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                repeat_type_0 = EmailSummaryRepeatType0.from_dict(data)
+
+
+
+                return repeat_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummaryRepeatType0 | None | Unset, data)
+
+        repeat = _parse_repeat(d.pop("repeat", UNSET))
+
+
+        def _parse_sender_member(data: object) -> EmailSummarySenderMemberType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                sender_member_type_0 = EmailSummarySenderMemberType0.from_dict(data)
+
+
+
+                return sender_member_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummarySenderMemberType0 | None | Unset, data)
+
+        sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
+
+
+        fyi = d.pop("fyi", UNSET)
+
+        interaction_hint = d.pop("interaction_hint", UNSET)
+
+        def _parse_interaction_kind(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        interaction_kind = _parse_interaction_kind(d.pop("interaction_kind", UNSET))
+
+
+        interaction_candidate = d.pop("interaction_candidate", UNSET)
+
+        def _parse_relay(data: object) -> EmailSummaryRelayType0 | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                relay_type_0 = EmailSummaryRelayType0.from_dict(data)
+
+
+
+                return relay_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(EmailSummaryRelayType0 | None | Unset, data)
+
+        relay = _parse_relay(d.pop("relay", UNSET))
+
+
+        def _parse_from_name(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        from_name = _parse_from_name(d.pop("from_name", UNSET))
+
+
+        def _parse_body_text(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        body_text = _parse_body_text(d.pop("body_text", UNSET))
+
+
+        def _parse_body_html(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        body_html = _parse_body_html(d.pop("body_html", UNSET))
+
+
+        def _parse_headers(data: object) -> IncludedMessageHeaders | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                headers_type_1 = IncludedMessageHeaders.from_dict(data)
+
+
+
+                return headers_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(IncludedMessageHeaders | None | Unset, data)
+
+        headers = _parse_headers(d.pop("headers", UNSET))
+
+
+        _attachments = d.pop("attachments", UNSET)
+        attachments: list[EmailSummaryAttachmentsItem] | Unset = UNSET
+        if _attachments is not UNSET:
+            attachments = []
+            for attachments_item_data in _attachments:
+                attachments_item = EmailSummaryAttachmentsItem.from_dict(attachments_item_data)
+
+
+
+                attachments.append(attachments_item)
+
+
+        truncated = d.pop("truncated", UNSET)
+
+        _truncated_fields = d.pop("truncated_fields", UNSET)
+        truncated_fields: list[EmailSummaryTruncatedFieldsItem] | Unset = UNSET
+        if _truncated_fields is not UNSET:
+            truncated_fields = []
+            for truncated_fields_item_data in _truncated_fields:
+                truncated_fields_item = EmailSummaryTruncatedFieldsItem(truncated_fields_item_data)
+
+
+
+                truncated_fields.append(truncated_fields_item)
+
+
+        change_inbound_message = cls(
+            id=id,
+            status=status,
+            sender=sender,
+            recipient=recipient,
+            domain=domain,
+            created_at=created_at,
+            received_at=received_at,
+            webhook_attempt_count=webhook_attempt_count,
+            reply_count=reply_count,
+            last_replied_at=last_replied_at,
+            awaiting=awaiting,
+            automated=automated,
+            automated_reasons=automated_reasons,
+            direction=direction,
+            message_id=message_id,
+            domain_id=domain_id,
+            org_id=org_id,
+            subject=subject,
+            spam_score=spam_score,
+            raw_size_bytes=raw_size_bytes,
+            webhook_status=webhook_status,
+            thread_id=thread_id,
+            presence_control=presence_control,
+            automation_headers=automation_headers,
+            from_verified=from_verified,
+            from_header_email=from_header_email,
+            repeat=repeat,
+            sender_member=sender_member,
+            fyi=fyi,
+            interaction_hint=interaction_hint,
+            interaction_kind=interaction_kind,
+            interaction_candidate=interaction_candidate,
+            relay=relay,
+            from_name=from_name,
+            body_text=body_text,
+            body_html=body_html,
+            headers=headers,
+            attachments=attachments,
+            truncated=truncated,
+            truncated_fields=truncated_fields,
+        )
+
+
+        change_inbound_message.additional_properties = d
+        return change_inbound_message
+
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

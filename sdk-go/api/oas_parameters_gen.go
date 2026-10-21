@@ -6299,6 +6299,416 @@ func decodeListAgentContactsParams(args [1]string, argsEscaped bool, r *http.Req
 	return params, nil
 }
 
+// ListChangesParams is parameters of listChanges operation.
+type ListChangesParams struct {
+	// `start` (the default) for a baseline, otherwise the previous `next_cursor`, unchanged.
+	Since OptString `json:",omitempty,omitzero"`
+	// Seconds to hold a caught-up request open. It returns as soon as a change this credential can see
+	// commits, else an empty page at the deadline. Ignored for a baseline request.
+	Wait OptInt `json:",omitempty,omitzero"`
+	// Maximum changes in one page.
+	Limit OptInt `json:",omitempty,omitzero"`
+	// `message` adds `message` to every change: the current list row of the message a message change
+	// names, so a reader needs no follow-up read. Ignored for a baseline request.
+	Expand OptListChangesExpand `json:",omitempty,omitzero"`
+	// Up to 20 email addresses, comma-separated (or the parameter repeated). Keeps only the message
+	// changes whose message is to or from one of them, matched case-insensitively. Inbound mail matches
+	// on the address it was delivered to, the envelope sender and the From header address; sent mail on
+	// the From address and the To and Cc addresses, and Bcc only for a credential that can read the
+	// sender side. Deletions, thread, agent and access changes are never filtered, because a deleted
+	// message's addresses can no longer be read: ignore a deletion for an id you do not hold. The cursor
+	// still moves past every change the filter drops, so a filtered page can be empty with a new cursor.
+	Address OptString `json:",omitempty,omitzero"`
+}
+
+func unpackListChangesParams(packed middleware.Parameters) (params ListChangesParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "since",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Since = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "wait",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Wait = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "limit",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Limit = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "expand",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Expand = v.(OptListChangesExpand)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "address",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Address = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeListChangesParams(args [0]string, argsEscaped bool, r *http.Request) (params ListChangesParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: since.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "since",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotSinceVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotSinceVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Since.SetTo(paramsDotSinceVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Since.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     512,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "since",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: wait.
+	{
+		val := int(0)
+		params.Wait.SetTo(val)
+	}
+	// Decode query: wait.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "wait",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotWaitVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotWaitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Wait.SetTo(paramsDotWaitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Wait.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           0,
+							MaxSet:        true,
+							Max:           25,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "wait",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: limit.
+	{
+		val := int(100)
+		params.Limit.SetTo(val)
+	}
+	// Decode query: limit.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLimitVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLimitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Limit.SetTo(paramsDotLimitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Limit.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           100,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "limit",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: expand.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "expand",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotExpandVal ListChangesExpand
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotExpandVal = ListChangesExpand(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Expand.SetTo(paramsDotExpandVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Expand.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "expand",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: address.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "address",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAddressVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAddressVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Address.SetTo(paramsDotAddressVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Address.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "address",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // ListContactsParams is parameters of listContacts operation.
 type ListContactsParams struct {
 	// Cursor for contacts.
@@ -7721,12 +8131,21 @@ type ListEmailsParams struct {
 	// older mail may lack them. This is loop and noise protection, not
 	// sender authentication.
 	Automated OptListEmailsAutomated `json:",omitempty,omitzero"`
+	// Only return emails whose `from_verified` (the From domain was authenticated on arrival; see the
+	// field) has this value. Combines with every other filter and with both `cursor` and `since`.
+	FromVerified OptListEmailsFromVerified `json:",omitempty,omitzero"`
 	// Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with
 	// existing filters and cursors; does not search message text.
 	Recipient OptString `json:",omitempty,omitzero"`
 	// With `true`, leave out emails whose `fyi` is true. Combines with every other filter and with both
 	// `cursor` and `since`.
 	ExcludeFyi OptListEmailsExcludeFyi `json:",omitempty,omitzero"`
+	// Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`.
+	// Reads a page of messages in one request instead of one detail read per row. Parts are withheld
+	// where the detail read withholds them. Each body field is cut to 64 KiB per row and a response
+	// carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in
+	// `truncated_fields`. Unknown values are a `validation_error`.
+	Include OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsParams) {
@@ -7831,6 +8250,15 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 	}
 	{
 		key := middleware.ParameterKey{
+			Name: "from_verified",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.FromVerified = v.(OptListEmailsFromVerified)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
 			Name: "recipient",
 			In:   "query",
 		}
@@ -7845,6 +8273,15 @@ func unpackListEmailsParams(packed middleware.Parameters) (params ListEmailsPara
 		}
 		if v, ok := packed[key]; ok {
 			params.ExcludeFyi = v.(OptListEmailsExcludeFyi)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "include",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Include = v.(OptString)
 		}
 	}
 	return params
@@ -8457,6 +8894,62 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 			Err:  err,
 		}
 	}
+	// Decode query: from_verified.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "from_verified",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotFromVerifiedVal ListEmailsFromVerified
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotFromVerifiedVal = ListEmailsFromVerified(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.FromVerified.SetTo(paramsDotFromVerifiedVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.FromVerified.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "from_verified",
+			In:   "query",
+			Err:  err,
+		}
+	}
 	// Decode query: recipient.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -8577,6 +9070,74 @@ func decodeListEmailsParams(args [0]string, argsEscaped bool, r *http.Request) (
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "exclude_fyi",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: include.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "include",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIncludeVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIncludeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Include.SetTo(paramsDotIncludeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Include.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "include",
 			In:   "query",
 			Err:  err,
 		}
@@ -9552,6 +10113,12 @@ type ListSentEmailsParams struct {
 	// never stored (trace, signature or credential-like). Sends made before header search was available
 	// are not matched.
 	Header OptString `json:",omitempty,omitzero"`
+	// Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`.
+	// Reads a page of messages in one request instead of one detail read per row. Parts are withheld
+	// where the detail read withholds them. Each body field is cut to 64 KiB per row and a response
+	// carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in
+	// `truncated_fields`. Unknown values are a `validation_error`.
+	Include OptString `json:",omitempty,omitzero"`
 }
 
 func unpackListSentEmailsParams(packed middleware.Parameters) (params ListSentEmailsParams) {
@@ -9643,6 +10210,15 @@ func unpackListSentEmailsParams(packed middleware.Parameters) (params ListSentEm
 		}
 		if v, ok := packed[key]; ok {
 			params.Header = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "include",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Include = v.(OptString)
 		}
 	}
 	return params
@@ -10182,6 +10758,74 @@ func decodeListSentEmailsParams(args [0]string, argsEscaped bool, r *http.Reques
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "header",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: include.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "include",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIncludeVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIncludeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Include.SetTo(paramsDotIncludeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Include.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "include",
 			In:   "query",
 			Err:  err,
 		}
@@ -12090,17 +12734,19 @@ type SearchEmailsParams struct {
 	// once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the
 	// word `OR` or `NOT` itself, write it in lower case or in double quotes (`"OR"`). With `prefix=true`,
 	//  a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a
-	// colon, such as a URL, put it in double quotes. `header:Name=Value` matches mail whose header
-	// `Name` has exactly `Value` (name and value case-insensitive, the whole value, quote the term for a
-	// value with spaces: `header:"List-Id=Team news <news.example.com>"`); `has-header:Name` matches
-	// mail that carries header `Name` with any value. Neither can be an `OR` alternative. Header filters
-	// read a stored copy of each message's headers: for received mail every header except trace and
-	// signature headers (`Received`, `DKIM-Signature`, `ARC-*`, `Authentication-Results` and similar)
-	// and credential-like names (a word such as `auth`, `token`, `key`, `secret`, `cookie`, `session`,
-	// `bearer`, `jwt` or `hmac`, including joined forms such as `AuthToken` or `SessionId`), at most 100
-	// headers and 16 KiB per message, each value cut to 1024 bytes; for sent mail the `headers` the
-	// request set. A filter on a header that is never stored is a `validation_error`. Mail stored before
-	// header search was available has no stored headers and is not matched.
+	// colon, such as a URL, put it in double quotes. Supports `from_verified:true` and
+	// `from_verified:false` to filter on the `from_verified` field. `header:Name=Value` matches mail
+	// whose header `Name` has exactly `Value` (name and value case-insensitive, the whole value, quote
+	// the term for a value with spaces: `header:"List-Id=Team news <news.example.com>"`);
+	// `has-header:Name` matches mail that carries header `Name` with any value. Neither can be an `OR`
+	// alternative. Header filters read a stored copy of each message's headers: for received mail every
+	// header except trace and signature headers (`Received`, `DKIM-Signature`, `ARC-*`,
+	// `Authentication-Results` and similar) and credential-like names (a word such as `auth`, `token`,
+	// `key`, `secret`, `cookie`, `session`, `bearer`, `jwt` or `hmac`, including joined forms such as
+	// `AuthToken` or `SessionId`), at most 100 headers and 16 KiB per message, each value cut to 1024
+	// bytes; for sent mail the `headers` the request set. A filter on a header that is never stored is a
+	// `validation_error`. Mail stored before header search was available has no stored headers and is
+	// not matched.
 	Q OptString `json:",omitempty,omitzero"`
 	// Filter by sender address or sender domain.
 	From OptString `json:",omitempty,omitzero"`
@@ -12188,6 +12834,9 @@ type SearchEmailsParams struct {
 	// older mail may lack them. This is loop and noise protection, not
 	// sender authentication.
 	Automated OptSearchEmailsAutomated `json:",omitempty,omitzero"`
+	// Only return emails whose `from_verified` (the From domain was authenticated on arrival; see the
+	// field) has this value. Also available in `q` as `from_verified:true` or `from_verified:false`.
+	FromVerified OptSearchEmailsFromVerified `json:",omitempty,omitzero"`
 	// Sort mode. Defaults to relevance when a text query is present,
 	// otherwise `received_at_desc`.
 	Sort OptSearchEmailsSort `json:",omitempty,omitzero"`
@@ -12249,6 +12898,12 @@ type SearchEmailsParams struct {
 	//  `accepted` (handed off, outcome not confirmed), `completed` (delivered) or `rejected` (not
 	// delivered: failed, denied, bounced or canceled).
 	Direction OptSearchEmailsDirection `json:",omitempty,omitzero"`
+	// Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`.
+	// Reads a page of messages in one request instead of one detail read per row. Parts are withheld
+	// where the detail read withholds them. Each body field is cut to 64 KiB per row and a response
+	// carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in
+	// `truncated_fields`. Unknown values are a `validation_error`.
+	Include OptString `json:",omitempty,omitzero"`
 }
 
 func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmailsParams) {
@@ -12389,6 +13044,15 @@ func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmails
 	}
 	{
 		key := middleware.ParameterKey{
+			Name: "from_verified",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.FromVerified = v.(OptSearchEmailsFromVerified)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
 			Name: "sort",
 			In:   "query",
 		}
@@ -12466,6 +13130,15 @@ func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmails
 		}
 		if v, ok := packed[key]; ok {
 			params.Direction = v.(OptSearchEmailsDirection)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "include",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Include = v.(OptString)
 		}
 	}
 	return params
@@ -13313,6 +13986,62 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 			Err:  err,
 		}
 	}
+	// Decode query: from_verified.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "from_verified",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotFromVerifiedVal SearchEmailsFromVerified
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotFromVerifiedVal = SearchEmailsFromVerified(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.FromVerified.SetTo(paramsDotFromVerifiedVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.FromVerified.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "from_verified",
+			In:   "query",
+			Err:  err,
+		}
+	}
 	// Decode query: sort.
 	if err := func() error {
 		cfg := uri.QueryParameterDecodingConfig{
@@ -13850,6 +14579,74 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "direction",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: include.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "include",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIncludeVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIncludeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Include.SetTo(paramsDotIncludeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Include.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     200,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "include",
 			In:   "query",
 			Err:  err,
 		}

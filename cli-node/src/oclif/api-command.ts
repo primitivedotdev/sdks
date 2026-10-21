@@ -45,6 +45,11 @@ import {
   maybeWriteFunctionEndpointRedirect,
 } from "./endpoints-test-redirect.js";
 import { withFlagSuggestion } from "./flag-suggestions.js";
+import {
+  assertFromVerifiedRows,
+  FromVerifiedFilterUnsupportedError,
+  fromVerifiedExpectation,
+} from "./from-verified-filter.js";
 import { writeIdempotentReplayBannerIfReplay } from "./idempotent-replay-banner.js";
 import { explainPendingMailNotFound } from "./pending-mail-miss.js";
 import {
@@ -1277,6 +1282,9 @@ export function createOperationCommand(
           operation.sdkName,
           query,
         );
+        // And for `from_verified`, a trust filter: rows without the
+        // requested value are refused, never printed.
+        const fromVerified = fromVerifiedExpectation(operation.sdkName, query);
         const callOperation = () =>
           operationFn({
             body,
@@ -1417,6 +1425,18 @@ export function createOperationCommand(
             }
           } catch (error) {
             if (!(error instanceof AutomatedFilterUnsupportedError))
+              throw error;
+            process.stderr.write(`${error.message}\n`);
+            process.exitCode = 1;
+            return;
+          }
+        }
+        if (fromVerified) {
+          try {
+            const rows = Array.isArray(envelope?.data) ? envelope.data : [];
+            assertFromVerifiedRows(rows, fromVerified);
+          } catch (error) {
+            if (!(error instanceof FromVerifiedFilterUnsupportedError))
               throw error;
             process.stderr.write(`${error.message}\n`);
             process.exitCode = 1;

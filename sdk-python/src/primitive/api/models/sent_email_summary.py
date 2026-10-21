@@ -9,13 +9,16 @@ from attrs import field as _attrs_field
 from ..types import UNSET, Unset
 
 from ..models.sent_email_status import SentEmailStatus
+from ..models.sent_email_summary_truncated_fields_item import SentEmailSummaryTruncatedFieldsItem
 from typing import cast
 from uuid import UUID
 import datetime
 
 if TYPE_CHECKING:
   from ..models.gate_denial import GateDenial
+  from ..models.included_message_headers import IncludedMessageHeaders
   from ..models.presence_control_type_0 import PresenceControlType0
+  from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem
   from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
   from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
 
@@ -155,6 +158,21 @@ class SentEmailSummary:
                 servers that predate repeating sends.
             sender_member (None | SentEmailSummarySenderMemberType0 | Unset): Verified human authorship, projected only
                 within the member organization. Historical attribution is not current sending or owner authority.
+            body_text (None | str | Unset): Plain-text body sent on the wire. Null when the
+                send carried only an HTML body, or when bodies have
+                been discarded post-send (`content_discarded_at`
+                set).
+            body_html (None | str | Unset): HTML body sent on the wire. Null when the send
+                carried only a plain-text body, or when bodies
+                have been discarded post-send.
+            headers (IncludedMessageHeaders | None | Unset): With `include=headers`: stored addressing and threading
+                headers.
+            attachments (list[SentEmailSummaryAttachmentsItem] | Unset): Metadata for submitted inline attachments; download
+                availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may
+                have no metadata. Offloaded payload files are not included in the inline archive.
+            truncated (bool | Unset): With `include`: true when a body on this row was cut or left out.
+            truncated_fields (list[SentEmailSummaryTruncatedFieldsItem] | Unset): With `include`: the body fields on this
+                row that were cut or left out.
      """
 
     id: UUID
@@ -192,6 +210,12 @@ class SentEmailSummary:
     presence_control: None | PresenceControlType0 | Unset = UNSET
     repeat: None | SentEmailSummaryRepeatType0 | Unset = UNSET
     sender_member: None | SentEmailSummarySenderMemberType0 | Unset = UNSET
+    body_text: None | str | Unset = UNSET
+    body_html: None | str | Unset = UNSET
+    headers: IncludedMessageHeaders | None | Unset = UNSET
+    attachments: list[SentEmailSummaryAttachmentsItem] | Unset = UNSET
+    truncated: bool | Unset = UNSET
+    truncated_fields: list[SentEmailSummaryTruncatedFieldsItem] | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -200,7 +224,9 @@ class SentEmailSummary:
 
     def to_dict(self) -> dict[str, Any]:
         from ..models.gate_denial import GateDenial # noqa: PLC0415
+        from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
         from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem # noqa: PLC0415
         from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
         id = str(self.id)
@@ -388,6 +414,46 @@ class SentEmailSummary:
         else:
             sender_member = self.sender_member
 
+        body_text: None | str | Unset
+        if isinstance(self.body_text, Unset):
+            body_text = UNSET
+        else:
+            body_text = self.body_text
+
+        body_html: None | str | Unset
+        if isinstance(self.body_html, Unset):
+            body_html = UNSET
+        else:
+            body_html = self.body_html
+
+        headers: dict[str, Any] | None | Unset
+        if isinstance(self.headers, Unset):
+            headers = UNSET
+        elif isinstance(self.headers, IncludedMessageHeaders):
+            headers = self.headers.to_dict()
+        else:
+            headers = self.headers
+
+        attachments: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.attachments, Unset):
+            attachments = []
+            for attachments_item_data in self.attachments:
+                attachments_item = attachments_item_data.to_dict()
+                attachments.append(attachments_item)
+
+
+
+        truncated = self.truncated
+
+        truncated_fields: list[str] | Unset = UNSET
+        if not isinstance(self.truncated_fields, Unset):
+            truncated_fields = []
+            for truncated_fields_item_data in self.truncated_fields:
+                truncated_fields_item = truncated_fields_item_data.value
+                truncated_fields.append(truncated_fields_item)
+
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -451,6 +517,18 @@ class SentEmailSummary:
             field_dict["repeat"] = repeat
         if sender_member is not UNSET:
             field_dict["sender_member"] = sender_member
+        if body_text is not UNSET:
+            field_dict["body_text"] = body_text
+        if body_html is not UNSET:
+            field_dict["body_html"] = body_html
+        if headers is not UNSET:
+            field_dict["headers"] = headers
+        if attachments is not UNSET:
+            field_dict["attachments"] = attachments
+        if truncated is not UNSET:
+            field_dict["truncated"] = truncated
+        if truncated_fields is not UNSET:
+            field_dict["truncated_fields"] = truncated_fields
 
         return field_dict
 
@@ -459,7 +537,9 @@ class SentEmailSummary:
     @classmethod
     def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
         from ..models.gate_denial import GateDenial # noqa: PLC0415
+        from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
         from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem # noqa: PLC0415
         from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
         from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
         d = dict(src_dict)
@@ -827,6 +907,72 @@ class SentEmailSummary:
         sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
 
 
+        def _parse_body_text(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        body_text = _parse_body_text(d.pop("body_text", UNSET))
+
+
+        def _parse_body_html(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        body_html = _parse_body_html(d.pop("body_html", UNSET))
+
+
+        def _parse_headers(data: object) -> IncludedMessageHeaders | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                headers_type_1 = IncludedMessageHeaders.from_dict(data)
+
+
+
+                return headers_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(IncludedMessageHeaders | None | Unset, data)
+
+        headers = _parse_headers(d.pop("headers", UNSET))
+
+
+        _attachments = d.pop("attachments", UNSET)
+        attachments: list[SentEmailSummaryAttachmentsItem] | Unset = UNSET
+        if _attachments is not UNSET:
+            attachments = []
+            for attachments_item_data in _attachments:
+                attachments_item = SentEmailSummaryAttachmentsItem.from_dict(attachments_item_data)
+
+
+
+                attachments.append(attachments_item)
+
+
+        truncated = d.pop("truncated", UNSET)
+
+        _truncated_fields = d.pop("truncated_fields", UNSET)
+        truncated_fields: list[SentEmailSummaryTruncatedFieldsItem] | Unset = UNSET
+        if _truncated_fields is not UNSET:
+            truncated_fields = []
+            for truncated_fields_item_data in _truncated_fields:
+                truncated_fields_item = SentEmailSummaryTruncatedFieldsItem(truncated_fields_item_data)
+
+
+
+                truncated_fields.append(truncated_fields_item)
+
+
         sent_email_summary = cls(
             id=id,
             status=status,
@@ -863,6 +1009,12 @@ class SentEmailSummary:
             presence_control=presence_control,
             repeat=repeat,
             sender_member=sender_member,
+            body_text=body_text,
+            body_html=body_html,
+            headers=headers,
+            attachments=attachments,
+            truncated=truncated,
+            truncated_fields=truncated_fields,
         )
 
 

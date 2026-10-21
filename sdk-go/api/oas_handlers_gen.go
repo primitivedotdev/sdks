@@ -940,6 +940,201 @@ func (s *Server) handleCancelSentEmailRequest(args [1]string, argsEscaped bool, 
 	}
 }
 
+// handleCancelSentEmailByIdempotencyKeyRequest handles cancelSentEmailByIdempotencyKey operation.
+//
+// Cancels the still-scheduled send created with this `Idempotency-Key` (matched exactly), as `POST
+// /sent-emails/{id}/cancel` does, and releases the key. 404 `not_found`: no send this credential can
+// act on was created with the key. 409 `not_scheduled`: the send holding the key is no longer
+// scheduled; `error.details` names its `sent_email_id` and `status` (`canceled` if already canceled).
+//
+//	Pass `created_before` on a retry so it cannot reach a newer send that reused the released key. A
+//
+// connected agent can cancel any scheduled send from its own address, whoever created it, and no
+// other.
+//
+// POST /sent-emails/cancel
+func (s *Server) handleCancelSentEmailByIdempotencyKeyRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("cancelSentEmailByIdempotencyKey"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/sent-emails/cancel"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), CancelSentEmailByIdempotencyKeyOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: CancelSentEmailByIdempotencyKeyOperation,
+			ID:   "cancelSentEmailByIdempotencyKey",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, CancelSentEmailByIdempotencyKeyOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeCancelSentEmailByIdempotencyKeyRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response CancelSentEmailByIdempotencyKeyRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    CancelSentEmailByIdempotencyKeyOperation,
+			OperationSummary: "Cancel a scheduled send by idempotency key",
+			OperationID:      "cancelSentEmailByIdempotencyKey",
+			Body:             request,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = *CancelSentEmailByIdempotencyKeyReq
+			Params   = struct{}
+			Response = CancelSentEmailByIdempotencyKeyRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.CancelSentEmailByIdempotencyKey(ctx, request)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.CancelSentEmailByIdempotencyKey(ctx, request)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeCancelSentEmailByIdempotencyKeyResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleCheckDefaultNetworkContactAdmissionRequest handles checkDefaultNetworkContactAdmission operation.
 //
 // Requires the recipient's connected-agent credential. The recipient
@@ -16336,6 +16531,226 @@ func (s *Server) handleListAgentNetworksRequest(args [0]string, argsEscaped bool
 	}
 }
 
+// handleListChangesRequest handles listChanges operation.
+//
+// One feed of small invalidations (ids and kinds) for everything an app keeps a snapshot of: inbound
+// mail, sent mail, the member's conversation read state, the agent directory and presence, and the
+// credential's own access. Non-consumptive and replayable: any number of devices can read the same
+// cursor independently.
+// Start with `since=start` (or no `since`): it returns an empty page whose `next_cursor` is a
+// baseline. Take it BEFORE the initial list reads; every change that commits after it is delivered,
+// including ones those reads already reflect. Then call with `since=<next_cursor>&wait=20` in a loop.
+//
+//	Changes come oldest first in commit order, at least once: a write that commits late is never
+//
+// skipped, because positions are assigned at commit.
+// Every change is scoped to what this credential's full reads would show: a connected agent sees
+// only its own mail, its own sends and sends it provably received; mail held for sender
+// authentication is announced only when released; read state reaches only the member it belongs to;
+// agent changes reach members and agents allowed to view the network; organization API keys receive
+// no agent changes. Function credentials cannot call this.
+// Changes are kept 7 days. A cursor answers 410 `cursor_expired` only when changes after it were
+// pruned (an idle cursor stays valid); rebuild the snapshots from `since=start`.
+//
+// GET /changes
+func (s *Server) handleListChangesRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listChanges"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/changes"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), ListChangesOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: ListChangesOperation,
+			ID:   "listChanges",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, ListChangesOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+	params, err := decodeListChangesParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var rawBody []byte
+
+	var response ListChangesRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    ListChangesOperation,
+			OperationSummary: "Long-poll what changed",
+			OperationID:      "listChanges",
+			Body:             nil,
+			RawBody:          rawBody,
+			Params: middleware.Parameters{
+				{
+					Name: "since",
+					In:   "query",
+				}: params.Since,
+				{
+					Name: "wait",
+					In:   "query",
+				}: params.Wait,
+				{
+					Name: "limit",
+					In:   "query",
+				}: params.Limit,
+				{
+					Name: "expand",
+					In:   "query",
+				}: params.Expand,
+				{
+					Name: "address",
+					In:   "query",
+				}: params.Address,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = ListChangesParams
+			Response = ListChangesRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackListChangesParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.ListChanges(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.ListChanges(ctx, params)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeListChangesResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
 // handleListContactsRequest handles listContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -17898,6 +18313,10 @@ func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w htt
 					In:   "query",
 				}: params.Automated,
 				{
+					Name: "from_verified",
+					In:   "query",
+				}: params.FromVerified,
+				{
 					Name: "recipient",
 					In:   "query",
 				}: params.Recipient,
@@ -17905,6 +18324,10 @@ func (s *Server) handleListEmailsRequest(args [0]string, argsEscaped bool, w htt
 					Name: "exclude_fyi",
 					In:   "query",
 				}: params.ExcludeFyi,
+				{
+					Name: "include",
+					In:   "query",
+				}: params.Include,
 			},
 			Raw: r,
 		}
@@ -20488,6 +20911,10 @@ func (s *Server) handleListSentEmailsRequest(args [0]string, argsEscaped bool, w
 					Name: "header",
 					In:   "query",
 				}: params.Header,
+				{
+					Name: "include",
+					In:   "query",
+				}: params.Include,
 			},
 			Raw: r,
 		}
@@ -26089,6 +26516,10 @@ func (s *Server) handleSearchEmailsRequest(args [0]string, argsEscaped bool, w h
 					In:   "query",
 				}: params.Automated,
 				{
+					Name: "from_verified",
+					In:   "query",
+				}: params.FromVerified,
+				{
 					Name: "sort",
 					In:   "query",
 				}: params.Sort,
@@ -26124,6 +26555,10 @@ func (s *Server) handleSearchEmailsRequest(args [0]string, argsEscaped bool, w h
 					Name: "direction",
 					In:   "query",
 				}: params.Direction,
+				{
+					Name: "include",
+					In:   "query",
+				}: params.Include,
 			},
 			Raw: r,
 		}

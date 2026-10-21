@@ -65,6 +65,18 @@ type Handler interface {
 	//
 	// POST /sent-emails/{id}/cancel
 	CancelSentEmail(ctx context.Context, params CancelSentEmailParams) (CancelSentEmailRes, error)
+	// CancelSentEmailByIdempotencyKey implements cancelSentEmailByIdempotencyKey operation.
+	//
+	// Cancels the still-scheduled send created with this `Idempotency-Key` (matched exactly), as `POST
+	// /sent-emails/{id}/cancel` does, and releases the key. 404 `not_found`: no send this credential can
+	// act on was created with the key. 409 `not_scheduled`: the send holding the key is no longer
+	// scheduled; `error.details` names its `sent_email_id` and `status` (`canceled` if already canceled).
+	//  Pass `created_before` on a retry so it cannot reach a newer send that reused the released key. A
+	// connected agent can cancel any scheduled send from its own address, whoever created it, and no
+	// other.
+	//
+	// POST /sent-emails/cancel
+	CancelSentEmailByIdempotencyKey(ctx context.Context, req *CancelSentEmailByIdempotencyKeyReq) (CancelSentEmailByIdempotencyKeyRes, error)
 	// CheckDefaultNetworkContactAdmission implements checkDefaultNetworkContactAdmission operation.
 	//
 	// Requires the recipient's connected-agent credential. The recipient
@@ -1071,6 +1083,27 @@ type Handler interface {
 	//
 	// GET /agent-networks
 	ListAgentNetworks(ctx context.Context) (ListAgentNetworksRes, error)
+	// ListChanges implements listChanges operation.
+	//
+	// One feed of small invalidations (ids and kinds) for everything an app keeps a snapshot of: inbound
+	// mail, sent mail, the member's conversation read state, the agent directory and presence, and the
+	// credential's own access. Non-consumptive and replayable: any number of devices can read the same
+	// cursor independently.
+	// Start with `since=start` (or no `since`): it returns an empty page whose `next_cursor` is a
+	// baseline. Take it BEFORE the initial list reads; every change that commits after it is delivered,
+	// including ones those reads already reflect. Then call with `since=<next_cursor>&wait=20` in a loop.
+	//  Changes come oldest first in commit order, at least once: a write that commits late is never
+	// skipped, because positions are assigned at commit.
+	// Every change is scoped to what this credential's full reads would show: a connected agent sees
+	// only its own mail, its own sends and sends it provably received; mail held for sender
+	// authentication is announced only when released; read state reaches only the member it belongs to;
+	// agent changes reach members and agents allowed to view the network; organization API keys receive
+	// no agent changes. Function credentials cannot call this.
+	// Changes are kept 7 days. A cursor answers 410 `cursor_expired` only when changes after it were
+	// pruned (an idle cursor stays valid); rebuild the snapshots from `since=start`.
+	//
+	// GET /changes
+	ListChanges(ctx context.Context, params ListChangesParams) (ListChangesRes, error)
 	// ListContacts implements listContacts operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.

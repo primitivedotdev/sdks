@@ -1,0 +1,1047 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any, TypeVar, BinaryIO, TextIO, TYPE_CHECKING, Generator
+
+from attrs import define as _attrs_define
+from attrs import field as _attrs_field
+
+from ..types import UNSET, Unset
+
+from ..models.change_outbound_message_direction import ChangeOutboundMessageDirection
+from ..models.sent_email_status import SentEmailStatus
+from ..models.sent_email_summary_truncated_fields_item import SentEmailSummaryTruncatedFieldsItem
+from typing import cast
+from uuid import UUID
+import datetime
+
+if TYPE_CHECKING:
+  from ..models.gate_denial import GateDenial
+  from ..models.included_message_headers import IncludedMessageHeaders
+  from ..models.presence_control_type_0 import PresenceControlType0
+  from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem
+  from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0
+  from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0
+
+
+
+
+
+T = TypeVar("T", bound="ChangeOutboundMessage")
+
+
+
+@_attrs_define
+class ChangeOutboundMessage:
+    """ A sent message inlined by `expand=message`, as GET /sent-emails returns it.
+
+        Attributes:
+            id (UUID):
+            status (SentEmailStatus): Lifecycle status of a sent_emails row. Possible values:
+
+                  - `queued`: pre-call INSERT; the outbound agent has not
+                    yet replied.
+                  - `submitted_to_agent`: agent accepted; `queue_id` is set.
+                  - `agent_failed`: agent rejected; `error_code` and
+                    `error_message` carry the reason.
+                  - `gate_denied`: a recipient-scope gate denied the send;
+                    the agent was never called. The `gates` array carries
+                    the denial detail. /send-mail returns 403 in this case
+                    so callers see the denial synchronously; /sent-emails
+                    additionally records the row for historical lookup,
+                    which is when this status appears in a listing.
+                  - `unknown`: terminal indeterminate; the on-box log
+                    poller couldn't classify the receiver's response.
+                  - `delivered` / `bounced` / `deferred` / `wait_timeout`:
+                    terminal delivery outcomes (see DeliveryStatus).
+                  - `scheduled`: created with a future `scheduled_at` and
+                    not yet executed; `scheduled_at` carries the pending
+                    execution time. Reschedulable via PATCH
+                    /sent-emails/{id} and cancelable via
+                    /sent-emails/{id}/cancel while in this status.
+                  - `canceled`: terminal; a scheduled send canceled before
+                    execution. `canceled_at` carries the cancellation time
+                    and nothing was dispatched.
+            status_changed_at (datetime.datetime): Timestamp of the most recent status transition.
+                Polling clients should treat `status='queued'` AND
+                `status_changed_at` older than 5 minutes as
+                "stuck-queued" (the post-tx UPDATE failed and the
+                actual delivery state is recoverable from on-box logs
+                via `queue_id` when populated, or `request_id`).
+            created_at (datetime.datetime):
+            updated_at (datetime.datetime):
+            content_hash (str): Stable hash of the canonical send payload.
+            from_header (str): Raw `From:` header as sent on the wire, including any
+                display name (e.g. `"Acme Support" <agent@acme.test>`).
+            from_address (str): Bare email address parsed from `from_header`.
+            to_header (str): Raw `To:` header as sent on the wire, including any
+                display name.
+            to_address (str): Bare email address parsed from `to_header`.
+            subject (str):
+            body_size_bytes (int): Total UTF-8 byte length of `body_text` + `body_html`.
+                Surfaced on the list endpoint so callers can see "this
+                row has a 4MB body" without fetching it.
+            direction (ChangeOutboundMessageDirection):
+            client_idempotency_key (None | str | Unset): Effective idempotency key used for this send. If the
+                caller passed the `Idempotency-Key` header, this is
+                that value; otherwise it's a server-derived hash of
+                the canonical request payload.
+            recipient_count (int | None | Unset): Every recipient of the send, To, Cc and Bcc together, each address counted
+                once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists
+                every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not
+                the sender, because the count would reveal Bcc recipients. The `sent_email` object of the `sent_email.*` webhook
+                events carries the same field.
+            content_discarded_at (datetime.datetime | None | Unset): Timestamp at which the bodies were discarded by an
+                entitlement-driven retention policy. Null when bodies
+                are still present. The detail endpoint returns
+                null-valued `body_text`/`body_html` for discarded rows.
+            message_id (None | str | Unset): Wire-level Message-ID assigned to the outbound message
+                (RFC 5322). Null on rows that never reached signing
+                (queued, gate_denied, agent_failed before signing).
+            in_reply_to (None | str | Unset): Wire-level In-Reply-To header value, when this send
+                was a reply.
+            email_references (None | str | Unset): Wire-level References header value, when this send
+                was a reply.
+            in_reply_to_email_id (None | Unset | UUID): Reference to the inbound `emails.id` that this send
+                replied to, when known. Populated when the caller used
+                /emails/{id}/reply or when /send-mail's `in_reply_to`
+                matched a stored inbound message_id in the same org.
+            thread_id (None | Unset | UUID): Conversation thread this send belongs to. A reply inherits
+                the thread of the inbound it answers; a fresh send starts a
+                new thread. Fetch `/threads/{thread_id}` for the full
+                ordered thread (inbound + outbound interleaved). NULL on
+                gate-denied sends and on sends created before threading was
+                enabled.
+            queue_id (None | str | Unset): Message identifier assigned by Primitive's outbound
+                relay once the agent accepts the message. Null on
+                queued, gate_denied, and agent_failed rows.
+            smtp_response_code (int | None | Unset): Receiver's 3-digit SMTP code (e.g. 250, 550, 451).
+                Populated on terminal delivery statuses; may be null
+                on a deferred where the agent never got an SMTP-level
+                response (TCP refused, DNS failed, TLS handshake
+                failed). `smtp_response_text` still carries Postfix's
+                descriptive text in those cases.
+            smtp_response_text (None | str | Unset): Free-form text portion of the receiver's SMTP
+                response. The most useful debugging signal on a
+                `bounced` or `deferred` row.
+            smtp_enhanced_status_code (None | str | Unset): RFC 3463 enhanced status code (e.g. `5.1.1` for "Bad
+                destination mailbox address"). Distinct from
+                `smtp_response_code`: the basic 3-digit code is coarse
+                (550 = "permanent failure"), the enhanced code is
+                finer-grained.
+            dkim_selector (None | str | Unset): DKIM selector used to sign the outbound message.
+                Public DNS data; useful for diagnosing why a downstream
+                verifier rejected the signature.
+            dkim_domain (None | str | Unset): DKIM signing domain.
+            error_code (None | str | Unset): Stable public error code on `agent_failed` rows. The
+                agent's internal codes are remapped to a stable public
+                taxonomy (see `publicAgentError` in the server) so this
+                field is safe to branch on across agent versions.
+            error_message (None | str | Unset): Free-form error message accompanying `error_code`.
+            gates (list[GateDenial] | None | Unset): Gate-denial detail on `gate_denied` rows. Mirrors the
+                synchronous /send-mail 403 contract so a caller's
+                GateDenial handler is the same across live denies and
+                historical lookups. Null on every other status.
+            request_id (None | str | Unset): Server-issued request identifier from the original
+                /send-mail call. Surfaced as the `X-Request-Id`
+                response header on the live send and recorded here
+                for support escalation.
+            scheduled_at (datetime.datetime | None | Unset): Requested execution time for a scheduled send. Kept
+                after execution as the historical schedule; null on
+                ordinary immediate sends.
+            canceled_at (datetime.datetime | None | Unset): When a scheduled send was canceled. Null unless the row
+                reached the `canceled` status.
+            presence_control (None | PresenceControlType0 | Unset):
+            repeat (None | SentEmailSummaryRepeatType0 | Unset): Set when Primitive sent this message as part of a repeating
+                send. Resolved from Primitive's own records, never from the message content. Null on every other message and on
+                servers that predate repeating sends.
+            sender_member (None | SentEmailSummarySenderMemberType0 | Unset): Verified human authorship, projected only
+                within the member organization. Historical attribution is not current sending or owner authority.
+            body_text (None | str | Unset): Plain-text body sent on the wire. Null when the
+                send carried only an HTML body, or when bodies have
+                been discarded post-send (`content_discarded_at`
+                set).
+            body_html (None | str | Unset): HTML body sent on the wire. Null when the send
+                carried only a plain-text body, or when bodies
+                have been discarded post-send.
+            headers (IncludedMessageHeaders | None | Unset): With `include=headers`: stored addressing and threading
+                headers.
+            attachments (list[SentEmailSummaryAttachmentsItem] | Unset): Metadata for submitted inline attachments; download
+                availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may
+                have no metadata. Offloaded payload files are not included in the inline archive.
+            truncated (bool | Unset): With `include`: true when a body on this row was cut or left out.
+            truncated_fields (list[SentEmailSummaryTruncatedFieldsItem] | Unset): With `include`: the body fields on this
+                row that were cut or left out.
+     """
+
+    id: UUID
+    status: SentEmailStatus
+    status_changed_at: datetime.datetime
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    content_hash: str
+    from_header: str
+    from_address: str
+    to_header: str
+    to_address: str
+    subject: str
+    body_size_bytes: int
+    direction: ChangeOutboundMessageDirection
+    client_idempotency_key: None | str | Unset = UNSET
+    recipient_count: int | None | Unset = UNSET
+    content_discarded_at: datetime.datetime | None | Unset = UNSET
+    message_id: None | str | Unset = UNSET
+    in_reply_to: None | str | Unset = UNSET
+    email_references: None | str | Unset = UNSET
+    in_reply_to_email_id: None | Unset | UUID = UNSET
+    thread_id: None | Unset | UUID = UNSET
+    queue_id: None | str | Unset = UNSET
+    smtp_response_code: int | None | Unset = UNSET
+    smtp_response_text: None | str | Unset = UNSET
+    smtp_enhanced_status_code: None | str | Unset = UNSET
+    dkim_selector: None | str | Unset = UNSET
+    dkim_domain: None | str | Unset = UNSET
+    error_code: None | str | Unset = UNSET
+    error_message: None | str | Unset = UNSET
+    gates: list[GateDenial] | None | Unset = UNSET
+    request_id: None | str | Unset = UNSET
+    scheduled_at: datetime.datetime | None | Unset = UNSET
+    canceled_at: datetime.datetime | None | Unset = UNSET
+    presence_control: None | PresenceControlType0 | Unset = UNSET
+    repeat: None | SentEmailSummaryRepeatType0 | Unset = UNSET
+    sender_member: None | SentEmailSummarySenderMemberType0 | Unset = UNSET
+    body_text: None | str | Unset = UNSET
+    body_html: None | str | Unset = UNSET
+    headers: IncludedMessageHeaders | None | Unset = UNSET
+    attachments: list[SentEmailSummaryAttachmentsItem] | Unset = UNSET
+    truncated: bool | Unset = UNSET
+    truncated_fields: list[SentEmailSummaryTruncatedFieldsItem] | Unset = UNSET
+    additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
+
+
+
+
+
+    def to_dict(self) -> dict[str, Any]:
+        from ..models.gate_denial import GateDenial # noqa: PLC0415
+        from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem # noqa: PLC0415
+        from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
+        from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
+        id = str(self.id)
+
+        status = self.status.value
+
+        status_changed_at = self.status_changed_at.isoformat()
+
+        created_at = self.created_at.isoformat()
+
+        updated_at = self.updated_at.isoformat()
+
+        content_hash = self.content_hash
+
+        from_header = self.from_header
+
+        from_address = self.from_address
+
+        to_header = self.to_header
+
+        to_address = self.to_address
+
+        subject = self.subject
+
+        body_size_bytes = self.body_size_bytes
+
+        direction = self.direction.value
+
+        client_idempotency_key: None | str | Unset
+        if isinstance(self.client_idempotency_key, Unset):
+            client_idempotency_key = UNSET
+        else:
+            client_idempotency_key = self.client_idempotency_key
+
+        recipient_count: int | None | Unset
+        if isinstance(self.recipient_count, Unset):
+            recipient_count = UNSET
+        else:
+            recipient_count = self.recipient_count
+
+        content_discarded_at: None | str | Unset
+        if isinstance(self.content_discarded_at, Unset):
+            content_discarded_at = UNSET
+        elif isinstance(self.content_discarded_at, datetime.datetime):
+            content_discarded_at = self.content_discarded_at.isoformat()
+        else:
+            content_discarded_at = self.content_discarded_at
+
+        message_id: None | str | Unset
+        if isinstance(self.message_id, Unset):
+            message_id = UNSET
+        else:
+            message_id = self.message_id
+
+        in_reply_to: None | str | Unset
+        if isinstance(self.in_reply_to, Unset):
+            in_reply_to = UNSET
+        else:
+            in_reply_to = self.in_reply_to
+
+        email_references: None | str | Unset
+        if isinstance(self.email_references, Unset):
+            email_references = UNSET
+        else:
+            email_references = self.email_references
+
+        in_reply_to_email_id: None | str | Unset
+        if isinstance(self.in_reply_to_email_id, Unset):
+            in_reply_to_email_id = UNSET
+        elif isinstance(self.in_reply_to_email_id, UUID):
+            in_reply_to_email_id = str(self.in_reply_to_email_id)
+        else:
+            in_reply_to_email_id = self.in_reply_to_email_id
+
+        thread_id: None | str | Unset
+        if isinstance(self.thread_id, Unset):
+            thread_id = UNSET
+        elif isinstance(self.thread_id, UUID):
+            thread_id = str(self.thread_id)
+        else:
+            thread_id = self.thread_id
+
+        queue_id: None | str | Unset
+        if isinstance(self.queue_id, Unset):
+            queue_id = UNSET
+        else:
+            queue_id = self.queue_id
+
+        smtp_response_code: int | None | Unset
+        if isinstance(self.smtp_response_code, Unset):
+            smtp_response_code = UNSET
+        else:
+            smtp_response_code = self.smtp_response_code
+
+        smtp_response_text: None | str | Unset
+        if isinstance(self.smtp_response_text, Unset):
+            smtp_response_text = UNSET
+        else:
+            smtp_response_text = self.smtp_response_text
+
+        smtp_enhanced_status_code: None | str | Unset
+        if isinstance(self.smtp_enhanced_status_code, Unset):
+            smtp_enhanced_status_code = UNSET
+        else:
+            smtp_enhanced_status_code = self.smtp_enhanced_status_code
+
+        dkim_selector: None | str | Unset
+        if isinstance(self.dkim_selector, Unset):
+            dkim_selector = UNSET
+        else:
+            dkim_selector = self.dkim_selector
+
+        dkim_domain: None | str | Unset
+        if isinstance(self.dkim_domain, Unset):
+            dkim_domain = UNSET
+        else:
+            dkim_domain = self.dkim_domain
+
+        error_code: None | str | Unset
+        if isinstance(self.error_code, Unset):
+            error_code = UNSET
+        else:
+            error_code = self.error_code
+
+        error_message: None | str | Unset
+        if isinstance(self.error_message, Unset):
+            error_message = UNSET
+        else:
+            error_message = self.error_message
+
+        gates: list[dict[str, Any]] | None | Unset
+        if isinstance(self.gates, Unset):
+            gates = UNSET
+        elif isinstance(self.gates, list):
+            gates = []
+            for gates_type_0_item_data in self.gates:
+                gates_type_0_item = gates_type_0_item_data.to_dict()
+                gates.append(gates_type_0_item)
+
+
+        else:
+            gates = self.gates
+
+        request_id: None | str | Unset
+        if isinstance(self.request_id, Unset):
+            request_id = UNSET
+        else:
+            request_id = self.request_id
+
+        scheduled_at: None | str | Unset
+        if isinstance(self.scheduled_at, Unset):
+            scheduled_at = UNSET
+        elif isinstance(self.scheduled_at, datetime.datetime):
+            scheduled_at = self.scheduled_at.isoformat()
+        else:
+            scheduled_at = self.scheduled_at
+
+        canceled_at: None | str | Unset
+        if isinstance(self.canceled_at, Unset):
+            canceled_at = UNSET
+        elif isinstance(self.canceled_at, datetime.datetime):
+            canceled_at = self.canceled_at.isoformat()
+        else:
+            canceled_at = self.canceled_at
+
+        presence_control: dict[str, Any] | None | Unset
+        if isinstance(self.presence_control, Unset):
+            presence_control = UNSET
+        elif isinstance(self.presence_control, PresenceControlType0):
+            presence_control = self.presence_control.to_dict()
+        else:
+            presence_control = self.presence_control
+
+        repeat: dict[str, Any] | None | Unset
+        if isinstance(self.repeat, Unset):
+            repeat = UNSET
+        elif isinstance(self.repeat, SentEmailSummaryRepeatType0):
+            repeat = self.repeat.to_dict()
+        else:
+            repeat = self.repeat
+
+        sender_member: dict[str, Any] | None | Unset
+        if isinstance(self.sender_member, Unset):
+            sender_member = UNSET
+        elif isinstance(self.sender_member, SentEmailSummarySenderMemberType0):
+            sender_member = self.sender_member.to_dict()
+        else:
+            sender_member = self.sender_member
+
+        body_text: None | str | Unset
+        if isinstance(self.body_text, Unset):
+            body_text = UNSET
+        else:
+            body_text = self.body_text
+
+        body_html: None | str | Unset
+        if isinstance(self.body_html, Unset):
+            body_html = UNSET
+        else:
+            body_html = self.body_html
+
+        headers: dict[str, Any] | None | Unset
+        if isinstance(self.headers, Unset):
+            headers = UNSET
+        elif isinstance(self.headers, IncludedMessageHeaders):
+            headers = self.headers.to_dict()
+        else:
+            headers = self.headers
+
+        attachments: list[dict[str, Any]] | Unset = UNSET
+        if not isinstance(self.attachments, Unset):
+            attachments = []
+            for attachments_item_data in self.attachments:
+                attachments_item = attachments_item_data.to_dict()
+                attachments.append(attachments_item)
+
+
+
+        truncated = self.truncated
+
+        truncated_fields: list[str] | Unset = UNSET
+        if not isinstance(self.truncated_fields, Unset):
+            truncated_fields = []
+            for truncated_fields_item_data in self.truncated_fields:
+                truncated_fields_item = truncated_fields_item_data.value
+                truncated_fields.append(truncated_fields_item)
+
+
+
+
+        field_dict: dict[str, Any] = {}
+        field_dict.update(self.additional_properties)
+        field_dict.update({
+            "id": id,
+            "status": status,
+            "status_changed_at": status_changed_at,
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "content_hash": content_hash,
+            "from_header": from_header,
+            "from_address": from_address,
+            "to_header": to_header,
+            "to_address": to_address,
+            "subject": subject,
+            "body_size_bytes": body_size_bytes,
+            "direction": direction,
+        })
+        if client_idempotency_key is not UNSET:
+            field_dict["client_idempotency_key"] = client_idempotency_key
+        if recipient_count is not UNSET:
+            field_dict["recipient_count"] = recipient_count
+        if content_discarded_at is not UNSET:
+            field_dict["content_discarded_at"] = content_discarded_at
+        if message_id is not UNSET:
+            field_dict["message_id"] = message_id
+        if in_reply_to is not UNSET:
+            field_dict["in_reply_to"] = in_reply_to
+        if email_references is not UNSET:
+            field_dict["email_references"] = email_references
+        if in_reply_to_email_id is not UNSET:
+            field_dict["in_reply_to_email_id"] = in_reply_to_email_id
+        if thread_id is not UNSET:
+            field_dict["thread_id"] = thread_id
+        if queue_id is not UNSET:
+            field_dict["queue_id"] = queue_id
+        if smtp_response_code is not UNSET:
+            field_dict["smtp_response_code"] = smtp_response_code
+        if smtp_response_text is not UNSET:
+            field_dict["smtp_response_text"] = smtp_response_text
+        if smtp_enhanced_status_code is not UNSET:
+            field_dict["smtp_enhanced_status_code"] = smtp_enhanced_status_code
+        if dkim_selector is not UNSET:
+            field_dict["dkim_selector"] = dkim_selector
+        if dkim_domain is not UNSET:
+            field_dict["dkim_domain"] = dkim_domain
+        if error_code is not UNSET:
+            field_dict["error_code"] = error_code
+        if error_message is not UNSET:
+            field_dict["error_message"] = error_message
+        if gates is not UNSET:
+            field_dict["gates"] = gates
+        if request_id is not UNSET:
+            field_dict["request_id"] = request_id
+        if scheduled_at is not UNSET:
+            field_dict["scheduled_at"] = scheduled_at
+        if canceled_at is not UNSET:
+            field_dict["canceled_at"] = canceled_at
+        if presence_control is not UNSET:
+            field_dict["presence_control"] = presence_control
+        if repeat is not UNSET:
+            field_dict["repeat"] = repeat
+        if sender_member is not UNSET:
+            field_dict["sender_member"] = sender_member
+        if body_text is not UNSET:
+            field_dict["body_text"] = body_text
+        if body_html is not UNSET:
+            field_dict["body_html"] = body_html
+        if headers is not UNSET:
+            field_dict["headers"] = headers
+        if attachments is not UNSET:
+            field_dict["attachments"] = attachments
+        if truncated is not UNSET:
+            field_dict["truncated"] = truncated
+        if truncated_fields is not UNSET:
+            field_dict["truncated_fields"] = truncated_fields
+
+        return field_dict
+
+
+
+    @classmethod
+    def from_dict(cls: type[T], src_dict: Mapping[str, Any]) -> T:
+        from ..models.gate_denial import GateDenial # noqa: PLC0415
+        from ..models.included_message_headers import IncludedMessageHeaders # noqa: PLC0415
+        from ..models.presence_control_type_0 import PresenceControlType0 # noqa: PLC0415
+        from ..models.sent_email_summary_attachments_item import SentEmailSummaryAttachmentsItem # noqa: PLC0415
+        from ..models.sent_email_summary_repeat_type_0 import SentEmailSummaryRepeatType0 # noqa: PLC0415
+        from ..models.sent_email_summary_sender_member_type_0 import SentEmailSummarySenderMemberType0 # noqa: PLC0415
+        d = dict(src_dict)
+        id = UUID(d.pop("id"))
+
+
+
+
+        status = SentEmailStatus(d.pop("status"))
+
+
+
+
+        status_changed_at = datetime.datetime.fromisoformat(d.pop("status_changed_at"))
+
+
+
+
+        created_at = datetime.datetime.fromisoformat(d.pop("created_at"))
+
+
+
+
+        updated_at = datetime.datetime.fromisoformat(d.pop("updated_at"))
+
+
+
+
+        content_hash = d.pop("content_hash")
+
+        from_header = d.pop("from_header")
+
+        from_address = d.pop("from_address")
+
+        to_header = d.pop("to_header")
+
+        to_address = d.pop("to_address")
+
+        subject = d.pop("subject")
+
+        body_size_bytes = d.pop("body_size_bytes")
+
+        direction = ChangeOutboundMessageDirection(d.pop("direction"))
+
+
+
+
+        def _parse_client_idempotency_key(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        client_idempotency_key = _parse_client_idempotency_key(d.pop("client_idempotency_key", UNSET))
+
+
+        def _parse_recipient_count(data: object) -> int | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(int | None | Unset, data)
+
+        recipient_count = _parse_recipient_count(d.pop("recipient_count", UNSET))
+
+
+        def _parse_content_discarded_at(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                content_discarded_at_type_0 = datetime.datetime.fromisoformat(data)
+
+
+
+                return content_discarded_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        content_discarded_at = _parse_content_discarded_at(d.pop("content_discarded_at", UNSET))
+
+
+        def _parse_message_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        message_id = _parse_message_id(d.pop("message_id", UNSET))
+
+
+        def _parse_in_reply_to(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        in_reply_to = _parse_in_reply_to(d.pop("in_reply_to", UNSET))
+
+
+        def _parse_email_references(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        email_references = _parse_email_references(d.pop("email_references", UNSET))
+
+
+        def _parse_in_reply_to_email_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                in_reply_to_email_id_type_0 = UUID(data)
+
+
+
+                return in_reply_to_email_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        in_reply_to_email_id = _parse_in_reply_to_email_id(d.pop("in_reply_to_email_id", UNSET))
+
+
+        def _parse_thread_id(data: object) -> None | Unset | UUID:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                thread_id_type_0 = UUID(data)
+
+
+
+                return thread_id_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | Unset | UUID, data)
+
+        thread_id = _parse_thread_id(d.pop("thread_id", UNSET))
+
+
+        def _parse_queue_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        queue_id = _parse_queue_id(d.pop("queue_id", UNSET))
+
+
+        def _parse_smtp_response_code(data: object) -> int | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(int | None | Unset, data)
+
+        smtp_response_code = _parse_smtp_response_code(d.pop("smtp_response_code", UNSET))
+
+
+        def _parse_smtp_response_text(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        smtp_response_text = _parse_smtp_response_text(d.pop("smtp_response_text", UNSET))
+
+
+        def _parse_smtp_enhanced_status_code(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        smtp_enhanced_status_code = _parse_smtp_enhanced_status_code(d.pop("smtp_enhanced_status_code", UNSET))
+
+
+        def _parse_dkim_selector(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        dkim_selector = _parse_dkim_selector(d.pop("dkim_selector", UNSET))
+
+
+        def _parse_dkim_domain(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        dkim_domain = _parse_dkim_domain(d.pop("dkim_domain", UNSET))
+
+
+        def _parse_error_code(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        error_code = _parse_error_code(d.pop("error_code", UNSET))
+
+
+        def _parse_error_message(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        error_message = _parse_error_message(d.pop("error_message", UNSET))
+
+
+        def _parse_gates(data: object) -> list[GateDenial] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                gates_type_0 = []
+                _gates_type_0 = data
+                for gates_type_0_item_data in (_gates_type_0):
+                    gates_type_0_item = GateDenial.from_dict(gates_type_0_item_data)
+
+
+
+                    gates_type_0.append(gates_type_0_item)
+
+                return gates_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[GateDenial] | None | Unset, data)
+
+        gates = _parse_gates(d.pop("gates", UNSET))
+
+
+        def _parse_request_id(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        request_id = _parse_request_id(d.pop("request_id", UNSET))
+
+
+        def _parse_scheduled_at(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                scheduled_at_type_0 = datetime.datetime.fromisoformat(data)
+
+
+
+                return scheduled_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        scheduled_at = _parse_scheduled_at(d.pop("scheduled_at", UNSET))
+
+
+        def _parse_canceled_at(data: object) -> datetime.datetime | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, str):
+                    raise TypeError()
+                canceled_at_type_0 = datetime.datetime.fromisoformat(data)
+
+
+
+                return canceled_at_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(datetime.datetime | None | Unset, data)
+
+        canceled_at = _parse_canceled_at(d.pop("canceled_at", UNSET))
+
+
+        def _parse_presence_control(data: object) -> None | PresenceControlType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                componentsschemas_presence_control_type_0 = PresenceControlType0.from_dict(data)
+
+
+
+                return componentsschemas_presence_control_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | PresenceControlType0 | Unset, data)
+
+        presence_control = _parse_presence_control(d.pop("presence_control", UNSET))
+
+
+        def _parse_repeat(data: object) -> None | SentEmailSummaryRepeatType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                repeat_type_0 = SentEmailSummaryRepeatType0.from_dict(data)
+
+
+
+                return repeat_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SentEmailSummaryRepeatType0 | Unset, data)
+
+        repeat = _parse_repeat(d.pop("repeat", UNSET))
+
+
+        def _parse_sender_member(data: object) -> None | SentEmailSummarySenderMemberType0 | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                sender_member_type_0 = SentEmailSummarySenderMemberType0.from_dict(data)
+
+
+
+                return sender_member_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(None | SentEmailSummarySenderMemberType0 | Unset, data)
+
+        sender_member = _parse_sender_member(d.pop("sender_member", UNSET))
+
+
+        def _parse_body_text(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        body_text = _parse_body_text(d.pop("body_text", UNSET))
+
+
+        def _parse_body_html(data: object) -> None | str | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            return cast(None | str | Unset, data)
+
+        body_html = _parse_body_html(d.pop("body_html", UNSET))
+
+
+        def _parse_headers(data: object) -> IncludedMessageHeaders | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, dict):
+                    raise TypeError()
+                headers_type_1 = IncludedMessageHeaders.from_dict(data)
+
+
+
+                return headers_type_1
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(IncludedMessageHeaders | None | Unset, data)
+
+        headers = _parse_headers(d.pop("headers", UNSET))
+
+
+        _attachments = d.pop("attachments", UNSET)
+        attachments: list[SentEmailSummaryAttachmentsItem] | Unset = UNSET
+        if _attachments is not UNSET:
+            attachments = []
+            for attachments_item_data in _attachments:
+                attachments_item = SentEmailSummaryAttachmentsItem.from_dict(attachments_item_data)
+
+
+
+                attachments.append(attachments_item)
+
+
+        truncated = d.pop("truncated", UNSET)
+
+        _truncated_fields = d.pop("truncated_fields", UNSET)
+        truncated_fields: list[SentEmailSummaryTruncatedFieldsItem] | Unset = UNSET
+        if _truncated_fields is not UNSET:
+            truncated_fields = []
+            for truncated_fields_item_data in _truncated_fields:
+                truncated_fields_item = SentEmailSummaryTruncatedFieldsItem(truncated_fields_item_data)
+
+
+
+                truncated_fields.append(truncated_fields_item)
+
+
+        change_outbound_message = cls(
+            id=id,
+            status=status,
+            status_changed_at=status_changed_at,
+            created_at=created_at,
+            updated_at=updated_at,
+            content_hash=content_hash,
+            from_header=from_header,
+            from_address=from_address,
+            to_header=to_header,
+            to_address=to_address,
+            subject=subject,
+            body_size_bytes=body_size_bytes,
+            direction=direction,
+            client_idempotency_key=client_idempotency_key,
+            recipient_count=recipient_count,
+            content_discarded_at=content_discarded_at,
+            message_id=message_id,
+            in_reply_to=in_reply_to,
+            email_references=email_references,
+            in_reply_to_email_id=in_reply_to_email_id,
+            thread_id=thread_id,
+            queue_id=queue_id,
+            smtp_response_code=smtp_response_code,
+            smtp_response_text=smtp_response_text,
+            smtp_enhanced_status_code=smtp_enhanced_status_code,
+            dkim_selector=dkim_selector,
+            dkim_domain=dkim_domain,
+            error_code=error_code,
+            error_message=error_message,
+            gates=gates,
+            request_id=request_id,
+            scheduled_at=scheduled_at,
+            canceled_at=canceled_at,
+            presence_control=presence_control,
+            repeat=repeat,
+            sender_member=sender_member,
+            body_text=body_text,
+            body_html=body_html,
+            headers=headers,
+            attachments=attachments,
+            truncated=truncated,
+            truncated_fields=truncated_fields,
+        )
+
+
+        change_outbound_message.additional_properties = d
+        return change_outbound_message
+
+    @property
+    def additional_keys(self) -> list[str]:
+        return list(self.additional_properties.keys())
+
+    def __getitem__(self, key: str) -> Any:
+        return self.additional_properties[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        self.additional_properties[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        del self.additional_properties[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in self.additional_properties

@@ -3326,6 +3326,1215 @@ export const operationManifest: PrimitiveOperationManifest[] = [
   {
     "binaryResponse": false,
     "bodyRequired": false,
+    "command": "list-changes",
+    "description": "One feed of small invalidations (ids and kinds) for everything an app keeps a snapshot of: inbound mail, sent mail, the member's conversation read state, the agent directory and presence, and the credential's own access. Non-consumptive and replayable: any number of devices can read the same cursor independently.\n\nStart with `since=start` (or no `since`): it returns an empty page whose `next_cursor` is a baseline. Take it BEFORE the initial list reads; every change that commits after it is delivered, including ones those reads already reflect. Then call with `since=<next_cursor>&wait=20` in a loop. Changes come oldest first in commit order, at least once: a write that commits late is never skipped, because positions are assigned at commit.\n\nEvery change is scoped to what this credential's full reads would show: a connected agent sees only its own mail, its own sends and sends it provably received; mail held for sender authentication is announced only when released; read state reaches only the member it belongs to; agent changes reach members and agents allowed to view the network; organization API keys receive no agent changes. Function credentials cannot call this.\n\nChanges are kept 7 days. A cursor answers 410 `cursor_expired` only when changes after it were pruned (an idle cursor stays valid); rebuild the snapshots from `since=start`.",
+    "hasJsonBody": false,
+    "method": "GET",
+    "operationId": "listChanges",
+    "path": "/changes",
+    "pathParams": [],
+    "queryParams": [
+      {
+        "description": "`start` (the default) for a baseline, otherwise the previous `next_cursor`, unchanged.",
+        "enum": null,
+        "name": "since",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": 0,
+        "description": "Seconds to hold a caught-up request open. It returns as soon as a change this credential can see commits, else an empty page at the deadline. Ignored for a baseline request.",
+        "enum": null,
+        "maximum": 25,
+        "minimum": 0,
+        "name": "wait",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "default": 100,
+        "description": "Maximum changes in one page.",
+        "enum": null,
+        "maximum": 100,
+        "minimum": 1,
+        "name": "limit",
+        "required": false,
+        "type": "integer"
+      },
+      {
+        "description": "`message` adds `message` to every change: the current list row of the message a message change names, so a reader needs no follow-up read. Ignored for a baseline request.",
+        "enum": [
+          "message"
+        ],
+        "name": "expand",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Up to 20 email addresses, comma-separated (or the parameter repeated). Keeps only the message changes whose message is to or from one of them, matched case-insensitively. Inbound mail matches on the address it was delivered to, the envelope sender and the From header address; sent mail on the From address and the To and Cc addresses, and Bcc only for a credential that can read the sender side. Deletions, thread, agent and access changes are never filtered, because a deleted message's addresses can no longer be read: ignore a deletion for an id you do not hold. The cursor still moves past every change the filter drops, so a filtered page can be empty with a new cursor.",
+        "enum": null,
+        "name": "address",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "requestSchema": null,
+    "responseSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "changes",
+        "next_cursor",
+        "has_more",
+        "baseline"
+      ],
+      "properties": {
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "One invalidation: what changed, by id, never its content. Every field is present; fields that do not apply to the kind are null. Apply idempotently: a change can repeat.",
+            "required": [
+              "kind",
+              "email_id",
+              "sent_email_id",
+              "thread_id",
+              "status",
+              "agent_address",
+              "reason",
+              "changed_at"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "email.visible",
+                  "email.updated",
+                  "email.deleted",
+                  "sent_email.created",
+                  "sent_email.updated",
+                  "sent_email.deleted",
+                  "thread.read_state_changed",
+                  "thread.mute_changed",
+                  "agent.changed",
+                  "access.changed"
+                ],
+                "description": "`email.visible`: an inbound email became visible to this credential (arrived, or its sender-authentication hold was released). `email.updated`: something a list row or conversation shows changed. `email.deleted`: gone, or withdrawn from view. `sent_email.created` / `sent_email.updated`: a send appeared or changed; `status` is its current status, and several changes between two reads collapse into one entry. Created is a hint (first committed after the cursor): treat both as upsert, including `sent_email.updated` for an id you have not seen. `sent_email.deleted`: the send was deleted. `thread.read_state_changed`: the signed-in member's read cursor for `thread_id` moved, on any device. `thread.mute_changed`: `thread_id` was muted or unmuted for an address this credential reads, which changes the `muted` flag and `exclude_muted` results of its mail. `agent.changed`: an agent in the directory changed (connected, disconnected, renamed, hidden, listed, presence extended, receiver live). `access.changed`: this credential's own access changed; rebuild every snapshot from `since=start`."
+              },
+              "email_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "email.* kinds."
+              },
+              "sent_email_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "sent_email.* kinds."
+              },
+              "thread_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "The conversation, when known. Null for a connected agent reading a send, or its deletion, that it received but did not send, matching what GET /sent-emails withholds. Inbound mail is announced when it becomes visible, which can be before its conversation is resolved, so `email.visible` can carry null; resolving or changing the conversation is always announced afterwards as `email.updated` with the `thread_id`."
+              },
+              "status": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "sent_email.created and sent_email.updated: the send's current status."
+              },
+              "agent_address": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "agent.changed: the agent's address."
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "membership",
+                  "agent_connection",
+                  null
+                ],
+                "description": "access.changed: `membership` (the member's role or membership) or `agent_connection` (this agent connection's status, owner or generation)."
+              },
+              "changed_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "The commit position in microsecond UTC form. Orders the feed; not a business timestamp."
+              },
+              "message": {
+                "oneOf": [
+                  {
+                    "description": "A message inlined by `expand=message`. `direction` `inbound` is a GET /emails row; `outbound` is a GET /sent-emails row.",
+                    "oneOf": [
+                      {
+                        "description": "An inbound message inlined by `expand=message`, as GET /emails returns it.",
+                        "allOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "message_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "domain_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "uuid"
+                              },
+                              "org_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "uuid"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Lifecycle status of an INBOUND email (a row in the `emails`\ntable). Distinct from `SentEmailStatus`, which describes\nthe OUTBOUND lifecycle (the `sent_emails` table) and uses\na different vocabulary because the lifecycles differ.\nPossible values:\n\n  - `pending`: the row was inserted at ingestion (mx_main)\n    and has not yet completed the spam / filter / auth\n    pipeline. Body and parsed fields are present; webhook\n    delivery is not yet scheduled. Most rows transition out\n    of `pending` within seconds.\n  - `accepted`: the inbound passed the policy gates and is\n    queued for webhook delivery. The `webhook_status` field\n    tracks the separate webhook-delivery lifecycle from\n    this point.\n  - `completed`: terminal success. Webhook delivery\n    attempted and acknowledged by every active endpoint, OR\n    no endpoints are configured, so the row is durably\n    archived.\n  - `rejected`: terminal failure at ingestion (spam, blocked\n    sender, filter rule, malformed). The body and metadata\n    are stored for auditing but no webhook fires and the\n    row is not repliable.\n\nSee also `webhook_status` (separate enum tracking the\nwebhook-delivery state machine) and `SentEmailStatus` (the\noutbound vocabulary).\n",
+                                "enum": [
+                                  "pending",
+                                  "accepted",
+                                  "completed",
+                                  "rejected"
+                                ]
+                              },
+                              "sender": {
+                                "type": "string",
+                                "description": "SMTP envelope sender (return-path) the inbound mail server\naccepted. For most legitimate mail this equals the bare\naddress in the From header; for mailing lists, bounce\nhandlers, and forwarders it is typically the bounce address\nrather than the human-visible sender.\n\nFor the parsed From-header value (with display name handling\nand a sender-fallback when the header is unparseable), GET\nthe email by id and use `from_email`.\n"
+                              },
+                              "recipient": {
+                                "type": "string"
+                              },
+                              "subject": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "domain": {
+                                "type": "string"
+                              },
+                              "spam_score": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "received_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "raw_size_bytes": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "webhook_status": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Webhook-delivery state for an inbound email. Tracks a\nSEPARATE lifecycle from the email's `status` field; the\nsame row carries both. Possible values:\n\n  - `pending`: ingestion is past `pending` (the email itself\n    is `accepted`) but the webhook fan-out has not yet\n    started for this row.\n  - `in_flight`: at least one delivery attempt is in flight.\n  - `fired`: terminal success. Every active endpoint\n    acknowledged the delivery (or accepted it after retries).\n  - `failed`: terminal partial-failure. At least one endpoint\n    exhausted its retry budget; some endpoints may still\n    have succeeded.\n  - `exhausted`: terminal failure. Every endpoint exhausted\n    its retry budget without success.\n  - `null`: no endpoints configured, so no webhook lifecycle\n    applies.\n\nNote that the value `pending` here does NOT mean the email\nis `pending`; it means the email is past ingestion but\nwebhook delivery has not yet begun. Two overlapping uses\nof the word `pending` for distinct lifecycle phases.\n",
+                                "enum": [
+                                  "pending",
+                                  "in_flight",
+                                  "fired",
+                                  "failed",
+                                  "exhausted",
+                                  null
+                                ]
+                              },
+                              "webhook_attempt_count": {
+                                "type": "integer"
+                              },
+                              "thread_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "uuid",
+                                "description": "Conversation thread this message belongs to. Fetch\n`/threads/{thread_id}` for the full ordered thread. NULL on\nmessages received before threading was enabled.\n"
+                              },
+                              "presence_control": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "verified",
+                                          "pending",
+                                          "rejected"
+                                        ]
+                                      },
+                                      "valid_for_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 600000
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "valid_for_ms"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "automation_headers": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "description": "What the message declared about being automated, verbatim:\n`List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),\n`Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message\ndeclared none, and on messages received before these headers\nwere captured, so a null value is not evidence that a person\nsent the message.\n",
+                                "properties": {
+                                  "list_unsubscribe": {
+                                    "type": "string"
+                                  },
+                                  "list_id": {
+                                    "type": "string"
+                                  },
+                                  "precedence": {
+                                    "type": "string"
+                                  },
+                                  "auto_submitted": {
+                                    "type": "string"
+                                  }
+                                },
+                                "additionalProperties": true
+                              },
+                              "reply_count": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "Number of replies recorded against this email: sends whose\n`in_reply_to_email_id` is this email, the same linkage that populates\n`EmailDetail.replies`, excluding sends that never went out (status\n`gate_denied`, `agent_failed`, `canceled`). Queued and scheduled\nreplies count. Under an agent connection, only the replies that agent\ncan see in `EmailDetail.replies`. Unlike `awaiting`, this counts\nreplies to this one email, not to the thread.\n"
+                              },
+                              "last_replied_at": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time",
+                                "description": "`created_at` of the latest reply counted in `reply_count`, or\nnull when `reply_count` is 0.\n"
+                              },
+                              "awaiting": {
+                                "type": "string",
+                                "enum": [
+                                  "you",
+                                  "them"
+                                ],
+                                "description": "Whose turn it is in this email's conversation. A send counts as a\nreply unless its status is `gate_denied`, `agent_failed`, `canceled`\n(queued and scheduled replies count: they are committed to go). For\nan email with a `thread_id`: `them` when the thread's latest counted\noutbound send (by send `created_at`, including any counted reply to\nthis email itself) is at or after the thread's latest inbound message\n(by `received_at`); otherwise `you`. For an email with no\n`thread_id`: `them` when it has at least one counted reply\n(`reply_count > 0` for an API key), otherwise `you`. It is a\nthread-level fact: every email in a thread carries the same value, and\nit reflects sends made by any credential in the organization,\nincluding other agent connections. It changes without a new inbound\nmessage, for example when a reply is sent, a queued reply fails, a\nscheduled reply is canceled, or a message is deleted, and is always\ncurrent when read.\n"
+                              },
+                              "automated": {
+                                "type": "boolean",
+                                "description": "Whether the message was sent by a machine rather than a person.\nAn inbound email is `automated` when any of these holds, decided once\nwhen it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);\n`no_identifiable_sender` (no address in the envelope or From);\n`own_address` (a sender address is exactly one of the addresses the\nmail was delivered to; sharing a domain with the recipient is not\nenough, so a colleague or another agent in the organization is not\nautomated);\n`mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);\n`auto_submitted` (Auto-Submitted with any keyword but `no`, an\nempty one included);\n`precedence` (Precedence bulk, list, junk or auto_reply);\n`list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id\npresent); `auto_response_suppress` (X-Auto-Response-Suppress asks\nfor no automatic reply: All, OOF or AutoReply);\n`failed_recipients` (X-Failed-Recipients present, a bounce);\n`report` (a delivery, feedback or disposition report). Mail\nPrimitive's own automatic responders decline to answer is always\n`automated`. The header rules only see headers captured at ingest, so\nolder mail may lack them. This is loop and noise protection, not\nsender authentication.\n"
+                              },
+                              "automated_reasons": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
+                              },
+                              "from_verified": {
+                                "type": [
+                                  "boolean",
+                                  "null"
+                                ],
+                                "description": "True when the From header address, `from_header_email`, passed DMARC for its domain on arrival (aligned SPF or DKIM); decided once, at receipt. It is about the From header, never the envelope: `sender`, the `from` parameter and `from:` term, and the change feed's `address` match the envelope sender, which can differ. It proves the domain, not the mailbox. False with no From header address, when authentication failed or was not attempted (a delivery between Primitive mailboxes counts only when it passed DMARC too), and for mail stored before the verdict was recorded. Null on sent rows in search results. Not a spam or safety judgement."
+                              },
+                              "from_header_email": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "The From header address, lowercased, that `from_verified` is about; null when the message had none. Unlike `sender` it is never the envelope address."
+                              },
+                              "repeat": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+                                "properties": {
+                                  "repeat_id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "sequence": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  }
+                                },
+                                "required": [
+                                  "repeat_id",
+                                  "sequence"
+                                ]
+                              },
+                              "sender_member": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+                                "properties": {
+                                  "address": {
+                                    "type": "string",
+                                    "format": "email"
+                                  },
+                                  "user_id": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "address",
+                                  "user_id",
+                                  "name"
+                                ]
+                              },
+                              "fyi": {
+                                "type": "boolean",
+                                "description": "True when the email is an informational signal (an acknowledgement, read, working or typing signal) and nothing else, so it needs no answer, not even another informational reply. Never true for mail from the reader's owner. Older servers omit it.\n"
+                              },
+                              "interaction_hint": {
+                                "type": "string",
+                                "description": "How to place this email in a timeline without downloading it: `status`, `card`, `none` or `pending`. Not declared as a closed enum so that a value added later does not fail decoding. Decided once by the server from the message's authoritative `interaction.json` part, and only when a passing DKIM signature covering From and Content-Type authenticates the From that wrote it; the `X-Primitive-Interaction` header is never used, so an unsigned or forged message is always `none`. `status`: a pure status signal (`read`, `working`, `typing`, or an `ack` in the strict signal shape), shown as a property of the message it is about rather than as a row. `card`: an interaction that renders as its own timeline item (for example `ack-request`, `x402.payment`, `wake.dispatch`, `primitive.contact`, `repeat.tick`, `repeat.stop`). `none`: ordinary mail, including any interaction kind not listed. `pending`: the email has not finished processing; read it again later. Email processed before the field existed is `none`. Treat an unfamiliar value as `none`. Older servers omit it.\n"
+                              },
+                              "interaction_kind": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "The `<protocol>/<version>` that `interaction_hint` was decided from (for example `repeat.tick/1` or `read/1`) when `interaction_hint` is `status` or `card`; null otherwise.\n"
+                              },
+                              "interaction_candidate": {
+                                "type": "boolean",
+                                "description": "UNVERIFIED early signal for the `pending` window: true when the raw message carries an `X-Primitive-Interaction` header or a MIME part named `interaction.json`, recorded before any signature is checked. Use it only to decide, while `interaction_hint` is `pending`, whether to show a placeholder instead of the raw text. It is never evidence of an interaction: anyone can set that header or name a part that way, so it must not grant trust or select an interaction kind. Ignore it once `interaction_hint` is anything other than `pending`.\n"
+                              },
+                              "relay": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "description": "Set when the message reached Primitive through a Primitive mail relay. Null for other mail. The field may be absent; treat a missing value the same as null.",
+                                "properties": {
+                                  "hostname": {
+                                    "type": "string",
+                                    "description": "The relay hostname the domain's MX record points at."
+                                  },
+                                  "via": {
+                                    "type": "string",
+                                    "description": "How the message arrived. Currently always `mail_relay`. Treat an unfamiliar value as one added after your client was built."
+                                  }
+                                },
+                                "required": [
+                                  "hostname",
+                                  "via"
+                                ]
+                              },
+                              "from_name": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Display name from the `From:` header, decoded for display:\nRFC 2047 encoded words are decoded in their declared charset\nand folded lines are joined (e.g. `Dana Rúiz` for\n`=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when\nthe header carries no display name, and may be absent; treat\na missing value the same as null.\n\nFor display only: the sender chooses this name freely, so\nidentify the sender by `from_email`, never by this name.\n"
+                              },
+                              "body_text": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "With `include=body_text`: the plain-text body, cut as `truncated_fields` says."
+                              },
+                              "body_html": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "With `include=body_html`: the HTML body, cut as `truncated_fields` says."
+                              },
+                              "headers": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+                                    "properties": {
+                                      "from": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "to": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "cc": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "bcc": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "reply_to": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "in_reply_to": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "references": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "automation": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "additionalProperties": {
+                                          "type": "string"
+                                        },
+                                        "description": "Received mail only."
+                                      }
+                                    },
+                                    "required": [
+                                      "from",
+                                      "to",
+                                      "cc",
+                                      "bcc",
+                                      "reply_to",
+                                      "in_reply_to",
+                                      "references",
+                                      "automation"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "With `include=headers`: stored addressing and threading headers."
+                              },
+                              "attachments": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "additionalProperties": true
+                                },
+                                "description": "With `include=attachments`: attachment metadata as the detail read reports it. Never the bytes."
+                              },
+                              "truncated": {
+                                "type": "boolean",
+                                "description": "With `include`: true when a body on this row was cut or left out."
+                              },
+                              "truncated_fields": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "body_text",
+                                    "body_html"
+                                  ]
+                                },
+                                "description": "With `include`: the body fields on this row that were cut or left out."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "status",
+                              "sender",
+                              "recipient",
+                              "domain",
+                              "created_at",
+                              "received_at",
+                              "webhook_attempt_count",
+                              "reply_count",
+                              "last_replied_at",
+                              "awaiting",
+                              "automated",
+                              "automated_reasons"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "direction"
+                            ],
+                            "properties": {
+                              "direction": {
+                                "type": "string",
+                                "enum": [
+                                  "inbound"
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "description": "A sent message inlined by `expand=message`, as GET /sent-emails returns it.",
+                        "allOf": [
+                          {
+                            "type": "object",
+                            "description": "List-row projection of a sent-email record. Drops\n`body_text` and `body_html` to keep paginated responses\nsmall; fetch /sent-emails/{id} for the full record with\nbodies.\n",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
+                                "enum": [
+                                  "queued",
+                                  "submitted_to_agent",
+                                  "agent_failed",
+                                  "gate_denied",
+                                  "unknown",
+                                  "delivered",
+                                  "bounced",
+                                  "deferred",
+                                  "wait_timeout",
+                                  "scheduled",
+                                  "canceled"
+                                ]
+                              },
+                              "status_changed_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Timestamp of the most recent status transition.\nPolling clients should treat `status='queued'` AND\n`status_changed_at` older than 5 minutes as\n\"stuck-queued\" (the post-tx UPDATE failed and the\nactual delivery state is recoverable from on-box logs\nvia `queue_id` when populated, or `request_id`).\n"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "client_idempotency_key": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Effective idempotency key used for this send. If the\ncaller passed the `Idempotency-Key` header, this is\nthat value; otherwise it's a server-derived hash of\nthe canonical request payload.\n"
+                              },
+                              "content_hash": {
+                                "type": "string",
+                                "description": "Stable hash of the canonical send payload."
+                              },
+                              "from_header": {
+                                "type": "string",
+                                "description": "Raw `From:` header as sent on the wire, including any\ndisplay name (e.g. `\"Acme Support\" <agent@acme.test>`).\n"
+                              },
+                              "from_address": {
+                                "type": "string",
+                                "description": "Bare email address parsed from `from_header`."
+                              },
+                              "to_header": {
+                                "type": "string",
+                                "description": "Raw `To:` header as sent on the wire, including any\ndisplay name.\n"
+                              },
+                              "to_address": {
+                                "type": "string",
+                                "description": "Bare email address parsed from `to_header`."
+                              },
+                              "recipient_count": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "minimum": 0,
+                                "description": "Every recipient of the send, To, Cc and Bcc together, each address counted once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not the sender, because the count would reveal Bcc recipients. The `sent_email` object of the `sent_email.*` webhook events carries the same field."
+                              },
+                              "subject": {
+                                "type": "string"
+                              },
+                              "body_size_bytes": {
+                                "type": "integer",
+                                "description": "Total UTF-8 byte length of `body_text` + `body_html`.\nSurfaced on the list endpoint so callers can see \"this\nrow has a 4MB body\" without fetching it.\n"
+                              },
+                              "content_discarded_at": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time",
+                                "description": "Timestamp at which the bodies were discarded by an\nentitlement-driven retention policy. Null when bodies\nare still present. The detail endpoint returns\nnull-valued `body_text`/`body_html` for discarded rows.\n"
+                              },
+                              "message_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Wire-level Message-ID assigned to the outbound message\n(RFC 5322). Null on rows that never reached signing\n(queued, gate_denied, agent_failed before signing).\n"
+                              },
+                              "in_reply_to": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Wire-level In-Reply-To header value, when this send\nwas a reply.\n"
+                              },
+                              "email_references": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Wire-level References header value, when this send\nwas a reply.\n"
+                              },
+                              "in_reply_to_email_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "uuid",
+                                "description": "Reference to the inbound `emails.id` that this send\nreplied to, when known. Populated when the caller used\n/emails/{id}/reply or when /send-mail's `in_reply_to`\nmatched a stored inbound message_id in the same org.\n"
+                              },
+                              "thread_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "uuid",
+                                "description": "Conversation thread this send belongs to. A reply inherits\nthe thread of the inbound it answers; a fresh send starts a\nnew thread. Fetch `/threads/{thread_id}` for the full\nordered thread (inbound + outbound interleaved). NULL on\ngate-denied sends and on sends created before threading was\nenabled.\n"
+                              },
+                              "queue_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Message identifier assigned by Primitive's outbound\nrelay once the agent accepts the message. Null on\nqueued, gate_denied, and agent_failed rows.\n"
+                              },
+                              "smtp_response_code": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ],
+                                "description": "Receiver's 3-digit SMTP code (e.g. 250, 550, 451).\nPopulated on terminal delivery statuses; may be null\non a deferred where the agent never got an SMTP-level\nresponse (TCP refused, DNS failed, TLS handshake\nfailed). `smtp_response_text` still carries Postfix's\ndescriptive text in those cases.\n"
+                              },
+                              "smtp_response_text": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Free-form text portion of the receiver's SMTP\nresponse. The most useful debugging signal on a\n`bounced` or `deferred` row.\n"
+                              },
+                              "smtp_enhanced_status_code": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "RFC 3463 enhanced status code (e.g. `5.1.1` for \"Bad\ndestination mailbox address\"). Distinct from\n`smtp_response_code`: the basic 3-digit code is coarse\n(550 = \"permanent failure\"), the enhanced code is\nfiner-grained.\n"
+                              },
+                              "dkim_selector": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "DKIM selector used to sign the outbound message.\nPublic DNS data; useful for diagnosing why a downstream\nverifier rejected the signature.\n"
+                              },
+                              "dkim_domain": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "DKIM signing domain."
+                              },
+                              "error_code": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Stable public error code on `agent_failed` rows. The\nagent's internal codes are remapped to a stable public\ntaxonomy (see `publicAgentError` in the server) so this\nfield is safe to branch on across agent versions.\n"
+                              },
+                              "error_message": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Free-form error message accompanying `error_code`."
+                              },
+                              "gates": {
+                                "type": [
+                                  "array",
+                                  "null"
+                                ],
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string",
+                                      "enum": [
+                                        "send_to_confirmed_domains",
+                                        "send_to_known_addresses"
+                                      ],
+                                      "description": "Public recipient-scope gate name that denied the send."
+                                    },
+                                    "reason": {
+                                      "type": "string",
+                                      "enum": [
+                                        "domain_not_confirmed",
+                                        "recipient_unauthenticated",
+                                        "recipient_not_known"
+                                      ],
+                                      "description": "Stable machine-readable denial reason."
+                                    },
+                                    "message": {
+                                      "type": "string",
+                                      "description": "Human-readable explanation of the gate denial."
+                                    },
+                                    "subject": {
+                                      "type": "string",
+                                      "description": "Domain or address the gate evaluated."
+                                    },
+                                    "fix": {
+                                      "type": "object",
+                                      "properties": {
+                                        "action": {
+                                          "type": "string",
+                                          "enum": [
+                                            "confirm_domain",
+                                            "sender_must_fix_authentication",
+                                            "wait_for_inbound"
+                                          ],
+                                          "description": "Suggested next action for the caller."
+                                        },
+                                        "subject": {
+                                          "type": "string",
+                                          "description": "Entity the action applies to."
+                                        }
+                                      },
+                                      "required": [
+                                        "action",
+                                        "subject"
+                                      ]
+                                    },
+                                    "docs_url": {
+                                      "type": "string",
+                                      "description": "Public docs URL with more context."
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "reason",
+                                    "message",
+                                    "subject"
+                                  ]
+                                },
+                                "description": "Gate-denial detail on `gate_denied` rows. Mirrors the\nsynchronous /send-mail 403 contract so a caller's\nGateDenial handler is the same across live denies and\nhistorical lookups. Null on every other status.\n"
+                              },
+                              "request_id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n"
+                              },
+                              "scheduled_at": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time",
+                                "description": "Requested execution time for a scheduled send. Kept\nafter execution as the historical schedule; null on\nordinary immediate sends.\n"
+                              },
+                              "canceled_at": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time",
+                                "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
+                              },
+                              "presence_control": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "status": {
+                                        "type": "string",
+                                        "enum": [
+                                          "verified",
+                                          "pending",
+                                          "rejected"
+                                        ]
+                                      },
+                                      "valid_for_ms": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 600000
+                                      }
+                                    },
+                                    "required": [
+                                      "status",
+                                      "valid_for_ms"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "repeat": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+                                "properties": {
+                                  "repeat_id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "sequence": {
+                                    "type": "integer",
+                                    "minimum": 1
+                                  }
+                                },
+                                "required": [
+                                  "repeat_id",
+                                  "sequence"
+                                ]
+                              },
+                              "sender_member": {
+                                "type": [
+                                  "object",
+                                  "null"
+                                ],
+                                "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+                                "properties": {
+                                  "address": {
+                                    "type": "string",
+                                    "format": "email"
+                                  },
+                                  "user_id": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "address",
+                                  "user_id",
+                                  "name"
+                                ]
+                              },
+                              "body_text": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+                              },
+                              "body_html": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+                              },
+                              "headers": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+                                    "properties": {
+                                      "from": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "to": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "cc": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "bcc": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "reply_to": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "in_reply_to": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "references": {
+                                        "type": [
+                                          "array",
+                                          "null"
+                                        ],
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "automation": {
+                                        "type": [
+                                          "object",
+                                          "null"
+                                        ],
+                                        "additionalProperties": {
+                                          "type": "string"
+                                        },
+                                        "description": "Received mail only."
+                                      }
+                                    },
+                                    "required": [
+                                      "from",
+                                      "to",
+                                      "cc",
+                                      "bcc",
+                                      "reply_to",
+                                      "in_reply_to",
+                                      "references",
+                                      "automation"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "With `include=headers`: stored addressing and threading headers."
+                              },
+                              "attachments": {
+                                "type": "array",
+                                "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+                                "items": {
+                                  "type": "object",
+                                  "description": "Metadata for one submitted inline attachment.",
+                                  "additionalProperties": true,
+                                  "properties": {
+                                    "filename": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    },
+                                    "content_type": {
+                                      "type": "string"
+                                    },
+                                    "size_bytes": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "sha256": {
+                                      "type": "string"
+                                    },
+                                    "part_index": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "tar_path": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "filename",
+                                    "content_type",
+                                    "size_bytes",
+                                    "sha256",
+                                    "part_index",
+                                    "tar_path"
+                                  ]
+                                }
+                              },
+                              "truncated": {
+                                "type": "boolean",
+                                "description": "With `include`: true when a body on this row was cut or left out."
+                              },
+                              "truncated_fields": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "body_text",
+                                    "body_html"
+                                  ]
+                                },
+                                "description": "With `include`: the body fields on this row that were cut or left out."
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "status",
+                              "status_changed_at",
+                              "created_at",
+                              "updated_at",
+                              "content_hash",
+                              "from_header",
+                              "from_address",
+                              "to_header",
+                              "to_address",
+                              "subject",
+                              "body_size_bytes"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "required": [
+                              "direction"
+                            ],
+                            "properties": {
+                              "direction": {
+                                "type": "string",
+                                "enum": [
+                                  "outbound"
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    "discriminator": {
+                      "propertyName": "direction",
+                      "mapping": {
+                        "inbound": "#/components/schemas/ChangeInboundMessage",
+                        "outbound": "#/components/schemas/ChangeOutboundMessage"
+                      }
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Present only when the request sets `expand=message`. For `email.visible`, `email.updated`, `sent_email.created`, `sent_email.updated`: the message as it reads at the time of this response (not at the time of the change), exactly as the list endpoints return it, marked by `direction`. Null for every other kind, and when the message is no longer readable by this credential (deleted, or withdrawn from view after the change)."
+              }
+            }
+          },
+          "description": "Oldest first, in commit order."
+        },
+        "next_cursor": {
+          "type": "string",
+          "description": "Always present. Send it unchanged as `since` next time, and store it only after applying the page. It is exactly the `since` you sent when nothing at all happened after it; it moves past changes this credential cannot see, so the page can be empty with a new cursor."
+        },
+        "has_more": {
+          "type": "boolean",
+          "description": "More changes are already pending: call again at once, without waiting."
+        },
+        "baseline": {
+          "type": "boolean",
+          "description": "True only for a `since=start` request, whose page is always empty."
+        }
+      }
+    },
+    "sdkName": "listChanges",
+    "summary": "Long-poll what changed",
+    "tag": "Changes",
+    "tagCommand": "changes"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": false,
     "command": "cli-logout",
     "description": "Revokes the OAuth grant used to authenticate the request. API-key\nauthenticated legacy logout requests succeed without deleting server API\nkeys so old local CLI state can be cleared safely.\n",
     "hasJsonBody": true,
@@ -8023,6 +9232,17 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           },
           "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
         },
+        "from_verified": {
+          "type": "boolean",
+          "description": "Whether the From header domain was authenticated when the message arrived. See EmailSummary.from_verified."
+        },
+        "from_header_email": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The From header address, lowercased, that `from_verified` is about; null when the message had none. Unlike `sender` it is never the envelope address."
+        },
         "repeat": {
           "type": [
             "object",
@@ -8378,6 +9598,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
+        "description": "Only return emails whose `from_verified` (the From domain was authenticated on arrival; see the field) has this value. Combines with every other filter and with both `cursor` and `since`.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "from_verified",
+        "required": false,
+        "type": "string"
+      },
+      {
         "description": "Exact case-insensitive delivered recipient mailbox, applied before pagination. Combines with existing filters and cursors; does not search message text.",
         "enum": null,
         "name": "recipient",
@@ -8391,6 +9621,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "false"
         ],
         "name": "exclude_fyi",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.",
+        "enum": null,
+        "name": "include",
         "required": false,
         "type": "string"
       }
@@ -8581,6 +9818,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
             },
             "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
           },
+          "from_verified": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "True when the From header address, `from_header_email`, passed DMARC for its domain on arrival (aligned SPF or DKIM); decided once, at receipt. It is about the From header, never the envelope: `sender`, the `from` parameter and `from:` term, and the change feed's `address` match the envelope sender, which can differ. It proves the domain, not the mailbox. False with no From header address, when authentication failed or was not attempted (a delivery between Primitive mailboxes counts only when it passed DMARC too), and for mail stored before the verdict was recorded. Null on sent rows in search results. Not a spam or safety judgement."
+          },
+          "from_header_email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The From header address, lowercased, that `from_verified` is about; null when the message had none. Unlike `sender` it is never the envelope address."
+          },
           "repeat": {
             "type": [
               "object",
@@ -8675,6 +9926,137 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "null"
             ],
             "description": "Display name from the `From:` header, decoded for display:\nRFC 2047 encoded words are decoded in their declared charset\nand folded lines are joined (e.g. `Dana Rúiz` for\n`=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when\nthe header carries no display name, and may be absent; treat\na missing value the same as null.\n\nFor display only: the sender chooses this name freely, so\nidentify the sender by `from_email`, never by this name.\n"
+          },
+          "body_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "With `include=body_text`: the plain-text body, cut as `truncated_fields` says."
+          },
+          "body_html": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "With `include=body_html`: the HTML body, cut as `truncated_fields` says."
+          },
+          "headers": {
+            "anyOf": [
+              {
+                "type": "object",
+                "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+                "properties": {
+                  "from": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "to": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cc": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "bcc": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reply_to": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "in_reply_to": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "references": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "automation": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Received mail only."
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "cc",
+                  "bcc",
+                  "reply_to",
+                  "in_reply_to",
+                  "references",
+                  "automation"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `include=headers`: stored addressing and threading headers."
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "With `include=attachments`: attachment metadata as the detail read reports it. Never the bytes."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "With `include`: true when a body on this row was cut or left out."
+          },
+          "truncated_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "body_text",
+                "body_html"
+              ]
+            },
+            "description": "With `include`: the body fields on this row that were cut or left out."
           }
         },
         "required": [
@@ -8753,7 +10135,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     "pathParams": [],
     "queryParams": [
       {
-        "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term must match. A term is a word, a `\"quoted phrase\"`, or a `field:value` filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`, `automated:`, `header:`, `has-header:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:` terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an unterminated quote, or only stop words is a `validation_error` that says what to change; it is never silently reinterpreted. Alternatives chain (`invoice OR receipt OR \"past due\"`), and each one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR` next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead); an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a search cannot exclude a term); and an alternative with no searchable word once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT` itself, write it in lower case or in double quotes (`\"OR\"`). With `prefix=true`, a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a URL, put it in double quotes. `header:Name=Value` matches mail whose header `Name` has exactly `Value` (name and value case-insensitive, the whole value, quote the term for a value with spaces: `header:\"List-Id=Team news <news.example.com>\"`); `has-header:Name` matches mail that carries header `Name` with any value. Neither can be an `OR` alternative. Header filters read a stored copy of each message's headers: for received mail every header except trace and signature headers (`Received`, `DKIM-Signature`, `ARC-*`, `Authentication-Results` and similar) and credential-like names (a word such as `auth`, `token`, `key`, `secret`, `cookie`, `session`, `bearer`, `jwt` or `hmac`, including joined forms such as `AuthToken` or `SessionId`), at most 100 headers and 16 KiB per message, each value cut to 1024 bytes; for sent mail the `headers` the request set. A filter on a header that is never stored is a `validation_error`. Mail stored before header search was available has no stored headers and is not matched.",
+        "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term must match. A term is a word, a `\"quoted phrase\"`, or a `field:value` filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`, `automated:`, `header:`, `has-header:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:` terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an unterminated quote, or only stop words is a `validation_error` that says what to change; it is never silently reinterpreted. Alternatives chain (`invoice OR receipt OR \"past due\"`), and each one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR` next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead); an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a search cannot exclude a term); and an alternative with no searchable word once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT` itself, write it in lower case or in double quotes (`\"OR\"`). With `prefix=true`, a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a URL, put it in double quotes. Supports `from_verified:true` and `from_verified:false` to filter on the `from_verified` field. `header:Name=Value` matches mail whose header `Name` has exactly `Value` (name and value case-insensitive, the whole value, quote the term for a value with spaces: `header:\"List-Id=Team news <news.example.com>\"`); `has-header:Name` matches mail that carries header `Name` with any value. Neither can be an `OR` alternative. Header filters read a stored copy of each message's headers: for received mail every header except trace and signature headers (`Received`, `DKIM-Signature`, `ARC-*`, `Authentication-Results` and similar) and credential-like names (a word such as `auth`, `token`, `key`, `secret`, `cookie`, `session`, `bearer`, `jwt` or `hmac`, including joined forms such as `AuthToken` or `SessionId`), at most 100 headers and 16 KiB per message, each value cut to 1024 bytes; for sent mail the `headers` the request set. A filter on a header that is never stored is a `validation_error`. Mail stored before header search was available has no stored headers and is not matched.",
         "enum": null,
         "name": "q",
         "required": false,
@@ -8867,6 +10249,16 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
+        "description": "Only return emails whose `from_verified` (the From domain was authenticated on arrival; see the field) has this value. Also available in `q` as `from_verified:true` or `from_verified:false`.",
+        "enum": [
+          "true",
+          "false"
+        ],
+        "name": "from_verified",
+        "required": false,
+        "type": "string"
+      },
+      {
         "description": "Sort mode. Defaults to relevance when a text query is present,\notherwise `received_at_desc`.\n",
         "enum": [
           "relevance",
@@ -8954,6 +10346,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
           "any"
         ],
         "name": "direction",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.",
+        "enum": null,
+        "name": "include",
         "required": false,
         "type": "string"
       }
@@ -9146,6 +10545,20 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 },
                 "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
               },
+              "from_verified": {
+                "type": [
+                  "boolean",
+                  "null"
+                ],
+                "description": "True when the From header address, `from_header_email`, passed DMARC for its domain on arrival (aligned SPF or DKIM); decided once, at receipt. It is about the From header, never the envelope: `sender`, the `from` parameter and `from:` term, and the change feed's `address` match the envelope sender, which can differ. It proves the domain, not the mailbox. False with no From header address, when authentication failed or was not attempted (a delivery between Primitive mailboxes counts only when it passed DMARC too), and for mail stored before the verdict was recorded. Null on sent rows in search results. Not a spam or safety judgement."
+              },
+              "from_header_email": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The From header address, lowercased, that `from_verified` is about; null when the message had none. Unlike `sender` it is never the envelope address."
+              },
               "repeat": {
                 "type": [
                   "object",
@@ -9240,6 +10653,137 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "null"
                 ],
                 "description": "Display name from the `From:` header, decoded for display:\nRFC 2047 encoded words are decoded in their declared charset\nand folded lines are joined (e.g. `Dana Rúiz` for\n`=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when\nthe header carries no display name, and may be absent; treat\na missing value the same as null.\n\nFor display only: the sender chooses this name freely, so\nidentify the sender by `from_email`, never by this name.\n"
+              },
+              "body_text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "With `include=body_text`: the plain-text body, cut as `truncated_fields` says."
+              },
+              "body_html": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "With `include=body_html`: the HTML body, cut as `truncated_fields` says."
+              },
+              "headers": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+                    "properties": {
+                      "from": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "to": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "cc": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "bcc": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "reply_to": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "in_reply_to": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "references": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "automation": {
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Received mail only."
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "to",
+                      "cc",
+                      "bcc",
+                      "reply_to",
+                      "in_reply_to",
+                      "references",
+                      "automation"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "With `include=headers`: stored addressing and threading headers."
+              },
+              "attachments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "description": "With `include=attachments`: attachment metadata as the detail read reports it. Never the bytes."
+              },
+              "truncated": {
+                "type": "boolean",
+                "description": "With `include`: true when a body on this row was cut or left out."
+              },
+              "truncated_fields": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "body_text",
+                    "body_html"
+                  ]
+                },
+                "description": "With `include`: the body fields on this row that were cut or left out."
               }
             },
             "required": [
@@ -18255,6 +19799,173 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "user_id",
                 "name"
               ]
+            },
+            "body_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+            },
+            "body_html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            },
+            "headers": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+                  "properties": {
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "cc": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "bcc": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "reply_to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "in_reply_to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "references": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "automation": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Received mail only."
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "cc",
+                    "bcc",
+                    "reply_to",
+                    "in_reply_to",
+                    "references",
+                    "automation"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "With `include=headers`: stored addressing and threading headers."
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+              "items": {
+                "type": "object",
+                "description": "Metadata for one submitted inline attachment.",
+                "additionalProperties": true,
+                "properties": {
+                  "filename": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sha256": {
+                    "type": "string"
+                  },
+                  "part_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tar_path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "filename",
+                  "content_type",
+                  "size_bytes",
+                  "sha256",
+                  "part_index",
+                  "tar_path"
+                ]
+              }
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "With `include`: true when a body on this row was cut or left out."
+            },
+            "truncated_fields": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "body_text",
+                  "body_html"
+                ]
+              },
+              "description": "With `include`: the body fields on this row that were cut or left out."
             }
           },
           "required": [
@@ -18495,6 +20206,801 @@ export const operationManifest: PrimitiveOperationManifest[] = [
     },
     "sdkName": "cancelSentEmail",
     "summary": "Cancel a scheduled send",
+    "tag": "Sending",
+    "tagCommand": "sending"
+  },
+  {
+    "binaryResponse": false,
+    "bodyRequired": true,
+    "command": "cancel-sent-email-by-idempotency-key",
+    "description": "Cancels the still-scheduled send created with this `Idempotency-Key` (matched exactly), as `POST /sent-emails/{id}/cancel` does, and releases the key. 404 `not_found`: no send this credential can act on was created with the key. 409 `not_scheduled`: the send holding the key is no longer scheduled; `error.details` names its `sent_email_id` and `status` (`canceled` if already canceled). Pass `created_before` on a retry so it cannot reach a newer send that reused the released key. A connected agent can cancel any scheduled send from its own address, whoever created it, and no other.",
+    "hasJsonBody": true,
+    "method": "POST",
+    "operationId": "cancelSentEmailByIdempotencyKey",
+    "path": "/sent-emails/cancel",
+    "pathParams": [],
+    "queryParams": [],
+    "requestSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "idempotency_key"
+      ],
+      "properties": {
+        "idempotency_key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "pattern": "^[\\x21-\\x7e]+$",
+          "description": "The `Idempotency-Key` the send was created with."
+        },
+        "created_before": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Only consider sends created at or before this instant, such as when you first asked to cancel."
+        }
+      }
+    },
+    "responseSchema": {
+      "description": "Full sent-email record, including `body_text` and\n`body_html`. Returned by /sent-emails/{id}.\n",
+      "allOf": [
+        {
+          "type": "object",
+          "description": "List-row projection of a sent-email record. Drops\n`body_text` and `body_html` to keep paginated responses\nsmall; fetch /sent-emails/{id} for the full record with\nbodies.\n",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
+              "enum": [
+                "queued",
+                "submitted_to_agent",
+                "agent_failed",
+                "gate_denied",
+                "unknown",
+                "delivered",
+                "bounced",
+                "deferred",
+                "wait_timeout",
+                "scheduled",
+                "canceled"
+              ]
+            },
+            "status_changed_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Timestamp of the most recent status transition.\nPolling clients should treat `status='queued'` AND\n`status_changed_at` older than 5 minutes as\n\"stuck-queued\" (the post-tx UPDATE failed and the\nactual delivery state is recoverable from on-box logs\nvia `queue_id` when populated, or `request_id`).\n"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "client_idempotency_key": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Effective idempotency key used for this send. If the\ncaller passed the `Idempotency-Key` header, this is\nthat value; otherwise it's a server-derived hash of\nthe canonical request payload.\n"
+            },
+            "content_hash": {
+              "type": "string",
+              "description": "Stable hash of the canonical send payload."
+            },
+            "from_header": {
+              "type": "string",
+              "description": "Raw `From:` header as sent on the wire, including any\ndisplay name (e.g. `\"Acme Support\" <agent@acme.test>`).\n"
+            },
+            "from_address": {
+              "type": "string",
+              "description": "Bare email address parsed from `from_header`."
+            },
+            "to_header": {
+              "type": "string",
+              "description": "Raw `To:` header as sent on the wire, including any\ndisplay name.\n"
+            },
+            "to_address": {
+              "type": "string",
+              "description": "Bare email address parsed from `to_header`."
+            },
+            "recipient_count": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "description": "Every recipient of the send, To, Cc and Bcc together, each address counted once: the size of `to_addresses`, `cc` and `bcc` combined without duplicates. On a mail relay send `bcc` lists every hidden recipient. Null when the request uses an address-bound agent connection key whose address is not the sender, because the count would reveal Bcc recipients. The `sent_email` object of the `sent_email.*` webhook events carries the same field."
+            },
+            "subject": {
+              "type": "string"
+            },
+            "body_size_bytes": {
+              "type": "integer",
+              "description": "Total UTF-8 byte length of `body_text` + `body_html`.\nSurfaced on the list endpoint so callers can see \"this\nrow has a 4MB body\" without fetching it.\n"
+            },
+            "content_discarded_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Timestamp at which the bodies were discarded by an\nentitlement-driven retention policy. Null when bodies\nare still present. The detail endpoint returns\nnull-valued `body_text`/`body_html` for discarded rows.\n"
+            },
+            "message_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level Message-ID assigned to the outbound message\n(RFC 5322). Null on rows that never reached signing\n(queued, gate_denied, agent_failed before signing).\n"
+            },
+            "in_reply_to": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level In-Reply-To header value, when this send\nwas a reply.\n"
+            },
+            "email_references": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Wire-level References header value, when this send\nwas a reply.\n"
+            },
+            "in_reply_to_email_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Reference to the inbound `emails.id` that this send\nreplied to, when known. Populated when the caller used\n/emails/{id}/reply or when /send-mail's `in_reply_to`\nmatched a stored inbound message_id in the same org.\n"
+            },
+            "thread_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid",
+              "description": "Conversation thread this send belongs to. A reply inherits\nthe thread of the inbound it answers; a fresh send starts a\nnew thread. Fetch `/threads/{thread_id}` for the full\nordered thread (inbound + outbound interleaved). NULL on\ngate-denied sends and on sends created before threading was\nenabled.\n"
+            },
+            "queue_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Message identifier assigned by Primitive's outbound\nrelay once the agent accepts the message. Null on\nqueued, gate_denied, and agent_failed rows.\n"
+            },
+            "smtp_response_code": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Receiver's 3-digit SMTP code (e.g. 250, 550, 451).\nPopulated on terminal delivery statuses; may be null\non a deferred where the agent never got an SMTP-level\nresponse (TCP refused, DNS failed, TLS handshake\nfailed). `smtp_response_text` still carries Postfix's\ndescriptive text in those cases.\n"
+            },
+            "smtp_response_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Free-form text portion of the receiver's SMTP\nresponse. The most useful debugging signal on a\n`bounced` or `deferred` row.\n"
+            },
+            "smtp_enhanced_status_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "RFC 3463 enhanced status code (e.g. `5.1.1` for \"Bad\ndestination mailbox address\"). Distinct from\n`smtp_response_code`: the basic 3-digit code is coarse\n(550 = \"permanent failure\"), the enhanced code is\nfiner-grained.\n"
+            },
+            "dkim_selector": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "DKIM selector used to sign the outbound message.\nPublic DNS data; useful for diagnosing why a downstream\nverifier rejected the signature.\n"
+            },
+            "dkim_domain": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "DKIM signing domain."
+            },
+            "error_code": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Stable public error code on `agent_failed` rows. The\nagent's internal codes are remapped to a stable public\ntaxonomy (see `publicAgentError` in the server) so this\nfield is safe to branch on across agent versions.\n"
+            },
+            "error_message": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Free-form error message accompanying `error_code`."
+            },
+            "gates": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "enum": [
+                      "send_to_confirmed_domains",
+                      "send_to_known_addresses"
+                    ],
+                    "description": "Public recipient-scope gate name that denied the send."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "domain_not_confirmed",
+                      "recipient_unauthenticated",
+                      "recipient_not_known"
+                    ],
+                    "description": "Stable machine-readable denial reason."
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Human-readable explanation of the gate denial."
+                  },
+                  "subject": {
+                    "type": "string",
+                    "description": "Domain or address the gate evaluated."
+                  },
+                  "fix": {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "confirm_domain",
+                          "sender_must_fix_authentication",
+                          "wait_for_inbound"
+                        ],
+                        "description": "Suggested next action for the caller."
+                      },
+                      "subject": {
+                        "type": "string",
+                        "description": "Entity the action applies to."
+                      }
+                    },
+                    "required": [
+                      "action",
+                      "subject"
+                    ]
+                  },
+                  "docs_url": {
+                    "type": "string",
+                    "description": "Public docs URL with more context."
+                  }
+                },
+                "required": [
+                  "name",
+                  "reason",
+                  "message",
+                  "subject"
+                ]
+              },
+              "description": "Gate-denial detail on `gate_denied` rows. Mirrors the\nsynchronous /send-mail 403 contract so a caller's\nGateDenial handler is the same across live denies and\nhistorical lookups. Null on every other status.\n"
+            },
+            "request_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Server-issued request identifier from the original\n/send-mail call. Surfaced as the `X-Request-Id`\nresponse header on the live send and recorded here\nfor support escalation.\n"
+            },
+            "scheduled_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "Requested execution time for a scheduled send. Kept\nafter execution as the historical schedule; null on\nordinary immediate sends.\n"
+            },
+            "canceled_at": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time",
+              "description": "When a scheduled send was canceled. Null unless the row\nreached the `canceled` status.\n"
+            },
+            "presence_control": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "verified",
+                        "pending",
+                        "rejected"
+                      ]
+                    },
+                    "valid_for_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 600000
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "valid_for_ms"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "repeat": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+              "properties": {
+                "repeat_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sequence": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "required": [
+                "repeat_id",
+                "sequence"
+              ]
+            },
+            "sender_member": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "user_id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "user_id",
+                "name"
+              ]
+            },
+            "body_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+            },
+            "body_html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            },
+            "headers": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+                  "properties": {
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "cc": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "bcc": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "reply_to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "in_reply_to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "references": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "automation": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Received mail only."
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "cc",
+                    "bcc",
+                    "reply_to",
+                    "in_reply_to",
+                    "references",
+                    "automation"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "With `include=headers`: stored addressing and threading headers."
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+              "items": {
+                "type": "object",
+                "description": "Metadata for one submitted inline attachment.",
+                "additionalProperties": true,
+                "properties": {
+                  "filename": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sha256": {
+                    "type": "string"
+                  },
+                  "part_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tar_path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "filename",
+                  "content_type",
+                  "size_bytes",
+                  "sha256",
+                  "part_index",
+                  "tar_path"
+                ]
+              }
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "With `include`: true when a body on this row was cut or left out."
+            },
+            "truncated_fields": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "body_text",
+                  "body_html"
+                ]
+              },
+              "description": "With `include`: the body fields on this row that were cut or left out."
+            }
+          },
+          "required": [
+            "id",
+            "status",
+            "status_changed_at",
+            "created_at",
+            "updated_at",
+            "content_hash",
+            "from_header",
+            "from_address",
+            "to_header",
+            "to_address",
+            "subject",
+            "body_size_bytes"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+            },
+            "body_html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+              "items": {
+                "type": "object",
+                "description": "Metadata for one submitted inline attachment.",
+                "additionalProperties": true,
+                "properties": {
+                  "filename": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sha256": {
+                    "type": "string"
+                  },
+                  "part_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tar_path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "filename",
+                  "content_type",
+                  "size_bytes",
+                  "sha256",
+                  "part_index",
+                  "tar_path"
+                ]
+              }
+            },
+            "attachments_size_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "description": "Original decoded attachment byte total accepted for this send, not the compressed archive size. It may exceed the retained inline total after offloading."
+            },
+            "attachments_complete": {
+              "type": "boolean",
+              "description": "Whether attachments enumerates the complete original submitted attachment set, including zero-byte and inline CID parts. True requires no submitted payload-reference, offloaded, or visibility-filtered attachment to be omitted, retained content, and a published archive when the attachment inventory is nonempty. False or absent provides no completeness proof, including for legacy or discarded content. This field grants no download access and has no interaction semantics."
+            },
+            "attachments_download_available": {
+              "type": "boolean",
+              "description": "Whether an inline attachment archive has been successfully retained and is available for download. Download authorization is checked separately; address-bound agent connection keys cannot download archives."
+            },
+            "to_addresses": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Every normalized To recipient of the send. Always populated on\nnew sends (a single-recipient send carries a one-element array);\nnull only on records that predate this field. `to_address` keeps\ncarrying the first recipient.\n"
+            },
+            "cc": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Cc address list. Null when the send had no Cc\nrecipients.\n"
+            },
+            "bcc": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Bcc address list, surfaced on the sending\norganization's own record. Bcc recipients are never written\ninto the transmitted message. Null when the send had no Bcc\nrecipients. Also null when the request uses an address-bound\nagent connection key whose address is not the sender, because\nBcc is withheld from recipients.\n"
+            },
+            "reply_to": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              },
+              "description": "Normalized Reply-To address list. Null when the send had none.\n"
+            },
+            "tags": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "description": "Customer metadata tags stored verbatim at send time. Null when\nthe send had none. Also null when the request uses an\naddress-bound agent connection key whose address is not the\nsender, because tags are withheld from recipients.\n",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "presence_control": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "verified",
+                    "pending",
+                    "rejected"
+                  ]
+                },
+                "valid_for_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 600000
+                }
+              },
+              "required": [
+                "status",
+                "valid_for_ms"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repeat": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
+          "properties": {
+            "repeat_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "repeat_id",
+            "sequence"
+          ]
+        },
+        "sender_member": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Verified human authorship, projected only within the member organization. Historical attribution is not current sending or owner authority.",
+          "properties": {
+            "address": {
+              "type": "string",
+              "format": "email"
+            },
+            "user_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "address",
+            "user_id",
+            "name"
+          ]
+        }
+      }
+    },
+    "sdkName": "cancelSentEmailByIdempotencyKey",
+    "summary": "Cancel a scheduled send by idempotency key",
     "tag": "Sending",
     "tagCommand": "sending"
   },
@@ -19276,6 +21782,173 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "user_id",
                 "name"
               ]
+            },
+            "body_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+            },
+            "body_html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            },
+            "headers": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+                  "properties": {
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "cc": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "bcc": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "reply_to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "in_reply_to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "references": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "automation": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Received mail only."
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "cc",
+                    "bcc",
+                    "reply_to",
+                    "in_reply_to",
+                    "references",
+                    "automation"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "With `include=headers`: stored addressing and threading headers."
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+              "items": {
+                "type": "object",
+                "description": "Metadata for one submitted inline attachment.",
+                "additionalProperties": true,
+                "properties": {
+                  "filename": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sha256": {
+                    "type": "string"
+                  },
+                  "part_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tar_path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "filename",
+                  "content_type",
+                  "size_bytes",
+                  "sha256",
+                  "part_index",
+                  "tar_path"
+                ]
+              }
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "With `include`: true when a body on this row was cut or left out."
+            },
+            "truncated_fields": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "body_text",
+                  "body_html"
+                ]
+              },
+              "description": "With `include`: the body fields on this row that were cut or left out."
             }
           },
           "required": [
@@ -19693,6 +22366,13 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name": "header",
         "required": false,
         "type": "string"
+      },
+      {
+        "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`.",
+        "enum": null,
+        "name": "include",
+        "required": false,
+        "type": "string"
       }
     ],
     "requestSchema": null,
@@ -20048,6 +22728,173 @@ export const operationManifest: PrimitiveOperationManifest[] = [
               "user_id",
               "name"
             ]
+          },
+          "body_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+          },
+          "body_html": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+          },
+          "headers": {
+            "anyOf": [
+              {
+                "type": "object",
+                "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+                "properties": {
+                  "from": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "to": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cc": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "bcc": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reply_to": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "in_reply_to": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "references": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "automation": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Received mail only."
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "cc",
+                  "bcc",
+                  "reply_to",
+                  "in_reply_to",
+                  "references",
+                  "automation"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "With `include=headers`: stored addressing and threading headers."
+          },
+          "attachments": {
+            "type": "array",
+            "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+            "items": {
+              "type": "object",
+              "description": "Metadata for one submitted inline attachment.",
+              "additionalProperties": true,
+              "properties": {
+                "filename": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "sha256": {
+                  "type": "string"
+                },
+                "part_index": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "tar_path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "filename",
+                "content_type",
+                "size_bytes",
+                "sha256",
+                "part_index",
+                "tar_path"
+              ]
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "With `include`: true when a body on this row was cut or left out."
+          },
+          "truncated_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "body_text",
+                "body_html"
+              ]
+            },
+            "description": "With `include`: the body fields on this row that were cut or left out."
           }
         },
         "required": [
@@ -20769,6 +23616,173 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                 "user_id",
                 "name"
               ]
+            },
+            "body_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n"
+            },
+            "body_html": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n"
+            },
+            "headers": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+                  "properties": {
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "cc": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "bcc": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "reply_to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "in_reply_to": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "references": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "automation": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Received mail only."
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "to",
+                    "cc",
+                    "bcc",
+                    "reply_to",
+                    "in_reply_to",
+                    "references",
+                    "automation"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "With `include=headers`: stored addressing and threading headers."
+            },
+            "attachments": {
+              "type": "array",
+              "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+              "items": {
+                "type": "object",
+                "description": "Metadata for one submitted inline attachment.",
+                "additionalProperties": true,
+                "properties": {
+                  "filename": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "size_bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sha256": {
+                    "type": "string"
+                  },
+                  "part_index": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "tar_path": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "filename",
+                  "content_type",
+                  "size_bytes",
+                  "sha256",
+                  "part_index",
+                  "tar_path"
+                ]
+              }
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "With `include`: true when a body on this row was cut or left out."
+            },
+            "truncated_fields": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "body_text",
+                  "body_html"
+                ]
+              },
+              "description": "With `include`: the body fields on this row that were cut or left out."
             }
           },
           "required": [

@@ -85,6 +85,18 @@ type Invoker interface {
 	//
 	// POST /sent-emails/{id}/cancel
 	CancelSentEmail(ctx context.Context, params CancelSentEmailParams) (CancelSentEmailRes, error)
+	// CancelSentEmailByIdempotencyKey invokes cancelSentEmailByIdempotencyKey operation.
+	//
+	// Cancels the still-scheduled send created with this `Idempotency-Key` (matched exactly), as `POST
+	// /sent-emails/{id}/cancel` does, and releases the key. 404 `not_found`: no send this credential can
+	// act on was created with the key. 409 `not_scheduled`: the send holding the key is no longer
+	// scheduled; `error.details` names its `sent_email_id` and `status` (`canceled` if already canceled).
+	//  Pass `created_before` on a retry so it cannot reach a newer send that reused the released key. A
+	// connected agent can cancel any scheduled send from its own address, whoever created it, and no
+	// other.
+	//
+	// POST /sent-emails/cancel
+	CancelSentEmailByIdempotencyKey(ctx context.Context, request *CancelSentEmailByIdempotencyKeyReq) (CancelSentEmailByIdempotencyKeyRes, error)
 	// CheckDefaultNetworkContactAdmission invokes checkDefaultNetworkContactAdmission operation.
 	//
 	// Requires the recipient's connected-agent credential. The recipient
@@ -1091,6 +1103,27 @@ type Invoker interface {
 	//
 	// GET /agent-networks
 	ListAgentNetworks(ctx context.Context) (ListAgentNetworksRes, error)
+	// ListChanges invokes listChanges operation.
+	//
+	// One feed of small invalidations (ids and kinds) for everything an app keeps a snapshot of: inbound
+	// mail, sent mail, the member's conversation read state, the agent directory and presence, and the
+	// credential's own access. Non-consumptive and replayable: any number of devices can read the same
+	// cursor independently.
+	// Start with `since=start` (or no `since`): it returns an empty page whose `next_cursor` is a
+	// baseline. Take it BEFORE the initial list reads; every change that commits after it is delivered,
+	// including ones those reads already reflect. Then call with `since=<next_cursor>&wait=20` in a loop.
+	//  Changes come oldest first in commit order, at least once: a write that commits late is never
+	// skipped, because positions are assigned at commit.
+	// Every change is scoped to what this credential's full reads would show: a connected agent sees
+	// only its own mail, its own sends and sends it provably received; mail held for sender
+	// authentication is announced only when released; read state reaches only the member it belongs to;
+	// agent changes reach members and agents allowed to view the network; organization API keys receive
+	// no agent changes. Function credentials cannot call this.
+	// Changes are kept 7 days. A cursor answers 410 `cursor_expired` only when changes after it were
+	// pruned (an idle cursor stays valid); rebuild the snapshots from `since=start`.
+	//
+	// GET /changes
+	ListChanges(ctx context.Context, params ListChangesParams) (ListChangesRes, error)
 	// ListContacts invokes listContacts operation.
 	//
 	// Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -2723,6 +2756,124 @@ func (c *Client) sendCancelSentEmail(ctx context.Context, params CancelSentEmail
 
 	stage = "DecodeResponse"
 	result, err := decodeCancelSentEmailResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// CancelSentEmailByIdempotencyKey invokes cancelSentEmailByIdempotencyKey operation.
+//
+// Cancels the still-scheduled send created with this `Idempotency-Key` (matched exactly), as `POST
+// /sent-emails/{id}/cancel` does, and releases the key. 404 `not_found`: no send this credential can
+// act on was created with the key. 409 `not_scheduled`: the send holding the key is no longer
+// scheduled; `error.details` names its `sent_email_id` and `status` (`canceled` if already canceled).
+//
+//	Pass `created_before` on a retry so it cannot reach a newer send that reused the released key. A
+//
+// connected agent can cancel any scheduled send from its own address, whoever created it, and no
+// other.
+//
+// POST /sent-emails/cancel
+func (c *Client) CancelSentEmailByIdempotencyKey(ctx context.Context, request *CancelSentEmailByIdempotencyKeyReq) (CancelSentEmailByIdempotencyKeyRes, error) {
+	res, err := c.sendCancelSentEmailByIdempotencyKey(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendCancelSentEmailByIdempotencyKey(ctx context.Context, request *CancelSentEmailByIdempotencyKeyReq) (res CancelSentEmailByIdempotencyKeyRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("cancelSentEmailByIdempotencyKey"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/sent-emails/cancel"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, CancelSentEmailByIdempotencyKeyOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/sent-emails/cancel"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeCancelSentEmailByIdempotencyKeyRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CancelSentEmailByIdempotencyKeyOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeCancelSentEmailByIdempotencyKeyResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -13321,6 +13472,219 @@ func (c *Client) sendListAgentNetworks(ctx context.Context) (res ListAgentNetwor
 	return result, nil
 }
 
+// ListChanges invokes listChanges operation.
+//
+// One feed of small invalidations (ids and kinds) for everything an app keeps a snapshot of: inbound
+// mail, sent mail, the member's conversation read state, the agent directory and presence, and the
+// credential's own access. Non-consumptive and replayable: any number of devices can read the same
+// cursor independently.
+// Start with `since=start` (or no `since`): it returns an empty page whose `next_cursor` is a
+// baseline. Take it BEFORE the initial list reads; every change that commits after it is delivered,
+// including ones those reads already reflect. Then call with `since=<next_cursor>&wait=20` in a loop.
+//
+//	Changes come oldest first in commit order, at least once: a write that commits late is never
+//
+// skipped, because positions are assigned at commit.
+// Every change is scoped to what this credential's full reads would show: a connected agent sees
+// only its own mail, its own sends and sends it provably received; mail held for sender
+// authentication is announced only when released; read state reaches only the member it belongs to;
+// agent changes reach members and agents allowed to view the network; organization API keys receive
+// no agent changes. Function credentials cannot call this.
+// Changes are kept 7 days. A cursor answers 410 `cursor_expired` only when changes after it were
+// pruned (an idle cursor stays valid); rebuild the snapshots from `since=start`.
+//
+// GET /changes
+func (c *Client) ListChanges(ctx context.Context, params ListChangesParams) (ListChangesRes, error) {
+	res, err := c.sendListChanges(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListChanges(ctx context.Context, params ListChangesParams) (res ListChangesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listChanges"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/changes"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListChangesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/changes"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "since" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "since",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Since.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "wait" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "wait",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Wait.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "limit" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Limit.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "expand" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "expand",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Expand.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "address" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "address",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Address.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListChangesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListChangesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // ListContacts invokes listContacts operation.
 //
 // Organization directory and agent preferences; no profiles, message history or runtime presence.
@@ -14680,6 +15044,23 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 		}
 	}
 	{
+		// Encode "from_verified" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "from_verified",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.FromVerified.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
 		// Encode "recipient" parameter.
 		cfg := uri.QueryParameterEncodingConfig{
 			Name:    "recipient",
@@ -14707,6 +15088,23 @@ func (c *Client) sendListEmails(ctx context.Context, params ListEmailsParams) (r
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.ExcludeFyi.Get(); ok {
 				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "include" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "include",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Include.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
 		}); err != nil {
@@ -16644,6 +17042,23 @@ func (c *Client) sendListSentEmails(ctx context.Context, params ListSentEmailsPa
 
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Header.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "include" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "include",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Include.Get(); ok {
 				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
@@ -20570,6 +20985,23 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 		}
 	}
 	{
+		// Encode "from_verified" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "from_verified",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.FromVerified.Get(); ok {
+				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
 		// Encode "sort" parameter.
 		cfg := uri.QueryParameterEncodingConfig{
 			Name:    "sort",
@@ -20716,6 +21148,23 @@ func (c *Client) sendSearchEmails(ctx context.Context, params SearchEmailsParams
 		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
 			if val, ok := params.Direction.Get(); ok {
 				return e.EncodeValue(conv.StringToString(string(val)))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "include" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "include",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Include.Get(); ok {
+				return e.EncodeValue(conv.StringToString(val))
 			}
 			return nil
 		}); err != nil {

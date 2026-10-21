@@ -78,6 +78,10 @@
       "description": "Conversation threads spanning received and sent emails"
     },
     {
+      "name": "Changes",
+      "description": "One replayable feed of what changed, to keep local snapshots current"
+    },
+    {
       "name": "Endpoints",
       "description": "Manage webhook endpoints that receive email events"
     },
@@ -2027,6 +2031,19 @@
             "description": "Only return emails whose `automated` has this value.\n`awaiting=you&automated=false` lists mail from people that is\nwaiting on your reply. Combines with every other filter and with\nboth `cursor` and `since`. An inbound email is `automated` when any of these holds, decided once\nwhen it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);\n`no_identifiable_sender` (no address in the envelope or From);\n`own_address` (a sender address is exactly one of the addresses the\nmail was delivered to; sharing a domain with the recipient is not\nenough, so a colleague or another agent in the organization is not\nautomated);\n`mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);\n`auto_submitted` (Auto-Submitted with any keyword but `no`, an\nempty one included);\n`precedence` (Precedence bulk, list, junk or auto_reply);\n`list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id\npresent); `auto_response_suppress` (X-Auto-Response-Suppress asks\nfor no automatic reply: All, OOF or AutoReply);\n`failed_recipients` (X-Failed-Recipients present, a bounce);\n`report` (a delivery, feedback or disposition report). Mail\nPrimitive's own automatic responders decline to answer is always\n`automated`. The header rules only see headers captured at ingest, so\nolder mail may lack them. This is loop and noise protection, not\nsender authentication.\n"
           },
           {
+            "name": "from_verified",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "Only return emails whose `from_verified` (the From domain was authenticated on arrival; see the field) has this value. Combines with every other filter and with both `cursor` and `since`."
+          },
+          {
             "name": "recipient",
             "in": "query",
             "required": false,
@@ -2049,6 +2066,17 @@
               ]
             },
             "description": "With `true`, leave out emails whose `fyi` is true. Combines with every other filter and with both `cursor` and `since`."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "example": "body_text,headers"
+            },
+            "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`."
           }
         ],
         "responses": {
@@ -2102,7 +2130,7 @@
               "type": "string",
               "maxLength": 500
             },
-            "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term must match. A term is a word, a `\"quoted phrase\"`, or a `field:value` filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`, `automated:`, `header:`, `has-header:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:` terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an unterminated quote, or only stop words is a `validation_error` that says what to change; it is never silently reinterpreted. Alternatives chain (`invoice OR receipt OR \"past due\"`), and each one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR` next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead); an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a search cannot exclude a term); and an alternative with no searchable word once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT` itself, write it in lower case or in double quotes (`\"OR\"`). With `prefix=true`, a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a URL, put it in double quotes. `header:Name=Value` matches mail whose header `Name` has exactly `Value` (name and value case-insensitive, the whole value, quote the term for a value with spaces: `header:\"List-Id=Team news <news.example.com>\"`); `has-header:Name` matches mail that carries header `Name` with any value. Neither can be an `OR` alternative. Header filters read a stored copy of each message's headers: for received mail every header except trace and signature headers (`Received`, `DKIM-Signature`, `ARC-*`, `Authentication-Results` and similar) and credential-like names (a word such as `auth`, `token`, `key`, `secret`, `cookie`, `session`, `bearer`, `jwt` or `hmac`, including joined forms such as `AuthToken` or `SessionId`), at most 100 headers and 16 KiB per message, each value cut to 1024 bytes; for sent mail the `headers` the request set. A filter on a header that is never stored is a `validation_error`. Mail stored before header search was available has no stored headers and is not matched."
+            "description": "Full-text search DSL query. Supports `awaiting:you` and `awaiting:them` to filter on reply state (see the `awaiting` field; delivered mail only, never `rejected`). Supports `automated:true` and `automated:false` to filter on the `automated` field. Terms are separated by spaces and every term must match. A term is a word, a `\"quoted phrase\"`, or a `field:value` filter (`from:`, `to:`, `subject:`, `body:`, `has:attachment`, `before:`, `after:`, `domain:`, `status:`, `awaiting:`, `automated:`, `header:`, `has-header:`). An upper-case `OR` between two text terms (words, phrases, `subject:` and `body:` terms) accepts either, and binds tighter than the implicit AND: `acme invoice OR receipt` is `acme` and either `invoice` or `receipt`. `OR` cannot join the other filters, and there is no `NOT` and no parentheses. A query that uses an unsupported operator, an unknown field, an unterminated quote, or only stop words is a `validation_error` that says what to change; it is never silently reinterpreted. Alternatives chain (`invoice OR receipt OR \"past due\"`), and each one counts toward the limit of 32 terms. These are rejected with a 400 `validation_error`: `OR` next to a filter (`from:a@example.com OR from:b@example.com`; run one search per value instead); an `OR` with no term on one side (a leading, trailing or doubled `OR`); an upper-case `NOT` (a search cannot exclude a term); and an alternative with no searchable word once stop words are removed (`the OR invoice`). Only upper case is an operator: to search for the word `OR` or `NOT` itself, write it in lower case or in double quotes (`\"OR\"`). With `prefix=true`, a trailing `OR` or `NOT` is read as a word still being typed. To search for text that contains a colon, such as a URL, put it in double quotes. Supports `from_verified:true` and `from_verified:false` to filter on the `from_verified` field. `header:Name=Value` matches mail whose header `Name` has exactly `Value` (name and value case-insensitive, the whole value, quote the term for a value with spaces: `header:\"List-Id=Team news <news.example.com>\"`); `has-header:Name` matches mail that carries header `Name` with any value. Neither can be an `OR` alternative. Header filters read a stored copy of each message's headers: for received mail every header except trace and signature headers (`Received`, `DKIM-Signature`, `ARC-*`, `Authentication-Results` and similar) and credential-like names (a word such as `auth`, `token`, `key`, `secret`, `cookie`, `session`, `bearer`, `jwt` or `hmac`, including joined forms such as `AuthToken` or `SessionId`), at most 100 headers and 16 KiB per message, each value cut to 1024 bytes; for sent mail the `headers` the request set. A filter on a header that is never stored is a `validation_error`. Mail stored before header search was available has no stored headers and is not matched."
           },
           {
             "name": "from",
@@ -2239,6 +2267,19 @@
             "description": "Only return emails whose `automated` has this value. Also\navailable in `q` as `automated:true` or `automated:false`. An inbound email is `automated` when any of these holds, decided once\nwhen it arrives: `null_envelope_sender` (an empty MAIL FROM, a bounce);\n`no_identifiable_sender` (no address in the envelope or From);\n`own_address` (a sender address is exactly one of the addresses the\nmail was delivered to; sharing a domain with the recipient is not\nenough, so a colleague or another agent in the organization is not\nautomated);\n`mailer_daemon` (mailer-daemon@ or postmaster@ on any domain);\n`auto_submitted` (Auto-Submitted with any keyword but `no`, an\nempty one included);\n`precedence` (Precedence bulk, list, junk or auto_reply);\n`list_unsubscribe` (List-Unsubscribe present); `list_id` (List-Id\npresent); `auto_response_suppress` (X-Auto-Response-Suppress asks\nfor no automatic reply: All, OOF or AutoReply);\n`failed_recipients` (X-Failed-Recipients present, a bounce);\n`report` (a delivery, feedback or disposition report). Mail\nPrimitive's own automatic responders decline to answer is always\n`automated`. The header rules only see headers captured at ingest, so\nolder mail may lack them. This is loop and noise protection, not\nsender authentication.\n"
           },
           {
+            "name": "from_verified",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "description": "Only return emails whose `from_verified` (the From domain was authenticated on arrival; see the field) has this value. Also available in `q` as `from_verified:true` or `from_verified:false`."
+          },
+          {
             "name": "sort",
             "in": "query",
             "schema": {
@@ -2341,6 +2382,17 @@
               "default": "inbound"
             },
             "description": "Which mail to search: `inbound` (mail received by the organization, the default), `outbound` (mail it sent) or `any` (both, merged in date order). Each result carries `direction`. When sent mail is included, results are in date order only (`sort=relevance` is a `validation_error`), filters that describe received mail only (`status`, `spam_score_lt`, `spam_score_gte`, `awaiting`, `automated`, `reply_to_sent_email_id`, `from_verified`, and `status:`, `awaiting:`, `automated:`, `from_verified:` in `q`) are a `validation_error`, as is `include`, and `facets` are not computed. `meta.total` is computed on the first page only and is null on later pages. A `meta.cursor` continues the direction it was issued for: using it with another `direction` is a `validation_error`. Text search over sent mail (`q`, `subject` or `body`) answers 503 `sent_mail_search_unavailable` in an environment where sent-mail search is not enabled. An agent connection searches only the mail its own address sent. On a sent result, `received_at` is when the message was accepted for sending, `recipient` is its first To address, and fields that describe receiving (`spam_score`, `raw_size_bytes`, `webhook_status`) are null, as is `from_verified` (sent mail has no From-authentication verdict). A sent result carries its sending status (`queued`, `delivered`, `bounced` and so on) in `delivery_status`; its `status` stays in the received-mail vocabulary as the nearest reading of it: `pending` (queued, scheduled, deferred), `accepted` (handed off, outcome not confirmed), `completed` (delivered) or `rejected` (not delivered: failed, denied, bounced or canceled)."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "example": "body_text,headers"
+            },
+            "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`."
           }
         ],
         "responses": {
@@ -5937,6 +5989,17 @@
               "maxLength": 1200
             },
             "description": "Return only sends that set this header: `Name=Value` matches that exact value, `Name` alone any value. Name and value compare case-insensitively; the value is trimmed and matched whole, not as a substring, and only the first `=` separates the two. Matches only the `headers` the send request set. History pages only: with `since` or `wait` it is a `validation_error`, as is a name that is never stored (trace, signature or credential-like). Sends made before header search was available are not matched."
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "example": "body_text,headers"
+            },
+            "description": "Extra parts on every row, comma-separated: `body_text`, `body_html`, `headers`, `attachments`. Reads a page of messages in one request instead of one detail read per row. Parts are withheld where the detail read withholds them. Each body field is cut to 64 KiB per row and a response carries at most 2048 KiB of body text, in page order; a cut or omitted body is named in `truncated_fields`. Unknown values are a `validation_error`."
           }
         ],
         "responses": {
@@ -8444,6 +8507,330 @@
           },
           "429": {
             "description": "Rate limit exceeded",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/changes": {
+      "get": {
+        "operationId": "listChanges",
+        "summary": "Long-poll what changed",
+        "description": "One feed of small invalidations (ids and kinds) for everything an app keeps a snapshot of: inbound mail, sent mail, the member's conversation read state, the agent directory and presence, and the credential's own access. Non-consumptive and replayable: any number of devices can read the same cursor independently.\n\nStart with `since=start` (or no `since`): it returns an empty page whose `next_cursor` is a baseline. Take it BEFORE the initial list reads; every change that commits after it is delivered, including ones those reads already reflect. Then call with `since=<next_cursor>&wait=20` in a loop. Changes come oldest first in commit order, at least once: a write that commits late is never skipped, because positions are assigned at commit.\n\nEvery change is scoped to what this credential's full reads would show: a connected agent sees only its own mail, its own sends and sends it provably received; mail held for sender authentication is announced only when released; read state reaches only the member it belongs to; agent changes reach members and agents allowed to view the network; organization API keys receive no agent changes. Function credentials cannot call this.\n\nChanges are kept 7 days. A cursor answers 410 `cursor_expired` only when changes after it were pruned (an idle cursor stays valid); rebuild the snapshots from `since=start`.",
+        "tags": [
+          "Changes"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "description": "`start` (the default) for a baseline, otherwise the previous `next_cursor`, unchanged."
+          },
+          {
+            "name": "wait",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 25,
+              "default": 0
+            },
+            "description": "Seconds to hold a caught-up request open. It returns as soon as a change this credential can see commits, else an empty page at the deadline. Ignored for a baseline request."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 100
+            },
+            "description": "Maximum changes in one page."
+          },
+          {
+            "name": "expand",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "message"
+              ]
+            },
+            "description": "`message` adds `message` to every change: the current list row of the message a message change names, so a reader needs no follow-up read. Ignored for a baseline request."
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Up to 20 email addresses, comma-separated (or the parameter repeated). Keeps only the message changes whose message is to or from one of them, matched case-insensitively. Inbound mail matches on the address it was delivered to, the envelope sender and the From header address; sent mail on the From address and the To and Cc addresses, and Bcc only for a credential that can read the sender side. Deletions, thread, agent and access changes are never filtered, because a deleted message's addresses can no longer be read: ignore a deletion for an id you do not hold. The cursor still moves past every change the filter drops, so a filtered page can be empty with a new cursor."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of changes",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/ChangePage"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`validation_error` for a bad parameter, or `invalid_cursor` for a cursor that is malformed or belongs to another organization. Rebuild from `since=start`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "410": {
+            "description": "`cursor_expired`: changes after this cursor were pruned. `error.details.retention_seconds` is the window. Rebuild the snapshots from `since=start`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Seconds to wait before retrying"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "rate_limit_exceeded",
+                    "message": "Rate limit exceeded"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sent-emails/cancel": {
+      "post": {
+        "operationId": "cancelSentEmailByIdempotencyKey",
+        "summary": "Cancel a scheduled send by idempotency key",
+        "description": "Cancels the still-scheduled send created with this `Idempotency-Key` (matched exactly), as `POST /sent-emails/{id}/cancel` does, and releases the key. 404 `not_found`: no send this credential can act on was created with the key. 409 `not_scheduled`: the send holding the key is no longer scheduled; `error.details` names its `sent_email_id` and `status` (`canceled` if already canceled). Pass `created_before` on a retry so it cannot reach a newer send that reused the released key. A connected agent can cancel any scheduled send from its own address, whoever created it, and no other.",
+        "tags": [
+          "Sending"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "idempotency_key"
+                ],
+                "properties": {
+                  "idempotency_key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "pattern": "^[\\x21-\\x7e]+$",
+                    "description": "The `Idempotency-Key` the send was created with."
+                  },
+                  "created_before": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Only consider sends created at or before this instant, such as when you first asked to cancel."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Canceled sent-email detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessEnvelope"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SentEmailDetail"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "validation_error",
+                    "message": "Invalid domain format"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "unauthorized",
+                    "message": "Invalid or missing API key"
+                  }
+                }
+              }
+            },
+            "headers": {}
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "not_found",
+                    "message": "Resource not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`not_scheduled`: `error.details` carries the `sent_email_id` and current `status` of the send holding the key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. The `ratelimit-*` headers describe the limiter that rejected this request, with its own limit and window, not the API budget that successful responses report. A limiter that reports only a wait sends `Retry-After` alone.",
             "headers": {
               "Retry-After": {
                 "schema": {
@@ -15058,6 +15445,76 @@
       }
     },
     "schemas": {
+      "IncludedMessageHeaders": {
+        "type": "object",
+        "description": "Stored addressing and threading headers. A member is null when absent or withheld.",
+        "properties": {
+          "from": {
+            "type": "string",
+            "nullable": true
+          },
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "cc": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "bcc": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "reply_to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "in_reply_to": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "automation": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Received mail only.",
+            "nullable": true
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "cc",
+          "bcc",
+          "reply_to",
+          "in_reply_to",
+          "references",
+          "automation"
+        ]
+      },
       "ArchiveMember": {
         "type": "object",
         "required": [
@@ -16786,7 +17243,9 @@
                   "archive_invalid",
                   "archive_unsupported",
                   "attachment_not_archive",
-                  "archive_busy"
+                  "archive_busy",
+                  "invalid_cursor",
+                  "cursor_expired"
                 ]
               },
               "message": {
@@ -18773,6 +19232,186 @@
           "scopes"
         ]
       },
+      "Change": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "One invalidation: what changed, by id, never its content. Every field is present; fields that do not apply to the kind are null. Apply idempotently: a change can repeat.",
+        "required": [
+          "kind",
+          "email_id",
+          "sent_email_id",
+          "thread_id",
+          "status",
+          "agent_address",
+          "reason",
+          "changed_at"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "email.visible",
+              "email.updated",
+              "email.deleted",
+              "sent_email.created",
+              "sent_email.updated",
+              "sent_email.deleted",
+              "thread.read_state_changed",
+              "thread.mute_changed",
+              "agent.changed",
+              "access.changed"
+            ],
+            "description": "`email.visible`: an inbound email became visible to this credential (arrived, or its sender-authentication hold was released). `email.updated`: something a list row or conversation shows changed. `email.deleted`: gone, or withdrawn from view. `sent_email.created` / `sent_email.updated`: a send appeared or changed; `status` is its current status, and several changes between two reads collapse into one entry. Created is a hint (first committed after the cursor): treat both as upsert, including `sent_email.updated` for an id you have not seen. `sent_email.deleted`: the send was deleted. `thread.read_state_changed`: the signed-in member's read cursor for `thread_id` moved, on any device. `thread.mute_changed`: `thread_id` was muted or unmuted for an address this credential reads, which changes the `muted` flag and `exclude_muted` results of its mail. `agent.changed`: an agent in the directory changed (connected, disconnected, renamed, hidden, listed, presence extended, receiver live). `access.changed`: this credential's own access changed; rebuild every snapshot from `since=start`."
+          },
+          "email_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "email.* kinds.",
+            "nullable": true
+          },
+          "sent_email_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "sent_email.* kinds.",
+            "nullable": true
+          },
+          "thread_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The conversation, when known. Null for a connected agent reading a send, or its deletion, that it received but did not send, matching what GET /sent-emails withholds. Inbound mail is announced when it becomes visible, which can be before its conversation is resolved, so `email.visible` can carry null; resolving or changing the conversation is always announced afterwards as `email.updated` with the `thread_id`.",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "sent_email.created and sent_email.updated: the send's current status.",
+            "nullable": true
+          },
+          "agent_address": {
+            "type": "string",
+            "description": "agent.changed: the agent's address.",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "membership",
+              "agent_connection",
+              null
+            ],
+            "description": "access.changed: `membership` (the member's role or membership) or `agent_connection` (this agent connection's status, owner or generation).",
+            "nullable": true
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The commit position in microsecond UTC form. Orders the feed; not a business timestamp."
+          },
+          "message": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ChangeMessage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present only when the request sets `expand=message`. For `email.visible`, `email.updated`, `sent_email.created`, `sent_email.updated`: the message as it reads at the time of this response (not at the time of the change), exactly as the list endpoints return it, marked by `direction`. Null for every other kind, and when the message is no longer readable by this credential (deleted, or withdrawn from view after the change)."
+          }
+        }
+      },
+      "ChangePage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "changes",
+          "next_cursor",
+          "has_more",
+          "baseline"
+        ],
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Change"
+            },
+            "description": "Oldest first, in commit order."
+          },
+          "next_cursor": {
+            "type": "string",
+            "description": "Always present. Send it unchanged as `since` next time, and store it only after applying the page. It is exactly the `since` you sent when nothing at all happened after it; it moves past changes this credential cannot see, so the page can be empty with a new cursor."
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "More changes are already pending: call again at once, without waiting."
+          },
+          "baseline": {
+            "type": "boolean",
+            "description": "True only for a `since=start` request, whose page is always empty."
+          }
+        }
+      },
+      "ChangeMessage": {
+        "description": "A message inlined by `expand=message`. `direction` `inbound` is a GET /emails row; `outbound` is a GET /sent-emails row.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ChangeInboundMessage"
+          },
+          {
+            "$ref": "#/components/schemas/ChangeOutboundMessage"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "direction",
+          "mapping": {
+            "inbound": "#/components/schemas/ChangeInboundMessage",
+            "outbound": "#/components/schemas/ChangeOutboundMessage"
+          }
+        }
+      },
+      "ChangeInboundMessage": {
+        "description": "An inbound message inlined by `expand=message`, as GET /emails returns it.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EmailSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "direction"
+            ],
+            "properties": {
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "inbound"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "ChangeOutboundMessage": {
+        "description": "A sent message inlined by `expand=message`, as GET /sent-emails returns it.",
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SentEmailSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "direction"
+            ],
+            "properties": {
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "outbound"
+                ]
+              }
+            }
+          }
+        ]
+      },
       "EmailSummary": {
         "type": "object",
         "properties": {
@@ -18892,6 +19531,16 @@
             },
             "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
           },
+          "from_verified": {
+            "type": "boolean",
+            "description": "True when the From header address, `from_header_email`, passed DMARC for its domain on arrival (aligned SPF or DKIM); decided once, at receipt. It is about the From header, never the envelope: `sender`, the `from` parameter and `from:` term, and the change feed's `address` match the envelope sender, which can differ. It proves the domain, not the mailbox. False with no From header address, when authentication failed or was not attempted (a delivery between Primitive mailboxes counts only when it passed DMARC too), and for mail stored before the verdict was recorded. Null on sent rows in search results. Not a spam or safety judgement.",
+            "nullable": true
+          },
+          "from_header_email": {
+            "type": "string",
+            "description": "The From header address, lowercased, that `from_verified` is about; null when the message had none. Unlike `sender` it is never the envelope address.",
+            "nullable": true
+          },
           "repeat": {
             "type": "object",
             "description": "Set when Primitive sent this message as part of a repeating send. Resolved from Primitive's own records, never from the message content. Null on every other message and on servers that predate repeating sends.",
@@ -18974,6 +19623,48 @@
             "type": "string",
             "description": "Display name from the `From:` header, decoded for display:\nRFC 2047 encoded words are decoded in their declared charset\nand folded lines are joined (e.g. `Dana Rúiz` for\n`=?UTF-8?Q?Dana_R=C3=BAiz?= <dana@example.com>`). Null when\nthe header carries no display name, and may be absent; treat\na missing value the same as null.\n\nFor display only: the sender chooses this name freely, so\nidentify the sender by `from_email`, never by this name.\n",
             "nullable": true
+          },
+          "body_text": {
+            "type": "string",
+            "description": "With `include=body_text`: the plain-text body, cut as `truncated_fields` says.",
+            "nullable": true
+          },
+          "body_html": {
+            "type": "string",
+            "description": "With `include=body_html`: the HTML body, cut as `truncated_fields` says.",
+            "nullable": true
+          },
+          "headers": {
+            "description": "With `include=headers`: stored addressing and threading headers.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IncludedMessageHeaders"
+              }
+            ],
+            "nullable": true
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "With `include=attachments`: attachment metadata as the detail read reports it. Never the bytes."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "With `include`: true when a body on this row was cut or left out."
+          },
+          "truncated_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "body_text",
+                "body_html"
+              ]
+            },
+            "description": "With `include`: the body fields on this row that were cut or left out."
           }
         },
         "required": [
@@ -19409,6 +20100,15 @@
               "type": "string"
             },
             "description": "Why `automated` is true, in rule order; empty when it is false.\nCurrent values: `null_envelope_sender`, `no_identifiable_sender`,\n`own_address`, `mailer_daemon`, `auto_submitted`, `precedence`,\n`list_unsubscribe`, `list_id`, `auto_response_suppress`,\n`failed_recipients`, `report`. Treat an unfamiliar value as a\nreason added after your client was built.\n"
+          },
+          "from_verified": {
+            "type": "boolean",
+            "description": "Whether the From header domain was authenticated when the message arrived. See EmailSummary.from_verified."
+          },
+          "from_header_email": {
+            "type": "string",
+            "description": "The From header address, lowercased, that `from_verified` is about; null when the message had none. Unlike `sender` it is never the envelope address.",
+            "nullable": true
           },
           "repeat": {
             "type": "object",
@@ -20600,6 +21300,82 @@
               "name"
             ],
             "nullable": true
+          },
+          "body_text": {
+            "type": "string",
+            "description": "Plain-text body sent on the wire. Null when the\nsend carried only an HTML body, or when bodies have\nbeen discarded post-send (`content_discarded_at`\nset).\n",
+            "nullable": true
+          },
+          "body_html": {
+            "type": "string",
+            "description": "HTML body sent on the wire. Null when the send\ncarried only a plain-text body, or when bodies\nhave been discarded post-send.\n",
+            "nullable": true
+          },
+          "headers": {
+            "description": "With `include=headers`: stored addressing and threading headers.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/IncludedMessageHeaders"
+              }
+            ],
+            "nullable": true
+          },
+          "attachments": {
+            "type": "array",
+            "description": "Metadata for submitted inline attachments; download availability is reported separately. Metadata may exist when the archive is unavailable, and legacy sends may have no metadata. Offloaded payload files are not included in the inline archive.",
+            "items": {
+              "type": "object",
+              "description": "Metadata for one submitted inline attachment.",
+              "additionalProperties": true,
+              "properties": {
+                "filename": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "size_bytes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "sha256": {
+                  "type": "string"
+                },
+                "part_index": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "tar_path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "filename",
+                "content_type",
+                "size_bytes",
+                "sha256",
+                "part_index",
+                "tar_path"
+              ]
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "With `include`: true when a body on this row was cut or left out."
+          },
+          "truncated_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "body_text",
+                "body_html"
+              ]
+            },
+            "description": "With `include`: the body fields on this row that were cut or left out."
           }
         },
         "required": [

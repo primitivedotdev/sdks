@@ -39,6 +39,7 @@ var regexMap = map[string]ogenregex.Regexp{
 	"^[\\x20-\\x7E]+$":                       ogenregex.MustCompile("^[\\x20-\\x7E]+$"),
 	"^[\\x21-\\x7E]+$":                       ogenregex.MustCompile("^[\\x21-\\x7E]+$"),
 	"^[\\x21-\\x7E]{1,200}$":                 ogenregex.MustCompile("^[\\x21-\\x7E]{1,200}$"),
+	"^[\\x21-\\x7e]+$":                       ogenregex.MustCompile("^[\\x21-\\x7e]+$"),
 	"^[^\\x00-\\x1F\\x7F]+$":                 ogenregex.MustCompile("^[^\\x00-\\x1F\\x7F]+$"),
 	"^[a-f0-9]{64}$":                         ogenregex.MustCompile("^[a-f0-9]{64}$"),
 	"^[a-fA-F0-9]{64}$":                      ogenregex.MustCompile("^[a-fA-F0-9]{64}$"),

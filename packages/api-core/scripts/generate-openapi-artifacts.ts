@@ -151,6 +151,27 @@ function normalizeForCodegen(value: unknown): unknown {
     next[key] = normalizeForCodegen(child);
   }
 
+  // `anyOf: [{ $ref }, { type: "null" }]` is the OpenAPI 3.1 spelling of a
+  // nullable reference. The generators read it as `X | unknown`, so for them
+  // it becomes `allOf: [{ $ref }]` with `nullable: true`, which they type as
+  // `X | null`. The published spec keeps the explicit null branch.
+  const anyOfValue = next.anyOf;
+  if (Array.isArray(anyOfValue) && anyOfValue.length === 2) {
+    const isObject = (item: unknown): item is Record<string, unknown> =>
+      Boolean(item) && typeof item === "object" && !Array.isArray(item);
+    const ref = anyOfValue.find(
+      (item) => isObject(item) && typeof item.$ref === "string" && Object.keys(item).length === 1,
+    );
+    const nullBranch = anyOfValue.find(
+      (item) => isObject(item) && item.type === "null" && Object.keys(item).length === 1,
+    );
+    if (ref && nullBranch) {
+      delete next.anyOf;
+      next.allOf = [ref];
+      next.nullable = true;
+    }
+  }
+
   const typeValue = next.type;
   if (Array.isArray(typeValue)) {
     const nonNull = typeValue.filter((item) => item !== "null");

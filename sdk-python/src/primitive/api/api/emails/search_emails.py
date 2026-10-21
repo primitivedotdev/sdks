@@ -14,6 +14,7 @@ from ...models.search_emails_automated import SearchEmailsAutomated
 from ...models.search_emails_awaiting import SearchEmailsAwaiting
 from ...models.search_emails_count import SearchEmailsCount
 from ...models.search_emails_direction import SearchEmailsDirection
+from ...models.search_emails_from_verified import SearchEmailsFromVerified
 from ...models.search_emails_has_attachment import SearchEmailsHasAttachment
 from ...models.search_emails_include_facets import SearchEmailsIncludeFacets
 from ...models.search_emails_prefix import SearchEmailsPrefix
@@ -44,6 +45,7 @@ def _get_kwargs(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -53,6 +55,7 @@ def _get_kwargs(
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
+    include: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -119,6 +122,12 @@ def _get_kwargs(
 
     params["automated"] = json_automated
 
+    json_from_verified: str | Unset = UNSET
+    if not isinstance(from_verified, Unset):
+        json_from_verified = from_verified.value
+
+    params["from_verified"] = json_from_verified
+
     json_sort: str | Unset = UNSET
     if not isinstance(sort, Unset):
         json_sort = sort.value
@@ -163,6 +172,8 @@ def _get_kwargs(
         json_direction = direction.value
 
     params["direction"] = json_direction
+
+    params["include"] = include
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -255,6 +266,7 @@ def sync_detailed(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -264,6 +276,7 @@ def sync_detailed(
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
+    include: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SearchEmailsResponse200]:
     """ Search inbound emails
@@ -334,6 +347,7 @@ def sync_detailed(
         spam_score_gte (float | Unset):
         awaiting (SearchEmailsAwaiting | Unset):
         automated (SearchEmailsAutomated | Unset):
+        from_verified (SearchEmailsFromVerified | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -344,6 +358,7 @@ def sync_detailed(
         prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
         count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
+        include (str | Unset):  Example: body_text,headers.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -370,6 +385,7 @@ spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
 awaiting=awaiting,
 automated=automated,
+from_verified=from_verified,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -379,6 +395,7 @@ thread_id=thread_id,
 prefix=prefix,
 count=count,
 direction=direction,
+include=include,
 
     )
 
@@ -406,6 +423,7 @@ def sync(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -415,6 +433,7 @@ def sync(
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
+    include: str | Unset = UNSET,
 
 ) -> ErrorResponse | SearchEmailsResponse200 | None:
     """ Search inbound emails
@@ -485,6 +504,7 @@ def sync(
         spam_score_gte (float | Unset):
         awaiting (SearchEmailsAwaiting | Unset):
         automated (SearchEmailsAutomated | Unset):
+        from_verified (SearchEmailsFromVerified | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -495,6 +515,7 @@ def sync(
         prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
         count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
+        include (str | Unset):  Example: body_text,headers.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -522,6 +543,7 @@ spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
 awaiting=awaiting,
 automated=automated,
+from_verified=from_verified,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -531,6 +553,7 @@ thread_id=thread_id,
 prefix=prefix,
 count=count,
 direction=direction,
+include=include,
 
     ).parsed
 
@@ -552,6 +575,7 @@ async def asyncio_detailed(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -561,6 +585,7 @@ async def asyncio_detailed(
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
+    include: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | SearchEmailsResponse200]:
     """ Search inbound emails
@@ -631,6 +656,7 @@ async def asyncio_detailed(
         spam_score_gte (float | Unset):
         awaiting (SearchEmailsAwaiting | Unset):
         automated (SearchEmailsAutomated | Unset):
+        from_verified (SearchEmailsFromVerified | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -641,6 +667,7 @@ async def asyncio_detailed(
         prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
         count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
+        include (str | Unset):  Example: body_text,headers.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -667,6 +694,7 @@ spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
 awaiting=awaiting,
 automated=automated,
+from_verified=from_verified,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -676,6 +704,7 @@ thread_id=thread_id,
 prefix=prefix,
 count=count,
 direction=direction,
+include=include,
 
     )
 
@@ -703,6 +732,7 @@ async def asyncio(
     spam_score_gte: float | Unset = UNSET,
     awaiting: SearchEmailsAwaiting | Unset = UNSET,
     automated: SearchEmailsAutomated | Unset = UNSET,
+    from_verified: SearchEmailsFromVerified | Unset = UNSET,
     sort: SearchEmailsSort | Unset = UNSET,
     cursor: str | Unset = UNSET,
     limit: int | Unset = 50,
@@ -712,6 +742,7 @@ async def asyncio(
     prefix: SearchEmailsPrefix | Unset = SearchEmailsPrefix.FALSE,
     count: SearchEmailsCount | Unset = SearchEmailsCount.TRUE,
     direction: SearchEmailsDirection | Unset = SearchEmailsDirection.INBOUND,
+    include: str | Unset = UNSET,
 
 ) -> ErrorResponse | SearchEmailsResponse200 | None:
     """ Search inbound emails
@@ -782,6 +813,7 @@ async def asyncio(
         spam_score_gte (float | Unset):
         awaiting (SearchEmailsAwaiting | Unset):
         automated (SearchEmailsAutomated | Unset):
+        from_verified (SearchEmailsFromVerified | Unset):
         sort (SearchEmailsSort | Unset):
         cursor (str | Unset):
         limit (int | Unset):  Default: 50.
@@ -792,6 +824,7 @@ async def asyncio(
         prefix (SearchEmailsPrefix | Unset):  Default: SearchEmailsPrefix.FALSE.
         count (SearchEmailsCount | Unset):  Default: SearchEmailsCount.TRUE.
         direction (SearchEmailsDirection | Unset):  Default: SearchEmailsDirection.INBOUND.
+        include (str | Unset):  Example: body_text,headers.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -819,6 +852,7 @@ spam_score_lt=spam_score_lt,
 spam_score_gte=spam_score_gte,
 awaiting=awaiting,
 automated=automated,
+from_verified=from_verified,
 sort=sort,
 cursor=cursor,
 limit=limit,
@@ -828,5 +862,6 @@ thread_id=thread_id,
 prefix=prefix,
 count=count,
 direction=direction,
+include=include,
 
     )).parsed

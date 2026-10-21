@@ -13,6 +13,7 @@ from ...models.error_response import ErrorResponse
 from ...models.list_emails_automated import ListEmailsAutomated
 from ...models.list_emails_awaiting import ListEmailsAwaiting
 from ...models.list_emails_exclude_fyi import ListEmailsExcludeFyi
+from ...models.list_emails_from_verified import ListEmailsFromVerified
 from ...models.list_emails_response_200 import ListEmailsResponse200
 from ...types import UNSET, Unset
 from typing import cast
@@ -34,8 +35,10 @@ def _get_kwargs(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    include: str | Unset = UNSET,
 
 ) -> dict[str, Any]:
     
@@ -87,6 +90,12 @@ def _get_kwargs(
 
     params["automated"] = json_automated
 
+    json_from_verified: str | Unset = UNSET
+    if not isinstance(from_verified, Unset):
+        json_from_verified = from_verified.value
+
+    params["from_verified"] = json_from_verified
+
     params["recipient"] = recipient
 
     json_exclude_fyi: str | Unset = UNSET
@@ -94,6 +103,8 @@ def _get_kwargs(
         json_exclude_fyi = exclude_fyi.value
 
     params["exclude_fyi"] = json_exclude_fyi
+
+    params["include"] = include
 
 
     params = {k: v for k, v in params.items() if v is not UNSET and v is not None}
@@ -161,8 +172,10 @@ def sync_detailed(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    include: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -221,8 +234,10 @@ def sync_detailed(
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
         automated (ListEmailsAutomated | Unset):
+        from_verified (ListEmailsFromVerified | Unset):
         recipient (str | Unset):
         exclude_fyi (ListEmailsExcludeFyi | Unset):
+        include (str | Unset):  Example: body_text,headers.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -245,8 +260,10 @@ since=since,
 wait=wait,
 awaiting=awaiting,
 automated=automated,
+from_verified=from_verified,
 recipient=recipient,
 exclude_fyi=exclude_fyi,
+include=include,
 
     )
 
@@ -270,8 +287,10 @@ def sync(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    include: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -330,8 +349,10 @@ def sync(
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
         automated (ListEmailsAutomated | Unset):
+        from_verified (ListEmailsFromVerified | Unset):
         recipient (str | Unset):
         exclude_fyi (ListEmailsExcludeFyi | Unset):
+        include (str | Unset):  Example: body_text,headers.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -355,8 +376,10 @@ since=since,
 wait=wait,
 awaiting=awaiting,
 automated=automated,
+from_verified=from_verified,
 recipient=recipient,
 exclude_fyi=exclude_fyi,
+include=include,
 
     ).parsed
 
@@ -374,8 +397,10 @@ async def asyncio_detailed(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    include: str | Unset = UNSET,
 
 ) -> Response[ErrorResponse | ListEmailsResponse200]:
     """ List inbound emails
@@ -434,8 +459,10 @@ async def asyncio_detailed(
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
         automated (ListEmailsAutomated | Unset):
+        from_verified (ListEmailsFromVerified | Unset):
         recipient (str | Unset):
         exclude_fyi (ListEmailsExcludeFyi | Unset):
+        include (str | Unset):  Example: body_text,headers.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -458,8 +485,10 @@ since=since,
 wait=wait,
 awaiting=awaiting,
 automated=automated,
+from_verified=from_verified,
 recipient=recipient,
 exclude_fyi=exclude_fyi,
+include=include,
 
     )
 
@@ -483,8 +512,10 @@ async def asyncio(
     wait: int | Unset = UNSET,
     awaiting: ListEmailsAwaiting | Unset = UNSET,
     automated: ListEmailsAutomated | Unset = UNSET,
+    from_verified: ListEmailsFromVerified | Unset = UNSET,
     recipient: str | Unset = UNSET,
     exclude_fyi: ListEmailsExcludeFyi | Unset = UNSET,
+    include: str | Unset = UNSET,
 
 ) -> ErrorResponse | ListEmailsResponse200 | None:
     """ List inbound emails
@@ -543,8 +574,10 @@ async def asyncio(
         wait (int | Unset):
         awaiting (ListEmailsAwaiting | Unset):
         automated (ListEmailsAutomated | Unset):
+        from_verified (ListEmailsFromVerified | Unset):
         recipient (str | Unset):
         exclude_fyi (ListEmailsExcludeFyi | Unset):
+        include (str | Unset):  Example: body_text,headers.
 
     Raises:
         errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
@@ -568,7 +601,9 @@ since=since,
 wait=wait,
 awaiting=awaiting,
 automated=automated,
+from_verified=from_verified,
 recipient=recipient,
 exclude_fyi=exclude_fyi,
+include=include,
 
     )).parsed

@@ -17,6 +17,10 @@ type AwaitReplyRes interface {
 	awaitReplyRes()
 }
 
+type CancelSentEmailByIdempotencyKeyRes interface {
+	cancelSentEmailByIdempotencyKeyRes()
+}
+
 type CancelSentEmailRes interface {
 	cancelSentEmailRes()
 }
@@ -339,6 +343,10 @@ type ListAgentContactsRes interface {
 
 type ListAgentNetworksRes interface {
 	listAgentNetworksRes()
+}
+
+type ListChangesRes interface {
+	listChangesRes()
 }
 
 type ListContactsRes interface {
