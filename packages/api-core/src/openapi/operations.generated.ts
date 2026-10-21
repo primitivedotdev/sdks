@@ -19321,7 +19321,7 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "type": "string"
       },
       {
-        "description": "Return only sends that set this header: `Name=Value` matches that exact value, `Name` alone any value. Name and value compare case-insensitively; the value is trimmed and matched whole, not as a substring, and only the first `=` separates the two. Matches only the `headers` the send request set. A name that is never stored (trace, signature or credential-like) is a `validation_error`; sends made before header search was available are not matched.",
+        "description": "Return only sends that set this header: `Name=Value` matches that exact value, `Name` alone any value. Name and value compare case-insensitively; the value is trimmed and matched whole, not as a substring, and only the first `=` separates the two. Matches only the `headers` the send request set. History pages only: with `since` or `wait` it is a `validation_error`, as is a name that is never stored (trace, signature or credential-like). Sends made before header search was available are not matched.",
         "enum": null,
         "name": "header",
         "required": false,
