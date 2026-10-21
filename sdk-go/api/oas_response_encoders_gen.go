@@ -13401,6 +13401,19 @@ func encodeSearchEmailsResponse(response SearchEmailsRes, w http.ResponseWriter,
 
 		return nil
 
+	case *SearchEmailsServiceUnavailable:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(503)
+		span.SetStatus(codes.Error, http.StatusText(503))
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	case *SearchEmailsGatewayTimeout:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(504)

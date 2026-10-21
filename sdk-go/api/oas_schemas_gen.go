@@ -37398,6 +37398,10 @@ func (s *SearchEmailsPrefix) UnmarshalText(data []byte) error {
 	}
 }
 
+type SearchEmailsServiceUnavailable ErrorResponse
+
+func (*SearchEmailsServiceUnavailable) searchEmailsRes() {}
+
 type SearchEmailsSnippet string
 
 const (

@@ -18918,6 +18918,14 @@ func (s SearchEmailsPrefix) Validate() error {
 	}
 }
 
+func (s *SearchEmailsServiceUnavailable) Validate() error {
+	alias := (*ErrorResponse)(s)
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s SearchEmailsSnippet) Validate() error {
 	switch s {
 	case "true":

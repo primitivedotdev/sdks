@@ -2395,6 +2395,16 @@ export const openapiDocument: Record<string, unknown> = {
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
+          "503": {
+            "description": "Sent-mail text search is not enabled in this environment (`sent_mail_search_unavailable`). Returned only for text terms (`q`, `subject` or `body`) with `direction=outbound` or `direction=any`; retry with `direction=inbound`, or without text terms.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "504": {
             "description": "Search query timed out",
             "content": {

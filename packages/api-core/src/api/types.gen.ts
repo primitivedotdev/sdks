@@ -6991,6 +6991,10 @@ export type SearchEmailsErrors = {
      */
     404: ErrorResponse;
     /**
+     * Sent-mail text search is not enabled in this environment (`sent_mail_search_unavailable`). Returned only for text terms (`q`, `subject` or `body`) with `direction=outbound` or `direction=any`; retry with `direction=inbound`, or without text terms.
+     */
+    503: ErrorResponse;
+    /**
      * Search query timed out
      */
     504: ErrorResponse;
