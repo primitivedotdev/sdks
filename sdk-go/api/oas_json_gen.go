@@ -43919,32 +43919,348 @@ func (s *ErrorResponseErrorCode) Decode(d *jx.Decoder) error {
 		*s = ErrorResponseErrorCodeAddressNotControlled
 	case ErrorResponseErrorCodeContactConflict:
 		*s = ErrorResponseErrorCodeContactConflict
-	case ErrorResponseErrorCodeSentMailSearchUnavailable:
-		*s = ErrorResponseErrorCodeSentMailSearchUnavailable
-	case ErrorResponseErrorCodeLatestMessageMismatch:
-		*s = ErrorResponseErrorCodeLatestMessageMismatch
-	case ErrorResponseErrorCodeLatestMessageThreadUnresolved:
-		*s = ErrorResponseErrorCodeLatestMessageThreadUnresolved
-	case ErrorResponseErrorCodeThreadBusy:
-		*s = ErrorResponseErrorCodeThreadBusy
+	case ErrorResponseErrorCodeConnectionRemoved:
+		*s = ErrorResponseErrorCodeConnectionRemoved
+	case ErrorResponseErrorCodeConnectionCreateRequestConflict:
+		*s = ErrorResponseErrorCodeConnectionCreateRequestConflict
+	case ErrorResponseErrorCodeConnectionAlreadyClaimed:
+		*s = ErrorResponseErrorCodeConnectionAlreadyClaimed
+	case ErrorResponseErrorCodeConnectionRevoked:
+		*s = ErrorResponseErrorCodeConnectionRevoked
+	case ErrorResponseErrorCodeConnectionCleanupPending:
+		*s = ErrorResponseErrorCodeConnectionCleanupPending
 	case ErrorResponseErrorCodeAttachmentNameAmbiguous:
 		*s = ErrorResponseErrorCodeAttachmentNameAmbiguous
-	case ErrorResponseErrorCodeArchiveLimitExceeded:
-		*s = ErrorResponseErrorCodeArchiveLimitExceeded
+	case ErrorResponseErrorCodeAttachmentNotArchive:
+		*s = ErrorResponseErrorCodeAttachmentNotArchive
 	case ErrorResponseErrorCodeArchiveUnsafePath:
 		*s = ErrorResponseErrorCodeArchiveUnsafePath
 	case ErrorResponseErrorCodeArchiveInvalid:
 		*s = ErrorResponseErrorCodeArchiveInvalid
 	case ErrorResponseErrorCodeArchiveUnsupported:
 		*s = ErrorResponseErrorCodeArchiveUnsupported
-	case ErrorResponseErrorCodeAttachmentNotArchive:
-		*s = ErrorResponseErrorCodeAttachmentNotArchive
+	case ErrorResponseErrorCodeArchiveLimitExceeded:
+		*s = ErrorResponseErrorCodeArchiveLimitExceeded
 	case ErrorResponseErrorCodeArchiveBusy:
 		*s = ErrorResponseErrorCodeArchiveBusy
-	case ErrorResponseErrorCodeInvalidCursor:
-		*s = ErrorResponseErrorCodeInvalidCursor
+	case ErrorResponseErrorCodeLatestMessageMismatch:
+		*s = ErrorResponseErrorCodeLatestMessageMismatch
+	case ErrorResponseErrorCodeLatestMessageThreadUnresolved:
+		*s = ErrorResponseErrorCodeLatestMessageThreadUnresolved
+	case ErrorResponseErrorCodeThreadBusy:
+		*s = ErrorResponseErrorCodeThreadBusy
+	case ErrorResponseErrorCodeSentMailSearchUnavailable:
+		*s = ErrorResponseErrorCodeSentMailSearchUnavailable
+	case ErrorResponseErrorCodeMemberAddressUnavailable:
+		*s = ErrorResponseErrorCodeMemberAddressUnavailable
+	case ErrorResponseErrorCodeMemberAddressHistoryConfirmationRequired:
+		*s = ErrorResponseErrorCodeMemberAddressHistoryConfirmationRequired
+	case ErrorResponseErrorCodeMemberAddressImmutable:
+		*s = ErrorResponseErrorCodeMemberAddressImmutable
+	case ErrorResponseErrorCodeMemberAddressDomainUnavailable:
+		*s = ErrorResponseErrorCodeMemberAddressDomainUnavailable
+	case ErrorResponseErrorCodeEmailAdmissionUnavailable:
+		*s = ErrorResponseErrorCodeEmailAdmissionUnavailable
+	case ErrorResponseErrorCodePullSubscriptionRequiresAgentConnection:
+		*s = ErrorResponseErrorCodePullSubscriptionRequiresAgentConnection
+	case ErrorResponseErrorCodeAddressInUse:
+		*s = ErrorResponseErrorCodeAddressInUse
+	case ErrorResponseErrorCodeAddressNotOwned:
+		*s = ErrorResponseErrorCodeAddressNotOwned
+	case ErrorResponseErrorCodeAddressOwnedByAnotherOrg:
+		*s = ErrorResponseErrorCodeAddressOwnedByAnotherOrg
+	case ErrorResponseErrorCodeAgentAccountManagedDomainOnly:
+		*s = ErrorResponseErrorCodeAgentAccountManagedDomainOnly
+	case ErrorResponseErrorCodeAgentChanged:
+		*s = ErrorResponseErrorCodeAgentChanged
+	case ErrorResponseErrorCodeAgentMisconfigured:
+		*s = ErrorResponseErrorCodeAgentMisconfigured
+	case ErrorResponseErrorCodeAgentNotDefined:
+		*s = ErrorResponseErrorCodeAgentNotDefined
+	case ErrorResponseErrorCodeAgentNotFound:
+		*s = ErrorResponseErrorCodeAgentNotFound
+	case ErrorResponseErrorCodeAgentUnreachable:
+		*s = ErrorResponseErrorCodeAgentUnreachable
+	case ErrorResponseErrorCodeAlreadyClaimed:
+		*s = ErrorResponseErrorCodeAlreadyClaimed
+	case ErrorResponseErrorCodeAlreadyMember:
+		*s = ErrorResponseErrorCodeAlreadyMember
+	case ErrorResponseErrorCodeBadRequest:
+		*s = ErrorResponseErrorCodeBadRequest
+	case ErrorResponseErrorCodeBodyNotSupported:
+		*s = ErrorResponseErrorCodeBodyNotSupported
+	case ErrorResponseErrorCodeBuildFailed:
+		*s = ErrorResponseErrorCodeBuildFailed
+	case ErrorResponseErrorCodeBuilderUnavailable:
+		*s = ErrorResponseErrorCodeBuilderUnavailable
+	case ErrorResponseErrorCodeChunkTooLarge:
+		*s = ErrorResponseErrorCodeChunkTooLarge
+	case ErrorResponseErrorCodeChunksMissing:
+		*s = ErrorResponseErrorCodeChunksMissing
+	case ErrorResponseErrorCodeClaimNotPending:
+		*s = ErrorResponseErrorCodeClaimNotPending
+	case ErrorResponseErrorCodeClerkFailed:
+		*s = ErrorResponseErrorCodeClerkFailed
+	case ErrorResponseErrorCodeCodeExpired:
+		*s = ErrorResponseErrorCodeCodeExpired
+	case ErrorResponseErrorCodeContactRequestInvalid:
+		*s = ErrorResponseErrorCodeContactRequestInvalid
+	case ErrorResponseErrorCodeContactRequestNotReady:
+		*s = ErrorResponseErrorCodeContactRequestNotReady
+	case ErrorResponseErrorCodeContactRequestUnauthenticated:
+		*s = ErrorResponseErrorCodeContactRequestUnauthenticated
+	case ErrorResponseErrorCodeContactRequestUnavailable:
+		*s = ErrorResponseErrorCodeContactRequestUnavailable
 	case ErrorResponseErrorCodeCursorExpired:
 		*s = ErrorResponseErrorCodeCursorExpired
+	case ErrorResponseErrorCodeDeleteFailed:
+		*s = ErrorResponseErrorCodeDeleteFailed
+	case ErrorResponseErrorCodeDeployFailed:
+		*s = ErrorResponseErrorCodeDeployFailed
+	case ErrorResponseErrorCodeDirectDeliveryFailed:
+		*s = ErrorResponseErrorCodeDirectDeliveryFailed
+	case ErrorResponseErrorCodeDirectDeliveryUnavailable:
+		*s = ErrorResponseErrorCodeDirectDeliveryUnavailable
+	case ErrorResponseErrorCodeDirectoryLimit:
+		*s = ErrorResponseErrorCodeDirectoryLimit
+	case ErrorResponseErrorCodeDNSPublicationFailed:
+		*s = ErrorResponseErrorCodeDNSPublicationFailed
+	case ErrorResponseErrorCodeDNSPublicationPending:
+		*s = ErrorResponseErrorCodeDNSPublicationPending
+	case ErrorResponseErrorCodeDNSVerificationFailed:
+		*s = ErrorResponseErrorCodeDNSVerificationFailed
+	case ErrorResponseErrorCodeDownloadTokenExpired:
+		*s = ErrorResponseErrorCodeDownloadTokenExpired
+	case ErrorResponseErrorCodeDownloadTokenInvalid:
+		*s = ErrorResponseErrorCodeDownloadTokenInvalid
+	case ErrorResponseErrorCodeEmailInUse:
+		*s = ErrorResponseErrorCodeEmailInUse
+	case ErrorResponseErrorCodeEmbeddingProviderUnavailable:
+		*s = ErrorResponseErrorCodeEmbeddingProviderUnavailable
+	case ErrorResponseErrorCodeExpired:
+		*s = ErrorResponseErrorCodeExpired
+	case ErrorResponseErrorCodeFreshSendNotAuthorized:
+		*s = ErrorResponseErrorCodeFreshSendNotAuthorized
+	case ErrorResponseErrorCodeFunctionEffectEmailMismatch:
+		*s = ErrorResponseErrorCodeFunctionEffectEmailMismatch
+	case ErrorResponseErrorCodeFunctionEffectMismatch:
+		*s = ErrorResponseErrorCodeFunctionEffectMismatch
+	case ErrorResponseErrorCodeFunctionForked:
+		*s = ErrorResponseErrorCodeFunctionForked
+	case ErrorResponseErrorCodeFunctionGithubLinked:
+		*s = ErrorResponseErrorCodeFunctionGithubLinked
+	case ErrorResponseErrorCodeFunctionNotDeployed:
+		*s = ErrorResponseErrorCodeFunctionNotDeployed
+	case ErrorResponseErrorCodeFunctionScopeForbidden:
+		*s = ErrorResponseErrorCodeFunctionScopeForbidden
+	case ErrorResponseErrorCodeHandleInCooldown:
+		*s = ErrorResponseErrorCodeHandleInCooldown
+	case ErrorResponseErrorCodeHandleReserved:
+		*s = ErrorResponseErrorCodeHandleReserved
+	case ErrorResponseErrorCodeHandleTaken:
+		*s = ErrorResponseErrorCodeHandleTaken
+	case ErrorResponseErrorCodeHashMismatch:
+		*s = ErrorResponseErrorCodeHashMismatch
+	case ErrorResponseErrorCodeIdempotencyConflict:
+		*s = ErrorResponseErrorCodeIdempotencyConflict
+	case ErrorResponseErrorCodeInvalidCode:
+		*s = ErrorResponseErrorCodeInvalidCode
+	case ErrorResponseErrorCodeInvalidCursor:
+		*s = ErrorResponseErrorCodeInvalidCursor
+	case ErrorResponseErrorCodeInvalidEmail:
+		*s = ErrorResponseErrorCodeInvalidEmail
+	case ErrorResponseErrorCodeInvalidInput:
+		*s = ErrorResponseErrorCodeInvalidInput
+	case ErrorResponseErrorCodeInvalidPayloadReference:
+		*s = ErrorResponseErrorCodeInvalidPayloadReference
+	case ErrorResponseErrorCodeInvalidRequest:
+		*s = ErrorResponseErrorCodeInvalidRequest
+	case ErrorResponseErrorCodeInvalidStep:
+		*s = ErrorResponseErrorCodeInvalidStep
+	case ErrorResponseErrorCodeInvalidToken:
+		*s = ErrorResponseErrorCodeInvalidToken
+	case ErrorResponseErrorCodeInvalidTopicSources:
+		*s = ErrorResponseErrorCodeInvalidTopicSources
+	case ErrorResponseErrorCodeInvitationAccepted:
+		*s = ErrorResponseErrorCodeInvitationAccepted
+	case ErrorResponseErrorCodeInvitationPending:
+		*s = ErrorResponseErrorCodeInvitationPending
+	case ErrorResponseErrorCodeInvitationUnconfirmed:
+		*s = ErrorResponseErrorCodeInvitationUnconfirmed
+	case ErrorResponseErrorCodeInvitationsPending:
+		*s = ErrorResponseErrorCodeInvitationsPending
+	case ErrorResponseErrorCodeMailRelayUnavailable:
+		*s = ErrorResponseErrorCodeMailRelayUnavailable
+	case ErrorResponseErrorCodeMailRoutingConflict:
+		*s = ErrorResponseErrorCodeMailRoutingConflict
+	case ErrorResponseErrorCodeMailTopicEditConflict:
+		*s = ErrorResponseErrorCodeMailTopicEditConflict
+	case ErrorResponseErrorCodeMailTopicGenerationConflict:
+		*s = ErrorResponseErrorCodeMailTopicGenerationConflict
+	case ErrorResponseErrorCodeMailboxNotFound:
+		*s = ErrorResponseErrorCodeMailboxNotFound
+	case ErrorResponseErrorCodeManagedBuildFailed:
+		*s = ErrorResponseErrorCodeManagedBuildFailed
+	case ErrorResponseErrorCodeManagedDomain:
+		*s = ErrorResponseErrorCodeManagedDomain
+	case ErrorResponseErrorCodeMemberChanged:
+		*s = ErrorResponseErrorCodeMemberChanged
+	case ErrorResponseErrorCodeMessageNotFound:
+		*s = ErrorResponseErrorCodeMessageNotFound
+	case ErrorResponseErrorCodeNameTaken:
+		*s = ErrorResponseErrorCodeNameTaken
+	case ErrorResponseErrorCodeNetworkMemberExcluded:
+		*s = ErrorResponseErrorCodeNetworkMemberExcluded
+	case ErrorResponseErrorCodeNetworkMemberNotFound:
+		*s = ErrorResponseErrorCodeNetworkMemberNotFound
+	case ErrorResponseErrorCodeNetworkPeerNotFound:
+		*s = ErrorResponseErrorCodeNetworkPeerNotFound
+	case ErrorResponseErrorCodeNetworkViewDenied:
+		*s = ErrorResponseErrorCodeNetworkViewDenied
+	case ErrorResponseErrorCodeNoCode:
+		*s = ErrorResponseErrorCodeNoCode
+	case ErrorResponseErrorCodeNoEndpoint:
+		*s = ErrorResponseErrorCodeNoEndpoint
+	case ErrorResponseErrorCodeNotATemplateInstall:
+		*s = ErrorResponseErrorCodeNotATemplateInstall
+	case ErrorResponseErrorCodeNotClaimable:
+		*s = ErrorResponseErrorCodeNotClaimable
+	case ErrorResponseErrorCodeNotPending:
+		*s = ErrorResponseErrorCodeNotPending
+	case ErrorResponseErrorCodeOpenPolicyNotAllowed:
+		*s = ErrorResponseErrorCodeOpenPolicyNotAllowed
+	case ErrorResponseErrorCodeOutboundEdgeRejected:
+		*s = ErrorResponseErrorCodeOutboundEdgeRejected
+	case ErrorResponseErrorCodeOutboundEmailLimitExceeded:
+		*s = ErrorResponseErrorCodeOutboundEmailLimitExceeded
+	case ErrorResponseErrorCodeOutboundRelayTimeout:
+		*s = ErrorResponseErrorCodeOutboundRelayTimeout
+	case ErrorResponseErrorCodePayloadTooLarge:
+		*s = ErrorResponseErrorCodePayloadTooLarge
+	case ErrorResponseErrorCodePresenceAdmissionBusy:
+		*s = ErrorResponseErrorCodePresenceAdmissionBusy
+	case ErrorResponseErrorCodePresenceIdempotencyConflict:
+		*s = ErrorResponseErrorCodePresenceIdempotencyConflict
+	case ErrorResponseErrorCodePresenceProbeStale:
+		*s = ErrorResponseErrorCodePresenceProbeStale
+	case ErrorResponseErrorCodeProPlanRequired:
+		*s = ErrorResponseErrorCodeProPlanRequired
+	case ErrorResponseErrorCodeProjectChanged:
+		*s = ErrorResponseErrorCodeProjectChanged
+	case ErrorResponseErrorCodeProtocolUnavailable:
+		*s = ErrorResponseErrorCodeProtocolUnavailable
+	case ErrorResponseErrorCodePublicationNotFound:
+		*s = ErrorResponseErrorCodePublicationNotFound
+	case ErrorResponseErrorCodePublishPolicyDenied:
+		*s = ErrorResponseErrorCodePublishPolicyDenied
+	case ErrorResponseErrorCodeRecipientChanged:
+		*s = ErrorResponseErrorCodeRecipientChanged
+	case ErrorResponseErrorCodeRecipientSuppressed:
+		*s = ErrorResponseErrorCodeRecipientSuppressed
+	case ErrorResponseErrorCodeRegistryCreateNotAllowed:
+		*s = ErrorResponseErrorCodeRegistryCreateNotAllowed
+	case ErrorResponseErrorCodeRegistryNotFound:
+		*s = ErrorResponseErrorCodeRegistryNotFound
+	case ErrorResponseErrorCodeRenameNotAllowed:
+		*s = ErrorResponseErrorCodeRenameNotAllowed
+	case ErrorResponseErrorCodeResendLimitExceeded:
+		*s = ErrorResponseErrorCodeResendLimitExceeded
+	case ErrorResponseErrorCodeResendTooSoon:
+		*s = ErrorResponseErrorCodeResendTooSoon
+	case ErrorResponseErrorCodeScheduleAllowlistNotProvided:
+		*s = ErrorResponseErrorCodeScheduleAllowlistNotProvided
+	case ErrorResponseErrorCodeScheduleSenderCollision:
+		*s = ErrorResponseErrorCodeScheduleSenderCollision
+	case ErrorResponseErrorCodeScheduleWakeDisabled:
+		*s = ErrorResponseErrorCodeScheduleWakeDisabled
+	case ErrorResponseErrorCodeScheduledPayloadInvalid:
+		*s = ErrorResponseErrorCodeScheduledPayloadInvalid
+	case ErrorResponseErrorCodeSearchUnavailable:
+		*s = ErrorResponseErrorCodeSearchUnavailable
+	case ErrorResponseErrorCodeSemanticSearchNotEnabled:
+		*s = ErrorResponseErrorCodeSemanticSearchNotEnabled
+	case ErrorResponseErrorCodeSendFailed:
+		*s = ErrorResponseErrorCodeSendFailed
+	case ErrorResponseErrorCodeSenderNotAuthorized:
+		*s = ErrorResponseErrorCodeSenderNotAuthorized
+	case ErrorResponseErrorCodeSentEmailTailUnavailable:
+		*s = ErrorResponseErrorCodeSentEmailTailUnavailable
+	case ErrorResponseErrorCodeSettlementUnresolved:
+		*s = ErrorResponseErrorCodeSettlementUnresolved
+	case ErrorResponseErrorCodeSharedParentRecipient:
+		*s = ErrorResponseErrorCodeSharedParentRecipient
+	case ErrorResponseErrorCodeShoppingBindingConflict:
+		*s = ErrorResponseErrorCodeShoppingBindingConflict
+	case ErrorResponseErrorCodeShoppingDecisionConflict:
+		*s = ErrorResponseErrorCodeShoppingDecisionConflict
+	case ErrorResponseErrorCodeShoppingIdentityConflict:
+		*s = ErrorResponseErrorCodeShoppingIdentityConflict
+	case ErrorResponseErrorCodeShoppingNotFound:
+		*s = ErrorResponseErrorCodeShoppingNotFound
+	case ErrorResponseErrorCodeShoppingOwnerMailRequired:
+		*s = ErrorResponseErrorCodeShoppingOwnerMailRequired
+	case ErrorResponseErrorCodeShoppingPackageNotFound:
+		*s = ErrorResponseErrorCodeShoppingPackageNotFound
+	case ErrorResponseErrorCodeShoppingProposalExpired:
+		*s = ErrorResponseErrorCodeShoppingProposalExpired
+	case ErrorResponseErrorCodeShoppingReplayConflict:
+		*s = ErrorResponseErrorCodeShoppingReplayConflict
+	case ErrorResponseErrorCodeShoppingSourceUnavailable:
+		*s = ErrorResponseErrorCodeShoppingSourceUnavailable
+	case ErrorResponseErrorCodeShoppingTooManyShipments:
+		*s = ErrorResponseErrorCodeShoppingTooManyShipments
+	case ErrorResponseErrorCodeShoppingTrackingInvalid:
+		*s = ErrorResponseErrorCodeShoppingTrackingInvalid
+	case ErrorResponseErrorCodeShoppingVersionConflict:
+		*s = ErrorResponseErrorCodeShoppingVersionConflict
+	case ErrorResponseErrorCodeShoppingWakeUnavailable:
+		*s = ErrorResponseErrorCodeShoppingWakeUnavailable
+	case ErrorResponseErrorCodeShredded:
+		*s = ErrorResponseErrorCodeShredded
+	case ErrorResponseErrorCodeSignInEmailChangeRequired:
+		*s = ErrorResponseErrorCodeSignInEmailChangeRequired
+	case ErrorResponseErrorCodeSignalNotAllowed:
+		*s = ErrorResponseErrorCodeSignalNotAllowed
+	case ErrorResponseErrorCodeSignalParentNotReady:
+		*s = ErrorResponseErrorCodeSignalParentNotReady
+	case ErrorResponseErrorCodeSignalSenderUnauthenticated:
+		*s = ErrorResponseErrorCodeSignalSenderUnauthenticated
+	case ErrorResponseErrorCodeSlugTaken:
+		*s = ErrorResponseErrorCodeSlugTaken
+	case ErrorResponseErrorCodeStepRejected:
+		*s = ErrorResponseErrorCodeStepRejected
+	case ErrorResponseErrorCodeStorageError:
+		*s = ErrorResponseErrorCodeStorageError
+	case ErrorResponseErrorCodeStorageLimitExceeded:
+		*s = ErrorResponseErrorCodeStorageLimitExceeded
+	case ErrorResponseErrorCodeTemplateUnavailable:
+		*s = ErrorResponseErrorCodeTemplateUnavailable
+	case ErrorResponseErrorCodeTemplateUpdateFailed:
+		*s = ErrorResponseErrorCodeTemplateUpdateFailed
+	case ErrorResponseErrorCodeTermsNotAccepted:
+		*s = ErrorResponseErrorCodeTermsNotAccepted
+	case ErrorResponseErrorCodeTooManyAttempts:
+		*s = ErrorResponseErrorCodeTooManyAttempts
+	case ErrorResponseErrorCodeTooManyConcurrentBuilds:
+		*s = ErrorResponseErrorCodeTooManyConcurrentBuilds
+	case ErrorResponseErrorCodeTooManyResends:
+		*s = ErrorResponseErrorCodeTooManyResends
+	case ErrorResponseErrorCodeTopicEditTooLarge:
+		*s = ErrorResponseErrorCodeTopicEditTooLarge
+	case ErrorResponseErrorCodeTopicGenerationTooLarge:
+		*s = ErrorResponseErrorCodeTopicGenerationTooLarge
+	case ErrorResponseErrorCodeUnavailable:
+		*s = ErrorResponseErrorCodeUnavailable
+	case ErrorResponseErrorCodeUnknownChunk:
+		*s = ErrorResponseErrorCodeUnknownChunk
+	case ErrorResponseErrorCodeUpdateNeedsInput:
+		*s = ErrorResponseErrorCodeUpdateNeedsInput
+	case ErrorResponseErrorCodeUpstreamError:
+		*s = ErrorResponseErrorCodeUpstreamError
+	case ErrorResponseErrorCodeUsageLimitExceeded:
+		*s = ErrorResponseErrorCodeUsageLimitExceeded
+	case ErrorResponseErrorCodeVendorUnavailable:
+		*s = ErrorResponseErrorCodeVendorUnavailable
 	default:
 		*s = ErrorResponseErrorCode(v)
 	}

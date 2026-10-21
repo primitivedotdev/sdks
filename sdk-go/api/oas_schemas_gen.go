@@ -17982,111 +17982,269 @@ func (s *ErrorResponseError) SetRequestID(val OptString) {
 type ErrorResponseErrorCode string
 
 const (
-	ErrorResponseErrorCodeUnauthorized                        ErrorResponseErrorCode = "unauthorized"
-	ErrorResponseErrorCodeForbidden                           ErrorResponseErrorCode = "forbidden"
-	ErrorResponseErrorCodeNotFound                            ErrorResponseErrorCode = "not_found"
-	ErrorResponseErrorCodeValidationError                     ErrorResponseErrorCode = "validation_error"
-	ErrorResponseErrorCodeRateLimitExceeded                   ErrorResponseErrorCode = "rate_limit_exceeded"
-	ErrorResponseErrorCodeInternalError                       ErrorResponseErrorCode = "internal_error"
-	ErrorResponseErrorCodeConflict                            ErrorResponseErrorCode = "conflict"
-	ErrorResponseErrorCodeMxConflict                          ErrorResponseErrorCode = "mx_conflict"
-	ErrorResponseErrorCodeNotScheduled                        ErrorResponseErrorCode = "not_scheduled"
-	ErrorResponseErrorCodeSentEmailDeleted                    ErrorResponseErrorCode = "sent_email_deleted"
-	ErrorResponseErrorCodeSentEmailNotSettled                 ErrorResponseErrorCode = "sent_email_not_settled"
-	ErrorResponseErrorCodeSentEmailChanged                    ErrorResponseErrorCode = "sent_email_changed"
-	ErrorResponseErrorCodeSentEmailCleanupFailed              ErrorResponseErrorCode = "sent_email_cleanup_failed"
-	ErrorResponseErrorCodeConnectionNotRevoked                ErrorResponseErrorCode = "connection_not_revoked"
-	ErrorResponseErrorCodeAttachmentChanged                   ErrorResponseErrorCode = "attachment_changed"
-	ErrorResponseErrorCodeContentDiscarded                    ErrorResponseErrorCode = "content_discarded"
-	ErrorResponseErrorCodeAttachmentLimitExceeded             ErrorResponseErrorCode = "attachment_limit_exceeded"
-	ErrorResponseErrorCodeAttachmentIntegrityFailed           ErrorResponseErrorCode = "attachment_integrity_failed"
-	ErrorResponseErrorCodeAttachmentNotReady                  ErrorResponseErrorCode = "attachment_not_ready"
-	ErrorResponseErrorCodeAttachmentStorageUnavailable        ErrorResponseErrorCode = "attachment_storage_unavailable"
-	ErrorResponseErrorCodeOutboundDisabled                    ErrorResponseErrorCode = "outbound_disabled"
-	ErrorResponseErrorCodeCannotSendFromDomain                ErrorResponseErrorCode = "cannot_send_from_domain"
-	ErrorResponseErrorCodeRecipientNotAllowed                 ErrorResponseErrorCode = "recipient_not_allowed"
-	ErrorResponseErrorCodeOutboundKeyMissing                  ErrorResponseErrorCode = "outbound_key_missing"
-	ErrorResponseErrorCodeOutboundUnreachable                 ErrorResponseErrorCode = "outbound_unreachable"
-	ErrorResponseErrorCodeOutboundKeyInvalid                  ErrorResponseErrorCode = "outbound_key_invalid"
-	ErrorResponseErrorCodeOutboundCapacityExhausted           ErrorResponseErrorCode = "outbound_capacity_exhausted"
-	ErrorResponseErrorCodeOutboundResponseMalformed           ErrorResponseErrorCode = "outbound_response_malformed"
-	ErrorResponseErrorCodeOutboundRelayFailed                 ErrorResponseErrorCode = "outbound_relay_failed"
-	ErrorResponseErrorCodeDiscardNotEnabled                   ErrorResponseErrorCode = "discard_not_enabled"
-	ErrorResponseErrorCodeInboundNotRepliable                 ErrorResponseErrorCode = "inbound_not_repliable"
-	ErrorResponseErrorCodeSearchTimeout                       ErrorResponseErrorCode = "search_timeout"
-	ErrorResponseErrorCodeAuthorizationPending                ErrorResponseErrorCode = "authorization_pending"
-	ErrorResponseErrorCodeSlowDown                            ErrorResponseErrorCode = "slow_down"
-	ErrorResponseErrorCodeAccessDenied                        ErrorResponseErrorCode = "access_denied"
-	ErrorResponseErrorCodeExpiredToken                        ErrorResponseErrorCode = "expired_token"
-	ErrorResponseErrorCodeInvalidDeviceCode                   ErrorResponseErrorCode = "invalid_device_code"
-	ErrorResponseErrorCodeInvalidSignupToken                  ErrorResponseErrorCode = "invalid_signup_token"
-	ErrorResponseErrorCodeInvalidVerificationCode             ErrorResponseErrorCode = "invalid_verification_code"
-	ErrorResponseErrorCodeEmailDeliveryFailed                 ErrorResponseErrorCode = "email_delivery_failed"
-	ErrorResponseErrorCodeClerkSignupFailed                   ErrorResponseErrorCode = "clerk_signup_failed"
-	ErrorResponseErrorCodeNoOrgsForUser                       ErrorResponseErrorCode = "no_orgs_for_user"
-	ErrorResponseErrorCodeOrgNotAccessible                    ErrorResponseErrorCode = "org_not_accessible"
-	ErrorResponseErrorCodeFeatureDisabled                     ErrorResponseErrorCode = "feature_disabled"
-	ErrorResponseErrorCodeMemoryConflict                      ErrorResponseErrorCode = "memory_conflict"
-	ErrorResponseErrorCodeTemplateNotInstallable              ErrorResponseErrorCode = "template_not_installable"
-	ErrorResponseErrorCodeScaffoldOnly                        ErrorResponseErrorCode = "scaffold_only"
-	ErrorResponseErrorCodeInvalidVariables                    ErrorResponseErrorCode = "invalid_variables"
-	ErrorResponseErrorCodeUnknownSecrets                      ErrorResponseErrorCode = "unknown_secrets"
-	ErrorResponseErrorCodeMissingSecrets                      ErrorResponseErrorCode = "missing_secrets"
-	ErrorResponseErrorCodeNoInboundDomain                     ErrorResponseErrorCode = "no_inbound_domain"
-	ErrorResponseErrorCodeDomainCannotSend                    ErrorResponseErrorCode = "domain_cannot_send"
-	ErrorResponseErrorCodeAddressTaken                        ErrorResponseErrorCode = "address_taken"
-	ErrorResponseErrorCodeRouteCapReached                     ErrorResponseErrorCode = "route_cap_reached"
-	ErrorResponseErrorCodeNameExhausted                       ErrorResponseErrorCode = "name_exhausted"
-	ErrorResponseErrorCodeDeveloperUsageCreditExhausted       ErrorResponseErrorCode = "developer_usage_credit_exhausted"
-	ErrorResponseErrorCodeNoPayoutAddress                     ErrorResponseErrorCode = "no_payout_address"
-	ErrorResponseErrorCodeOwnershipProofFailed                ErrorResponseErrorCode = "ownership_proof_failed"
-	ErrorResponseErrorCodePaymentVerificationFailed           ErrorResponseErrorCode = "payment_verification_failed"
-	ErrorResponseErrorCodePaymentDeclined                     ErrorResponseErrorCode = "payment_declined"
-	ErrorResponseErrorCodeChallengeExpired                    ErrorResponseErrorCode = "challenge_expired"
-	ErrorResponseErrorCodeSettlementFailed                    ErrorResponseErrorCode = "settlement_failed"
-	ErrorResponseErrorCodePullUnavailable                     ErrorResponseErrorCode = "pull_unavailable"
-	ErrorResponseErrorCodeSubscriptionConflict                ErrorResponseErrorCode = "subscription_conflict"
-	ErrorResponseErrorCodeSubscriptionLimit                   ErrorResponseErrorCode = "subscription_limit"
-	ErrorResponseErrorCodeSubscriptionDisabled                ErrorResponseErrorCode = "subscription_disabled"
-	ErrorResponseErrorCodeRequestAborted                      ErrorResponseErrorCode = "request_aborted"
-	ErrorResponseErrorCodeEventContentUnavailable             ErrorResponseErrorCode = "event_content_unavailable"
-	ErrorResponseErrorCodeEventPreparationFailed              ErrorResponseErrorCode = "event_preparation_failed"
-	ErrorResponseErrorCodeSubscriptionUnavailable             ErrorResponseErrorCode = "subscription_unavailable"
-	ErrorResponseErrorCodeStaleDelivery                       ErrorResponseErrorCode = "stale_delivery"
-	ErrorResponseErrorCodeIdempotencyKeyRequired              ErrorResponseErrorCode = "idempotency_key_required"
-	ErrorResponseErrorCodeRepeatUnsupported                   ErrorResponseErrorCode = "repeat_unsupported"
-	ErrorResponseErrorCodeRepeatRecipientExternal             ErrorResponseErrorCode = "repeat_recipient_external"
-	ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient ErrorResponseErrorCode = "repeat_idle_requires_internal_recipient"
-	ErrorResponseErrorCodeNotARepeatingSend                   ErrorResponseErrorCode = "not_a_repeating_send"
-	ErrorResponseErrorCodeRepeatStopNotAllowed                ErrorResponseErrorCode = "repeat_stop_not_allowed"
-	ErrorResponseErrorCodeIdempotencyKeyReused                ErrorResponseErrorCode = "idempotency_key_reused"
-	ErrorResponseErrorCodeCreditCodeInvalid                   ErrorResponseErrorCode = "credit_code_invalid"
-	ErrorResponseErrorCodeCreditCodeAlreadyRedeemed           ErrorResponseErrorCode = "credit_code_already_redeemed"
-	ErrorResponseErrorCodeCreditCodeNotEligible               ErrorResponseErrorCode = "credit_code_not_eligible"
-	ErrorResponseErrorCodeCreditCodeBalanceCap                ErrorResponseErrorCode = "credit_code_balance_cap"
-	ErrorResponseErrorCodeRateLimited                         ErrorResponseErrorCode = "rate_limited"
-	ErrorResponseErrorCodeServiceUnavailable                  ErrorResponseErrorCode = "service_unavailable"
-	ErrorResponseErrorCodeConnectionDomainUnavailable         ErrorResponseErrorCode = "connection_domain_unavailable"
-	ErrorResponseErrorCodeConnectionAddressUnavailable        ErrorResponseErrorCode = "connection_address_unavailable"
-	ErrorResponseErrorCodeConnectionOwnerAddressInvalid       ErrorResponseErrorCode = "connection_owner_address_invalid"
-	ErrorResponseErrorCodeConnectionInvitationUnavailable     ErrorResponseErrorCode = "connection_invitation_unavailable"
-	ErrorResponseErrorCodeAgentConnectionScopeForbidden       ErrorResponseErrorCode = "agent_connection_scope_forbidden"
-	ErrorResponseErrorCodeAddressNoteConflict                 ErrorResponseErrorCode = "address_note_conflict"
-	ErrorResponseErrorCodeAddressNotControlled                ErrorResponseErrorCode = "address_not_controlled"
-	ErrorResponseErrorCodeContactConflict                     ErrorResponseErrorCode = "contact_conflict"
-	ErrorResponseErrorCodeSentMailSearchUnavailable           ErrorResponseErrorCode = "sent_mail_search_unavailable"
-	ErrorResponseErrorCodeLatestMessageMismatch               ErrorResponseErrorCode = "latest_message_mismatch"
-	ErrorResponseErrorCodeLatestMessageThreadUnresolved       ErrorResponseErrorCode = "latest_message_thread_unresolved"
-	ErrorResponseErrorCodeThreadBusy                          ErrorResponseErrorCode = "thread_busy"
-	ErrorResponseErrorCodeAttachmentNameAmbiguous             ErrorResponseErrorCode = "attachment_name_ambiguous"
-	ErrorResponseErrorCodeArchiveLimitExceeded                ErrorResponseErrorCode = "archive_limit_exceeded"
-	ErrorResponseErrorCodeArchiveUnsafePath                   ErrorResponseErrorCode = "archive_unsafe_path"
-	ErrorResponseErrorCodeArchiveInvalid                      ErrorResponseErrorCode = "archive_invalid"
-	ErrorResponseErrorCodeArchiveUnsupported                  ErrorResponseErrorCode = "archive_unsupported"
-	ErrorResponseErrorCodeAttachmentNotArchive                ErrorResponseErrorCode = "attachment_not_archive"
-	ErrorResponseErrorCodeArchiveBusy                         ErrorResponseErrorCode = "archive_busy"
-	ErrorResponseErrorCodeInvalidCursor                       ErrorResponseErrorCode = "invalid_cursor"
-	ErrorResponseErrorCodeCursorExpired                       ErrorResponseErrorCode = "cursor_expired"
+	ErrorResponseErrorCodeUnauthorized                             ErrorResponseErrorCode = "unauthorized"
+	ErrorResponseErrorCodeForbidden                                ErrorResponseErrorCode = "forbidden"
+	ErrorResponseErrorCodeNotFound                                 ErrorResponseErrorCode = "not_found"
+	ErrorResponseErrorCodeValidationError                          ErrorResponseErrorCode = "validation_error"
+	ErrorResponseErrorCodeRateLimitExceeded                        ErrorResponseErrorCode = "rate_limit_exceeded"
+	ErrorResponseErrorCodeInternalError                            ErrorResponseErrorCode = "internal_error"
+	ErrorResponseErrorCodeConflict                                 ErrorResponseErrorCode = "conflict"
+	ErrorResponseErrorCodeMxConflict                               ErrorResponseErrorCode = "mx_conflict"
+	ErrorResponseErrorCodeNotScheduled                             ErrorResponseErrorCode = "not_scheduled"
+	ErrorResponseErrorCodeSentEmailDeleted                         ErrorResponseErrorCode = "sent_email_deleted"
+	ErrorResponseErrorCodeSentEmailNotSettled                      ErrorResponseErrorCode = "sent_email_not_settled"
+	ErrorResponseErrorCodeSentEmailChanged                         ErrorResponseErrorCode = "sent_email_changed"
+	ErrorResponseErrorCodeSentEmailCleanupFailed                   ErrorResponseErrorCode = "sent_email_cleanup_failed"
+	ErrorResponseErrorCodeConnectionNotRevoked                     ErrorResponseErrorCode = "connection_not_revoked"
+	ErrorResponseErrorCodeAttachmentChanged                        ErrorResponseErrorCode = "attachment_changed"
+	ErrorResponseErrorCodeContentDiscarded                         ErrorResponseErrorCode = "content_discarded"
+	ErrorResponseErrorCodeAttachmentLimitExceeded                  ErrorResponseErrorCode = "attachment_limit_exceeded"
+	ErrorResponseErrorCodeAttachmentIntegrityFailed                ErrorResponseErrorCode = "attachment_integrity_failed"
+	ErrorResponseErrorCodeAttachmentNotReady                       ErrorResponseErrorCode = "attachment_not_ready"
+	ErrorResponseErrorCodeAttachmentStorageUnavailable             ErrorResponseErrorCode = "attachment_storage_unavailable"
+	ErrorResponseErrorCodeOutboundDisabled                         ErrorResponseErrorCode = "outbound_disabled"
+	ErrorResponseErrorCodeCannotSendFromDomain                     ErrorResponseErrorCode = "cannot_send_from_domain"
+	ErrorResponseErrorCodeRecipientNotAllowed                      ErrorResponseErrorCode = "recipient_not_allowed"
+	ErrorResponseErrorCodeOutboundKeyMissing                       ErrorResponseErrorCode = "outbound_key_missing"
+	ErrorResponseErrorCodeOutboundUnreachable                      ErrorResponseErrorCode = "outbound_unreachable"
+	ErrorResponseErrorCodeOutboundKeyInvalid                       ErrorResponseErrorCode = "outbound_key_invalid"
+	ErrorResponseErrorCodeOutboundCapacityExhausted                ErrorResponseErrorCode = "outbound_capacity_exhausted"
+	ErrorResponseErrorCodeOutboundResponseMalformed                ErrorResponseErrorCode = "outbound_response_malformed"
+	ErrorResponseErrorCodeOutboundRelayFailed                      ErrorResponseErrorCode = "outbound_relay_failed"
+	ErrorResponseErrorCodeDiscardNotEnabled                        ErrorResponseErrorCode = "discard_not_enabled"
+	ErrorResponseErrorCodeInboundNotRepliable                      ErrorResponseErrorCode = "inbound_not_repliable"
+	ErrorResponseErrorCodeSearchTimeout                            ErrorResponseErrorCode = "search_timeout"
+	ErrorResponseErrorCodeAuthorizationPending                     ErrorResponseErrorCode = "authorization_pending"
+	ErrorResponseErrorCodeSlowDown                                 ErrorResponseErrorCode = "slow_down"
+	ErrorResponseErrorCodeAccessDenied                             ErrorResponseErrorCode = "access_denied"
+	ErrorResponseErrorCodeExpiredToken                             ErrorResponseErrorCode = "expired_token"
+	ErrorResponseErrorCodeInvalidDeviceCode                        ErrorResponseErrorCode = "invalid_device_code"
+	ErrorResponseErrorCodeInvalidSignupToken                       ErrorResponseErrorCode = "invalid_signup_token"
+	ErrorResponseErrorCodeInvalidVerificationCode                  ErrorResponseErrorCode = "invalid_verification_code"
+	ErrorResponseErrorCodeEmailDeliveryFailed                      ErrorResponseErrorCode = "email_delivery_failed"
+	ErrorResponseErrorCodeClerkSignupFailed                        ErrorResponseErrorCode = "clerk_signup_failed"
+	ErrorResponseErrorCodeNoOrgsForUser                            ErrorResponseErrorCode = "no_orgs_for_user"
+	ErrorResponseErrorCodeOrgNotAccessible                         ErrorResponseErrorCode = "org_not_accessible"
+	ErrorResponseErrorCodeFeatureDisabled                          ErrorResponseErrorCode = "feature_disabled"
+	ErrorResponseErrorCodeMemoryConflict                           ErrorResponseErrorCode = "memory_conflict"
+	ErrorResponseErrorCodeTemplateNotInstallable                   ErrorResponseErrorCode = "template_not_installable"
+	ErrorResponseErrorCodeScaffoldOnly                             ErrorResponseErrorCode = "scaffold_only"
+	ErrorResponseErrorCodeInvalidVariables                         ErrorResponseErrorCode = "invalid_variables"
+	ErrorResponseErrorCodeUnknownSecrets                           ErrorResponseErrorCode = "unknown_secrets"
+	ErrorResponseErrorCodeMissingSecrets                           ErrorResponseErrorCode = "missing_secrets"
+	ErrorResponseErrorCodeNoInboundDomain                          ErrorResponseErrorCode = "no_inbound_domain"
+	ErrorResponseErrorCodeDomainCannotSend                         ErrorResponseErrorCode = "domain_cannot_send"
+	ErrorResponseErrorCodeAddressTaken                             ErrorResponseErrorCode = "address_taken"
+	ErrorResponseErrorCodeRouteCapReached                          ErrorResponseErrorCode = "route_cap_reached"
+	ErrorResponseErrorCodeNameExhausted                            ErrorResponseErrorCode = "name_exhausted"
+	ErrorResponseErrorCodeDeveloperUsageCreditExhausted            ErrorResponseErrorCode = "developer_usage_credit_exhausted"
+	ErrorResponseErrorCodeNoPayoutAddress                          ErrorResponseErrorCode = "no_payout_address"
+	ErrorResponseErrorCodeOwnershipProofFailed                     ErrorResponseErrorCode = "ownership_proof_failed"
+	ErrorResponseErrorCodePaymentVerificationFailed                ErrorResponseErrorCode = "payment_verification_failed"
+	ErrorResponseErrorCodePaymentDeclined                          ErrorResponseErrorCode = "payment_declined"
+	ErrorResponseErrorCodeChallengeExpired                         ErrorResponseErrorCode = "challenge_expired"
+	ErrorResponseErrorCodeSettlementFailed                         ErrorResponseErrorCode = "settlement_failed"
+	ErrorResponseErrorCodePullUnavailable                          ErrorResponseErrorCode = "pull_unavailable"
+	ErrorResponseErrorCodeSubscriptionConflict                     ErrorResponseErrorCode = "subscription_conflict"
+	ErrorResponseErrorCodeSubscriptionLimit                        ErrorResponseErrorCode = "subscription_limit"
+	ErrorResponseErrorCodeSubscriptionDisabled                     ErrorResponseErrorCode = "subscription_disabled"
+	ErrorResponseErrorCodeRequestAborted                           ErrorResponseErrorCode = "request_aborted"
+	ErrorResponseErrorCodeEventContentUnavailable                  ErrorResponseErrorCode = "event_content_unavailable"
+	ErrorResponseErrorCodeEventPreparationFailed                   ErrorResponseErrorCode = "event_preparation_failed"
+	ErrorResponseErrorCodeSubscriptionUnavailable                  ErrorResponseErrorCode = "subscription_unavailable"
+	ErrorResponseErrorCodeStaleDelivery                            ErrorResponseErrorCode = "stale_delivery"
+	ErrorResponseErrorCodeIdempotencyKeyRequired                   ErrorResponseErrorCode = "idempotency_key_required"
+	ErrorResponseErrorCodeRepeatUnsupported                        ErrorResponseErrorCode = "repeat_unsupported"
+	ErrorResponseErrorCodeRepeatRecipientExternal                  ErrorResponseErrorCode = "repeat_recipient_external"
+	ErrorResponseErrorCodeRepeatIdleRequiresInternalRecipient      ErrorResponseErrorCode = "repeat_idle_requires_internal_recipient"
+	ErrorResponseErrorCodeNotARepeatingSend                        ErrorResponseErrorCode = "not_a_repeating_send"
+	ErrorResponseErrorCodeRepeatStopNotAllowed                     ErrorResponseErrorCode = "repeat_stop_not_allowed"
+	ErrorResponseErrorCodeIdempotencyKeyReused                     ErrorResponseErrorCode = "idempotency_key_reused"
+	ErrorResponseErrorCodeCreditCodeInvalid                        ErrorResponseErrorCode = "credit_code_invalid"
+	ErrorResponseErrorCodeCreditCodeAlreadyRedeemed                ErrorResponseErrorCode = "credit_code_already_redeemed"
+	ErrorResponseErrorCodeCreditCodeNotEligible                    ErrorResponseErrorCode = "credit_code_not_eligible"
+	ErrorResponseErrorCodeCreditCodeBalanceCap                     ErrorResponseErrorCode = "credit_code_balance_cap"
+	ErrorResponseErrorCodeRateLimited                              ErrorResponseErrorCode = "rate_limited"
+	ErrorResponseErrorCodeServiceUnavailable                       ErrorResponseErrorCode = "service_unavailable"
+	ErrorResponseErrorCodeConnectionDomainUnavailable              ErrorResponseErrorCode = "connection_domain_unavailable"
+	ErrorResponseErrorCodeConnectionAddressUnavailable             ErrorResponseErrorCode = "connection_address_unavailable"
+	ErrorResponseErrorCodeConnectionOwnerAddressInvalid            ErrorResponseErrorCode = "connection_owner_address_invalid"
+	ErrorResponseErrorCodeConnectionInvitationUnavailable          ErrorResponseErrorCode = "connection_invitation_unavailable"
+	ErrorResponseErrorCodeAgentConnectionScopeForbidden            ErrorResponseErrorCode = "agent_connection_scope_forbidden"
+	ErrorResponseErrorCodeAddressNoteConflict                      ErrorResponseErrorCode = "address_note_conflict"
+	ErrorResponseErrorCodeAddressNotControlled                     ErrorResponseErrorCode = "address_not_controlled"
+	ErrorResponseErrorCodeContactConflict                          ErrorResponseErrorCode = "contact_conflict"
+	ErrorResponseErrorCodeConnectionRemoved                        ErrorResponseErrorCode = "connection_removed"
+	ErrorResponseErrorCodeConnectionCreateRequestConflict          ErrorResponseErrorCode = "connection_create_request_conflict"
+	ErrorResponseErrorCodeConnectionAlreadyClaimed                 ErrorResponseErrorCode = "connection_already_claimed"
+	ErrorResponseErrorCodeConnectionRevoked                        ErrorResponseErrorCode = "connection_revoked"
+	ErrorResponseErrorCodeConnectionCleanupPending                 ErrorResponseErrorCode = "connection_cleanup_pending"
+	ErrorResponseErrorCodeAttachmentNameAmbiguous                  ErrorResponseErrorCode = "attachment_name_ambiguous"
+	ErrorResponseErrorCodeAttachmentNotArchive                     ErrorResponseErrorCode = "attachment_not_archive"
+	ErrorResponseErrorCodeArchiveUnsafePath                        ErrorResponseErrorCode = "archive_unsafe_path"
+	ErrorResponseErrorCodeArchiveInvalid                           ErrorResponseErrorCode = "archive_invalid"
+	ErrorResponseErrorCodeArchiveUnsupported                       ErrorResponseErrorCode = "archive_unsupported"
+	ErrorResponseErrorCodeArchiveLimitExceeded                     ErrorResponseErrorCode = "archive_limit_exceeded"
+	ErrorResponseErrorCodeArchiveBusy                              ErrorResponseErrorCode = "archive_busy"
+	ErrorResponseErrorCodeLatestMessageMismatch                    ErrorResponseErrorCode = "latest_message_mismatch"
+	ErrorResponseErrorCodeLatestMessageThreadUnresolved            ErrorResponseErrorCode = "latest_message_thread_unresolved"
+	ErrorResponseErrorCodeThreadBusy                               ErrorResponseErrorCode = "thread_busy"
+	ErrorResponseErrorCodeSentMailSearchUnavailable                ErrorResponseErrorCode = "sent_mail_search_unavailable"
+	ErrorResponseErrorCodeMemberAddressUnavailable                 ErrorResponseErrorCode = "member_address_unavailable"
+	ErrorResponseErrorCodeMemberAddressHistoryConfirmationRequired ErrorResponseErrorCode = "member_address_history_confirmation_required"
+	ErrorResponseErrorCodeMemberAddressImmutable                   ErrorResponseErrorCode = "member_address_immutable"
+	ErrorResponseErrorCodeMemberAddressDomainUnavailable           ErrorResponseErrorCode = "member_address_domain_unavailable"
+	ErrorResponseErrorCodeEmailAdmissionUnavailable                ErrorResponseErrorCode = "email_admission_unavailable"
+	ErrorResponseErrorCodePullSubscriptionRequiresAgentConnection  ErrorResponseErrorCode = "pull_subscription_requires_agent_connection"
+	ErrorResponseErrorCodeAddressInUse                             ErrorResponseErrorCode = "address_in_use"
+	ErrorResponseErrorCodeAddressNotOwned                          ErrorResponseErrorCode = "address_not_owned"
+	ErrorResponseErrorCodeAddressOwnedByAnotherOrg                 ErrorResponseErrorCode = "address_owned_by_another_org"
+	ErrorResponseErrorCodeAgentAccountManagedDomainOnly            ErrorResponseErrorCode = "agent_account_managed_domain_only"
+	ErrorResponseErrorCodeAgentChanged                             ErrorResponseErrorCode = "agent_changed"
+	ErrorResponseErrorCodeAgentMisconfigured                       ErrorResponseErrorCode = "agent_misconfigured"
+	ErrorResponseErrorCodeAgentNotDefined                          ErrorResponseErrorCode = "agent_not_defined"
+	ErrorResponseErrorCodeAgentNotFound                            ErrorResponseErrorCode = "agent_not_found"
+	ErrorResponseErrorCodeAgentUnreachable                         ErrorResponseErrorCode = "agent_unreachable"
+	ErrorResponseErrorCodeAlreadyClaimed                           ErrorResponseErrorCode = "already_claimed"
+	ErrorResponseErrorCodeAlreadyMember                            ErrorResponseErrorCode = "already_member"
+	ErrorResponseErrorCodeBadRequest                               ErrorResponseErrorCode = "bad_request"
+	ErrorResponseErrorCodeBodyNotSupported                         ErrorResponseErrorCode = "body_not_supported"
+	ErrorResponseErrorCodeBuildFailed                              ErrorResponseErrorCode = "build_failed"
+	ErrorResponseErrorCodeBuilderUnavailable                       ErrorResponseErrorCode = "builder_unavailable"
+	ErrorResponseErrorCodeChunkTooLarge                            ErrorResponseErrorCode = "chunk_too_large"
+	ErrorResponseErrorCodeChunksMissing                            ErrorResponseErrorCode = "chunks_missing"
+	ErrorResponseErrorCodeClaimNotPending                          ErrorResponseErrorCode = "claim_not_pending"
+	ErrorResponseErrorCodeClerkFailed                              ErrorResponseErrorCode = "clerk_failed"
+	ErrorResponseErrorCodeCodeExpired                              ErrorResponseErrorCode = "code_expired"
+	ErrorResponseErrorCodeContactRequestInvalid                    ErrorResponseErrorCode = "contact_request_invalid"
+	ErrorResponseErrorCodeContactRequestNotReady                   ErrorResponseErrorCode = "contact_request_not_ready"
+	ErrorResponseErrorCodeContactRequestUnauthenticated            ErrorResponseErrorCode = "contact_request_unauthenticated"
+	ErrorResponseErrorCodeContactRequestUnavailable                ErrorResponseErrorCode = "contact_request_unavailable"
+	ErrorResponseErrorCodeCursorExpired                            ErrorResponseErrorCode = "cursor_expired"
+	ErrorResponseErrorCodeDeleteFailed                             ErrorResponseErrorCode = "delete_failed"
+	ErrorResponseErrorCodeDeployFailed                             ErrorResponseErrorCode = "deploy_failed"
+	ErrorResponseErrorCodeDirectDeliveryFailed                     ErrorResponseErrorCode = "direct_delivery_failed"
+	ErrorResponseErrorCodeDirectDeliveryUnavailable                ErrorResponseErrorCode = "direct_delivery_unavailable"
+	ErrorResponseErrorCodeDirectoryLimit                           ErrorResponseErrorCode = "directory_limit"
+	ErrorResponseErrorCodeDNSPublicationFailed                     ErrorResponseErrorCode = "dns_publication_failed"
+	ErrorResponseErrorCodeDNSPublicationPending                    ErrorResponseErrorCode = "dns_publication_pending"
+	ErrorResponseErrorCodeDNSVerificationFailed                    ErrorResponseErrorCode = "dns_verification_failed"
+	ErrorResponseErrorCodeDownloadTokenExpired                     ErrorResponseErrorCode = "download_token_expired"
+	ErrorResponseErrorCodeDownloadTokenInvalid                     ErrorResponseErrorCode = "download_token_invalid"
+	ErrorResponseErrorCodeEmailInUse                               ErrorResponseErrorCode = "email_in_use"
+	ErrorResponseErrorCodeEmbeddingProviderUnavailable             ErrorResponseErrorCode = "embedding_provider_unavailable"
+	ErrorResponseErrorCodeExpired                                  ErrorResponseErrorCode = "expired"
+	ErrorResponseErrorCodeFreshSendNotAuthorized                   ErrorResponseErrorCode = "fresh_send_not_authorized"
+	ErrorResponseErrorCodeFunctionEffectEmailMismatch              ErrorResponseErrorCode = "function_effect_email_mismatch"
+	ErrorResponseErrorCodeFunctionEffectMismatch                   ErrorResponseErrorCode = "function_effect_mismatch"
+	ErrorResponseErrorCodeFunctionForked                           ErrorResponseErrorCode = "function_forked"
+	ErrorResponseErrorCodeFunctionGithubLinked                     ErrorResponseErrorCode = "function_github_linked"
+	ErrorResponseErrorCodeFunctionNotDeployed                      ErrorResponseErrorCode = "function_not_deployed"
+	ErrorResponseErrorCodeFunctionScopeForbidden                   ErrorResponseErrorCode = "function_scope_forbidden"
+	ErrorResponseErrorCodeHandleInCooldown                         ErrorResponseErrorCode = "handle_in_cooldown"
+	ErrorResponseErrorCodeHandleReserved                           ErrorResponseErrorCode = "handle_reserved"
+	ErrorResponseErrorCodeHandleTaken                              ErrorResponseErrorCode = "handle_taken"
+	ErrorResponseErrorCodeHashMismatch                             ErrorResponseErrorCode = "hash_mismatch"
+	ErrorResponseErrorCodeIdempotencyConflict                      ErrorResponseErrorCode = "idempotency_conflict"
+	ErrorResponseErrorCodeInvalidCode                              ErrorResponseErrorCode = "invalid_code"
+	ErrorResponseErrorCodeInvalidCursor                            ErrorResponseErrorCode = "invalid_cursor"
+	ErrorResponseErrorCodeInvalidEmail                             ErrorResponseErrorCode = "invalid_email"
+	ErrorResponseErrorCodeInvalidInput                             ErrorResponseErrorCode = "invalid_input"
+	ErrorResponseErrorCodeInvalidPayloadReference                  ErrorResponseErrorCode = "invalid_payload_reference"
+	ErrorResponseErrorCodeInvalidRequest                           ErrorResponseErrorCode = "invalid_request"
+	ErrorResponseErrorCodeInvalidStep                              ErrorResponseErrorCode = "invalid_step"
+	ErrorResponseErrorCodeInvalidToken                             ErrorResponseErrorCode = "invalid_token"
+	ErrorResponseErrorCodeInvalidTopicSources                      ErrorResponseErrorCode = "invalid_topic_sources"
+	ErrorResponseErrorCodeInvitationAccepted                       ErrorResponseErrorCode = "invitation_accepted"
+	ErrorResponseErrorCodeInvitationPending                        ErrorResponseErrorCode = "invitation_pending"
+	ErrorResponseErrorCodeInvitationUnconfirmed                    ErrorResponseErrorCode = "invitation_unconfirmed"
+	ErrorResponseErrorCodeInvitationsPending                       ErrorResponseErrorCode = "invitations_pending"
+	ErrorResponseErrorCodeMailRelayUnavailable                     ErrorResponseErrorCode = "mail_relay_unavailable"
+	ErrorResponseErrorCodeMailRoutingConflict                      ErrorResponseErrorCode = "mail_routing_conflict"
+	ErrorResponseErrorCodeMailTopicEditConflict                    ErrorResponseErrorCode = "mail_topic_edit_conflict"
+	ErrorResponseErrorCodeMailTopicGenerationConflict              ErrorResponseErrorCode = "mail_topic_generation_conflict"
+	ErrorResponseErrorCodeMailboxNotFound                          ErrorResponseErrorCode = "mailbox_not_found"
+	ErrorResponseErrorCodeManagedBuildFailed                       ErrorResponseErrorCode = "managed_build_failed"
+	ErrorResponseErrorCodeManagedDomain                            ErrorResponseErrorCode = "managed_domain"
+	ErrorResponseErrorCodeMemberChanged                            ErrorResponseErrorCode = "member_changed"
+	ErrorResponseErrorCodeMessageNotFound                          ErrorResponseErrorCode = "message_not_found"
+	ErrorResponseErrorCodeNameTaken                                ErrorResponseErrorCode = "name_taken"
+	ErrorResponseErrorCodeNetworkMemberExcluded                    ErrorResponseErrorCode = "network_member_excluded"
+	ErrorResponseErrorCodeNetworkMemberNotFound                    ErrorResponseErrorCode = "network_member_not_found"
+	ErrorResponseErrorCodeNetworkPeerNotFound                      ErrorResponseErrorCode = "network_peer_not_found"
+	ErrorResponseErrorCodeNetworkViewDenied                        ErrorResponseErrorCode = "network_view_denied"
+	ErrorResponseErrorCodeNoCode                                   ErrorResponseErrorCode = "no_code"
+	ErrorResponseErrorCodeNoEndpoint                               ErrorResponseErrorCode = "no_endpoint"
+	ErrorResponseErrorCodeNotATemplateInstall                      ErrorResponseErrorCode = "not_a_template_install"
+	ErrorResponseErrorCodeNotClaimable                             ErrorResponseErrorCode = "not_claimable"
+	ErrorResponseErrorCodeNotPending                               ErrorResponseErrorCode = "not_pending"
+	ErrorResponseErrorCodeOpenPolicyNotAllowed                     ErrorResponseErrorCode = "open_policy_not_allowed"
+	ErrorResponseErrorCodeOutboundEdgeRejected                     ErrorResponseErrorCode = "outbound_edge_rejected"
+	ErrorResponseErrorCodeOutboundEmailLimitExceeded               ErrorResponseErrorCode = "outbound_email_limit_exceeded"
+	ErrorResponseErrorCodeOutboundRelayTimeout                     ErrorResponseErrorCode = "outbound_relay_timeout"
+	ErrorResponseErrorCodePayloadTooLarge                          ErrorResponseErrorCode = "payload_too_large"
+	ErrorResponseErrorCodePresenceAdmissionBusy                    ErrorResponseErrorCode = "presence_admission_busy"
+	ErrorResponseErrorCodePresenceIdempotencyConflict              ErrorResponseErrorCode = "presence_idempotency_conflict"
+	ErrorResponseErrorCodePresenceProbeStale                       ErrorResponseErrorCode = "presence_probe_stale"
+	ErrorResponseErrorCodeProPlanRequired                          ErrorResponseErrorCode = "pro_plan_required"
+	ErrorResponseErrorCodeProjectChanged                           ErrorResponseErrorCode = "project_changed"
+	ErrorResponseErrorCodeProtocolUnavailable                      ErrorResponseErrorCode = "protocol_unavailable"
+	ErrorResponseErrorCodePublicationNotFound                      ErrorResponseErrorCode = "publication_not_found"
+	ErrorResponseErrorCodePublishPolicyDenied                      ErrorResponseErrorCode = "publish_policy_denied"
+	ErrorResponseErrorCodeRecipientChanged                         ErrorResponseErrorCode = "recipient_changed"
+	ErrorResponseErrorCodeRecipientSuppressed                      ErrorResponseErrorCode = "recipient_suppressed"
+	ErrorResponseErrorCodeRegistryCreateNotAllowed                 ErrorResponseErrorCode = "registry_create_not_allowed"
+	ErrorResponseErrorCodeRegistryNotFound                         ErrorResponseErrorCode = "registry_not_found"
+	ErrorResponseErrorCodeRenameNotAllowed                         ErrorResponseErrorCode = "rename_not_allowed"
+	ErrorResponseErrorCodeResendLimitExceeded                      ErrorResponseErrorCode = "resend_limit_exceeded"
+	ErrorResponseErrorCodeResendTooSoon                            ErrorResponseErrorCode = "resend_too_soon"
+	ErrorResponseErrorCodeScheduleAllowlistNotProvided             ErrorResponseErrorCode = "schedule_allowlist_not_provided"
+	ErrorResponseErrorCodeScheduleSenderCollision                  ErrorResponseErrorCode = "schedule_sender_collision"
+	ErrorResponseErrorCodeScheduleWakeDisabled                     ErrorResponseErrorCode = "schedule_wake_disabled"
+	ErrorResponseErrorCodeScheduledPayloadInvalid                  ErrorResponseErrorCode = "scheduled_payload_invalid"
+	ErrorResponseErrorCodeSearchUnavailable                        ErrorResponseErrorCode = "search_unavailable"
+	ErrorResponseErrorCodeSemanticSearchNotEnabled                 ErrorResponseErrorCode = "semantic_search_not_enabled"
+	ErrorResponseErrorCodeSendFailed                               ErrorResponseErrorCode = "send_failed"
+	ErrorResponseErrorCodeSenderNotAuthorized                      ErrorResponseErrorCode = "sender_not_authorized"
+	ErrorResponseErrorCodeSentEmailTailUnavailable                 ErrorResponseErrorCode = "sent_email_tail_unavailable"
+	ErrorResponseErrorCodeSettlementUnresolved                     ErrorResponseErrorCode = "settlement_unresolved"
+	ErrorResponseErrorCodeSharedParentRecipient                    ErrorResponseErrorCode = "shared_parent_recipient"
+	ErrorResponseErrorCodeShoppingBindingConflict                  ErrorResponseErrorCode = "shopping_binding_conflict"
+	ErrorResponseErrorCodeShoppingDecisionConflict                 ErrorResponseErrorCode = "shopping_decision_conflict"
+	ErrorResponseErrorCodeShoppingIdentityConflict                 ErrorResponseErrorCode = "shopping_identity_conflict"
+	ErrorResponseErrorCodeShoppingNotFound                         ErrorResponseErrorCode = "shopping_not_found"
+	ErrorResponseErrorCodeShoppingOwnerMailRequired                ErrorResponseErrorCode = "shopping_owner_mail_required"
+	ErrorResponseErrorCodeShoppingPackageNotFound                  ErrorResponseErrorCode = "shopping_package_not_found"
+	ErrorResponseErrorCodeShoppingProposalExpired                  ErrorResponseErrorCode = "shopping_proposal_expired"
+	ErrorResponseErrorCodeShoppingReplayConflict                   ErrorResponseErrorCode = "shopping_replay_conflict"
+	ErrorResponseErrorCodeShoppingSourceUnavailable                ErrorResponseErrorCode = "shopping_source_unavailable"
+	ErrorResponseErrorCodeShoppingTooManyShipments                 ErrorResponseErrorCode = "shopping_too_many_shipments"
+	ErrorResponseErrorCodeShoppingTrackingInvalid                  ErrorResponseErrorCode = "shopping_tracking_invalid"
+	ErrorResponseErrorCodeShoppingVersionConflict                  ErrorResponseErrorCode = "shopping_version_conflict"
+	ErrorResponseErrorCodeShoppingWakeUnavailable                  ErrorResponseErrorCode = "shopping_wake_unavailable"
+	ErrorResponseErrorCodeShredded                                 ErrorResponseErrorCode = "shredded"
+	ErrorResponseErrorCodeSignInEmailChangeRequired                ErrorResponseErrorCode = "sign_in_email_change_required"
+	ErrorResponseErrorCodeSignalNotAllowed                         ErrorResponseErrorCode = "signal_not_allowed"
+	ErrorResponseErrorCodeSignalParentNotReady                     ErrorResponseErrorCode = "signal_parent_not_ready"
+	ErrorResponseErrorCodeSignalSenderUnauthenticated              ErrorResponseErrorCode = "signal_sender_unauthenticated"
+	ErrorResponseErrorCodeSlugTaken                                ErrorResponseErrorCode = "slug_taken"
+	ErrorResponseErrorCodeStepRejected                             ErrorResponseErrorCode = "step_rejected"
+	ErrorResponseErrorCodeStorageError                             ErrorResponseErrorCode = "storage_error"
+	ErrorResponseErrorCodeStorageLimitExceeded                     ErrorResponseErrorCode = "storage_limit_exceeded"
+	ErrorResponseErrorCodeTemplateUnavailable                      ErrorResponseErrorCode = "template_unavailable"
+	ErrorResponseErrorCodeTemplateUpdateFailed                     ErrorResponseErrorCode = "template_update_failed"
+	ErrorResponseErrorCodeTermsNotAccepted                         ErrorResponseErrorCode = "terms_not_accepted"
+	ErrorResponseErrorCodeTooManyAttempts                          ErrorResponseErrorCode = "too_many_attempts"
+	ErrorResponseErrorCodeTooManyConcurrentBuilds                  ErrorResponseErrorCode = "too_many_concurrent_builds"
+	ErrorResponseErrorCodeTooManyResends                           ErrorResponseErrorCode = "too_many_resends"
+	ErrorResponseErrorCodeTopicEditTooLarge                        ErrorResponseErrorCode = "topic_edit_too_large"
+	ErrorResponseErrorCodeTopicGenerationTooLarge                  ErrorResponseErrorCode = "topic_generation_too_large"
+	ErrorResponseErrorCodeUnavailable                              ErrorResponseErrorCode = "unavailable"
+	ErrorResponseErrorCodeUnknownChunk                             ErrorResponseErrorCode = "unknown_chunk"
+	ErrorResponseErrorCodeUpdateNeedsInput                         ErrorResponseErrorCode = "update_needs_input"
+	ErrorResponseErrorCodeUpstreamError                            ErrorResponseErrorCode = "upstream_error"
+	ErrorResponseErrorCodeUsageLimitExceeded                       ErrorResponseErrorCode = "usage_limit_exceeded"
+	ErrorResponseErrorCodeVendorUnavailable                        ErrorResponseErrorCode = "vendor_unavailable"
 )
 
 // AllValues returns all ErrorResponseErrorCode values.
@@ -18184,19 +18342,177 @@ func (ErrorResponseErrorCode) AllValues() []ErrorResponseErrorCode {
 		ErrorResponseErrorCodeAddressNoteConflict,
 		ErrorResponseErrorCodeAddressNotControlled,
 		ErrorResponseErrorCodeContactConflict,
-		ErrorResponseErrorCodeSentMailSearchUnavailable,
-		ErrorResponseErrorCodeLatestMessageMismatch,
-		ErrorResponseErrorCodeLatestMessageThreadUnresolved,
-		ErrorResponseErrorCodeThreadBusy,
+		ErrorResponseErrorCodeConnectionRemoved,
+		ErrorResponseErrorCodeConnectionCreateRequestConflict,
+		ErrorResponseErrorCodeConnectionAlreadyClaimed,
+		ErrorResponseErrorCodeConnectionRevoked,
+		ErrorResponseErrorCodeConnectionCleanupPending,
 		ErrorResponseErrorCodeAttachmentNameAmbiguous,
-		ErrorResponseErrorCodeArchiveLimitExceeded,
+		ErrorResponseErrorCodeAttachmentNotArchive,
 		ErrorResponseErrorCodeArchiveUnsafePath,
 		ErrorResponseErrorCodeArchiveInvalid,
 		ErrorResponseErrorCodeArchiveUnsupported,
-		ErrorResponseErrorCodeAttachmentNotArchive,
+		ErrorResponseErrorCodeArchiveLimitExceeded,
 		ErrorResponseErrorCodeArchiveBusy,
-		ErrorResponseErrorCodeInvalidCursor,
+		ErrorResponseErrorCodeLatestMessageMismatch,
+		ErrorResponseErrorCodeLatestMessageThreadUnresolved,
+		ErrorResponseErrorCodeThreadBusy,
+		ErrorResponseErrorCodeSentMailSearchUnavailable,
+		ErrorResponseErrorCodeMemberAddressUnavailable,
+		ErrorResponseErrorCodeMemberAddressHistoryConfirmationRequired,
+		ErrorResponseErrorCodeMemberAddressImmutable,
+		ErrorResponseErrorCodeMemberAddressDomainUnavailable,
+		ErrorResponseErrorCodeEmailAdmissionUnavailable,
+		ErrorResponseErrorCodePullSubscriptionRequiresAgentConnection,
+		ErrorResponseErrorCodeAddressInUse,
+		ErrorResponseErrorCodeAddressNotOwned,
+		ErrorResponseErrorCodeAddressOwnedByAnotherOrg,
+		ErrorResponseErrorCodeAgentAccountManagedDomainOnly,
+		ErrorResponseErrorCodeAgentChanged,
+		ErrorResponseErrorCodeAgentMisconfigured,
+		ErrorResponseErrorCodeAgentNotDefined,
+		ErrorResponseErrorCodeAgentNotFound,
+		ErrorResponseErrorCodeAgentUnreachable,
+		ErrorResponseErrorCodeAlreadyClaimed,
+		ErrorResponseErrorCodeAlreadyMember,
+		ErrorResponseErrorCodeBadRequest,
+		ErrorResponseErrorCodeBodyNotSupported,
+		ErrorResponseErrorCodeBuildFailed,
+		ErrorResponseErrorCodeBuilderUnavailable,
+		ErrorResponseErrorCodeChunkTooLarge,
+		ErrorResponseErrorCodeChunksMissing,
+		ErrorResponseErrorCodeClaimNotPending,
+		ErrorResponseErrorCodeClerkFailed,
+		ErrorResponseErrorCodeCodeExpired,
+		ErrorResponseErrorCodeContactRequestInvalid,
+		ErrorResponseErrorCodeContactRequestNotReady,
+		ErrorResponseErrorCodeContactRequestUnauthenticated,
+		ErrorResponseErrorCodeContactRequestUnavailable,
 		ErrorResponseErrorCodeCursorExpired,
+		ErrorResponseErrorCodeDeleteFailed,
+		ErrorResponseErrorCodeDeployFailed,
+		ErrorResponseErrorCodeDirectDeliveryFailed,
+		ErrorResponseErrorCodeDirectDeliveryUnavailable,
+		ErrorResponseErrorCodeDirectoryLimit,
+		ErrorResponseErrorCodeDNSPublicationFailed,
+		ErrorResponseErrorCodeDNSPublicationPending,
+		ErrorResponseErrorCodeDNSVerificationFailed,
+		ErrorResponseErrorCodeDownloadTokenExpired,
+		ErrorResponseErrorCodeDownloadTokenInvalid,
+		ErrorResponseErrorCodeEmailInUse,
+		ErrorResponseErrorCodeEmbeddingProviderUnavailable,
+		ErrorResponseErrorCodeExpired,
+		ErrorResponseErrorCodeFreshSendNotAuthorized,
+		ErrorResponseErrorCodeFunctionEffectEmailMismatch,
+		ErrorResponseErrorCodeFunctionEffectMismatch,
+		ErrorResponseErrorCodeFunctionForked,
+		ErrorResponseErrorCodeFunctionGithubLinked,
+		ErrorResponseErrorCodeFunctionNotDeployed,
+		ErrorResponseErrorCodeFunctionScopeForbidden,
+		ErrorResponseErrorCodeHandleInCooldown,
+		ErrorResponseErrorCodeHandleReserved,
+		ErrorResponseErrorCodeHandleTaken,
+		ErrorResponseErrorCodeHashMismatch,
+		ErrorResponseErrorCodeIdempotencyConflict,
+		ErrorResponseErrorCodeInvalidCode,
+		ErrorResponseErrorCodeInvalidCursor,
+		ErrorResponseErrorCodeInvalidEmail,
+		ErrorResponseErrorCodeInvalidInput,
+		ErrorResponseErrorCodeInvalidPayloadReference,
+		ErrorResponseErrorCodeInvalidRequest,
+		ErrorResponseErrorCodeInvalidStep,
+		ErrorResponseErrorCodeInvalidToken,
+		ErrorResponseErrorCodeInvalidTopicSources,
+		ErrorResponseErrorCodeInvitationAccepted,
+		ErrorResponseErrorCodeInvitationPending,
+		ErrorResponseErrorCodeInvitationUnconfirmed,
+		ErrorResponseErrorCodeInvitationsPending,
+		ErrorResponseErrorCodeMailRelayUnavailable,
+		ErrorResponseErrorCodeMailRoutingConflict,
+		ErrorResponseErrorCodeMailTopicEditConflict,
+		ErrorResponseErrorCodeMailTopicGenerationConflict,
+		ErrorResponseErrorCodeMailboxNotFound,
+		ErrorResponseErrorCodeManagedBuildFailed,
+		ErrorResponseErrorCodeManagedDomain,
+		ErrorResponseErrorCodeMemberChanged,
+		ErrorResponseErrorCodeMessageNotFound,
+		ErrorResponseErrorCodeNameTaken,
+		ErrorResponseErrorCodeNetworkMemberExcluded,
+		ErrorResponseErrorCodeNetworkMemberNotFound,
+		ErrorResponseErrorCodeNetworkPeerNotFound,
+		ErrorResponseErrorCodeNetworkViewDenied,
+		ErrorResponseErrorCodeNoCode,
+		ErrorResponseErrorCodeNoEndpoint,
+		ErrorResponseErrorCodeNotATemplateInstall,
+		ErrorResponseErrorCodeNotClaimable,
+		ErrorResponseErrorCodeNotPending,
+		ErrorResponseErrorCodeOpenPolicyNotAllowed,
+		ErrorResponseErrorCodeOutboundEdgeRejected,
+		ErrorResponseErrorCodeOutboundEmailLimitExceeded,
+		ErrorResponseErrorCodeOutboundRelayTimeout,
+		ErrorResponseErrorCodePayloadTooLarge,
+		ErrorResponseErrorCodePresenceAdmissionBusy,
+		ErrorResponseErrorCodePresenceIdempotencyConflict,
+		ErrorResponseErrorCodePresenceProbeStale,
+		ErrorResponseErrorCodeProPlanRequired,
+		ErrorResponseErrorCodeProjectChanged,
+		ErrorResponseErrorCodeProtocolUnavailable,
+		ErrorResponseErrorCodePublicationNotFound,
+		ErrorResponseErrorCodePublishPolicyDenied,
+		ErrorResponseErrorCodeRecipientChanged,
+		ErrorResponseErrorCodeRecipientSuppressed,
+		ErrorResponseErrorCodeRegistryCreateNotAllowed,
+		ErrorResponseErrorCodeRegistryNotFound,
+		ErrorResponseErrorCodeRenameNotAllowed,
+		ErrorResponseErrorCodeResendLimitExceeded,
+		ErrorResponseErrorCodeResendTooSoon,
+		ErrorResponseErrorCodeScheduleAllowlistNotProvided,
+		ErrorResponseErrorCodeScheduleSenderCollision,
+		ErrorResponseErrorCodeScheduleWakeDisabled,
+		ErrorResponseErrorCodeScheduledPayloadInvalid,
+		ErrorResponseErrorCodeSearchUnavailable,
+		ErrorResponseErrorCodeSemanticSearchNotEnabled,
+		ErrorResponseErrorCodeSendFailed,
+		ErrorResponseErrorCodeSenderNotAuthorized,
+		ErrorResponseErrorCodeSentEmailTailUnavailable,
+		ErrorResponseErrorCodeSettlementUnresolved,
+		ErrorResponseErrorCodeSharedParentRecipient,
+		ErrorResponseErrorCodeShoppingBindingConflict,
+		ErrorResponseErrorCodeShoppingDecisionConflict,
+		ErrorResponseErrorCodeShoppingIdentityConflict,
+		ErrorResponseErrorCodeShoppingNotFound,
+		ErrorResponseErrorCodeShoppingOwnerMailRequired,
+		ErrorResponseErrorCodeShoppingPackageNotFound,
+		ErrorResponseErrorCodeShoppingProposalExpired,
+		ErrorResponseErrorCodeShoppingReplayConflict,
+		ErrorResponseErrorCodeShoppingSourceUnavailable,
+		ErrorResponseErrorCodeShoppingTooManyShipments,
+		ErrorResponseErrorCodeShoppingTrackingInvalid,
+		ErrorResponseErrorCodeShoppingVersionConflict,
+		ErrorResponseErrorCodeShoppingWakeUnavailable,
+		ErrorResponseErrorCodeShredded,
+		ErrorResponseErrorCodeSignInEmailChangeRequired,
+		ErrorResponseErrorCodeSignalNotAllowed,
+		ErrorResponseErrorCodeSignalParentNotReady,
+		ErrorResponseErrorCodeSignalSenderUnauthenticated,
+		ErrorResponseErrorCodeSlugTaken,
+		ErrorResponseErrorCodeStepRejected,
+		ErrorResponseErrorCodeStorageError,
+		ErrorResponseErrorCodeStorageLimitExceeded,
+		ErrorResponseErrorCodeTemplateUnavailable,
+		ErrorResponseErrorCodeTemplateUpdateFailed,
+		ErrorResponseErrorCodeTermsNotAccepted,
+		ErrorResponseErrorCodeTooManyAttempts,
+		ErrorResponseErrorCodeTooManyConcurrentBuilds,
+		ErrorResponseErrorCodeTooManyResends,
+		ErrorResponseErrorCodeTopicEditTooLarge,
+		ErrorResponseErrorCodeTopicGenerationTooLarge,
+		ErrorResponseErrorCodeUnavailable,
+		ErrorResponseErrorCodeUnknownChunk,
+		ErrorResponseErrorCodeUpdateNeedsInput,
+		ErrorResponseErrorCodeUpstreamError,
+		ErrorResponseErrorCodeUsageLimitExceeded,
+		ErrorResponseErrorCodeVendorUnavailable,
 	}
 }
 
@@ -18387,17 +18703,19 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorResponseErrorCodeContactConflict:
 		return []byte(s), nil
-	case ErrorResponseErrorCodeSentMailSearchUnavailable:
+	case ErrorResponseErrorCodeConnectionRemoved:
 		return []byte(s), nil
-	case ErrorResponseErrorCodeLatestMessageMismatch:
+	case ErrorResponseErrorCodeConnectionCreateRequestConflict:
 		return []byte(s), nil
-	case ErrorResponseErrorCodeLatestMessageThreadUnresolved:
+	case ErrorResponseErrorCodeConnectionAlreadyClaimed:
 		return []byte(s), nil
-	case ErrorResponseErrorCodeThreadBusy:
+	case ErrorResponseErrorCodeConnectionRevoked:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeConnectionCleanupPending:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeAttachmentNameAmbiguous:
 		return []byte(s), nil
-	case ErrorResponseErrorCodeArchiveLimitExceeded:
+	case ErrorResponseErrorCodeAttachmentNotArchive:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeArchiveUnsafePath:
 		return []byte(s), nil
@@ -18405,13 +18723,327 @@ func (s ErrorResponseErrorCode) MarshalText() ([]byte, error) {
 		return []byte(s), nil
 	case ErrorResponseErrorCodeArchiveUnsupported:
 		return []byte(s), nil
-	case ErrorResponseErrorCodeAttachmentNotArchive:
+	case ErrorResponseErrorCodeArchiveLimitExceeded:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeArchiveBusy:
 		return []byte(s), nil
-	case ErrorResponseErrorCodeInvalidCursor:
+	case ErrorResponseErrorCodeLatestMessageMismatch:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeLatestMessageThreadUnresolved:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeThreadBusy:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSentMailSearchUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMemberAddressUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMemberAddressHistoryConfirmationRequired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMemberAddressImmutable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMemberAddressDomainUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeEmailAdmissionUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePullSubscriptionRequiresAgentConnection:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAddressInUse:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAddressNotOwned:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAddressOwnedByAnotherOrg:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAgentAccountManagedDomainOnly:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAgentChanged:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAgentMisconfigured:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAgentNotDefined:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAgentNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAgentUnreachable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAlreadyClaimed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeAlreadyMember:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeBadRequest:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeBodyNotSupported:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeBuildFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeBuilderUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeChunkTooLarge:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeChunksMissing:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeClaimNotPending:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeClerkFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeCodeExpired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeContactRequestInvalid:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeContactRequestNotReady:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeContactRequestUnauthenticated:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeContactRequestUnavailable:
 		return []byte(s), nil
 	case ErrorResponseErrorCodeCursorExpired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDeleteFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDeployFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDirectDeliveryFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDirectDeliveryUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDirectoryLimit:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDNSPublicationFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDNSPublicationPending:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDNSVerificationFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDownloadTokenExpired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeDownloadTokenInvalid:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeEmailInUse:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeEmbeddingProviderUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeExpired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeFreshSendNotAuthorized:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeFunctionEffectEmailMismatch:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeFunctionEffectMismatch:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeFunctionForked:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeFunctionGithubLinked:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeFunctionNotDeployed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeFunctionScopeForbidden:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeHandleInCooldown:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeHandleReserved:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeHandleTaken:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeHashMismatch:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeIdempotencyConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidCode:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidCursor:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidEmail:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidInput:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidPayloadReference:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidRequest:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidStep:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidToken:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvalidTopicSources:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvitationAccepted:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvitationPending:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvitationUnconfirmed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeInvitationsPending:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMailRelayUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMailRoutingConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMailTopicEditConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMailTopicGenerationConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMailboxNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeManagedBuildFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeManagedDomain:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMemberChanged:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeMessageNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNameTaken:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNetworkMemberExcluded:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNetworkMemberNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNetworkPeerNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNetworkViewDenied:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNoCode:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNoEndpoint:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNotATemplateInstall:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNotClaimable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeNotPending:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOpenPolicyNotAllowed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundEdgeRejected:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundEmailLimitExceeded:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeOutboundRelayTimeout:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePayloadTooLarge:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePresenceAdmissionBusy:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePresenceIdempotencyConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePresenceProbeStale:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeProPlanRequired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeProjectChanged:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeProtocolUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePublicationNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodePublishPolicyDenied:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRecipientChanged:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRecipientSuppressed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRegistryCreateNotAllowed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRegistryNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeRenameNotAllowed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeResendLimitExceeded:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeResendTooSoon:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeScheduleAllowlistNotProvided:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeScheduleSenderCollision:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeScheduleWakeDisabled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeScheduledPayloadInvalid:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSearchUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSemanticSearchNotEnabled:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSendFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSenderNotAuthorized:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSentEmailTailUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSettlementUnresolved:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSharedParentRecipient:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingBindingConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingDecisionConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingIdentityConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingOwnerMailRequired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingPackageNotFound:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingProposalExpired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingReplayConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingSourceUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingTooManyShipments:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingTrackingInvalid:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingVersionConflict:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShoppingWakeUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeShredded:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSignInEmailChangeRequired:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSignalNotAllowed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSignalParentNotReady:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSignalSenderUnauthenticated:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeSlugTaken:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeStepRejected:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeStorageError:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeStorageLimitExceeded:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeTemplateUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeTemplateUpdateFailed:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeTermsNotAccepted:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeTooManyAttempts:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeTooManyConcurrentBuilds:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeTooManyResends:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeTopicEditTooLarge:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeTopicGenerationTooLarge:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeUnavailable:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeUnknownChunk:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeUpdateNeedsInput:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeUpstreamError:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeUsageLimitExceeded:
+		return []byte(s), nil
+	case ErrorResponseErrorCodeVendorUnavailable:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -18697,23 +19329,26 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeContactConflict:
 		*s = ErrorResponseErrorCodeContactConflict
 		return nil
-	case ErrorResponseErrorCodeSentMailSearchUnavailable:
-		*s = ErrorResponseErrorCodeSentMailSearchUnavailable
+	case ErrorResponseErrorCodeConnectionRemoved:
+		*s = ErrorResponseErrorCodeConnectionRemoved
 		return nil
-	case ErrorResponseErrorCodeLatestMessageMismatch:
-		*s = ErrorResponseErrorCodeLatestMessageMismatch
+	case ErrorResponseErrorCodeConnectionCreateRequestConflict:
+		*s = ErrorResponseErrorCodeConnectionCreateRequestConflict
 		return nil
-	case ErrorResponseErrorCodeLatestMessageThreadUnresolved:
-		*s = ErrorResponseErrorCodeLatestMessageThreadUnresolved
+	case ErrorResponseErrorCodeConnectionAlreadyClaimed:
+		*s = ErrorResponseErrorCodeConnectionAlreadyClaimed
 		return nil
-	case ErrorResponseErrorCodeThreadBusy:
-		*s = ErrorResponseErrorCodeThreadBusy
+	case ErrorResponseErrorCodeConnectionRevoked:
+		*s = ErrorResponseErrorCodeConnectionRevoked
+		return nil
+	case ErrorResponseErrorCodeConnectionCleanupPending:
+		*s = ErrorResponseErrorCodeConnectionCleanupPending
 		return nil
 	case ErrorResponseErrorCodeAttachmentNameAmbiguous:
 		*s = ErrorResponseErrorCodeAttachmentNameAmbiguous
 		return nil
-	case ErrorResponseErrorCodeArchiveLimitExceeded:
-		*s = ErrorResponseErrorCodeArchiveLimitExceeded
+	case ErrorResponseErrorCodeAttachmentNotArchive:
+		*s = ErrorResponseErrorCodeAttachmentNotArchive
 		return nil
 	case ErrorResponseErrorCodeArchiveUnsafePath:
 		*s = ErrorResponseErrorCodeArchiveUnsafePath
@@ -18724,17 +19359,488 @@ func (s *ErrorResponseErrorCode) UnmarshalText(data []byte) error {
 	case ErrorResponseErrorCodeArchiveUnsupported:
 		*s = ErrorResponseErrorCodeArchiveUnsupported
 		return nil
-	case ErrorResponseErrorCodeAttachmentNotArchive:
-		*s = ErrorResponseErrorCodeAttachmentNotArchive
+	case ErrorResponseErrorCodeArchiveLimitExceeded:
+		*s = ErrorResponseErrorCodeArchiveLimitExceeded
 		return nil
 	case ErrorResponseErrorCodeArchiveBusy:
 		*s = ErrorResponseErrorCodeArchiveBusy
 		return nil
-	case ErrorResponseErrorCodeInvalidCursor:
-		*s = ErrorResponseErrorCodeInvalidCursor
+	case ErrorResponseErrorCodeLatestMessageMismatch:
+		*s = ErrorResponseErrorCodeLatestMessageMismatch
+		return nil
+	case ErrorResponseErrorCodeLatestMessageThreadUnresolved:
+		*s = ErrorResponseErrorCodeLatestMessageThreadUnresolved
+		return nil
+	case ErrorResponseErrorCodeThreadBusy:
+		*s = ErrorResponseErrorCodeThreadBusy
+		return nil
+	case ErrorResponseErrorCodeSentMailSearchUnavailable:
+		*s = ErrorResponseErrorCodeSentMailSearchUnavailable
+		return nil
+	case ErrorResponseErrorCodeMemberAddressUnavailable:
+		*s = ErrorResponseErrorCodeMemberAddressUnavailable
+		return nil
+	case ErrorResponseErrorCodeMemberAddressHistoryConfirmationRequired:
+		*s = ErrorResponseErrorCodeMemberAddressHistoryConfirmationRequired
+		return nil
+	case ErrorResponseErrorCodeMemberAddressImmutable:
+		*s = ErrorResponseErrorCodeMemberAddressImmutable
+		return nil
+	case ErrorResponseErrorCodeMemberAddressDomainUnavailable:
+		*s = ErrorResponseErrorCodeMemberAddressDomainUnavailable
+		return nil
+	case ErrorResponseErrorCodeEmailAdmissionUnavailable:
+		*s = ErrorResponseErrorCodeEmailAdmissionUnavailable
+		return nil
+	case ErrorResponseErrorCodePullSubscriptionRequiresAgentConnection:
+		*s = ErrorResponseErrorCodePullSubscriptionRequiresAgentConnection
+		return nil
+	case ErrorResponseErrorCodeAddressInUse:
+		*s = ErrorResponseErrorCodeAddressInUse
+		return nil
+	case ErrorResponseErrorCodeAddressNotOwned:
+		*s = ErrorResponseErrorCodeAddressNotOwned
+		return nil
+	case ErrorResponseErrorCodeAddressOwnedByAnotherOrg:
+		*s = ErrorResponseErrorCodeAddressOwnedByAnotherOrg
+		return nil
+	case ErrorResponseErrorCodeAgentAccountManagedDomainOnly:
+		*s = ErrorResponseErrorCodeAgentAccountManagedDomainOnly
+		return nil
+	case ErrorResponseErrorCodeAgentChanged:
+		*s = ErrorResponseErrorCodeAgentChanged
+		return nil
+	case ErrorResponseErrorCodeAgentMisconfigured:
+		*s = ErrorResponseErrorCodeAgentMisconfigured
+		return nil
+	case ErrorResponseErrorCodeAgentNotDefined:
+		*s = ErrorResponseErrorCodeAgentNotDefined
+		return nil
+	case ErrorResponseErrorCodeAgentNotFound:
+		*s = ErrorResponseErrorCodeAgentNotFound
+		return nil
+	case ErrorResponseErrorCodeAgentUnreachable:
+		*s = ErrorResponseErrorCodeAgentUnreachable
+		return nil
+	case ErrorResponseErrorCodeAlreadyClaimed:
+		*s = ErrorResponseErrorCodeAlreadyClaimed
+		return nil
+	case ErrorResponseErrorCodeAlreadyMember:
+		*s = ErrorResponseErrorCodeAlreadyMember
+		return nil
+	case ErrorResponseErrorCodeBadRequest:
+		*s = ErrorResponseErrorCodeBadRequest
+		return nil
+	case ErrorResponseErrorCodeBodyNotSupported:
+		*s = ErrorResponseErrorCodeBodyNotSupported
+		return nil
+	case ErrorResponseErrorCodeBuildFailed:
+		*s = ErrorResponseErrorCodeBuildFailed
+		return nil
+	case ErrorResponseErrorCodeBuilderUnavailable:
+		*s = ErrorResponseErrorCodeBuilderUnavailable
+		return nil
+	case ErrorResponseErrorCodeChunkTooLarge:
+		*s = ErrorResponseErrorCodeChunkTooLarge
+		return nil
+	case ErrorResponseErrorCodeChunksMissing:
+		*s = ErrorResponseErrorCodeChunksMissing
+		return nil
+	case ErrorResponseErrorCodeClaimNotPending:
+		*s = ErrorResponseErrorCodeClaimNotPending
+		return nil
+	case ErrorResponseErrorCodeClerkFailed:
+		*s = ErrorResponseErrorCodeClerkFailed
+		return nil
+	case ErrorResponseErrorCodeCodeExpired:
+		*s = ErrorResponseErrorCodeCodeExpired
+		return nil
+	case ErrorResponseErrorCodeContactRequestInvalid:
+		*s = ErrorResponseErrorCodeContactRequestInvalid
+		return nil
+	case ErrorResponseErrorCodeContactRequestNotReady:
+		*s = ErrorResponseErrorCodeContactRequestNotReady
+		return nil
+	case ErrorResponseErrorCodeContactRequestUnauthenticated:
+		*s = ErrorResponseErrorCodeContactRequestUnauthenticated
+		return nil
+	case ErrorResponseErrorCodeContactRequestUnavailable:
+		*s = ErrorResponseErrorCodeContactRequestUnavailable
 		return nil
 	case ErrorResponseErrorCodeCursorExpired:
 		*s = ErrorResponseErrorCodeCursorExpired
+		return nil
+	case ErrorResponseErrorCodeDeleteFailed:
+		*s = ErrorResponseErrorCodeDeleteFailed
+		return nil
+	case ErrorResponseErrorCodeDeployFailed:
+		*s = ErrorResponseErrorCodeDeployFailed
+		return nil
+	case ErrorResponseErrorCodeDirectDeliveryFailed:
+		*s = ErrorResponseErrorCodeDirectDeliveryFailed
+		return nil
+	case ErrorResponseErrorCodeDirectDeliveryUnavailable:
+		*s = ErrorResponseErrorCodeDirectDeliveryUnavailable
+		return nil
+	case ErrorResponseErrorCodeDirectoryLimit:
+		*s = ErrorResponseErrorCodeDirectoryLimit
+		return nil
+	case ErrorResponseErrorCodeDNSPublicationFailed:
+		*s = ErrorResponseErrorCodeDNSPublicationFailed
+		return nil
+	case ErrorResponseErrorCodeDNSPublicationPending:
+		*s = ErrorResponseErrorCodeDNSPublicationPending
+		return nil
+	case ErrorResponseErrorCodeDNSVerificationFailed:
+		*s = ErrorResponseErrorCodeDNSVerificationFailed
+		return nil
+	case ErrorResponseErrorCodeDownloadTokenExpired:
+		*s = ErrorResponseErrorCodeDownloadTokenExpired
+		return nil
+	case ErrorResponseErrorCodeDownloadTokenInvalid:
+		*s = ErrorResponseErrorCodeDownloadTokenInvalid
+		return nil
+	case ErrorResponseErrorCodeEmailInUse:
+		*s = ErrorResponseErrorCodeEmailInUse
+		return nil
+	case ErrorResponseErrorCodeEmbeddingProviderUnavailable:
+		*s = ErrorResponseErrorCodeEmbeddingProviderUnavailable
+		return nil
+	case ErrorResponseErrorCodeExpired:
+		*s = ErrorResponseErrorCodeExpired
+		return nil
+	case ErrorResponseErrorCodeFreshSendNotAuthorized:
+		*s = ErrorResponseErrorCodeFreshSendNotAuthorized
+		return nil
+	case ErrorResponseErrorCodeFunctionEffectEmailMismatch:
+		*s = ErrorResponseErrorCodeFunctionEffectEmailMismatch
+		return nil
+	case ErrorResponseErrorCodeFunctionEffectMismatch:
+		*s = ErrorResponseErrorCodeFunctionEffectMismatch
+		return nil
+	case ErrorResponseErrorCodeFunctionForked:
+		*s = ErrorResponseErrorCodeFunctionForked
+		return nil
+	case ErrorResponseErrorCodeFunctionGithubLinked:
+		*s = ErrorResponseErrorCodeFunctionGithubLinked
+		return nil
+	case ErrorResponseErrorCodeFunctionNotDeployed:
+		*s = ErrorResponseErrorCodeFunctionNotDeployed
+		return nil
+	case ErrorResponseErrorCodeFunctionScopeForbidden:
+		*s = ErrorResponseErrorCodeFunctionScopeForbidden
+		return nil
+	case ErrorResponseErrorCodeHandleInCooldown:
+		*s = ErrorResponseErrorCodeHandleInCooldown
+		return nil
+	case ErrorResponseErrorCodeHandleReserved:
+		*s = ErrorResponseErrorCodeHandleReserved
+		return nil
+	case ErrorResponseErrorCodeHandleTaken:
+		*s = ErrorResponseErrorCodeHandleTaken
+		return nil
+	case ErrorResponseErrorCodeHashMismatch:
+		*s = ErrorResponseErrorCodeHashMismatch
+		return nil
+	case ErrorResponseErrorCodeIdempotencyConflict:
+		*s = ErrorResponseErrorCodeIdempotencyConflict
+		return nil
+	case ErrorResponseErrorCodeInvalidCode:
+		*s = ErrorResponseErrorCodeInvalidCode
+		return nil
+	case ErrorResponseErrorCodeInvalidCursor:
+		*s = ErrorResponseErrorCodeInvalidCursor
+		return nil
+	case ErrorResponseErrorCodeInvalidEmail:
+		*s = ErrorResponseErrorCodeInvalidEmail
+		return nil
+	case ErrorResponseErrorCodeInvalidInput:
+		*s = ErrorResponseErrorCodeInvalidInput
+		return nil
+	case ErrorResponseErrorCodeInvalidPayloadReference:
+		*s = ErrorResponseErrorCodeInvalidPayloadReference
+		return nil
+	case ErrorResponseErrorCodeInvalidRequest:
+		*s = ErrorResponseErrorCodeInvalidRequest
+		return nil
+	case ErrorResponseErrorCodeInvalidStep:
+		*s = ErrorResponseErrorCodeInvalidStep
+		return nil
+	case ErrorResponseErrorCodeInvalidToken:
+		*s = ErrorResponseErrorCodeInvalidToken
+		return nil
+	case ErrorResponseErrorCodeInvalidTopicSources:
+		*s = ErrorResponseErrorCodeInvalidTopicSources
+		return nil
+	case ErrorResponseErrorCodeInvitationAccepted:
+		*s = ErrorResponseErrorCodeInvitationAccepted
+		return nil
+	case ErrorResponseErrorCodeInvitationPending:
+		*s = ErrorResponseErrorCodeInvitationPending
+		return nil
+	case ErrorResponseErrorCodeInvitationUnconfirmed:
+		*s = ErrorResponseErrorCodeInvitationUnconfirmed
+		return nil
+	case ErrorResponseErrorCodeInvitationsPending:
+		*s = ErrorResponseErrorCodeInvitationsPending
+		return nil
+	case ErrorResponseErrorCodeMailRelayUnavailable:
+		*s = ErrorResponseErrorCodeMailRelayUnavailable
+		return nil
+	case ErrorResponseErrorCodeMailRoutingConflict:
+		*s = ErrorResponseErrorCodeMailRoutingConflict
+		return nil
+	case ErrorResponseErrorCodeMailTopicEditConflict:
+		*s = ErrorResponseErrorCodeMailTopicEditConflict
+		return nil
+	case ErrorResponseErrorCodeMailTopicGenerationConflict:
+		*s = ErrorResponseErrorCodeMailTopicGenerationConflict
+		return nil
+	case ErrorResponseErrorCodeMailboxNotFound:
+		*s = ErrorResponseErrorCodeMailboxNotFound
+		return nil
+	case ErrorResponseErrorCodeManagedBuildFailed:
+		*s = ErrorResponseErrorCodeManagedBuildFailed
+		return nil
+	case ErrorResponseErrorCodeManagedDomain:
+		*s = ErrorResponseErrorCodeManagedDomain
+		return nil
+	case ErrorResponseErrorCodeMemberChanged:
+		*s = ErrorResponseErrorCodeMemberChanged
+		return nil
+	case ErrorResponseErrorCodeMessageNotFound:
+		*s = ErrorResponseErrorCodeMessageNotFound
+		return nil
+	case ErrorResponseErrorCodeNameTaken:
+		*s = ErrorResponseErrorCodeNameTaken
+		return nil
+	case ErrorResponseErrorCodeNetworkMemberExcluded:
+		*s = ErrorResponseErrorCodeNetworkMemberExcluded
+		return nil
+	case ErrorResponseErrorCodeNetworkMemberNotFound:
+		*s = ErrorResponseErrorCodeNetworkMemberNotFound
+		return nil
+	case ErrorResponseErrorCodeNetworkPeerNotFound:
+		*s = ErrorResponseErrorCodeNetworkPeerNotFound
+		return nil
+	case ErrorResponseErrorCodeNetworkViewDenied:
+		*s = ErrorResponseErrorCodeNetworkViewDenied
+		return nil
+	case ErrorResponseErrorCodeNoCode:
+		*s = ErrorResponseErrorCodeNoCode
+		return nil
+	case ErrorResponseErrorCodeNoEndpoint:
+		*s = ErrorResponseErrorCodeNoEndpoint
+		return nil
+	case ErrorResponseErrorCodeNotATemplateInstall:
+		*s = ErrorResponseErrorCodeNotATemplateInstall
+		return nil
+	case ErrorResponseErrorCodeNotClaimable:
+		*s = ErrorResponseErrorCodeNotClaimable
+		return nil
+	case ErrorResponseErrorCodeNotPending:
+		*s = ErrorResponseErrorCodeNotPending
+		return nil
+	case ErrorResponseErrorCodeOpenPolicyNotAllowed:
+		*s = ErrorResponseErrorCodeOpenPolicyNotAllowed
+		return nil
+	case ErrorResponseErrorCodeOutboundEdgeRejected:
+		*s = ErrorResponseErrorCodeOutboundEdgeRejected
+		return nil
+	case ErrorResponseErrorCodeOutboundEmailLimitExceeded:
+		*s = ErrorResponseErrorCodeOutboundEmailLimitExceeded
+		return nil
+	case ErrorResponseErrorCodeOutboundRelayTimeout:
+		*s = ErrorResponseErrorCodeOutboundRelayTimeout
+		return nil
+	case ErrorResponseErrorCodePayloadTooLarge:
+		*s = ErrorResponseErrorCodePayloadTooLarge
+		return nil
+	case ErrorResponseErrorCodePresenceAdmissionBusy:
+		*s = ErrorResponseErrorCodePresenceAdmissionBusy
+		return nil
+	case ErrorResponseErrorCodePresenceIdempotencyConflict:
+		*s = ErrorResponseErrorCodePresenceIdempotencyConflict
+		return nil
+	case ErrorResponseErrorCodePresenceProbeStale:
+		*s = ErrorResponseErrorCodePresenceProbeStale
+		return nil
+	case ErrorResponseErrorCodeProPlanRequired:
+		*s = ErrorResponseErrorCodeProPlanRequired
+		return nil
+	case ErrorResponseErrorCodeProjectChanged:
+		*s = ErrorResponseErrorCodeProjectChanged
+		return nil
+	case ErrorResponseErrorCodeProtocolUnavailable:
+		*s = ErrorResponseErrorCodeProtocolUnavailable
+		return nil
+	case ErrorResponseErrorCodePublicationNotFound:
+		*s = ErrorResponseErrorCodePublicationNotFound
+		return nil
+	case ErrorResponseErrorCodePublishPolicyDenied:
+		*s = ErrorResponseErrorCodePublishPolicyDenied
+		return nil
+	case ErrorResponseErrorCodeRecipientChanged:
+		*s = ErrorResponseErrorCodeRecipientChanged
+		return nil
+	case ErrorResponseErrorCodeRecipientSuppressed:
+		*s = ErrorResponseErrorCodeRecipientSuppressed
+		return nil
+	case ErrorResponseErrorCodeRegistryCreateNotAllowed:
+		*s = ErrorResponseErrorCodeRegistryCreateNotAllowed
+		return nil
+	case ErrorResponseErrorCodeRegistryNotFound:
+		*s = ErrorResponseErrorCodeRegistryNotFound
+		return nil
+	case ErrorResponseErrorCodeRenameNotAllowed:
+		*s = ErrorResponseErrorCodeRenameNotAllowed
+		return nil
+	case ErrorResponseErrorCodeResendLimitExceeded:
+		*s = ErrorResponseErrorCodeResendLimitExceeded
+		return nil
+	case ErrorResponseErrorCodeResendTooSoon:
+		*s = ErrorResponseErrorCodeResendTooSoon
+		return nil
+	case ErrorResponseErrorCodeScheduleAllowlistNotProvided:
+		*s = ErrorResponseErrorCodeScheduleAllowlistNotProvided
+		return nil
+	case ErrorResponseErrorCodeScheduleSenderCollision:
+		*s = ErrorResponseErrorCodeScheduleSenderCollision
+		return nil
+	case ErrorResponseErrorCodeScheduleWakeDisabled:
+		*s = ErrorResponseErrorCodeScheduleWakeDisabled
+		return nil
+	case ErrorResponseErrorCodeScheduledPayloadInvalid:
+		*s = ErrorResponseErrorCodeScheduledPayloadInvalid
+		return nil
+	case ErrorResponseErrorCodeSearchUnavailable:
+		*s = ErrorResponseErrorCodeSearchUnavailable
+		return nil
+	case ErrorResponseErrorCodeSemanticSearchNotEnabled:
+		*s = ErrorResponseErrorCodeSemanticSearchNotEnabled
+		return nil
+	case ErrorResponseErrorCodeSendFailed:
+		*s = ErrorResponseErrorCodeSendFailed
+		return nil
+	case ErrorResponseErrorCodeSenderNotAuthorized:
+		*s = ErrorResponseErrorCodeSenderNotAuthorized
+		return nil
+	case ErrorResponseErrorCodeSentEmailTailUnavailable:
+		*s = ErrorResponseErrorCodeSentEmailTailUnavailable
+		return nil
+	case ErrorResponseErrorCodeSettlementUnresolved:
+		*s = ErrorResponseErrorCodeSettlementUnresolved
+		return nil
+	case ErrorResponseErrorCodeSharedParentRecipient:
+		*s = ErrorResponseErrorCodeSharedParentRecipient
+		return nil
+	case ErrorResponseErrorCodeShoppingBindingConflict:
+		*s = ErrorResponseErrorCodeShoppingBindingConflict
+		return nil
+	case ErrorResponseErrorCodeShoppingDecisionConflict:
+		*s = ErrorResponseErrorCodeShoppingDecisionConflict
+		return nil
+	case ErrorResponseErrorCodeShoppingIdentityConflict:
+		*s = ErrorResponseErrorCodeShoppingIdentityConflict
+		return nil
+	case ErrorResponseErrorCodeShoppingNotFound:
+		*s = ErrorResponseErrorCodeShoppingNotFound
+		return nil
+	case ErrorResponseErrorCodeShoppingOwnerMailRequired:
+		*s = ErrorResponseErrorCodeShoppingOwnerMailRequired
+		return nil
+	case ErrorResponseErrorCodeShoppingPackageNotFound:
+		*s = ErrorResponseErrorCodeShoppingPackageNotFound
+		return nil
+	case ErrorResponseErrorCodeShoppingProposalExpired:
+		*s = ErrorResponseErrorCodeShoppingProposalExpired
+		return nil
+	case ErrorResponseErrorCodeShoppingReplayConflict:
+		*s = ErrorResponseErrorCodeShoppingReplayConflict
+		return nil
+	case ErrorResponseErrorCodeShoppingSourceUnavailable:
+		*s = ErrorResponseErrorCodeShoppingSourceUnavailable
+		return nil
+	case ErrorResponseErrorCodeShoppingTooManyShipments:
+		*s = ErrorResponseErrorCodeShoppingTooManyShipments
+		return nil
+	case ErrorResponseErrorCodeShoppingTrackingInvalid:
+		*s = ErrorResponseErrorCodeShoppingTrackingInvalid
+		return nil
+	case ErrorResponseErrorCodeShoppingVersionConflict:
+		*s = ErrorResponseErrorCodeShoppingVersionConflict
+		return nil
+	case ErrorResponseErrorCodeShoppingWakeUnavailable:
+		*s = ErrorResponseErrorCodeShoppingWakeUnavailable
+		return nil
+	case ErrorResponseErrorCodeShredded:
+		*s = ErrorResponseErrorCodeShredded
+		return nil
+	case ErrorResponseErrorCodeSignInEmailChangeRequired:
+		*s = ErrorResponseErrorCodeSignInEmailChangeRequired
+		return nil
+	case ErrorResponseErrorCodeSignalNotAllowed:
+		*s = ErrorResponseErrorCodeSignalNotAllowed
+		return nil
+	case ErrorResponseErrorCodeSignalParentNotReady:
+		*s = ErrorResponseErrorCodeSignalParentNotReady
+		return nil
+	case ErrorResponseErrorCodeSignalSenderUnauthenticated:
+		*s = ErrorResponseErrorCodeSignalSenderUnauthenticated
+		return nil
+	case ErrorResponseErrorCodeSlugTaken:
+		*s = ErrorResponseErrorCodeSlugTaken
+		return nil
+	case ErrorResponseErrorCodeStepRejected:
+		*s = ErrorResponseErrorCodeStepRejected
+		return nil
+	case ErrorResponseErrorCodeStorageError:
+		*s = ErrorResponseErrorCodeStorageError
+		return nil
+	case ErrorResponseErrorCodeStorageLimitExceeded:
+		*s = ErrorResponseErrorCodeStorageLimitExceeded
+		return nil
+	case ErrorResponseErrorCodeTemplateUnavailable:
+		*s = ErrorResponseErrorCodeTemplateUnavailable
+		return nil
+	case ErrorResponseErrorCodeTemplateUpdateFailed:
+		*s = ErrorResponseErrorCodeTemplateUpdateFailed
+		return nil
+	case ErrorResponseErrorCodeTermsNotAccepted:
+		*s = ErrorResponseErrorCodeTermsNotAccepted
+		return nil
+	case ErrorResponseErrorCodeTooManyAttempts:
+		*s = ErrorResponseErrorCodeTooManyAttempts
+		return nil
+	case ErrorResponseErrorCodeTooManyConcurrentBuilds:
+		*s = ErrorResponseErrorCodeTooManyConcurrentBuilds
+		return nil
+	case ErrorResponseErrorCodeTooManyResends:
+		*s = ErrorResponseErrorCodeTooManyResends
+		return nil
+	case ErrorResponseErrorCodeTopicEditTooLarge:
+		*s = ErrorResponseErrorCodeTopicEditTooLarge
+		return nil
+	case ErrorResponseErrorCodeTopicGenerationTooLarge:
+		*s = ErrorResponseErrorCodeTopicGenerationTooLarge
+		return nil
+	case ErrorResponseErrorCodeUnavailable:
+		*s = ErrorResponseErrorCodeUnavailable
+		return nil
+	case ErrorResponseErrorCodeUnknownChunk:
+		*s = ErrorResponseErrorCodeUnknownChunk
+		return nil
+	case ErrorResponseErrorCodeUpdateNeedsInput:
+		*s = ErrorResponseErrorCodeUpdateNeedsInput
+		return nil
+	case ErrorResponseErrorCodeUpstreamError:
+		*s = ErrorResponseErrorCodeUpstreamError
+		return nil
+	case ErrorResponseErrorCodeUsageLimitExceeded:
+		*s = ErrorResponseErrorCodeUsageLimitExceeded
+		return nil
+	case ErrorResponseErrorCodeVendorUnavailable:
+		*s = ErrorResponseErrorCodeVendorUnavailable
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
