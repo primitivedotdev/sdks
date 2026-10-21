@@ -97,11 +97,11 @@ class SemanticSearchMeta:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                coverage_type_0 = SemanticSearchCoverage.from_dict(data)
+                coverage_type_1 = SemanticSearchCoverage.from_dict(data)
 
 
 
-                return coverage_type_0
+                return coverage_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(None | SemanticSearchCoverage, data)

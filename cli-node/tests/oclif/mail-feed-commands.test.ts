@@ -271,6 +271,15 @@ describe("from_verified filter guard", () => {
         '"say \\"hi\\" from_verified:true" from_verified:false',
       ),
     ).toEqual([false]);
+    // Nor inside another field's quoted value, such as an exact header search.
+    expect(
+      fromVerifiedTermsInQuery('header:"X-Note=hello from_verified:true world"'),
+    ).toEqual([]);
+    expect(
+      fromVerifiedTermsInQuery(
+        'subject:"from_verified:false" from_verified:true',
+      ),
+    ).toEqual([true]);
     expect(
       fromVerifiedExpectation("listEmails", { from_verified: "true" }),
     ).toEqual({

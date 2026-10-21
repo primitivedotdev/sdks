@@ -9507,14 +9507,12 @@
                       "type": "object",
                       "properties": {
                         "data": {
-                          "oneOf": [
+                          "allOf": [
                             {
                               "$ref": "#/components/schemas/FunctionRouting"
-                            },
-                            {
-                              "type": "null"
                             }
-                          ]
+                          ],
+                          "nullable": true
                         }
                       }
                     }
@@ -19307,15 +19305,13 @@
             "description": "The commit position in microsecond UTC form. Orders the feed; not a business timestamp."
           },
           "message": {
-            "oneOf": [
+            "description": "Present only when the request sets `expand=message`. For `email.visible`, `email.updated`, `sent_email.created`, `sent_email.updated`: the message as it reads at the time of this response (not at the time of the change), exactly as the list endpoints return it, marked by `direction`. Null for every other kind, and when the message is no longer readable by this credential (deleted, or withdrawn from view after the change).",
+            "allOf": [
               {
                 "$ref": "#/components/schemas/ChangeMessage"
-              },
-              {
-                "type": "null"
               }
             ],
-            "description": "Present only when the request sets `expand=message`. For `email.visible`, `email.updated`, `sent_email.created`, `sent_email.updated`: the message as it reads at the time of this response (not at the time of the change), exactly as the list endpoints return it, marked by `direction`. Null for every other kind, and when the message is no longer readable by this credential (deleted, or withdrawn from view after the change)."
+            "nullable": true
           }
         }
       },
@@ -21668,15 +21664,13 @@
             "description": "Ranking mode used for this response."
           },
           "coverage": {
-            "oneOf": [
+            "description": "Index-coverage snapshot, present only when requested via\n`include: [coverage]`; otherwise null.\n",
+            "allOf": [
               {
                 "$ref": "#/components/schemas/SemanticSearchCoverage"
-              },
-              {
-                "type": "null"
               }
             ],
-            "description": "Index-coverage snapshot, present only when requested via\n`include: [coverage]`; otherwise null.\n"
+            "nullable": true
           }
         },
         "required": [
@@ -24774,14 +24768,12 @@
         "description": "On success, carries the new `routing`. On conflict, carries\n`conflict` describing the binding holder so the caller can\nre-issue with `takeover: true`.\n",
         "properties": {
           "routing": {
-            "oneOf": [
+            "allOf": [
               {
                 "$ref": "#/components/schemas/FunctionRouting"
-              },
-              {
-                "type": "null"
               }
-            ]
+            ],
+            "nullable": true
           },
           "conflict": {
             "type": "object",

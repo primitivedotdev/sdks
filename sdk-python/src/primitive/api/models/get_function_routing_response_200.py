@@ -76,11 +76,11 @@ class GetFunctionRoutingResponse200:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                data_type_0 = FunctionRouting.from_dict(data)
+                data_type_1 = FunctionRouting.from_dict(data)
 
 
 
-                return data_type_0
+                return data_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(FunctionRouting | None | Unset, data)

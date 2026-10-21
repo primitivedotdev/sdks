@@ -30,8 +30,10 @@ const FROM_VERIFIED_SURFACES: Record<string, string> = {
 };
 
 const TERM = /(?:^|\s)from_verified:("?)(true|false)\1(?=\s|$)/gi;
-// A quoted phrase that starts a term is literal text, never a filter.
-const PHRASE = /(^|\s)"(?:[^"\\]|\\.)*"/g;
+// Quoted text is literal, never a filter: a standalone phrase, or the quoted
+// value of another field (`header:"X-Note=... from_verified:true ..."`). A
+// quoted `from_verified:"true"` is the filter itself, so it is kept.
+const PHRASE = /(^|\s)(?:(?!from_verified:)[A-Za-z_][\w.-]*:)?"(?:[^"\\]|\\.)*"/gi;
 
 /** The `from_verified:` values a search query asks for, in order. */
 export function fromVerifiedTermsInQuery(

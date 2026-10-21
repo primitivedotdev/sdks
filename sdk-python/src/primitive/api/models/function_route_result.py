@@ -83,11 +83,11 @@ class FunctionRouteResult:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                routing_type_0 = FunctionRouting.from_dict(data)
+                routing_type_1 = FunctionRouting.from_dict(data)
 
 
 
-                return routing_type_0
+                return routing_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
             return cast(FunctionRouting | None | Unset, data)

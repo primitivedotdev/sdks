@@ -1780,7 +1780,7 @@ export type Change = {
     /**
      * Present only when the request sets `expand=message`. For `email.visible`, `email.updated`, `sent_email.created`, `sent_email.updated`: the message as it reads at the time of this response (not at the time of the change), exactly as the list endpoints return it, marked by `direction`. Null for every other kind, and when the message is no longer readable by this credential (deleted, or withdrawn from view after the change).
      */
-    message?: ChangeMessage | unknown;
+    message?: ChangeMessage | null;
 };
 
 export type ChangePage = {
@@ -3492,7 +3492,7 @@ export type SemanticSearchMeta = {
      * `include: [coverage]`; otherwise null.
      *
      */
-    coverage: SemanticSearchCoverage | unknown;
+    coverage: SemanticSearchCoverage | null;
 };
 
 /**
@@ -5092,7 +5092,7 @@ export type FunctionRouteBody = {
  *
  */
 export type FunctionRouteResult = {
-    routing?: FunctionRouting | unknown;
+    routing?: FunctionRouting | null;
     conflict?: {
         kind: 'http' | 'function';
         functionId?: string | null;
@@ -11334,7 +11334,7 @@ export type GetFunctionRoutingResponses = {
      * Function routing
      */
     200: SuccessEnvelope & {
-        data?: FunctionRouting | unknown;
+        data?: FunctionRouting | null;
     };
 };
 
