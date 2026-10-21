@@ -8771,6 +8771,18 @@ export const operationManifest: PrimitiveOperationManifest[] = [
         "name": "count",
         "required": false,
         "type": "string"
+      },
+      {
+        "default": "inbound",
+        "description": "Which mail to search: `inbound` (mail received by the organization, the default), `outbound` (mail it sent) or `any` (both, merged in date order). Each result carries `direction`. When sent mail is included, results are in date order only (`sort=relevance` is a `validation_error`), filters that describe received mail only (`status`, `spam_score_lt`, `spam_score_gte`, `awaiting`, `automated`, `reply_to_sent_email_id`, `from_verified`, and `status:`, `awaiting:`, `automated:`, `from_verified:` in `q`) are a `validation_error`, as is `include`, and `facets` are not computed. `meta.total` is computed on the first page only and is null on later pages. A `meta.cursor` continues the direction it was issued for: using it with another `direction` is a `validation_error`. Text search over sent mail (`q`, `subject` or `body`) answers 503 `sent_mail_search_unavailable` in an environment where sent-mail search is not enabled. An agent connection searches only the mail its own address sent. On a sent result, `received_at` is when the message was accepted for sending, `recipient` is its first To address, and fields that describe receiving (`spam_score`, `raw_size_bytes`, `webhook_status`) are null, as is `from_verified` (sent mail has no From-authentication verdict). A sent result carries its sending status (`queued`, `delivered`, `bounced` and so on) in `delivery_status`; its `status` stays in the received-mail vocabulary as the nearest reading of it: `pending` (queued, scheduled, deferred), `accepted` (handed off, outcome not confirmed), `completed` (delivered) or `rejected` (not delivered: failed, denied, bounced or canceled).",
+        "enum": [
+          "inbound",
+          "outbound",
+          "any"
+        ],
+        "name": "direction",
+        "required": false,
+        "type": "string"
       }
     ],
     "requestSchema": null,
@@ -9125,7 +9137,24 @@ export const operationManifest: PrimitiveOperationManifest[] = [
                   "inbound",
                   "outbound"
                 ],
-                "description": "Which side of the conversation the result is on: `inbound` for mail received by the organization, `outbound` for mail it sent. This endpoint currently returns received mail only, so every result is `inbound`."
+                "description": "Which side of the conversation the result is on: `inbound` for mail received by the organization, `outbound` for mail it sent. Only `direction=outbound` or `direction=any` returns `outbound` results. Treat an unfamiliar value as one added after your client was built. An `outbound` result also carries `delivery_status`."
+              },
+              "delivery_status": {
+                "type": "string",
+                "description": "Lifecycle status of a sent_emails row. Possible values:\n\n  - `queued`: pre-call INSERT; the outbound agent has not\n    yet replied.\n  - `submitted_to_agent`: agent accepted; `queue_id` is set.\n  - `agent_failed`: agent rejected; `error_code` and\n    `error_message` carry the reason.\n  - `gate_denied`: a recipient-scope gate denied the send;\n    the agent was never called. The `gates` array carries\n    the denial detail. /send-mail returns 403 in this case\n    so callers see the denial synchronously; /sent-emails\n    additionally records the row for historical lookup,\n    which is when this status appears in a listing.\n  - `unknown`: terminal indeterminate; the on-box log\n    poller couldn't classify the receiver's response.\n  - `delivered` / `bounced` / `deferred` / `wait_timeout`:\n    terminal delivery outcomes (see DeliveryStatus).\n  - `scheduled`: created with a future `scheduled_at` and\n    not yet executed; `scheduled_at` carries the pending\n    execution time. Reschedulable via PATCH\n    /sent-emails/{id} and cancelable via\n    /sent-emails/{id}/cancel while in this status.\n  - `canceled`: terminal; a scheduled send canceled before\n    execution. `canceled_at` carries the cancellation time\n    and nothing was dispatched.\n",
+                "enum": [
+                  "queued",
+                  "submitted_to_agent",
+                  "agent_failed",
+                  "gate_denied",
+                  "unknown",
+                  "delivered",
+                  "bounced",
+                  "deferred",
+                  "wait_timeout",
+                  "scheduled",
+                  "canceled"
+                ]
               }
             },
             "required": [

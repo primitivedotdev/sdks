@@ -11150,6 +11150,25 @@ type SearchEmailsParams struct {
 	// whether another page exists. Skipping the count makes a broad query,
 	// such as a one-letter prefix, cheaper to serve. Defaults to `true`.
 	Count OptSearchEmailsCount `json:",omitempty,omitzero"`
+	// Which mail to search: `inbound` (mail received by the organization, the default), `outbound` (mail
+	// it sent) or `any` (both, merged in date order). Each result carries `direction`. When sent mail is
+	// included, results are in date order only (`sort=relevance` is a `validation_error`), filters that
+	// describe received mail only (`status`, `spam_score_lt`, `spam_score_gte`, `awaiting`, `automated`,
+	// `reply_to_sent_email_id`, `from_verified`, and `status:`, `awaiting:`, `automated:`,
+	// `from_verified:` in `q`) are a `validation_error`, as is `include`, and `facets` are not computed.
+	// `meta.total` is computed on the first page only and is null on later pages. A `meta.cursor`
+	// continues the direction it was issued for: using it with another `direction` is a
+	// `validation_error`. Text search over sent mail (`q`, `subject` or `body`) answers 503
+	// `sent_mail_search_unavailable` in an environment where sent-mail search is not enabled. An agent
+	// connection searches only the mail its own address sent. On a sent result, `received_at` is when
+	// the message was accepted for sending, `recipient` is its first To address, and fields that
+	// describe receiving (`spam_score`, `raw_size_bytes`, `webhook_status`) are null, as is
+	// `from_verified` (sent mail has no From-authentication verdict). A sent result carries its sending
+	// status (`queued`, `delivered`, `bounced` and so on) in `delivery_status`; its `status` stays in
+	// the received-mail vocabulary as the nearest reading of it: `pending` (queued, scheduled, deferred),
+	//  `accepted` (handed off, outcome not confirmed), `completed` (delivered) or `rejected` (not
+	// delivered: failed, denied, bounced or canceled).
+	Direction OptSearchEmailsDirection `json:",omitempty,omitzero"`
 }
 
 func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmailsParams) {
@@ -11358,6 +11377,15 @@ func unpackSearchEmailsParams(packed middleware.Parameters) (params SearchEmails
 		}
 		if v, ok := packed[key]; ok {
 			params.Count = v.(OptSearchEmailsCount)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "direction",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Direction = v.(OptSearchEmailsDirection)
 		}
 	}
 	return params
@@ -12681,6 +12709,67 @@ func decodeSearchEmailsParams(args [0]string, argsEscaped bool, r *http.Request)
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "count",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Set default value for query: direction.
+	{
+		val := SearchEmailsDirection("inbound")
+		params.Direction.SetTo(val)
+	}
+	// Decode query: direction.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "direction",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotDirectionVal SearchEmailsDirection
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotDirectionVal = SearchEmailsDirection(c)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Direction.SetTo(paramsDotDirectionVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Direction.Get(); ok {
+					if err := func() error {
+						if err := value.Validate(); err != nil {
+							return err
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "direction",
 			In:   "query",
 			Err:  err,
 		}

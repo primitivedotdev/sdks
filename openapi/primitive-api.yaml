@@ -2158,6 +2158,40 @@ paths:
             is null (`meta.total_capped` is false). Use `meta.cursor` to tell
             whether another page exists. Skipping the count makes a broad query,
             such as a one-letter prefix, cheaper to serve. Defaults to `true`.
+        - name: direction
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - inbound
+              - outbound
+              - any
+            default: inbound
+          description: >-
+            Which mail to search: `inbound` (mail received by the organization, the
+            default), `outbound` (mail it sent) or `any` (both, merged in date order).
+            Each result carries `direction`. When sent mail is included, results are in
+            date order only (`sort=relevance` is a `validation_error`), filters that
+            describe received mail only (`status`, `spam_score_lt`, `spam_score_gte`,
+            `awaiting`, `automated`, `reply_to_sent_email_id`, `from_verified`, and
+            `status:`, `awaiting:`, `automated:`, `from_verified:` in `q`) are a
+            `validation_error`, as is `include`, and `facets` are not computed.
+            `meta.total` is computed on the first page only and is null on later pages.
+            A `meta.cursor` continues the direction it was issued for: using it with
+            another `direction` is a `validation_error`. Text search over sent mail
+            (`q`, `subject` or `body`) answers 503 `sent_mail_search_unavailable` in an
+            environment where sent-mail search is not enabled. An agent connection
+            searches only the mail its own address sent. On a sent result, `received_at`
+            is when the message was accepted for sending, `recipient` is its first To
+            address, and fields that describe receiving (`spam_score`, `raw_size_bytes`,
+            `webhook_status`) are null, as is `from_verified` (sent mail has no
+            From-authentication verdict). A sent result carries its sending status
+            (`queued`, `delivered`, `bounced` and so on) in `delivery_status`; its
+            `status` stays in the received-mail vocabulary as the nearest reading of it:
+            `pending` (queued, scheduled, deferred), `accepted` (handed off, outcome not
+            confirmed), `completed` (delivered) or `rejected` (not delivered: failed,
+            denied, bounced or canceled).
       responses:
         "200":
           description: Search results
@@ -14588,10 +14622,14 @@ components:
               enum:
                 - inbound
                 - outbound
-              description: "Which side of the conversation the result is on: `inbound`
-                for mail received by the organization, `outbound` for mail it
-                sent. This endpoint currently returns received mail only, so
-                every result is `inbound`."
+              description: >-
+                Which side of the conversation the result is on: `inbound` for mail received
+                by the organization, `outbound` for mail it sent. Only `direction=outbound`
+                or `direction=any` returns `outbound` results. Treat an unfamiliar value as
+                one added after your client was built. An `outbound` result also carries
+                `delivery_status`.
+            delivery_status:
+              $ref: "#/components/schemas/SentEmailStatus"
           required:
             - attachment_count
             - from_known_address
@@ -14624,6 +14662,24 @@ components:
             - received_at_desc
             - received_at_asc
           description: Sort mode used for the result page.
+        total_unavailable:
+          type: boolean
+          description: >-
+            Present and `true` when a count was requested but did not fit the search
+            time budget. The page in `data` and `meta.cursor` are still returned (the
+            page may itself be partial, see `partial`); only `meta.total` is missing
+            (null). Retry with narrower filters, or use `count=false` and `meta.cursor`.
+        partial:
+          type: boolean
+          description: >-
+            Present and `true` when the page stopped at the search time bound before it
+            filled. This happens when the filters reject most of what the text matches,
+            for example a one-letter `prefix` search with a `from` that matches little
+            or nothing. `data` then holds fewer than `limit` results, possibly none, and
+            `meta.cursor` continues the search after the last email examined. Every
+            result returned is correct and in order; keep following `meta.cursor` until
+            it is null to read the rest. A page shorter than `limit` is therefore not
+            the end of the results: only a null `meta.cursor` is.
       required:
         - total
         - total_capped

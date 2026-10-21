@@ -14,6 +14,7 @@ from ..models.email_summary_awaiting import EmailSummaryAwaiting
 from ..models.email_webhook_status_type_1 import EmailWebhookStatusType1
 from ..models.email_webhook_status_type_2_type_1 import EmailWebhookStatusType2Type1
 from ..models.email_webhook_status_type_3_type_1 import EmailWebhookStatusType3Type1
+from ..models.sent_email_status import SentEmailStatus
 from typing import cast
 from uuid import UUID
 import datetime
@@ -137,8 +138,9 @@ class EmailSearchResult:
             from_known_address (bool): Whether the parsed From address is known to this org from prior authenticated inbound
                 mail.
             direction (EmailSearchResultDirection): Which side of the conversation the result is on: `inbound` for mail
-                received by the organization, `outbound` for mail it sent. This endpoint currently returns received mail only,
-                so every result is `inbound`.
+                received by the organization, `outbound` for mail it sent. Only `direction=outbound` or `direction=any` returns
+                `outbound` results. Treat an unfamiliar value as one added after your client was built. An `outbound` result
+                also carries `delivery_status`.
             message_id (None | str | Unset):
             domain_id (None | Unset | UUID):
             org_id (None | Unset | UUID):
@@ -216,6 +218,31 @@ class EmailSearchResult:
                 identify the sender by `from_email`, never by this name.
             score (float | Unset): Relevance score. Present only when sorting by relevance.
             highlights (EmailSearchHighlights | Unset):
+            delivery_status (SentEmailStatus | Unset): Lifecycle status of a sent_emails row. Possible values:
+
+                  - `queued`: pre-call INSERT; the outbound agent has not
+                    yet replied.
+                  - `submitted_to_agent`: agent accepted; `queue_id` is set.
+                  - `agent_failed`: agent rejected; `error_code` and
+                    `error_message` carry the reason.
+                  - `gate_denied`: a recipient-scope gate denied the send;
+                    the agent was never called. The `gates` array carries
+                    the denial detail. /send-mail returns 403 in this case
+                    so callers see the denial synchronously; /sent-emails
+                    additionally records the row for historical lookup,
+                    which is when this status appears in a listing.
+                  - `unknown`: terminal indeterminate; the on-box log
+                    poller couldn't classify the receiver's response.
+                  - `delivered` / `bounced` / `deferred` / `wait_timeout`:
+                    terminal delivery outcomes (see DeliveryStatus).
+                  - `scheduled`: created with a future `scheduled_at` and
+                    not yet executed; `scheduled_at` carries the pending
+                    execution time. Reschedulable via PATCH
+                    /sent-emails/{id} and cancelable via
+                    /sent-emails/{id}/cancel while in this status.
+                  - `canceled`: terminal; a scheduled send canceled before
+                    execution. `canceled_at` carries the cancellation time
+                    and nothing was dispatched.
      """
 
     id: UUID
@@ -254,6 +281,7 @@ class EmailSearchResult:
     from_name: None | str | Unset = UNSET
     score: float | Unset = UNSET
     highlights: EmailSearchHighlights | Unset = UNSET
+    delivery_status: SentEmailStatus | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -427,6 +455,11 @@ class EmailSearchResult:
         if not isinstance(self.highlights, Unset):
             highlights = self.highlights.to_dict()
 
+        delivery_status: str | Unset = UNSET
+        if not isinstance(self.delivery_status, Unset):
+            delivery_status = self.delivery_status.value
+
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -487,6 +520,8 @@ class EmailSearchResult:
             field_dict["score"] = score
         if highlights is not UNSET:
             field_dict["highlights"] = highlights
+        if delivery_status is not UNSET:
+            field_dict["delivery_status"] = delivery_status
 
         return field_dict
 
@@ -844,6 +879,16 @@ class EmailSearchResult:
 
 
 
+        _delivery_status = d.pop("delivery_status", UNSET)
+        delivery_status: SentEmailStatus | Unset
+        if isinstance(_delivery_status,  Unset):
+            delivery_status = UNSET
+        else:
+            delivery_status = SentEmailStatus(_delivery_status)
+
+
+
+
         email_search_result = cls(
             id=id,
             status=status,
@@ -881,6 +926,7 @@ class EmailSearchResult:
             from_name=from_name,
             score=score,
             highlights=highlights,
+            delivery_status=delivery_status,
         )
 
 

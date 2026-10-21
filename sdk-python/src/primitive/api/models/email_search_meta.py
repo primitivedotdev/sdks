@@ -30,6 +30,15 @@ class EmailSearchMeta:
             limit (int): Page size used for this request.
             cursor (None | str): Cursor for the next search page, or null if no more results.
             sort (EmailSearchMetaSort): Sort mode used for the result page.
+            total_unavailable (bool | Unset): Present and `true` when a count was requested but did not fit the search time
+                budget. The page in `data` and `meta.cursor` are still returned (the page may itself be partial, see `partial`);
+                only `meta.total` is missing (null). Retry with narrower filters, or use `count=false` and `meta.cursor`.
+            partial (bool | Unset): Present and `true` when the page stopped at the search time bound before it filled. This
+                happens when the filters reject most of what the text matches, for example a one-letter `prefix` search with a
+                `from` that matches little or nothing. `data` then holds fewer than `limit` results, possibly none, and
+                `meta.cursor` continues the search after the last email examined. Every result returned is correct and in order;
+                keep following `meta.cursor` until it is null to read the rest. A page shorter than `limit` is therefore not the
+                end of the results: only a null `meta.cursor` is.
      """
 
     total: int | None
@@ -37,6 +46,8 @@ class EmailSearchMeta:
     limit: int
     cursor: None | str
     sort: EmailSearchMetaSort
+    total_unavailable: bool | Unset = UNSET
+    partial: bool | Unset = UNSET
     additional_properties: dict[str, Any] = _attrs_field(init=False, factory=dict)
 
 
@@ -56,6 +67,10 @@ class EmailSearchMeta:
 
         sort = self.sort.value
 
+        total_unavailable = self.total_unavailable
+
+        partial = self.partial
+
 
         field_dict: dict[str, Any] = {}
         field_dict.update(self.additional_properties)
@@ -66,6 +81,10 @@ class EmailSearchMeta:
             "cursor": cursor,
             "sort": sort,
         })
+        if total_unavailable is not UNSET:
+            field_dict["total_unavailable"] = total_unavailable
+        if partial is not UNSET:
+            field_dict["partial"] = partial
 
         return field_dict
 
@@ -99,12 +118,18 @@ class EmailSearchMeta:
 
 
 
+        total_unavailable = d.pop("total_unavailable", UNSET)
+
+        partial = d.pop("partial", UNSET)
+
         email_search_meta = cls(
             total=total,
             total_capped=total_capped,
             limit=limit,
             cursor=cursor,
             sort=sort,
+            total_unavailable=total_unavailable,
+            partial=partial,
         )
 
 

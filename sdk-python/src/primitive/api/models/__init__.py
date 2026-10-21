@@ -477,6 +477,7 @@ from .run_wake_schedule_response_200_data import RunWakeScheduleResponse200Data
 from .search_emails_automated import SearchEmailsAutomated
 from .search_emails_awaiting import SearchEmailsAwaiting
 from .search_emails_count import SearchEmailsCount
+from .search_emails_direction import SearchEmailsDirection
 from .search_emails_has_attachment import SearchEmailsHasAttachment
 from .search_emails_include_facets import SearchEmailsIncludeFacets
 from .search_emails_prefix import SearchEmailsPrefix
@@ -1139,6 +1140,7 @@ __all__ = (
     "SearchEmailsAutomated",
     "SearchEmailsAwaiting",
     "SearchEmailsCount",
+    "SearchEmailsDirection",
     "SearchEmailsHasAttachment",
     "SearchEmailsIncludeFacets",
     "SearchEmailsPrefix",

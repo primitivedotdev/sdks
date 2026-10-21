@@ -24927,6 +24927,10 @@ func (s *Server) handleSearchEmailsRequest(args [0]string, argsEscaped bool, w h
 					Name: "count",
 					In:   "query",
 				}: params.Count,
+				{
+					Name: "direction",
+					In:   "query",
+				}: params.Direction,
 			},
 			Raw: r,
 		}

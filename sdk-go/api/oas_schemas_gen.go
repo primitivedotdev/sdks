@@ -12534,6 +12534,18 @@ type EmailSearchMeta struct {
 	Cursor NilString `json:"cursor"`
 	// Sort mode used for the result page.
 	Sort EmailSearchMetaSort `json:"sort"`
+	// Present and `true` when a count was requested but did not fit the search time budget. The page in
+	// `data` and `meta.cursor` are still returned (the page may itself be partial, see `partial`); only
+	// `meta.total` is missing (null). Retry with narrower filters, or use `count=false` and `meta.
+	// cursor`.
+	TotalUnavailable OptBool `json:"total_unavailable"`
+	// Present and `true` when the page stopped at the search time bound before it filled. This happens
+	// when the filters reject most of what the text matches, for example a one-letter `prefix` search
+	// with a `from` that matches little or nothing. `data` then holds fewer than `limit` results,
+	// possibly none, and `meta.cursor` continues the search after the last email examined. Every result
+	// returned is correct and in order; keep following `meta.cursor` until it is null to read the rest.
+	// A page shorter than `limit` is therefore not the end of the results: only a null `meta.cursor` is.
+	Partial OptBool `json:"partial"`
 }
 
 // GetTotal returns the value of Total.
@@ -12561,6 +12573,16 @@ func (s *EmailSearchMeta) GetSort() EmailSearchMetaSort {
 	return s.Sort
 }
 
+// GetTotalUnavailable returns the value of TotalUnavailable.
+func (s *EmailSearchMeta) GetTotalUnavailable() OptBool {
+	return s.TotalUnavailable
+}
+
+// GetPartial returns the value of Partial.
+func (s *EmailSearchMeta) GetPartial() OptBool {
+	return s.Partial
+}
+
 // SetTotal sets the value of Total.
 func (s *EmailSearchMeta) SetTotal(val NilInt) {
 	s.Total = val
@@ -12584,6 +12606,16 @@ func (s *EmailSearchMeta) SetCursor(val NilString) {
 // SetSort sets the value of Sort.
 func (s *EmailSearchMeta) SetSort(val EmailSearchMetaSort) {
 	s.Sort = val
+}
+
+// SetTotalUnavailable sets the value of TotalUnavailable.
+func (s *EmailSearchMeta) SetTotalUnavailable(val OptBool) {
+	s.TotalUnavailable = val
+}
+
+// SetPartial sets the value of Partial.
+func (s *EmailSearchMeta) SetPartial(val OptBool) {
+	s.Partial = val
 }
 
 // Sort mode used for the result page.
@@ -12781,9 +12813,11 @@ type EmailSearchResult struct {
 	Score      OptFloat64               `json:"score"`
 	Highlights OptEmailSearchHighlights `json:"highlights"`
 	// Which side of the conversation the result is on: `inbound` for mail received by the organization,
-	// `outbound` for mail it sent. This endpoint currently returns received mail only, so every result
-	// is `inbound`.
-	Direction EmailSearchResultDirection `json:"direction"`
+	// `outbound` for mail it sent. Only `direction=outbound` or `direction=any` returns `outbound`
+	// results. Treat an unfamiliar value as one added after your client was built. An `outbound` result
+	// also carries `delivery_status`.
+	Direction      EmailSearchResultDirection `json:"direction"`
+	DeliveryStatus OptSentEmailStatus         `json:"delivery_status"`
 }
 
 // GetID returns the value of ID.
@@ -12966,6 +13000,11 @@ func (s *EmailSearchResult) GetDirection() EmailSearchResultDirection {
 	return s.Direction
 }
 
+// GetDeliveryStatus returns the value of DeliveryStatus.
+func (s *EmailSearchResult) GetDeliveryStatus() OptSentEmailStatus {
+	return s.DeliveryStatus
+}
+
 // SetID sets the value of ID.
 func (s *EmailSearchResult) SetID(val uuid.UUID) {
 	s.ID = val
@@ -13146,6 +13185,11 @@ func (s *EmailSearchResult) SetDirection(val EmailSearchResultDirection) {
 	s.Direction = val
 }
 
+// SetDeliveryStatus sets the value of DeliveryStatus.
+func (s *EmailSearchResult) SetDeliveryStatus(val OptSentEmailStatus) {
+	s.DeliveryStatus = val
+}
+
 // What the message declared about being automated, verbatim:
 // `List-Unsubscribe` (RFC 2369/8058), `List-Id` (RFC 2919),
 // `Precedence`, and `Auto-Submitted` (RFC 3834). Null or absent when the message
@@ -13278,8 +13322,9 @@ func (s *EmailSearchResultAwaiting) UnmarshalText(data []byte) error {
 }
 
 // Which side of the conversation the result is on: `inbound` for mail received by the organization,
-// `outbound` for mail it sent. This endpoint currently returns received mail only, so every result
-// is `inbound`.
+// `outbound` for mail it sent. Only `direction=outbound` or `direction=any` returns `outbound`
+// results. Treat an unfamiliar value as one added after your client was built. An `outbound` result
+// also carries `delivery_status`.
 type EmailSearchResultDirection string
 
 const (
@@ -29937,6 +29982,52 @@ func (o OptSearchEmailsCount) Or(d SearchEmailsCount) SearchEmailsCount {
 	return d
 }
 
+// NewOptSearchEmailsDirection returns new OptSearchEmailsDirection with value set to v.
+func NewOptSearchEmailsDirection(v SearchEmailsDirection) OptSearchEmailsDirection {
+	return OptSearchEmailsDirection{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchEmailsDirection is optional SearchEmailsDirection.
+type OptSearchEmailsDirection struct {
+	Value SearchEmailsDirection
+	Set   bool
+}
+
+// IsSet returns true if OptSearchEmailsDirection was set.
+func (o OptSearchEmailsDirection) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchEmailsDirection) Reset() {
+	var v SearchEmailsDirection
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchEmailsDirection) SetTo(v SearchEmailsDirection) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchEmailsDirection) Get() (v SearchEmailsDirection, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchEmailsDirection) Or(d SearchEmailsDirection) SearchEmailsDirection {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSearchEmailsHasAttachment returns new OptSearchEmailsHasAttachment with value set to v.
 func NewOptSearchEmailsHasAttachment(v SearchEmailsHasAttachment) OptSearchEmailsHasAttachment {
 	return OptSearchEmailsHasAttachment{
@@ -37072,6 +37163,54 @@ func (s *SearchEmailsCount) UnmarshalText(data []byte) error {
 		return nil
 	case SearchEmailsCountFalse:
 		*s = SearchEmailsCountFalse
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type SearchEmailsDirection string
+
+const (
+	SearchEmailsDirectionInbound  SearchEmailsDirection = "inbound"
+	SearchEmailsDirectionOutbound SearchEmailsDirection = "outbound"
+	SearchEmailsDirectionAny      SearchEmailsDirection = "any"
+)
+
+// AllValues returns all SearchEmailsDirection values.
+func (SearchEmailsDirection) AllValues() []SearchEmailsDirection {
+	return []SearchEmailsDirection{
+		SearchEmailsDirectionInbound,
+		SearchEmailsDirectionOutbound,
+		SearchEmailsDirectionAny,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchEmailsDirection) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchEmailsDirectionInbound:
+		return []byte(s), nil
+	case SearchEmailsDirectionOutbound:
+		return []byte(s), nil
+	case SearchEmailsDirectionAny:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchEmailsDirection) UnmarshalText(data []byte) error {
+	switch SearchEmailsDirection(data) {
+	case SearchEmailsDirectionInbound:
+		*s = SearchEmailsDirectionInbound
+		return nil
+	case SearchEmailsDirectionOutbound:
+		*s = SearchEmailsDirectionOutbound
+		return nil
+	case SearchEmailsDirectionAny:
+		*s = SearchEmailsDirectionAny
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

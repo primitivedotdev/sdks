@@ -32651,14 +32651,28 @@ func (s *EmailSearchMeta) encodeFields(e *jx.Encoder) {
 		e.FieldStart("sort")
 		s.Sort.Encode(e)
 	}
+	{
+		if s.TotalUnavailable.Set {
+			e.FieldStart("total_unavailable")
+			s.TotalUnavailable.Encode(e)
+		}
+	}
+	{
+		if s.Partial.Set {
+			e.FieldStart("partial")
+			s.Partial.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailSearchMeta = [5]string{
+var jsonFieldsNameOfEmailSearchMeta = [7]string{
 	0: "total",
 	1: "total_capped",
 	2: "limit",
 	3: "cursor",
 	4: "sort",
+	5: "total_unavailable",
+	6: "partial",
 }
 
 // Decode decodes EmailSearchMeta from json.
@@ -32723,6 +32737,26 @@ func (s *EmailSearchMeta) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"sort\"")
+			}
+		case "total_unavailable":
+			if err := func() error {
+				s.TotalUnavailable.Reset()
+				if err := s.TotalUnavailable.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"total_unavailable\"")
+			}
+		case "partial":
+			if err := func() error {
+				s.Partial.Reset()
+				if err := s.Partial.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"partial\"")
 			}
 		default:
 			return d.Skip()
@@ -33017,9 +33051,15 @@ func (s *EmailSearchResult) encodeFields(e *jx.Encoder) {
 		e.FieldStart("direction")
 		s.Direction.Encode(e)
 	}
+	{
+		if s.DeliveryStatus.Set {
+			e.FieldStart("delivery_status")
+			s.DeliveryStatus.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfEmailSearchResult = [36]string{
+var jsonFieldsNameOfEmailSearchResult = [37]string{
 	0:  "id",
 	1:  "message_id",
 	2:  "domain_id",
@@ -33056,6 +33096,7 @@ var jsonFieldsNameOfEmailSearchResult = [36]string{
 	33: "score",
 	34: "highlights",
 	35: "direction",
+	36: "delivery_status",
 }
 
 // Decode decodes EmailSearchResult from json.
@@ -33458,6 +33499,16 @@ func (s *EmailSearchResult) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"direction\"")
+			}
+		case "delivery_status":
+			if err := func() error {
+				s.DeliveryStatus.Reset()
+				if err := s.DeliveryStatus.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"delivery_status\"")
 			}
 		default:
 			return d.Skip()
