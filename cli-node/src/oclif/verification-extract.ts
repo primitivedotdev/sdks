@@ -99,13 +99,8 @@ function blank(match: string): string {
 }
 
 /** Normalised lines the code scan reads: subject first, then the body. */
-function codeLines(email: VerificationEmail): string[] {
-  const body = email.text?.trim()
-    ? email.text
-    : email.html?.trim()
-      ? htmlToText(email.html)
-      : "";
-  const combined = `${email.subject ?? ""}\n\n${body}`
+function codeLines(subject: string | null | undefined, body: string): string[] {
+  const combined = `${subject ?? ""}\n\n${body}`
     .replace(/\r\n?/g, "\n")
     .replace(NON_CODE_PHRASES, (match) => "#".repeat(match.length))
     .replace(/[   \t]/g, " ")
@@ -128,7 +123,7 @@ function scoreCode(
   candidate: Omit<CodeCandidate, "score">,
   lines: string[],
   mentionsCode: boolean,
-): number {
+): number | null {
   const line = lines[candidate.line];
   const before = line.slice(0, candidate.start);
   const near30 = before.slice(-30);
@@ -136,6 +131,8 @@ function scoreCode(
   const near = before.slice(-40);
   let score = 0;
 
+  // A code keyword on the same line or the two lines above is required; the
+  // other signals only rank candidates that have it.
   if (CODE_KEYWORD.test(near)) score += 12;
   else if (CODE_KEYWORD.test(before)) score += 8;
   else if (CODE_KEYWORD.test(after.slice(0, 40))) score += 10;
@@ -143,6 +140,7 @@ function scoreCode(
     previousContent(lines, candidate.line, 2).some((l) => CODE_KEYWORD.test(l))
   )
     score += 7;
+  else return null;
   if (mentionsCode) score += 2;
 
   if (line.trim() === candidate.raw) score += 4;
@@ -192,7 +190,23 @@ const MIN_CODE_SCORE = 8;
 export function extractVerificationCode(
   email: VerificationEmail,
 ): string | null {
-  const lines = codeLines(email);
+  // The text part first; the HTML part when the text has no code (a text
+  // part that only says "view this email in HTML").
+  const fromText = email.text?.trim()
+    ? codeInBody(email.subject, email.text)
+    : null;
+  if (fromText !== null) return fromText;
+  return codeInBody(
+    email.subject,
+    email.html?.trim() ? htmlToText(email.html) : "",
+  );
+}
+
+function codeInBody(
+  subject: string | null | undefined,
+  body: string,
+): string | null {
+  const lines = codeLines(subject, body);
   const mentionsCode = lines.some((line) => CODE_KEYWORD.test(line));
   const found: CodeCandidate[] = [];
   lines.forEach((line, index) => {
@@ -216,7 +230,9 @@ export function extractVerificationCode(
   });
   let best: CodeCandidate | null = null;
   for (const candidate of dropContained(found)) {
-    candidate.score = scoreCode(candidate, lines, mentionsCode);
+    const score = scoreCode(candidate, lines, mentionsCode);
+    if (score === null) continue;
+    candidate.score = score;
     if (
       candidate.score >= MIN_CODE_SCORE &&
       (best === null || candidate.score > best.score)
@@ -235,12 +251,29 @@ type LinkCandidate = { url: string; label: string };
 const ANCHOR =
   /<a\b[^>]*?\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))[^>]*>([\s\S]*?)<\/a\s*>/gi;
 
+const HREF_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&#38;": "&",
+  "&#x26;": "&",
+  "&quot;": '"',
+  "&#34;": '"',
+  "&#x22;": '"',
+  "&apos;": "'",
+  "&#39;": "'",
+  "&#x27;": "'",
+};
+
+/** Decode the entities an href carries, in one pass so none is decoded twice. */
 function decodeHref(value: string): string {
   return value
     .trim()
-    .replace(/&amp;|&#0*38;|&#x0*26;/gi, "&")
-    .replace(/&quot;|&#0*34;/gi, '"')
-    .replace(/&#0*39;|&apos;/gi, "'");
+    .replace(
+      /&(?:amp|quot|apos|#0*(?:38|34|39)|#x0*(?:26|22|27));/gi,
+      (match) => {
+        const key = match.toLowerCase().replace(/^&#(x?)0+/, "&#$1");
+        return HREF_ENTITIES[key] ?? match;
+      },
+    );
 }
 
 function anchorLabel(html: string): string {

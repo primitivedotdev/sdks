@@ -175,6 +175,24 @@ describe("extractVerificationCode", () => {
     expect(extractVerificationCode(email)).toBeNull();
   });
 
+  it("does not take a standalone number without a code keyword near it", () => {
+    expect(
+      extractVerificationCode({
+        text: "Your order has shipped.\n\n482913\n\nFor verification, contact support.",
+      }),
+    ).toBeNull();
+  });
+
+  it("reads the HTML part when the text part has no code", () => {
+    expect(
+      extractVerificationCode({
+        subject: "Verify your email",
+        text: "Please view this message in an HTML-capable email client.",
+        html: "<p>Your verification code is</p><p><b>604172</b></p>",
+      }),
+    ).toBe("604172");
+  });
+
   it("ignores digits inside links and email addresses", () => {
     expect(
       extractVerificationCode({
@@ -241,6 +259,14 @@ describe("extractVerificationLink", () => {
     expect(extractVerificationLink(newsletter)).toBeNull();
     expect(extractVerificationLink(github)).toBeNull();
     expect(extractVerificationLink({})).toBeNull();
+  });
+
+  it("decodes each href entity once", () => {
+    expect(
+      extractVerificationLink({
+        html: `<a href="https://example.com/verify?a=1&amp;amp;b=2&#38;c=&amp;quot;">Verify</a>`,
+      }),
+    ).toBe("https://example.com/verify?a=1&amp;b=2&c=&quot;");
   });
 
   it("ignores mailto and non-web links", () => {

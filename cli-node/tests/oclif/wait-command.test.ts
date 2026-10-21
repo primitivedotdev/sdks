@@ -38,7 +38,10 @@ type FakeMail = {
   thread_id?: string | null;
   reply_to_sent_email_id?: string | null;
   status?: string;
+  created_at?: string;
 };
+
+const LONG_AGO = "2026-01-05T12:00:00.000Z";
 
 function detail(mail: FakeMail) {
   return {
@@ -54,8 +57,8 @@ function detail(mail: FakeMail) {
     body_html: mail.body_html ?? null,
     thread_id: mail.thread_id ?? null,
     reply_to_sent_email_id: mail.reply_to_sent_email_id ?? null,
-    received_at: "2026-10-21T12:00:00.000Z",
-    created_at: "2026-10-21T12:00:00.000Z",
+    received_at: mail.created_at ?? LONG_AGO,
+    created_at: mail.created_at ?? LONG_AGO,
     parsed: { status: "complete", attachments: [] },
   };
 }
@@ -212,6 +215,7 @@ describe("primitive wait helpers", () => {
       filters: { from: "github.com" },
       includeExisting: false,
       deadline: Date.now() - 1,
+      startedAt: Date.now(),
     });
     expect(found).toBeNull();
   });
@@ -244,9 +248,26 @@ describe("primitive wait command", () => {
     const tail = mocks.listEmails.mock.calls
       .map(([arg]) => arg.query)
       .find((query) => query.since !== undefined);
-    expect(tail.since).toBe("2026-10-21T12:00:00.000Z|old-1");
+    expect(tail.since).toBe(`${LONG_AGO}|old-1`);
     expect(tail.wait).toBeGreaterThan(0);
     expect(tail.wait).toBeLessThanOrEqual(30);
+  });
+
+  it("matches mail that arrived while the command was starting", async () => {
+    // Already at or before the baseline, but received after the command
+    // started: the tail alone would skip it.
+    fakeInbox(
+      [oldCode, { ...githubCode, created_at: new Date().toISOString() }],
+      [],
+    );
+    const result = await runWait([
+      "--from",
+      "github.com",
+      "--code",
+      "--timeout",
+      "1",
+    ]);
+    expect(result.stdout).toBe("482913\n");
   });
 
   it("matches existing mail with --include-existing", async () => {
@@ -282,7 +303,7 @@ describe("primitive wait command", () => {
       id: "gh-2",
       from: "noreply@github.com",
       subject: "[GitHub] Please verify your device",
-      received_at: "2026-10-21T12:00:00.000Z",
+      received_at: LONG_AGO,
       code: "482913",
       link: null,
     });

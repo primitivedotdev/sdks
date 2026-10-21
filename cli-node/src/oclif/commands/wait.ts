@@ -266,6 +266,15 @@ async function firstMatch(
   return null;
 }
 
+// Server timestamps against the client's start time: allow a little clock
+// difference so mail sent right as the command starts is not lost.
+const CLOCK_SKEW_MS = 5000;
+
+function arrivedSince(row: Row, threshold: number): boolean {
+  const at = Date.parse(str(row.created_at) ?? str(row.received_at) ?? "");
+  return Number.isFinite(at) && at >= threshold;
+}
+
 /**
  * Block until an email matching `filters` arrives (or, with
  * `includeExisting`, is among the newest already received). Returns null at
@@ -276,14 +285,24 @@ export async function waitForEmail(params: {
   filters: WaitFilters;
   includeExisting: boolean;
   deadline: number | null;
+  /** When the command started (client clock), before authentication. */
+  startedAt: number;
 }): Promise<EmailDetail | null> {
   const { apiClient, filters, deadline } = params;
   const seen = new Set<string>();
-  // Read before looking at existing mail, so mail that lands during that
-  // look is still returned by the tail.
+  // Taken before the recent page is read, so mail that lands during that
+  // read is returned by the tail.
   let since = await baselineCursor({ apiClient });
+  // Mail that arrived between the command starting and the baseline (during
+  // authentication, say) sits at or before the baseline. Check it from the
+  // newest page, oldest first, before tailing past it.
+  const recent = await listRows(apiClient, { limit: EXISTING_PAGE_SIZE });
+  const sinceStart = recent.rows
+    .filter((row) => arrivedSince(row, params.startedAt - CLOCK_SKEW_MS))
+    .reverse();
+  const early = await firstMatch(apiClient, sinceStart, filters, seen);
+  if (early) return early;
   if (params.includeExisting) {
-    const recent = await listRows(apiClient, { limit: EXISTING_PAGE_SIZE });
     const found = await firstMatch(apiClient, recent.rows, filters, seen);
     if (found) return found;
   }
@@ -414,6 +433,7 @@ Exit codes:
   };
 
   async run(): Promise<void> {
+    const startedAt = Date.now();
     const { flags } = await this.parse(WaitCommand);
     let timeoutSeconds: number;
     try {
@@ -453,6 +473,7 @@ Exit codes:
         filters,
         includeExisting: flags["include-existing"],
         deadline,
+        startedAt,
       });
     } catch (error) {
       if (!(error instanceof InboxNextApiError)) throw error;
