@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import { hostname } from "node:os";
 import { Command, Errors, Flags } from "@oclif/core";
 import type {
@@ -31,6 +30,12 @@ import {
   type StoredCliCredentials,
   saveCliCredentials,
 } from "../auth.js";
+import {
+  canOfferCopyHotkey,
+  formatBrowserLoginInstructions,
+  listenForCopyHotkey,
+  openBrowser,
+} from "../browser-login-prompt.js";
 import { deleteChatState } from "../chat-state.js";
 
 const MAX_CLI_LOGIN_POLL_INTERVAL_SECONDS = 60;
@@ -41,19 +46,6 @@ function cliError(message: string): Errors.CLIError {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function openBrowser(url: string): void {
-  const command =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "cmd"
-        : "xdg-open";
-  const args = process.platform === "win32" ? ["/c", "start", "", url] : [url];
-  const child = spawn(command, args, { detached: true, stdio: "ignore" });
-  child.on("error", () => undefined);
-  child.unref();
 }
 
 function unwrapData<T>(value: unknown): T | null {
@@ -392,26 +384,36 @@ class LoginCommand extends Command {
       throw cliError("Primitive API returned an empty CLI login response.");
     }
 
-    process.stderr.write(`Your sign-in code is: ${start.user_code}\n`);
-    if (!flags["no-browser"]) {
-      openBrowser(start.verification_uri_complete);
-      process.stderr.write("Opening Primitive in your browser...\n");
-    }
+    const openedBrowser = !flags["no-browser"];
+    if (openedBrowser) openBrowser(start.verification_uri_complete);
+    const copyHotkey = canOfferCopyHotkey(process.stdin, process.stderr);
+    const stopCopyHotkey = copyHotkey
+      ? listenForCopyHotkey({
+          input: process.stdin,
+          output: process.stderr,
+          url: start.verification_uri_complete,
+        })
+      : () => undefined;
     process.stderr.write(
-      `If the browser did not open, visit: ${start.verification_uri_complete}\n`,
+      formatBrowserLoginInstructions({ copyHotkey, openedBrowser, start }),
     );
     process.stderr.write("Waiting for browser approval...\n");
 
-    const login = await pollCliLoginUntilApproved({
-      poll: (deviceCode) =>
-        pollCliLogin({
-          body: { device_code: deviceCode },
-          client: apiClient.client,
-          responseStyle: "fields",
-        }),
-      retryCommand,
-      start,
-    });
+    let login: CliLoginPollResult;
+    try {
+      login = await pollCliLoginUntilApproved({
+        poll: (deviceCode) =>
+          pollCliLogin({
+            body: { device_code: deviceCode },
+            client: apiClient.client,
+            responseStyle: "fields",
+          }),
+        retryCommand,
+        start,
+      });
+    } finally {
+      stopCopyHotkey();
+    }
 
     deleteChatState(this.config.configDir);
     saveCliCredentials(this.config.configDir, {
