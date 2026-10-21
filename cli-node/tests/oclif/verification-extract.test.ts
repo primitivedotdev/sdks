@@ -200,6 +200,22 @@ describe("extractVerificationCode", () => {
     ).toBe("4455");
   });
 
+  it("keeps a code labelled below when the label states an expiry", () => {
+    expect(
+      extractVerificationCode({
+        text: "482913\nis your verification code. Expires in 3600 seconds.",
+      }),
+    ).toBe("482913");
+  });
+
+  it("does not take an expiry for the code", () => {
+    expect(
+      extractVerificationCode({
+        text: "Your verification code expires in 1440 minutes.",
+      }),
+    ).toBeNull();
+  });
+
   it("reads the HTML part when the text part has no code", () => {
     expect(
       extractVerificationCode({

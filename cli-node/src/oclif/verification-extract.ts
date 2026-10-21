@@ -38,6 +38,12 @@ function lastMatchIndex(regex: RegExp, text: string): number {
   return last;
 }
 
+// "3600 seconds", "10 minutes": a lifetime, never the code.
+const DURATION_AFTER =
+  /^\s?(?:s|secs?|seconds?|mins?|minutes?|h|hrs?|hours?|days?)\b/i;
+const DURATION_GLOBAL =
+  /\b\d+\s?(?:s|secs?|seconds?|mins?|minutes?|h|hrs?|hours?|days?)\b/gi;
+
 const CURRENCY_AFTER = /^\s?(?:usd|eur|gbp|cad|aud|dollars|euros)\b/i;
 
 // Phone numbers: optional country code, area code (with or without
@@ -130,7 +136,9 @@ function isLabelBelow(line: string | null): boolean {
   return (
     line !== null &&
     NEXT_LINE_LABEL.test(line) &&
-    !/\d{4,}|\b(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{3,}\b/.test(line)
+    !/\d{4,}|\b(?=[A-Z0-9-]*\d)[A-Z0-9][A-Z0-9-]{3,}\b/.test(
+      line.replace(DURATION_GLOBAL, " "),
+    )
   );
 }
 
@@ -184,6 +192,7 @@ function scoreCode(
   if (negative >= 0 && negative > lastMatchIndex(CODE_KEYWORD, near30))
     score -= 15;
   if (CURRENCY_AFTER.test(after)) score -= 15;
+  if (DURATION_AFTER.test(after)) score -= 15;
   if (candidate.form === "digits" && /^(?:19|20)\d\d$/.test(candidate.value))
     score -= 6;
   // Letter-only dashed groups ("ABC-DEF") count only right after a keyword.
