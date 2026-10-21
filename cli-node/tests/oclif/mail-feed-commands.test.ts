@@ -273,7 +273,9 @@ describe("from_verified filter guard", () => {
     ).toEqual([false]);
     // Nor inside another field's quoted value, such as an exact header search.
     expect(
-      fromVerifiedTermsInQuery('header:"X-Note=hello from_verified:true world"'),
+      fromVerifiedTermsInQuery(
+        'header:"X-Note=hello from_verified:true world"',
+      ),
     ).toEqual([]);
     expect(
       fromVerifiedTermsInQuery(
